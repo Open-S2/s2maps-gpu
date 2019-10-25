@@ -1,26 +1,35 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useState, useEffect } from 'react'
+import { S2Map } from './s2'
+import style from './style.json'
 
-function App() {
+import './App.css'
+
+function App () {
+  const { setMap } = useMapContainer()
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <div id="map-container" ref={c => setMap(c)}></div>
     </div>
-  );
+  )
 }
 
-export default App;
+function useMapContainer () {
+  let [mapContainer, setMap] = useState()
+
+  // cause a prep of data
+  useEffect(() => {
+    if (mapContainer) { prepCanvas(mapContainer) }
+  }, [mapContainer])
+
+  return { mapContainer, setMap }
+}
+
+function prepCanvas(container) {
+  new S2Map({
+    style,
+    container,
+    projection: 'blend'
+  })
+}
+
+export default App

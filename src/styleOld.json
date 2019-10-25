@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "name": "s2test",
+  "center": [0, 0],
+  "zoom": 0,
+  "sources": {
+    "ocean": {
+      "json": "/Users/craigoconnor/Desktop/WebGL/step4_perspective/src/json/ocean.s2json",
+      "type": "vector",
+      "fileType": "s2json"
+    },
+    "water": {
+      "json": "http://localhost:8000/data/water",
+      "type": "pbf"
+    }
+  },
+  "wallpaper": {
+    "background-color": "rgb(29, 38, 85)",
+    "fade-1": "rgb(138, 204, 255)",
+    "fade-2": "rgb(224, 255, 255)",
+    "halo": "rgb(242, 255, 255)"
+  },
+  "sphere-background": {
+    "background-color": "rgb(244, 239, 226)"
+  },
+  "layers": {
+    "ocean": {
+      "water": [
+        {
+          "type": ["fill", "line"],
+          "layout": {
+            "line-cap": "round",
+            "line-edge": "round"
+          },
+          "paint": {
+            "fill-color": "rgb(170, 218, 255)",
+            "line-color": "rgb(170, 218, 255)"
+          }
+        },
+        {
+          "type": "text",
+          "layout": {
+            "text-size": 72,
+            "text-family": "Roboto"
+          },
+          "paint": {
+            "text-color": "rgb(29, 38, 85)"
+          }
+        }
+      ]
+    }
+  }
+}
