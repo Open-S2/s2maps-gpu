@@ -43,17 +43,15 @@ export default class Wallpaper {
 
   _updateScale () {
     const radius = 512 * Math.min(Math.pow(2, this.projection.zoom), 32768)
-    this.uniforms.uScale[0] = 1 / this.projection.width * radius
-    this.uniforms.uScale[1] = 1 / this.projection.height * radius
+    this.uniforms.uScale[0] = radius / (this.projection.width * this.projection.multiplier)
+    this.uniforms.uScale[1] = radius / (this.projection.height * this.projection.multiplier)
   }
 
   _updateStyle () {
     const { wallpaper } = this.style
     for (let key in wallpaper) {
       if (this.uniforms[key]) {
-        this.uniforms[key][0] = wallpaper[key].r / 255
-        this.uniforms[key][1] = wallpaper[key].g / 255
-        this.uniforms[key][2] = wallpaper[key].b / 255
+        this.uniforms[key] = wallpaper[key].getRGB().slice(0, 3)
       }
     }
   }

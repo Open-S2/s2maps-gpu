@@ -2,7 +2,10 @@
 import Color from './color'
 import Map from '../ui/map'
 import { Tile } from '../source'
-import { requestData } from '../util/xmlHttpRequest'
+import requestData from '../util/xmlHttpRequest'
+import { parseConditionDecode } from './conditionals'
+
+import type { TileRequest } from '../workers/tile.worker'
 
 type SourceType = {
   path: string,
@@ -18,21 +21,18 @@ type SourceTypes = {
 type DrawType = 'fill' | 'line' | 'text' | 'billboard'
 
 type StyleLayout = {
-  'line-cap'?: 'round' | 'bevel' | 'square',
-  'line-edge'?: 'round' | '',
+  'line-cap'?: 'butt' | 'square' | 'round',
+  'line-edge'?: 'bevel' | 'miter' | 'round',
   'text-size'?: number,
-  'text-family'?: string
-  "text-field"?: string | Array<string>, // ["name_en", "name"] or just "name"
-  "text-size"?: number,
-  "text-family"?: string | Array<string>, //
-  "symbol-placement"?: string // "point" or "line" or nothing which equates to both
+  'text-family'?: string,
+  'text-field'?: string | Array<string>, // ['name_en', 'name'] or just 'name'
+  'text-size'?: number,
+  'text-family'?: string | Array<string>, //
+  'symbol-placement'?: string // "point" or "line" or nothing which equates to both
 }
 
 type StylePaint = {
   'color'?: string,
-  'fill-color'?: string,
-  'line-color'?: string,
-  'text-color'?: string
 }
 
 type StyleFilter = Array<any> // ["any", ["class", "==", "ocean"], ["class", "==", "river"]]
@@ -77,7 +77,7 @@ export default class Style {
   billboards: SourceTypes = {}
   layers: StyleLayers = []
   wallpaper: WallpaperStyle
-  sphereBackground: SphereBackgroundStyle
+  sphereBackground: void | SphereBackgroundStyle
   dirty: boolean = true
   constructor (style: Style | Object | string, map: Map) {
     this.map = map
@@ -85,25 +85,15 @@ export default class Style {
     this._buildStyle(style)
   }
 
-  _sendStyleDataToWorkers () {
-    // now that we have various source data, package up the style objects we need and send it off:
-    let stylePackage = {
-      sources: this.sources,
-      fonts: this.fonts,
-      billboards: this.billboards,
-      layers: this.layers
-    }
-  }
-
   _buildStyle (style: string | Object) {
     const self = this
     if (typeof style === 'string') {
-      requestData(style, 'json')
-        .then(res => self._buildStyle(res))
-        .catch(err => console.log('could not acquire the style', err))
+      requestData(style, 'json', (res) => {
+        if (res) { self._buildStyle(res) }
+      })
     } else if (typeof style === 'object') {
-      // TODO: before manipulating the style, send it off to the worker pool manager
-
+      // Before manipulating the style, send it off to the worker pool manager
+      this._sendStyleDataToWorkers(style)
       // extract starting values
       if (style.center) {
         self.lon = style.center[0]
@@ -116,10 +106,27 @@ export default class Style {
       if (style.billboards) self.billboards = style.billboards
       // build wallpaper and sphere background if applicable
       self._buildWallpaper(style.wallpaper || {})
-      self._buildSphereBackground(style['sphere-background'] || {})
+      self._buildSphereBackground(style['sphere-background'])
       // build the layers
       if (style.layers) self.layers = style.layers
       self._buildLayers()
+    }
+  }
+
+  _sendStyleDataToWorkers (style: Object) {
+    // now that we have various source data, package up the style objects we need and send it off:
+    let stylePackage = {
+      sources: style.sources,
+      fonts: style.fonts,
+      billboards: style.billboards,
+      layers: style.layers
+    }
+    // If the map engine is running on the main thread, directly send the stylePackage to the worker pool.
+    // Otherwise perhaps this map instance is a web worker and has a global instance of postMessage
+    if (window && window.S2WorkerPool) {
+      window.S2WorkerPool.injectStyle(this.map.id, stylePackage)
+    } else if (typeof postMessage === 'function') {
+      postMessage({ mapID: this.map.id, type: 'style', style: stylePackage })
     }
   }
 
@@ -132,21 +139,39 @@ export default class Style {
     }
   }
 
-  _buildSphereBackground (sphereBackground: Object) {
-    this.sphereBackground = new Color(sphereBackground['background-color'])
+  _buildSphereBackground (sphereBackground?: Object) {
+    if (sphereBackground) this.sphereBackground = parseConditionDecode(sphereBackground['background-color'])
   }
 
-  // prep color, line-color, text-color, fill-color, text-size, text-halo-color, text-halo-width, and/or line-width, conditions
+  // TODO: prep color, line-color, text-color, fill-color, text-size, text-halo-color, text-halo-width, and/or line-width, conditions
   _buildLayers () {
+    const programs = new Set()
     for (const layer of this.layers) {
-
+      programs.add(layer.type)
+      // LAYOUTS
+      for (let key in layer.layout) layer.layout[key] = parseConditionDecode(layer.layout[key])
+      // PAINTS
+      for (let key in layer.paint) layer.paint[key] = parseConditionDecode(layer.paint[key])
     }
+    this.map.painter.prebuildPrograms(programs)
   }
 
   requestTiles (tiles: Array<Tile>) {
     const self = this
-    // inject layers into tile
-    tiles.forEach(tile => tile.layers = self.layers)
-    // TODO: send the tiles over to the worker pool manager to split the workload
+    const tileRequests: Array<TileRequest> = []
+    tiles.forEach(tile => {
+      // inject layers into tile
+      tile.layers = self.layers
+      // grab request values
+      const { id, face, zoom, x, y, center, bbox, division, extent } = tile
+      // build tileRequests
+      tileRequests.push({ hash: id, face, zoom, x, y, center, bbox, division, extent })
+    })
+    // send the tiles over to the worker pool manager to split the workload
+    if (window && window.S2WorkerPool) { // otherwise a main thread, just get the worker pool from window
+      window.S2WorkerPool.tileRequest(this.map.id, tileRequests)
+    } else if (typeof postMessage === 'function') { // perhaps this map instance is a web worker and has a global instance of postMessage
+      postMessage({ mapID: this.map.id, type: 'request', tiles: tileRequests })
+    }
   }
 }

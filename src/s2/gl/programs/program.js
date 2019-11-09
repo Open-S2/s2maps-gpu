@@ -1,7 +1,5 @@
 // @flow
 export default class Program {
-  vao: VertexArrayObject
-  vertexBuffer: WebGLVertexArrayObject
   compiled: boolean = false
   linked: boolean = false
   glProgram: WebGLProgram
@@ -25,7 +23,7 @@ export default class Program {
   }
 }
 
-function loadShader(gl: WebGLRenderingContext, shaderSource: string, shaderType: number) {
+function loadShader (gl: WebGLRenderingContext, shaderSource: string, shaderType: number) {
   // Create the shader object
   const shader = gl.createShader(shaderType)
   // Load the shader source

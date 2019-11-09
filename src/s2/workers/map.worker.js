@@ -6,14 +6,15 @@ import type { MapOptions } from '../ui/map'
 
 class MapWorker {
   map: Map
-  onMessage (e: Event) {
-    const { type } = e.data
-    if (type === 'canvas') this._prepCanvas(e.data.options, e.data.canvas)
-    if (type === 'resize') { this.map.resize(e.data.width, e.data.height) }
+  onMessage ({ data }) {
+    const { type } = data
+    if (type === 'canvas') this._prepCanvas(data.options, data.canvas, data.id)
+    if (type === 'resize') { this.map.resize() }
+    if (type === 'data') this.map.injectSourceData(data.tileID, data.vertexBuffer, data.indexBuffer, data.layerGuideBuffer)
   }
 
-  _prepCanvas (options: MapOptions, canvas: HTMLCanvasElement) {
-    this.map = new Map(options, canvas)
+  _prepCanvas (options: MapOptions, canvas: HTMLCanvasElement, id: string) {
+    this.map = new Map(options, canvas, id)
   }
 }
 

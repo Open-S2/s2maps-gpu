@@ -1,5 +1,4 @@
 // @flow
-
 export interface Projection {
   translation?: [number, number, number];
   zTranslateStart?: number;

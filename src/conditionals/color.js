@@ -1,5 +1,5 @@
 // @flow
-import colorParser from './colorParser'
+const colorParser = require('./colorParser').default
 
 // for color interpolation, we should use the LCH color space
 // https://www.alanzucconi.com/2016/01/06/colour-interpolation/4/
@@ -7,10 +7,10 @@ import colorParser from './colorParser'
 // hsv is a good secondary. Saved for posterity.
 
 // color is designed to parse varying inputs
-export default class Color {
+class Color {
   val = [0, 0, 0, 0]
   type = 'rgb'
-  constructor (x: number, y: number, z: number, a: number, type: string) {
+  constructor (x, y, z, a, type) {
     if (typeof x === 'string') {
       const [type, val] = colorParser(x)
       this.type = type
@@ -23,13 +23,12 @@ export default class Color {
     this.toLCH()
   }
 
-  getRGB (): [number, number, number, number] {
+  getRGB () {
     this.toRGB()
     return [this.val[0] / 255, this.val[1] / 255, this.val[2] / 255, this.val[3]]
   }
 
-  toHSV (): Color {
-    if (this.type === 'hsv') return this
+  toHSV () {
     // potentially swing back
     if (this.type === 'lch') this.LCH2LAB()
     if (this.type === 'lab') this.LAB2RGB()
@@ -39,8 +38,7 @@ export default class Color {
     return this
   }
 
-  toRGB (): Color {
-    if (this.type === 'rgb') return this
+  toRGB () {
     // potentially swing back
     if (this.type === 'hsv') this.HSV2RGB()
     // lch goes to midpoint lab
@@ -51,8 +49,7 @@ export default class Color {
     return this
   }
 
-  toLCH (): Color {
-    if (this.type === 'lch') return this
+  toLCH () {
     // if outside variables, bring them back to a starting point
     if (this.type === 'hsv') this.HSV2RGB()
     // step 1: rgb to lab
@@ -132,7 +129,6 @@ export default class Color {
         if (r === max) h = (g - b) / delta
         if (g === max) h = 2 + (b - r) / delta
         if (b === max) h = 4 + (r - g) / delta
-        if (!h) h = 0
         h *= 60
         if (h < 0) h += 360
       }
@@ -165,14 +161,13 @@ export default class Color {
         case 3: this.val = [p, q, v, a]; break
         case 4: this.val = [t, p, v, a]; break
         case 5: this.val = [v, p, q, a]; break
-        default: this.val = [v, t, p, a]; break
       }
     }
     this.type = 'rgb'
   }
 
   // take two hsv OR  values and return an rgb Color
-  static interpolate (color1: Color, color2: Color, t: number) {
+  static interpolate (color1, color2, t) {
     if (color1.type !== color2.type) return new Color(color1.val[0], color1.val[1], color1.val[2], color1.val[3], color1.type)
     // prep variables
     let sat, hue, lbv, dh, alpha
@@ -186,12 +181,12 @@ export default class Color {
       hue = hue0 + t * dh
     } else if (!isNaN(hue0)) {
       hue = hue0
-      if (lbv1 === 1 || lbv1 === 0) sat = sat0
+      if (lbv1 == 1 || lbv1 == 0) sat = sat0
     } else if (!isNaN(hue1)) {
       hue = hue1
-      if (lbv0 === 1 || lbv0 === 0) sat = sat1
+      if (lbv0 == 1 || lbv0 == 0) sat = sat1
     } else {
-      hue = 0
+      hue = null
     }
     // saturation
     if (!sat) sat = sat0 + t * (sat1 - sat0)
@@ -232,3 +227,5 @@ const rgb2xyz = (r,g,b) => {
   const z = xyz_lab((0.0193339 * r + 0.1191920 * g + 0.9503041 * b) / 1.088830)
   return [x, y, z]
 }
+
+exports.default = Color

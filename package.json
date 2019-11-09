@@ -19,7 +19,7 @@
     "delaunator": "^4.0.0",
     "dotenv": "6.2.0",
     "dotenv-expand": "4.2.0",
-    "earclip": "^0.3.9",
+    "earclip": "^0.3.10",
     "earcut": "^2.1.5",
     "eslint": "^5.16.0",
     "eslint-config-react-app": "^4.0.1",
@@ -30,6 +30,7 @@
     "eslint-plugin-react": "7.12.4",
     "eslint-plugin-react-hooks": "^1.5.0",
     "file-loader": "3.0.1",
+    "font-gl": "^0.2.3",
     "fs-extra": "7.0.1",
     "gl-matrix": "^3.1.0",
     "gl-vignette-background": "^2.0.1",
@@ -60,6 +61,7 @@
     "sass-loader": "7.1.0",
     "semver": "6.0.0",
     "style-loader": "0.23.1",
+    "svg-gl": "^0.4.1",
     "terser-webpack-plugin": "1.2.3",
     "ts-pnp": "1.1.2",
     "turf": "^3.0.14",
@@ -142,6 +144,7 @@
   },
   "devDependencies": {
     "@babel/preset-flow": "^7.0.0",
+    "chroma-js": "^2.0.6",
     "raw-loader": "^3.1.0",
     "worker-loader": "^2.0.0"
   },

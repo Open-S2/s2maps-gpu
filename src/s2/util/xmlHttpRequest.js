@@ -8,7 +8,7 @@ export default function requestData (path: string, extension: Extension, callbac
     callback(oReq.response)
   }
   oReq.onerror = () => { callback(null) }
-  oReq.open('GET', `${path}.${extention}`)
+  oReq.open('GET', `${path}.${extension}`)
   oReq.responseType = getResposeType(extension)
   oReq.send()
 }

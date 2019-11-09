@@ -211,18 +211,13 @@ export function rotateZ (m: Float32Array, rad: number): Float32Array {
   return m
 }
 
-export function multiplyVector (a: Float32Array | Array<number>, b: Float32Array | Array<number>): Array<number> {
+export function multiplyVector (matrix: Float32Array | Array<number>, vector: Float32Array | Array<number>): Array<number> {
   const out = []
 
-  // out.push(a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3])
-  // out.push(a[4] * b[0] + a[5] * b[1] + a[6] * b[2] + a[7] * b[3])
-  // out.push(a[8] * b[0] + a[9] * b[1] + a[10] * b[2] + a[11] * b[3])
-  // out.push(a[12] * b[0] + a[13] * b[1] + a[14] * b[2] + a[15] * b[3])
-
-  out.push(a[0] * b[0] + a[4] * b[1] + a[8] * b[2] + a[12] * b[3])
-  out.push(a[1] * b[0] + a[5] * b[1] + a[9] * b[2] + a[13] * b[3])
-  out.push(a[2] * b[0] + a[6] * b[1] + a[10] * b[2] + a[14] * b[3])
-  out.push(a[3] * b[0] + a[7] * b[1] + a[11] * b[2] + a[15] * b[3])
+  out.push(matrix[0] * vector[0] + matrix[4] * vector[1] + matrix[8] * vector[2] + matrix[12])
+  out.push(matrix[1] * vector[0] + matrix[5] * vector[1] + matrix[9] * vector[2] + matrix[13])
+  out.push(matrix[2] * vector[0] + matrix[6] * vector[1] + matrix[10] * vector[2] + matrix[14])
+  out.push(matrix[3] * vector[0] + matrix[7] * vector[1] + matrix[11] * vector[2] + matrix[15])
 
   return out
 }
@@ -279,4 +274,10 @@ export function multiply (a: Float32Array | Array<number>, b: Float32Array | Arr
   a[15] = b0*a03 + b1*a13 + b2*a23 + b3*a33
 
   return a
+}
+
+export function project (matrix: Float32Array | Array<number>, vector: Float32Array | Array<number>): Array<number> {
+  const mul = multiplyVector(matrix, vector)
+
+  return [mul[0] / mul[3], mul[1] / mul[3], mul[2] / mul[3]]
 }

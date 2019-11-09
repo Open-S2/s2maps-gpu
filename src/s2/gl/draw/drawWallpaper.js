@@ -12,6 +12,9 @@ export default function drawWallpaper (painter: Painter, wallpaper: Wallpaper) {
   if (!wallpaperProgram) return
   // now we draw
   gl.useProgram(wallpaperProgram.glProgram)
+  // bind the vao
+  painter.context.bindVertexArray(wallpaperProgram.vao)
+  // set new uniforms should we need to
   const uniforms: null | WallpaperUniforms = wallpaper.getUniforms()
   if (uniforms) {
     gl.uniform2fv(wallpaperProgram.uScale, uniforms.uScale)
@@ -20,5 +23,6 @@ export default function drawWallpaper (painter: Painter, wallpaper: Wallpaper) {
     gl.uniform3fv(wallpaperProgram.fade2Color, uniforms.fade2Color)
     gl.uniform3fv(wallpaperProgram.haloColor, uniforms.haloColor)
   }
+  wallpaper.dirty = false
   gl.drawArrays(gl.TRIANGLE_FAN, 0, 4)
 }

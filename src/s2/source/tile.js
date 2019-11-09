@@ -1,34 +1,109 @@
 // @flow
 import { S2Point, bboxST } from 's2projection' // https://github.com/Regia-Corporation/s2projection
-import type { Face } from 's2projection' // https://github.com/Regia-Corporation/s2projection/blob/master/src/S2Projection.js#L4
-import Style from '../style'
+import { Painter } from '../gl'
 
+import type { Face } from 's2projection' // https://github.com/Regia-Corporation/s2projection/blob/master/src/S2Projection.js#L4
 import type { StyleLayers } from '../style'
+
+// The layer guide helps identify how to properly draw from the vertexBuffer/vertexIndex stack.
+// All layers are merged into one VAO/indexBuffer/vertexBuffer set. This reduces complexity and improves draw speed.
+// To ensure we draw in order and know the index ranges exist per layer, we maintain a 'Layer Guide'.
+// the properties object is for dataConditions and dataRanges.
+type LayerGuide = {
+  layerID: number,
+  count: number,
+  offset: number,
+  type: string,
+  properties: Object
+}
 
 // tiles are designed to create mask geometry and store prebuilt layer data handed off by the worker pool
 // whenever rerenders are called, they will access these tile objects for the layer data / vaos
 // before managing sources asyncronously, a tile needs to synchronously place spherical background
-// data to ensure we get no awkward visuals
+// data to ensure we get no awkward visuals.
+// TODO: Every tile needs access to the painters context for creating and deleting the WebGLBuffer and WebGLVertexArrayObject
 export default class Tile {
+  id: number
   face: Face
   zoom: number
   x: number
   y: number
-  layers: StyleLayers
-  center: Float32Array = new Float32Array(4) // [number (x), number (y), number (z), 1 (w)]
+  size: number
+  center: [number, number, number] = [0, 0, 0] // [number (x), number (y), number (z)]
   bbox: [number, number, number, number]
+  extent: number = 4096
   division: number
-  id: number
-  constructor (face: number, zoom: number, x: number, y: number, hash: number) {
+  vertices: Array<number> = []
+  indices: Array<number> = []
+  layersGuide: Array<LayerGuide> = []
+  vertexBuffer: WebGLBuffer
+  indexBuffer: WebGLBuffer
+  vao: WebGLVertexArrayObject
+  painter: Painter
+  constructor (face: number, zoom: number, x: number, y: number, hash: number, painter: Painter, size?: number = 512) {
     this.face = face
     this.zoom = zoom
     this.x = x
     this.y = y
     this.id = hash
+    this.painter = painter
+    this.size = size
     this.bbox = bboxST(x, y, zoom)
     this._createCenter()
     this._createDivision()
     this._buildMaskGeometry()
+  }
+
+  injectSourceData (vertexArray: Float32Array, indexArray: Uint32Array, layerGuideArray: Uint32Array, layers: StyleLayers) {
+    // Remember one tile can have multiple sources. So we need to potentially merge data from seperate worker submissions
+    // This means we need to offset the indexArray to the current vertices size, and update the layer guide with the new
+    // data along with the new offset for draw calls.
+    const verticesOffset = this.vertices.length / 3
+    const indicesOffset = this.indices.length
+    // store the vertices
+    this.vertices.push(...vertexArray)
+    // store the indices with the appropriate vertex offset
+    for (let i = 0, il = indexArray.length; i < il; i++) this.indices.push(indexArray[i] + verticesOffset)
+    // we work off the layerGuideArray, adding to the buffer as we go
+    const ll = layerGuideArray.length
+    let i = 0
+    while (i < ll) {
+      // grab the size, layerID, count, and offset, and update the index
+      const [layerID, count, offset, size] = layerGuideArray.slice(i, i + 4)
+      i += 4
+      // grab the layer and encodings and update index by size
+      const layer = layers[layerID]
+      const encodings = (size) ? [...layerGuideArray.slice(i, i + size)] : []
+      i += size
+      // create the layerGuide
+      const layerGuide = {
+        layerID,
+        count,
+        offset: offset + indicesOffset,
+        type: layer.type,
+        properties: this._parseProperties(layer, encodings)
+      }
+      // store the layerGuide
+      this.layersGuide.push(layerGuide)
+    }
+    // because sources may be utilized in an out of order fashion inside the style.layers property,
+    // but come in linearly, we need to sort.
+    this.layersGuide.sort((a, b) => a.layerID - b.layerID)
+    // lastly rebuild the vao
+    this.painter.buildVAO(this)
+  }
+
+  _parseProperties(layer: StyleLayers, encodings: Array<number>) {
+    const properties = {}
+    // parse layouts given encoding
+    for (const l in layer.layout) {
+      properties[l] = layer.layout[l](encodings)
+    }
+    // parse paints given encoding
+    for (const p in layer.paint) {
+      properties[p] = layer.paint[p](encodings)
+    }
+    return properties
   }
 
   _createCenter () {
@@ -42,16 +117,14 @@ export default class Tile {
     this.center[0] = (topRight.x + bottomLeft.x) / 2
     this.center[1] = (topRight.y + bottomLeft.y) / 2
     this.center[2] = (topRight.z + bottomLeft.z) / 2
-    this.center[3] = 1
   }
 
   _createDivision () {
     // the zoom determines the number of divisions necessary to maintain a visually
     // asthetic spherical shape. As we zoom in, the tiles are practically flat,
     // so division is less useful
-    // y = mx + b
     const z = Math.min(this.zoom, 12) // we want 0 divisions once we hit zoom 12
-    this.division = Math.max(Math.floor(-64 / 12 * z) + 64, 1)
+    this.division = Math.max(Math.floor(-32 / 12 * z) + 32, 1)
   }
 
   _buildMaskGeometry () {
@@ -86,5 +159,10 @@ export default class Tile {
         }
       }
     }
+    // create our initial vertices and indices:
+    this.vertices = vertices
+    this.indices = indices
+    this.layersGuide.push({ layerID: -1, count: this.indices.length, offset: 0, type: 'fill', properties: {} })
+    this.painter.buildVAO(this)
   }
 }

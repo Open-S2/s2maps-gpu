@@ -1,23 +1,23 @@
 // @flow
+import { degToRad } from 's2projection'
 import * as mat4 from '../../../util/mat4'
 import Projector from './projector'
 
-import type Projection from './projection'
-
 export type OrthographicConfig = {
-  translation: [number, number, number],
-  maxLatRotation: number,
-  zoom: number,
-  lon: number,
-  lat: number,
-  scale: number,
-  zNear: number,
-  zFar: number,
-  width: number,
-  height: number
+  translation?: [number, number, number],
+  maxLatRotation?: number,
+  zoom?: number,
+  lon?: number,
+  lat?: number,
+  scale?: number,
+  zNear?: number,
+  zFar?: number,
+  width?: number,
+  height?: number,
+  multiplier?: number
 }
 
-export default class OrthographicProjection extends Projector implements Projection {
+export default class OrthographicProjection extends Projector {
   constructor (config?: OrthographicConfig = {}) {
     super(config)
   }

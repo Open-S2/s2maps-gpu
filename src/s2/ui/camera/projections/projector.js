@@ -1,20 +1,23 @@
 // @flow
 import * as mat4 from '../../../util/mat4'
-import { S2Point, tileXYFromSTZoom, bboxST, updateFace, tileHash, degToRad } from 's2projection'
+import { S2Point, tileXYFromSTZoom, bboxST, updateFace, tileHash } from 's2projection'
+
+import type { Projection } from './projection'
 
 export type ProjectionConfig = {
-  translation: [number, number, number],
-  zoom: number,
-  lon: number,
-  lat: number,
-  scale: number,
-  zNear: number,
-  zFar: number,
-  width: number,
-  height: number
+  translation?: [number, number, number],
+  maxLatRotation?: number,
+  zoom?: number,
+  lon?: number,
+  lat?: number,
+  scale?: number,
+  zNear?: number,
+  zFar?: number,
+  width?: number,
+  height?: number
 }
 
-export default class Projector {
+export default class Projector implements Projection {
   translation: [number, number, number] = [0, 0, -10] // only z should change for visual effects
   maxLatRotation: number = 80 // 80 deg
   zoom: number = 0
@@ -25,6 +28,7 @@ export default class Projector {
   zFar: number = 100 // static; just for draw calls
   width: number = 400 // default canvas width
   height: number = 300 // default canvas height
+  multiplier: number = 1
   matrices: { [number | string]: Float32Array } = {}
   dirty: boolean = true
   constructor (config?: ProjectionConfig = {}) {
@@ -52,9 +56,9 @@ export default class Projector {
     this.onZoom()
   }
 
-  onMove (lon?: number = 0, lat?: number = 0) {
-    this.lon += lon
-    this.lat += lat
+  onMove (movementX?: number = 0, movementY?: number = 0, multiplierX?: number = 3, multiplierY?: number = 3) {
+    this.lon += movementX / (multiplierX * (2 << this.zoom))
+    this.lat += movementY / (multiplierY * (2 << this.zoom))
     // check that we don't over move on the x axis
     if (this.lat > this.maxLatRotation) { this.lat = this.maxLatRotation }
     else if (this.lat < -this.maxLatRotation) { this.lat = -this.maxLatRotation }
@@ -82,7 +86,7 @@ export default class Projector {
     // grab the first tile while we prep
     let point = S2Point.fromLonLat(-this.lon, this.lat)
     let [face, s, t] = point.toST()
-    if (s < 0 || s === 1 || t < 0 || t === 1) [face, s, t] = updateTile(face, s, t);
+    if (s < 0 || s === 1 || t < 0 || t === 1) [face, s, t] = updateFace(face, s, t);
     let [x, y] = tileXYFromSTZoom(s, t, zoomLevel)
     let stBbox = bboxST(x, y, zoomLevel)
     let hash = tileHash(face, zoomLevel, x, y)
@@ -141,7 +145,7 @@ function addSuroundingTiles (face, zoomLevel, x, y, tileSize, checkList, checked
 // first check the face, x, y are correct.. update them if out of bounds
 // if the we have not checked the tile yet, we add it to checked tiles and the checkList
 function findTile (face, zoom, x, y, tileSize, checkList, checkedTiles) {
-  while (x < 0 || x === tileSize || y < 0 || y === tileSize) [face, x, y] = updateTile(face, x, y, tileSize)
+  while (x < 0 || x === tileSize || y < 0 || y === tileSize) [face, x, y] = updateFace(face, x, y, tileSize)
   const hash = tileHash(face, zoom, x, y)
   if (!checkedTiles.has(hash)) {
     checkedTiles.add(hash)

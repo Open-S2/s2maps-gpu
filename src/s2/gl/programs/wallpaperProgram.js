@@ -1,18 +1,21 @@
 // @flow
-import { WebGL2Context, WebGLContext } from '../contexts'
 import Program from './program'
 
 import wallpaperVertex from '../../shaders/wallpaper.vertex.glsl'
 import wallpaperFragment from '../../shaders/wallpaper.fragment.glsl'
 
+import type { Context } from '../contexts'
+
 export default class WallpaperProgram extends Program {
+  vao: VertexArrayObject
+  vertexBuffer: WebGLVertexArrayObject
   aPos: GLint // 'a_pos' vec4 attribute
   uScale: GLint // 'u_scale' vec2 uniform
   backgroundColor: GLint
   haloColor: GLint
   fade1Color: GLint
   fade2Color: GLint
-  constructor (context: WebGL2Context | WebGLContext) {
+  constructor (context: Context) {
     // get gl from context
     const { gl } = context
     // upgrade
@@ -26,6 +29,8 @@ export default class WallpaperProgram extends Program {
     this.fade2Color = gl.getUniformLocation(this.glProgram, 'fade2Color')
     // create a vertex array object
     this.vao = context.createVertexArray()
+    // bind the vao so we can work on it
+    context.bindVertexArray(this.vao)
     // Create a vertex buffer
     this.vertexBuffer = gl.createBuffer()
     // Bind it to ARRAY_BUFFER (think of it as ARRAY_BUFFER = vertexBuffer)

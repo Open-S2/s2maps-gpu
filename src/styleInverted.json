@@ -13,7 +13,7 @@
     "halo": "rgb(242, 255, 255)"
   },
   "sphere-background": {
-    "background-color": "rgb(170, 218, 255)"
+    "background-color": "rgb(244, 239, 226)"
   },
   "layers": [
     {
@@ -26,7 +26,7 @@
       "maxzoom": 5,
       "layout": {},
       "paint": {
-        "color": "rgb(244, 239, 226)"
+        "color": "rgb(170, 218, 255)"
       }
     }
   ]

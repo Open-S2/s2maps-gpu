@@ -2,7 +2,7 @@
 
 // Standard design to build a source object
 export interface Source {
-  
+
   //
   // layerIds: Array<string>;
   // hasPattern: boolean;

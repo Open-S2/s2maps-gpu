@@ -1,5 +1,4 @@
 #version 300 es
-
 precision mediump float;
 
 // float sqrt2 = 1.4142135623730951;

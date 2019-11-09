@@ -1,26 +1,25 @@
 // @flow
+import { degToRad } from 's2projection'
 import * as mat4 from '../../../util/mat4'
 import Projector from './projector'
 
-import type Projection from './projection'
-
 export type BlendConfig = {
-  translation: [number, number, number],
-  zTranslateStart: number,
-  zTranslateEnd: number,
-  zoomEnd: number,
-  maxLatRotation: number,
-  zoom: number,
-  lon: number,
-  lat: number,
-  scale: number,
-  zNear: number,
-  zFar: number,
-  width: number,
-  height: number
+  translation?: [number, number, number],
+  zTranslateStart?: number,
+  zTranslateEnd?: number,
+  zoomEnd?: number,
+  maxLatRotation?: number,
+  zoom?: number,
+  lon?: number,
+  lat?: number,
+  scale?: number,
+  zNear?: number,
+  zFar?: number,
+  width?: number,
+  height?: number
 }
 
-export default class BlendProjection extends Projector implements Projection {
+export default class BlendProjection extends Projector {
   zTranslateStart: number = -10
   zTranslateEnd: number = -3
   zoomEnd: number = 2

@@ -1,18 +1,19 @@
 // @flow
 
 export default class Context {
-  gl: WebGLRenderingContext
-  constructor (context: WebGLRenderingContext) {
+  gl: WebGLRenderingContext | WebGL2RenderingContext
+  constructor (context: WebGLRenderingContext | WebGL2RenderingContext) {
     this.gl = context
+  }
+
+  clearScene () {
+    this.gl.clear(this.gl.DEPTH_BUFFER_BIT | this.gl.STENCIL_BUFFER_BIT)
+    this.clearColor()
   }
 
   clearColor () {
     this.gl.clearColor(0, 0, 0, 0)
     this.gl.clear(this.gl.COLOR_BUFFER_BIT)
-  }
-
-  clearScene () {
-    this.gl.clear(this.gl.DEPTH_BUFFER_BIT | this.gl.STENCIL_BUFFER_BIT)
   }
 
   enableDepthTest () {
@@ -56,5 +57,11 @@ export default class Context {
     this.gl.clearStencil(0x0)
   	this.gl.stencilMask(0xFF)
     this.gl.clear(this.gl.STENCIL_BUFFER_BIT)
+  }
+
+  cleanup () {
+    this.bindVertexArray(null)
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null)
+    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, null)
   }
 }

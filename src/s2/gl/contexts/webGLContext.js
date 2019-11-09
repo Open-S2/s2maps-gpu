@@ -8,4 +8,12 @@ export default class WebGLContext extends Context {
   createVertexArray (): WebGLVertexArrayObject {
     // TODO: VAO's are not naturally part of webgl
   }
+
+  bindVertexArray (vao: WebGLVertexArrayObject) {
+    // TODO: VAO's are not naturally part of webgl
+  }
+
+  deleteVertexArray (vao: WebGLVertexArrayObject) {
+    // TODO: VAO's are not naturally part of webgl
+  }
 }
