@@ -214,7 +214,7 @@ export default class TileWorker {
       const indexBuffer = new Uint32Array(indices).buffer
       const layerGuideBuffer = new Uint32Array(layerGuide).buffer
       // Upon encoding, send back to GlobalWorkerPool.
-      postMessage({ mapID, type: 'data', tileID: tile.hash, vertexBuffer, indexBuffer, layerGuideBuffer }, [vertexBuffer, indexBuffer, layerGuideBuffer])
+      postMessage({ mapID, type: 'data', source: sourceName, tileID: tile.hash, vertexBuffer, indexBuffer, layerGuideBuffer }, [vertexBuffer, indexBuffer, layerGuideBuffer])
     }
   }
 

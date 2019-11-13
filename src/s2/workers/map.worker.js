@@ -9,11 +9,12 @@ class MapWorker {
   onMessage ({ data }) {
     const { type } = data
     if (type === 'canvas') this._prepCanvas(data.options, data.canvas, data.id)
-    if (type === 'resize') { this.map.resize() }
-    if (type === 'data') this.map.injectSourceData(data.tileID, data.vertexBuffer, data.indexBuffer, data.layerGuideBuffer)
+    if (type === 'resize') { this.map.resize(data.width, data.height) }
+    if (type === 'data') this.map.injectSourceData(data.source, data.tileID, data.vertexBuffer, data.indexBuffer, data.layerGuideBuffer)
   }
 
   _prepCanvas (options: MapOptions, canvas: HTMLCanvasElement, id: string) {
+    options.webworker = true
     this.map = new Map(options, canvas, id)
   }
 }

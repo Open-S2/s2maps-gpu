@@ -1,4 +1,5 @@
 // @flow
+
 export interface Projection {
   translation?: [number, number, number];
   zTranslateStart?: number;
@@ -17,6 +18,7 @@ export interface Projection {
   onZoom(zoom: number): null;
   setLonLat(lon: number, lat: number): null;
   onMove(rotation: [number, number, number]): null;
-  getMatrix(tileSize: number): Float32Array;
+  getMatrixAtSize(size: number): Float32Array;
+  getMatrix(tile: Tile): Float32Array;
   getTilesInView(): Array<[number, number, number, number, number]>;
 }

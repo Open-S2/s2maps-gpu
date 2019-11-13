@@ -26,7 +26,7 @@ export default class TileCache extends Map<number, Tile> {
   getBatch (tileHashes: Array<number>): Array<Tile> {
     const tiles: Array<Tile> = []
     for (const tileHash of tileHashes) {
-      tiles.push(this.get(tileHash))
+      if (this.has(tileHash)) tiles.push(this.get(tileHash))
     }
     return tiles
   }

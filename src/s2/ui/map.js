@@ -9,10 +9,13 @@ import type { ProjectionType } from './camera/projections'
 export type MapOptions = {
   container: HTMLElement,
   interactive?: boolean,
-  style: Style | Object | string,
+  style: Object | string,
   projection?: ProjectionType,
   scrollZoom?: boolean,
-  canvasMultiplier?: number
+  canvasMultiplier?: number,
+  canvasWidth?: number, // incase the map is a webworker, this value will be added to the options
+  canvasHeight?: number, // incase the map is a webworker, this value will be added to the options
+  webworker?: boolean
 }
 
 type ScrollEvent = SyntheticEvent<Object>
@@ -22,6 +25,7 @@ export default class Map extends Camera {
   _canvas: HTMLCanvasElement
   _interactive: boolean
   _scrollZoom: boolean
+  zooming: setTimeout
   dragPan: DragPan
   constructor (options: MapOptions, canvas: HTMLCanvasElement, id: string) {
     // setup default variables
@@ -32,18 +36,18 @@ export default class Map extends Camera {
     this._interactive = options.interactive || true
     this._scrollZoom = options.scrollZoom || true
     // now we setup canvas
-    this._setupCanvas()
+    this._setupCanvas(options)
     // now that we have a canvas, prep the camera's painter
     this.painter = new Painter(this._canvas, options)
     // setup the style
-    this.style = new Style(options.style, this)
+    this.style = new Style(options, this)
     // now that we have a painter and style object, let's create the initial scene
     this._setupInitialScene()
     // render our first pass
     this._render()
   }
 
-  _setupCanvas () {
+  _setupCanvas (options: MapOptions) {
     // setup listeners
     this._canvas.addEventListener('webglcontextlost', this._contextLost, false)
     this._canvas.addEventListener('webglcontextrestored', this._contextRestored, false)
@@ -62,22 +66,36 @@ export default class Map extends Camera {
       this.dragPan.addEventListener('click', this._onClick.bind(this))
     }
     // setup camera
-    this.resizeCamera(this._canvas.clientWidth, this._canvas.clientHeight)
+    if (options.canvasWidth && options.canvasHeight) this.resizeCamera(options.canvasWidth, options.canvasHeight)
+    else this.resizeCamera(this._canvas.clientWidth, this._canvas.clientHeight)
   }
 
   getCanvas (): HTMLCanvasElement {
     return this._canvas
   }
 
-  resize () {
-    this.resizeCamera(this._canvas.clientWidth, this._canvas.clientHeight)
+  resize (width?: number, height?: number) {
+    if (width && height) this.resizeCamera(width, height)
+    else this.resizeCamera(this._canvas.clientWidth, this._canvas.clientHeight)
     this._render()
   }
 
   _onScroll (e: ScrollEvent) {
-    if (this._scrollZoom) e.preventDefault()
-    // update camera
-    this._onZoom(e.wheelDeltaY)
+    e.preventDefault()
+    if (this.dragPan.active) this.dragPan.clear()
+    const rect = this._canvas.getBoundingClientRect()
+    const { clientX, clientY, wheelDeltaY } = e
+    // manage a timeout for updating the scene when user is done zooming
+    if (this.zooming) clearTimeout(this.zooming)
+    this.zooming = setTimeout(() => {
+      this.zooming = null
+      this._render()
+    }, 150)
+    // update projection
+    this.projection.onZoom(wheelDeltaY, clientX - rect.left, clientY - rect.top)
+    // const update = this.projection.onZoom(wheelDeltaY, clientX - rect.left, clientY - rect.top)
+    // if (update) this._render(false)
+    // else this._render()
     this._render()
   }
 
@@ -91,6 +109,13 @@ export default class Map extends Camera {
 
   _onMovement (e: Event) {
     const { movementX, movementY } = e.target
+    // manage a timeout
+    if (this.moving) clearTimeout(this.moving)
+    this.moving = setTimeout(() => {
+      this.moving = null
+      this._render()
+    }, 150)
+    // update projection
     this.projection.onMove(movementX, movementY)
     this._render()
   }
@@ -102,8 +127,10 @@ export default class Map extends Camera {
   swipeAnimation (now: number) {
     const [newMovementX, newMovementY, time] = this.dragPan.getNextFrame(now)
     this.projection.onMove(newMovementX, newMovementY, 6, 6)
-    this._render()
-    if (time) requestAnimationFrame(this.swipeAnimation.bind(this))
+    if (time) {
+      this._render()
+      requestAnimationFrame(this.swipeAnimation.bind(this))
+    }
   }
 
   _onClick (e: Event) {

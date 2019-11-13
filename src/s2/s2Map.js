@@ -67,6 +67,8 @@ export default class S2Map {
       this._offscreen = true
       this.map = new Worker('./workers/map.worker.js', { type: 'module' })
       this.map.onmessage = this._mapMessage.bind(this)
+      options.canvasWidth = this._container.clientWidth
+      options.canvasHeight = this._container.clientHeight
       this.map.postMessage({ type: 'canvas', options, canvas: offscreen, id: this.id }, [offscreen])
     } else { this.map = new Map(options, canvas, this.id) }
   }
@@ -82,7 +84,11 @@ export default class S2Map {
 
   _resize () {
     // rebuild the proper width and height using the container as a guide
-    if (this._offscreen) this.map.postMessage({ type: 'resize' })
+    if (this._offscreen) this.map.postMessage({
+      type: 'resize',
+      width: this._canvasContainer.clientWidth,
+      height: this._canvasContainer.clientHeight
+    })
     else this.map.resize()
   }
 
@@ -99,11 +105,11 @@ export default class S2Map {
     return this._canvasContainer
   }
 
-  injectSourceData (tileID: string, vertexBuffer: ArrayBuffer, indexBuffer: ArrayBuffer, layerGuideBuffer: ArrayBuffer) {
+  injectSourceData (source: string, tileID: string, vertexBuffer: ArrayBuffer, indexBuffer: ArrayBuffer, layerGuideBuffer: ArrayBuffer) {
     if (this._offscreen) {
-      this.map.postMessage({ type: 'data', tileID, vertexBuffer, indexBuffer, layerGuideBuffer }, [vertexBuffer, indexBuffer, layerGuideBuffer])
+      this.map.postMessage({ type: 'data', source, tileID, vertexBuffer, indexBuffer, layerGuideBuffer }, [vertexBuffer, indexBuffer, layerGuideBuffer])
     } else {
-      this.map.injectSourceData(tileID, vertexBuffer, indexBuffer, layerGuideBuffer)
+      this.map.injectSourceData(source, tileID, vertexBuffer, indexBuffer, layerGuideBuffer)
     }
   }
 }

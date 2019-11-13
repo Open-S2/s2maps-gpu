@@ -20,24 +20,21 @@ export default class Camera {
   tileCache: TileCache
   tilesInView: Array<number> = [] // hash id's of the tiles
   constructor (options: MapOptions) {
-    this._createProjection(options.projection || 'blend', options.canvasMultiplier)
+    this._createProjection(options)
     this.tileCache = new TileCache()
   }
 
-  _onZoom (delta: number) {
-    this.projection.onZoom(delta)
-  }
-
   // TODO
-  _createProjection (projection: ProjectionType, multiplier?: number = 1) {
+  _createProjection (options: MapOptions) {
+    let { projection } = options
+    if (!projection) projection = 'blend'
     if (projection === 'persp' || projection === 'perspective') {
-      this.projection = new OrthographicProjection()
+      this.projection = new OrthographicProjection(options)
     } else if (projection === 'blend' || projection === 'orthographicPerspective') {
-      this.projection = new BlendProjection()
+      this.projection = new BlendProjection(options)
     } else {
-      this.projection = new OrthographicProjection()
+      this.projection = new OrthographicProjection(options)
     }
-    this.projection.multiplier = multiplier
   }
 
   resizeCamera (width: number, height: number) {
@@ -49,8 +46,8 @@ export default class Camera {
     this.wallpaper = new Wallpaper(this.style, this.projection)
   }
 
-  _getTiles () {
-    if (this.projection.dirty) {
+  _getTiles (updateTiles: boolean) {
+    if (updateTiles && this.projection.dirty) {
       const newTiles = []
       // update tiles in view
       this.tilesInView = this.projection.getTilesInView()
@@ -58,7 +55,13 @@ export default class Camera {
       for (const tile of this.tilesInView) {
         const [face, zoom, x, y, hash] = tile
         if (!this.tileCache.has(hash)) {
-          const newTile = new Tile(face, zoom, x, y, hash, this.painter)
+          // tile not found, so we create it
+          const newTile = new Tile(face, zoom, x, y, hash)
+          // inject parent or children data if they exist
+          newTile.injectParentOrChildren(this.tileCache)
+          // build the VAO
+          this.painter.buildVAO(newTile)
+          // store the tile
           this.tileCache.set(hash, newTile)
           newTiles.push(newTile)
         }
@@ -69,18 +72,20 @@ export default class Camera {
     return this.tileCache.getBatch(this.tilesInView.map(tArr => tArr[4]))
   }
 
-  injectSourceData (tileID: number, vertexBuffer: ArrayBuffer, indexBuffer: ArrayBuffer, layerGuideBuffer: ArrayBuffer) {
+  injectSourceData (source: string, tileID: number, vertexBuffer: ArrayBuffer, indexBuffer: ArrayBuffer, layerGuideBuffer: ArrayBuffer) {
     if (this.tileCache.has(tileID)) {
       const tile = this.tileCache.get(tileID)
-      tile.injectSourceData(new Float32Array(vertexBuffer), new Uint32Array(indexBuffer), new Uint32Array(layerGuideBuffer), this.style.layers)
+      tile.injectSourceData(source, new Float32Array(vertexBuffer), new Uint32Array(indexBuffer), new Uint32Array(layerGuideBuffer), this.style.layers)
+      // build the VAO
+      this.painter.buildVAO(tile)
     }
     // re-render
     this._render()
   }
 
-  _render () {
+  _render (updateTiles?: boolean = true) {
     // prep tiles
-    const tiles = this._getTiles()
+    const tiles = this._getTiles(updateTiles)
     // paint scene
     this.painter.paint(this.wallpaper, this.projection, this.style, tiles)
     // at the end of a scene render, we know Projection and Style are up to date

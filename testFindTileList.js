@@ -110,7 +110,11 @@ function getTilesInView (zoom, lon, lat) {
       (topLeftProjected[0] <= 1 && topLeftProjected[0] >= -1 && topLeftProjected[1] <= 1 && topLeftProjected[1] >= -1) ||
       (topRightProjected[0] <= 1 && topRightProjected[0] >= -1 && topRightProjected[1] <= 1 && topRightProjected[1] >= -1) ||
       (bottomLeftProjected[0] <= 1 && bottomLeftProjected[0] >= -1 && bottomLeftProjected[1] <= 1 && bottomLeftProjected[1] >= -1) ||
-      (bottomRightProjected[0] <= 1 && bottomRightProjected[0] >= -1 && bottomRightProjected[1] <= 1 && bottomRightProjected[1] >= -1)
+      (bottomRightProjected[0] <= 1 && bottomRightProjected[0] >= -1 && bottomRightProjected[1] <= 1 && bottomRightProjected[1] >= -1) ||
+      boxIntersect(topLeftProjected[0], topLeftProjected[1], bottomLeftProjected[0], bottomLeftProjected[1]) || // leftLine
+      boxIntersect(bottomRightProjected[0], bottomRightProjected[1], topRightProjected[0], topRightProjected[1]) || // rightLine
+      boxIntersect(bottomLeftProjected[0], bottomLeftProjected[1], bottomRightProjected[0], bottomRightProjected[1]) || // bottomLine
+      boxIntersect(topRightProjected[0], topRightProjected[1], topLeftProjected[0], topLeftProjected[1]) // topLine
     ) {
       tiles.push([face, zoomLevel, x, y, hash])
       addSuroundingTiles(face, zoomLevel, x, y, tileSize, checkList, checkedTiles)
@@ -118,6 +122,50 @@ function getTilesInView (zoom, lon, lat) {
   } while (checkList.length)
 
   return tiles
+}
+
+function boxIntersect (x1, y1, x2, y2) {
+  // console.log('x1, y1, x2, y2', x1, y1, x2, y2)
+  if (
+    lineIntersect(x1, y1, x2, y2, -1, -1, -1, 1) || // leftLineBox
+    lineIntersect(x1, y1, x2, y2, 1, -1, 1, 1) || // rightLineBox
+    lineIntersect(x1, y1, x2, y2, -1, -1, 1, -1) || // bottomLineBox
+    lineIntersect(x1, y1, x2, y2, -1, 1, 1, 1) // topLineBox
+  ) {
+    // console.log('STORE')
+    return true
+  }
+  // console.log('REJECT')
+  return false
+}
+
+function lineIntersect (x1, y1, x2, y2, x3, y3, x4, y4) {
+  const denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)
+  if (!denom) return false
+  const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom
+  const intersectX = x1 + ua * (x2 - x1)
+  const intersectY = y1 + ua * (y2 - y1)
+  // console.log([intersectX, intersectY])
+  if (x1 > x2) {
+    if (intersectX < x2 || intersectX > x1) return false
+  } else {
+    if (intersectX > x2 || intersectX < x1) return false
+  }
+  if (y1 > y2) {
+    if (intersectY < y2 || intersectY > y1) return false
+  } else {
+    if (intersectY > y2 || intersectY < y1) return false
+  }
+  if (intersectX <= 1 && intersectX >= -1 && intersectY <= 1 && intersectY >= -1) return true
+  return false
+}
+
+function lineIntersect (x1, y1, x2, y2, x3, y3, x4, y4) {
+  const denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)
+  if (!denom) return false
+  const lambda = ((y4 - y3) * (x4 - x1) + (x3 - x4) * (y4 - y1)) / denom
+  const gamma = ((y1 - y2) * (x4 - x1) + (x2 - x1) * (y4 - y1)) / denom
+  return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1)
 }
 
 // check all 8 tiles around the current tile
@@ -143,8 +191,13 @@ function findTile(face, zoom, x, y, tileSize, checkList, checkedTiles) {
   }
 }
 
+// lat: 23.065019845499286
+// lon: 75.24004701174681
+// zoom: 1.9574999999999867
+// const tiles = getTilesInView(1.9574999999999867, 75.24004701174681, 23.065019845499286)
+
 // BUGGED
-const tiles = getTilesInView(3, 22, 40)
+const tiles = getTilesInView(2.9, 22, 40)
 // BUGGED
 // const tiles = getTilesInView(4, 90, 30)
 // const tiles = getTilesInView(1, -30, 0)

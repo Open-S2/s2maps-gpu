@@ -1,5 +1,4 @@
 // @flow
-import * as mat4 from '../util/mat4'
 import Style from '../style'
 /** CONTEXTS **/
 import { WebGL2Context, WebGLContext } from './contexts'
@@ -22,6 +21,7 @@ import { Wallpaper, Tile } from '../source'
 
 import type { MapOptions } from '../ui/map'
 import type { Projection } from '../ui/camera/projections'
+import type { LayerGuide } from '../source/tile'
 
 export default class Painter {
   _canvas: HTMLCanvasElement
@@ -140,41 +140,49 @@ export default class Painter {
     drawWallpaper(this, wallpaper)
     // for each tile, draw background & layers as necessary
     for (let tile of tiles) {
-      // grab the matrix
-      const matrix = projection.getMatrix(tile.size)
-      // compute centerEye
-      const centerEye = mat4.multiplyVector(matrix, tile.center)
-      // add eye center
-      mat4.addCenter(matrix, centerEye)
-      // run through all tiles  and paint according to layers
+      // grab the matrix (duplicate created)
+      const matrix = projection.getMatrix(tile)
+      // grab the layersGuide and vao from current tile
       const { layersGuide, vao } = tile
-      // bind the vao in relation to said tile
+      // bind the vao
       this.context.bindVertexArray(vao)
-      // grab the base layer for the mask and sphereBackground fill
-      const baseLayerGuide = layersGuide[0]
       // First 'layer' is the mask layer
-      drawMask(this, baseLayerGuide.count, 0, matrix)
-      // Second layer is the sphere-background layer
+      drawMask(this, tile.maskSize, 0, matrix)
+      // Second layer is the sphere-background layer should it exist
       const sphereBackground = style.sphereBackground(projection.zoom)
-      if (sphereBackground) drawFill(this, baseLayerGuide.count, 0, matrix, sphereBackground)
+      if (sphereBackground) drawFill(this, tile.maskSize, 0, matrix, sphereBackground)
       // now draw the tile according to the layers it contains
-      const lgl = layersGuide.length
-      let i = 1
-      while (i < lgl) {
-        // grab the size, layerID, count, and offset
-        let { count, offset, type, properties } = layersGuide[i]
-        // now update paint properties:
-        if (type === 'fill') {
-          const { color } = properties
-          const fillColor = (typeof color === 'function') ? color(projection.zoom) : color
-          drawFill(this, count, offset, matrix, fillColor)
-        }
-        i++
-      }
+      this.paintLayers(layersGuide, projection, vao, matrix)
       // assuming the mask has been drawn, we should tell the context to clear it
       this.context.clearStencil()
     }
     // cleanup
     this.context.cleanup()
+  }
+
+  paintLayers (layersGuide: Array<LayerGuide>, projection: Projection, currentVao: vertexAttribPointer, currentMatrix: Float32Array) {
+    let matrix = currentMatrix
+    let parentSet = false
+    for (const layer of layersGuide) {
+      const { parent, count, offset, type, attributes } = layer
+      // if a parent tile, be sure to bind the parent tiles vao
+      // rebind back to current vao and matrix when the parent is not being used (since a )
+      if (parent && !parentSet) {
+        parentSet = true
+        this.context.bindVertexArray(layer.tile.vao)
+        matrix = projection.getMatrix(layer.tile)
+      }
+      if (!parent && parentSet) {
+        parentSet = false
+        this.context.bindVertexArray(currentVao)
+        matrix = currentMatrix
+      }
+      // now update paint attributes:
+      if (type === 'fill') {
+        const { color } = attributes
+        const fillColor = (typeof color === 'function') ? color(projection.zoom) : color
+        drawFill(this, count, offset, matrix, fillColor)
+      }
+    }
   }
 }

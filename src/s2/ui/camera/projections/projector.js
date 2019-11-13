@@ -1,5 +1,6 @@
 // @flow
 import * as mat4 from '../../../util/mat4'
+import { Tile } from '../../../source'
 import { S2Point, tileXYFromSTZoom, bboxST, updateFace, tileHash } from 's2projection'
 
 import type { Projection } from './projection'
@@ -8,6 +9,7 @@ export type ProjectionConfig = {
   translation?: [number, number, number],
   maxLatRotation?: number,
   zoom?: number,
+  maxZoom?: number,
   lon?: number,
   lat?: number,
   scale?: number,
@@ -21,6 +23,7 @@ export default class Projector implements Projection {
   translation: [number, number, number] = [0, 0, -10] // only z should change for visual effects
   maxLatRotation: number = 80 // 80 deg
   zoom: number = 0
+  maxZoom: number = 22
   lon: number = 0
   lat: number = 0
   scale: number = 1 // this is always going to be between 1 and 2
@@ -29,12 +32,14 @@ export default class Projector implements Projection {
   width: number = 400 // default canvas width
   height: number = 300 // default canvas height
   multiplier: number = 1
-  matrices: { [number | string]: Float32Array } = {}
+  matrices: { [number | string]: Float32Array } = {} // key is tile.id
+  sizeMatrices: { [number | string]: Float32Array } = {} // key is tileSize
   dirty: boolean = true
   constructor (config?: ProjectionConfig = {}) {
     if (config.translation) this.translation = config.translation
     if (config.maxLatRotation) this.maxLatRotation = config.maxLatRotation
     if (config.zoom) this.zoom = config.zoom
+    if (config.maxZoom) this.maxZoom = config.maxZoom
     if (config.lon) this.lon = config.lon
     if (config.lat) this.lat = config.lat
     if (config.scale) this.scale = config.scale
@@ -42,12 +47,14 @@ export default class Projector implements Projection {
     if (config.zFar) this.zFar = config.zFar
     if (config.width) this.width = config.width
     if (config.height) this.height = config.height
+    if (config.canvasMultiplier) this.multiplier = config.canvasMultiplier
   }
 
   resize (width: number, height: number) {
     this.width = width
     this.height = height
     this.matrices = {}
+    this.sizeMatrices = {}
     this.dirty = true
   }
 
@@ -57,14 +64,15 @@ export default class Projector implements Projection {
   }
 
   onMove (movementX?: number = 0, movementY?: number = 0, multiplierX?: number = 3, multiplierY?: number = 3) {
-    this.lon += movementX / (multiplierX * (2 << this.zoom))
-    this.lat += movementY / (multiplierY * (2 << this.zoom))
+    this.lon += movementX / (multiplierX * (2 * Math.pow(2, Math.max(this.zoom, 0))))
+    this.lat += movementY / (multiplierY * (2 * Math.pow(2, Math.max(this.zoom, 0))))
     // check that we don't over move on the x axis
     if (this.lat > this.maxLatRotation) { this.lat = this.maxLatRotation }
     else if (this.lat < -this.maxLatRotation) { this.lat = -this.maxLatRotation }
     // if we hit 360, just swing back to 0
     while (this.lon >= 360) { this.lon -= 360 }
     this.matrices = {}
+    this.sizeMatrices = {}
     this.dirty = true
   }
 
@@ -74,14 +82,24 @@ export default class Projector implements Projection {
     this.onMove()
   }
 
-  getTilesInView (size?: number): Array<[number, number, number, number, number]> { // [face, zoom, x, y, hash]
+  getMatrix (tile: Tile): Float32Array {
+    if (this.matrices[tile.id]) return this.matrices[tile.id]
+    const matrix = this.matrices[tile.id] = this.getMatrixAtSize(tile.size)
+    // compute centerEye
+    const centerEye = mat4.multiplyVector(matrix, tile.center)
+    // add eye center to the matrix
+    mat4.addCenter(matrix, centerEye)
+    return matrix
+  }
+
+  getTilesInView (size?: number = 512): Array<[number, number, number, number, number]> { // [face, zoom, x, y, hash]
     if (this.zoom < 1) return [[0, 0, 0, 0, 2], [1, 0, 0, 0, 3], [2, 0, 0, 0, 4], [3, 0, 0, 0, 5], [4, 0, 0, 0, 6], [5, 0, 0, 0, 7]]
     const tiles = []
     const checkList = []
     const checkedTiles = new Set()
     const zoomLevel = this.zoom << 0
     const tileSize = 1 << zoomLevel
-    const matrix = this.getMatrix(size)
+    const matrix = this.getMatrixAtSize(size)
 
     // grab the first tile while we prep
     let point = S2Point.fromLonLat(-this.lon, this.lat)
@@ -119,7 +137,11 @@ export default class Projector implements Projection {
         (topLeftProjected[0] <= 1 && topLeftProjected[0] >= -1 && topLeftProjected[1] <= 1 && topLeftProjected[1] >= -1) ||
         (topRightProjected[0] <= 1 && topRightProjected[0] >= -1 && topRightProjected[1] <= 1 && topRightProjected[1] >= -1) ||
         (bottomLeftProjected[0] <= 1 && bottomLeftProjected[0] >= -1 && bottomLeftProjected[1] <= 1 && bottomLeftProjected[1] >= -1) ||
-        (bottomRightProjected[0] <= 1 && bottomRightProjected[0] >= -1 && bottomRightProjected[1] <= 1 && bottomRightProjected[1] >= -1)
+        (bottomRightProjected[0] <= 1 && bottomRightProjected[0] >= -1 && bottomRightProjected[1] <= 1 && bottomRightProjected[1] >= -1) ||
+        boxIntersect(topLeftProjected[0], topLeftProjected[1], bottomLeftProjected[0], bottomLeftProjected[1]) || // leftLine
+        boxIntersect(bottomRightProjected[0], bottomRightProjected[1], topRightProjected[0], topRightProjected[1]) || // rightLine
+        boxIntersect(bottomLeftProjected[0], bottomLeftProjected[1], bottomRightProjected[0], bottomRightProjected[1]) || // bottomLine
+        boxIntersect(topRightProjected[0], topRightProjected[1], topLeftProjected[0], topLeftProjected[1]) // topLine
       ) {
         tiles.push([face, zoomLevel, x, y, hash])
         addSuroundingTiles(face, zoomLevel, x, y, tileSize, checkList, checkedTiles)
@@ -151,4 +173,22 @@ function findTile (face, zoom, x, y, tileSize, checkList, checkedTiles) {
     checkedTiles.add(hash)
     checkList.push([face, x, y, hash])
   }
+}
+
+function boxIntersect (x1, y1, x2, y2) {
+  if (
+    lineIntersect(x1, y1, x2, y2, -1, -1, -1, 1) || // leftLineBox
+    lineIntersect(x1, y1, x2, y2, 1, -1, 1, 1) || // rightLineBox
+    lineIntersect(x1, y1, x2, y2, -1, -1, 1, -1) || // bottomLineBox
+    lineIntersect(x1, y1, x2, y2, -1, 1, 1, 1) // topLineBox
+  ) return true
+  return false
+}
+
+function lineIntersect (x1, y1, x2, y2, x3, y3, x4, y4) {
+  const denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)
+  if (!denom) return false
+  const lambda = ((y4 - y3) * (x4 - x1) + (x3 - x4) * (y4 - y1)) / denom
+  const gamma = ((y1 - y2) * (x4 - x1) + (x2 - x1) * (y4 - y1)) / denom
+  return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1)
 }

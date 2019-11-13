@@ -1,6 +1,6 @@
 // @flow
-import { S2Point, bboxST } from 's2projection' // https://github.com/Regia-Corporation/s2projection
-import { Painter } from '../gl'
+import { S2Point, tileHash, bboxST } from 's2projection' // https://github.com/Regia-Corporation/s2projection
+import { TileCache } from './'
 
 import type { Face } from 's2projection' // https://github.com/Regia-Corporation/s2projection/blob/master/src/S2Projection.js#L4
 import type { StyleLayers } from '../style'
@@ -8,13 +8,16 @@ import type { StyleLayers } from '../style'
 // The layer guide helps identify how to properly draw from the vertexBuffer/vertexIndex stack.
 // All layers are merged into one VAO/indexBuffer/vertexBuffer set. This reduces complexity and improves draw speed.
 // To ensure we draw in order and know the index ranges exist per layer, we maintain a 'Layer Guide'.
-// the properties object is for dataConditions and dataRanges.
-type LayerGuide = {
+// the attributes object is for dataConditions and dataRanges.
+export type LayerGuide = {
+  parent: boolean,
+  tile?: any, // should it be a parent reference
+  source: string,
   layerID: number,
   count: number,
   offset: number,
   type: string,
-  properties: Object
+  attributes: Object
 }
 
 // tiles are designed to create mask geometry and store prebuilt layer data handed off by the worker pool
@@ -36,17 +39,16 @@ export default class Tile {
   vertices: Array<number> = []
   indices: Array<number> = []
   layersGuide: Array<LayerGuide> = []
+  maskSize: number = 0
   vertexBuffer: WebGLBuffer
   indexBuffer: WebGLBuffer
   vao: WebGLVertexArrayObject
-  painter: Painter
-  constructor (face: number, zoom: number, x: number, y: number, hash: number, painter: Painter, size?: number = 512) {
+  constructor (face: number, zoom: number, x: number, y: number, hash: number, size?: number = 512) {
     this.face = face
     this.zoom = zoom
     this.x = x
     this.y = y
     this.id = hash
-    this.painter = painter
     this.size = size
     this.bbox = bboxST(x, y, zoom)
     this._createCenter()
@@ -54,10 +56,33 @@ export default class Tile {
     this._buildMaskGeometry()
   }
 
-  injectSourceData (vertexArray: Float32Array, indexArray: Uint32Array, layerGuideArray: Uint32Array, layers: StyleLayers) {
+  // find parent tile incase some source cache does not exist. Should the parent not have
+  injectParentOrChildren (tileCache: TileCache) {
+    // corner case, we are at min zoom
+    if (this.zoom === 0) return
+    // get parent hash
+    const parentHash = tileHash(this.face, this.zoom - 1, Math.floor(this.x / 2), Math.floor(this.y / 2))
+    // check if parent tile exists, if so inject
+    if (tileCache.has(parentHash)) {
+      const parent = tileCache.get(parentHash)
+      // inject references to layersGuide from each parentTile. If a layerGuide is marked parent,
+      // than it's the parents-parent and that can get messy if the user zooms in really fast, so we ignore.
+      // sort according to ID
+      for (const layerGuide of parent.layersGuide) {
+        if (!layerGuide.parent) {
+          const { source, layerID, count, offset, type, attributes } = layerGuide
+          this.layersGuide.push({ parent: true, tile: parent, source, layerID, count, offset, type, attributes })
+        }
+      }
+      this.layersGuide.sort((a, b) => a.layerID - b.layerID)
+    }
+  }
+
+  injectSourceData (source: string, vertexArray: Float32Array, indexArray: Uint32Array, layerGuideArray: Uint32Array, layers: StyleLayers) {
     // Remember one tile can have multiple sources. So we need to potentially merge data from seperate worker submissions
     // This means we need to offset the indexArray to the current vertices size, and update the layer guide with the new
     // data along with the new offset for draw calls.
+    // now we inject
     const verticesOffset = this.vertices.length / 3
     const indicesOffset = this.indices.length
     // store the vertices
@@ -65,9 +90,9 @@ export default class Tile {
     // store the indices with the appropriate vertex offset
     for (let i = 0, il = indexArray.length; i < il; i++) this.indices.push(indexArray[i] + verticesOffset)
     // we work off the layerGuideArray, adding to the buffer as we go
-    const ll = layerGuideArray.length
+    const lgl = layerGuideArray.length
     let i = 0
-    while (i < ll) {
+    while (i < lgl) {
       // grab the size, layerID, count, and offset, and update the index
       const [layerID, count, offset, size] = layerGuideArray.slice(i, i + 4)
       i += 4
@@ -75,35 +100,36 @@ export default class Tile {
       const layer = layers[layerID]
       const encodings = (size) ? [...layerGuideArray.slice(i, i + size)] : []
       i += size
-      // create the layerGuide
-      const layerGuide = {
+      // create and store the layerGuide
+      this.layersGuide.push({
+        parent: false,
+        source,
         layerID,
         count,
         offset: offset + indicesOffset,
         type: layer.type,
-        properties: this._parseProperties(layer, encodings)
-      }
-      // store the layerGuide
-      this.layersGuide.push(layerGuide)
+        attributes: this._parseAttributes(layer, encodings)
+      })
     }
+    // Since a parent or children can be injected, we need to first remove any instances of the "old" source data.
+    // Since we only reference
+    this.layersGuide = this.layersGuide.filter(lg => !(lg.parent && lg.source === source))
     // because sources may be utilized in an out of order fashion inside the style.layers property,
     // but come in linearly, we need to sort.
     this.layersGuide.sort((a, b) => a.layerID - b.layerID)
-    // lastly rebuild the vao
-    this.painter.buildVAO(this)
   }
 
-  _parseProperties(layer: StyleLayers, encodings: Array<number>) {
-    const properties = {}
+  _parseAttributes(layer: StyleLayers, encodings: Array<number>) {
+    const attributes = {}
     // parse layouts given encoding
     for (const l in layer.layout) {
-      properties[l] = layer.layout[l](encodings)
+      attributes[l] = layer.layout[l](encodings)
     }
     // parse paints given encoding
     for (const p in layer.paint) {
-      properties[p] = layer.paint[p](encodings)
+      attributes[p] = layer.paint[p](encodings)
     }
-    return properties
+    return attributes
   }
 
   _createCenter () {
@@ -122,9 +148,10 @@ export default class Tile {
   _createDivision () {
     // the zoom determines the number of divisions necessary to maintain a visually
     // asthetic spherical shape. As we zoom in, the tiles are practically flat,
-    // so division is less useful
-    const z = Math.min(this.zoom, 12) // we want 0 divisions once we hit zoom 12
-    this.division = Math.max(Math.floor(-32 / 12 * z) + 32, 1)
+    // so division is less useful.
+    // 0, 1 => 32  ;  2, 3 => 16  ;  4, 5 => 8  ;  6, 7 => 4  ;  8, 9 => 2  ;  10+ => 1
+    const level = 1 << Math.min(Math.floor(this.zoom / 2), 5) // max 5 as its binary position is 32
+    this.division = 32 / level
   }
 
   _buildMaskGeometry () {
@@ -162,7 +189,6 @@ export default class Tile {
     // create our initial vertices and indices:
     this.vertices = vertices
     this.indices = indices
-    this.layersGuide.push({ layerID: -1, count: this.indices.length, offset: 0, type: 'fill', properties: {} })
-    this.painter.buildVAO(this)
+    this.maskSize = this.indices.length
   }
 }

@@ -69,6 +69,7 @@ type SphereBackgroundStyle = Color
 
 export default class Style {
   map: Map
+  webworker: boolean = false
   zoom: number = 0
   lon: number = 0
   lat: number = 0
@@ -79,9 +80,10 @@ export default class Style {
   wallpaper: WallpaperStyle
   sphereBackground: void | SphereBackgroundStyle
   dirty: boolean = true
-  constructor (style: Style | Object | string, map: Map) {
+  constructor (options: MapOptions, map: Map) {
+    const { style } = options
+    if (options.webworker) this.webworker = true
     this.map = map
-    if (style instanceof Style) return style // we are inputing a built style (multiple maps on one page)
     this._buildStyle(style)
   }
 
@@ -123,10 +125,10 @@ export default class Style {
     }
     // If the map engine is running on the main thread, directly send the stylePackage to the worker pool.
     // Otherwise perhaps this map instance is a web worker and has a global instance of postMessage
-    if (window && window.S2WorkerPool) {
-      window.S2WorkerPool.injectStyle(this.map.id, stylePackage)
-    } else if (typeof postMessage === 'function') {
+    if (this.webworker) {
       postMessage({ mapID: this.map.id, type: 'style', style: stylePackage })
+    } else {
+      window.S2WorkerPool.injectStyle(this.map.id, stylePackage)
     }
   }
 
@@ -157,21 +159,18 @@ export default class Style {
   }
 
   requestTiles (tiles: Array<Tile>) {
-    const self = this
     const tileRequests: Array<TileRequest> = []
     tiles.forEach(tile => {
-      // inject layers into tile
-      tile.layers = self.layers
       // grab request values
       const { id, face, zoom, x, y, center, bbox, division, extent } = tile
       // build tileRequests
       tileRequests.push({ hash: id, face, zoom, x, y, center, bbox, division, extent })
     })
     // send the tiles over to the worker pool manager to split the workload
-    if (window && window.S2WorkerPool) { // otherwise a main thread, just get the worker pool from window
-      window.S2WorkerPool.tileRequest(this.map.id, tileRequests)
-    } else if (typeof postMessage === 'function') { // perhaps this map instance is a web worker and has a global instance of postMessage
+    if (this.webworker) {
       postMessage({ mapID: this.map.id, type: 'request', tiles: tileRequests })
+    } else {
+      window.S2WorkerPool.tileRequest(this.map.id, tileRequests)
     }
   }
 }

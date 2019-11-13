@@ -15,6 +15,11 @@ export default class DragPan extends EventTarget {
   totalMovementX: number = 0
   totalMovementY: number = 0
   time: number = -1
+  clear () {
+    this.active = false
+    this.time = -1
+  }
+
   onMouseDown (e: MouseEvent) {
     this.active = true
     this.movementX = 0

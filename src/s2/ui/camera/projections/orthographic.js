@@ -22,16 +22,18 @@ export default class OrthographicProjection extends Projector {
     super(config)
   }
 
-  onZoom (zoom: number) {
-    this.zoom += 0.001 * zoom
-    if (this.zoom > 22) this.zoom = 22
-    if (this.zoom < 0) this.zoom = 0
+  onZoom (zoom?: number = 0, canvasX?: number = 0, canvasY?: number = 0): boolean {
+    this.zoom += 0.0015 * zoom
+    if (this.zoom > this.maxZoom) { this.zoom = this.maxZoom; return false }
+    else if (this.zoom < 0) { this.zoom = 0; return false }
     this.scale = Math.pow(2, this.zoom)
     this.matrices = {}
+    this.sizeMatrices = {}
     this.dirty = true
+    return true
   }
 
-  getMatrix (tileSize?: number = 512): Float32Array {
+  getMatrixAtSize (tileSize?: number = 512): Float32Array {
     if (this.matrices[tileSize]) return mat4.clone(this.matrices[tileSize])
     const matrix = mat4.create()
     // get height and width ratios for each tile

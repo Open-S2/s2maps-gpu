@@ -31,22 +31,32 @@ export default class BlendProjection extends Projector {
     if (config.zoomEnd) this.zoomEnd = config.zoomEnd
   }
 
-  onZoom (zoom?: number = 0) {
-    this.zoom += 0.001 * zoom
-    if (this.zoom > 22) this.zoom = 22
-    if (this.zoom < 0) this.zoom = 0
+  onZoom (zoom?: number = 0, canvasX?: number = 0, canvasY?: number = 0): boolean {
+    this.zoom += 0.0015 * zoom
+    if (this.zoom > this.maxZoom) { this.zoom = this.maxZoom; return false }
+    else if (this.zoom < 0) { this.zoom = 0; return false }
     this.scale = Math.pow(2, this.zoom)
     // update transation
     this.translation[2] = Math.min(
       (((this.zTranslateEnd - this.zTranslateStart) / this.zoomEnd) * this.zoom) + this.zTranslateStart,
       this.zTranslateEnd
     )
+    // setup move
+    // let lonChange = 2 * (canvasX / this.width) - 1
+    // let latChange = 2 * (canvasY / this.height) - 1
+    // if (zoom > 0) {
+    //   lonChange = -lonChange
+    //   latChange = -latChange
+    // }
+    // this.onMove(lonChange, latChange, 0.25, 0.25)
     this.matrices = {}
+    this.sizeMatrices = {}
     this.dirty = true
+    return true
   }
 
-  getMatrix (tileSize?: number = 512): Float32Array {
-    if (this.matrices[tileSize]) return mat4.clone(this.matrices[tileSize])
+  getMatrixAtSize (tileSize?: number = 512): Float32Array {
+    if (this.sizeMatrices[tileSize]) return mat4.clone(this.sizeMatrices[tileSize])
     const matrix = mat4.create()
     // get height and width ratios for each tile
     const widthRatio = this.width / (tileSize * this.scale)
@@ -57,8 +67,8 @@ export default class BlendProjection extends Projector {
     mat4.translate(matrix, this.translation)
     // rotate position
     mat4.rotate(matrix, [degToRad(this.lat), degToRad(this.lon), 0])
-    // updated matrix, no longer "dirty"
-    this.matrices[tileSize] = matrix
+    // updated matrix
+    this.sizeMatrices[tileSize] = matrix
 
     return mat4.clone(matrix)
   }
