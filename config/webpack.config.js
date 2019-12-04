@@ -337,8 +337,12 @@ module.exports = function(webpackEnv) {
             // smaller than specified limit in bytes as data URLs to avoid requests.
             // A missing `test` is equivalent to a match.
             {
-              test: [/\.txt$/i, /\.glsl$/],
+              test: /\.txt$/i,
               loader: require.resolve('raw-loader')
+            },
+            {
+              test: /\.glsl$/,
+              loader: require.resolve('webpack-glsl-loader')
             },
             {
               test: [/\.bmp$/, /\.gif$/, /\.jpe?g$/, /\.png$/],

@@ -1,6 +1,3 @@
-#version 300 es
-precision mediump float;
-
 #define PI 3.1415926538
 
 vec4 LCH2LAB (vec4 lch) { // r -> l ; g -> c ; b -> h
@@ -63,8 +60,8 @@ vec4 LCH2RGB (vec4 lch) {
 
 vec4 interpolateColor (vec4 color1, vec4 color2, float t) {
   // dummy check
-  if (t === 0.) return color1;
-  else if (t === 1.) return color2;
+  if (t == 0.) return color1;
+  else if (t == 1.) return color2;
   float sat, hue, lbv, dh, alpha;
   // create proper hue translation
   if (!isinf(color1.r) && !isinf(color2.r)) {
@@ -74,15 +71,15 @@ vec4 interpolateColor (vec4 color1, vec4 color2, float t) {
     hue = color1.r + t * dh;
   } else if (!isinf(color1.r)) {
     hue = color1.r;
-    if (color2.b === 1. || color2.b === 0.) sat = color1.g;
+    if (color2.b == 1. || color2.b == 0.) sat = color1.g;
   } else if (!isinf(color2.r)) {
     hue = color2.r;
-    if (color1.b === 1. || color1.b === 0.) sat = color2.g;
+    if (color1.b == 1. || color1.b == 0.) sat = color2.g;
   } else {
     hue = 0.;
   }
   // saturation
-  if (!sat) sat = color1.g + t * (color2.g - color1.g);
+  if (!isnan(sat)) sat = color1.g + t * (color2.g - color1.g);
   // luminosity
   lbv = color1.b + t * (color2.b - color1.b);
   // alpha

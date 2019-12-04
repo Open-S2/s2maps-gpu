@@ -4347,6 +4347,11 @@ fs.realpath@^1.0.0:
   resolved "https://registry.yarnpkg.com/fs.realpath/-/fs.realpath-1.0.0.tgz#1504ad2523158caa40db4a2787cb01411994ea4f"
   integrity sha1-FQStJSMVjKpA20onh8sBQRmU6k8=
 
+fs@0.0.2:
+  version "0.0.2"
+  resolved "https://registry.yarnpkg.com/fs/-/fs-0.0.2.tgz#e1f244ef3933c1b2a64bd4799136060d0f5914f8"
+  integrity sha1-4fJE7zkzwbKmS9R5kTYGDQ9ZFPg=
+
 fsevents@^1.2.7:
   version "1.2.9"
   resolved "https://registry.yarnpkg.com/fsevents/-/fsevents-1.2.9.tgz#3f5ed66583ccd6f400b5a00db6f7e861363e388f"
@@ -7372,6 +7377,11 @@ path-type@^3.0.0:
   integrity sha512-T2ZUsdZFHgA3u4e5PfPbjd7HDDpxPnQb5jN0SrDsjNSuVXHJqtwTnWqG0B1jZrgmJ/7lj1EmVIByWt1gxGkWvg==
   dependencies:
     pify "^3.0.0"
+
+path@^0.11.14:
+  version "0.11.14"
+  resolved "https://registry.yarnpkg.com/path/-/path-0.11.14.tgz#cbc7569355cb3c83afeb4ace43ecff95231e5a7d"
+  integrity sha1-y8dWk1XLPIOv60rOQ+z/lSMeWn0=
 
 pbf@^3.2.0:
   version "3.2.1"
@@ -10777,6 +10787,14 @@ webpack-dev-server@3.2.1:
     webpack-dev-middleware "^3.5.1"
     webpack-log "^2.0.0"
     yargs "12.0.2"
+
+webpack-glsl-loader@^1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/webpack-glsl-loader/-/webpack-glsl-loader-1.0.1.tgz#72a0e30192bd57947d60d6d505c915be680d0acc"
+  integrity sha1-cqDjAZK9V5R9YNbVBckVvmgNCsw=
+  dependencies:
+    fs "0.0.2"
+    path "^0.11.14"
 
 webpack-log@^2.0.0:
   version "2.0.0"
