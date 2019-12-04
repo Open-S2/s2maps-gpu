@@ -16,10 +16,10 @@ in vec2 vertPos;
 out vec4 fragColor;
 
 uniform vec2 uScale;
-uniform vec3 backgroundColor;
-uniform vec3 haloColor;
-uniform vec3 fade1Color;
-uniform vec3 fade2Color;
+uniform vec4 backgroundColor;
+uniform vec4 haloColor;
+uniform vec4 fade1Color;
+uniform vec4 fade2Color;
 
 void main () {
   vec2 pos = vertPos;
@@ -34,9 +34,9 @@ void main () {
   haloSmooth = smoothstep(haloSmoothSteps.x, haloSmoothSteps.y, 1.0 - haloSmooth);
 
   vec4 color = vec4(1.0);
-	color.rgb = mix(backgroundColor, fade1Color, fade1);
-  color.rgb = mix(vec3(color.r, color.g, color.b), haloColor, haloSmooth);
-  color.rgb = mix(vec3(color.r, color.g, color.b), fade2Color, fade2);
+	color = mix(backgroundColor, fade1Color, fade1);
+  color = mix(color, haloColor, haloSmooth);
+  color = mix(color, fade2Color, fade2);
 
   fragColor = color;
 }

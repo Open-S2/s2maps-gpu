@@ -21,7 +21,7 @@ import { Wallpaper, Tile } from '../source'
 
 import type { MapOptions } from '../ui/map'
 import type { Projection } from '../ui/camera/projections'
-import type { LayerGuide } from '../source/tile'
+import type { LayerGuide, VectorTileSource } from '../source/tile'
 
 export default class Painter {
   _canvas: HTMLCanvasElement
@@ -80,62 +80,55 @@ export default class Painter {
     return null
   }
 
-  buildVAO (tile: Tile) {
+  useProgram (programName: string) {
+    const program = this.getProgram(programName)
+    if (program) this.context.gl.useProgram(program.glProgram)
+  }
+
+  buildVAO (source: string, tile: Tile) {
     const { gl } = this.context
+    // grab the source
+    const tileSource = tile.sourceData[source]
     // cleanup old setup
-    if (tile.vao) {
-      gl.deleteBuffer(tile.vertexBuffer)
-      gl.deleteBuffer(tile.indexBuffer)
-      this.context.deleteVertexArray(tile.vao)
+    if (tileSource.vao) {
+      gl.deleteBuffer(tileSource.vertexBuffer)
+      gl.deleteBuffer(tileSource.indexBuffer)
+      this.context.deleteVertexArray(tileSource.vao)
     }
     // Create a starting vertex array object (attribute state)
-    tile.vao = this.context.createVertexArray()
+    tileSource.vao = this.context.createVertexArray()
     // and make it the one we're currently working with
-    this.context.bindVertexArray(tile.vao)
+    this.context.bindVertexArray(tileSource.vao)
     // VERTEX
     // Create a vertex buffer
-    tile.vertexBuffer = gl.createBuffer()
+    tileSource.vertexBuffer = gl.createBuffer()
     // Bind the buffer
-    gl.bindBuffer(gl.ARRAY_BUFFER, tile.vertexBuffer)
+    gl.bindBuffer(gl.ARRAY_BUFFER, tileSource.vertexBuffer)
     // Buffer the data
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(tile.vertices), gl.STATIC_DRAW)
+    gl.bufferData(gl.ARRAY_BUFFER, tileSource.vertexArray, gl.STATIC_DRAW)
     // INDEX - If we are on a browser that lacks support for 32bit element array, we won't have indices
-    if (tile.indices.length) {
+    if (tileSource.indexArray.length) {
       // Create an index buffer
-      tile.indexBuffer = gl.createBuffer()
+      tileSource.indexBuffer = gl.createBuffer()
       // bind to ELEMENT_ARRAY
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, tile.indexBuffer)
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, tileSource.indexBuffer)
       // buffer the data
-      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(tile.indices), gl.STATIC_DRAW)
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, tileSource.indexArray, gl.STATIC_DRAW)
     }
     // lastly link attributes (a_pos will always be 0 if applicable)
     gl.enableVertexAttribArray(0)
     // tell attribute how to get data out of vertexBuffer
     gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0)
-    // this._setProgramsAttributes()
   }
 
-  // _setProgramsAttributes () {
-  //   const { gl } = this.context
-  //   for (const key in this.programs) {
-  //     if (key !== 'wallpaper') {
-  //       const program = this.programs[key]
-  //       // bind the program
-  //       // gl.useProgram(program.glProgram)
-  //       // Turn on the attribute
-  //       gl.enableVertexAttribArray(program.aPos)
-  //       // tell attribute how to get data out of vertexBuffer
-  //       gl.vertexAttribPointer(program.aPos, 3, gl.FLOAT, false, 0, 0)
-  //     }
-  //   }
-  // }
-
   paint (wallpaper: Wallpaper, projection: Projection, style: Style, tiles: Array<Tile>) {
+    const { context } = this
+    const { gl } = context
     // prep painting:
-    this.context.clearScene()
-    this.context.enableCullFace()
-    this.context.enableAlphaCoverage()
-    this.context.disableDepthTest()
+    context.clearScene()
+    context.enableCullFace()
+    context.enableAlphaCoverage()
+    context.disableDepthTest()
     // first draw the wallpaper
     drawWallpaper(this, wallpaper)
     // for each tile, draw background & layers as necessary
@@ -143,45 +136,55 @@ export default class Painter {
       // grab the matrix (duplicate created)
       const matrix = projection.getMatrix(tile)
       // grab the layersGuide and vao from current tile
-      const { layersGuide, vao } = tile
-      // bind the vao
-      this.context.bindVertexArray(vao)
+      const { layersGuide } = tile
+      const { mask } = tile.sourceData
+      // use mask vao and fill program
+      context.bindVertexArray(mask.vao)
+      this.useProgram('fill')
       // First 'layer' is the mask layer
-      drawMask(this, tile.maskSize, 0, matrix)
+      drawMask(this, mask, matrix)
       // Second layer is the sphere-background layer should it exist
       const sphereBackground = style.sphereBackground(projection.zoom)
-      if (sphereBackground) drawFill(this, tile.maskSize, 0, matrix, sphereBackground)
+      if (sphereBackground) drawFill(this, mask, mask.indexArray.length, 0, matrix, sphereBackground, gl.TRIANGLE_STRIP)
       // now draw the tile according to the layers it contains
-      this.paintLayers(layersGuide, projection, vao, matrix)
+      this.paintLayers(layersGuide, projection, tile)
       // assuming the mask has been drawn, we should tell the context to clear it
-      this.context.clearStencil()
+      context.clearStencil()
     }
     // cleanup
-    this.context.cleanup()
+    context.cleanup()
   }
 
-  paintLayers (layersGuide: Array<LayerGuide>, projection: Projection, currentVao: vertexAttribPointer, currentMatrix: Float32Array) {
-    let matrix = currentMatrix
-    let parentSet = false
+  paintLayers (layersGuide: Array<LayerGuide>, projection: Projection, currentTile: Tile) {
+    const { context } = this
+    let matrix: Float32Array, tileSource: VectorTileSource
+    let currentSource = 'mask'
+    let currentProgram = 'fill'
     for (const layer of layersGuide) {
-      const { parent, count, offset, type, attributes } = layer
-      // if a parent tile, be sure to bind the parent tiles vao
-      // rebind back to current vao and matrix when the parent is not being used (since a )
-      if (parent && !parentSet) {
-        parentSet = true
-        this.context.bindVertexArray(layer.tile.vao)
-        matrix = projection.getMatrix(layer.tile)
+      const { parent, source, count, offset, type, attributes } = layer
+      // if type is not the same as the currentProgram, we have to update currentProgram
+      if (type !== currentProgram) {
+        this.useProgram(type)
+        currentProgram = type
       }
-      if (!parent && parentSet) {
-        parentSet = false
-        this.context.bindVertexArray(currentVao)
-        matrix = currentMatrix
+      // Given the layer's properties, we choose the appropraite matrix and source data (vao & buffers)
+      if (parent) {
+        matrix = projection.getMatrix(layer.tile)
+        tileSource = layer.tile.sourceData[source]
+      } else {
+        matrix = projection.getMatrix(currentTile)
+        tileSource = currentTile.sourceData[source]
+      }
+      // if source is not the same, update vao
+      if (source !== currentSource) {
+        context.bindVertexArray(tileSource.vao)
+        currentSource = source
       }
       // now update paint attributes:
       if (type === 'fill') {
         const { color } = attributes
         const fillColor = (typeof color === 'function') ? color(projection.zoom) : color
-        drawFill(this, count, offset, matrix, fillColor)
+        drawFill(this, tileSource, count, offset, matrix, fillColor)
       }
     }
   }

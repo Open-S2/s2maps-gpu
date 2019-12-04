@@ -15,10 +15,10 @@ export default class Wallpaper {
   projection: Projection
   uniforms: WallpaperUniforms = {
     uScale: new Float32Array(2),
-    backgroundColor: new Float32Array(3),
-    haloColor: new Float32Array(3),
-    fade1Color: new Float32Array(3),
-    fade2Color: new Float32Array(3)
+    backgroundColor: new Float32Array(4),
+    haloColor: new Float32Array(4),
+    fade1Color: new Float32Array(4),
+    fade2Color: new Float32Array(4)
   }
   dirty: boolean = true
   constructor (style: Style, projection: Projection) {
@@ -51,7 +51,7 @@ export default class Wallpaper {
     const { wallpaper } = this.style
     for (let key in wallpaper) {
       if (this.uniforms[key]) {
-        this.uniforms[key] = wallpaper[key].getRGB().slice(0, 3)
+        this.uniforms[key] = wallpaper[key].getRGB()
       }
     }
   }

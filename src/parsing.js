@@ -1,5 +1,5 @@
 const Color = require('./conditionals/color').default
-const { parseConditionEncode, parseConditionDecode } = require('./conditionals/parseCondition').default
+const { parseFeature, encodeCondition, decodeFeature } = require('./conditionals/parseCondition').default
 // const chroma = require('chroma-js')
 // const filterFunction = require('./conditionals/filterFunction').default
 
@@ -36,7 +36,17 @@ const { parseConditionEncode, parseConditionDecode } = require('./conditionals/p
 //   input2
 // ]
 
-const input2 = [
+const input4 = [
+  "input-condition",
+  ["zoom", "==", "5"],
+  "rgba(5, 100, 125, .5)",
+  ["lat", ">", "90"],
+  "rgba(200, 160, 100, .8)",
+  "default",
+  "rgba(20, 200, 200, 1)"
+]
+
+const input3 = [
   "data-condition",
   ["class", "==", "ocean"],
   "rgba(5, 100, 125, .5)",
@@ -46,51 +56,81 @@ const input2 = [
   "rgba(20, 200, 200, 1)"
 ]
 
-const input3 = [
-  "zoom-range",
+const input2 = [
+  "data-range",
   "lin",
-  0,
+  "elev",
+  2,
   "rgba(5, 100, 125, .5)",
   5,
   "rgba(200, 160, 100, .8)",
   7,
-  input2
+  "rgba(20, 200, 200, 1)"
 ]
 
 const input = [
-  "data-range",
+  "input-range",
+  "zoom",
   "lin",
-  "elev",
   0,
   "rgba(5, 100, 125, .5)",
   5,
-  "rgba(20, 130, 200, 0.75)",
+  input2,
   7,
-  input3
+  "rgba(20, 200, 200, 1)"
 ]
 
-const inputClone = JSON.parse(JSON.stringify(input))
+// const input = [
+//   "input-range",
+//   "zoom",
+//   "lin",
+//   2,
+//   "rgba(5, 100, 125, .5)",
+//   5,
+//   "rgba(200, 160, 100, .8)",
+//   7,
+//   "rgba(20, 200, 200, 1)"
+// ]
 
-const parsedEncode = parseConditionEncode(inputClone)
+// const input = "rgba(200, 160, 100, .8)"
 
-const encoding = []
+const inputClone = JSON.parse(JSON.stringify(input2))
 
-parsedEncode({ class: 'river', elev: 5.5 }, encoding)
-console.log('encoding', encoding)
+const encodeFeatureFunction = parseFeature(inputClone)
 
-const inputCloneDecode = JSON.parse(JSON.stringify(input))
+const featureEncoding = []
 
-// first level decode
-const parsedDecode = parseConditionDecode(inputCloneDecode)
-// second level decode
-const fullParsedDecode = parsedDecode(encoding)
+encodeFeatureFunction({ class: 'river', elev: 10 }, featureEncoding)
+console.log('featureEncoding', featureEncoding)
 
-const res = (typeof fullParsedDecode === 'function') ? fullParsedDecode(7) : fullParsedDecode
-if (res instanceof Color) res.toRGB()
+const inputCloneEncode = JSON.parse(JSON.stringify(input2))
 
-console.log(res)
+const conditionEncodings = encodeCondition(inputCloneEncode)
+console.log('conditionEncodings', conditionEncodings)
+
+const decoded = [-1, -1, -1, -1]
+decodeFeature(conditionEncodings, featureEncoding, [0, 0, 0], decoded, true)
+console.log(decoded)
 
 
+// // first level decode
+// const parsedDecode = parseConditionDecode(inputCloneDecode)
+// console.log('parsedDecode', parsedDecode.toString())
+// // second level decode
+// const fullParsedDecode = parsedDecode(encoding)
+// console.log('fullParsedDecode', fullParsedDecode)
+//
+// const res = (typeof fullParsedDecode === 'function') ? fullParsedDecode(7) : fullParsedDecode
+// if (res instanceof Color) res.toRGB()
+//
+// console.log(res)
+//
+//
+// let color1 = new Color(55, 200, 125, 1, 'rgb')
+// let color2 = new Color(10, 130, 0, 1, 'rgb')
+//
+// let interp = Color.interpolate(color1, color2, 1)
+// console.log('test', color1)
 
 
 

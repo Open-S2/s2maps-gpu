@@ -3,49 +3,132 @@ const Color = require('./color').default
 const parseFilter = require('./parseFilter').default
 
 // This functionality is built for the Web Worker
-function parseConditionEncode (input) {
+function parseFeature (input) {
   if (!input) {
     return () => null
   } else if (Array.isArray(input)) { // we hit a conditional
     const conditionType = input.shift()
     if (conditionType === 'data-condition') {
-      const parsedDataFunction = encodeDataConditionFunction(input)
-      return parsedDataFunction
+      return parseDataCondition(input)
+    } else if (conditionType === 'input-condition') {
+      // TODO
+      // input.shift() // input-condition type
+      // return parseInputCondition(input)
     } else if (conditionType === 'data-range') {
-      const parsedDataFunction = encodeDataRangeFunction(input)
-      return parsedDataFunction
-    } else if (conditionType === 'zoom-range') {
-      const parsedZoomFunction = encodeZoomRangeFunction(input)
-      return parsedZoomFunction
+      return parseDataRange(input)
+    } else if (conditionType === 'input-range') {
+      input.shift() // input-range type
+      return parseInputRange(input)
     } else { return () => null }
   } else { return () => null } // the draw thread will naturally handle the appropraite color/number
 }
 
-// This functionality is built for the draw thread
-function parseConditionDecode (input) {
-  if (!input) {
-    return () => null
-  } else if (Array.isArray(input)) { // conditional
+// CONDITION ENCODINGS: 128 positions possible, although if you're using more than 2 or 3 feature-states, you may need to rethink your design
+// 0 -> null
+// 1 -> value
+// 2 -> data-condition
+// 3 -> input-condition
+// 4 -> data-range
+// 5 -> input-range
+// 6 -> animation-state
+// 7+ -> feature-state
+
+// INPUT RANGE/CONDITION ENCODINGS:
+// 0 -> zoom
+// 1 -> lat
+// 2 -> lon
+// 3 -> angle
+// 4 -> pitch
+
+// INTERPOLATION ENCODINGS: data-ranges or input-ranges have either linear or exponential interpolations
+// if exponential the base must also be encoded, after the type
+// 0 -> linear
+// 1 -> exponential
+
+// This functionality is built for webgl to parse for drawing
+function encodeCondition (input) {
+  const encodings = []
+  encodings.push(0) // store a null no matter what
+  let length = 1
+  if (Array.isArray(input)) { // conditional
     const conditionType = input.shift()
     if (conditionType === 'data-condition') {
-      const parsedDataFunction = decodeDataConditionFunction(input)
-      return parsedDataFunction
+      // set the condition bits as data-condition
+      encodings[0] += (2 << 4)
+      // encode the condition type
+      subEncodings = encodeDataCondition(input)
+      encodings.push(...subEncodings)
+    } else if (conditionType === 'input-condition') {
+      // set the condition bits as input-condition
+      encodings[0] += (3 << 4)
+      const inputConditionType = input.shift()
+      // encode the input-condition type
+      if (inputConditionType === 'zoom') encodings[0] += (0 << 1)
+      else if (inputConditionType === 'lat') encodings[0] += (1 << 1)
+      else if (inputConditionType === 'lon') encodings[0] += (2 << 1)
+      else if (inputConditionType === 'angle') encodings[0] += (3 << 1)
+      else if (inputConditionType === 'pitch') encodings[0] += (4 << 1)
+      else throw Error('unknown input-condition type')
+      // encode the condition type and store
+      subEncodings = encodeInputCondition(input[0])
+      encodings.push(...subEncodings)
     } else if (conditionType === 'data-range') {
-      const parsedDataFunction = decodeDataRangeFunction(input)
-      return parsedDataFunction
-    } else if (conditionType === 'zoom-range') {
-      const parsedZoomFunction = decodeZoomRangeFunction(input)
-      return parsedZoomFunction
-    } else { return () => { return () => null } }
-  } else {
+      // set the condition bits as data-range
+      encodings[0] += (4 << 4)
+      // encode the interpolation type
+      const inputRangeInterpType = input.shift()
+      if (inputRangeInterpType === 'expo') {
+        encodings[0] += 1
+        // store base seperately as it can be a floating point
+        encodings.push(input.shift())
+      }
+      // remove data type
+      input.shift()
+      // encode and store
+      subEncodings = encodeRange(input)
+      encodings.push(...subEncodings)
+    } else if (conditionType === 'input-range') {
+      // set the condition bits as input-range
+      encodings[0] += (5 << 4)
+      // encode the input-range type
+      const inputRangeType = input.shift()
+      if (inputRangeType === 'zoom') encodings[0] += (0 << 1)
+      else if (inputRangeType === 'lat') encodings[0] += (1 << 1)
+      else if (inputRangeType === 'lon') encodings[0] += (2 << 1)
+      else if (inputRangeType === 'angle') encodings[0] += (3 << 1)
+      else if (inputRangeType === 'pitch') encodings[0] += (4 << 1)
+      else throw Error('unknown input-range type')
+      // encode the interpolation type
+      const inputRangeInterpType = input.shift()
+      if (inputRangeInterpType === 'expo') {
+        encodings[0] += 1
+        // store base seperately as it can be a floating point
+        encodings.push(input.shift())
+      }
+      // encode and store
+      subEncodings = encodeRange(input)
+      encodings.push(...subEncodings)
+    } else throw Error('unknown condition type')
+  } else if (input) { // assuming data exists, than it's just a value type
+    // value
     if (isNaN(input)) {
-      const color = new Color(input)
-      return () => color
-    } else { return () => input }
+      const color = new Color(input) // build the color as LCH
+      encodings[0] += (1 << 4) // set the condition bits as 1 (value)
+      encodings.push(...color.getLCH()) // store that it is a value and than the values
+    } else {
+      encodings[0] += (1 << 4) // set the condition bits as 1 (value)
+      encodings.push(~~input) // store true as 1 and false as 0, otherwise it's a number
+    }
   }
+  // lastly store length of the current encoding
+  encodings[0] += (encodings.length << 10)
+  return encodings
 }
 
-function encodeZoomRangeFunction (input) {
+// input ranges must encode an offset for each unknown (if a sub-condition exists)
+// this means that if we come back with 3 new encodings for a specific zoom,
+// than we need to preface that data with an offset of 3.
+function parseInputRange (input) {
   // grab function type
   const easeType = input.shift() // remove ease type
   if (easeType === 'expo') input.shift() // remove base value
@@ -54,115 +137,19 @@ function encodeZoomRangeFunction (input) {
   const preSolutions = {}
   for (let i = 0, il = input.length; i < il; i += 2) {
     if (Array.isArray(input[i + 1])) {
-      preSolutions[input[i]] = parseConditionEncode(input[i + 1])
+      preSolutions[input[i]] = parseFeature(input[i + 1])
     }
   }
-  // now store all possible outcomes that require inputs
+  // now store all possible outcomes for sub conditionals
   return (properties, encoding) => {
     for (let key in preSolutions) {
+      // get current state of encoding
       preSolutions[key](properties, encoding)
     }
   }
 }
 
-function decodeZoomRangeFunction (input) {
-  // grab function type
-  const easeType = input.shift()
-  const base = (easeType === 'expo') ? input.shift() : null
-  const easeFunction = getEasingFunction(easeType, base)
-
-  let c = 1
-  let il = input.length
-  while (c < il) {
-    input[c] = parseConditionDecode(input[c])
-    c += 2
-  }
-
-  // first ensure each result property is parsed:
-  return (encodings) => {
-    let c = 1
-    let il = input.length
-    while (c < il) {
-      input[c] = input[c](encodings)
-      c += 2
-    }
-
-    return (zoom) => {
-      if (zoom <= input[0]) {
-        return input[1]
-      } else if (zoom >= input[input.length - 2]) {
-        return input[input.length - 1]
-      } else {
-        let i = 0
-        while (input[i] <= zoom) i += 2
-        // now we know the zoom is inbetween input[i - 2][0] and input[i - 1][0]
-        const startZoom = input[i - 2]
-        const startValue = input[i - 1]
-        if (startZoom === zoom) return startValue
-        const endZoom = input[i]
-        const endValue = input[i + 1]
-        // now we interpolate
-        return easeFunction(zoom, startZoom, endZoom, startValue, endValue)
-      }
-    }
-  }
-}
-
-function encodeDataConditionFunction (input) {
-  const conditions = []
-  let encodeResultID = 1
-  while (input.length) {
-    if (Array.isArray(input[0])) {
-      const filter = input.shift()
-      conditions.push({
-        key: filter[0],
-        encodeID: encodeResultID,
-        condition: parseFilter(filter),
-        result: parseConditionEncode(input.shift())
-      })
-      encodeResultID++
-    } else if (input[0] === 'default') {
-      input.shift() // 'default'
-      conditions['default'] = parseConditionEncode(input.shift())
-    }
-  }
-  if (!conditions['default']) conditions['default'] = () => null // just incase it's missing in the style json
-  return (properties, encoding) => {
-    if (properties) {
-      for (const condition of conditions) { // run through the conditions
-        if (condition.condition(properties)) {
-          encoding.push(condition.encodeID)
-          return condition.result(properties, encoding)
-        }
-      }
-    }
-    // if we made it here, just run default
-    encoding.push(0)
-    return conditions['default'](properties)
-  }
-}
-
-function decodeDataConditionFunction (input) {
-  const conditions = {}
-  let i = 1
-  while (input.length) {
-    if (Array.isArray(input[0])) {
-      input.shift() // the filter
-      conditions[i] = parseConditionDecode(input.shift())
-      i++
-    } else if (input[0] === 'default') {
-      input.shift() // default
-      conditions[0] = parseConditionDecode(input.shift())
-    }
-  }
-  if (!conditions[0]) conditions[0] = () => null // just incase it's missing in the style json
-  return (encodings) => {
-    const code = encodings.shift()
-    return conditions[code](encodings)
-  }
-}
-
-function encodeDataRangeFunction (input) {
+function parseDataRange (input) {
   // grab function type
   const easeType = input.shift() // remove ease type
   if (easeType === 'expo') input.shift() // remove base value
@@ -172,7 +159,7 @@ function encodeDataRangeFunction (input) {
   let c = 1
   let il = input.length
   while (c < il) {
-    input[c] = parseConditionEncode(input[c])
+    input[c] = parseFeature(input[c])
     c += 2
   }
 
@@ -199,41 +186,211 @@ function encodeDataRangeFunction (input) {
   }
 }
 
-function decodeDataRangeFunction (input) {
-  // grab function type
-  const easeType = input.shift()
-  const base = (easeType === 'expo') ? input.shift() : null
-  const key = input.shift() // key
-
-  let c = 1
-  let il = input.length
-  while (c < il) {
-    input[c] = parseConditionDecode(input[c])
-    c += 2
-  }
-
-  // first ensure each result property is parsed:
-  return (encodings) => {
-    const code = encodings.shift()
-
-    if (code <= input[0]) {
-      return input[1](encodings)
-    } else if (code >= input[input.length - 2]) {
-      return input[input.length - 1](encodings)
-    } else {
-      const easeFunction = getEasingFunction(easeType, base)
-      let i = 0
-      while (input[i] <= code) i += 2
-      // now we know the code is inbetween input[i - 2][0] and input[i - 1][0]
-      const start = input[i - 2]
-      const startValue = input[i - 1](encodings)
-      if (start === code) return startValue
-      const end = input[i]
-      const endValue = input[i + 1](encodings)
-      // now we interpolate
-      return easeFunction(code, start, end, startValue, endValue)
+function parseDataCondition (input) {
+  const conditions = []
+  let encodeResultID = 1
+  while (input.length) {
+    if (Array.isArray(input[0])) {
+      const filter = input.shift()
+      conditions.push({
+        key: filter[0],
+        encodeID: encodeResultID,
+        condition: parseFilter(filter),
+        result: parseFeature(input.shift())
+      })
+      encodeResultID++
+    } else if (input[0] === 'default') {
+      input.shift() // 'default'
+      conditions['default'] = parseFeature(input.shift())
     }
   }
+  if (!conditions['default']) conditions['default'] = () => null // just incase it's missing in the style json
+  return (properties, encoding) => {
+    if (properties) {
+      for (const condition of conditions) { // run through the conditions
+        if (condition.condition(properties)) {
+          encoding.push(condition.encodeID)
+          return condition.result(properties, encoding)
+        }
+      }
+    }
+    // if we made it here, just run default
+    encoding.push(0)
+    return conditions['default'](properties)
+  }
+}
+
+function encodeDataCondition (input) {
+  const encoding = []
+  let i = 1
+
+  while (input.length) {
+    const condition = input.shift()
+    const value = input.shift()
+    if (Array.isArray(condition)) {
+      encoding.push(i, ...encodeCondition(value))
+    } else if (condition === 'default') {
+      encoding.push(0, ...encodeCondition(value))
+    } else { throw new Error('unkown condition type') }
+    i++
+  }
+
+  return encoding
+}
+
+function encodeRange (input) {
+  const encoding = []
+
+  while (input.length) {
+    const condition = ~~input.shift() // convert true and false to 0 and 1 respectively
+    const value = input.shift()
+    encoding.push(condition, ...encodeCondition(value))
+  }
+
+  return encoding
+}
+
+let trigger = 0
+
+function decodeFeature (conditionEncodings, featureEncoding, inputs, res, color, index = 0, featureIndex = 0) {
+  // prep variables
+  const startIndex = index
+  const featureIndexStart = featureIndex
+  const length = conditionEncodings[index] >> 10
+  const condition = (conditionEncodings[index] & 1008) >> 4
+  const inputType = (conditionEncodings[index] & 14) >> 1
+  const interpolationType = conditionEncodings[index] & 1
+  // console.log('index', index)
+  // console.log('length', length)
+  // console.log('condition', condition)
+  // console.log('inputType', inputType)
+  // console.log('interpolationType', interpolationType)
+  trigger++
+  if (trigger >= 10) return
+  index++
+  // create base, if exponential interpolation, we need to grab the base value and increment
+  let base = 1
+  if (interpolationType === 1) {
+    base = conditionEncodings[index]
+    index++
+  }
+  // run through conditions
+  if (condition === 1) { // value
+    for (let i = 0; i < length - 1; i++) res[i] = conditionEncodings[index + i]
+  } else if (condition === 2 || condition === 3) { // data-condition or input-condition
+    // run through each condition, when match is found, set value
+    let input, value
+    // setup input
+    if (condition === 2) {
+      input = featureEncoding[featureIndex]
+      featureIndex++
+    } else { input = inputs[inputType] }
+    // prep
+    value = conditionEncodings[index]
+    while (input !== value) {
+      // increment index & find length
+      index += (conditionEncodings[index + 1] >> 10) + 1
+      value = conditionEncodings[index]
+    }
+    // now we are in the proper place, we increment once and find grab the value
+    decodeFeature(conditionEncodings, featureEncoding, inputs, res, color, index + 1, featureIndex)
+  } else if (condition === 4 || condition === 5) { // data-range or input-range
+    let input, val1, val2, start, end
+    val1 = [-1, -1, -1, -1]
+    val2 = [-1, -1, -1, -1]
+    // grab the input value
+    if (condition === 4) {
+      input = featureEncoding[featureIndex]
+      featureIndex++
+    } else { input = inputs[inputType] }
+    // create a start point
+    start = end = conditionEncodings[index]
+    index++
+    // iterate through the current conditionalEncodings and match the indices with input
+    while (end < input && input < length) {
+      // console.log('START', end)
+      // console.log('INPUT', input)
+      const [newIndex, newFeatureIndex] = decodeFeature(conditionEncodings, featureEncoding, inputs, val1, color, index, featureIndex)
+      index = newIndex
+      // console.log('newIndex', index)
+      featureIndex = newFeatureIndex
+      // update end and index
+      start = end
+      end = conditionEncodings[index]
+      index++
+    }
+    // console.log('start', start)
+    // console.log('end', end)
+    // if input >= length than return val1
+    if (end === input) {
+      // console.log('A STORY')
+      // console.log()
+      decodeFeature(conditionEncodings, featureEncoding, inputs, res, color, index, featureIndex)
+    } else if (index >= length) { // just not found
+      // console.log('B STORY', val1)
+      // console.log()
+      res[0] = val1[0]; res[1] = val1[1]; res[2] = val1[2]; res[3] = val1[3]
+    } else if (val1[0] === -1) { // if val1 is still a negative number than decode start and set it to res
+      // console.log('C STORY')
+      // console.log()
+      decodeFeature(conditionEncodings, featureEncoding, inputs, res, color, index, featureIndex)
+    } else { // otherwise find val2, interpolate
+      // console.log('D STORY', index)
+      // console.log()
+      // console.log('end', end)
+      decodeFeature(conditionEncodings, featureEncoding, inputs, val2, color, index, featureIndex)
+      // console.log('val1', val1)
+      // console.log('val2', val2)
+      // get interpolation
+      const t = exponential(input, start, end, base) // default base of 1 makes a linear interpolation
+      if (color) interpolateColor(val1, val2, t, res)
+      else res[0] = val1[0] + t * (val2[0] - val1[0])
+    }
+  } else if (condition === 6) { // animation-state
+
+  } else if (condition >= 7) { // feature-state
+
+  }
+
+  return [startIndex + length, featureIndexStart + featureEncoding[featureIndexStart]]
+}
+
+// interpolation type: input & 1
+// input range: (input & 14) >> 1
+// input condition: (input & 1008) >> 4
+// length: input >> 10
+
+function interpolateColor (val1, val2, t, res) {
+  // prep variables
+  let sat, hue, lbv, dh, alpha
+  let [hue0, sat0, lbv0, alpha0] = val1
+  let [hue1, sat1, lbv1, alpha1] = val2
+  // first manage hue
+  if (!isNaN(hue0) && !isNaN(hue1)) {
+    if (hue1 > hue0 && hue1 - hue0 > 180) dh = hue1 - (hue0 + 360)
+    else if (hue1 < hue0 && hue0 - hue1 > 180) dh = hue1 + 360 - hue0
+    else dh = hue1 - hue0
+    hue = hue0 + t * dh
+  } else if (!isNaN(hue0)) {
+    hue = hue0
+    if (lbv1 == 1 || lbv1 == 0) sat = sat0
+  } else if (!isNaN(hue1)) {
+    hue = hue1
+    if (lbv0 == 1 || lbv0 == 0) sat = sat1
+  } else {
+    hue = null
+  }
+  // saturation
+  if (!sat) sat = sat0 + t * (sat1 - sat0)
+  // luminosity
+  lbv = lbv0 + t * (lbv1 - lbv0)
+  // alpha
+  alpha = alpha0 + t * (alpha1 - alpha0)
+  // create the new color
+  res[0] = hue
+  res[1] = sat
+  res[2] = lbv
+  res[3] = alpha
 }
 
 function getEasingFunction(zoomType, base = 1) {
@@ -292,6 +449,7 @@ function step (input, start, end) {
 }
 
 exports.default = {
-  parseConditionEncode,
-  parseConditionDecode
+  parseFeature,
+  encodeCondition,
+  decodeFeature
 }

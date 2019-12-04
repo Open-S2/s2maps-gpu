@@ -20,6 +20,15 @@ export type LayerGuide = {
   attributes: Object
 }
 
+export type VectorTileSource = {
+  type: 'vector',
+  vertexArray: Float32Array,
+  indexArray: Uint32Array,
+  vertexBuffer?: WebGLBuffer,
+  indexBuffer?: WebGLBuffer,
+  vao?: WebGLVertexArrayObject
+}
+
 // tiles are designed to create mask geometry and store prebuilt layer data handed off by the worker pool
 // whenever rerenders are called, they will access these tile objects for the layer data / vaos
 // before managing sources asyncronously, a tile needs to synchronously place spherical background
@@ -36,13 +45,8 @@ export default class Tile {
   bbox: [number, number, number, number]
   extent: number = 4096
   division: number
-  vertices: Array<number> = []
-  indices: Array<number> = []
+  sourceData: { [string | number]: VectorTileSource } = {}
   layersGuide: Array<LayerGuide> = []
-  maskSize: number = 0
-  vertexBuffer: WebGLBuffer
-  indexBuffer: WebGLBuffer
-  vao: WebGLVertexArrayObject
   constructor (face: number, zoom: number, x: number, y: number, hash: number, size?: number = 512) {
     this.face = face
     this.zoom = zoom
@@ -79,16 +83,11 @@ export default class Tile {
   }
 
   injectSourceData (source: string, vertexArray: Float32Array, indexArray: Uint32Array, layerGuideArray: Uint32Array, layers: StyleLayers) {
-    // Remember one tile can have multiple sources. So we need to potentially merge data from seperate worker submissions
-    // This means we need to offset the indexArray to the current vertices size, and update the layer guide with the new
-    // data along with the new offset for draw calls.
-    // now we inject
-    const verticesOffset = this.vertices.length / 3
-    const indicesOffset = this.indices.length
-    // store the vertices
-    this.vertices.push(...vertexArray)
-    // store the indices with the appropriate vertex offset
-    for (let i = 0, il = indexArray.length; i < il; i++) this.indices.push(indexArray[i] + verticesOffset)
+    // store a reference to the source
+    this.sourceData[source] = {
+      vertexArray,
+      indexArray
+    }
     // we work off the layerGuideArray, adding to the buffer as we go
     const lgl = layerGuideArray.length
     let i = 0
@@ -106,7 +105,7 @@ export default class Tile {
         source,
         layerID,
         count,
-        offset: offset + indicesOffset,
+        offset,
         type: layer.type,
         attributes: this._parseAttributes(layer, encodings)
       })
@@ -150,7 +149,7 @@ export default class Tile {
     // asthetic spherical shape. As we zoom in, the tiles are practically flat,
     // so division is less useful.
     // 0, 1 => 32  ;  2, 3 => 16  ;  4, 5 => 8  ;  6, 7 => 4  ;  8, 9 => 2  ;  10+ => 1
-    const level = 1 << Math.min(Math.floor(this.zoom / 2), 5) // max 5 as its binary position is 32
+    const level = 1 << Math.max(Math.min(Math.floor(this.zoom / 2), 5), 0) // max 5 as its binary position is 32
     this.division = 32 / level
   }
 
@@ -163,32 +162,39 @@ export default class Tile {
     // y = mx + b, we need to find the potential b for each tiles s and t
     const tB = this.bbox[1]
     const sB = this.bbox[0]
+    // grab the appropriate tile constants, and prep variables
+    const { center, division, face } = this
+    const indexLength = division + 1
+    let t: number, s: number, point: S2Point, index: number, indexAbove: number
     // now we can build out the vertices and indices
-    let j: number, i: number, bl: number, tr: number, t: number, s: number, st: S2Point
-    const indexLength = this.division + 1
-    for (j = 0; j <= this.division; j++) {
-      t = dt / this.division * j + tB
-      for (i = 0; i <= this.division; i++) {
-        // vertices
-        s = ds / this.division * i + sB
-        st = S2Point.fromSTGL(this.face, s, t)
-        st.normalize()
-        st.subScalar(this.center)
-        vertices.push(st.x, st.y, st.z)
-        // indices
-        if (j !== this.division && i !== this.division) {
-          bl = j * indexLength + i
-          tr = (j + 1) * indexLength + i + 1
-          indices.push(
-            bl, tr, (j + 1) * indexLength + i,
-            tr, bl, j * indexLength + i + 1
-          )
-        }
+    // vertices
+    for (let j = 0; j <= division; j++) {
+      t = dt / division * j + tB
+      for (let i = 0; i <= division; i++) {
+        s = ds / division * i + sB
+        // create s2Point using WebGL's projection scheme, normalize, inject center, and than store
+        point = S2Point.fromSTGL(face, s, t)
+        point.normalize()
+        point.subScalar(center)
+        vertices.push(point.x, point.y, point.z)
       }
     }
+    // indices
+    for (let j = 0; j < division; j++) {
+      // add degenerate if j is not 0
+      if (j !== 0) indices.push((j + 1) * indexLength)
+      for (let i = 0; i <= division; i++) {
+        index = j * indexLength + i
+        indexAbove = (j + 1) * indexLength + i
+        indices.push(indexAbove, index)
+      }
+      // upon finishing a row, add a degenerate
+      indices.push(index)
+    }
     // create our initial vertices and indices:
-    this.vertices = vertices
-    this.indices = indices
-    this.maskSize = this.indices.length
+    this.sourceData.mask = {
+      vertexArray: new Float32Array(vertices),
+      indexArray: new Uint32Array(indices)
+    }
   }
 }

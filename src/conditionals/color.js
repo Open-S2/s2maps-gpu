@@ -28,6 +28,10 @@ class Color {
     return [this.val[0] / 255, this.val[1] / 255, this.val[2] / 255, this.val[3]]
   }
 
+  getLCH () {
+    return this.val
+  }
+
   toHSV () {
     // potentially swing back
     if (this.type === 'lch') this.LCH2LAB()

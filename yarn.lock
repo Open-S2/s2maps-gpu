@@ -8909,10 +8909,10 @@ s2projection@^1.3.0:
   resolved "https://registry.yarnpkg.com/s2projection/-/s2projection-1.3.0.tgz#f834e4ab1241d048c33d5fae4d124b5323d0589c"
   integrity sha512-0DXdD86UM7CyCGHsfib2cMg/xXYheZGVVGHkTA7Uq2tN7zC44akR885rHe5Azrt/2ctCsRGpf3Fbxf68PmdAQw==
 
-s2projection@^1.6.0:
-  version "1.6.0"
-  resolved "https://registry.yarnpkg.com/s2projection/-/s2projection-1.6.0.tgz#ad4121fc80e544b333aadfb1aefbe78daf96f154"
-  integrity sha512-id+sjV2dDTa0ZklTpRRe74OGCgQ/XwYKLUNzTZSvHaLW7PB6KBf/5gWKKINQIvMySn/04QbRtrEjiK4BVrhmSg==
+s2projection@^1.6.2:
+  version "1.6.2"
+  resolved "https://registry.yarnpkg.com/s2projection/-/s2projection-1.6.2.tgz#5d8af0c9437ffada37353a0008fb5499a8e2a736"
+  integrity sha512-qKZx0WfCBz/tg+yZOXWyxSRHBR86zIXM9fscM/clYY9s4uY0BaFZMpLaN9tZj6i8eAF9cousqJg0jeKCn2GEtg==
 
 safe-buffer@5.1.2, safe-buffer@^5.0.1, safe-buffer@^5.1.0, safe-buffer@^5.1.1, safe-buffer@^5.1.2, safe-buffer@~5.1.0, safe-buffer@~5.1.1:
   version "5.1.2"

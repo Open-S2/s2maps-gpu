@@ -60,7 +60,7 @@ export default class Camera {
           // inject parent or children data if they exist
           newTile.injectParentOrChildren(this.tileCache)
           // build the VAO
-          this.painter.buildVAO(newTile)
+          this.painter.buildVAO('mask', newTile)
           // store the tile
           this.tileCache.set(hash, newTile)
           newTiles.push(newTile)
@@ -77,7 +77,7 @@ export default class Camera {
       const tile = this.tileCache.get(tileID)
       tile.injectSourceData(source, new Float32Array(vertexBuffer), new Uint32Array(indexBuffer), new Uint32Array(layerGuideBuffer), this.style.layers)
       // build the VAO
-      this.painter.buildVAO(tile)
+      this.painter.buildVAO(source, tile)
     }
     // re-render
     this._render()

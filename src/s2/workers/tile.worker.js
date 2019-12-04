@@ -1,8 +1,8 @@
 // @flow
 import { VectorTile } from 's2-vector-tile'
-import { earclip } from 'earclip'
 import { S2Point } from 's2projection'
 import { parseFilter, parseConditionEncode } from '../style/conditionals'
+import { processFill } from './process'
 import requestData from '../util/xmlHttpRequest'
 
 import type { Face } from 'S2Projection'
@@ -32,7 +32,7 @@ export type TileRequest = {
 //    b) create array list of vertices/indices pairs.
 // 3) Serialize to arraybuffer and send off to GlobalWorkerPool to send back to the appropriate map.
 //    for each vertices/indices pair, encode all in the same buffer. Howevever, we need to track the layer index
-//    of each pair for deserializing. For instance, if the layers looks like: [{ source: 1 }, { source: 2}, { source: 1} ]
+//    of each pair for deserializing. For instance, if the layers looks like: [{ source: 1 }, { source: 2 }, { source: 1} ]
 //    and the source 1 has finished downloading first, we serialize the first part, and add the index sets:
 //    [layerID, count, offset, size, ..., layerID, count, offset, size, ..., etc.]: [3, 0, 3, 102, 3, 0, 1, 3, 3, 66, 102]. The resultant to send is:
 //    In a future update, the size parameter will matter when we add dataRangeFunctions and dataConditionFunctions
@@ -189,21 +189,16 @@ export default class TileWorker {
               layerGuide.push(i)
               // we can now process according to type
               if (layer.type === 'fill' && (type === 3 || type === 4)) {
-                this._processFill(feature.loadGeometry(), type, tile, vertices, indices)
+                processFill(feature.loadGeometry(), type, tile, vertices, indices)
               }
-
               // store layerGuides index count and offset
               layerGuide.push(indices.length - indicesOffset, indicesOffset) // layerID, count, offset
               // update offset
               indicesOffset = indices.length
               // create a mapping of layer and paint properties and than store
               const encodings = []
-              for (const l in layer.layout) {
-                layer.layout[l](properties, encodings)
-              }
-              for (const p in layer.paint) {
-                layer.paint[p](properties, encodings)
-              }
+              for (const l in layer.layout) layer.layout[l](properties, encodings)
+              for (const p in layer.paint) layer.paint[p](properties, encodings)
               layerGuide.push(encodings.length, ...encodings)
             }
           }
@@ -217,52 +212,6 @@ export default class TileWorker {
       postMessage({ mapID, type: 'data', source: sourceName, tileID: tile.hash, vertexBuffer, indexBuffer, layerGuideBuffer }, [vertexBuffer, indexBuffer, layerGuideBuffer])
     }
   }
-
-  _processFill (geometry: Array<Array<Point>> | Array<Point>, type: 3 | 4, tile: TileRequest,
-    vertices: Array<number>, indices: Array<number>) {
-    const { division, extent, bbox } = tile
-    // given geometry, convert data to tiles bounds, position all points relative to center,
-    // push results to vertices and indices updating offset as we go.
-    const ds = (bbox[2] - bbox[0]) / 4096
-    const dt = (bbox[3] - bbox[1]) / 4096
-
-    if (type === 4) {
-      geometry.forEach(poly => {
-        const data = earclip(poly, division, extent, vertices.length / 3)
-        // remap vertices to x, y, z than store
-        remapVertices(data.vertices, vertices, tile, ds, dt)
-        // store indices
-        indices.push(...data.indices)
-      })
-    } else {
-      const data = earclip(geometry, division, extent, vertices.length / 3) // just the first ring for now
-      // remap vertices to x, y, z than store
-      remapVertices(data.vertices, vertices, tile, ds, dt)
-      // store indices
-      indices.push(...data.indices)
-    }
-  }
-}
-
-function remapVertices (stVertices: Array<number>, vertices: Array<number>, tile: TileRequest,
-  ds: number, dt: number) {
-  const { face, center, bbox } = tile
-  let st: S2Point
-  let s: number
-  let t: number
-  stVertices.forEach((vertex, i) => {
-    if (i % 2 === 0) { // x
-      s = ds * vertex + bbox[0]
-    } else { // y
-      t = dt * vertex + bbox[1]
-      // convert to point, scale it, subtract center
-      st = S2Point.fromSTGL(face, s, t)
-      st.normalize()
-      st.subScalar(center)
-      // store
-      vertices.push(st.x, st.y, st.z)
-    }
-  })
 }
 
 // create the tileworker

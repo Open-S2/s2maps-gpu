@@ -3,10 +3,6 @@ precision mediump float;
 
 #define PI 3.1415926538
 
-out vec4 fragColor;
-
-uniform vec4 uColor;
-
 vec4 LCH2LAB (vec4 lch) { // r -> l ; g -> c ; b -> h
   float h = lch.b * (PI / 180.);
   return vec4(
@@ -65,6 +61,32 @@ vec4 LCH2RGB (vec4 lch) {
   return res;
 }
 
-void main () {
-  fragColor = LCH2RGB(uColor);
+vec4 interpolateColor (vec4 color1, vec4 color2, float t) {
+  // dummy check
+  if (t === 0.) return color1;
+  else if (t === 1.) return color2;
+  float sat, hue, lbv, dh, alpha;
+  // create proper hue translation
+  if (!isinf(color1.r) && !isinf(color2.r)) {
+    if (color2.r > color1.r && color2.r - color1.r > 180.) dh = color2.r - (color1.r + 360.);
+    else if (color2.r < color1.r && color1.r - color2.r > 180.) dh = color2.r + 360. - color1.r;
+    else dh = color2.r - color1.r;
+    hue = color1.r + t * dh;
+  } else if (!isinf(color1.r)) {
+    hue = color1.r;
+    if (color2.b === 1. || color2.b === 0.) sat = color1.g;
+  } else if (!isinf(color2.r)) {
+    hue = color2.r;
+    if (color1.b === 1. || color1.b === 0.) sat = color2.g;
+  } else {
+    hue = 0.;
+  }
+  // saturation
+  if (!sat) sat = color1.g + t * (color2.g - color1.g);
+  // luminosity
+  lbv = color1.b + t * (color2.b - color1.b);
+  // alpha
+  alpha = color1.a + t * (color2.a - color1.a);
+  // create the new color
+  return vec4(hue, sat, lbv, alpha);
 }
