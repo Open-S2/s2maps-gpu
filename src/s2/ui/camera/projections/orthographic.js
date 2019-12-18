@@ -1,5 +1,4 @@
 // @flow
-import { degToRad } from 's2projection'
 import * as mat4 from '../../../util/mat4'
 import Projector from './projector'
 
@@ -27,26 +26,21 @@ export default class OrthographicProjection extends Projector {
     if (this.zoom > this.maxZoom) { this.zoom = this.maxZoom; return false }
     else if (this.zoom < 0) { this.zoom = 0; return false }
     this.scale = Math.pow(2, this.zoom)
-    this.matrices = {}
     this.sizeMatrices = {}
     this.dirty = true
     return true
   }
 
   getMatrixAtSize (tileSize?: number = 512): Float32Array {
-    if (this.matrices[tileSize]) return mat4.clone(this.matrices[tileSize])
+    if (this.sizeMatrices[tileSize]) return mat4.clone(this.sizeMatrices[tileSize])
     const matrix = mat4.create()
     // get height and width ratios for each tile
     const widthRatio = this.width / (tileSize * this.scale)
     const heightRatio = this.height / (tileSize * this.scale)
     // create projection
     mat4.ortho(matrix, widthRatio, heightRatio, this.zFar)
-    // translate position
-    mat4.translate(matrix, this.translation)
-    // rotate position
-    mat4.rotate(matrix, [degToRad(this.lat), degToRad(this.lon), 0])
     // store the matrix for future use
-    this.matrices[tileSize] = matrix
+    this.sizeMatrices[tileSize] = matrix
 
     return mat4.clone(matrix)
   }

@@ -10,17 +10,17 @@ export default class WallpaperProgram extends Program {
   vao: VertexArrayObject
   vertexBuffer: WebGLVertexArrayObject
   aPos: GLint // 'a_pos' vec4 attribute
-  uScale: GLint // 'u_scale' vec2 uniform
-  backgroundColor: GLint
-  haloColor: GLint
-  fade1Color: GLint
-  fade2Color: GLint
+  uScale: WebGLUniformLocation // 'u_scale' vec2 uniform
+  backgroundColor: WebGLUniformLocation
+  haloColor: WebGLUniformLocation
+  fade1Color: WebGLUniformLocation
+  fade2Color: WebGLUniformLocation
   constructor (context: Context) {
     // get gl from context
     const { gl } = context
     // upgrade
-    super(gl, wallpaperVertex, wallpaperFragment)
-    // acquire the attributes
+    super(gl, wallpaperVertex, wallpaperFragment, false)
+    // acquire the attributes & uniforms
     this.aPos = gl.getAttribLocation(this.glProgram, 'aPos')
     this.uScale = gl.getUniformLocation(this.glProgram, 'uScale')
     this.backgroundColor = gl.getUniformLocation(this.glProgram, 'backgroundColor')

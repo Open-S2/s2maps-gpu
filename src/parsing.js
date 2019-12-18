@@ -1,5 +1,5 @@
 const Color = require('./conditionals/color').default
-const { parseFeature, encodeCondition, decodeFeature } = require('./conditionals/parseCondition').default
+const { encodeFeatureFunction, encodeLayerFunction, decodeFeature } = require('./conditionals/parseCondition').default
 // const chroma = require('chroma-js')
 // const filterFunction = require('./conditionals/filterFunction').default
 
@@ -68,17 +68,17 @@ const input2 = [
   "rgba(20, 200, 200, 1)"
 ]
 
-const input = [
-  "input-range",
-  "zoom",
-  "lin",
-  0,
-  "rgba(5, 100, 125, .5)",
-  5,
-  input2,
-  7,
-  "rgba(20, 200, 200, 1)"
-]
+// const input = [
+//   "input-range",
+//   "zoom",
+//   "lin",
+//   0,
+//   "rgba(5, 100, 125, .5)",
+//   5,
+//   input2,
+//   7,
+//   "rgba(20, 200, 200, 1)"
+// ]
 
 // const input = [
 //   "input-range",
@@ -92,24 +92,21 @@ const input = [
 //   "rgba(20, 200, 200, 1)"
 // ]
 
-// const input = "rgba(200, 160, 100, .8)"
+const input = "rgba(200, 160, 100, .8)"
 
-const inputClone = JSON.parse(JSON.stringify(input2))
+const inputClone = JSON.parse(JSON.stringify(input3))
+const inputCloneEncode = JSON.parse(JSON.stringify(input3))
 
-const encodeFeatureFunction = parseFeature(inputClone)
+const encodeFeatureFunc = encodeFeatureFunction(inputClone)
+const encodedLayer = encodeLayerFunction(inputCloneEncode)
+console.log('encodedLayer', encodedLayer)
 
 const featureEncoding = []
 
-encodeFeatureFunction({ class: 'river', elev: 10 }, featureEncoding)
+encodeFeatureFunc({ class: 'river', elev: 10 }, featureEncoding)
 console.log('featureEncoding', featureEncoding)
 
-const inputCloneEncode = JSON.parse(JSON.stringify(input2))
-
-const conditionEncodings = encodeCondition(inputCloneEncode)
-console.log('conditionEncodings', conditionEncodings)
-
-const decoded = [-1, -1, -1, -1]
-decodeFeature(conditionEncodings, featureEncoding, [0, 0, 0], decoded, true)
+const decoded = decodeFeature(encodedLayer, featureEncoding, [0, 0, 0], true)
 console.log(decoded)
 
 

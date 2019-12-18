@@ -1,21 +1,28 @@
 #version 300 es
 precision mediump float;
 
-in vec3 aPos;
-// out vec4 color;
-uniform mat4 uMatrix;
+layout (location = 0) in vec3 aPosHigh;
+layout (location = 1) in vec3 aPosLow;
+// layout (location = 2) in uint index;
 
-// uniform TileState {
-//   mat4 uMatrix;
-// };
-//
-// uniform InputState {
-//   float inputs[16]; // [zoom, lat, lon, angle, pitch, ...FeatureStates]
-//   float encodings[256];
-//   float featureCode[64];
-// };
+uniform mat4 uMatrix;
+uniform vec3 uEyePosHigh;
+uniform vec3 uEyePosLow;
+
+uniform float uInputs[16];
+uniform float uLayerCode[256];
+uniform float uFeatureCode[64];
+
+@import ./decodeFeature;
+@import ./rteDSFun90;
+
+out vec4 color;
 
 void main () {
-  // Multiply the position by the matrix.
-  gl_Position = uMatrix * vec4(aPos, 1);
+  // decode color
+  color = decodeFeature(true, 0, 0);
+  // GPU-RTE DSFUN90
+  vec3 pos = RTE();
+  // set position
+  gl_Position = uMatrix * vec4(pos, 1);
 }

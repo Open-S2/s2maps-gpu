@@ -105,11 +105,11 @@ export default class S2Map {
     return this._canvasContainer
   }
 
-  injectSourceData (source: string, tileID: string, vertexBuffer: ArrayBuffer, indexBuffer: ArrayBuffer, layerGuideBuffer: ArrayBuffer) {
+  injectSourceData (source: string, tileID: string, vertexBuffer: ArrayBuffer, indexBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer) {
     if (this._offscreen) {
-      this.map.postMessage({ type: 'data', source, tileID, vertexBuffer, indexBuffer, layerGuideBuffer }, [vertexBuffer, indexBuffer, layerGuideBuffer])
+      this.map.postMessage({ type: 'data', source, tileID, vertexBuffer, indexBuffer, featureGuideBuffer }, [vertexBuffer, indexBuffer, featureGuideBuffer])
     } else {
-      this.map.injectSourceData(source, tileID, vertexBuffer, indexBuffer, layerGuideBuffer)
+      this.map.injectSourceData(source, tileID, vertexBuffer, indexBuffer, featureGuideBuffer)
     }
   }
 }

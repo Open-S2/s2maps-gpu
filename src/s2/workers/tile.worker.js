@@ -1,7 +1,7 @@
 // @flow
 import { VectorTile } from 's2-vector-tile'
 import { S2Point } from 's2projection'
-import { parseFilter, parseConditionEncode } from '../style/conditionals'
+import { parseFilter, encodeFeatureFunction } from '../style/conditionals'
 import { processFill } from './process'
 import requestData from '../util/xmlHttpRequest'
 
@@ -16,7 +16,6 @@ export type TileRequest = {
   zoom: number,
   x: number,
   y: number,
-  center: [number, number, number],
   bbox: [number, number, number, number],
   division: number,
   extent: number
@@ -37,7 +36,7 @@ export type TileRequest = {
 //    [layerID, count, offset, size, ..., layerID, count, offset, size, ..., etc.]: [3, 0, 3, 102, 3, 0, 1, 3, 3, 66, 102]. The resultant to send is:
 //    In a future update, the size parameter will matter when we add dataRangeFunctions and dataConditionFunctions
 //    size does not include layerID, count, or offset. So for instance, if we have no dataFunctions, size is 0
-//    postMessage({ mapID, layerGuide, vertexBuffer, indexBuffer }, [vertexBuffer, indexBuffer])
+//    postMessage({ mapID, featureGuide, vertexBuffer, indexBuffer }, [vertexBuffer, indexBuffer])
 
 // one thing to note: If all source, font, billboard data has not yet been downloaded, but we are already processing tiles,
 // after every update of
@@ -85,10 +84,10 @@ export default class TileWorker {
     for (const layer of layers) {
       layer.filter = parseFilter(layer.filter)
       for (const l in layer.layout) {
-        layer.layout[l] = parseConditionEncode(layer.layout[l])
+        layer.layout[l] = encodeFeatureFunction(layer.layout[l])
       }
       for (const p in layer.paint) {
-        layer.paint[p] = parseConditionEncode(layer.paint[p])
+        layer.paint[p] = encodeFeatureFunction(layer.paint[p])
       }
     }
   }
@@ -159,6 +158,7 @@ export default class TileWorker {
     this.status = 'ready'
   }
 
+  // TODO: If featureCode is the same for multiple: merge for batching
   _processTileData (mapID: string, sourceName: string, source: Object, tile: TileRequest, data: ArrayBuffer | Blob) {
     // Check the source metadata. If it's a vector run through all
     // layers and process accordingly. If image, no pre-processing needed.
@@ -167,7 +167,7 @@ export default class TileWorker {
     if (type === 'vector') {
       const vertices: Array<number> = []
       const indices: Array<number> = []
-      const layerGuide: Array<number> = []
+      const featureGuide: Array<number> = []
       const vectorTile = new VectorTile(data)
       const { layers } = this.maps[mapID]
       let indicesOffset: number = 0
@@ -185,21 +185,21 @@ export default class TileWorker {
             const { properties, type } = feature
             // lastly we need to filter according to the layer
             if (layer.filter(properties)) {
-              // now we definitively are creating triangles, so store layerGuide's layer ID, and current indices length
-              layerGuide.push(i)
+              // now we definitively are creating triangles, so store featureGuide's layer ID, and current indices length
+              featureGuide.push(i)
               // we can now process according to type
               if (layer.type === 'fill' && (type === 3 || type === 4)) {
                 processFill(feature.loadGeometry(), type, tile, vertices, indices)
               }
-              // store layerGuides index count and offset
-              layerGuide.push(indices.length - indicesOffset, indicesOffset) // layerID, count, offset
+              // store featureGuides index count and offset
+              featureGuide.push(indices.length - indicesOffset, indicesOffset) // layerID, count, offset
               // update offset
               indicesOffset = indices.length
               // create a mapping of layer and paint properties and than store
               const encodings = []
               for (const l in layer.layout) layer.layout[l](properties, encodings)
               for (const p in layer.paint) layer.paint[p](properties, encodings)
-              layerGuide.push(encodings.length, ...encodings)
+              featureGuide.push(encodings.length, ...encodings)
             }
           }
         }
@@ -207,9 +207,9 @@ export default class TileWorker {
       // Upon processing the data, encode vertices, indices, and .
       const vertexBuffer = new Float32Array(vertices).buffer
       const indexBuffer = new Uint32Array(indices).buffer
-      const layerGuideBuffer = new Uint32Array(layerGuide).buffer
+      const featureGuideBuffer = new Uint32Array(featureGuide).buffer
       // Upon encoding, send back to GlobalWorkerPool.
-      postMessage({ mapID, type: 'data', source: sourceName, tileID: tile.hash, vertexBuffer, indexBuffer, layerGuideBuffer }, [vertexBuffer, indexBuffer, layerGuideBuffer])
+      postMessage({ mapID, type: 'data', source: sourceName, tileID: tile.hash, vertexBuffer, indexBuffer, featureGuideBuffer }, [vertexBuffer, indexBuffer, featureGuideBuffer])
     }
   }
 }

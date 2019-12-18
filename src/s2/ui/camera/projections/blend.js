@@ -1,5 +1,4 @@
 // @flow
-import { degToRad } from 's2projection'
 import * as mat4 from '../../../util/mat4'
 import Projector from './projector'
 
@@ -49,7 +48,6 @@ export default class BlendProjection extends Projector {
     //   latChange = -latChange
     // }
     // this.onMove(lonChange, latChange, 0.25, 0.25)
-    this.matrices = {}
     this.sizeMatrices = {}
     this.dirty = true
     return true
@@ -63,10 +61,6 @@ export default class BlendProjection extends Projector {
     const heightRatio = this.height / (tileSize * this.scale)
     // create projection
     mat4.blend(matrix, widthRatio * (-1 / this.translation[2]), heightRatio * (-1 / this.translation[2]), this.zNear, this.zFar)
-    // translate position
-    mat4.translate(matrix, this.translation)
-    // rotate position
-    mat4.rotate(matrix, [degToRad(this.lat), degToRad(this.lon), 0])
     // updated matrix
     this.sizeMatrices[tileSize] = matrix
 

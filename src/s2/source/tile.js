@@ -1,6 +1,7 @@
 // @flow
-import { S2Point, tileHash, bboxST } from 's2projection' // https://github.com/Regia-Corporation/s2projection
-import { TileCache } from './'
+import { S2Point, bboxST } from 's2projection' // https://github.com/Regia-Corporation/s2projection
+// import { S2Point, tileHash, bboxST } from 's2projection' // https://github.com/Regia-Corporation/s2projection
+// import { TileCache } from './'
 
 import type { Face } from 's2projection' // https://github.com/Regia-Corporation/s2projection/blob/master/src/S2Projection.js#L4
 import type { StyleLayers } from '../style'
@@ -9,11 +10,11 @@ import type { StyleLayers } from '../style'
 // All layers are merged into one VAO/indexBuffer/vertexBuffer set. This reduces complexity and improves draw speed.
 // To ensure we draw in order and know the index ranges exist per layer, we maintain a 'Layer Guide'.
 // the attributes object is for dataConditions and dataRanges.
-export type LayerGuide = {
-  parent: boolean,
-  tile?: any, // should it be a parent reference
-  source: string,
+export type FeatureGuide = {
+  // parent: boolean,
+  // tile?: any, // should it be a parent reference
   layerID: number,
+  source: string,
   count: number,
   offset: number,
   type: string,
@@ -29,6 +30,8 @@ export type VectorTileSource = {
   vao?: WebGLVertexArrayObject
 }
 
+export type SourceData = { [string | number]: VectorTileSource }
+
 // tiles are designed to create mask geometry and store prebuilt layer data handed off by the worker pool
 // whenever rerenders are called, they will access these tile objects for the layer data / vaos
 // before managing sources asyncronously, a tile needs to synchronously place spherical background
@@ -41,12 +44,11 @@ export default class Tile {
   x: number
   y: number
   size: number
-  center: [number, number, number] = [0, 0, 0] // [number (x), number (y), number (z)]
   bbox: [number, number, number, number]
   extent: number = 4096
   division: number
-  sourceData: { [string | number]: VectorTileSource } = {}
-  layersGuide: Array<LayerGuide> = []
+  sourceData: SourceData = {}
+  featureGuide: Array<FeatureGuide> = []
   constructor (face: number, zoom: number, x: number, y: number, hash: number, size?: number = 512) {
     this.face = face
     this.zoom = zoom
@@ -55,93 +57,37 @@ export default class Tile {
     this.id = hash
     this.size = size
     this.bbox = bboxST(x, y, zoom)
-    this._createCenter()
     this._createDivision()
     this._buildMaskGeometry()
   }
 
-  // find parent tile incase some source cache does not exist. Should the parent not have
-  injectParentOrChildren (tileCache: TileCache) {
-    // corner case, we are at min zoom
-    if (this.zoom === 0) return
-    // get parent hash
-    const parentHash = tileHash(this.face, this.zoom - 1, Math.floor(this.x / 2), Math.floor(this.y / 2))
-    // check if parent tile exists, if so inject
-    if (tileCache.has(parentHash)) {
-      const parent = tileCache.get(parentHash)
-      // inject references to layersGuide from each parentTile. If a layerGuide is marked parent,
-      // than it's the parents-parent and that can get messy if the user zooms in really fast, so we ignore.
-      // sort according to ID
-      for (const layerGuide of parent.layersGuide) {
-        if (!layerGuide.parent) {
-          const { source, layerID, count, offset, type, attributes } = layerGuide
-          this.layersGuide.push({ parent: true, tile: parent, source, layerID, count, offset, type, attributes })
-        }
-      }
-      this.layersGuide.sort((a, b) => a.layerID - b.layerID)
-    }
-  }
-
-  injectSourceData (source: string, vertexArray: Float32Array, indexArray: Uint32Array, layerGuideArray: Uint32Array, layers: StyleLayers) {
+  injectSourceData (source: string, vertexArray: Float32Array, indexArray: Uint32Array, featureGuideArray: Uint32Array, layers: StyleLayers) {
     // store a reference to the source
     this.sourceData[source] = {
       vertexArray,
       indexArray
     }
-    // we work off the layerGuideArray, adding to the buffer as we go
-    const lgl = layerGuideArray.length
+    // we work off the featureGuideArray, adding to the buffer as we go
+    const lgl = featureGuideArray.length
     let i = 0
     while (i < lgl) {
       // grab the size, layerID, count, and offset, and update the index
-      const [layerID, count, offset, size] = layerGuideArray.slice(i, i + 4)
+      const [layerID, count, offset, size] = featureGuideArray.slice(i, i + 4)
       i += 4
-      // grab the layer and encodings and update index by size
-      const layer = layers[layerID]
-      const encodings = (size) ? [...layerGuideArray.slice(i, i + size)] : []
-      i += size
-      // create and store the layerGuide
-      this.layersGuide.push({
-        parent: false,
-        source,
+      // create and store the featureGuide
+      this.featureGuide.push({
         layerID,
+        source,
         count,
         offset,
-        type: layer.type,
-        attributes: this._parseAttributes(layer, encodings)
+        type: layers[layerID].type,
+        featureCode: new Float32Array([...featureGuideArray.slice(i, i + size)])
       })
+      i += size
     }
-    // Since a parent or children can be injected, we need to first remove any instances of the "old" source data.
-    // Since we only reference
-    this.layersGuide = this.layersGuide.filter(lg => !(lg.parent && lg.source === source))
     // because sources may be utilized in an out of order fashion inside the style.layers property,
     // but come in linearly, we need to sort.
-    this.layersGuide.sort((a, b) => a.layerID - b.layerID)
-  }
-
-  _parseAttributes(layer: StyleLayers, encodings: Array<number>) {
-    const attributes = {}
-    // parse layouts given encoding
-    for (const l in layer.layout) {
-      attributes[l] = layer.layout[l](encodings)
-    }
-    // parse paints given encoding
-    for (const p in layer.paint) {
-      attributes[p] = layer.paint[p](encodings)
-    }
-    return attributes
-  }
-
-  _createCenter () {
-    // find corner x, y, z coordinates, and find the averages
-    // The z value will sometimes be at the tips of the face, but that's ok as the delta z
-    // is usually fairly small
-    const bottomLeft = S2Point.fromSTGL(this.face, this.bbox[0], this.bbox[1])
-    bottomLeft.normalize()
-    const topRight = S2Point.fromSTGL(this.face, this.bbox[2], this.bbox[3])
-    topRight.normalize()
-    this.center[0] = (topRight.x + bottomLeft.x) / 2
-    this.center[1] = (topRight.y + bottomLeft.y) / 2
-    this.center[2] = (topRight.z + bottomLeft.z) / 2
+    this.featureGuide.sort((a, b) => a.layerID - b.layerID)
   }
 
   _createDivision () {
@@ -163,7 +109,7 @@ export default class Tile {
     const tB = this.bbox[1]
     const sB = this.bbox[0]
     // grab the appropriate tile constants, and prep variables
-    const { center, division, face } = this
+    const { division, face } = this
     const indexLength = division + 1
     let t: number, s: number, point: S2Point, index: number, indexAbove: number
     // now we can build out the vertices and indices
@@ -172,11 +118,10 @@ export default class Tile {
       t = dt / division * j + tB
       for (let i = 0; i <= division; i++) {
         s = ds / division * i + sB
-        // create s2Point using WebGL's projection scheme, normalize, inject center, and than store
+        // create s2Point using WebGL's projection scheme, normalize, and than store
         point = S2Point.fromSTGL(face, s, t)
         point.normalize()
-        point.subScalar(center)
-        vertices.push(point.x, point.y, point.z)
+        vertices.push(...point.toFloats())
       }
     }
     // indices

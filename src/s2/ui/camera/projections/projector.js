@@ -1,7 +1,6 @@
 // @flow
 import * as mat4 from '../../../util/mat4'
-import { Tile } from '../../../source'
-import { S2Point, tileXYFromSTZoom, bboxST, updateFace, tileHash } from 's2projection'
+import { S2Point, tileXYFromSTZoom, bboxST, updateFace, tileHash, doubleToFloats, degToRad } from 's2projection'
 
 import type { Projection } from './projection'
 
@@ -32,7 +31,6 @@ export default class Projector implements Projection {
   width: number = 400 // default canvas width
   height: number = 300 // default canvas height
   multiplier: number = 1
-  matrices: { [number | string]: Float32Array } = {} // key is tile.id
   sizeMatrices: { [number | string]: Float32Array } = {} // key is tileSize
   dirty: boolean = true
   constructor (config?: ProjectionConfig = {}) {
@@ -53,7 +51,6 @@ export default class Projector implements Projection {
   resize (width: number, height: number) {
     this.width = width
     this.height = height
-    this.matrices = {}
     this.sizeMatrices = {}
     this.dirty = true
   }
@@ -71,7 +68,6 @@ export default class Projector implements Projection {
     else if (this.lat < -this.maxLatRotation) { this.lat = -this.maxLatRotation }
     // if we hit 360, just swing back to 0
     while (this.lon >= 360) { this.lon -= 360 }
-    this.matrices = {}
     this.sizeMatrices = {}
     this.dirty = true
   }
@@ -82,14 +78,33 @@ export default class Projector implements Projection {
     this.onMove()
   }
 
-  getMatrix (tile: Tile): Float32Array {
-    if (this.matrices[tile.id]) return this.matrices[tile.id]
-    const matrix = this.matrices[tile.id] = this.getMatrixAtSize(tile.size)
-    // compute centerEye
-    const centerEye = mat4.multiplyVector(matrix, tile.center)
-    // add eye center to the matrix
-    mat4.addCenter(matrix, centerEye)
-    return matrix
+  getMatrix (size: number, full?: boolean = false): Float32Array {
+    const matrix = this.getMatrixAtSize(size)
+    const mv = mat4.create()
+    // translate position
+    mat4.translate(mv, this.translation)
+    // rotate position
+    mat4.rotate(mv, [degToRad(this.lat), degToRad(this.lon), 0])
+    // if full, just build out the pmv projection and return
+    if (full) {
+      mat4.multiply(matrix, mv)
+      return matrix
+    }
+    const eye = new Float32Array([mv[3], mv[7], mv[11]])
+    // build eyePosHigh and eyePosLow
+    const eyeX = doubleToFloats(eye[0])
+    const eyeY = doubleToFloats(eye[1])
+    const eyeZ = doubleToFloats(eye[2])
+    const eyePosHigh = new Float32Array([eyeX[0], eyeY[0], eyeZ[0]])
+    const eyePosLow = new Float32Array([eyeX[1], eyeY[1], eyeZ[1]])
+    // remove translate
+    mv[3] = 0
+    mv[7] = 0
+    mv[11] = 0
+    // multiply the view matrix into the main perspective matrix
+    mat4.multiply(matrix, mv)
+
+    return { matrix, eyePosHigh, eyePosLow }
   }
 
   getTilesInView (size?: number = 512): Array<[number, number, number, number, number]> { // [face, zoom, x, y, hash]
@@ -99,7 +114,7 @@ export default class Projector implements Projection {
     const checkedTiles = new Set()
     const zoomLevel = this.zoom << 0
     const tileSize = 1 << zoomLevel
-    const matrix = this.getMatrixAtSize(size)
+    const matrix = this.getMatrix(size, true)
 
     // grab the first tile while we prep
     let point = S2Point.fromLonLat(-this.lon, this.lat)
@@ -148,6 +163,7 @@ export default class Projector implements Projection {
       }
     } while (checkList.length)
 
+    console.log('tiles', tiles)
     return tiles
   }
 }

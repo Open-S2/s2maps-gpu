@@ -4,6 +4,7 @@ export default class Context {
   gl: WebGLRenderingContext | WebGL2RenderingContext
   constructor (context: WebGLRenderingContext | WebGL2RenderingContext) {
     this.gl = context
+    this.enableAlphaCoverage()
   }
 
   clearScene () {
@@ -38,6 +39,14 @@ export default class Context {
 
   disableAlphaCoverage () {
     this.gl.disable(this.gl.SAMPLE_ALPHA_TO_COVERAGE)
+  }
+
+  enableStencilTest () {
+    this.gl.enable(this.gl.STENCIL_TEST)
+  }
+
+  disableStencilTest () {
+    this.gl.disable(this.gl.STENCIL_TEST)
   }
 
   enableStencil () {

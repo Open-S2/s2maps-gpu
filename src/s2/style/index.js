@@ -3,7 +3,7 @@ import Color from './color'
 import Map from '../ui/map'
 import { Tile } from '../source'
 import requestData from '../util/xmlHttpRequest'
-import { parseConditionDecode } from './conditionals'
+import { encodeLayerAttribute } from './conditionals'
 
 import type { TileRequest } from '../workers/tile.worker'
 
@@ -14,9 +14,7 @@ type SourceType = {
   sourceName?: string // if you want to make requests without getting metadata, you need this
 }
 
-type SourceTypes = {
-  [string]: SourceType
-}
+type SourceTypes = { [string]: SourceType }
 
 type DrawType = 'fill' | 'line' | 'text' | 'billboard'
 
@@ -46,7 +44,8 @@ export type StyleLayer = {
   type?: Array<DrawType> | DrawType, // if no type, it can be "any"
   filter: StyleFilter,
   layout: StyleLayout,
-  paint: StylePaint
+  paint: StylePaint,
+  code: Float32Array
 }
 
 type StyleLayers = Array<StyleLayer>
@@ -65,8 +64,6 @@ export type StylePackage = {
   layers: StyleLayers
 }
 
-type SphereBackgroundStyle = Color
-
 export default class Style {
   map: Map
   webworker: boolean = false
@@ -78,7 +75,7 @@ export default class Style {
   billboards: SourceTypes = {}
   layers: StyleLayers = []
   wallpaper: WallpaperStyle
-  sphereBackground: void | SphereBackgroundStyle
+  sphereBackground: void | Float32Array // Attribute Code - limited to input-range or input-condition
   dirty: boolean = true
   constructor (options: MapOptions, map: Map) {
     const { style } = options
@@ -142,18 +139,26 @@ export default class Style {
   }
 
   _buildSphereBackground (sphereBackground?: Object) {
-    if (sphereBackground) this.sphereBackground = parseConditionDecode(sphereBackground['background-color'])
+    if (sphereBackground) this.sphereBackground = encodeLayerAttribute(sphereBackground['background-color'])
   }
 
   // TODO: prep color, line-color, text-color, fill-color, text-size, text-halo-color, text-halo-width, and/or line-width, conditions
+  // TODO+: ensure the order is correct when WebGL eventually parses the eoncdings
   _buildLayers () {
+    // now we build our program set simultaneous to encoding our layers
     const programs = new Set()
     for (const layer of this.layers) {
+      const code = []
       programs.add(layer.type)
       // LAYOUTS
-      for (let key in layer.layout) layer.layout[key] = parseConditionDecode(layer.layout[key])
+      for (let key in layer.layout) {
+        code.push(...encodeLayerAttribute(layer.layout[key]))
+      }
       // PAINTS
-      for (let key in layer.paint) layer.paint[key] = parseConditionDecode(layer.paint[key])
+      for (let key in layer.paint) {
+        code.push(...encodeLayerAttribute(layer.paint[key]))
+      }
+      layer.code = new Float32Array(code)
     }
     this.map.painter.prebuildPrograms(programs)
   }
@@ -162,9 +167,9 @@ export default class Style {
     const tileRequests: Array<TileRequest> = []
     tiles.forEach(tile => {
       // grab request values
-      const { id, face, zoom, x, y, center, bbox, division, extent } = tile
+      const { id, face, zoom, x, y, bbox, division, extent } = tile
       // build tileRequests
-      tileRequests.push({ hash: id, face, zoom, x, y, center, bbox, division, extent })
+      tileRequests.push({ hash: id, face, zoom, x, y, bbox, division, extent })
     })
     // send the tiles over to the worker pool manager to split the workload
     if (this.webworker) {

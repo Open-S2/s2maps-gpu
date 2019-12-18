@@ -3,7 +3,7 @@ const Color = require('./color').default
 const parseFilter = require('./parseFilter').default
 
 // This functionality is built for the Web Worker
-function parseFeature (input) {
+function encodeFeatureFunction (input) {
   if (!input) {
     return () => null
   } else if (Array.isArray(input)) { // we hit a conditional
@@ -46,7 +46,7 @@ function parseFeature (input) {
 // 1 -> exponential
 
 // This functionality is built for webgl to parse for drawing
-function encodeCondition (input) {
+function encodeLayerFunction (input) {
   const encodings = []
   encodings.push(0) // store a null no matter what
   let length = 1
@@ -137,7 +137,7 @@ function parseInputRange (input) {
   const preSolutions = {}
   for (let i = 0, il = input.length; i < il; i += 2) {
     if (Array.isArray(input[i + 1])) {
-      preSolutions[input[i]] = parseFeature(input[i + 1])
+      preSolutions[input[i]] = encodeFeatureFunction(input[i + 1])
     }
   }
   // now store all possible outcomes for sub conditionals
@@ -159,7 +159,7 @@ function parseDataRange (input) {
   let c = 1
   let il = input.length
   while (c < il) {
-    input[c] = parseFeature(input[c])
+    input[c] = encodeFeatureFunction(input[c])
     c += 2
   }
 
@@ -196,12 +196,12 @@ function parseDataCondition (input) {
         key: filter[0],
         encodeID: encodeResultID,
         condition: parseFilter(filter),
-        result: parseFeature(input.shift())
+        result: encodeFeatureFunction(input.shift())
       })
       encodeResultID++
     } else if (input[0] === 'default') {
       input.shift() // 'default'
-      conditions['default'] = parseFeature(input.shift())
+      conditions['default'] = encodeFeatureFunction(input.shift())
     }
   }
   if (!conditions['default']) conditions['default'] = () => null // just incase it's missing in the style json
@@ -228,9 +228,9 @@ function encodeDataCondition (input) {
     const condition = input.shift()
     const value = input.shift()
     if (Array.isArray(condition)) {
-      encoding.push(i, ...encodeCondition(value))
+      encoding.push(i, ...encodeLayerFunction(value))
     } else if (condition === 'default') {
-      encoding.push(0, ...encodeCondition(value))
+      encoding.push(0, ...encodeLayerFunction(value))
     } else { throw new Error('unkown condition type') }
     i++
   }
@@ -244,7 +244,7 @@ function encodeRange (input) {
   while (input.length) {
     const condition = ~~input.shift() // convert true and false to 0 and 1 respectively
     const value = input.shift()
-    encoding.push(condition, ...encodeCondition(value))
+    encoding.push(condition, ...encodeLayerFunction(value))
   }
 
   return encoding
@@ -252,115 +252,244 @@ function encodeRange (input) {
 
 let trigger = 0
 
-function decodeFeature (conditionEncodings, featureEncoding, inputs, res, color, index = 0, featureIndex = 0) {
+// function decodeFeature (conditionEncodings, featureEncoding, inputs, res, color, index = 0, featureIndex = 0) {
+//   // prep variables
+//   const startIndex = index
+//   const featureIndexStart = featureIndex
+//   const length = conditionEncodings[index] >> 10
+//   const condition = (conditionEncodings[index] & 1008) >> 4
+//   const inputType = (conditionEncodings[index] & 14) >> 1
+//   const interpolationType = conditionEncodings[index] & 1
+//   // console.log('index', index)
+//   // console.log('length', length)
+//   // console.log('condition', condition)
+//   // console.log('inputType', inputType)
+//   // console.log('interpolationType', interpolationType)
+//   trigger++
+//   if (trigger >= 10) return
+//   index++
+//   // create base, if exponential interpolation, we need to grab the base value and increment
+//   let base = 1
+//   if (interpolationType === 1) {
+//     base = conditionEncodings[index]
+//     index++
+//   }
+//   // run through conditions
+//   if (condition === 1) { // value
+//     for (let i = 0; i < length - 1; i++) res[i] = conditionEncodings[index + i]
+//   } else if (condition === 2 || condition === 3) { // data-condition or input-condition
+//     // run through each condition, when match is found, set value
+//     let input, value
+//     // setup input
+//     if (condition === 2) {
+//       input = featureEncoding[featureIndex]
+//       featureIndex++
+//     } else { input = inputs[inputType] }
+//     // prep
+//     value = conditionEncodings[index]
+//     while (input !== value) {
+//       // increment index & find length
+//       index += (conditionEncodings[index + 1] >> 10) + 1
+//       value = conditionEncodings[index]
+//     }
+//     // now we are in the proper place, we increment once and find grab the value
+//     decodeFeature(conditionEncodings, featureEncoding, inputs, res, color, index + 1, featureIndex)
+//   } else if (condition === 4 || condition === 5) { // data-range or input-range
+//     let input, val1, val2, start, end
+//     val1 = [-1, -1, -1, -1]
+//     val2 = [-1, -1, -1, -1]
+//     // grab the input value
+//     if (condition === 4) {
+//       input = featureEncoding[featureIndex]
+//       featureIndex++
+//     } else { input = inputs[inputType] }
+//     // create a start point
+//     start = end = conditionEncodings[index]
+//     index++
+//     // iterate through the current conditionalEncodings and match the indices with input
+//     while (end < input && input < length) {
+//       // console.log('START', end)
+//       // console.log('INPUT', input)
+//       const [newIndex, newFeatureIndex] = decodeFeature(conditionEncodings, featureEncoding, inputs, val1, color, index, featureIndex)
+//       index = newIndex
+//       // console.log('newIndex', index)
+//       featureIndex = newFeatureIndex
+//       // update end and index
+//       start = end
+//       end = conditionEncodings[index]
+//       index++
+//     }
+//     // console.log('start', start)
+//     // console.log('end', end)
+//     // if input >= length than return val1
+//     if (end === input) {
+//       // console.log('A STORY')
+//       // console.log()
+//       decodeFeature(conditionEncodings, featureEncoding, inputs, res, color, index, featureIndex)
+//     } else if (index >= length) { // just not found
+//       // console.log('B STORY', val1)
+//       // console.log()
+//       res[0] = val1[0]; res[1] = val1[1]; res[2] = val1[2]; res[3] = val1[3]
+//     } else if (val1[0] === -1) { // if val1 is still a negative number than decode start and set it to res
+//       // console.log('C STORY')
+//       // console.log()
+//       decodeFeature(conditionEncodings, featureEncoding, inputs, res, color, index, featureIndex)
+//     } else { // otherwise find val2, interpolate
+//       // console.log('D STORY', index)
+//       // console.log()
+//       // console.log('end', end)
+//       decodeFeature(conditionEncodings, featureEncoding, inputs, val2, color, index, featureIndex)
+//       // console.log('val1', val1)
+//       // console.log('val2', val2)
+//       // get interpolation
+//       const t = exponential(input, start, end, base) // default base of 1 makes a linear interpolation
+//       if (color) interpolateColor(val1, val2, t, res)
+//       else res[0] = val1[0] + t * (val2[0] - val1[0])
+//     }
+//   } else if (condition === 6) { // animation-state
+//
+//   } else if (condition >= 7) { // feature-state
+//
+//   }
+//
+//   return [startIndex + length, featureIndexStart + featureEncoding[featureIndexStart]]
+// }
+
+function decodeFeature (conditionEncodings, featureEncoding, inputs, color, index = 0, featureIndex = 0) {
+  const res = new Float32Array([-1, -1, -1, -1])
   // prep variables
-  const startIndex = index
-  const featureIndexStart = featureIndex
-  const length = conditionEncodings[index] >> 10
-  const condition = (conditionEncodings[index] & 1008) >> 4
-  const inputType = (conditionEncodings[index] & 14) >> 1
-  const interpolationType = conditionEncodings[index] & 1
-  // console.log('index', index)
-  // console.log('length', length)
-  // console.log('condition', condition)
-  // console.log('inputType', inputType)
-  // console.log('interpolationType', interpolationType)
-  trigger++
-  if (trigger >= 10) return
+  const conditionStack = new Float32Array(6)
+  let conditionIndex = 0
+  // prep the first featureIndex
+  conditionStack[conditionIndex] = conditionEncodings[index]
+  conditionIndex++
   index++
-  // create base, if exponential interpolation, we need to grab the base value and increment
-  let base = 1
-  if (interpolationType === 1) {
-    base = conditionEncodings[index]
-    index++
-  }
-  // run through conditions
-  if (condition === 1) { // value
-    for (let i = 0; i < length - 1; i++) res[i] = conditionEncodings[index + i]
-  } else if (condition === 2 || condition === 3) { // data-condition or input-condition
-    // run through each condition, when match is found, set value
-    let input, value
-    // setup input
-    if (condition === 2) {
-      input = featureEncoding[featureIndex]
-      featureIndex++
-    } else { input = inputs[inputType] }
-    // prep
-    value = conditionEncodings[index]
-    while (input !== value) {
-      // increment index & find length
-      index += (conditionEncodings[index + 1] >> 10) + 1
-      value = conditionEncodings[index]
-    }
-    // now we are in the proper place, we increment once and find grab the value
-    decodeFeature(conditionEncodings, featureEncoding, inputs, res, color, index + 1, featureIndex)
-  } else if (condition === 4 || condition === 5) { // data-range or input-range
-    let input, val1, val2, start, end
-    val1 = [-1, -1, -1, -1]
-    val2 = [-1, -1, -1, -1]
-    // grab the input value
-    if (condition === 4) {
-      input = featureEncoding[featureIndex]
-      featureIndex++
-    } else { input = inputs[inputType] }
-    // create a start point
-    start = end = conditionEncodings[index]
-    index++
-    // iterate through the current conditionalEncodings and match the indices with input
-    while (end < input && input < length) {
-      // console.log('START', end)
-      // console.log('INPUT', input)
-      const [newIndex, newFeatureIndex] = decodeFeature(conditionEncodings, featureEncoding, inputs, val1, color, index, featureIndex)
-      index = newIndex
-      // console.log('newIndex', index)
-      featureIndex = newFeatureIndex
-      // update end and index
-      start = end
-      end = conditionEncodings[index]
+
+  do {
+    conditionIndex--
+    // pull out current conditionIndex condition an decode
+    const conditionSet = conditionStack[conditionIndex]
+    const length = conditionSet >> 10
+    const condition = (conditionSet & 1008) >> 4
+    // for each following condition, pull out the eventual color and set to val
+    if (condition === 1) {
+      if (res[0] !== -1) { // blend with current value
+        // const t = exponential(input, start, end, base)
+        const val = [conditionEncodings[index], conditionEncodings[index + 1], conditionEncodings[index + 2], conditionEncodings[index + 3]]
+        if (color) res = interpolateColor(res, val, t)
+        else res[0] = res[0] + t * (val[0] - res[0])
+      } else {
+        for (let i = 0; i < length - 1; i++) res[i] = conditionEncodings[index + i]
+      }
+      index += length // increment where we are in the total conditionEncodings
+    } else if (condition === 2 || condition === 3) { // data-condition & input-condition
+      // get the input from either featureEncoding or inputs
+      let input, conditionInput
+      if (condition === 2) {
+        input = featureEncoding[featureIndex]
+        featureIndex++
+      } else { input = inputs[(conditionSet & 14) >> 1] }
+      // now that we have the input, we iterate through and find a match
+      conditionInput = conditionEncodings[index]
+      while (input !== conditionInput) {
+        // increment index & find length
+        index += (conditionEncodings[index + 1] >> 10) + 1
+        conditionInput = conditionEncodings[index]
+      }
+      index++ // increment to conditionEncoding
+      // now parse subCondition
+      conditionStack[conditionIndex] = conditionEncodings[index]
+      conditionIndex++ // increment size of conditionIndex
+      index++ // increment to actual input set
+    } else if (condition === 4 || condition === 5) { // data-range & input-range
+      // get interpolation & base
+      interpolationType = conditionSet & 1
+      base = 1
+      if (interpolationType === 1) {
+        base = conditionEncodings[index]
+        index++
+      }
+      // find the two values and run them
+      let input, start, end, subCondition
+      // grab the input value
+      if (condition === 4) {
+        input = featureEncoding[featureIndex]
+        featureIndex++
+      } else { input = inputs[inputType] }
+      // create a start point
+      start = end = conditionEncodings[index]
       index++
+      subCondition = (conditionEncodings[index] & 1008) >> 4
+      if (subCondition === 2 || subCondition === 4) featureIndex++
+      // iterate through the current conditionalEncodings and match the indices with input
+      while (end < input && input < length) {
+        // update end and index
+        start = end
+        end = conditionEncodings[index]
+        index++
+        // get actual condition
+        subCondition = (conditionEncodings[index] & 1008) >> 4
+        if (subCondition === 2 || subCondition === 4) featureIndex++
+      }
+      // if input >= length than return val1
+      if (end === input) {
+        // console.log('A STORY')
+        // console.log()
+        // decodeFeature(conditionEncodings, featureEncoding, inputs, res, color, index, featureIndex)
+      } else if (index >= length) { // just not found
+        // console.log('B STORY', val1)
+        // console.log()
+        res[0] = val1[0]; res[1] = val1[1]; res[2] = val1[2]; res[3] = val1[3]
+      } else if (val1[0] === -1) { // if val1 is still a negative number than decode start and set it to res
+        // console.log('C STORY')
+        // console.log()
+        // decodeFeature(conditionEncodings, featureEncoding, inputs, res, color, index, featureIndex)
+      } else { // otherwise find val2, interpolate
+        // console.log('D STORY', index)
+        // console.log()
+        // console.log('end', end)
+        // decodeFeature(conditionEncodings, featureEncoding, inputs, val2, color, index, featureIndex)
+        // console.log('val1', val1)
+        // console.log('val2', val2)
+        // get interpolation
+        // const t = exponential(input, start, end, base) // default base of 1 makes a linear interpolation
+        // if (color) interpolateColor(val1, val2, t, res)
+        // else res[0] = val1[0] + t * (val2[0] - val1[0])
+      }
     }
-    // console.log('start', start)
-    // console.log('end', end)
-    // if input >= length than return val1
-    if (end === input) {
-      // console.log('A STORY')
-      // console.log()
-      decodeFeature(conditionEncodings, featureEncoding, inputs, res, color, index, featureIndex)
-    } else if (index >= length) { // just not found
-      // console.log('B STORY', val1)
-      // console.log()
-      res[0] = val1[0]; res[1] = val1[1]; res[2] = val1[2]; res[3] = val1[3]
-    } else if (val1[0] === -1) { // if val1 is still a negative number than decode start and set it to res
-      // console.log('C STORY')
-      // console.log()
-      decodeFeature(conditionEncodings, featureEncoding, inputs, res, color, index, featureIndex)
-    } else { // otherwise find val2, interpolate
-      // console.log('D STORY', index)
-      // console.log()
-      // console.log('end', end)
-      decodeFeature(conditionEncodings, featureEncoding, inputs, val2, color, index, featureIndex)
-      // console.log('val1', val1)
-      // console.log('val2', val2)
-      // get interpolation
-      const t = exponential(input, start, end, base) // default base of 1 makes a linear interpolation
-      if (color) interpolateColor(val1, val2, t, res)
-      else res[0] = val1[0] + t * (val2[0] - val1[0])
-    }
-  } else if (condition === 6) { // animation-state
+  } while (conditionIndex > 0)
 
-  } else if (condition >= 7) { // feature-state
-
-  }
-
-  return [startIndex + length, featureIndexStart + featureEncoding[featureIndexStart]]
+  return res
 }
+
+// CONDITION ENCODINGS: 128 positions possible, although if you're using more than 2 or 3 feature-states, you may need to rethink your design
+// 0 -> null
+// 1 -> value
+// 2 -> data-condition
+// 3 -> input-condition
+// 4 -> data-range
+// 5 -> input-range
+// 6 -> animation-state
+// 7+ -> feature-state
+
+// INPUT RANGE/CONDITION ENCODINGS:
+// 0 -> zoom
+// 1 -> lat
+// 2 -> lon
+// 3 -> angle
+// 4 -> pitch
+
+// INTERPOLATION ENCODINGS: data-ranges or input-ranges have either linear or exponential interpolations
+// if exponential the base must also be encoded, after the type
+// 0 -> linear
+// 1 -> exponential
 
 // interpolation type: input & 1
 // input range: (input & 14) >> 1
 // input condition: (input & 1008) >> 4
 // length: input >> 10
 
-function interpolateColor (val1, val2, t, res) {
+function interpolateColor (val1, val2, t) {
   // prep variables
   let sat, hue, lbv, dh, alpha
   let [hue0, sat0, lbv0, alpha0] = val1
@@ -387,10 +516,7 @@ function interpolateColor (val1, val2, t, res) {
   // alpha
   alpha = alpha0 + t * (alpha1 - alpha0)
   // create the new color
-  res[0] = hue
-  res[1] = sat
-  res[2] = lbv
-  res[3] = alpha
+  return [hues, sat, lbv, alpha]
 }
 
 function getEasingFunction(zoomType, base = 1) {
@@ -449,7 +575,7 @@ function step (input, start, end) {
 }
 
 exports.default = {
-  parseFeature,
-  encodeCondition,
+  encodeFeatureFunction,
+  encodeLayerFunction,
   decodeFeature
 }

@@ -1,5 +1,5 @@
 // @flow
-export function create (): Float32Array {
+function create () {
   const m = new Float32Array(16)
   m[0] = 1
   m[5] = 1
@@ -9,7 +9,7 @@ export function create (): Float32Array {
   return m
 }
 
-export function clone (m: Float32Array): Float32Array {
+function clone (m) {
   const out = new Float32Array(m.length)
 
   m.forEach((v, i) => out[i] = v)
@@ -17,7 +17,7 @@ export function clone (m: Float32Array): Float32Array {
   return out
 }
 
-export function blend (m: Float32Array, width: number, height: number, near: number, far: number): Float32Array {
+function blend (m, width, height, near, far) {
   // const f = 1.0 / Math.tan(fovy / 2)
   m[0] = 1 / width
   m[1] = 0
@@ -45,7 +45,7 @@ export function blend (m: Float32Array, width: number, height: number, near: num
   return m
 }
 
-export function ortho (m: Float32Array, width: number, height: number, far: number): Float32Array {
+function ortho (m, width, height, far) {
   m[0] = 1 / width
   m[1] = 0
   m[2] = 0
@@ -60,34 +60,13 @@ export function ortho (m: Float32Array, width: number, height: number, far: numb
   m[11] = 0
   m[12] = 0
   m[13] = 0
-  m[14] = 0
+  m[14] = -1
   m[15] = 1
 
   return m
 }
 
-// export function ortho (m: Float32Array, width: number, height: number, far: number): Float32Array {
-//   m[0] = 1 / width
-//   m[1] = 0
-//   m[2] = 0
-//   m[3] = 0
-//   m[4] = 0
-//   m[5] = 1 / height
-//   m[6] = 0
-//   m[7] = 0
-//   m[8] = 0
-//   m[9] = 0
-//   m[10] = -1 / far
-//   m[11] = 0
-//   m[12] = 0
-//   m[13] = 0
-//   m[14] = -1
-//   m[15] = 1
-//
-//   return m
-// }
-
-export function perspective (m: Float32Array, fovy: number, aspect: number, near: number, far: number): Float32Array {
+function perspective (m, fovy, aspect, near, far) {
   const f = 1.0 / Math.tan(fovy / 2)
   m[0] = f / aspect
   m[1] = 0
@@ -115,7 +94,7 @@ export function perspective (m: Float32Array, fovy: number, aspect: number, near
   return m
 }
 
-export function addCenter (m: Float32Array, v: Float32Array | Array<number>): Float32Array {
+function addCenter (m, v) {
   m[12] = v[0]
   m[13] = v[1]
   m[14] = v[2]
@@ -124,18 +103,34 @@ export function addCenter (m: Float32Array, v: Float32Array | Array<number>): Fl
   return m
 }
 
-export function translate (m: Float32Array, v: Float32Array | [number, number, number]): Float32Array {
+function translate (m, v, a) {
   const x = v[0], y = v[1], z = v[2]
 
-  m[12] = m[0] * x + m[4] * y + m[8] * z + m[12]
-  m[13] = m[1] * x + m[5] * y + m[9] * z + m[13]
-  m[14] = m[2] * x + m[6] * y + m[10] * z + m[14]
-  m[15] = m[3] * x + m[7] * y + m[11] * z + m[15]
+  if (!a) {
+    m[12] = m[0] * x + m[4] * y + m[8] * z + m[12]
+    m[13] = m[1] * x + m[5] * y + m[9] * z + m[13]
+    m[14] = m[2] * x + m[6] * y + m[10] * z + m[14]
+    m[15] = m[3] * x + m[7] * y + m[11] * z + m[15]
+  } else {
+    let a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22, a23
+    a00 = a[0]; a01 = a[1]; a02 = a[2]; a03 = a[3]
+    a10 = a[4]; a11 = a[5]; a12 = a[6]; a13 = a[7]
+    a20 = a[8]; a21 = a[9]; a22 = a[10]; a23 = a[11]
+
+    m[0] = a00; m[1] = a01; m[2] = a02; m[3] = a03
+    m[4] = a10; m[5] = a11; m[6] = a12; m[7] = a13
+    m[8] = a20; m[9] = a21; m[10] = a22; m[11] = a23
+
+    m[12] = a00 * x + a10 * y + a20 * z + a[12]
+    m[13] = a01 * x + a11 * y + a21 * z + a[13]
+    m[14] = a02 * x + a12 * y + a22 * z + a[14]
+    m[15] = a03 * x + a13 * y + a23 * z + a[15]
+  }
 
   return m
 }
 
-export function scale(m: Float32Array, v: Float32Array | [number, number, number]): Float32Array {
+function scale(m, v) {
   const x = v[0]
   const y = v[1]
   const z = v[2]
@@ -156,7 +151,7 @@ export function scale(m: Float32Array, v: Float32Array | [number, number, number
   return m
 }
 
-export function rotate (m: Float32Array, rad: [number, number, number]): Float32Array {
+function rotate (m, rad) {
   rotateX(m, rad[0])
   rotateY(m, rad[1])
   rotateZ(m, rad[2])
@@ -164,7 +159,7 @@ export function rotate (m: Float32Array, rad: [number, number, number]): Float32
   return m
 }
 
-export function rotateX (m: Float32Array, rad: number): Float32Array {
+function rotateX (m, rad) {
   const s = Math.sin(rad)
   const c = Math.cos(rad)
   const m10 = m[4]
@@ -188,7 +183,7 @@ export function rotateX (m: Float32Array, rad: number): Float32Array {
   return m
 }
 
-export function rotateY (m: Float32Array, rad: number): Float32Array {
+function rotateY (m, rad) {
   const s = Math.sin(rad)
   const c = Math.cos(rad)
   const m00 = m[0]
@@ -212,7 +207,7 @@ export function rotateY (m: Float32Array, rad: number): Float32Array {
   return m
 }
 
-export function rotateZ (m: Float32Array, rad: number): Float32Array {
+function rotateZ (m, rad) {
   const s = Math.sin(rad)
   const c = Math.cos(rad)
   const m00 = m[0]
@@ -236,7 +231,7 @@ export function rotateZ (m: Float32Array, rad: number): Float32Array {
   return m
 }
 
-export function multiplyVector (matrix: Float32Array | Array<number>, vector: Float32Array | Array<number>): Array<number> {
+function multiplyVector (matrix, vector) {
   const out = []
 
   out.push(matrix[0] * vector[0] + matrix[4] * vector[1] + matrix[8] * vector[2] + matrix[12])
@@ -247,7 +242,7 @@ export function multiplyVector (matrix: Float32Array | Array<number>, vector: Fl
   return out
 }
 
-export function multiply (a: Float32Array | Array<number>, b: Float32Array | Array<number>): Float32Array | Array<number> {
+function multiply (a, b) {
   const a00 = a[0]
   const a01 = a[1]
   const a02 = a[2]
@@ -301,8 +296,23 @@ export function multiply (a: Float32Array | Array<number>, b: Float32Array | Arr
   return a
 }
 
-export function project (matrix: Float32Array | Array<number>, vector: Float32Array | Array<number>): Array<number> {
+function project (matrix, vector) {
   const mul = multiplyVector(matrix, vector)
 
   return [mul[0] / mul[3], mul[1] / mul[3], mul[2] / mul[3]]
+}
+
+exports.default = {
+  create,
+  clone,
+  blend,
+  ortho,
+  perspective,
+  addCenter,
+  translate,
+  scale,
+  rotate,
+  multiplyVector,
+  multiply,
+  project
 }

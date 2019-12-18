@@ -21,7 +21,9 @@ import { Wallpaper, Tile } from '../source'
 
 import type { MapOptions } from '../ui/map'
 import type { Projection } from '../ui/camera/projections'
-import type { LayerGuide, VectorTileSource } from '../source/tile'
+import type { FeatureGuide, SourceData } from '../source/tile'
+import type { StyleLayers } from '../style'
+import type { ProgramTypes } from './programs/program'
 
 export default class Painter {
   _canvas: HTMLCanvasElement
@@ -80,9 +82,10 @@ export default class Painter {
     return null
   }
 
-  useProgram (programName: string) {
+  useProgram (programName: string): Program {
     const program = this.getProgram(programName)
-    if (program) this.context.gl.useProgram(program.glProgram)
+    program.use()
+    return program
   }
 
   buildVAO (source: string, tile: Tile) {
@@ -115,10 +118,12 @@ export default class Painter {
       // buffer the data
       gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, tileSource.indexArray, gl.STATIC_DRAW)
     }
-    // lastly link attributes (a_pos will always be 0 if applicable)
+    // link attributes (aPosHigh will always be 0 and aPosLow will always be 1)
     gl.enableVertexAttribArray(0)
+    gl.enableVertexAttribArray(1)
     // tell attribute how to get data out of vertexBuffer
-    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0)
+    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0)
+    gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12)
   }
 
   paint (wallpaper: Wallpaper, projection: Projection, style: Style, tiles: Array<Tile>) {
@@ -131,60 +136,70 @@ export default class Painter {
     context.disableDepthTest()
     // first draw the wallpaper
     drawWallpaper(this, wallpaper)
-    // for each tile, draw background & layers as necessary
+    // prep stencil
+    context.enableStencilTest()
+    // for each tile, draw background & features as necessary
     for (let tile of tiles) {
       // grab the matrix (duplicate created)
-      const matrix = projection.getMatrix(tile)
-      // grab the layersGuide and vao from current tile
-      const { layersGuide } = tile
-      const { mask } = tile.sourceData
+      const { matrix, eyePosHigh, eyePosLow } = projection.getMatrix(tile.size)
+      // grab the featureGuide and vao from current tile
+      const { sourceData, featureGuide } = tile
+      const { mask } = sourceData
       // use mask vao and fill program
       context.bindVertexArray(mask.vao)
-      this.useProgram('fill')
-      // First 'layer' is the mask layer
-      drawMask(this, mask, matrix)
-      // Second layer is the sphere-background layer should it exist
-      const sphereBackground = style.sphereBackground(projection.zoom)
-      if (sphereBackground) drawFill(this, mask, mask.indexArray.length, 0, matrix, sphereBackground, gl.TRIANGLE_STRIP)
-      // now draw the tile according to the layers it contains
-      this.paintLayers(layersGuide, projection, tile)
+      let program = this.useProgram('fill')
+      // set the matrix uniform and inputs
+      program.setMatrix(matrix, eyePosHigh, eyePosLow)
+      // program.setInputs(new Float32Array([0, 0, 0, 0]))
+      // First 'feature' is the mask feature
+      drawMask(this, mask.indexArray.length)
+      // Second feature is the sphere-background feature should it exist
+      const sphereBackground = style.sphereBackground
+      program.setLayerCode(sphereBackground)
+      if (sphereBackground) drawFill(this, mask.indexArray.length, 0, null, gl.TRIANGLE_STRIP)
+      // now draw the tile according to the features it contains
+      this.paintLayers(featureGuide, style.layers, sourceData, program)
       // assuming the mask has been drawn, we should tell the context to clear it
       context.clearStencil()
     }
+    // disable stencil
+    context.disableStencilTest()
     // cleanup
     context.cleanup()
   }
 
-  paintLayers (layersGuide: Array<LayerGuide>, projection: Projection, currentTile: Tile) {
+  paintLayers (featureGuide: Array<FeatureGuide>, layers: StyleLayers,
+    sourceData: SourceData, program: Program) {
     const { context } = this
-    let matrix: Float32Array, tileSource: VectorTileSource
-    let currentSource = 'mask'
-    let currentProgram = 'fill'
-    for (const layer of layersGuide) {
-      const { parent, source, count, offset, type, attributes } = layer
-      // if type is not the same as the currentProgram, we have to update currentProgram
-      if (type !== currentProgram) {
-        this.useProgram(type)
-        currentProgram = type
+    let curSource: string = 'mask'
+    let curProgram: ProgramTypes = 'fill'
+    let curLayer: number = -1
+    for (const feature of featureGuide) {
+      const { source, layerID, count, offset, type, featureCode } = feature
+      // if type is not the same as the curProgram, we have to update curProgram and set uniforms
+      if (type !== curProgram) {
+        program = this.useProgram(type)
+        curProgram = type
       }
-      // Given the layer's properties, we choose the appropraite matrix and source data (vao & buffers)
-      if (parent) {
-        matrix = projection.getMatrix(layer.tile)
-        tileSource = layer.tile.sourceData[source]
-      } else {
-        matrix = projection.getMatrix(currentTile)
-        tileSource = currentTile.sourceData[source]
+      // if new layerID, update layerCode
+      if (layerID !== curLayer) {
+        program.setLayerCode(layers[layerID].code)
+        curLayer = layerID
       }
       // if source is not the same, update vao
-      if (source !== currentSource) {
-        context.bindVertexArray(tileSource.vao)
-        currentSource = source
+      if (source !== curSource) {
+        context.bindVertexArray(sourceData[source].vao)
+        curSource = source
       }
-      // now update paint attributes:
+      // now draw according to type
       if (type === 'fill') {
-        const { color } = attributes
-        const fillColor = (typeof color === 'function') ? color(projection.zoom) : color
-        drawFill(this, tileSource, count, offset, matrix, fillColor)
+        drawFill(this, count, offset, featureCode)
+      } else if (type === 'line') {
+
+      } else if (type === 'text') {
+
+      } else if (type === 'billboard') {
+
       }
     }
   }
