@@ -151,11 +151,8 @@ export default class Painter {
   paint (wallpaper: Wallpaper, projection: Projection, style: Style, tiles: Array<Tile>) {
     const { context } = this
     const { gl } = context
-    // prep painting:
-    context.clearScene()
-    context.enableCullFace()
-    context.enableAlphaCoverage()
-    context.disableDepthTest()
+    // prep painting
+    context.newScene()
     // first draw the wallpaper
     drawWallpaper(this, wallpaper)
     // prep stencil

@@ -4,17 +4,23 @@ export default class Context {
   gl: WebGLRenderingContext | WebGL2RenderingContext
   constructor (context: WebGLRenderingContext | WebGL2RenderingContext) {
     this.gl = context
-    this.enableAlphaCoverage()
+  }
+
+  newScene () {
+    this.clearScene()
+    this.enableCullFace()
+    this.disableDepthTest()
+    this.enableBlend()
   }
 
   clearScene () {
-    this.gl.clear(this.gl.DEPTH_BUFFER_BIT | this.gl.STENCIL_BUFFER_BIT)
+    this.gl.clear(this.gl.DEPTH_BUFFER_BIT | this.gl.STENCIL_BUFFER_BIT | this.gl.COLOR_BUFFER_BIT)
     this.clearColor()
   }
 
   clearColor () {
     this.gl.clearColor(0, 0, 0, 0)
-    this.gl.clear(this.gl.COLOR_BUFFER_BIT)
+    this.gl.colorMask(true, true, true, true)
   }
 
   enableDepthTest () {
@@ -33,12 +39,14 @@ export default class Context {
     this.gl.disable(this.gl.CULL_FACE)
   }
 
-  enableAlphaCoverage () {
-    this.gl.enable(this.gl.SAMPLE_ALPHA_TO_COVERAGE)
+  enableBlend () {
+    this.gl.enable(this.gl.BLEND)
+    this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA)
+    // this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA)
   }
 
-  disableAlphaCoverage () {
-    this.gl.disable(this.gl.SAMPLE_ALPHA_TO_COVERAGE)
+  disableBlend () {
+    this.gl.disable(this.gl.BLEND)
   }
 
   enableStencilTest () {
