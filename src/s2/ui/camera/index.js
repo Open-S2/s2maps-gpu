@@ -72,10 +72,10 @@ export default class Camera {
     return this.tileCache.getBatch(this.tilesInView.map(tArr => tArr[4]))
   }
 
-  injectSourceData (source: string, tileID: number, vertexBuffer: ArrayBuffer, indexBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer) {
+  injectSourceData (source: string, tileID: number, vertexBuffer: ArrayBuffer, indexBuffer: ArrayBuffer, featureIndexBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer) {
     if (this.tileCache.has(tileID)) {
       const tile = this.tileCache.get(tileID)
-      tile.injectSourceData(source, new Float32Array(vertexBuffer), new Uint32Array(indexBuffer), new Uint32Array(featureGuideBuffer), this.style.layers)
+      tile.injectSourceData(source, new Float32Array(vertexBuffer), new Uint32Array(indexBuffer), new Uint8Array(featureIndexBuffer), new Uint32Array(featureGuideBuffer), this.style.layers)
       // build the VAO
       this.painter.buildVAO(source, tile)
     }

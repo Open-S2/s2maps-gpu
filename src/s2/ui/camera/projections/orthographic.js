@@ -22,10 +22,15 @@ export default class OrthographicProjection extends Projector {
   }
 
   onZoom (zoom?: number = 0, canvasX?: number = 0, canvasY?: number = 0): boolean {
+    // update zoom
     this.zoom += 0.0015 * zoom
     if (this.zoom > this.maxZoom) { this.zoom = this.maxZoom; return false }
     else if (this.zoom < 0) { this.zoom = 0; return false }
+    // update view
+    this.view[0] = this.zoom
+    // update scale
     this.scale = Math.pow(2, this.zoom)
+    // clear matrices
     this.sizeMatrices = {}
     this.dirty = true
     return true

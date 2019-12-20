@@ -19,6 +19,7 @@ export type ProjectionConfig = {
 }
 
 export default class Projector implements Projection {
+  view: Float32Array = new Float32Array(16) // [zoom, lon, lat, angle, pitch, ...extensions]
   translation: [number, number, number] = [0, 0, -10] // only z should change for visual effects
   maxLatRotation: number = 80 // 80 deg
   zoom: number = 0
@@ -57,6 +58,7 @@ export default class Projector implements Projection {
 
   setZoom (zoom: number) {
     this.zoom = zoom
+    this.view[0] = this.zoom
     this.onZoom()
   }
 
@@ -66,6 +68,9 @@ export default class Projector implements Projection {
     // check that we don't over move on the x axis
     if (this.lat > this.maxLatRotation) { this.lat = this.maxLatRotation }
     else if (this.lat < -this.maxLatRotation) { this.lat = -this.maxLatRotation }
+    // update view
+    this.view[1] = this.lon
+    this.view[2] = this.lat
     // if we hit 360, just swing back to 0
     while (this.lon >= 360) { this.lon -= 360 }
     this.sizeMatrices = {}

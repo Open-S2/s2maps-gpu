@@ -1,84 +1,3 @@
-vec4 decodeFeature (bool color, int index, int featureIndex) {
-  // prep variables
-  int startIndex = index;
-  int conditionCode = int(uLayerCode[index]);
-  int len = conditionCode >> 10;
-  int condition = (conditionCode & 1008) >> 4;
-  // int inputType = (conditionCode & 14) >> 1;
-  // int interpolationType = conditionCode & 1;
-  index++;
-  // create base, if exponential interpolation, we need to grab the base value and increment
-  // float base = 1.;
-  // if (interpolationType == 1) {
-  //   base = uLayerCode[index];
-  //   index++;
-  // }
-  // run through conditions
-  if (condition == 0) {
-  } else if (condition == 1) { // value
-    return vec4(uLayerCode[index], uLayerCode[index + 1], uLayerCode[index + 2], uLayerCode[index + 3]);
-  } else if (condition == 2 || condition == 3) { // data-condition or input-condition
-    // // run through each condition, when match is found, set value
-    // float inputVal, value;
-    // // setup inputVal
-    // if (condition == 2) {
-    //   inputVal = uFeatureCode[featureIndex];
-    //   featureIndex++;
-    // } else { inputVal = uInputs[inputType]; }
-    // // prep
-    // value = uLayerCode[index];
-    // while (inputVal != value) {
-    //   // increment index & find len
-    //   index += int(uLayerCode[index + 1]) >> 10 + 1;
-    //   value = uLayerCode[index];
-    // }
-    // // now we are in the proper place, we increment once and find grab the value
-    // decodeFeature(uLayerCode, uFeatureCode, uInputs, res, color, index + 1, featureIndex);
-  } else if (condition == 4 || condition == 5) { // data-range or input-range
-    // float inputVal, start, end;
-    // vec4 val1(-1., -1., -1., -1.);
-    // vec4 val2(-1., -1., -1., -1.);
-    // // grab the inputVal value
-    // if (condition == 4) {
-    //   inputVal = uFeatureCode[featureIndex];
-    //   featureIndex++;
-    // } else { inputVal = uInputs[inputType] }
-    // // create a start point
-    // start = end = uLayerCode[index];
-    // index++;
-    // // iterate through the current conditionalEncodings and match the indices with inputVal
-    // while (end < inputVal && inputVal < len) {
-    //   vec2 indexes = decodeFeature(uLayerCode, uFeatureCode, uInputs, val1, color, index, featureIndex);
-    //   index = indexes[0];
-    //   featureIndex = indexes[1];
-    //   // update end and index
-    //   start = end;
-    //   end = uLayerCode[index];
-    //   index++;
-    // }
-    // if (end == inputVal) {
-    //   decodeFeature(uLayerCode, uFeatureCode, uInputs, res, color, index, featureIndex);
-    // } else if (index >= len) { // just not found
-    //   res = val1;
-    // } else if (val1[0] == -1) { // if val1 is still a negative number than decode start and set it to res
-    //   decodeFeature(uLayerCode, uFeatureCode, uInputs, res, color, index, featureIndex);
-    // } else { // otherwise find val2, interpolate
-    //   decodeFeature(uLayerCode, uFeatureCode, uInputs, val2, color, index, featureIndex);
-    //   // get interpolation
-    //   float t = exponential(inputVal, start, end, base); // default base of 1 makes a linear interpolation
-    //   if (color) res = interpolateColor(val1, val2, t);
-    //   else res[0] = val1[0] + t * (val2[0] - val1[0]);
-    // }
-  } else if (condition == 6) { // animation-state
-
-  } else if (condition >= 7) { // feature-state
-
-  }
-  // return indexing state for range based computations
-  // return vec2(startIndex + len, featureIndex);
-  return vec4(0, 0, 0, 0.5);
-}
-
 // y = e^x OR y = Math.pow(2, 10 * x)
 float exponentialInterpolation (float inputVal, float start, float end, float base) {
   // grab change
@@ -101,26 +20,132 @@ vec4 interpolateColor (vec4 color1, vec4 color2, float t) {
   else if (t == 1.) return color2;
   float sat, hue, lbv, dh, alpha;
   // create proper hue translation
-  if (!isinf(color1[0]) && !isinf(color2[0])) {
-    if (color2[0] > color1[0] && color2[0] - color1[0] > 180.) dh = color2[0] - (color1[0] + 360.);
-    else if (color2[0] < color1[0] && color1[0] - color2[0] > 180.) dh = color2[0] + 360. - color1[0];
-    else dh = color2[0] - color1[0];
-    hue = color1[0] + t * dh;
-  } else if (!isinf(color1[0])) {
-    hue = color1[0];
-    if (color2[2] == 1. || color2[2] == 0.) sat = color1[1];
-  } else if (!isinf(color2[0])) {
-    hue = color2[0];
-    if (color1[2] == 1. || color1[2] == 0.) sat = color2[1];
-  } else {
-    hue = 0.;
-  }
+  if (color2[0] > color1[0] && color2[0] - color1[0] > 180.) dh = color2[0] - color1[0] + 360.;
+  else if (color2[0] < color1[0] && color1[0] - color2[0] > 180.) dh = color2[0] + 360. - color1[0];
+  else dh = color2[0] - color1[0];
+  hue = color1[0] + t * dh;
   // saturation
-  if (!isnan(sat)) sat = color1[1] + t * (color2[1] - color1[1]);
+  sat = color1[1] + t * (color2[1] - color1[1]);
   // luminosity
   lbv = color1[2] + t * (color2[2] - color1[2]);
   // alpha
   alpha = color1[3] + t * (color2[3] - color1[3]);
   // create the new color
   return vec4(hue, sat, lbv, alpha);
+}
+
+vec4 decodeFeature (bool color, int index, int featureIndex) {
+  // prep result and variables
+  vec4 res = vec4(-1, -1, -1, -1);
+  int conditionStack[6];
+  float tStack[6];
+  int stackIndex = 1; // start at 1 because our first condition will be the initial starting point
+  conditionStack[0] = index;
+  int len, conditionSet, condition;
+
+  do {
+    stackIndex--;
+    // pull out current stackIndex condition an decode
+    index = conditionStack[stackIndex];
+    conditionSet = int(uLayerCode[index]);
+    len = conditionSet >> 10;
+    condition = (conditionSet & 1008) >> 4;
+    index++;
+    // for each following condition, pull out the eventual color and set to val
+    if (condition == 0) {
+    } else if (condition == 1) { // value
+      if (res[0] == -1.) {
+        for (int i = 0; i < len - 1; i++) res[i] = uLayerCode[index + i];
+      } else {
+        if (color) {
+          vec4 val = vec4(uLayerCode[index], uLayerCode[index + 1], uLayerCode[index + 2], uLayerCode[index + 3]);
+          res = interpolateColor(res, val, tStack[stackIndex]);
+        } else {
+          for (int i = 0; i < len - 1; i++) res[i] = res[i] + tStack[stackIndex] * (uLayerCode[index + i] - res[i]);
+        }
+      }
+    } else if (condition == 2 || condition == 3) { // data-condition & input-condition
+      // get the input from either uFeatureCode or uInputs
+      float inputVal, conditionInput;
+      if (condition == 2) {
+        inputVal = uFeatureCode[featureIndex];
+        featureIndex++;
+      } else { inputVal = uInputs[(conditionSet & 14) >> 1]; }
+      // now that we have the inputVal, we iterate through and find a match
+      conditionInput = uLayerCode[index];
+      while (inputVal != conditionInput) {
+        // increment index & find length
+        index += (int(uLayerCode[index + 1]) >> 10) + 1;
+        conditionInput = uLayerCode[index];
+      }
+      index++; // increment to conditionEncoding
+      // now add subCondition to be parsed
+      conditionStack[stackIndex] = index;
+      tStack[stackIndex] = 1.;
+      stackIndex++; // increment size of stackIndex
+    } else if (condition == 4 || condition == 5) { // data-range & input-range
+      // get interpolation & base
+      int interpolationType = conditionSet & 1;
+      int inputType = (conditionSet & 14) >> 1;
+      float base = 1.;
+      if (interpolationType == 1) {
+        base = uLayerCode[index];
+        index++;
+      }
+      // find the two values and run them
+      float inputVal, start, end;
+      int startIndex, endIndex, subCondition;
+      // grab the inputVal value
+      if (condition == 4) {
+        inputVal = uFeatureCode[featureIndex];
+        featureIndex++;
+      } else { inputVal = uInputs[inputType]; }
+      // create a start point
+      start = end = uLayerCode[index];
+      startIndex = endIndex = index + 1;
+      while (end < inputVal && endIndex < len) {
+        // if current sub condition is an input-range, we must check if if the "start"
+        // subCondition was a data-condition or data-range, and if so, we must move past the uFeatureCode that was stored there
+        subCondition = (int(uLayerCode[startIndex]) & 1008) >> 4;
+        if (subCondition == 2 || subCondition == 4) featureIndex++;
+        // increment to subCondition
+        index++;
+        // increment by subConditions length
+        index += int(uLayerCode[index]) >> 10;
+        // set new start and end
+        start = end;
+        startIndex = endIndex;
+        end = uLayerCode[index];
+        endIndex = index + 1;
+      }
+      // if start and end are the same, we only need to process the first piece
+      if (startIndex == endIndex) {
+        conditionStack[stackIndex] = startIndex;
+        if (stackIndex > 0) tStack[stackIndex] = tStack[stackIndex - 1];
+        else tStack[stackIndex] = 1.;
+        stackIndex++;
+      } else if (end == inputVal) {
+        conditionStack[stackIndex] = endIndex;
+        if (stackIndex > 0) tStack[stackIndex] = tStack[stackIndex - 1];
+        else tStack[stackIndex] = 1.;
+        stackIndex++;
+      } else { // otherwise we process startIndex and endIndex
+        float t = exponentialInterpolation(inputVal, start, end, base);
+        conditionStack[stackIndex] = startIndex;
+        tStack[stackIndex] = 1. - t;
+        stackIndex++;
+        conditionStack[stackIndex] = endIndex;
+        tStack[stackIndex] = t;
+        stackIndex++;
+      }
+    } else if (condition == 6) { // animation-state
+
+    } else if (condition >= 7) { // feature-state
+
+    }
+    // safety precaution
+    if (stackIndex > 5) return res;
+  } while (stackIndex > 0);
+
+  return res;
 }

@@ -34,6 +34,9 @@ export default class BlendProjection extends Projector {
     this.zoom += 0.0015 * zoom
     if (this.zoom > this.maxZoom) { this.zoom = this.maxZoom; return false }
     else if (this.zoom < 0) { this.zoom = 0; return false }
+    // update view
+    this.view[0] = this.zoom
+    // update scale
     this.scale = Math.pow(2, this.zoom)
     // update transation
     this.translation[2] = Math.min(

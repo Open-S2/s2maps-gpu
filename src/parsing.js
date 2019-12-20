@@ -58,7 +58,8 @@ const input3 = [
 
 const input2 = [
   "data-range",
-  "lin",
+  "expo",
+  0.5,
   "elev",
   2,
   "rgba(5, 100, 125, .5)",
@@ -73,29 +74,29 @@ const input2 = [
 //   "zoom",
 //   "lin",
 //   0,
-//   "rgba(5, 100, 125, .5)",
+//   input3
 //   5,
 //   input2,
 //   7,
 //   "rgba(20, 200, 200, 1)"
 // ]
 
-// const input = [
-//   "input-range",
-//   "zoom",
-//   "lin",
-//   2,
-//   "rgba(5, 100, 125, .5)",
-//   5,
-//   "rgba(200, 160, 100, .8)",
-//   7,
-//   "rgba(20, 200, 200, 1)"
-// ]
+const inputZoom = [
+  "input-range",
+  "zoom",
+  "lin",
+  2,
+  "rgba(5, 100, 125, .5)",
+  5,
+  "rgba(200, 160, 100, .8)",
+  7,
+  "rgba(20, 200, 200, 1)"
+]
 
 const input = "rgba(200, 160, 100, .8)"
 
-const inputClone = JSON.parse(JSON.stringify(input3))
-const inputCloneEncode = JSON.parse(JSON.stringify(input3))
+const inputClone = JSON.parse(JSON.stringify(input2))
+const inputCloneEncode = JSON.parse(JSON.stringify(input2))
 
 const encodeFeatureFunc = encodeFeatureFunction(inputClone)
 const encodedLayer = encodeLayerFunction(inputCloneEncode)
@@ -103,10 +104,10 @@ console.log('encodedLayer', encodedLayer)
 
 const featureEncoding = []
 
-encodeFeatureFunc({ class: 'river', elev: 10 }, featureEncoding)
+encodeFeatureFunc({ class: 'ocean', elev: 3 }, featureEncoding)
 console.log('featureEncoding', featureEncoding)
 
-const decoded = decodeFeature(encodedLayer, featureEncoding, [0, 0, 0], true)
+const decoded = decodeFeature(encodedLayer, featureEncoding, [9, 0, 0], true, 0, 0)
 console.log(decoded)
 
 

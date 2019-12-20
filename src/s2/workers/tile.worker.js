@@ -21,6 +21,8 @@ export type TileRequest = {
   extent: number
 }
 
+const MAX_FEATURE_BATCH_SIZE = 128
+
 // A TileWorker on spin up will get style "guide". It will have all layers "filter" and "layout" properties
 // This is the tileworkers time to prepare the the style data for future requests from said mapID.
 // the style features source data long with layer filters shall be prepared early for efficiency.
@@ -33,7 +35,7 @@ export type TileRequest = {
 //    for each vertices/indices pair, encode all in the same buffer. Howevever, we need to track the layer index
 //    of each pair for deserializing. For instance, if the layers looks like: [{ source: 1 }, { source: 2 }, { source: 1} ]
 //    and the source 1 has finished downloading first, we serialize the first part, and add the index sets:
-//    [layerID, count, offset, size, ..., layerID, count, offset, size, ..., etc.]: [3, 0, 3, 102, 3, 0, 1, 3, 3, 66, 102]. The resultant to send is:
+//    [layerID, count, offset, encoding-size, ..., layerID, count, offset, size, ..., etc.]: [3, 0, 3, 102, 3, 0, 1, 3, 3, 66, 102]. The resultant to send is:
 //    In a future update, the size parameter will matter when we add dataRangeFunctions and dataConditionFunctions
 //    size does not include layerID, count, or offset. So for instance, if we have no dataFunctions, size is 0
 //    postMessage({ mapID, featureGuide, vertexBuffer, indexBuffer }, [vertexBuffer, indexBuffer])
@@ -158,7 +160,6 @@ export default class TileWorker {
     this.status = 'ready'
   }
 
-  // TODO: If featureCode is the same for multiple: merge for batching
   _processTileData (mapID: string, sourceName: string, source: Object, tile: TileRequest, data: ArrayBuffer | Blob) {
     // Check the source metadata. If it's a vector run through all
     // layers and process accordingly. If image, no pre-processing needed.
@@ -166,6 +167,7 @@ export default class TileWorker {
     const { type } = source
     if (type === 'vector') {
       const vertices: Array<number> = []
+      const featureIndices: Array<number> = []
       const indices: Array<number> = []
       const featureGuide: Array<number> = []
       const vectorTile = new VectorTile(data)
@@ -178,38 +180,58 @@ export default class TileWorker {
           vectorTile.layers[layer.layer] && // the vectorTile has said layer in it
           layer.minzoom <= tile.zoom && layer.maxzoom >= tile.zoom // zoom attributes fit
         ) {
-          // run through the vectorTile's features of said layers layer
+          // run through the vectorTile's features of said layer and build batches
+          // to reduce draw counts, we batch data of the same layer and type.
+          // When a feature batch size exceeds the max batch size, finish out the
+          // draw batch and start again
           const vectorTileLayer = vectorTile.layers[layer.layer]
+          // prep a mapping of layer and paint properties (feature encodings)
+          let encodings = []
+          let prevEncodings = []
+          let encodingIndex = 0
           for (let f = 0; f < vectorTileLayer.length; f++) {
+            let featureEncodings = []
             const feature = vectorTileLayer.feature(f)
             const { properties, type } = feature
             // lastly we need to filter according to the layer
             if (layer.filter(properties)) {
-              // now we definitively are creating triangles, so store featureGuide's layer ID, and current indices length
-              featureGuide.push(i)
               // we can now process according to type
               if (layer.type === 'fill' && (type === 3 || type === 4)) {
-                processFill(feature.loadGeometry(), type, tile, vertices, indices)
-              }
-              // store featureGuides index count and offset
-              featureGuide.push(indices.length - indicesOffset, indicesOffset) // layerID, count, offset
-              // update offset
+                processFill(feature.loadGeometry(), type, tile, vertices, indices, featureIndices, encodingIndex)
+              } else { continue }
+            } else { continue }
+            // create encodings for the feature, if it is different than the previous feature, we start a new encoding set
+            for (const l in layer.layout) layer.layout[l](properties, featureEncodings)
+            for (const p in layer.paint) layer.paint[p](properties, featureEncodings)
+            // quick test, if the batch size is maxed out, then we close out the draw batch and start another one
+            if (encodings.length + featureEncodings.length > MAX_FEATURE_BATCH_SIZE) {
+              // store the features index count and offset; update offset; store all feature encodings; reset
+              featureGuide.push(i, indices.length - indicesOffset, indicesOffset, encodings.length, ...encodings) // layerID, count, offset, encoding size, encodings
               indicesOffset = indices.length
-              // create a mapping of layer and paint properties and than store
-              const encodings = []
-              for (const l in layer.layout) layer.layout[l](properties, encodings)
-              for (const p in layer.paint) layer.paint[p](properties, encodings)
-              featureGuide.push(encodings.length, ...encodings)
+              encodings = []
+              prevEncodings = []
+              encodingIndex = 0
+            }
+            // if we have nothing to encode, move on, otherwise, check if we already have that encoding stored
+            if (featureEncodings.length && JSON.stringify(featureEncodings) !== JSON.stringify(prevEncodings)) {
+              // store the encodings; set the new previous; update encodingIndex for future vertices
+              encodings.push(...featureEncodings)
+              prevEncodings = featureEncodings
+              encodingIndex += encodings.length
             }
           }
+          // store the features index count and offset; update offset; store all feature encodings
+          featureGuide.push(i, indices.length - indicesOffset, indicesOffset, encodings.length, ...encodings) // layerID, count, offset, encoding size, encodings
+          indicesOffset = indices.length
         }
       }
-      // Upon processing the data, encode vertices, indices, and .
+      // Upon processing the data, encode vertices, indices, and feature data.
       const vertexBuffer = new Float32Array(vertices).buffer
       const indexBuffer = new Uint32Array(indices).buffer
+      const featureIndexBuffer = new Uint8Array(featureIndices).buffer
       const featureGuideBuffer = new Uint32Array(featureGuide).buffer
       // Upon encoding, send back to GlobalWorkerPool.
-      postMessage({ mapID, type: 'data', source: sourceName, tileID: tile.hash, vertexBuffer, indexBuffer, featureGuideBuffer }, [vertexBuffer, indexBuffer, featureGuideBuffer])
+      postMessage({ mapID, type: 'data', source: sourceName, tileID: tile.hash, vertexBuffer, indexBuffer, featureIndexBuffer, featureGuideBuffer }, [vertexBuffer, indexBuffer, featureIndexBuffer, featureGuideBuffer])
     }
   }
 }

@@ -7,26 +7,26 @@ import type { Face } from 's2projection' // https://github.com/Regia-Corporation
 import type { StyleLayers } from '../style'
 
 // The layer guide helps identify how to properly draw from the vertexBuffer/vertexIndex stack.
-// All layers are merged into one VAO/indexBuffer/vertexBuffer set. This reduces complexity and improves draw speed.
+// All layers are merged into one VAO/indexBuffer/vertexBuffer/featureIndexBuffer set. This reduces complexity and improves draw speed.
 // To ensure we draw in order and know the index ranges exist per layer, we maintain a 'Layer Guide'.
 // the attributes object is for dataConditions and dataRanges.
 export type FeatureGuide = {
-  // parent: boolean,
-  // tile?: any, // should it be a parent reference
   layerID: number,
   source: string,
   count: number,
   offset: number,
   type: string,
-  attributes: Object
+  featureCode: Float32Array
 }
 
 export type VectorTileSource = {
   type: 'vector',
   vertexArray: Float32Array,
   indexArray: Uint32Array,
+  featureIndexArray: Uint8Array,
   vertexBuffer?: WebGLBuffer,
   indexBuffer?: WebGLBuffer,
+  featureIndexBuffer?: WebGLBuffer,
   vao?: WebGLVertexArrayObject
 }
 
@@ -61,18 +61,19 @@ export default class Tile {
     this._buildMaskGeometry()
   }
 
-  injectSourceData (source: string, vertexArray: Float32Array, indexArray: Uint32Array, featureGuideArray: Uint32Array, layers: StyleLayers) {
+  injectSourceData (source: string, vertexArray: Float32Array, indexArray: Uint32Array, featureIndexArray: Uint8Array, featureGuideArray: Uint32Array, layers: StyleLayers) {
     // store a reference to the source
     this.sourceData[source] = {
       vertexArray,
-      indexArray
+      indexArray,
+      featureIndexArray
     }
     // we work off the featureGuideArray, adding to the buffer as we go
     const lgl = featureGuideArray.length
     let i = 0
     while (i < lgl) {
       // grab the size, layerID, count, and offset, and update the index
-      const [layerID, count, offset, size] = featureGuideArray.slice(i, i + 4)
+      const [layerID, count, offset, encodingSize] = featureGuideArray.slice(i, i + 4)
       i += 4
       // create and store the featureGuide
       this.featureGuide.push({
@@ -81,9 +82,9 @@ export default class Tile {
         count,
         offset,
         type: layers[layerID].type,
-        featureCode: new Float32Array([...featureGuideArray.slice(i, i + size)])
+        featureCode: new Float32Array([...featureGuideArray.slice(i, i + encodingSize)])
       })
-      i += size
+      i += encodingSize
     }
     // because sources may be utilized in an out of order fashion inside the style.layers property,
     // but come in linearly, we need to sort.

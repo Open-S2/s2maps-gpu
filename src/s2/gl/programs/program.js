@@ -12,6 +12,10 @@ export default class Program {
   inputs: GLuint
   layerCode: GLuint
   featureCode: GLuint
+  updateMatrix: Float32Array // pointer
+  updateEyeHigh: Float32Array // pointer
+  updateEyeLow: Float32Array // pointer
+  updateInputs: Float32Array // pointer
   constructor (gl: WebGLRenderingContext, vertexShaderSource: string, fragmentShaderSource: string, buildUniforms?: boolean = true) {
     const program = this.glProgram = gl.createProgram()
     const vertexShader = loadShader(gl, vertexShaderSource, gl.VERTEX_SHADER)
@@ -46,14 +50,34 @@ export default class Program {
     this.gl.useProgram(this.glProgram)
   }
 
+  injectFrameUniforms (matrix: Float32Array, eyePosHigh: Float32Array,
+    eyePosLow: Float32Array, view: Float32Array) {
+    this.updateMatrix = matrix
+    this.updateEyeHigh = eyePosHigh
+    this.updateEyeLow = eyePosLow
+    this.updateInputs = view
+  }
+
+  flush () {
+    if (this.updateMatrix) {
+      this.setMatrix(this.updateMatrix, this.updateEyeHigh, this.updateEyeLow)
+      this.setInputs(this.updateInputs)
+    }
+  }
+
   setMatrix (matrix: Float32Array, eyeHigh: Float32Array, eyeLow: Float32Array) {
     this.gl.uniformMatrix4fv(this.matrix, false, matrix)
     this.gl.uniform3fv(this.eyePosHigh, eyeHigh)
     this.gl.uniform3fv(this.eyePosLow, eyeLow)
+    // flush update pointers
+    this.updateMatrix = null
+    this.updateEyeHigh = null
+    this.updateEyeLow = null
   }
 
   setInputs (inputs: Float32Array) {
     this.gl.uniform1fv(this.inputs, inputs, 0, inputs.length)
+    this.updateInputs = null // ensure updateInputs is "flushed"
   }
 
   setLayerCode (layerCode: Float32Array) {

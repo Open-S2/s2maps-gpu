@@ -3,7 +3,7 @@ precision mediump float;
 
 layout (location = 0) in vec3 aPosHigh;
 layout (location = 1) in vec3 aPosLow;
-// layout (location = 2) in uint index;
+layout (location = 2) in float index;
 
 uniform mat4 uMatrix;
 uniform vec3 uEyePosHigh;
@@ -11,7 +11,7 @@ uniform vec3 uEyePosLow;
 
 uniform float uInputs[16];
 uniform float uLayerCode[256];
-uniform float uFeatureCode[64];
+uniform float uFeatureCode[128];
 
 @import ./decodeFeature;
 @import ./rteDSFun90;

@@ -22,10 +22,8 @@ vec4 LAB2RGB (vec4 lab) { // r -> l ; g -> a ; b -> b
   float x, y, z, r, g, b;
   // prep move to xyz
   y = (lab.r + 16.) / 116.;
-  if (isnan(lab.g)) x = y;
-  else x = y + lab.g / 500.;
-  if (isnan(lab.b)) z = y;
-  else z = y - lab.b / 200.;
+  x = y + lab.g / 500.;
+  z = y - lab.b / 200.;
   // solve x, y, z
   x = 0.950470 * LAB2XYZ(x);
   y = 1. * LAB2XYZ(y);

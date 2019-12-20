@@ -13,8 +13,8 @@ import Color from '../color'
 
 // INPUT RANGE/CONDITION ENCODINGS:
 // 0 -> zoom
-// 1 -> lat
-// 2 -> lon
+// 1 -> lon
+// 2 -> lat
 // 3 -> angle
 // 4 -> pitch
 
@@ -54,8 +54,8 @@ export default function encodeLayerAttribute (input: Array<any>): Float32Array {
       // encode the input-range type
       const inputRangeType = input.shift()
       if (inputRangeType === 'zoom') encodings[0] += (0 << 1)
-      else if (inputRangeType === 'lat') encodings[0] += (1 << 1)
-      else if (inputRangeType === 'lon') encodings[0] += (2 << 1)
+      else if (inputRangeType === 'lon') encodings[0] += (1 << 1)
+      else if (inputRangeType === 'lat') encodings[0] += (2 << 1)
       else if (inputRangeType === 'angle') encodings[0] += (3 << 1)
       else if (inputRangeType === 'pitch') encodings[0] += (4 << 1)
       else throw Error('unknown input-range type')

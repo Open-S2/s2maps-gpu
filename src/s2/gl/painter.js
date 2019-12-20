@@ -58,6 +58,14 @@ export default class Painter {
     programs.forEach(program => { self.getProgram(program) })
   }
 
+  injectFrameUniforms (matrix: Float32Array, eyePosHigh: Float32Array,
+    eyePosLow: Float32Array, view: Float32Array) {
+    const { programs } = this
+    for (const programName in programs) {
+      programs[programName].injectFrameUniforms(matrix, eyePosHigh, eyePosLow, view)
+    }
+  }
+
   getProgram (programName: string): null | Object {
     const { programs } = this
     if (programs[programName]) return programs[programName]
@@ -95,6 +103,7 @@ export default class Painter {
     // cleanup old setup
     if (tileSource.vao) {
       gl.deleteBuffer(tileSource.vertexBuffer)
+      gl.deleteBuffer(tileSource.featureIndexBuffer)
       gl.deleteBuffer(tileSource.indexBuffer)
       this.context.deleteVertexArray(tileSource.vao)
     }
@@ -109,8 +118,27 @@ export default class Painter {
     gl.bindBuffer(gl.ARRAY_BUFFER, tileSource.vertexBuffer)
     // Buffer the data
     gl.bufferData(gl.ARRAY_BUFFER, tileSource.vertexArray, gl.STATIC_DRAW)
+    // link attributes (aPosHigh will always be 0 and aPosLow will always be 1)
+    gl.enableVertexAttribArray(0)
+    gl.enableVertexAttribArray(1)
+    // tell attribute how to get data out of vertexBuffer
+    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0)
+    gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12)
+    // FEATURE INDEX
+    if (tileSource.featureIndexArray && tileSource.featureIndexArray.length) {
+      // Create the feature index buffer
+      tileSource.featureIndexBuffer = gl.createBuffer()
+      // Bind the buffer
+      gl.bindBuffer(gl.ARRAY_BUFFER, tileSource.featureIndexBuffer)
+      // Buffer the data
+      gl.bufferData(gl.ARRAY_BUFFER, tileSource.featureIndexArray, gl.STATIC_DRAW)
+      // link attribute
+      gl.enableVertexAttribArray(2)
+      // tell attribute how to get data out of feature index buffer
+      gl.vertexAttribPointer(2, 1, gl.UNSIGNED_BYTE, false, 1, 0)
+    }
     // INDEX - If we are on a browser that lacks support for 32bit element array, we won't have indices
-    if (tileSource.indexArray.length) {
+    if (tileSource.indexArray && tileSource.indexArray.length) {
       // Create an index buffer
       tileSource.indexBuffer = gl.createBuffer()
       // bind to ELEMENT_ARRAY
@@ -118,12 +146,6 @@ export default class Painter {
       // buffer the data
       gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, tileSource.indexArray, gl.STATIC_DRAW)
     }
-    // link attributes (aPosHigh will always be 0 and aPosLow will always be 1)
-    gl.enableVertexAttribArray(0)
-    gl.enableVertexAttribArray(1)
-    // tell attribute how to get data out of vertexBuffer
-    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0)
-    gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12)
   }
 
   paint (wallpaper: Wallpaper, projection: Projection, style: Style, tiles: Array<Tile>) {
@@ -138,19 +160,23 @@ export default class Painter {
     drawWallpaper(this, wallpaper)
     // prep stencil
     context.enableStencilTest()
+    // setup inputs for programs
+
     // for each tile, draw background & features as necessary
     for (let tile of tiles) {
-      // grab the matrix (duplicate created)
+      // grab the matrix (duplicate created) and view (input) properties
       const { matrix, eyePosHigh, eyePosLow } = projection.getMatrix(tile.size)
+      const { view } = projection
+      // inject values to programs
+      this.injectFrameUniforms(matrix, eyePosHigh, eyePosLow, view)
       // grab the featureGuide and vao from current tile
       const { sourceData, featureGuide } = tile
       const { mask } = sourceData
       // use mask vao and fill program
       context.bindVertexArray(mask.vao)
       let program = this.useProgram('fill')
-      // set the matrix uniform and inputs
-      program.setMatrix(matrix, eyePosHigh, eyePosLow)
-      // program.setInputs(new Float32Array([0, 0, 0, 0]))
+      // set the matrix and inputs uniforms by flushing the first program
+      program.flush()
       // First 'feature' is the mask feature
       drawMask(this, mask.indexArray.length)
       // Second feature is the sphere-background feature should it exist
@@ -174,11 +200,12 @@ export default class Painter {
     let curSource: string = 'mask'
     let curProgram: ProgramTypes = 'fill'
     let curLayer: number = -1
-    for (const feature of featureGuide) {
-      const { source, layerID, count, offset, type, featureCode } = feature
+    for (const featureBatch of featureGuide) {
+      const { source, layerID, count, offset, type, featureCode } = featureBatch
       // if type is not the same as the curProgram, we have to update curProgram and set uniforms
       if (type !== curProgram) {
         program = this.useProgram(type)
+        program.flush()
         curProgram = type
       }
       // if new layerID, update layerCode

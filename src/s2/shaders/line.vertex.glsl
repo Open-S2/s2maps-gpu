@@ -13,7 +13,7 @@ uniform vec3 uEyePosLow;
 
 uniform float uInputs[16];
 uniform float uLayerCode[256];
-uniform float uFeatureCode[64];
+uniform float uFeatureCode[128];
 
 @import ./decodeFeature;
 @import ./rteDSFun90;
