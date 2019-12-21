@@ -3,6 +3,8 @@
   "name": "s2test",
   "center": [0, 0],
   "zoom": 0,
+  "minzoom": 0,
+  "maxzoom": 5,
   "sources": {
     "water": "http://localhost:8000/data/waterTwo"
   },
@@ -31,7 +33,7 @@
           "zoom",
           "lin",
           0,
-          "rgba(244, 239, 226, 0.6)",
+          "rgba(244, 239, 226, 1)",
           2,
           "rgb(234, 233, 230)",
           3,

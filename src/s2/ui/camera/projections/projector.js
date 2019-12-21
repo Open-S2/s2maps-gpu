@@ -8,7 +8,8 @@ export type ProjectionConfig = {
   translation?: [number, number, number],
   maxLatRotation?: number,
   zoom?: number,
-  maxZoom?: number,
+  minzoom?: number,
+  maxzoom?: number,
   lon?: number,
   lat?: number,
   scale?: number,
@@ -23,7 +24,8 @@ export default class Projector implements Projection {
   translation: [number, number, number] = [0, 0, -10] // only z should change for visual effects
   maxLatRotation: number = 80 // 80 deg
   zoom: number = 0
-  maxZoom: number = 22
+  minzoom: number = 0
+  maxzoom: number = 20
   lon: number = 0
   lat: number = 0
   scale: number = 1 // this is always going to be between 1 and 2
@@ -38,7 +40,6 @@ export default class Projector implements Projection {
     if (config.translation) this.translation = config.translation
     if (config.maxLatRotation) this.maxLatRotation = config.maxLatRotation
     if (config.zoom) this.zoom = config.zoom
-    if (config.maxZoom) this.maxZoom = config.maxZoom
     if (config.lon) this.lon = config.lon
     if (config.lat) this.lat = config.lat
     if (config.scale) this.scale = config.scale
@@ -47,6 +48,12 @@ export default class Projector implements Projection {
     if (config.width) this.width = config.width
     if (config.height) this.height = config.height
     if (config.canvasMultiplier) this.multiplier = config.canvasMultiplier
+  }
+
+  setZoomRange (minzoom: number, maxzoom: number) {
+    // clamp values and ensure minzoom is less than maxzoom
+    this.minzoom = (minzoom < -10) ? -10 : (minzoom > maxzoom) ? maxzoom - 1 : (minzoom > 29) ? 29 : minzoom
+    this.maxzoom = (maxzoom > 30) ? 30 : (maxzoom < this.minzoom) ? this.minzoom + 1 : maxzoom
   }
 
   resize (width: number, height: number) {

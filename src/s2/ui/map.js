@@ -39,8 +39,11 @@ export default class Map extends Camera {
     this._setupCanvas(options)
     // now that we have a canvas, prep the camera's painter
     this.painter = new Painter(this._canvas, options)
-    // setup the style
+    // setup the style - this goes AFTER creation of the painter, because the
+    // style will tell the painter what programs it will be using
     this.style = new Style(options, this)
+    // inject minzoom and maxzoom
+    this.projection.setZoomRange(this.style.minzoom, this.style.maxzoom)
     // now that we have a painter and style object, let's create the initial scene
     this._setupInitialScene()
     // render our first pass

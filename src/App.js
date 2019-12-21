@@ -28,8 +28,7 @@ function prepCanvas(container) {
   new S2Map({
     style,
     container,
-    projection: 'blend',
-    maxZoom: 5
+    projection: 'blend'
   })
 }
 

@@ -20,11 +20,13 @@ export default class Camera {
   tileCache: TileCache
   tilesInView: Array<number> = [] // hash id's of the tiles
   constructor (options: MapOptions) {
+    // setup projection
     this._createProjection(options)
+    // prep the tileCache for future tiles
     this.tileCache = new TileCache()
   }
 
-  // TODO
+  // TODO: Perspective Projection
   _createProjection (options: MapOptions) {
     let { projection } = options
     if (!projection) projection = 'blend'

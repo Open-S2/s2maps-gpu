@@ -68,6 +68,8 @@ export default class Style {
   map: Map
   webworker: boolean = false
   zoom: number = 0
+  minzoom: number = 0
+  maxzoom: number = 20
   lon: number = 0
   lat: number = 0
   sources: SourceTypes = {}
@@ -99,6 +101,8 @@ export default class Style {
         self.lat = style.center[1]
       }
       if (style.zoom) self.zoom = style.zoom
+      if (style.minzoom) self.minzoom = style.minzoom
+      if (style.maxzoom) self.maxzoom = style.maxzoom
       // extract sources
       if (style.sources) self.sources = style.sources
       if (style.fonts) self.fonts = style.fonts
