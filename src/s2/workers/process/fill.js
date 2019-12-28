@@ -12,17 +12,19 @@ export default function processFill (geometry: Array<Array<Point>> | Array<Point
   // push results to vertices and indices updating offset as we go.
   const ds = (bbox[2] - bbox[0]) / extent
   const dt = (bbox[3] - bbox[1]) / extent
+  let maxLength = extent / division
+  if (maxLength === extent) maxLength = Infinity
 
   if (type === 4) {
     for (const poly of geometry) {
-      const data = earclip(poly, division, extent, vertices.length / 6)
+      const data = earclip(poly, maxLength, vertices.length / 6)
       // remap vertices to x, y, z than store
       remapVertices(data.vertices, vertices, tile, ds, dt, featureIndices, encodingIndex)
       // store indices
       indices.push(...data.indices)
     }
   } else {
-    const data = earclip(geometry, division, extent, vertices.length / 6) // just the first ring for now
+    const data = earclip(geometry, maxLength, vertices.length / 6) // just the first ring for now
     // remap vertices to x, y, z than store
     remapVertices(data.vertices, vertices, tile, ds, dt, featureIndices, encodingIndex)
     // store indices

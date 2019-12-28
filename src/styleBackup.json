@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "name": "s2test",
+  "center": [0, 0],
+  "zoom": 0,
+  "minzoom": 0,
+  "maxzoom": 5,
+  "sources": {
+    "water": "http://localhost:8000/data/waterTwo"
+  },
+  "wallpaper": {
+    "background-color": "rgb(29, 38, 85)",
+    "fade-1": "rgb(138, 204, 255)",
+    "fade-2": "rgb(224, 255, 255)",
+    "halo": "rgb(242, 255, 255)"
+  },
+  "sphere-background": {
+    "background-color": "rgba(170, 218, 255, 1)"
+  },
+  "layers": [
+    {
+      "id": "ocean",
+      "source": "water",
+      "layer": "water",
+      "type": "fill",
+      "filter": ["all", ["class", "==", "ocean"]],
+      "minzoom": 0,
+      "maxzoom": 5,
+      "layout": {},
+      "paint": {
+        "color": [
+          "input-range",
+          "zoom",
+          "lin",
+          0,
+          "rgba(244, 239, 226, 1)",
+          2,
+          "rgb(234, 233, 230)",
+          3,
+          "rgb(240, 240, 240)",
+          5,
+          "rgb(247, 247, 247)"
+        ]
+      }
+    }
+  ]
+}
