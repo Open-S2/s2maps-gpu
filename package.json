@@ -19,7 +19,7 @@
     "delaunator": "^4.0.0",
     "dotenv": "6.2.0",
     "dotenv-expand": "4.2.0",
-    "earclip": "^0.3.18",
+    "earclip": "^0.4.4",
     "earcut": "^2.1.5",
     "eslint": "^5.16.0",
     "eslint-config-react-app": "^4.0.1",

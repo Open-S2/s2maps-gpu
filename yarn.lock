@@ -3476,15 +3476,15 @@ duplexify@^3.4.2, duplexify@^3.6.0:
     readable-stream "^2.0.0"
     stream-shift "^1.0.0"
 
-earclip@^0.3.18:
-  version "0.3.18"
-  resolved "https://registry.yarnpkg.com/earclip/-/earclip-0.3.18.tgz#ab90019348eb6ca62923f1079d8f7e62f12d090e"
-  integrity sha512-L9on2UAcQf1R3nLsOWp6PDhyV1tpQQwV7LhcXzMhZC+StEOuwHlXjztuN6yEhgW1pKOnXY1uLZMxEsj80SQtfA==
-
 earclip@^0.3.8:
   version "0.3.9"
   resolved "https://registry.yarnpkg.com/earclip/-/earclip-0.3.9.tgz#523d59620289fbcff9de5ac9d59116c81baf3b0d"
   integrity sha512-oca77yCrcsC5umzE/aI/CurJmC7akG/mg/6i52b2MDJ53feAIBPLNdjaBp7FnApKgAqKU9lVdHN8CQSbyvZhgQ==
+
+earclip@^0.4.4:
+  version "0.4.4"
+  resolved "https://registry.yarnpkg.com/earclip/-/earclip-0.4.4.tgz#9d77e2eae8c32d31a5bf03ac6f6b7003563b5e1f"
+  integrity sha512-DV2JnxFqR257ABWemqcm/FEFOUt2jNxKkw1ya1Bl9Mr3ozHPXmqd9PefNKadyIv05kzG4SzYCt7IaF2vdLM7FA==
 
 earcut@^2.0.0, earcut@^2.1.5:
   version "2.1.5"
