@@ -6239,10 +6239,10 @@ levn@^0.3.0, levn@~0.3.0:
     prelude-ls "~1.1.2"
     type-check "~0.3.2"
 
-line-gl@^0.4.0:
-  version "0.4.0"
-  resolved "https://registry.yarnpkg.com/line-gl/-/line-gl-0.4.0.tgz#f75f590e09141cc797c2a279344e1e965b374320"
-  integrity sha512-TkAz8B7OZ3yun8nQyjPl992VJypx0jWDzD6c7YRxW4CgRplBFhJynahMIaannTsbBDth7S7nkM9B7YQUoWRgMA==
+line-gl@^1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/line-gl/-/line-gl-1.0.1.tgz#17202510fc0a46adc93153c37e2ab5e68a2a3d8d"
+  integrity sha512-lst5Ttkc6mfVahHwb6Bqqjjgep7W7b6UUQ4JvYA8F1dtsiFeSdJnx/BIAePDSH1284QTC7hTRD/uR1ye5jQCGQ==
 
 load-json-file@^2.0.0:
   version "2.0.0"
@@ -8919,10 +8919,10 @@ s2projection@^1.3.0:
   resolved "https://registry.yarnpkg.com/s2projection/-/s2projection-1.3.0.tgz#f834e4ab1241d048c33d5fae4d124b5323d0589c"
   integrity sha512-0DXdD86UM7CyCGHsfib2cMg/xXYheZGVVGHkTA7Uq2tN7zC44akR885rHe5Azrt/2ctCsRGpf3Fbxf68PmdAQw==
 
-s2projection@^1.7.1:
-  version "1.7.1"
-  resolved "https://registry.yarnpkg.com/s2projection/-/s2projection-1.7.1.tgz#7e076764899e6e6875a2eeae3fc552f6b480a34b"
-  integrity sha512-MUBnzVV0WjUw+fnkz7bkHlwofYpT3dgEU3LkxfxTi3ZG3vwRibzBO8oQMCzhti7B7K8/kqwfxvABoFEum8WVkw==
+s2projection@^1.7.3:
+  version "1.7.3"
+  resolved "https://registry.yarnpkg.com/s2projection/-/s2projection-1.7.3.tgz#81381320a6b1201efe058096f0fc9a016030230d"
+  integrity sha512-Z2kufy4SN+084nzg7nwNV/2GxJ+EfsoHm9nkoiknX1klfIn1dtvHOMAs4eLXPjFPszbU5YZdaJMC80JzagF33A==
 
 safe-buffer@5.1.2, safe-buffer@^5.0.1, safe-buffer@^5.1.0, safe-buffer@^5.1.1, safe-buffer@^5.1.2, safe-buffer@~5.1.0, safe-buffer@~5.1.1:
   version "5.1.2"

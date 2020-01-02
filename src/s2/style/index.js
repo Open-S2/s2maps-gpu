@@ -3,66 +3,10 @@ import Color from './color'
 import Map from '../ui/map'
 import { Tile } from '../source'
 import requestData from '../util/xmlHttpRequest'
-import { encodeLayerAttribute } from './conditionals'
+import { encodeLayerAttribute, orderLayer } from './conditionals'
 
+import type { SourceTypes, Layer, WallpaperStyle } from './styleSpec'
 import type { TileRequest } from '../workers/tile.worker'
-
-type SourceType = {
-  path: string,
-  type: 'vector' | 'raster' | 'font' | 'billboard',
-  fileType: 'json' | 's2json' | 'pbf' | 's2tile' | 'png' | 'jpeg' | 'ttf' | 'woff',
-  sourceName?: string // if you want to make requests without getting metadata, you need this
-}
-
-type SourceTypes = { [string]: SourceType }
-
-type DrawType = 'fill' | 'line' | 'text' | 'billboard'
-
-type StyleLayout = {
-  'line-cap'?: 'butt' | 'square' | 'round',
-  'line-edge'?: 'bevel' | 'miter' | 'round',
-  'text-size'?: number,
-  'text-family'?: string,
-  'text-field'?: string | Array<string>, // ['name_en', 'name'] or just 'name'
-  'text-size'?: number,
-  'text-family'?: string | Array<string>, //
-  'symbol-placement'?: string // "point" or "line" or nothing which equates to both
-}
-
-type StylePaint = {
-  'color'?: string,
-}
-
-type StyleFilter = Array<any> // ["any", ["class", "==", "ocean"], ["class", "==", "river"]]
-
-export type StyleLayer = {
-  id: string,
-  source: string,
-  layer: string,
-  minzoom: number,
-  maxzoom: number,
-  type?: Array<DrawType> | DrawType, // if no type, it can be "any"
-  filter: StyleFilter,
-  layout: StyleLayout,
-  paint: StylePaint,
-  code: Float32Array
-}
-
-type StyleLayers = Array<StyleLayer>
-
-export type WallpaperStyle = {
-  backgroundColor: Color,
-  fade1Color: Color,
-  fade2Color: Color,
-  haloColor: Color
-}
-
-export type StylePackage = {
-  sources: SourceTypes,
-  fonts: SourceTypes,
-  billboards: SourceTypes,
-  layers: StyleLayers
-}
 
 export default class Style {
   map: Map
@@ -75,7 +19,7 @@ export default class Style {
   sources: SourceTypes = {}
   fonts: SourceTypes = {}
   billboards: SourceTypes = {}
-  layers: StyleLayers = []
+  layers: Array<Layer> = []
   wallpaper: WallpaperStyle
   sphereBackground: void | Float32Array // Attribute Code - limited to input-range or input-condition
   dirty: boolean = true
@@ -146,22 +90,21 @@ export default class Style {
     if (sphereBackground) this.sphereBackground = encodeLayerAttribute(sphereBackground['background-color'])
   }
 
-  // TODO: prep color, line-color, text-color, fill-color, text-size, text-halo-color, text-halo-width, and/or line-width, conditions
-  // TODO+: ensure the order is correct when WebGL eventually parses the eoncdings
+  // 1) ensure "bad" layers are removed (missing important keys or subkeys)
+  // 2) ensure the order is correct for when WebGL eventually parses the encodings
   _buildLayers () {
     // now we build our program set simultaneous to encoding our layers
     const programs = new Set()
     for (const layer of this.layers) {
+      // TODO: if bad layer, remove
       const code = []
       programs.add(layer.type)
+      // order layers for GPU
+      orderLayer(layer)
       // LAYOUTS
-      for (let key in layer.layout) {
-        code.push(...encodeLayerAttribute(layer.layout[key]))
-      }
+      for (let key in layer.layout) code.push(...encodeLayerAttribute(layer.layout[key]))
       // PAINTS
-      for (let key in layer.paint) {
-        code.push(...encodeLayerAttribute(layer.paint[key]))
-      }
+      for (let key in layer.paint) code.push(...encodeLayerAttribute(layer.paint[key]))
       layer.code = new Float32Array(code)
     }
     this.map.painter.prebuildPrograms(programs)

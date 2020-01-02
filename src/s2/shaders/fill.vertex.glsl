@@ -22,7 +22,7 @@ void main () {
   // decode color
   color = decodeFeature(true, 0, 0);
   // GPU-RTE DSFUN90
-  vec3 pos = RTE();
+  vec3 pos = RTE(aPosHigh, aPosLow);
   // set position
   gl_Position = uMatrix * vec4(pos, 1);
 }

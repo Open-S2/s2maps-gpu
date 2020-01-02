@@ -103,7 +103,7 @@ function encodeDataCondition (input: Array<any>): Array<number> {
   return encoding
 }
 
-function encodeRange (input: Array<any>): Array<number>  {
+function encodeRange (input: Array<any>): Array<number> {
   const encoding = []
 
   while (input.length) {

@@ -2,14 +2,15 @@
 // examples:
 // "filter": ["any", ["class", "==", "ocean"], ["class", "==", "river"]]
 // "filter": ["all", ["class", "==", "ocean"], ["class", "==", "lake"], ["class", "!=", "river"]]
-export default function parseFilter (filter: Array<string | Array<any>>) {
+export default function parseFilter (filter: null | Array<string | Array<any>>) {
+  if (!filter) return () => true
   // first attribute describes how if we have a bunch of && or ||
   const andOr = (filter[0] === 'any' || filter[0] === 'all') ? filter.shift() : null
   if (!andOr) {
     const [key, condition, value] = filter
-    const filterArrow = parseFilterCondition(condition, value)
+    const filterLambda = parseFilterCondition(condition, value)
     return (properties) => {
-      if (properties && properties[key] != null) return filterArrow(properties[key])
+      if (properties && properties[key] != null) return filterLambda(properties[key])
     }
   }
   // first create all conditionals

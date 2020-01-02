@@ -6,7 +6,7 @@
   "minzoom": 0,
   "maxzoom": 5,
   "sources": {
-    "water": "http://localhost:8000/data/waterTwo"
+    "water": "http://localhost:8000/data/water"
   },
   "wallpaper": {
     "background-color": "rgb(29, 38, 85)",

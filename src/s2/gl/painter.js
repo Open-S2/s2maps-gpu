@@ -118,12 +118,22 @@ export default class Painter {
     gl.bindBuffer(gl.ARRAY_BUFFER, tileSource.vertexBuffer)
     // Buffer the data
     gl.bufferData(gl.ARRAY_BUFFER, tileSource.vertexArray, gl.STATIC_DRAW)
-    // link attributes (aPosHigh will always be 0 and aPosLow will always be 1)
+    // link attributes:
+    // FILL: aPosHigh -> 0 and aPosLow -> 1
     gl.enableVertexAttribArray(0)
     gl.enableVertexAttribArray(1)
+    // LINE: aPosHigh -> 3, aPosLow -> 4, normal -> 5
+    gl.enableVertexAttribArray(3)
+    gl.enableVertexAttribArray(4)
+    gl.enableVertexAttribArray(5)
     // tell attribute how to get data out of vertexBuffer
+    // instructions for fill
     gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0)
     gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12)
+    // instructions for line
+    gl.vertexAttribPointer(3, 3, gl.FLOAT, false, 32, 0)
+    gl.vertexAttribPointer(4, 3, gl.FLOAT, false, 32, 12)
+    gl.vertexAttribPointer(5, 2, gl.FLOAT, false, 32, 24)
     // FEATURE INDEX
     if (tileSource.featureIndexArray && tileSource.featureIndexArray.length) {
       // Create the feature index buffer
@@ -137,15 +147,13 @@ export default class Painter {
       // tell attribute how to get data out of feature index buffer
       gl.vertexAttribPointer(2, 1, gl.UNSIGNED_BYTE, false, 1, 0)
     }
-    // INDEX - If we are on a browser that lacks support for 32bit element array, we won't have indices
-    if (tileSource.indexArray && tileSource.indexArray.length) {
-      // Create an index buffer
-      tileSource.indexBuffer = gl.createBuffer()
-      // bind to ELEMENT_ARRAY
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, tileSource.indexBuffer)
-      // buffer the data
-      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, tileSource.indexArray, gl.STATIC_DRAW)
-    }
+    // INDEX
+    // Create an index buffer
+    tileSource.indexBuffer = gl.createBuffer()
+    // bind to ELEMENT_ARRAY
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, tileSource.indexBuffer)
+    // buffer the data
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, tileSource.indexArray, gl.STATIC_DRAW)
   }
 
   paint (wallpaper: Wallpaper, projection: Projection, style: Style, tiles: Array<Tile>) {

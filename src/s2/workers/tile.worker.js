@@ -1,8 +1,7 @@
 // @flow
 import { VectorTile } from 's2-vector-tile'
-import { S2Point } from 's2projection'
-import { parseFilter, encodeFeatureFunction } from '../style/conditionals'
-import { processFill } from './process'
+import { parseLayers } from '../style/conditionals'
+import { processFill, processLine } from './process'
 import requestData from '../util/xmlHttpRequest'
 
 import type { Face } from 'S2Projection'
@@ -18,7 +17,8 @@ export type TileRequest = {
   y: number,
   bbox: [number, number, number, number],
   division: number,
-  extent: number
+  extent: number,
+  size: number
 }
 
 const MAX_FEATURE_BATCH_SIZE = 128
@@ -59,7 +59,7 @@ export default class TileWorker {
     // store the style
     this.maps[mapID] = style
     // prep filter functions
-    this.parseLayers(mapID)
+    parseLayers(this.maps[mapID].layers)
     // prep request system
     this.buildSources(mapID)
   }
@@ -76,20 +76,6 @@ export default class TileWorker {
       for (const sourceName in sources) {
         const source = sources[sourceName]
         this.requestTiles(mapID, sourceName, source, tiles)
-      }
-    }
-  }
-
-  // prep functions that take feature.properties as an input
-  parseLayers (mapID: string) {
-    const { layers } = this.maps[mapID]
-    for (const layer of layers) {
-      layer.filter = parseFilter(layer.filter)
-      for (const l in layer.layout) {
-        layer.layout[l] = encodeFeatureFunction(layer.layout[l])
-      }
-      for (const p in layer.paint) {
-        layer.paint[p] = encodeFeatureFunction(layer.paint[p])
       }
     }
   }
@@ -161,6 +147,11 @@ export default class TileWorker {
   }
 
   _processTileData (mapID: string, sourceName: string, source: Object, tile: TileRequest, data: ArrayBuffer | Blob) {
+    // grab tiles basics
+    const { extent, division, size } = tile
+    let maxLength = extent / division
+    if (maxLength === extent) maxLength = null
+    const pixelSize = extent / size // defaults extent and size (4096 and 512) equate to 8 units. so 8 units = 1 pixel
     // Check the source metadata. If it's a vector run through all
     // layers and process accordingly. If image, no pre-processing needed.
     // TODO: types may differ between vector or raster
@@ -197,7 +188,15 @@ export default class TileWorker {
             if (layer.filter(properties)) {
               // we can now process according to type
               if (layer.type === 'fill' && (type === 3 || type === 4)) {
-                processFill(feature.loadGeometry(), type, tile, vertices, indices, featureIndices, encodingIndex)
+                processFill(feature.loadGeometry(), type, tile, vertices, indices, featureIndices, encodingIndex, maxLength)
+              } else if (layer.type === 'line' && type === 2) {
+                processLine(feature.loadGeometry(), type, tile, vertices, indices, featureIndices, encodingIndex, maxLength, pixelSize * layer.maxWidth)
+              } else if (layer.type === 'line3D' && type === 2) {
+
+              } else if (layer.type === 'text' && type === 1) {
+
+              } else if (layer.type === 'billboard' && type === 1) {
+
               } else { continue }
             } else { continue }
             // create encodings for the feature, if it is different than the previous feature, we start a new encoding set
