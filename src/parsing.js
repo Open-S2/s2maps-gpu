@@ -36,25 +36,25 @@ const { encodeFeatureFunction, encodeLayerFunction, decodeFeature } = require('.
 //   input2
 // ]
 
-const input4 = [
-  "input-condition",
-  ["zoom", "==", "5"],
-  "rgba(5, 100, 125, .5)",
-  ["lat", ">", "90"],
-  "rgba(200, 160, 100, .8)",
-  "default",
-  "rgba(20, 200, 200, 1)"
-]
-
-const input3 = [
-  "data-condition",
-  ["class", "==", "ocean"],
-  "rgba(5, 100, 125, .5)",
-  ["class", "==", "river"],
-  "rgba(200, 160, 100, .8)",
-  "default",
-  "rgba(20, 200, 200, 1)"
-]
+// const input4 = [
+//   "input-condition",
+//   ["zoom", "==", "5"],
+//   "rgba(5, 100, 125, .5)",
+//   ["lat", ">", "90"],
+//   "rgba(200, 160, 100, .8)",
+//   "default",
+//   "rgba(20, 200, 200, 1)"
+// ]
+//
+// const input3 = [
+//   "data-condition",
+//   ["class", "==", "ocean"],
+//   "rgba(5, 100, 125, .5)",
+//   ["class", "==", "river"],
+//   "rgba(200, 160, 100, .8)",
+//   "default",
+//   "rgba(20, 200, 200, 1)"
+// ]
 
 const input2 = [
   "data-range",
@@ -81,34 +81,111 @@ const input2 = [
 //   "rgba(20, 200, 200, 1)"
 // ]
 
-const inputZoom = [
+// const inputZoom = [
+//   "input-range",
+//   "zoom",
+//   "lin",
+//   2,
+//   "rgba(5, 100, 125, .5)",
+//   5,
+//   "rgba(200, 160, 100, .8)",
+//   7,
+//   "rgba(20, 200, 200, 1)"
+// ]
+
+// const input = "rgba(200, 160, 100, .8)"
+//
+// const inputClone = JSON.parse(JSON.stringify(input2))
+// const inputCloneEncode = JSON.parse(JSON.stringify(input2))
+//
+// const encodeFeatureFunc = encodeFeatureFunction(inputClone)
+// const encodedLayer = encodeLayerFunction(inputCloneEncode)
+// console.log('encodedLayer', encodedLayer)
+//
+// const featureEncoding = []
+//
+// encodeFeatureFunc({ class: 'ocean', elev: 3 }, featureEncoding)
+// featureEncoding.unshift(featureEncoding.length)
+// console.log('featureEncoding', featureEncoding)
+//
+// const decoded = decodeFeature(encodedLayer, featureEncoding, [9, 0, 0], true, 0, 1)
+// console.log(decoded)
+
+
+
+
+
+
+
+
+
+
+
+/*** LIINNESSS ***/
+
+const colorZoom = [
   "input-range",
   "zoom",
   "lin",
   2,
-  "rgba(5, 100, 125, .5)",
-  5,
-  "rgba(200, 160, 100, .8)",
+  "rgb(33, 49, 62)",
   7,
-  "rgba(20, 200, 200, 1)"
+  "rgb(239, 238, 105)"
 ]
 
-const input = "rgba(200, 160, 100, .8)"
+const inputZoom = [
+  "input-range",
+  "zoom",
+  "lin",
+  2, // zoom
+  0, // VALUE
+  5, // zoom
+  5, // VALUE
+  7, // zoom
+  7  // VALUE
+]
 
-const inputClone = JSON.parse(JSON.stringify(input2))
-const inputCloneEncode = JSON.parse(JSON.stringify(input2))
+const input = 5
+
+const colorInputClone = JSON.parse(JSON.stringify(colorZoom))
+const colorInputCloneEncode = JSON.parse(JSON.stringify(colorZoom))
+const inputClone = JSON.parse(JSON.stringify(inputZoom))
+const inputCloneEncode = JSON.parse(JSON.stringify(inputZoom))
+
+const layerCode = []
+
+const colorencodeFeatureFunc = encodeFeatureFunction(colorInputClone)
+layerCode.push(...encodeLayerFunction(colorInputCloneEncode))
 
 const encodeFeatureFunc = encodeFeatureFunction(inputClone)
-const encodedLayer = encodeLayerFunction(inputCloneEncode)
-console.log('encodedLayer', encodedLayer)
+layerCode.push(...encodeLayerFunction(inputCloneEncode))
+console.log('layerCode', layerCode)
 
-const featureEncoding = []
+const featureCode = []
 
-encodeFeatureFunc({ class: 'ocean', elev: 3 }, featureEncoding)
-console.log('featureEncoding', featureEncoding)
+colorencodeFeatureFunc({ class: 'street' }, featureCode)
+encodeFeatureFunc({ class: 'street' }, featureCode)
+console.log('featureCode', featureCode)
 
-const decoded = decodeFeature(encodedLayer, featureEncoding, [9, 0, 0], true, 0, 0)
-console.log(decoded)
+const color = decodeFeature(layerCode, featureCode, [4, 0, 0], true, 0, 0)
+console.log(color)
+
+console.log('***********************')
+// find position
+const width = decodeFeature(layerCode, featureCode, [10, 0, 0], false, color[1], color[2])
+console.log(width)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 // // first level decode

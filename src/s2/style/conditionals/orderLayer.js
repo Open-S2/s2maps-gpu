@@ -28,7 +28,6 @@ function orderLine (layer: Layer) {
 }
 
 // line order: (layout)family->field->offset->padding->(paint)color->size->halowidth->halocolor
-// TODO: set layer.maxWidth appropriately
 function orderText (layer: Layer) {
   const { layout, paint } = layer
   const newtextLayout = {
@@ -52,7 +51,6 @@ function orderText (layer: Layer) {
 }
 
 // line order: (layout)field->offset->padding->(paint)size->opacity
-// TODO: set layer.maxWidth appropriately
 function orderBillboard (layer: Layer) {
   const { layout, paint } = layer
   const newBillboardLayout = {

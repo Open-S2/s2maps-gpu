@@ -31,10 +31,13 @@ vec3 decodeVector (vec2 enc) {
 }
 
 void main () {
+  // prep layer index and feature index positions
+  int index = 0;
+  int featureIndex = 0;
   // decode color
-  color = decodeFeature(true, 0, 0);
+  color = decodeFeature(true, index, featureIndex);
   // decode line width
-
+  float width = decodeFeature(false, index, featureIndex);
   // GPU-RTE DSFUN90
   vec3 pos = RTE(aPosHigh, aPosLow);
   // build out the vector

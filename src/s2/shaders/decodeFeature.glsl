@@ -34,8 +34,10 @@ vec4 interpolateColor (vec4 color1, vec4 color2, float t) {
   return vec4(hue, sat, lbv, alpha);
 }
 
-vec4 decodeFeature (bool color, int index, int featureIndex) {
+vec4 decodeFeature (bool color, inout int index, inout int featureIndex) {
   // prep result and variables
+  int startingOffset = index;
+  int featureSize = int(uLayerCode[index]) >> 10;
   vec4 res = vec4(-1, -1, -1, -1);
   int conditionStack[6];
   float tStack[6];
@@ -103,9 +105,10 @@ vec4 decodeFeature (bool color, int index, int featureIndex) {
       // create a start point
       start = end = uLayerCode[index];
       startIndex = endIndex = index + 1;
-      while (end < inputVal && endIndex < len) {
+      while (end < inputVal && endIndex < len + startingOffset) {
         // if current sub condition is an input-range, we must check if if the "start"
-        // subCondition was a data-condition or data-range, and if so, we must move past the uFeatureCode that was stored there
+        // subCondition was a data-condition or data-range, and if so,
+        // we must move past the uFeatureCode that was stored there
         subCondition = (int(uLayerCode[startIndex]) & 1008) >> 4;
         if (subCondition == 2 || subCondition == 4) featureIndex++;
         // increment to subCondition
@@ -138,14 +141,32 @@ vec4 decodeFeature (bool color, int index, int featureIndex) {
         tStack[stackIndex] = t;
         stackIndex++;
       }
+      // now that we got the information we need - we need to ensure we flush all feature subCondition data
+      // hidden in zooms that we had to parse in the setup stage
+      while (endIndex < len + startingOffset) {
+        // if current sub condition is an input-range, we must check if if the "start"
+        // subCondition was a data-condition or data-range, and if so,
+        // we must move past the uFeatureCode that was stored there
+        subCondition = (int(uLayerCode[startIndex]) & 1008) >> 4;
+        if (subCondition == 2 || subCondition == 4) featureIndex++;
+        index++;
+        index += int(uLayerCode[index]) >> 10;
+        endIndex = index + 1;
+      }
     } else if (condition == 6) { // animation-state
 
     } else if (condition >= 7) { // feature-state
 
     }
     // safety precaution
-    if (stackIndex > 5) return res;
+    if (stackIndex > 5) {
+      index = featureSize + startingOffset;
+      return res;
+    }
   } while (stackIndex > 0);
+
+  // update index to the next Layer property
+  index = featureSize + startingOffset;
 
   return res;
 }
