@@ -24,5 +24,5 @@ export default function encodeFeatureFunction (input: void | Array<any>) {
       input.shift() // input-range type
       return parseInputRange(input)
     } else { return noop }
-  } else { return noop } // the draw thread will naturally handle the appropraite color/number
+  } else { return () => input } // the draw thread will naturally handle the appropraite color/number
 }

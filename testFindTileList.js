@@ -142,27 +142,6 @@ function boxIntersect (x1, y1, x2, y2) {
 function lineIntersect (x1, y1, x2, y2, x3, y3, x4, y4) {
   const denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)
   if (!denom) return false
-  const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom
-  const intersectX = x1 + ua * (x2 - x1)
-  const intersectY = y1 + ua * (y2 - y1)
-  // console.log([intersectX, intersectY])
-  if (x1 > x2) {
-    if (intersectX < x2 || intersectX > x1) return false
-  } else {
-    if (intersectX > x2 || intersectX < x1) return false
-  }
-  if (y1 > y2) {
-    if (intersectY < y2 || intersectY > y1) return false
-  } else {
-    if (intersectY > y2 || intersectY < y1) return false
-  }
-  if (intersectX <= 1 && intersectX >= -1 && intersectY <= 1 && intersectY >= -1) return true
-  return false
-}
-
-function lineIntersect (x1, y1, x2, y2, x3, y3, x4, y4) {
-  const denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)
-  if (!denom) return false
   const lambda = ((y4 - y3) * (x4 - x1) + (x3 - x4) * (y4 - y1)) / denom
   const gamma = ((y1 - y2) * (x4 - x1) + (x2 - x1) * (y4 - y1)) / denom
   return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1)
@@ -197,13 +176,13 @@ function findTile(face, zoom, x, y, tileSize, checkList, checkedTiles) {
 // const tiles = getTilesInView(1.9574999999999867, 75.24004701174681, 23.065019845499286)
 
 // BUGGED
-const tiles = getTilesInView(2.9, 22, 40)
+const tiles = getTilesInView(1, 0, 0)
 // BUGGED
 // const tiles = getTilesInView(4, 90, 30)
 // const tiles = getTilesInView(1, -30, 0)
 // const tiles = getTilesInView(1, 0, 0)
 
-console.log('tiles', tiles)
+console.log('tiles', tiles, tiles.length)
 
 function updateTile (face, s, t, size = 1) {
   const diff = (size === 1) ? size : size - 1

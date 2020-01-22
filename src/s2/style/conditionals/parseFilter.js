@@ -2,7 +2,7 @@
 // examples:
 // "filter": ["any", ["class", "==", "ocean"], ["class", "==", "river"]]
 // "filter": ["all", ["class", "==", "ocean"], ["class", "==", "lake"], ["class", "!=", "river"]]
-export default function parseFilter (filter: null | Array<string | Array<any>>) {
+export default function parseFilter (filter: undefined | Array<string | Array<any>>) {
   if (!filter) return () => true
   // first attribute describes how if we have a bunch of && or ||
   const andOr = (filter[0] === 'any' || filter[0] === 'all') ? filter.shift() : null

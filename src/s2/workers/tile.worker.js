@@ -9,8 +9,10 @@ import type { StylePackage } from '../style'
 
 type Point = [number, number]
 
+export type CancelTileRequest = Array<number> // hashes of tiles e.g. ['204', '1003', '1245', ...]
+
 export type TileRequest = {
-  hash: string,
+  hash: number,
   face: Face,
   zoom: number,
   x: number,
@@ -46,11 +48,13 @@ export default class TileWorker {
   maps: { [string]: StylePackage } = {} // mapID: StylePackage
   status: 'building' | 'busy' | 'ready' = 'ready'
   cache: { [string]: Array<TileRequest> } = {} // mapID: TileRequests
+  cancelCache: Array<number> = []
   onMessage ({ data }) {
     const { mapID, type } = data
     if (type === 'style') this._styleMessage(mapID, data.style)
     else if (type === 'request') this._requestMessage(mapID, data.tiles)
     else if (type === 'status') postMessage({ type: 'status', status: this.status })
+    else if (type === 'cancel') this._cancelTiles(mapID, data.tiles)
   }
 
   _styleMessage (mapID: string, style: StylePackage) {
@@ -62,6 +66,13 @@ export default class TileWorker {
     parseLayers(this.maps[mapID].layers)
     // prep request system
     this.buildSources(mapID)
+  }
+
+  _cancelTiles (mapID: string, tiles: Array<CancelTileRequest>) {
+    // first check if any of the tiles are in a cache queue
+    this.cache[mapID].filter(tile => !tiles.includes(tile.hash))
+    // store the cache
+    this.cancelCache = tiles
   }
 
   _requestMessage (mapID: string, tiles: Array<TileRequest>) {
@@ -91,46 +102,49 @@ export default class TileWorker {
     if (!style.billboards) style.billboards = {}
     const { sources, fonts, billboards } = style
     // build sources
-    if (!self._isDoneBuilding(style)) {
-      for (const source in sources) {
-        if (typeof sources[source] === 'string') {
-          requestData(`${sources[source]}/metadata`, 'json', (metadata) => {
-            // build & add proper path to metadata if it does not exist
-            if (!metadata.path) metadata.path = sources[source]
-            // update source to said metadata
-            sources[source] = metadata
-            // check if all metadata is downloaded, if so, update status and improve
-            self.buildSources(mapID)
+    const promises = []
+    for (const source in sources) {
+      if (typeof sources[source] === 'string') {
+        promises.push(
+          new Promise((resolve, _) => {
+            requestData(`${sources[source]}/metadata`, 'json', (metadata) => {
+              // build & add proper path to metadata if it does not exist
+              if (!metadata.path) metadata.path = sources[source]
+              // update source to said metadata
+              sources[source] = metadata
+              resolve()
+            })
           })
-        }
-      }
-      // TODO: get and replace fonts strings with font-gl class objects
-
-      // TODO: get and replace billboard strings with svg-gl class objects
-    } else {
-      this.status = 'ready'
-      // if we have a cache, we are now ready to find data
-      const firstCache = Object.keys(this.cache)[0]
-      if (firstCache) {
-        // pull out the requests and delete the reference
-        const tileRequest = this.cache[firstCache]
-        delete this.cache[firstCache]
-        this._requestMessage(firstCache, tileRequest)
+        )
       }
     }
+    // TODO: get and replace fonts strings with font-gl class objects
+
+    // TODO: get and replace billboard strings with svg-gl class objects
+    Promise.all(promises)
+      .then(() => {
+        this.status = 'ready'
+        this._checkCache()
+      })
   }
 
-  _isDoneBuilding (style: mapStyles) {
-    const { sources, fonts, billboards } = style
-    return !Object.values(sources).some(s => typeof s === 'string') &&
-    !Object.values(fonts).some(s => typeof s === 'string') &&
-    !Object.values(billboards).some(s => typeof s === 'string')
+  _checkCache () {
+    // if we have a cached tiles, we are now ready to request more data
+    const firstCache = Object.keys(this.cache)[0]
+    if (firstCache) {
+      // pull out the requests and delete the reference
+      const tileRequest = this.cache[firstCache]
+      delete this.cache[firstCache]
+      this._requestMessage(firstCache, tileRequest)
+    } else { // otherwise we have no more tiles to process, clear cancelCache should their be any leftover
+      this.cancelCache = []
+    }
   }
 
   async requestTiles (mapID: string, sourceName: string, source: Object, tiles: Array<TileRequest>) { // tile: [face, zoom, x, y]
     const self = this
     for (const tile of tiles) {
-      const { face, zoom, x, y } = tile
+      const { hash, face, zoom, x, y } = tile
       if (
         source.minzoom <= zoom && source.maxzoom >= zoom && // check zoom bounds
         source.facesbounds[face] && // check face exists
@@ -139,11 +153,12 @@ export default class TileWorker {
         source.facesbounds[face][zoom][1] <= y && source.facesbounds[face][zoom][3] >= y // check y is within bounds
       ) {
         requestData(`${source.path}/${face}/${zoom}/${x}/${y}`, source.extension, (data) => {
-          if (data) self._processTileData(mapID, sourceName, source, tile, data)
+          if (data && !self.cancelCache.includes(hash)) self._processTileData(mapID, sourceName, source, tile, data)
         })
       }
     }
-    this.status = 'ready'
+    self.status = 'ready'
+    self._checkCache()
   }
 
   _processTileData (mapID: string, sourceName: string, source: Object, tile: TileRequest, data: ArrayBuffer | Blob) {
@@ -190,7 +205,7 @@ export default class TileWorker {
               if (layer.type === 'fill' && (type === 3 || type === 4)) {
                 processFill(feature.loadGeometry(), type, tile, vertices, indices, featureIndices, encodingIndex, maxLength)
               } else if (layer.type === 'line' && type === 2) {
-                processLine(feature.loadGeometry(), type, tile, vertices, indices, featureIndices, encodingIndex, maxLength, pixelSize * layer.maxWidth)
+                processLine(feature.loadGeometry(), { cap: layer.layout.cap(), join: layer.layout.join() }, tile, vertices, indices, featureIndices, encodingIndex, maxLength, pixelSize * 1)
               } else if (layer.type === 'line3D' && type === 2) {
 
               } else if (layer.type === 'text' && type === 1) {

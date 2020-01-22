@@ -25,7 +25,6 @@ export default class Map extends Camera {
   _canvas: HTMLCanvasElement
   _interactive: boolean
   _scrollZoom: boolean
-  zooming: setTimeout
   dragPan: DragPan
   constructor (options: MapOptions, canvas: HTMLCanvasElement, id: string) {
     // setup default variables
@@ -85,21 +84,12 @@ export default class Map extends Camera {
 
   _onScroll (e: ScrollEvent) {
     e.preventDefault()
-    if (this.dragPan.active) this.dragPan.clear()
+    this.dragPan.clear()
     const rect = this._canvas.getBoundingClientRect()
-    const { clientX, clientY, wheelDeltaY } = e
-    // manage a timeout for updating the scene when user is done zooming
-    if (this.zooming) clearTimeout(this.zooming)
-    this.zooming = setTimeout(() => {
-      this.zooming = null
-      this._render()
-    }, 150)
+    const { clientX, clientY, deltaY } = e
     // update projection
-    this.projection.onZoom(wheelDeltaY, clientX - rect.left, clientY - rect.top)
-    // const update = this.projection.onZoom(wheelDeltaY, clientX - rect.left, clientY - rect.top)
-    // if (update) this._render(false)
-    // else this._render()
-    this._render()
+    const update = this.projection.onZoom(deltaY, clientX - rect.left, clientY - rect.top)
+    if (update) this._render()
   }
 
   _contextLost () {
@@ -124,13 +114,15 @@ export default class Map extends Camera {
   }
 
   _onSwipe (e: Event) {
+    this.dragPan.swipeActive = true
     requestAnimationFrame(this.swipeAnimation.bind(this))
   }
 
   swipeAnimation (now: number) {
+    if (!this.dragPan.swipeActive) return
     const [newMovementX, newMovementY, time] = this.dragPan.getNextFrame(now)
-    this.projection.onMove(newMovementX, newMovementY, 6, 6)
     if (time) {
+      this.projection.onMove(newMovementX, newMovementY, 6, 6)
       this._render()
       requestAnimationFrame(this.swipeAnimation.bind(this))
     }

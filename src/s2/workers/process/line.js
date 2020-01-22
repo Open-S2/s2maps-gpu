@@ -1,6 +1,7 @@
 // @flow
-import { drawLine } from 'line-gl'
+import drawLine from 'line-gl'
 import encodeNormal from './encodeNormal'
+import { S2Point } from 's2projection'
 
 import type { Attributes } from 'line-gl'
 import type { TileRequest } from '../tile.worker'
@@ -21,20 +22,23 @@ export default function processLine (geometry: Array<Array<Point>> | Array<Point
 
   for (const lineString of geometry) {
     const data = drawLine(lineString, attributes, vertices.length / 8)
+    // console.log('data.vertices', data.vertices)
     // remap vertices to x, y, z than store
     remapVerticesNormals(data.vertices, vertices, data.normals, tile, ds, dt, featureIndices, encodingIndex, width)
     // store indices
     indices.push(...data.indices)
+    // console.log('vertices', vertices)
   }
 }
 
 // since we are looking at a EXTENTxEXTENT mapping, we need to convert it back to the
 // proper ST and than x, y, z coordinates. In the case of a line, since we precompute the vertex
-// at its position in world space, the number is split in two, so we can't find easily create variable
-// width of the point + normal. To alleviate this, we compute what the lines paint maximum width would look like, and use the vector
-// of those two points to create variable width. Stationary width looks aesthetically better for roads/paths and
-// borders which comprise pretty much all lines on the surface of the earth. 3D lines will use a different technique.
-// anything less than max-width will just follow the path that max-width creates, therefore many pixel difference at low
+// at its position in world space, the number is split in two, so we can't easily create variable
+// width of the point + normal. To alleviate this, we compute what the lines paint maximum width
+// would look like, and use the vector of those two points to create variable width. Stationary
+// width looks aesthetically better for roads/paths and borders which comprise pretty much all
+// lines on the surface of the earth. 3D lines will use a different technique. anything less than
+// max-width will just follow the path that max-width creates, therefore many pixel difference at low
 // zoom will look even smaller, however anything zoom 4 or greater should look relatively normal with large widths.
 function remapVerticesNormals (stVertices: Array<number>, vertices: Array<number>,
   stNormals: Array<number>, tile: TileRequest, ds: number, dt: number,
@@ -43,6 +47,7 @@ function remapVerticesNormals (stVertices: Array<number>, vertices: Array<number
   let vertex: S2Point, normal: S2Point
   let sT: number = bbox[0]
   let tT: number = bbox[1]
+  // console.log('fst', face, sT, tT)
   for (let i = 0, vl = stVertices.length; i < vl; i += 2) {
     // create normal's point at a distance of 1unit (this applies a width to
     // understand the position relative to the vertex in 3d space)

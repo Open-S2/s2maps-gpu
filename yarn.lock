@@ -3481,12 +3481,12 @@ earclip@^0.3.8:
   resolved "https://registry.yarnpkg.com/earclip/-/earclip-0.3.9.tgz#523d59620289fbcff9de5ac9d59116c81baf3b0d"
   integrity sha512-oca77yCrcsC5umzE/aI/CurJmC7akG/mg/6i52b2MDJ53feAIBPLNdjaBp7FnApKgAqKU9lVdHN8CQSbyvZhgQ==
 
-earclip@^0.4.4:
-  version "0.4.4"
-  resolved "https://registry.yarnpkg.com/earclip/-/earclip-0.4.4.tgz#9d77e2eae8c32d31a5bf03ac6f6b7003563b5e1f"
-  integrity sha512-DV2JnxFqR257ABWemqcm/FEFOUt2jNxKkw1ya1Bl9Mr3ozHPXmqd9PefNKadyIv05kzG4SzYCt7IaF2vdLM7FA==
+earclip@^0.5.0:
+  version "0.5.0"
+  resolved "https://registry.yarnpkg.com/earclip/-/earclip-0.5.0.tgz#dab248486b7eb387a35fb69fae272fa37e2b453f"
+  integrity sha512-2PwthFXbSu6M1GNvYmuZ5NcDTBXAPlY8vJBNerK9RE4/rA9B7IDkX51dn8Q8eO+2i4hOLMVyTGEhT2N0v7rSAA==
 
-earcut@^2.0.0, earcut@^2.1.5:
+earcut@^2.0.0:
   version "2.1.5"
   resolved "https://registry.yarnpkg.com/earcut/-/earcut-2.1.5.tgz#829280a9a3a0f5fee0529f0a47c3e4eff09b21e4"
   integrity sha512-QFWC7ywTVLtvRAJTVp8ugsuuGQ5mVqNmJ1cRYeLrSHgP3nycr2RHTJob9OtM0v8ujuoKN0NY1a93J/omeTL1PA==

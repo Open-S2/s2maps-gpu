@@ -6,7 +6,9 @@ const easeOutExp = (delta, movement, animationLength) => {
 }
 
 export default class DragPan extends EventTarget {
-  active: boolean = false // false mean's 'inactive', true is 'active'
+  mouseActive: boolean = false // when a user presses left click and moves during the press
+  swipeActive: boolean = false // when user clicks and drags at a fast enough pace to cause the world to keep moving after unpressing the left mouse button
+  wasActive: boolean = false // if a onMouseDown event comes up, we want to check if the map was previously active to avoid unecessary click events
   animationLength: number = 1.75
   minMovementX: number = 1
   minMovementY: number = 0.5
@@ -16,35 +18,40 @@ export default class DragPan extends EventTarget {
   totalMovementY: number = 0
   time: number = -1
   clear () {
-    this.active = false
+    this.mouseActive = false
+    this.swipeActive = false
     this.time = -1
   }
 
   onMouseDown (e: MouseEvent) {
-    this.active = true
+    // if we were actively moving (swipe animation) than we should not register a click. this is prep for that
+    // NOTE: We don't have to study if we were zooming because browsers naturally ignore propogating clicks during a zoom
+    if (this.mouseActive || this.swipeActive) this.wasActive = true
+    else this.wasActive = false
+    this.clear()
+    this.mouseActive = true
     this.movementX = 0
     this.movementY = 0
     this.totalMovementX = 0
     this.totalMovementY = 0
-    this.time = -1
   }
 
   onMouseUp (e: MouseEvent) {
-    this.active = false
+    this.mouseActive = false
     this.time = 0
     // if movement is greater than mins, animate swipe,
     // otherwise if total movement is less than mins it's considered a click
     if (Math.abs(this.movementX) > this.minMovementX || Math.abs(this.movementY) > this.minMovementY) {
       this.dispatchEvent(new Event('swipe'))
     } else if (Math.abs(this.totalMovementX) < this.minMovementX && Math.abs(this.totalMovementY) < this.minMovementY) {
-      this.dispatchEvent(new Event('click'))
+      if (!this.wasActive) this.dispatchEvent(new Event('click'))
     }
   }
 
   // tracks movement if the left click actively pressed
   // or it tracks what features are currently active
   onMouseMove (e: MouseEvent) {
-    if (this.active) {
+    if (this.mouseActive) {
       const { movementX, movementY } = e
       this.movementX = movementX
       this.movementY = movementY

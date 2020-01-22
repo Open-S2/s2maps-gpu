@@ -40,7 +40,7 @@ export default class Painter {
     // const contextTypes = ['webgl2', 'webgl', 'experimental-webgl']
 
     // first webgl2
-    let context = this._canvas.getContext('webgl2', { alpha: false, stencil: true })
+    let context = this._canvas.getContext('webgl2', { antialias: true, alpha: false, stencil: true })
     if (context && typeof context.getParameter === 'function') {
       return this.context = new WebGL2Context(context)
     }

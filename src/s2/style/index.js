@@ -102,7 +102,10 @@ export default class Style {
       // order layers for GPU
       orderLayer(layer)
       // LAYOUTS
-      for (let key in layer.layout) code.push(...encodeLayerAttribute(layer.layout[key]))
+      for (let key in layer.layout) {
+        if (key === 'cap' || key === 'join') continue
+        code.push(...encodeLayerAttribute(layer.layout[key]))
+      }
       // PAINTS
       for (let key in layer.paint) code.push(...encodeLayerAttribute(layer.paint[key]))
       layer.code = new Float32Array(code)

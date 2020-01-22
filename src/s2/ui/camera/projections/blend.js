@@ -31,9 +31,16 @@ export default class BlendProjection extends Projector {
   }
 
   onZoom (zoom?: number = 0, canvasX?: number = 0, canvasY?: number = 0): boolean {
-    this.zoom += 0.0015 * zoom
-    if (this.zoom > this.maxzoom) { this.zoom = this.maxzoom; return false }
-    else if (this.zoom < this.minzoom) { this.zoom = this.minzoom; return false }
+    const curZoom = this.zoom
+    this.zoom -= 0.003 * zoom
+    if (this.zoom > this.maxzoom) {
+      this.zoom = this.maxzoom // if it overzooms but the previous zoom was not at maxzoom, we need to render one more time
+      if (curZoom === this.maxzoom) return false
+    }
+    else if (this.zoom < this.minzoom) {
+      this.zoom = this.minzoom // if it underzooms but the previous zoom was not at minzoom, we need to render one more time
+      if (curZoom === this.minzoom) return false
+    }
     // update view
     this.view[0] = this.zoom
     // update scale
@@ -43,14 +50,6 @@ export default class BlendProjection extends Projector {
       (((this.zTranslateEnd - this.zTranslateStart) / this.zoomEnd) * this.zoom) + this.zTranslateStart,
       this.zTranslateEnd
     )
-    // setup move
-    // let lonChange = 2 * (canvasX / this.width) - 1
-    // let latChange = 2 * (canvasY / this.height) - 1
-    // if (zoom > 0) {
-    //   lonChange = -lonChange
-    //   latChange = -latChange
-    // }
-    // this.onMove(lonChange, latChange, 0.25, 0.25)
     this.sizeMatrices = {}
     this.dirty = true
     return true
