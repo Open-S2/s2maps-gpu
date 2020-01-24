@@ -113,23 +113,9 @@ export default class Painter {
       const { view } = projection
       // inject values to programs
       this.injectFrameUniforms(matrix, eyePosHigh, eyePosLow, view)
-      // grab the featureGuide and vao from current tile
-      const { sourceData, featureGuide } = tile
-      const { mask } = sourceData
-      // use mask vao and fill program
-      context.bindVertexArray(mask.vao)
-      let program = this.useProgram('fill')
-      // set the matrix and inputs uniforms by flushing the first program
-      program.flush()
-      // First 'feature' is the mask feature
-      drawMask(this, mask.indexArray.length)
-      // Second feature is the sphere-background feature should it exist
-      const sphereBackground = style.sphereBackground
-      program.setLayerCode(sphereBackground)
-      if (sphereBackground) drawFill(this, mask.indexArray.length, 0, null, gl.TRIANGLE_STRIP)
       // now draw the tile according to the features it contains
       this.paintLayers(tile, style.layers)
-      // assuming the mask has been drawn, we should tell the context to clear it
+      // no matter what, clear the stencil to ensure it's ready for the next tile
       context.clearStencil()
     }
     // disable stencil
@@ -138,16 +124,35 @@ export default class Painter {
     context.cleanup()
   }
 
-  paintLayers (featureGuide: Array<FeatureGuide>, layers: StyleLayers,
-    sourceData: SourceData, program: Program) {
+  paintLayers (tile: Tile, layers: StyleLayers) {
+    // setup context
     const { context } = this
+    // grab the featureGuide and vao from current tile
+    const { sourceData, featureGuide } = tile
+    const { mask } = sourceData
+    // setup variables
     let curSource: string = 'mask'
     let curProgram: ProgramTypes = 'fill'
     let program = this.useProgram('fill')
     let curLayer: number = -1
     let curTile: number = tile.id
+    // use mask vao and fill program
+    context.bindVertexArray(mask.vao)
+    let program = this.useProgram('fill')
+    // use mask vao and fill program
+    context.bindVertexArray(mask.vao)
+    let program = this.useProgram('fill')
+    // set the matrix and inputs uniforms by flushing the first program
+    program.flush()
+    // First 'feature' is the mask feature
+    drawMask(this, mask.indexArray.length)
+    // Second feature is the sphere-background feature should it exist
+    const sphereBackground = style.sphereBackground
+    program.setLayerCode(sphereBackground)
+    if (sphereBackground) drawFill(this, mask.indexArray.length, 0, null, gl.TRIANGLE_STRIP)
+    // now we start drawing feature batches
     for (const featureBatch of featureGuide) {
-      const { source, layerID, count, offset, type, featureCode } = featureBatch
+      const { parentChild, child, source, layerID, count, offset, type, featureCode } = featureBatch
       // if type is not the same as the curProgram, we have to update curProgram and set uniforms
       if (type !== curProgram) {
         program = this.useProgram(type)
