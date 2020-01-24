@@ -114,6 +114,7 @@ export default class Style {
   }
 
   requestTiles (tiles: Array<Tile>) {
+    if (!tiles) return
     const tileRequests: Array<TileRequest> = []
     tiles.forEach(tile => {
       // grab request values

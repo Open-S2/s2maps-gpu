@@ -9,10 +9,10 @@
     "world": "http://localhost:8000/data/world"
   },
   "wallpaper": {
-    "background-color": "rgb(29, 38, 85)",
+    "background-color": "rgb(23, 28, 70)",
     "fade-1": "rgb(138, 204, 255)",
-    "fade-2": "rgb(224, 255, 255)",
-    "halo": "rgb(242, 255, 255)"
+    "fade-2": "rgb(217, 255, 255)",
+    "halo": "rgb(230, 255, 255)"
   },
   "sphere-background": {
     "background-color": "rgba(170, 218, 255, 1)"

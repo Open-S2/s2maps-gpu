@@ -1,9 +1,8 @@
 // @flow
+import { WebGL2Context, WebGLContext } from '../gl/contexts'
 import { S2Point, bboxST } from 's2projection' // https://github.com/Regia-Corporation/s2projection
-// import { S2Point, tileHash, bboxST } from 's2projection' // https://github.com/Regia-Corporation/s2projection
-// import { TileCache } from './'
 
-import type { Face } from 's2projection' // https://github.com/Regia-Corporation/s2projection/blob/master/src/S2Projection.js#L4
+import type { BBOX, Face } from 's2projection' // https://github.com/Regia-Corporation/s2projection/blob/master/src/S2Projection.js#L4
 import type { StyleLayers } from '../style'
 
 // The layer guide helps identify how to properly draw from the vertexBuffer/vertexIndex stack.
@@ -11,6 +10,9 @@ import type { StyleLayers } from '../style'
 // To ensure we draw in order and know the index ranges exist per layer, we maintain a 'Layer Guide'.
 // the attributes object is for dataConditions and dataRanges.
 export type FeatureGuide = {
+  parentChild?: boolean,
+  child?: boolean, // eslint-disable-next-line
+  tile?: Tile,
   layerID: number,
   source: string,
   count: number,
@@ -30,7 +32,10 @@ export type VectorTileSource = {
   vao?: WebGLVertexArrayObject
 }
 
-export type SourceData = { [string | number]: VectorTileSource }
+// SourceData will either be the current tiles VectorTileSource, RasterTileSource,
+// or reference tile(s) to be masked + created.
+// eslint-disable-next-line
+export type SourceData = { [string | number]: VectorTileSource | Array<Tile> }
 
 // tiles are designed to create mask geometry and store prebuilt layer data handed off by the worker pool
 // whenever rerenders are called, they will access these tile objects for the layer data / vaos
@@ -49,7 +54,11 @@ export default class Tile {
   division: number
   sourceData: SourceData = {}
   featureGuide: Array<FeatureGuide> = []
-  constructor (face: number, zoom: number, x: number, y: number, hash: number, size?: number = 512) {
+  context: WebGL2Context | WebGLContext
+  // requestSent: boolean = false
+  constructor (context: WebGL2Context | WebGLContext, face: number, zoom: number,
+    x: number, y: number, hash: number, size?: number = 512) {
+    this.context = context
     this.face = face
     this.zoom = zoom
     this.x = x
@@ -59,11 +68,48 @@ export default class Tile {
     this.bbox = bboxST(x, y, zoom)
     this._createDivision()
     this._buildMaskGeometry()
+    this.buildVAO(this.sourceData.mask)
   }
 
-  injectSourceData (source: string, vertexArray: Float32Array, indexArray: Uint32Array, featureIndexArray: Uint8Array, featureGuideArray: Uint32Array, layers: StyleLayers) {
+  destroy () {
+    const { gl } = this.context
+    for (const sourceName in this.sourceData) {
+      const source = this.sourceData[sourceName]
+      if (source.type === 'vector') {
+        if (source.vertexBuffer) gl.deleteBuffer(source.vertexBuffer)
+        if (source.featureIndexBuffer) gl.deleteBuffer(source.featureIndexBuffer)
+        if (source.indexBuffer) gl.deleteBuffer(source.indexBuffer)
+        if (source.vao) this.context.deleteVertexArray(source.vao)
+      }
+    }
+  }
+
+  // this is designed to maintain references to nearby tiles in zoom. This is to avoid awkard
+  // flicker while the current tile loads.
+  injectParentChildTiles (tileSet: null | Array<Tile>) {
+    if (!tileSet) return
+    // inject references to featureGuide from tiles in tileSet that have overlapping boundaries.
+    // If somehow we reference a tile that also references a parentChild: skip (this shouldn't happen).
+    for (const tile of tileSet) {
+      const child = tile.zoom < this.zoom
+      if (tile.zoom !== this.zoom && bboxOverlap(this.bbox, tile.bbox, child)) {
+        for (const featureGuide of tile.featureGuide) {
+          if (!featureGuide.parentChild) {
+            const { source, layerID, count, offset, type, attributes } = featureGuide
+            this.featureGuide.push({ parentChild: true, child, tile, source, layerID, count, offset, type, attributes })
+          }
+        }
+      }
+    }
+    // Ensure to sort according to ID
+    this.featureGuide.sort((a, b) => a.layerID - b.layerID)
+  }
+
+  injectVectorSourceData (source: string, vertexArray: Float32Array, indexArray: Uint32Array,
+    featureIndexArray: Uint8Array, featureGuideArray: Uint32Array, layers: StyleLayers) {
     // store a reference to the source
     this.sourceData[source] = {
+      type: 'vector',
       vertexArray,
       indexArray,
       featureIndexArray
@@ -77,6 +123,7 @@ export default class Tile {
       i += 4
       // create and store the featureGuide
       this.featureGuide.push({
+        parentChild: false,
         layerID,
         source,
         count,
@@ -86,9 +133,13 @@ export default class Tile {
       })
       i += encodingSize
     }
+    // Since a parent or children can be injected, we need to remove any instances of the "old" source data.
+    this.featureGuide = this.featureGuide.filter(lg => !(lg.parentChild && lg.source === source))
     // because sources may be utilized in an out of order fashion inside the style.layers property,
     // but come in linearly, we need to sort.
     this.featureGuide.sort((a, b) => a.layerID - b.layerID)
+    // build the VAO
+    this.buildVAO(this.sourceData[source])
   }
 
   _createDivision () {
@@ -139,8 +190,83 @@ export default class Tile {
     }
     // create our initial vertices and indices:
     this.sourceData.mask = {
+      type: 'vector',
       vertexArray: new Float32Array(vertices),
       indexArray: new Uint32Array(indices)
     }
   }
+
+  buildVAO (source: VectorTileSource) {
+    const { gl } = this.context
+    // type vector
+    if (source.type === 'vector') {
+      // cleanup old setup
+      if (source.vertexBuffer) gl.deleteBuffer(source.vertexBuffer)
+      if (source.featureIndexBuffer) gl.deleteBuffer(source.featureIndexBuffer)
+      if (source.indexBuffer) gl.deleteBuffer(source.indexBuffer)
+      if (source.vao) this.context.deleteVertexArray(source.vao)
+      // Create a starting vertex array object (attribute state)
+      source.vao = this.context.createVertexArray()
+      // and make it the one we're currently working with
+      this.context.bindVertexArray(source.vao)
+      // VERTEX
+      // Create a vertex buffer
+      source.vertexBuffer = gl.createBuffer()
+      // Bind the buffer
+      gl.bindBuffer(gl.ARRAY_BUFFER, source.vertexBuffer)
+      // Buffer the data
+      gl.bufferData(gl.ARRAY_BUFFER, source.vertexArray, gl.STATIC_DRAW)
+      // link attributes:
+      // FILL: aPosHigh -> 0 and aPosLow -> 1
+      gl.enableVertexAttribArray(0)
+      gl.enableVertexAttribArray(1)
+      // LINE: aPosHigh -> 3, aPosLow -> 4, normal -> 5
+      gl.enableVertexAttribArray(3)
+      gl.enableVertexAttribArray(4)
+      gl.enableVertexAttribArray(5)
+      // tell attribute how to get data out of vertexBuffer
+      // instructions for fill
+      gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0)
+      gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12)
+      // instructions for line
+      gl.vertexAttribPointer(3, 3, gl.FLOAT, false, 32, 0)
+      gl.vertexAttribPointer(4, 3, gl.FLOAT, false, 32, 12)
+      gl.vertexAttribPointer(5, 2, gl.FLOAT, false, 32, 24)
+      // FEATURE INDEX
+      if (source.featureIndexArray && source.featureIndexArray.length) {
+        // Create the feature index buffer
+        source.featureIndexBuffer = gl.createBuffer()
+        // Bind the buffer
+        gl.bindBuffer(gl.ARRAY_BUFFER, source.featureIndexBuffer)
+        // Buffer the data
+        gl.bufferData(gl.ARRAY_BUFFER, source.featureIndexArray, gl.STATIC_DRAW)
+        // link attribute
+        gl.enableVertexAttribArray(2)
+        // tell attribute how to get data out of feature index buffer
+        gl.vertexAttribPointer(2, 1, gl.UNSIGNED_BYTE, false, 1, 0)
+      }
+      // INDEX
+      // Create an index buffer
+      source.indexBuffer = gl.createBuffer()
+      // bind to ELEMENT_ARRAY
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, source.indexBuffer)
+      // buffer the data
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, source.indexArray, gl.STATIC_DRAW)
+    }
+  }
+}
+
+// if parent, than bbox is potentially inside bbox2
+// if child, than bbox2 is potentially inside bbox
+function bboxOverlap(bbox: BBOX, bbox2: BBOX, child: boolean): boolean {
+  if (!child) {
+    const tmp = bbox2
+    bbox2 = bbox
+    bbox = tmp
+  }
+  if (bbox[0] > bbox2[0] && bbox[0] < bbox2[2]) return true
+  if (bbox[1] > bbox2[1] && bbox[1] < bbox2[3]) return true
+  if (bbox[2] > bbox2[0] && bbox[2] < bbox2[2]) return true
+  if (bbox[3] > bbox2[1] && bbox[3] < bbox2[3]) return true
+  return false
 }

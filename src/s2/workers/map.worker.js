@@ -10,7 +10,7 @@ class MapWorker {
     const { type } = data
     if (type === 'canvas') this._prepCanvas(data.options, data.canvas, data.id)
     if (type === 'resize') { this.map.resize(data.width, data.height) }
-    if (type === 'data') this.map.injectSourceData(data.source, data.tileID, data.vertexBuffer, data.indexBuffer, data.featureIndexBuffer, data.featureGuideBuffer)
+    if (type === 'vectordata') this.map.injectVectorSourceData(data.source, data.tileID, data.vertexBuffer, data.indexBuffer, data.featureIndexBuffer, data.featureGuideBuffer)
   }
 
   _prepCanvas (options: MapOptions, canvas: HTMLCanvasElement, id: string) {

@@ -204,6 +204,8 @@ export default class TileWorker {
               // we can now process according to type
               if (layer.type === 'fill' && (type === 3 || type === 4)) {
                 processFill(feature.loadGeometry(), type, tile, vertices, indices, featureIndices, encodingIndex, maxLength)
+              } else if (layer.type === 'fill3D' && (type === 7 || type === 8)) {
+
               } else if (layer.type === 'line' && type === 2) {
                 processLine(feature.loadGeometry(), { cap: layer.layout.cap(), join: layer.layout.join() }, tile, vertices, indices, featureIndices, encodingIndex, maxLength, pixelSize * 1)
               } else if (layer.type === 'line3D' && type === 2) {
@@ -245,7 +247,7 @@ export default class TileWorker {
       const featureIndexBuffer = new Uint8Array(featureIndices).buffer
       const featureGuideBuffer = new Uint32Array(featureGuide).buffer
       // Upon encoding, send back to GlobalWorkerPool.
-      postMessage({ mapID, type: 'data', source: sourceName, tileID: tile.hash, vertexBuffer, indexBuffer, featureIndexBuffer, featureGuideBuffer }, [vertexBuffer, indexBuffer, featureIndexBuffer, featureGuideBuffer])
+      postMessage({ mapID, type: 'vectordata', source: sourceName, tileID: tile.hash, vertexBuffer, indexBuffer, featureIndexBuffer, featureGuideBuffer }, [vertexBuffer, indexBuffer, featureIndexBuffer, featureGuideBuffer])
     }
   }
 }

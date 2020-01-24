@@ -23,6 +23,7 @@ export default class Projector implements Projection {
   view: Float32Array = new Float32Array(16) // [zoom, lon, lat, angle, pitch, ...extensions]
   translation: [number, number, number] = [0, 0, -10] // only z should change for visual effects
   maxLatRotation: number = 80 // 80 deg
+  prevZoom: number = 0
   zoom: number = 0
   minzoom: number = 0
   maxzoom: number = 20
@@ -39,7 +40,7 @@ export default class Projector implements Projection {
   constructor (config?: ProjectionConfig = {}) {
     if (config.translation) this.translation = config.translation
     if (config.maxLatRotation) this.maxLatRotation = config.maxLatRotation
-    if (config.zoom) this.zoom = config.zoom
+    if (config.zoom) this.prevZoom = this.zoom = config.zoom
     if (config.lon) this.lon = config.lon
     if (config.lat) this.lat = config.lat
     if (config.scale) this.scale = config.scale
@@ -54,6 +55,10 @@ export default class Projector implements Projection {
     // clamp values and ensure minzoom is less than maxzoom
     this.minzoom = (minzoom < -10) ? -10 : (minzoom > maxzoom) ? maxzoom - 1 : (minzoom > 29) ? 29 : minzoom
     this.maxzoom = (maxzoom > 30) ? 30 : (maxzoom < this.minzoom) ? this.minzoom + 1 : maxzoom
+  }
+
+  zoomChange (): number {
+    return Math.floor(this.zoom) - Math.floor(this.prevZoom)
   }
 
   resize (width: number, height: number) {
@@ -175,7 +180,7 @@ export default class Projector implements Projection {
       }
     } while (checkList.length)
 
-    console.log('tiles', tiles)
+    // console.log('tiles', tiles)
     return tiles
   }
 }

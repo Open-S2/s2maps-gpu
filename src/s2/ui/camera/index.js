@@ -19,7 +19,13 @@ export default class Camera {
   wallpaper: Wallpaper
   tileCache: TileCache
   tilesInView: Array<number> = [] // hash id's of the tiles
+  lastTileViewState: Array<number> = []
+  requestQueue: Array<Tile> = []
+  zooming: null | SetTimeout = null
+  request: null | SetTimeout = null
+  _updateWhileZooming: boolean // this is a more cpu/gpu intensive redraw technique that will update tiles while the user is still zooming. This can cause overdrawing if the user is going to zoom from say 0 to 10 quickly.
   constructor (options: MapOptions) {
+    this._updateWhileZooming = options.updateWhileZooming || true
     // setup projection
     this._createProjection(options)
     // prep the tileCache for future tiles
@@ -48,50 +54,86 @@ export default class Camera {
     this.wallpaper = new Wallpaper(this.style, this.projection)
   }
 
-  _getTiles (updateTiles: boolean) {
-    if (updateTiles && this.projection.dirty) {
+  // TODO: On zooming start (this.lastTileViewState is empty) we set to tilesInView
+  // during the zooming process, all newTiles need to be injected with whatever tiles
+  // fit within it's view of lastTileViewState. Everytime we get zooming === false,
+  // we set lastTileViewState to null again to ensure we don't inject tiles...
+  // if updateTiles is set to false, we don't requestTiles unless zooming is off.
+  // no matter what, if zooming is false, we check that each tile has made requests
+  _getTiles (isZooming?: boolean) {
+    const self = this
+    if (self.projection.dirty) {
+      if (isZooming) {
+        if (!self.lastTileViewState) self.lastTileViewState = self.tilesInView
+        if (self.zooming) clearTimeout(self.zooming)
+        self.zooming = setTimeout (() => {
+          self.zooming = null
+          self.lastTileViewState = null
+        }, 150)
+      }
+      // grab zoom change
+      const zoomChange = self.projection.zoomChange()
+      // no matter what we need to update what's in view
       const newTiles = []
       // update tiles in view
-      this.tilesInView = this.projection.getTilesInView()
+      self.tilesInView = self.projection.getTilesInView()
       // check if any of the tiles don't exist in the cache. If they don't create a new tile
-      for (const tile of this.tilesInView) {
+      for (const tile of self.tilesInView) {
         const [face, zoom, x, y, hash] = tile
-        if (!this.tileCache.has(hash)) {
+        if (!self.tileCache.has(hash)) {
           // tile not found, so we create it
-          const newTile = new Tile(face, zoom, x, y, hash)
-          // // inject parent or children data if they exist
-          // newTile.injectParentOrChildren(this.tileCache)
-          // build the VAO
-          this.painter.buildVAO('mask', newTile)
+          const newTile = new Tile(self.painter.context, face, zoom, x, y, hash)
+          // inject parent/children should they exist
+          if (zoomChange) newTile.injectParentChildTiles(self.lastTileViewState)
           // store the tile
-          this.tileCache.set(hash, newTile)
+          self.tileCache.set(hash, newTile)
           newTiles.push(newTile)
         }
       }
-      // send off the appropraite requests using the style manager
-      if (newTiles.length) this.style.requestTiles(newTiles)
+      // if there was a zoom change, we store requests
+      // if (newTiles.length) {
+      //   if (self.request || !!zoomChange) {
+      //     self._setRequestQueue(newTiles)
+      //   } else { self.style.requestTiles(newTiles) } // if we only dragged/panned we request tiles immediately
+      // }
+      self.style.requestTiles(newTiles)
     }
-    return this.tileCache.getBatch(this.tilesInView.map(tArr => tArr[4]))
+    return self.tileCache.getBatch(self.tilesInView.map(tArr => tArr[4]))
   }
 
-  injectSourceData (source: string, tileID: number, vertexBuffer: ArrayBuffer, indexBuffer: ArrayBuffer, featureIndexBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer) {
+  // avoid over-asking for tiles if we are zooming quickly
+  _setRequestQueue (tiles: Array<Tile>) {
+    const self = this
+    // first clear timer
+    if (self.request) clearTimeout(self.request)
+    // set a new timer that eventually makes the requests
+    self.request = setTimeout(() => {
+      self.style.requestTiles(self.requestQueue)
+    }, 150)
+  }
+
+  injectVectorSourceData (source: string, tileID: number, vertexBuffer: ArrayBuffer,
+    indexBuffer: ArrayBuffer, featureIndexBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer) {
     if (this.tileCache.has(tileID)) {
       const tile = this.tileCache.get(tileID)
-      tile.injectSourceData(source, new Float32Array(vertexBuffer), new Uint32Array(indexBuffer), new Uint8Array(featureIndexBuffer), new Uint32Array(featureGuideBuffer), this.style.layers)
-      // build the VAO
-      this.painter.buildVAO(source, tile)
+      tile.injectVectorSourceData(source, new Float32Array(vertexBuffer), new Uint32Array(indexBuffer), new Uint8Array(featureIndexBuffer), new Uint32Array(featureGuideBuffer), this.style.layers)
+      // call a re-render only if the tile is in our current viewing
+      if (this.tilesInView.map(tArr => tArr[4]).includes(tileID)) this._render()
+      // new paint, so painter is dirty
+      this.painter.dirty = true
     }
-    // re-render
-    this._render()
   }
 
-  _render (updateTiles?: boolean = true) {
+  _render (isZooming?: boolean = false) {
+    // dummy check, if nothing has changed, do nothing
+    if (!this.painter.dirty && !this.style.dirty && !this.projection.dirty) return
     // prep tiles
-    const tiles = this._getTiles(updateTiles)
+    const tiles = this._getTiles(isZooming)
     // paint scene
     this.painter.paint(this.wallpaper, this.projection, this.style, tiles)
     // at the end of a scene render, we know Projection and Style are up to date
-    this.painter.dirty = false
+    this.painter.dirty = true
     this.style.dirty = false
+    this.projection.dirty = false
   }
 }

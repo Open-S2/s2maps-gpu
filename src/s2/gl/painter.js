@@ -29,6 +29,7 @@ export default class Painter {
   _canvas: HTMLCanvasElement
   context: WebGL2Context | WebGLContext
   programs: { [string]: Program } = {}
+  dirty: boolean = true
   constructor (canvas: HTMLCanvasElement, options: MapOptions) {
     // setup canvas
     this._canvas = canvas
@@ -40,7 +41,7 @@ export default class Painter {
     // const contextTypes = ['webgl2', 'webgl', 'experimental-webgl']
 
     // first webgl2
-    let context = this._canvas.getContext('webgl2', { antialias: true, alpha: false, stencil: true })
+    let context = this._canvas.getContext('webgl2', { antialias: false, alpha: false, stencil: true })
     if (context && typeof context.getParameter === 'function') {
       return this.context = new WebGL2Context(context)
     }
@@ -96,66 +97,6 @@ export default class Painter {
     return program
   }
 
-  buildVAO (source: string, tile: Tile) {
-    const { gl } = this.context
-    // grab the source
-    const tileSource = tile.sourceData[source]
-    // cleanup old setup
-    if (tileSource.vao) {
-      gl.deleteBuffer(tileSource.vertexBuffer)
-      gl.deleteBuffer(tileSource.featureIndexBuffer)
-      gl.deleteBuffer(tileSource.indexBuffer)
-      this.context.deleteVertexArray(tileSource.vao)
-    }
-    // Create a starting vertex array object (attribute state)
-    tileSource.vao = this.context.createVertexArray()
-    // and make it the one we're currently working with
-    this.context.bindVertexArray(tileSource.vao)
-    // VERTEX
-    // Create a vertex buffer
-    tileSource.vertexBuffer = gl.createBuffer()
-    // Bind the buffer
-    gl.bindBuffer(gl.ARRAY_BUFFER, tileSource.vertexBuffer)
-    // Buffer the data
-    gl.bufferData(gl.ARRAY_BUFFER, tileSource.vertexArray, gl.STATIC_DRAW)
-    // link attributes:
-    // FILL: aPosHigh -> 0 and aPosLow -> 1
-    gl.enableVertexAttribArray(0)
-    gl.enableVertexAttribArray(1)
-    // LINE: aPosHigh -> 3, aPosLow -> 4, normal -> 5
-    gl.enableVertexAttribArray(3)
-    gl.enableVertexAttribArray(4)
-    gl.enableVertexAttribArray(5)
-    // tell attribute how to get data out of vertexBuffer
-    // instructions for fill
-    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0)
-    gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12)
-    // instructions for line
-    gl.vertexAttribPointer(3, 3, gl.FLOAT, false, 32, 0)
-    gl.vertexAttribPointer(4, 3, gl.FLOAT, false, 32, 12)
-    gl.vertexAttribPointer(5, 2, gl.FLOAT, false, 32, 24)
-    // FEATURE INDEX
-    if (tileSource.featureIndexArray && tileSource.featureIndexArray.length) {
-      // Create the feature index buffer
-      tileSource.featureIndexBuffer = gl.createBuffer()
-      // Bind the buffer
-      gl.bindBuffer(gl.ARRAY_BUFFER, tileSource.featureIndexBuffer)
-      // Buffer the data
-      gl.bufferData(gl.ARRAY_BUFFER, tileSource.featureIndexArray, gl.STATIC_DRAW)
-      // link attribute
-      gl.enableVertexAttribArray(2)
-      // tell attribute how to get data out of feature index buffer
-      gl.vertexAttribPointer(2, 1, gl.UNSIGNED_BYTE, false, 1, 0)
-    }
-    // INDEX
-    // Create an index buffer
-    tileSource.indexBuffer = gl.createBuffer()
-    // bind to ELEMENT_ARRAY
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, tileSource.indexBuffer)
-    // buffer the data
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, tileSource.indexArray, gl.STATIC_DRAW)
-  }
-
   paint (wallpaper: Wallpaper, projection: Projection, style: Style, tiles: Array<Tile>) {
     const { context } = this
     const { gl } = context
@@ -165,8 +106,6 @@ export default class Painter {
     drawWallpaper(this, wallpaper)
     // prep stencil
     context.enableStencilTest()
-    // setup inputs for programs
-
     // for each tile, draw background & features as necessary
     for (let tile of tiles) {
       // grab the matrix (duplicate created) and view (input) properties
@@ -189,7 +128,7 @@ export default class Painter {
       program.setLayerCode(sphereBackground)
       if (sphereBackground) drawFill(this, mask.indexArray.length, 0, null, gl.TRIANGLE_STRIP)
       // now draw the tile according to the features it contains
-      this.paintLayers(featureGuide, style.layers, sourceData, program)
+      this.paintLayers(tile, style.layers)
       // assuming the mask has been drawn, we should tell the context to clear it
       context.clearStencil()
     }
@@ -204,7 +143,9 @@ export default class Painter {
     const { context } = this
     let curSource: string = 'mask'
     let curProgram: ProgramTypes = 'fill'
+    let program = this.useProgram('fill')
     let curLayer: number = -1
+    let curTile: number = tile.id
     for (const featureBatch of featureGuide) {
       const { source, layerID, count, offset, type, featureCode } = featureBatch
       // if type is not the same as the curProgram, we have to update curProgram and set uniforms
