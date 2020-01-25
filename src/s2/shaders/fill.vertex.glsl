@@ -1,22 +1,25 @@
 #version 300 es
 precision mediump float;
 
-layout (location = 0) in vec3 aPosHigh;
-layout (location = 1) in vec3 aPosLow;
-layout (location = 2) in float index;
+#define EXTENT 4096.
 
-uniform mat4 uMatrix;
-uniform vec3 uEyePosHigh;
-uniform vec3 uEyePosLow;
+layout (location = 0) in vec2 aPos;
+layout (location = 5) in uint aIndex;
 
 uniform float uInputs[16];
 uniform float uLayerCode[256];
 uniform float uFeatureCode[128];
 
 @import ./decodeFeature;
-@import ./rteDSFun90;
 
 out vec4 color;
+
+vec2 decodePosition (in vec2 uv) {
+  return vec2(
+    (uv.x / EXTENT) * 2. - 1.,
+    (uv.y / EXTENT) * 2. - 1.
+  );
+}
 
 void main () {
   // prep layer index and feature index positions
@@ -24,8 +27,8 @@ void main () {
   int featureIndex = 0;
   // decode color
   color = decodeFeature(true, index, featureIndex);
-  // GPU-RTE DSFUN90
-  vec3 pos = RTE(aPosHigh, aPosLow);
+  // convert points to -1 to +1 xy space
+  vec2 pos = decodePosition(aPos);
   // set position
-  gl_Position = uMatrix * vec4(pos, 1);
+  gl_Position = vec4(pos, 0, 1);
 }

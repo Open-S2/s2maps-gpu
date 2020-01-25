@@ -11,6 +11,6 @@ export default class lineProgram extends Program {
     // get gl from context
     const { gl } = context
     // upgrade
-    super(gl, lineVertex, lineFragment)
+    super(gl, lineVertex, lineFragment, false, true)
   }
 }

@@ -7,7 +7,8 @@ import { FillProgram } from '../programs'
 export default function drawFill (painter: Painter, segmentLength: number,
   segmentOffset: number, featureEncoding?: Float32Array, mode?: GLenum) {
   // setup variables
-  const { gl } = painter.context
+  const { context, indexSize, offsetSize } = painter
+  const { gl } = context
   const fillProgram: FillProgram = painter.getProgram('fill')
   if (!fillProgram) return
   // set feature code
@@ -15,5 +16,5 @@ export default function drawFill (painter: Painter, segmentLength: number,
   // get mode
   if (!mode) mode = gl.TRIANGLES
   // draw elements
-  gl.drawElements(mode, segmentLength, gl.UNSIGNED_INT, segmentOffset * 4)
+  gl.drawElements(mode, segmentLength, indexSize, segmentOffset * offsetSize)
 }

@@ -34,7 +34,7 @@ vec4 interpolateColor (vec4 color1, vec4 color2, float t) {
   return vec4(hue, sat, lbv, alpha);
 }
 
-vec4 decodeFeature (bool color, inout int index, inout int featureIndex) {
+vec4 decodeFeature (bool color, int index, inout int featureIndex) {
   // prep result and variables
   int startingOffset = index;
   int featureSize = int(uLayerCode[index]) >> 10;

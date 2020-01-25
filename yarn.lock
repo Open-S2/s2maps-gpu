@@ -3481,10 +3481,10 @@ earclip@^0.3.8:
   resolved "https://registry.yarnpkg.com/earclip/-/earclip-0.3.9.tgz#523d59620289fbcff9de5ac9d59116c81baf3b0d"
   integrity sha512-oca77yCrcsC5umzE/aI/CurJmC7akG/mg/6i52b2MDJ53feAIBPLNdjaBp7FnApKgAqKU9lVdHN8CQSbyvZhgQ==
 
-earclip@^0.5.0:
-  version "0.5.0"
-  resolved "https://registry.yarnpkg.com/earclip/-/earclip-0.5.0.tgz#dab248486b7eb387a35fb69fae272fa37e2b453f"
-  integrity sha512-2PwthFXbSu6M1GNvYmuZ5NcDTBXAPlY8vJBNerK9RE4/rA9B7IDkX51dn8Q8eO+2i4hOLMVyTGEhT2N0v7rSAA==
+earclip@^0.6.1:
+  version "0.6.1"
+  resolved "https://registry.yarnpkg.com/earclip/-/earclip-0.6.1.tgz#3d5018d4f60cc579bc5d492661940aa7fbcfee39"
+  integrity sha512-OSiOwMpJytiE4l+zZRJNVBG9kVOyEPQ6EcJwZrnzwFTW9OXuHUqN1/SeD4keb+CDCowSjgn2PV+EmgSLIazLhw==
 
 earcut@^2.0.0:
   version "2.1.5"
@@ -6239,10 +6239,10 @@ levn@^0.3.0, levn@~0.3.0:
     prelude-ls "~1.1.2"
     type-check "~0.3.2"
 
-line-gl@^1.0.1:
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/line-gl/-/line-gl-1.0.1.tgz#17202510fc0a46adc93153c37e2ab5e68a2a3d8d"
-  integrity sha512-lst5Ttkc6mfVahHwb6Bqqjjgep7W7b6UUQ4JvYA8F1dtsiFeSdJnx/BIAePDSH1284QTC7hTRD/uR1ye5jQCGQ==
+line-gl@^1.0.2:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/line-gl/-/line-gl-1.0.2.tgz#69b74bf7f973fcbb2c35959854bc00c49d5f84a4"
+  integrity sha512-ewsy8flcVrOpnboQ9wFlthutNgAQEGp0+b/Wt7txNILhdjd6A+9szVTMMcHRuu+rOk4ytVnVbn3KcP5rZA0RSQ==
 
 load-json-file@^2.0.0:
   version "2.0.0"

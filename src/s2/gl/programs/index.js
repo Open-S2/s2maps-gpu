@@ -1,5 +1,6 @@
 export { default as FillProgram } from './fillProgram'
 export { default as LineProgram } from './lineProgram'
+export { default as MaskProgram } from './maskProgram'
 export { default as TextProgram } from './textProgram'
 export { default as WallpaperProgram } from './wallpaperProgram'
 export { default as Program } from './program'

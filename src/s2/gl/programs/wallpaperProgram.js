@@ -19,7 +19,7 @@ export default class WallpaperProgram extends Program {
     // get gl from context
     const { gl } = context
     // upgrade
-    super(gl, wallpaperVertex, wallpaperFragment, false)
+    super(gl, wallpaperVertex, wallpaperFragment, false, false)
     // acquire the attributes & uniforms
     this.aPos = gl.getAttribLocation(this.glProgram, 'aPos')
     this.uScale = gl.getUniformLocation(this.glProgram, 'uScale')

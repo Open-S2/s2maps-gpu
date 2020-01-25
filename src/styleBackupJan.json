@@ -42,6 +42,22 @@
           "rgb(247, 247, 247)"
         ]
       }
+    },
+    {
+      "id": "boundary",
+      "source": "world",
+      "layer": "boundary",
+      "type": "line",
+      "minzoom": 0,
+      "maxzoom": 5,
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "#5a5a5a",
+        "width": 1.5
+      }
     }
   ]
 }

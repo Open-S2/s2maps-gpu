@@ -63,16 +63,16 @@ export default class Camera {
   _getTiles (isZooming?: boolean) {
     const self = this
     if (self.projection.dirty) {
-      if (isZooming) {
-        if (!self.lastTileViewState) self.lastTileViewState = self.tilesInView
-        if (self.zooming) clearTimeout(self.zooming)
-        self.zooming = setTimeout (() => {
-          self.zooming = null
-          self.lastTileViewState = null
-        }, 150)
-      }
+      // if (isZooming) {
+      //   if (!self.lastTileViewState) self.lastTileViewState = self.tilesInView
+      //   if (self.zooming) clearTimeout(self.zooming)
+      //   self.zooming = setTimeout (() => {
+      //     self.zooming = null
+      //     self.lastTileViewState = null
+      //   }, 150)
+      // }
       // grab zoom change
-      const zoomChange = self.projection.zoomChange()
+      // const zoomChange = self.projection.zoomChange()
       // no matter what we need to update what's in view
       const newTiles = []
       // update tiles in view
@@ -84,7 +84,7 @@ export default class Camera {
           // tile not found, so we create it
           const newTile = new Tile(self.painter.context, face, zoom, x, y, hash)
           // inject parent/children should they exist
-          if (zoomChange) newTile.injectParentChildTiles(self.lastTileViewState)
+          // if (zoomChange) newTile.injectParentChildTiles(self.lastTileViewState)
           // store the tile
           self.tileCache.set(hash, newTile)
           newTiles.push(newTile)
@@ -96,6 +96,7 @@ export default class Camera {
       //     self._setRequestQueue(newTiles)
       //   } else { self.style.requestTiles(newTiles) } // if we only dragged/panned we request tiles immediately
       // }
+      if (newTiles.length) this.painter.dirty = true
       self.style.requestTiles(newTiles)
     }
     return self.tileCache.getBatch(self.tilesInView.map(tArr => tArr[4]))
@@ -132,7 +133,7 @@ export default class Camera {
     // paint scene
     this.painter.paint(this.wallpaper, this.projection, this.style, tiles)
     // at the end of a scene render, we know Projection and Style are up to date
-    this.painter.dirty = true
+    this.painter.dirty = false
     this.style.dirty = false
     this.projection.dirty = false
   }

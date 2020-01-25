@@ -7,6 +7,7 @@ import {
   Program,
   FillProgram,
   LineProgram,
+  MaskProgram,
   TextProgram,
   WallpaperProgram
 } from './programs'
@@ -21,15 +22,18 @@ import { Wallpaper, Tile } from '../source'
 
 import type { MapOptions } from '../ui/map'
 import type { Projection } from '../ui/camera/projections'
-import type { FeatureGuide, SourceData } from '../source/tile'
+// import type { FeatureGuide, SourceData } from '../source/tile'
 import type { StyleLayers } from '../style'
 import type { ProgramTypes } from './programs/program'
 
 export default class Painter {
   _canvas: HTMLCanvasElement
   context: WebGL2Context | WebGLContext
+  indexSize: GLenum
+  offsetSize: number
   programs: { [string]: Program } = {}
   dirty: boolean = true
+  webglState: 0
   constructor (canvas: HTMLCanvasElement, options: MapOptions) {
     // setup canvas
     this._canvas = canvas
@@ -41,8 +45,11 @@ export default class Painter {
     // const contextTypes = ['webgl2', 'webgl', 'experimental-webgl']
 
     // first webgl2
-    let context = this._canvas.getContext('webgl2', { antialias: false, alpha: false, stencil: true })
+    let context = this._canvas.getContext('webgl2', { alpha: false, stencil: true })
     if (context && typeof context.getParameter === 'function') {
+      this.indexSize = context.UNSIGNED_INT
+      this.webglState = 2
+      this.offsetSize = 4
       return this.context = new WebGL2Context(context)
     }
 
@@ -55,6 +62,7 @@ export default class Painter {
 
   // programs are pre-set for tiles to create their VAO vertexAttribPointers
   prebuildPrograms (programs: Set) {
+    programs.add('mask') // ensure our default tile drawing program is created
     const self = this
     programs.forEach(program => { self.getProgram(program) })
   }
@@ -77,6 +85,9 @@ export default class Painter {
         break
       case 'line':
         programs[programName] = new LineProgram(this.context)
+        break
+      case 'mask':
+        programs[programName] = new MaskProgram(this.context)
         break
       case 'text':
         programs[programName] = new TextProgram(this.context)
@@ -103,56 +114,67 @@ export default class Painter {
     // prep painting
     context.newScene()
     // first draw the wallpaper
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
     drawWallpaper(this, wallpaper)
-    // prep stencil
-    context.enableStencilTest()
     // for each tile, draw background & features as necessary
     for (let tile of tiles) {
+      const { sourceData, size, texture } = tile
       // grab the matrix (duplicate created) and view (input) properties
-      const { matrix, eyePosHigh, eyePosLow } = projection.getMatrix(tile.size)
+      const { matrix, eyePosHigh, eyePosLow } = projection.getMatrix(size)
       const { view } = projection
       // inject values to programs
       this.injectFrameUniforms(matrix, eyePosHigh, eyePosLow, view)
       // now draw the tile according to the features it contains
-      this.paintLayers(tile, style.layers)
-      // no matter what, clear the stencil to ensure it's ready for the next tile
-      context.clearStencil()
+      if (this.dirty) this.paintLayers(tile, style, style.layers)
+      // now that the framebuffer is ready, draw the texture to the 3D mask
+      const { mask } = sourceData
+      // bind to our canvas framebuffer
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+      // reset viewport
+      gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
+      // use the appropriate program
+      const maskProgram = this.useProgram('mask')
+      maskProgram.flush()
+      context.bindVertexArray(mask.vao)
+      drawMask(this, mask.indexArray.length, texture, mask.drawMode)
+      // FUTURE: draw 3D layers should they exist
     }
-    // disable stencil
-    context.disableStencilTest()
     // cleanup
     context.cleanup()
   }
 
-  paintLayers (tile: Tile, layers: StyleLayers) {
-    // setup context
+  paintLayers (tile: Tile, style: Style, layers: StyleLayers) {
     const { context } = this
+    const { gl } = context
+    // setup fbo, texture and layout
+    gl.bindFramebuffer(gl.FRAMEBUFFER, tile.fbo)
+    const tileSize = tile.size * tile.scale
+    gl.viewport(0, 0, tileSize, tileSize)
+    // clear the tile "scene"
+    context.clearScene()
     // grab the featureGuide and vao from current tile
     const { sourceData, featureGuide } = tile
-    const { mask } = sourceData
+    const { background } = sourceData
     // setup variables
-    let curSource: string = 'mask'
-    let curProgram: ProgramTypes = 'fill'
-    let program = this.useProgram('fill')
+    let curSource: string = ''
+    let curProgram: ProgramTypes = ''
+    let program = null
     let curLayer: number = -1
-    let curTile: number = tile.id
-    // use mask vao and fill program
-    context.bindVertexArray(mask.vao)
-    let program = this.useProgram('fill')
-    // use mask vao and fill program
-    context.bindVertexArray(mask.vao)
-    let program = this.useProgram('fill')
-    // set the matrix and inputs uniforms by flushing the first program
-    program.flush()
-    // First 'feature' is the mask feature
-    drawMask(this, mask.indexArray.length)
-    // Second feature is the sphere-background feature should it exist
+    // let curTile: number = tile.id
+    // let's draw the sphere-background feature should it exist
     const sphereBackground = style.sphereBackground
-    program.setLayerCode(sphereBackground)
-    if (sphereBackground) drawFill(this, mask.indexArray.length, 0, null, gl.TRIANGLE_STRIP)
+    if (sphereBackground) {
+      curProgram = 'fill'
+      program = this.useProgram('fill')
+      program.flush()
+      program.setLayerCode(sphereBackground)
+      context.bindVertexArray(sourceData.background.vao)
+      drawFill(this, background.indexArray.length, 0, null, background.drawMode)
+    }
     // now we start drawing feature batches
     for (const featureBatch of featureGuide) {
-      const { parentChild, child, source, layerID, count, offset, type, featureCode } = featureBatch
+      const { source, layerID, count, offset, type, featureCode } = featureBatch
       // if type is not the same as the curProgram, we have to update curProgram and set uniforms
       if (type !== curProgram) {
         program = this.useProgram(type)
@@ -171,7 +193,7 @@ export default class Painter {
       }
       // now draw according to type
       if (type === 'fill') {
-        drawFill(this, count, offset, featureCode)
+        drawFill(this, count, offset, featureCode, sourceData[source].drawMode)
       } else if (type === 'line') {
 
       } else if (type === 'text') {

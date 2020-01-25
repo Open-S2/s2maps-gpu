@@ -29,7 +29,8 @@ export type VectorTileSource = {
   vertexBuffer?: WebGLBuffer,
   indexBuffer?: WebGLBuffer,
   featureIndexBuffer?: WebGLBuffer,
-  vao?: WebGLVertexArrayObject
+  vao?: WebGLVertexArrayObject,
+  drawMode?: GLenum // gl.TRIANGLE_FAN, gl.TRIANGLE_STRIP, etc.
 }
 
 // SourceData will either be the current tiles VectorTileSource, RasterTileSource,
@@ -49,15 +50,17 @@ export default class Tile {
   x: number
   y: number
   size: number
+  scale: number
   bbox: [number, number, number, number]
   extent: number = 4096
   division: number
   sourceData: SourceData = {}
   featureGuide: Array<FeatureGuide> = []
   context: WebGL2Context | WebGLContext
-  // requestSent: boolean = false
+  fbo: WebGLFramebuffer
+  texture: WebGLTexture
   constructor (context: WebGL2Context | WebGLContext, face: number, zoom: number,
-    x: number, y: number, hash: number, size?: number = 512) {
+    x: number, y: number, hash: number, size?: number = 512, scale?: number = 2) {
     this.context = context
     this.face = face
     this.zoom = zoom
@@ -65,10 +68,12 @@ export default class Tile {
     this.y = y
     this.id = hash
     this.size = size
+    this.scale = scale
     this.bbox = bboxST(x, y, zoom)
     this._createDivision()
+    this._buildBackgroundGeometry()
     this._buildMaskGeometry()
-    this.buildVAO(this.sourceData.mask)
+    this.buildFBO()
   }
 
   destroy () {
@@ -82,6 +87,8 @@ export default class Tile {
         if (source.vao) this.context.deleteVertexArray(source.vao)
       }
     }
+    if (this.texture) gl.deleteTexture(this.texture)
+    if (this.fbo) gl.deleteFramebuffer(this.fbo)
   }
 
   // this is designed to maintain references to nearby tiles in zoom. This is to avoid awkard
@@ -108,7 +115,7 @@ export default class Tile {
   injectVectorSourceData (source: string, vertexArray: Float32Array, indexArray: Uint32Array,
     featureIndexArray: Uint8Array, featureGuideArray: Uint32Array, layers: StyleLayers) {
     // store a reference to the source
-    this.sourceData[source] = {
+    const builtSource = this.sourceData[source] = {
       type: 'vector',
       vertexArray,
       indexArray,
@@ -139,7 +146,7 @@ export default class Tile {
     // but come in linearly, we need to sort.
     this.featureGuide.sort((a, b) => a.layerID - b.layerID)
     // build the VAO
-    this.buildVAO(this.sourceData[source])
+    this.buildVAO(builtSource)
   }
 
   _createDivision () {
@@ -149,6 +156,17 @@ export default class Tile {
     // 0, 1 => 32  ;  2, 3 => 16  ;  4, 5 => 8  ;  6, 7 => 4  ;  8, 9 => 2  ;  10+ => 1
     const level = 1 << Math.max(Math.min(Math.floor(this.zoom / 2), 5), 0) // max 5 as its binary position is 32
     this.division = 32 / level
+  }
+
+  _buildBackgroundGeometry () {
+    const { extent, context } = this
+    const background = this.sourceData.background = {
+      type: 'vector',
+      vertexArray: new Float32Array([0, 0,  extent, 0,  0, extent,  extent, extent]),
+      indexArray: new Uint32Array([0, 1, 2, 3]),
+      drawMode: context.gl.TRIANGLE_STRIP
+    }
+    this.buildVAO(background)
   }
 
   _buildMaskGeometry () {
@@ -173,7 +191,8 @@ export default class Tile {
         // create s2Point using WebGL's projection scheme, normalize, and than store
         point = S2Point.fromSTGL(face, s, t)
         point.normalize()
-        vertices.push(...point.toFloats())
+        vertices.push(...point.toFloats()) // push 3d point data high and low (6 floats)
+        vertices.push(i / division, j / division) // push x,y textcoord positions (2 floats)
       }
     }
     // indices
@@ -189,26 +208,32 @@ export default class Tile {
       indices.push(index)
     }
     // create our initial vertices and indices:
-    this.sourceData.mask = {
+    const mask = this.sourceData.mask = {
       type: 'vector',
       vertexArray: new Float32Array(vertices),
-      indexArray: new Uint32Array(indices)
+      indexArray: new Uint32Array(indices),
+      drawMode: this.context.gl.TRIANGLE_STRIP
     }
+    this.buildVAO(mask)
   }
 
+  // TODO: For future 3D terrain geometry, we would create a new mask
+  _injectNewMaskGeometry() {}
+
   buildVAO (source: VectorTileSource) {
-    const { gl } = this.context
+    const { context } = this
+    const { gl } = context
     // type vector
     if (source.type === 'vector') {
       // cleanup old setup
       if (source.vertexBuffer) gl.deleteBuffer(source.vertexBuffer)
       if (source.featureIndexBuffer) gl.deleteBuffer(source.featureIndexBuffer)
       if (source.indexBuffer) gl.deleteBuffer(source.indexBuffer)
-      if (source.vao) this.context.deleteVertexArray(source.vao)
+      if (source.vao) context.deleteVertexArray(source.vao)
       // Create a starting vertex array object (attribute state)
-      source.vao = this.context.createVertexArray()
+      source.vao = context.createVertexArray()
       // and make it the one we're currently working with
-      this.context.bindVertexArray(source.vao)
+      context.bindVertexArray(source.vao)
       // VERTEX
       // Create a vertex buffer
       source.vertexBuffer = gl.createBuffer()
@@ -217,21 +242,21 @@ export default class Tile {
       // Buffer the data
       gl.bufferData(gl.ARRAY_BUFFER, source.vertexArray, gl.STATIC_DRAW)
       // link attributes:
-      // FILL: aPosHigh -> 0 and aPosLow -> 1
+      // fill
       gl.enableVertexAttribArray(0)
+      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 8, 0)
+      // line
       gl.enableVertexAttribArray(1)
-      // LINE: aPosHigh -> 3, aPosLow -> 4, normal -> 5
-      gl.enableVertexAttribArray(3)
-      gl.enableVertexAttribArray(4)
-      gl.enableVertexAttribArray(5)
-      // tell attribute how to get data out of vertexBuffer
-      // instructions for fill
-      gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0)
-      gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12)
-      // instructions for line
-      gl.vertexAttribPointer(3, 3, gl.FLOAT, false, 32, 0)
-      gl.vertexAttribPointer(4, 3, gl.FLOAT, false, 32, 12)
-      gl.vertexAttribPointer(5, 2, gl.FLOAT, false, 32, 24)
+      gl.enableVertexAttribArray(2)
+      gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 8, 0)
+      gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 8, 4)
+      // mask
+      gl.enableVertexAttribArray(6)
+      gl.enableVertexAttribArray(7)
+      gl.enableVertexAttribArray(8)
+      gl.vertexAttribPointer(6, 3, gl.FLOAT, false, 32, 0)
+      gl.vertexAttribPointer(7, 3, gl.FLOAT, false, 32, 12)
+      gl.vertexAttribPointer(8, 2, gl.FLOAT, false, 32, 24)
       // FEATURE INDEX
       if (source.featureIndexArray && source.featureIndexArray.length) {
         // Create the feature index buffer
@@ -241,9 +266,9 @@ export default class Tile {
         // Buffer the data
         gl.bufferData(gl.ARRAY_BUFFER, source.featureIndexArray, gl.STATIC_DRAW)
         // link attribute
-        gl.enableVertexAttribArray(2)
+        gl.enableVertexAttribArray(5)
         // tell attribute how to get data out of feature index buffer
-        gl.vertexAttribPointer(2, 1, gl.UNSIGNED_BYTE, false, 1, 0)
+        gl.vertexAttribPointer(5, 1, gl.UNSIGNED_BYTE, false, 1, 0)
       }
       // INDEX
       // Create an index buffer
@@ -253,6 +278,22 @@ export default class Tile {
       // buffer the data
       gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, source.indexArray, gl.STATIC_DRAW)
     }
+  }
+
+  buildFBO () {
+    const { gl } = this.context
+    const tileSize = this.size * this.scale
+    // prep texture and framebuffer
+    this.texture = gl.createTexture()
+    gl.bindTexture(gl.TEXTURE_2D, this.texture)
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, tileSize, tileSize, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+    this.fbo = gl.createFramebuffer()
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo)
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.texture, 0)
   }
 }
 

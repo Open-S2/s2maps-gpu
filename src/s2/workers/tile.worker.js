@@ -207,7 +207,7 @@ export default class TileWorker {
               } else if (layer.type === 'fill3D' && (type === 7 || type === 8)) {
 
               } else if (layer.type === 'line' && type === 2) {
-                processLine(feature.loadGeometry(), { cap: layer.layout.cap(), join: layer.layout.join() }, tile, vertices, indices, featureIndices, encodingIndex, maxLength, pixelSize * 1)
+                // processLine(feature.loadGeometry(), { cap: layer.layout.cap(), join: layer.layout.join() }, tile, vertices, indices, featureIndices, encodingIndex, maxLength, pixelSize * 1)
               } else if (layer.type === 'line3D' && type === 2) {
 
               } else if (layer.type === 'text' && type === 1) {

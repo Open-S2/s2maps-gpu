@@ -91,7 +91,10 @@ export default class Map extends Camera {
     const update = this.projection.onZoom(deltaY, clientX - rect.left, clientY - rect.top)
     // if the projection sees a zoom change, we need to render, but don't request new tiles until
     // done zooming if the updateWhileZooming flag is set to false
-    if (update) this._render(true)
+    if (update) {
+      this.painter.dirty = true
+      this._render(true)
+    }
   }
 
   _contextLost () {
