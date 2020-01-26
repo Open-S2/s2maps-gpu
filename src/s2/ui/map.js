@@ -56,13 +56,13 @@ export default class Map extends Camera {
     this._canvas.addEventListener('webglcontextrestored', this._contextRestored, false)
     if (this._interactive) {
       // listen to scroll events
-      if (this._scrollZoom) this._canvas.addEventListener('wheel', this._onScroll.bind(this), { capture: true, passive: true })
+      if (this._scrollZoom) this._canvas.addEventListener('wheel', this._onScroll.bind(this))
       // create a dragPan
       this.dragPan = new DragPan()
       // listen to mouse movement
-      this._canvas.addEventListener('mousedown', this.dragPan.onMouseDown.bind(this.dragPan), { capture: true, passive: true })
-      this._canvas.addEventListener('mouseup', this.dragPan.onMouseUp.bind(this.dragPan), { capture: true, passive: true })
-      this._canvas.addEventListener('mousemove', this.dragPan.onMouseMove.bind(this.dragPan), { capture: true, passive: true })
+      this._canvas.addEventListener('mousedown', this.dragPan.onMouseDown.bind(this.dragPan))
+      this._canvas.addEventListener('mouseup', this.dragPan.onMouseUp.bind(this.dragPan))
+      this._canvas.addEventListener('mousemove', this.dragPan.onMouseMove.bind(this.dragPan))
       // listen to dragPans updates
       this.dragPan.addEventListener('move', this._onMovement.bind(this), { passive: true })
       this.dragPan.addEventListener('swipe', this._onSwipe.bind(this), { passive: true })
@@ -84,6 +84,7 @@ export default class Map extends Camera {
   }
 
   _onScroll (e: ScrollEvent) {
+    e.preventDefault()
     this.dragPan.clear()
     const rect = this._canvas.getBoundingClientRect()
     const { clientX, clientY, deltaY } = e
@@ -92,8 +93,11 @@ export default class Map extends Camera {
     // if the projection sees a zoom change, we need to render, but don't request new tiles until
     // done zooming if the updateWhileZooming flag is set to false
     if (update) {
+      const stats = window.stats
+      stats.begin()
       this.painter.dirty = true
       this._render(true)
+      stats.end()
     }
   }
 
@@ -119,12 +123,15 @@ export default class Map extends Camera {
 
   swipeAnimation (now: number) {
     if (!this.dragPan.swipeActive) return
+    const stats = window.stats
+    stats.begin()
     const [newMovementX, newMovementY, time] = this.dragPan.getNextFrame(now)
     if (time) {
       this.projection.onMove(newMovementX, newMovementY, 6, 6)
       this._render()
+      stats.end()
       requestAnimationFrame(this.swipeAnimation.bind(this))
-    }
+    } else { stats.end() }
   }
 
   _onClick (e: Event) {

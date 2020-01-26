@@ -6239,10 +6239,10 @@ levn@^0.3.0, levn@~0.3.0:
     prelude-ls "~1.1.2"
     type-check "~0.3.2"
 
-line-gl@^1.0.2:
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/line-gl/-/line-gl-1.0.2.tgz#69b74bf7f973fcbb2c35959854bc00c49d5f84a4"
-  integrity sha512-ewsy8flcVrOpnboQ9wFlthutNgAQEGp0+b/Wt7txNILhdjd6A+9szVTMMcHRuu+rOk4ytVnVbn3KcP5rZA0RSQ==
+line-gl@^1.0.3:
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/line-gl/-/line-gl-1.0.3.tgz#0110f428667147813569a9c43d0be397e80b457a"
+  integrity sha512-gfo+tWsw68Tnm7UfwIwe8Q/YoIYZCgWf4+cEYBZLTeJBLrsd7VE6MnfJyWGSMG7lY6aIRWBhAynglasm27kaPw==
 
 load-json-file@^2.0.0:
   version "2.0.0"
@@ -9465,6 +9465,11 @@ static-module@^1.1.2:
     shallow-copy "~0.0.1"
     static-eval "~0.2.0"
     through2 "~0.4.1"
+
+stats.js@^0.17.0:
+  version "0.17.0"
+  resolved "https://registry.yarnpkg.com/stats.js/-/stats.js-0.17.0.tgz#b1c3dc46d94498b578b7fd3985b81ace7131cc7d"
+  integrity sha1-scPcRtlEmLV4t/05hbgaznExzH0=
 
 "statuses@>= 1.4.0 < 2":
   version "1.5.0"

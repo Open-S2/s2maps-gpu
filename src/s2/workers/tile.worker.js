@@ -203,11 +203,12 @@ export default class TileWorker {
             if (layer.filter(properties)) {
               // we can now process according to type
               if (layer.type === 'fill' && (type === 3 || type === 4)) {
-                processFill(feature.loadGeometry(), type, tile, vertices, indices, featureIndices, encodingIndex, maxLength)
+                processFill(feature.loadGeometry(), type, tile, vertices, indices, featureIndices, encodingIndex)
               } else if (layer.type === 'fill3D' && (type === 7 || type === 8)) {
 
               } else if (layer.type === 'line' && type === 2) {
-                // processLine(feature.loadGeometry(), { cap: layer.layout.cap(), join: layer.layout.join() }, tile, vertices, indices, featureIndices, encodingIndex, maxLength, pixelSize * 1)
+                const attributes = { cap: layer.layout.cap(), join: layer.layout.join() }
+                processLine(feature.loadGeometry(), attributes, tile, vertices, indices, featureIndices, encodingIndex)
               } else if (layer.type === 'line3D' && type === 2) {
 
               } else if (layer.type === 'text' && type === 1) {

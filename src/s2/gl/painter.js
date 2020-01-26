@@ -108,7 +108,7 @@ export default class Painter {
     return program
   }
 
-  paint (wallpaper: Wallpaper, projection: Projection, style: Style, tiles: Array<Tile>) {
+  paint (wallpaper: Wallpaper, projection: Projection, style: Style, tiles: Array<Tile>) {    
     const { context } = this
     const { gl } = context
     // prep painting
