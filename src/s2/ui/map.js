@@ -64,9 +64,9 @@ export default class Map extends Camera {
       this._canvas.addEventListener('mouseup', this.dragPan.onMouseUp.bind(this.dragPan))
       this._canvas.addEventListener('mousemove', this.dragPan.onMouseMove.bind(this.dragPan))
       // listen to dragPans updates
-      this.dragPan.addEventListener('move', this._onMovement.bind(this), { passive: true })
-      this.dragPan.addEventListener('swipe', this._onSwipe.bind(this), { passive: true })
-      this.dragPan.addEventListener('click', this._onClick.bind(this), { passive: true })
+      this.dragPan.addEventListener('move', this._onMovement.bind(this))
+      this.dragPan.addEventListener('swipe', this._onSwipe.bind(this))
+      this.dragPan.addEventListener('click', this._onClick.bind(this))
     }
     // setup camera
     if (options.canvasWidth && options.canvasHeight) this.resizeCamera(options.canvasWidth, options.canvasHeight)

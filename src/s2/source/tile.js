@@ -60,7 +60,7 @@ export default class Tile {
   fbo: WebGLFramebuffer
   texture: WebGLTexture
   constructor (context: WebGL2Context | WebGLContext, face: number, zoom: number,
-    x: number, y: number, hash: number, size?: number = 512, scale?: number = 2) {
+    x: number, y: number, hash: number, size?: number = 512, scale?: number = 1) {
     this.context = context
     this.face = face
     this.zoom = zoom

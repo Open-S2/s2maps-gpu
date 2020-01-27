@@ -4,7 +4,7 @@ precision mediump float;
 #define EXTENT 4096.
 
 layout (location = 0) in vec2 aPos;
-layout (location = 5) in uint aIndex;
+layout (location = 5) in float aIndex;
 
 uniform float uInputs[16];
 uniform float uLayerCode[256];
@@ -23,7 +23,7 @@ vec2 decodePosition (in vec2 uv) {
 
 void main () {
   // prep layer index and feature index positions
-  int index = 0;
+  int index = int(aIndex);
   int featureIndex = 0;
   // decode color
   color = decodeFeature(true, index, featureIndex);

@@ -5,7 +5,7 @@ precision mediump float;
 
 layout (location = 1) in vec2 aPos;
 layout (location = 2) in vec2 aNormal;
-layout (location = 5) in uint aIndex;
+layout (location = 5) in float aIndex;
 
 uniform float uInputs[16];
 uniform float uLayerCode[256];
@@ -18,7 +18,7 @@ out vec4 color;
 
 void main () {
   // prep layer index and feature index positions
-  int index = 0;
+  int index = int(aIndex);
   int featureIndex = 0;
   // decode color
   color = decodeFeature(true, index, featureIndex);
