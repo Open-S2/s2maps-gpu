@@ -1,5 +1,5 @@
 #version 300 es
-precision mediump float;
+precision highp float;
 
 layout (location = 6) in vec3 aPosHigh;
 layout (location = 7) in vec3 aPosLow;

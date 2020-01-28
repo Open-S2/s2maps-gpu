@@ -45,7 +45,7 @@ export default class Painter {
     // const contextTypes = ['webgl2', 'webgl', 'experimental-webgl']
 
     // first webgl2
-    let context = this._canvas.getContext('webgl2', { alpha: false, stencil: true })
+    let context = this._canvas.getContext('webgl2', { alpha: true, stencil: true })
     if (context && typeof context.getParameter === 'function') {
       this.indexSize = context.UNSIGNED_INT
       this.webglState = 2
@@ -108,7 +108,7 @@ export default class Painter {
     return program
   }
 
-  paint (wallpaper: Wallpaper, projection: Projection, style: Style, tiles: Array<Tile>) {    
+  paint (wallpaper: Wallpaper, projection: Projection, style: Style, tiles: Array<Tile>) {
     const { context } = this
     const { gl } = context
     // prep painting
@@ -163,15 +163,15 @@ export default class Painter {
     let curLayer: number = -1
     // let curTile: number = tile.id
     // let's draw the sphere-background feature should it exist
-    const sphereBackground = style.sphereBackground
-    if (sphereBackground) {
-      curProgram = 'fill'
-      program = this.useProgram('fill')
-      program.flush()
-      program.setLayerCode(sphereBackground)
-      context.bindVertexArray(sourceData.background.vao)
-      drawFill(this, background.indexArray.length, 0, null, background.drawMode)
-    }
+    // const sphereBackground = style.sphereBackground
+    // if (sphereBackground) {
+    //   curProgram = 'fill'
+    //   program = this.useProgram('fill')
+    //   program.flush()
+    //   program.setLayerCode(sphereBackground)
+    //   context.bindVertexArray(sourceData.background.vao)
+    //   drawFill(this, background.indexArray.length, 0, null, background.drawMode)
+    // }
     // now we start drawing feature batches
     for (const featureBatch of featureGuide) {
       const { source, layerID, count, offset, type, featureCode } = featureBatch

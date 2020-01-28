@@ -8900,10 +8900,10 @@ rxjs@^6.4.0:
   dependencies:
     tslib "^1.9.0"
 
-s2-vector-tile@^1.1.8:
-  version "1.1.8"
-  resolved "https://registry.yarnpkg.com/s2-vector-tile/-/s2-vector-tile-1.1.8.tgz#84cbf776e58bb509ca397a5255a1dd2b7a022867"
-  integrity sha512-/9sLqnJ2eMzNR/M7Z5KOe/qU7EcYG+rJVNLgXRrQbNgFg7HmrkEyeG0qLNdHG11daNZjoVeq5lQ1vkiC0MUlVg==
+s2-vector-tile@^1.2.2:
+  version "1.2.2"
+  resolved "https://registry.yarnpkg.com/s2-vector-tile/-/s2-vector-tile-1.2.2.tgz#8c0ed8c6de1dcd9d864913a5a0b3fd582480f13d"
+  integrity sha512-iGoIVLv2gXCN+jAUnrH3cl218/WMYqIMATJxsj+PoPolccGdybE4U/aDy4ZkmQ1LvBgfTq9seO8RQHDYITVJcA==
   dependencies:
     pbf "^3.2.0"
 
