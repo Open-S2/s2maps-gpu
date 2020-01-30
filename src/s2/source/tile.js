@@ -52,13 +52,13 @@ export default class Tile {
   size: number
   scale: number
   bbox: [number, number, number, number]
+  faceST: Float32Array
   extent: number = 4096
   division: number
   sourceData: SourceData = {}
   featureGuide: Array<FeatureGuide> = []
   context: WebGL2Context | WebGLContext
   fbo: WebGLFramebuffer
-  texture: WebGLTexture
   constructor (context: WebGL2Context | WebGLContext, face: number, zoom: number,
     x: number, y: number, hash: number, size?: number = 512, scale?: number = 2) {
     this.context = context
@@ -69,11 +69,10 @@ export default class Tile {
     this.id = hash
     this.size = size
     this.scale = scale
-    this.bbox = bboxST(x, y, zoom)
+    const bbox = this.bbox = bboxST(x, y, zoom)
+    this.faceST = new Float32Array([face, bbox[2] - bbox[0], bbox[0], bbox[3] - bbox[1], bbox[1]])
     this._createDivision()
-    this._buildBackgroundGeometry()
     this._buildMaskGeometry()
-    this.buildFBO()
   }
 
   destroy () {
@@ -158,26 +157,9 @@ export default class Tile {
     this.division = 32 / level
   }
 
-  _buildBackgroundGeometry () {
-    const { extent, context } = this
-    const background = this.sourceData.background = {
-      type: 'vector',
-      vertexArray: new Float32Array([0, 0,  extent, 0,  0, extent,  extent, extent]),
-      indexArray: new Uint32Array([0, 1, 2, 3]),
-      drawMode: context.gl.TRIANGLE_STRIP
-    }
-    this.buildVAO(background)
-  }
-
   _buildMaskGeometry () {
     const vertices = []
     const indices = []
-    // find change in s and change in t
-    const dt = this.bbox[2] - this.bbox[0]
-    const ds = this.bbox[3] - this.bbox[1]
-    // y = mx + b, we need to find the potential b for each tiles s and t
-    const tB = this.bbox[1]
-    const sB = this.bbox[0]
     // grab the appropriate tile constants, and prep variables
     const { division, face } = this
     const indexLength = division + 1
@@ -185,14 +167,13 @@ export default class Tile {
     // now we can build out the vertices and indices
     // vertices
     for (let j = 0; j <= division; j++) {
-      t = dt / division * j + tB
+      t = 1 / division * j
       for (let i = 0; i <= division; i++) {
-        s = ds / division * i + sB
+        s = 1 / division * i
         // create s2Point using WebGL's projection scheme, normalize, and than store
         point = S2Point.fromSTGL(face, s, t)
         point.normalize()
-        vertices.push(...point.toFloats()) // push 3d point data high and low (6 floats)
-        vertices.push(i / division, j / division) // push x,y textcoord positions (2 floats)
+        vertices.push(s, t) // push 3d point data high and low (6 floats)
       }
     }
     // indices
@@ -251,12 +232,12 @@ export default class Tile {
       gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 8, 0)
       gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 8, 4)
       // mask
-      gl.enableVertexAttribArray(6)
-      gl.enableVertexAttribArray(7)
-      gl.enableVertexAttribArray(8)
-      gl.vertexAttribPointer(6, 3, gl.FLOAT, false, 32, 0)
-      gl.vertexAttribPointer(7, 3, gl.FLOAT, false, 32, 12)
-      gl.vertexAttribPointer(8, 2, gl.FLOAT, false, 32, 24)
+      // gl.enableVertexAttribArray(6)
+      // gl.enableVertexAttribArray(7)
+      // gl.enableVertexAttribArray(8)
+      // gl.vertexAttribPointer(6, 3, gl.FLOAT, false, 32, 0)
+      // gl.vertexAttribPointer(7, 3, gl.FLOAT, false, 32, 12)
+      // gl.vertexAttribPointer(8, 2, gl.FLOAT, false, 32, 24)
       // FEATURE INDEX
       if (source.featureIndexArray && source.featureIndexArray.length) {
         // Create the feature index buffer
@@ -278,22 +259,6 @@ export default class Tile {
       // buffer the data
       gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, source.indexArray, gl.STATIC_DRAW)
     }
-  }
-
-  buildFBO () {
-    const { gl } = this.context
-    const tileSize = this.size * this.scale
-    // prep texture and framebuffer
-    this.texture = gl.createTexture()
-    gl.bindTexture(gl.TEXTURE_2D, this.texture)
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, tileSize, tileSize, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-    this.fbo = gl.createFramebuffer()
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo)
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.texture, 0)
   }
 }
 

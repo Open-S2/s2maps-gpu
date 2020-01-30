@@ -11,6 +11,6 @@ export default class TextProgram extends Program {
     // get gl from context
     const { gl } = context
     // upgrade
-    super(gl, textVertex, textFragment, false, true)
+    super(gl, textVertex, textFragment)
   }
 }

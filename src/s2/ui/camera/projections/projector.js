@@ -1,6 +1,6 @@
 // @flow
 import * as mat4 from '../../../util/mat4'
-import { S2Point, tileXYFromSTZoom, bboxST, updateFace, tileHash, doubleToFloats, degToRad } from 's2projection'
+import { S2Point, tileXYFromSTZoom, bboxST, updateFace, tileHash, degToRad } from 's2projection'
 
 import type { Projection } from './projection'
 
@@ -95,7 +95,7 @@ export default class Projector implements Projection {
     this.onMove()
   }
 
-  getMatrix (size: number, full?: boolean = false): Float32Array {
+  getMatrix (size: number): Float32Array {
     const matrix = this.getMatrixAtSize(size)
     const mv = mat4.create()
     // translate position
@@ -103,25 +103,9 @@ export default class Projector implements Projection {
     // rotate position
     mat4.rotate(mv, [degToRad(this.lat), degToRad(this.lon), 0])
     // if full, just build out the pmv projection and return
-    if (full) {
-      mat4.multiply(matrix, mv)
-      return matrix
-    }
-    const eye = new Float32Array([mv[3], mv[7], mv[11]])
-    // build eyePosHigh and eyePosLow
-    const eyeX = doubleToFloats(eye[0])
-    const eyeY = doubleToFloats(eye[1])
-    const eyeZ = doubleToFloats(eye[2])
-    const eyePosHigh = new Float32Array([eyeX[0], eyeY[0], eyeZ[0]])
-    const eyePosLow = new Float32Array([eyeX[1], eyeY[1], eyeZ[1]])
-    // remove translate
-    mv[3] = 0
-    mv[7] = 0
-    mv[11] = 0
-    // multiply the view matrix into the main perspective matrix
     mat4.multiply(matrix, mv)
 
-    return { matrix, eyePosHigh, eyePosLow }
+    return matrix
   }
 
   getTilesInView (size?: number = 512): Array<[number, number, number, number, number]> { // [face, zoom, x, y, hash]
@@ -132,7 +116,7 @@ export default class Projector implements Projection {
     const checkedTiles = new Set()
     const zoomLevel = this.zoom << 0
     const tileSize = 1 << zoomLevel
-    const matrix = this.getMatrix(size, true)
+    const matrix = this.getMatrix(size)
 
     // grab the first tile while we prep
     let point = S2Point.fromLonLat(-this.lon, this.lat)

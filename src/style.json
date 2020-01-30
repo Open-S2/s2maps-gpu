@@ -4,9 +4,9 @@
   "center": [0, 0],
   "zoom": 0,
   "minzoom": 0,
-  "maxzoom": 5,
+  "maxzoom": 12,
   "sources": {
-    "world": "http://localhost:8000/data/world"
+    "fills": "http://localhost:8000/data/fills"
   },
   "wallpaper": {
     "background-color": "rgb(23, 28, 70)",
@@ -15,32 +15,31 @@
     "halo": "rgb(230, 255, 255)"
   },
   "sphere-background": {
-    "background-color": "rgba(170, 218, 255, 1)"
+    "background-color": [
+      "input-range",
+      "zoom",
+      "lin",
+      0,
+      "rgba(244, 239, 226, 1)",
+      2,
+      "rgb(234, 233, 230)",
+      3,
+      "rgb(240, 240, 240)",
+      5,
+      "rgb(247, 247, 247)"
+    ]
   },
   "layers": [
     {
-      "id": "land",
-      "source": "world",
-      "layer": "land",
+      "id": "water",
+      "source": "fills",
+      "layer": "water",
       "type": "fill",
-      "filter": ["all", ["class", "==", "ocean"]],
       "minzoom": 0,
-      "maxzoom": 5,
+      "maxzoom": 12,
       "layout": {},
       "paint": {
-        "color": [
-          "input-range",
-          "zoom",
-          "lin",
-          0,
-          "rgba(244, 239, 226, 1)",
-          2,
-          "rgb(234, 233, 230)",
-          3,
-          "rgb(240, 240, 240)",
-          5,
-          "rgb(247, 247, 247)"
-        ]
+        "color": "rgba(170, 218, 255, 1)"
       }
     }
   ]

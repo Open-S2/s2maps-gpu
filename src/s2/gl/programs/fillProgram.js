@@ -11,6 +11,6 @@ export default class FillProgram extends Program {
     // get gl from context
     const { gl } = context
     // upgrade
-    super(gl, fillVertex, fillFragment, false, true)
+    super(gl, fillVertex, fillFragment)
   }
 }

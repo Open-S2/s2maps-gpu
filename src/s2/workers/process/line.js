@@ -1,7 +1,5 @@
 // @flow
 import drawLine from 'line-gl'
-import encodeNormal from './encodeNormal'
-import { S2Point } from 's2projection'
 
 import type { Attributes } from 'line-gl'
 import type { TileRequest } from '../tile.worker'
