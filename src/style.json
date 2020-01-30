@@ -18,28 +18,157 @@
     "background-color": [
       "input-range",
       "zoom",
-      "lin",
+      "expo",
+      1.7,
       0,
-      "rgba(244, 239, 226, 1)",
-      2,
-      "rgb(234, 233, 230)",
-      3,
-      "rgb(240, 240, 240)",
-      5,
-      "rgb(247, 247, 247)"
+      "rgb(244, 239, 226)",
+      2.5,
+      "rgb(245, 245, 245)",
+      6,
+      "rgb(237, 235, 232)",
+      10,
+      "rgb(236, 234, 231)",
+      11,
+      "rgb(236, 234, 231)",
+      12,
+      "rgb(240, 244, 246)"
     ]
   },
   "layers": [
+    {
+      "id": "airport",
+      "source": "fills",
+      "layer": "landuse",
+      "type": "fill",
+      "filter": ["all", ["class", "==", "aeroway"]],
+      "minzoom": 0,
+      "maxzoom": 12,
+      "layout": {},
+      "paint": {
+        "color": "rgb(219, 222, 235)"
+      }
+    },
+    {
+      "id": "military",
+      "source": "fills",
+      "layer": "landuse",
+      "type": "fill",
+      "filter": ["all", ["class", "==", "military"]],
+      "minzoom": 0,
+      "maxzoom": 12,
+      "layout": {},
+      "paint": {
+        "color": "rgb(226, 226, 224)"
+      }
+    },
+    {
+      "id": "hospital",
+      "source": "fills",
+      "layer": "landuse",
+      "type": "fill",
+      "filter": ["all", ["class", "==", "hospital"]],
+      "minzoom": 0,
+      "maxzoom": 12,
+      "layout": {},
+      "paint": {
+        "color": "rgb(249, 220, 218)"
+      }
+    },
+    {
+      "id": "school",
+      "source": "fills",
+      "layer": "landuse",
+      "type": "fill",
+      "filter": ["all", ["class", "has", ["university", "college", "school", "kindergarten"]]],
+      "minzoom": 0,
+      "maxzoom": 12,
+      "layout": {},
+      "paint": {
+        "color": "rgb(222, 228, 229)"
+      }
+    },
+    {
+      "id": "sand",
+      "source": "fills",
+      "layer": "landuse",
+      "type": "fill",
+      "filter": ["all", ["class", "==", "sand"]],
+      "minzoom": 0,
+      "maxzoom": 12,
+      "layout": {},
+      "paint": {
+        "color": "rgb(242, 236, 207)"
+      }
+    },
+    {
+      "id": "indianReservations",
+      "source": "fills",
+      "layer": "landuse",
+      "type": "fill",
+      "filter": ["all", ["class", "==", "indianReservation"]],
+      "minzoom": 0,
+      "maxzoom": 12,
+      "layout": {},
+      "paint": {
+        "color": "rgb(240, 237, 235)"
+      }
+    },
+    {
+      "id": "grass",
+      "source": "fills",
+      "layer": "landuse",
+      "type": "fill",
+      "filter": ["all", ["class", "has", ["golf", "grass", "wood", "swamp", "forest", "wetland", "zoo"]]],
+      "minzoom": 0,
+      "maxzoom": 12,
+      "layout": {},
+      "paint": {
+        "color": "rgb(201, 238, 201)"
+      }
+    },
+    {
+      "id": "parks",
+      "source": "fills",
+      "layer": "landuse",
+      "type": "fill",
+      "filter": ["all", ["class", "has", ["park", "national_park", "protected_area"]]],
+      "minzoom": 0,
+      "maxzoom": 12,
+      "layout": {},
+      "paint": {
+        "color": [
+          "input-range",
+          "zoom",
+          "lin",
+          3,
+          "rgb(205, 236, 205)",
+          4,
+          "rgb(197, 232, 197)"
+        ]
+      }
+    },
+    {
+      "id": "cemetery",
+      "source": "fills",
+      "layer": "landuse",
+      "type": "fill",
+      "filter": ["all", ["class", "==", "cemetery"]],
+      "minzoom": 0,
+      "maxzoom": 12,
+      "layout": {},
+      "paint": {
+        "color": "rgb(208, 236, 208)"
+      }
+    },
     {
       "id": "water",
       "source": "fills",
       "layer": "water",
       "type": "fill",
       "minzoom": 0,
-      "maxzoom": 12,
       "layout": {},
       "paint": {
-        "color": "rgba(170, 218, 255, 1)"
+        "color": "rgb(170, 218, 255)"
       }
     }
   ]
