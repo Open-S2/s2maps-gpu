@@ -58,14 +58,6 @@ export default class Camera {
   _getTiles (isZooming?: boolean) {
     const self = this
     if (self.projection.dirty) {
-      // if (isZooming) {
-      //   if (!self.lastTileViewState) self.lastTileViewState = self.tilesInView
-      //   if (self.zooming) clearTimeout(self.zooming)
-      //   self.zooming = setTimeout (() => {
-      //     self.zooming = null
-      //     self.lastTileViewState = null
-      //   }, 150)
-      // }
       // grab zoom change
       const zoomChange = self.projection.zoomChange()
       // no matter what we need to update what's in view
@@ -80,21 +72,43 @@ export default class Camera {
           const newTile = new Tile(self.painter.context, face, zoom, x, y, hash)
           // inject parent should one exist
           if (zoomChange) newTile.injectParentTile(this.tileCache)
+          // start requesting raster data if exists
+          self._requestRasterData(newTile)
           // store the tile
           self.tileCache.set(hash, newTile)
           newTiles.push(newTile)
         }
       }
-      // if there was a zoom change, we store requests
-      // if (newTiles.length) {
-      //   if (self.request || !!zoomChange) {
-      //     self._setRequestQueue(newTiles)
-      //   } else { self.style.requestTiles(newTiles) } // if we only dragged/panned we request tiles immediately
-      // }
       if (newTiles.length) this.painter.dirty = true
       self.style.requestTiles(newTiles)
     }
-    return self.tileCache.getBatch(self.tilesInView.map(tArr => tArr[4]))
+    return self.tileCache.getBatch(self.tilesInView.map(t => t[4]))
+  }
+
+  _requestRasterData (tile: Tile) {
+    const self = this
+    const { rasterLayers } = self.style
+    for (const sourceName in rasterLayers) {
+      // grab the source and layer details
+      const source = self.style.sources[sourceName]
+      const layer = rasterLayers[sourceName]
+      // create texture and recieve the pieces that need to be requested
+      const pieces = tile.buildSourceTexture(sourceName, layer)
+      // start requesting tiles
+      for (const piece of pieces) {
+        const image = new Image()
+        image.crossOrigin = 'anonymous'
+        image.src = `${source.path}/${piece.face}/${piece.zoom}/${piece.x}/${piece.y}.${source.fileType}`
+        image.onload = () => {
+          // inject the image into the raster in its proper position
+          tile._injectRasterData(sourceName, image, piece.leftShift, piece.bottomShift)
+          // new paint, so painter is dirty
+          self.painter.dirty = true
+          // call a re-render only if the tile is in our current viewing
+          if (self.tilesInView.map(t => t[4]).includes(tile.id)) self._render()
+        }
+      }
+    }
   }
 
   // avoid over-asking for tiles if we are zooming quickly
@@ -116,7 +130,7 @@ export default class Camera {
       // new paint, so painter is dirty
       this.painter.dirty = true
       // call a re-render only if the tile is in our current viewing
-      if (this.tilesInView.map(tArr => tArr[4]).includes(tileID)) this._render()
+      if (this.tilesInView.map(t => t[4]).includes(tileID)) this._render()
     }
   }
 

@@ -3,7 +3,7 @@ import { WebGL2Context, WebGLContext } from '../gl/contexts'
 import { S2Point, tileHash, bboxST } from 's2projection' // https://github.com/Regia-Corporation/s2projection
 
 import type { Face } from 's2projection' // https://github.com/Regia-Corporation/s2projection/blob/master/src/S2Projection.js#L4
-import type { StyleLayers } from '../style'
+import type { Layer } from '../styleSpec'
 
 // The layer guide helps identify how to properly draw from the vertexBuffer/vertexIndex stack.
 // All layers are merged into one VAO/indexBuffer/vertexBuffer/codeOffsetBuffer set. This reduces complexity and improves draw speed.
@@ -32,10 +32,15 @@ export type VectorTileSource = {
   drawMode?: GLenum // gl.TRIANGLE_FAN, gl.TRIANGLE_STRIP, etc.
 }
 
+export type RasterTileSource = {
+  type: 'raster',
+  texture: WebGLTexture
+}
+
 // SourceData will either be the current tiles VectorTileSource, RasterTileSource,
 // or reference tile(s) to be masked + created.
 // eslint-disable-next-line
-export type SourceData = { [string | number]: VectorTileSource | Array<Tile> }
+export type SourceData = { [string | number]: RasterTileSource | VectorTileSource | Array<Tile> }
 
 // tiles are designed to create mask geometry and store prebuilt layer data handed off by the worker pool
 // whenever rerenders are called, they will access these tile objects for the layer data / vaos
@@ -56,7 +61,6 @@ export default class Tile {
   featureGuide: Array<FeatureGuide> = []
   children: Array<Tile>
   context: WebGL2Context | WebGLContext
-  fbo: WebGLFramebuffer
   constructor (context: WebGL2Context | WebGLContext, face: number, zoom: number,
     x: number, y: number, hash: number, size?: number = 512, children?: Array<Tile>) {
     this.context = context
@@ -82,10 +86,10 @@ export default class Tile {
         if (source.codeOffsetBuffer) gl.deleteBuffer(source.codeOffsetBuffer)
         if (source.indexBuffer) gl.deleteBuffer(source.indexBuffer)
         if (source.vao) this.context.deleteVertexArray(source.vao)
+      } else if (source.type === 'raster') {
+        if (source.texture) gl.deleteTexture(source.texture)
       }
     }
-    if (this.texture) gl.deleteTexture(this.texture)
-    if (this.fbo) gl.deleteFramebuffer(this.fbo)
   }
 
   injectParentTile (tileCache: TileCache) {
@@ -106,8 +110,60 @@ export default class Tile {
     }
   }
 
+  // if a style has a raster source & layer pointing to it, we request the tiles
+  // four children (if size is 512 and images are 512, otherwise we may store
+  // 16 images of 256). Create a texture of size this.size x this.size to house
+  // said data.
+  buildSourceTexture (source: string, layer: Layer) {
+    const { gl } = this.context
+    const { mask } = this.sourceData
+    // Build sourceData
+    const raster = this.sourceData[source] = {
+      type: 'raster'
+    }
+    // Create a texture.
+    const texture = raster.texture = gl.createTexture()
+    // store information to featureGuide
+    this.featureGuide.push({
+      parent: false,
+      layerID: 0,
+      source: 'mask', // when pulling from the vao, we still use the mask vertices
+      count: mask.indexArray.length,
+      type: 'raster',
+      texture
+    })
+    // setup texture params
+    const length = this.size * 2
+    gl.bindTexture(gl.TEXTURE_2D, texture)
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, length, length, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+    // setup image requests
+    const { face, zoom, x, y } = this
+    const pieces = [
+      { face, zoom: zoom + 1, x: x * 2, y: y * 2, leftShift: 0, bottomShift: 0 },
+      { face, zoom: zoom + 1, x: x * 2 + 1, y: y * 2, leftShift: 1, bottomShift: 0 },
+      { face, zoom: zoom + 1, x: x * 2, y: y * 2 + 1, leftShift: 0, bottomShift: 1 },
+      { face, zoom: zoom + 1, x: x * 2 + 1, y: y * 2 + 1, leftShift: 1, bottomShift: 1 }
+    ]
+
+    return pieces
+  }
+
+  _injectRasterData (source: string, image: Image, leftShift: number, bottomShift: number) {
+    const { gl } = this.context
+    const length = image.width
+    const { texture } = this.sourceData[source]
+    // put into texture
+    gl.bindTexture(gl.TEXTURE_2D, texture)
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, leftShift * length, bottomShift * length, gl.RGBA, gl.UNSIGNED_BYTE, image)
+  }
+
   injectVectorSourceData (source: string, vertexArray: Float32Array, indexArray: Uint32Array,
-    codeOffsetArray: Uint8Array, featureGuideArray: Uint32Array, layers: StyleLayers) {
+    codeOffsetArray: Uint8Array, featureGuideArray: Uint32Array, layers: Array<Layer>) {
     // store a reference to the source
     const builtSource = this.sourceData[source] = {
       type: 'vector',

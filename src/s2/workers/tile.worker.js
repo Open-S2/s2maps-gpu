@@ -6,7 +6,7 @@ import { processFill, processLine } from './process'
 import requestData from '../util/xmlHttpRequest'
 
 import type { Face } from 'S2Projection'
-import type { StylePackage } from '../style'
+import type { StylePackage } from '../styleSpec'
 
 type Point = [number, number]
 
@@ -30,6 +30,8 @@ type Feature = {
   divisor: number,
   layerID: number
 }
+
+// TODO: If source is raster, delete it so that each request does not loop through layers and such
 
 const MAX_FEATURE_BATCH_SIZE = 128
 const MAX_INDEX_BUFFER_SIZE = 4294967295 // 16bit: 65535
@@ -95,6 +97,7 @@ export default class TileWorker {
       const sources = this.maps[mapID].sources
       for (const sourceName in sources) {
         const source = sources[sourceName]
+        if (source.type === 'raster') continue
         this.requestTiles(mapID, sourceName, source, tiles)
       }
     }

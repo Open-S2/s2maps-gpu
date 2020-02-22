@@ -5,6 +5,7 @@ import { WebGL2Context, WebGLContext } from './contexts'
 /** PROGRAMS **/
 import {
   Program,
+  RasterProgram,
   FillProgram,
   LineProgram,
   ShadeProgram,
@@ -16,6 +17,7 @@ import {
   drawFill,
   drawLine,
   drawMask,
+  drawRaster,
   // drawShade,
   drawWallpaper
 } from './draw'
@@ -80,6 +82,9 @@ export default class Painter {
     if (programs[programName]) return programs[programName]
     // if program not created yet, let's make it
     switch (programName) {
+      case 'raster':
+        programs[programName] = new RasterProgram(this.context)
+        break
       case 'fill':
         programs[programName] = new FillProgram(this.context)
         break
@@ -161,7 +166,7 @@ export default class Painter {
     if (sphereBackground) drawFill(this, mask.indexArray.length, 0, null, gl.TRIANGLE_STRIP)
     // now we start drawing feature batches
     for (const featureBatch of featureGuide) {
-      const { parent, source, layerID, count, offset, type, featureCode } = featureBatch
+      const { parent, source, layerID, count, offset, type, featureCode, texture } = featureBatch
       // if a parent tile, be sure to bind the parent tiles vao
       // rebind back to current vao and matrix when the parent is not being used
       if (parent && (!parentSet || source !== curSource)) {
@@ -186,14 +191,15 @@ export default class Painter {
         flush = false
         program.flush()
       }
-      program.flush()
       // if new layerID, update layerCode
-      if (layerID !== curLayer) {
+      if (layerID !== curLayer && layers[layerID].code) {
         program.setLayerCode(layers[layerID].code)
         curLayer = layerID
       }
       // now draw according to type
-      if (type === 'fill') {
+      if (type === 'raster') {
+        drawRaster(this, count, texture)
+      } else if (type === 'fill') {
         drawFill(this, count, offset, featureCode)
       } else if (type === 'line') {
         drawLine(this, count, offset, featureCode)

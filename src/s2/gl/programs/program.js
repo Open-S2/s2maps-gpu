@@ -51,9 +51,9 @@ export default class Program {
   }
 
   injectFrameUniforms (matrix: Float32Array, view: Float32Array, faceST: Float32Array) {
-    if (matrix) this.updateMatrix = matrix
-    if (view) this.updateInputs = view
-    if (faceST) this.updateFaceST = faceST
+    if (matrix && this.matrix) this.updateMatrix = matrix
+    if (view && this.inputs) this.updateInputs = view
+    if (faceST && this.faceST) this.updateFaceST = faceST
   }
 
   flush () {

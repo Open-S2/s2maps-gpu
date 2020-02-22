@@ -4,9 +4,16 @@
   "center": [0, 0],
   "zoom": 0,
   "minzoom": 0,
-  "maxzoom": 20,
+  "maxzoom": 8,
   "sources": {
-    "satellite": "http://localhost:8000/data/satellite"
+    "satellite": {
+      "path": "http://localhost:8000/data/satellite",
+      "type": "raster",
+      "fileType": "png",
+      "minzoom": 0,
+      "maxzoom": 7,
+      "tileSize": 512
+    }
   },
   "shade": false,
   "wallpaper": {

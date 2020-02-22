@@ -1,18 +1,18 @@
 // @flow
 /** SOURCES **/
-type SourceType = {
+type Source = {
   path: string,
   type: 'vector' | 'json' | 'raster' | 'font' | 'billboard',
   fileType: 'json' | 's2json' | 'pbf' | 's2tile' | 'png' | 'jpeg' | 'ttf' | 'woff',
   sourceName?: string // if you want to make requests without getting metadata, you need this
 }
-type SourceTypes = { [string]: SourceType }
+type Sources = { [string]: Source }
 
 /** WORKER PACKAGE **/
 export type StylePackage = {
-  sources: SourceTypes,
-  fonts: SourceTypes,
-  billboards: SourceTypes,
+  sources: Sources,
+  fonts: Sources,
+  billboards: Sources,
   layers: Array<Layer>
 }
 
@@ -31,11 +31,11 @@ export type Layer = {
   layer: string,
   minzoom: number,
   maxzoom: number,
-  type: 'fill' | 'line' | 'line3D' | 'billboard' | 'text',
+  type: 'raster' | 'fill' | 'fill3D' | 'line' | 'line3D' | 'billboard' | 'text',
   filter: Array<any>, // ["any", ["class", "==", "ocean"], ["class", "==", "river"]]
   layout: LineLayout | TextLayout | BillboardLayout,
   paint: FillPaint | LinePaint | TextPaint | BillboardPaint,
-  code: Float32Array
+  code?: Float32Array
 }
 
 /** FILL **/

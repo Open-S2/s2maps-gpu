@@ -5,7 +5,7 @@ import { Shade, Wallpaper, Tile } from '../source'
 import requestData from '../util/xmlHttpRequest'
 import { encodeLayerAttribute, orderLayer } from './conditionals'
 
-import type { SourceTypes, Layer, WallpaperStyle } from './styleSpec'
+import type { Sources, Layer, WallpaperStyle } from './styleSpec'
 import type { TileRequest } from '../workers/tile.worker'
 
 export default class Style {
@@ -16,10 +16,11 @@ export default class Style {
   maxzoom: number = 15
   lon: number = 0
   lat: number = 0
-  sources: SourceTypes = {}
-  fonts: SourceTypes = {}
-  billboards: SourceTypes = {}
+  sources: Sources = {}
+  fonts: Sources = {}
+  billboards: Sources = {}
   layers: Array<Layer> = []
+  rasterLayers: { [string]: Layer } = {} // rasterLayers[sourceName]: Layer
   wallpaper: undefined | Wallpaper
   wallpaperStyle: undefined | WallpaperStyle
   sphereBackground: void | Float32Array // Attribute Code - limited to input-range or input-condition
@@ -70,8 +71,9 @@ export default class Style {
   }
 
   _prebuildStyle(style) {
-    // layers
+    // ensure certain default layer values exist. If it is a raster layer: seggregate
     for (const layer of style.layers) {
+      if (layer.type === 'raster' && layer.source) this.rasterLayers[layer.source] = layer
       if (!layer.minzoom) layer.minzoom = 0
       if (!layer.maxzoom) layer.maxzoom = 30
       if (!layer.layer) layer.layer = 'default'
