@@ -1,8 +1,14 @@
-// @flow
+const filter = parseFilter(["all", ["class", "has", ["Country", "State"]], ["maritime", "==", false]])
+
+const res = filter({ class: 'Country', maritime: false })
+console.log('res', res)
+
+
+
 // examples:
 // "filter": ["any", ["class", "==", "ocean"], ["class", "==", "river"]]
 // "filter": ["all", ["class", "==", "ocean"], ["class", "==", "lake"], ["class", "!=", "river"]]
-export default function parseFilter (filter: undefined | Array<string | Array<any>>) {
+function parseFilter (filter) {
   if (!filter) return () => true
   // first attribute describes how if we have a bunch of && or ||
   const andOr = (filter[0] === 'any' || filter[0] === 'all') ? filter.shift() : null
@@ -29,27 +35,33 @@ export default function parseFilter (filter: undefined | Array<string | Array<an
   // if any, join all conditionals into an array, if "any" as soon as we see a true, return true
   // if "all" than ensure all cases return true
   if (andOr === 'any') {
-    return (properties: Object) => {
+    return (properties) => {
       for (const condition of conditionals) {
         if (condition.key) {
-          if (properties[condition.key] != null && condition.condition(properties[condition.key])) return true
+          if (properties[condition.key] !== undefined && condition.condition(properties[condition.key])) return true
         } else if (condition.condition(properties)) return true
       }
       return false
     }
   } else { // andOr === 'all'
-    return (properties: Object) => {
+    return (properties) => {
       for (const condition of conditionals) {
+        console.log('condition', condition)
         if (condition.key) {
-          if (properties[condition.key] == null || !condition.condition(properties[condition.key])) return false
-        } else if (!condition.condition(properties)) return false
+          console.log('A', properties[condition.key], condition.condition(properties[condition.key]))
+          if (properties[condition.key] === undefined || !condition.condition(properties[condition.key])) return false
+        } else if (!condition.condition(properties)) {
+          console.log('B')
+          return false
+        }
       }
+      console.log('HERE')
       return true
     }
   }
 }
 
-function parseFilterCondition (condition: string, value: string | number | Array<string | number>): Function {
+function parseFilterCondition (condition, value) {
   // manage multiple conditions
   if (condition === "==") return (input) => input === value // ["class", "==", "ocean"] OR ["elev", "==", 50]
   else if (condition === "!=") return (input) => input !== value // ["class", "!=", "ocean"] OR ["elev", "!=", 50]

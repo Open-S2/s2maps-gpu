@@ -15,7 +15,6 @@ export default function encodeFeatureFunction (input: void | Array<any>) {
     if (conditionType === 'data-condition') {
       return parseDataCondition(input)
     } else if (conditionType === 'input-condition') {
-      // TODO
       // input.shift() // input-condition type
       // return parseInputCondition(input)
     } else if (conditionType === 'data-range') {

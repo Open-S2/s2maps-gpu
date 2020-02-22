@@ -77,7 +77,7 @@ export default function encodeLayerAttribute (input: Array<any>): Float32Array {
       encodings.push(...color.getLCH()) // store that it is a value and than the values
     } else {
       encodings[0] += (1 << 4) // set the condition bits as 1 (value)
-      encodings.push(~~input) // store true as 1 and false as 0, otherwise it's a number
+      encodings.push(input) // store true as 1 and false as 0, otherwise it's a number
     }
   }
   // lastly store length of the current encoding
@@ -107,7 +107,7 @@ function encodeRange (input: Array<any>): Array<number> {
   const encoding = []
 
   while (input.length) {
-    const condition = ~~input.shift() // convert true and false to 0 and 1 respectively
+    const condition = input.shift() // convert true and false to 0 and 1 respectively
     const value = input.shift()
     encoding.push(condition, ...encodeLayerAttribute(value))
   }

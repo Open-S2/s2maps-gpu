@@ -12,19 +12,20 @@ vec2 fade1SmoothSteps = vec2(0.15, 1.);
 vec2 fade2SmoothSteps = vec2(0.55, 1.);
 vec2 haloSmoothSteps = vec2(0.77, 0.825);
 
-in vec2 vertPos;
-out vec4 fragColor;
-
 uniform vec2 uScale;
 uniform vec4 backgroundColor;
 uniform vec4 haloColor;
 uniform vec4 fade1Color;
 uniform vec4 fade2Color;
 
+in vec2 vertPos;
+out vec4 fragColor;
+
 void main () {
   vec2 pos = vertPos;
   pos.x *= 0.1 / uScale.x;
   pos.y *= 0.1 / uScale.y;
+
 
   float fade1 = length(pos);
   float fade2 = fade1;

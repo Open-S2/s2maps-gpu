@@ -12,6 +12,7 @@ export default function drawFill (painter: Painter, segmentLength: number,
   const fillProgram: FillProgram = painter.getProgram('fill')
   if (!fillProgram) return
   // set feature code
+  // console.log('featureCode', featureEncoding)
   if (featureEncoding && featureEncoding.length) gl.uniform1fv(fillProgram.featureCode, featureEncoding)
   // get mode
   if (!mode) mode = gl.TRIANGLES

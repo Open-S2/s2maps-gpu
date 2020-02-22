@@ -15,7 +15,7 @@ export default function requestData (path: string, extension: Extension, callbac
 
 function getResposeType (extension: Extension) {
   if (extension === 'pbf') return 'arraybuffer'
-  else if (extension === 'json') return 'json'
+  else if (extension === 'json' || extension === 'geojson' || extension === 's2json') return 'json'
   else if (extension === 'png' || extension === 'jpeg') return 'blob'
   else return 'arraybuffer'
 }

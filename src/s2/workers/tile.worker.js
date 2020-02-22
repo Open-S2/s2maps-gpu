@@ -1,4 +1,5 @@
 // @flow
+import S2JsonVT from 's2json-vt'
 import { VectorTile } from 's2-vector-tile'
 import { parseLayers } from '../style/conditionals'
 import { processFill, processLine } from './process'
@@ -9,7 +10,7 @@ import type { StylePackage } from '../style'
 
 type Point = [number, number]
 
-export type CancelTileRequest = Array<number> // hashes of tiles e.g. ['204', '1003', '1245', ...]
+export type CancelTileRequest = Array<number> // hashe IDs of tiles e.g. ['204', '1003', '1245', ...]
 
 export type TileRequest = {
   hash: number,
@@ -17,13 +18,21 @@ export type TileRequest = {
   zoom: number,
   x: number,
   y: number,
-  bbox: [number, number, number, number],
   division: number,
-  extent: number,
   size: number
 }
 
+type Feature = {
+  vertices: Array<number>,
+  indices: Array<number>,
+  code: Array<number>,
+  size: number,
+  divisor: number,
+  layerID: number
+}
+
 const MAX_FEATURE_BATCH_SIZE = 128
+const MAX_INDEX_BUFFER_SIZE = 4294967295 // 16bit: 65535
 
 // A TileWorker on spin up will get style "guide". It will have all layers "filter" and "layout" properties
 // This is the tileworkers time to prepare the the style data for future requests from said mapID.
@@ -105,22 +114,38 @@ export default class TileWorker {
     const promises = []
     for (const source in sources) {
       if (typeof sources[source] === 'string') {
-        promises.push(
-          new Promise((resolve, _) => {
-            requestData(`${sources[source]}/metadata`, 'json', (metadata) => {
+        // if there is a filetype at the end, we parse it differently.
+        const [fileName, fileType] = sources[source].split('.')
+
+        promises.push(new Promise((resolve, _) => {
+          if (fileType === 's2json' || fileType === 'geojson' || fileType === 'json') { // s2json request
+            requestData(fileName, fileType, (json) => {
+              // create an S2JsonVT object
+              if (json) {
+                sources[source] = {
+                  type: 'json',
+                  s2json: new S2JsonVT(json)
+                }
+              }
+              resolve()
+            })
+          } else { // standard metadata request
+            requestData(`${fileName}/metadata`, 'json', (metadata) => {
               // build & add proper path to metadata if it does not exist
               if (!metadata.path) metadata.path = sources[source]
               // update source to said metadata
               sources[source] = metadata
               resolve()
             })
-          })
-        )
+          }
+        }))
       }
     }
     // TODO: get and replace fonts strings with font-gl class objects
 
     // TODO: get and replace billboard strings with svg-gl class objects
+
+    // run the style config
     Promise.all(promises)
       .then(() => {
         this.status = 'ready'
@@ -145,70 +170,81 @@ export default class TileWorker {
     const self = this
     for (const tile of tiles) {
       const { hash, face, zoom, x, y } = tile
-      if (
-        source.minzoom <= zoom && source.maxzoom >= zoom && // check zoom bounds
-        source.facesbounds[face] && // check face exists
-        source.facesbounds[face][zoom] && // check zoom exists
-        source.facesbounds[face][zoom][0] <= x && source.facesbounds[face][zoom][2] >= x && // check x is within bounds
-        source.facesbounds[face][zoom][1] <= y && source.facesbounds[face][zoom][3] >= y // check y is within bounds
-      ) {
-        requestData(`${source.path}/${face}/${zoom}/${x}/${y}`, source.extension, (data) => {
+      if (source.type === 'vector') {
+        if (
+          source.minzoom <= zoom && source.maxzoom >= zoom && // check zoom bounds
+          source.facesbounds[face] && // check face exists
+          source.facesbounds[face][zoom] && // check zoom exists
+          source.facesbounds[face][zoom][0] <= x && source.facesbounds[face][zoom][2] >= x && // check x is within bounds
+          source.facesbounds[face][zoom][1] <= y && source.facesbounds[face][zoom][3] >= y // check y is within bounds
+        ) {
+          requestData(`${source.path}/${face}/${zoom}/${x}/${y}`, source.extension, (data) => {
+            if (data && !self.cancelCache.includes(hash)) self._processTileData(mapID, sourceName, source, tile, data)
+          })
+        }
+      } else if (source.type === 'json') {
+        if (source.s2json.faces.has(face)) {
+          const data = source.s2json.getTile(face, zoom, x, y)
           if (data && !self.cancelCache.includes(hash)) self._processTileData(mapID, sourceName, source, tile, data)
-        })
+        }
       }
     }
+    // worker is ready for future tiles
     self.status = 'ready'
     self._checkCache()
   }
 
-  _processTileData (mapID: string, sourceName: string, source: Object, tile: TileRequest, data: ArrayBuffer | Blob) {
+  _processTileData (mapID: string, sourceName: string, source: Object,
+    tile: TileRequest, data: Object | ArrayBuffer | Blob) {
     // grab tiles basics
-    const { extent, division, size } = tile
-    let maxLength = extent / division
-    if (maxLength === extent) maxLength = null
-    const pixelSize = extent / size // defaults extent and size (4096 and 512) equate to 8 units. so 8 units = 1 pixel
+    const { zoom, division } = tile
     // Check the source metadata. If it's a vector run through all
     // layers and process accordingly. If image, no pre-processing needed.
-    // TODO: types may differ between vector or raster
     const { type } = source
-    if (type === 'vector') {
-      const vertices: Array<number> = []
-      const featureIndices: Array<number> = []
-      const indices: Array<number> = []
-      const featureGuide: Array<number> = []
-      const vectorTile = new VectorTile(data)
+    if (type === 'vector' || type === 'json') {
+      const features: Array<Feature> = []
+      const vectorTile = (type === 'vector') ? new VectorTile(data) : data
       const { layers } = this.maps[mapID]
-      let indicesOffset: number = 0
-      for (let i = 0, sl = layers.length; i < sl; i++) {
-        const layer = layers[i]
+      for (let layerID = 0, ll = layers.length; layerID < ll; layerID++) {
+        const layer = layers[layerID]
         if (
           layer.source === sourceName && // the layer source matches
           vectorTile.layers[layer.layer] && // the vectorTile has said layer in it
-          layer.minzoom <= tile.zoom && layer.maxzoom >= tile.zoom // zoom attributes fit
+          layer.minzoom <= zoom && layer.maxzoom >= zoom // zoom attributes fit
         ) {
           // run through the vectorTile's features of said layer and build batches
           // to reduce draw counts, we batch data of the same layer and type.
           // When a feature batch size exceeds the max batch size, finish out the
           // draw batch and start again
           const vectorTileLayer = vectorTile.layers[layer.layer]
+          const { extent } = vectorTileLayer
           // prep a mapping of layer and paint properties (feature encodings)
-          let encodings = []
-          let prevEncodings = []
-          let encodingIndex = 0
           for (let f = 0; f < vectorTileLayer.length; f++) {
-            let featureEncodings = []
+            let featureCode = []
             const feature = vectorTileLayer.feature(f)
+            // if (layer.layer === 'boundary') console.log(layer.filter.toString())
             const { properties, type } = feature
             // lastly we need to filter according to the layer
             if (layer.filter(properties)) {
+              // create encodings for the feature, if it is different than the previous feature, we start a new encoding set
+              for (const l in layer.layout) layer.layout[l](properties, featureCode)
+              for (const p in layer.paint) layer.paint[p](properties, featureCode)
               // we can now process according to type
+              let vertices = []
+              let indices = []
+              let vertexSize
+              let vertexDivisor
               if (layer.type === 'fill' && (type === 3 || type === 4)) {
-                processFill(feature.loadGeometry(), type, tile, vertices, indices, featureIndices, encodingIndex)
+                processFill(feature.loadGeometry(), type, vertices, indices, division, extent)
+                vertexSize = vertices.length / 2
+                vertexDivisor = 2
               } else if (layer.type === 'fill3D' && (type === 7 || type === 8)) {
 
-              } else if (layer.type === 'line' && type === 2) {
-                const attributes = { cap: layer.layout.cap(), join: layer.layout.join() }
-                processLine(feature.loadGeometry(), attributes, tile, vertices, indices, featureIndices, encodingIndex)
+              } else if (layer.type === 'line' && (type === 2 || type === 3 || type === 4)) {
+                const attributes = { cap: layer.layout.cap(), join: layer.layout.join(), maxDistance: extent / division, dashed: true }
+                processLine(feature.loadGeometry(), type, attributes, vertices, indices, extent)
+                vertexSize = vertices.length / 4
+                vertexDivisor = 4
               } else if (layer.type === 'line3D' && type === 2) {
 
               } else if (layer.type === 'text' && type === 1) {
@@ -216,40 +252,85 @@ export default class TileWorker {
               } else if (layer.type === 'billboard' && type === 1) {
 
               } else { continue }
+              features.push({ vertices, indices, code: featureCode, size: vertexSize, divisor: vertexDivisor, layerID })
             } else { continue }
-            // create encodings for the feature, if it is different than the previous feature, we start a new encoding set
-            for (const l in layer.layout) layer.layout[l](properties, featureEncodings)
-            for (const p in layer.paint) layer.paint[p](properties, featureEncodings)
-            // quick test, if the batch size is maxed out, then we close out the draw batch and start another one
-            if (encodings.length + featureEncodings.length > MAX_FEATURE_BATCH_SIZE) {
-              // store the features index count and offset; update offset; store all feature encodings; reset
-              featureGuide.push(i, indices.length - indicesOffset, indicesOffset, encodings.length, ...encodings) // layerID, count, offset, encoding size, encodings
-              indicesOffset = indices.length
-              encodings = []
-              prevEncodings = []
-              encodingIndex = 0
-            }
-            // if we have nothing to encode, move on, otherwise, check if we already have that encoding stored
-            if (featureEncodings.length && JSON.stringify(featureEncodings) !== JSON.stringify(prevEncodings)) {
-              // store the encodings; set the new previous; update encodingIndex for future vertices
-              encodings.push(...featureEncodings)
-              prevEncodings = featureEncodings
-              encodingIndex += encodings.length
-            }
           }
-          // store the features index count and offset; update offset; store all feature encodings
-          featureGuide.push(i, indices.length - indicesOffset, indicesOffset, encodings.length, ...encodings) // layerID, count, offset, encoding size, encodings
-          indicesOffset = indices.length
         }
       }
-      // Upon processing the data, encode vertices, indices, and feature data.
-      const vertexBuffer = new Float32Array(vertices).buffer
-      const indexBuffer = new Uint32Array(indices).buffer
-      const featureIndexBuffer = new Uint8Array(featureIndices).buffer
-      const featureGuideBuffer = new Uint32Array(featureGuide).buffer
-      // Upon encoding, send back to GlobalWorkerPool.
-      postMessage({ mapID, type: 'vectordata', source: sourceName, tileID: tile.hash, vertexBuffer, indexBuffer, featureIndexBuffer, featureGuideBuffer }, [vertexBuffer, indexBuffer, featureIndexBuffer, featureGuideBuffer])
+      // now post process triangles
+      this._processVectorFeatures(mapID, sourceName, tile.hash, features)
+    } else if (type === 'raster') {
+      // TODO
     }
+  }
+
+  _processVectorFeatures (mapID: string, sourceName: string, tileID: string, features: Array<Feature>) {
+    // now that we have created all triangles, let's merge into bundled buffer sets
+    // for the main thread to build VAOs.
+    // Step 1: Sort by layerID, than sort by feature code.
+    features = features.sort((a, b) => {
+      // layerID
+      let diff = a.layerID - b.layerID
+      let index = 0
+      let maxSize = Math.min(a.code.length, b.code.length)
+      while (diff === 0 && index < maxSize) {
+        diff = a.code[index] - b.code[index]
+        index++
+      }
+      return diff
+    })
+
+    // step 2: Run through all features and bundle into the fewest VAOs and fewest featureBatches. Caveats:
+    // 1) don't store VAO set larger than index size (if webgl1 we can only store 16 bits, otherwise 32)
+    // 2) don't store any feature code larger than MAX_FEATURE_BATCH_SIZE
+    let vertices: Array<number> = []
+    let indices: Array<number> = []
+    let codeOffset: Array<number> = []
+    let featureGuide: Array<number> = []
+    let encodings: Array<number> = []
+    let indicesOffset: number = 0
+    let vertexOffset: number = 0
+    let encodingIndexes = { '': 0 }
+    let encodingIndex
+    let prevLayerID
+    for (const feature of features) {
+      // setup encodings data
+      const feKey = feature.code.toString()
+      encodingIndex = encodingIndexes[feKey]
+      if (!encodingIndex) {
+        encodingIndex = encodingIndexes[feKey] = encodings.length
+        encodings.push(...feature.code)
+      }
+      // TODO: If vertex size + current vertexLength > MAX_INDEX_BUFFER_SIZE we start a new VAO set
+
+      // on layer changes we have to setup a new featureGuide
+      if ((prevLayerID !== undefined && prevLayerID !== feature.layerID) || (encodings.length + feature.code.length > MAX_FEATURE_BATCH_SIZE)) {
+        featureGuide.push(prevLayerID, indices.length - indicesOffset, indicesOffset, encodings.length, ...encodings) // layerID, count, offset, encoding size, encodings
+        indicesOffset = indices.length
+        encodings = []
+      }
+      // each draw type has it's own alignment type, we must pad accordigly
+      let vertexalignment = vertices.length % feature.divisor
+      while (vertexalignment--) vertices.push(0)
+      // store
+      vertexOffset = vertices.length / feature.divisor
+      // NOTE: Spreader functions on large arrays are failing in chrome right now -_-
+      for (let f = 0, fl = feature.vertices.length; f < fl; f++) vertices.push(feature.vertices[f])
+      for (let f = 0, fl = feature.indices.length; f < fl; f++) indices.push(feature.indices[f] + vertexOffset)
+      for (let s = 0; s < feature.size; s++) codeOffset.push(encodingIndex)
+      // update previous layerID
+      prevLayerID = feature.layerID
+    }
+    // store the very last featureGuide batch
+    if (indices.length - indicesOffset) featureGuide.push(prevLayerID, indices.length - indicesOffset, indicesOffset, encodings.length, ...encodings) // layerID, count, offset, encoding size, encodings
+
+    // Upon building the batches, convert to buffers and ship.
+    const vertexBuffer = new Float32Array(vertices).buffer
+    const indexBuffer = new Uint32Array(indices).buffer
+    const codeOffsetBuffer = new Uint8Array(codeOffset).buffer
+    const featureGuideBuffer = new Uint32Array(featureGuide).buffer
+    // Upon encoding, send back to GlobalWorkerPool.
+    postMessage({ mapID, type: 'vectordata', source: sourceName, tileID, vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer }, [vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer])
   }
 }
 

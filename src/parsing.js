@@ -123,21 +123,43 @@ const input2 = [
 
 /*** LIINNESSS ***/
 
+// const colorZoom = [
+//   "input-range",
+//   "zoom",
+//   "lin",
+//   2,
+//   "rgb(33, 49, 62)",
+//   7,
+//   "rgb(239, 238, 105)"
+// ]
+
 const colorZoom = [
-  "input-range",
-  "zoom",
-  "lin",
-  2,
-  "rgb(33, 49, 62)",
-  7,
-  "rgb(239, 238, 105)"
+  "data-condition",
+  ["class", "has", ["golf", "grass", "garden", "meadow", "wood", "swamp", "forest", "wetland", "zoo"]],
+  "rgb(201, 238, 201)",
+  ["class", "has", ["park", "national_park", "protected_area"]],
+  [
+    "input-range",
+    "zoom",
+    "lin",
+    3,
+    "rgb(205, 236, 205)",
+    4,
+    "rgb(197, 232, 197)"
+  ],
+  ["class", "==", "cemetery"],
+  "rgb(208, 236, 208)",
+  ["class", "==", "indianReservation"],
+  "rgb(240, 237, 235)",
+  "default",
+  "rgba(0, 0, 0, 0)"
 ]
 
 const inputZoom = [
   "input-range",
   "zoom",
   "lin",
-  2, // zoom
+  0.9, // zoom
   0, // VALUE
   5, // zoom
   5, // VALUE
@@ -145,34 +167,45 @@ const inputZoom = [
   7  // VALUE
 ]
 
+const inputCondition = [
+  "input-condition",
+  ["zoom", "==", "5"],
+  "rgba(5, 100, 125, .5)",
+  ["lat", ">", "90"],
+  "rgba(200, 160, 100, .8)",
+  "default",
+  "rgba(20, 200, 200, 1)"
+]
+
 const input = 5
 
-const colorInputClone = JSON.parse(JSON.stringify(colorZoom))
-const colorInputCloneEncode = JSON.parse(JSON.stringify(colorZoom))
+// const colorInputClone = JSON.parse(JSON.stringify(colorZoom))
+// const colorInputCloneEncode = JSON.parse(JSON.stringify(colorZoom))
 const inputClone = JSON.parse(JSON.stringify(inputZoom))
 const inputCloneEncode = JSON.parse(JSON.stringify(inputZoom))
 
 const layerCode = []
 
-const colorencodeFeatureFunc = encodeFeatureFunction(colorInputClone)
-layerCode.push(...encodeLayerFunction(colorInputCloneEncode))
+// const colorencodeFeatureFunc = encodeFeatureFunction(colorInputClone)
+// layerCode.push(...encodeLayerFunction(colorInputCloneEncode))
 
 const encodeFeatureFunc = encodeFeatureFunction(inputClone)
 layerCode.push(...encodeLayerFunction(inputCloneEncode))
-console.log('layerCode', layerCode)
+console.log('layerCode', layerCode.length, layerCode)
 
 const featureCode = []
 
-colorencodeFeatureFunc({ class: 'street' }, featureCode)
-encodeFeatureFunc({ class: 'street' }, featureCode)
+// colorencodeFeatureFunc({ class: 'park' }, featureCode)
+encodeFeatureFunc({ class: 'grass' }, featureCode)
 console.log('featureCode', featureCode)
+// featureCode[0] = 3
 
-const color = decodeFeature(layerCode, featureCode, [4, 0, 0], true, 0, 0)
-console.log(color)
+// const color = decodeFeature(layerCode, featureCode, [0.5, 0, 0], true, 0, 0)
+// console.log(color)
 
 console.log('***********************')
 // find position
-const width = decodeFeature(layerCode, featureCode, [10, 0, 0], false, color[1], color[2])
+const width = decodeFeature(layerCode, featureCode, [0.5, 0, 0], false, 0, 0)
 console.log(width)
 
 

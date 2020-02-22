@@ -6,7 +6,8 @@
   "minzoom": 0,
   "maxzoom": 20,
   "sources": {
-    "fills": "http://localhost:8000/data/fills"
+    "fills": "http://localhost:8000/data/fills",
+    "utah": "http://localhost:8000/json/utah.s2json"
   },
   "shade": true,
   "wallpaper": {
@@ -21,7 +22,7 @@
       "zoom",
       "expo",
       1.7,
-      2.75,
+      2,
       "rgb(244, 239, 226)",
       3,
       "rgb(245, 245, 245)",
@@ -30,21 +31,18 @@
       8.5,
       "rgb(236, 234, 231)",
       11,
-      "rgb(248, 249, 250)"
+      "rgb(236, 234, 231)",
+      12,
+      "rgb(242,241,240)"
     ]
   },
   "layers": [
     {
-      "id": "landuse",
+      "id": "parks",
       "source": "fills",
       "layer": "landuse",
       "type": "fill",
-      "filter": ["all", ["class", "has", ["park", "national_park", "protected_area",
-        "aboriginal_lands", "grass", "grassland", "garden", "meadow",
-        "wood", "swamp", "forest", "wetland", "zoo", "cemetery", "indianReservation",
-        "sand", "beach", "desert", "aeroway", "military", "hospital",
-        "university", "college", "school", "kindergarten", "parking", "glacier",
-        "quarry", "industrial", "retail"]]],
+      "filter": ["all", ["class", "has", ["park", "national_park", "protected_area", "aboriginal_lands", "golf", "grass", "grassland", "garden", "meadow", "wood", "swamp", "forest", "wetland", "zoo", "cemetery", "indianReservation", "sand", "beach", "desert", "aeroway", "military", "hospital", "university", "college", "school", "kindergarten", "parking", "glacier", "quarry", "industrial", "retail"]]],
       "minzoom": 0,
       "layout": {},
       "paint": {
@@ -76,40 +74,18 @@
             4,
             "rgb(197, 232, 197)"
           ],
-          ["class", "has", ["grass", "grassland", "garden", "meadow", "wood", "swamp", "forest", "zoo"]],
+          ["class", "has", ["golf", "grass", "grassland", "garden", "meadow", "wood", "swamp", "forest", "zoo"]],
           "rgb(201, 238, 201)",
           ["class", "==", "cemetery"],
           "rgb(208, 236, 208)",
+          ["class", "==", "industrial"],
+          "rgb(232, 232, 232)",
           ["class", "==", "glacier"],
           "rgb(249, 249, 249)",
           ["class", "==", "aboriginal_lands"],
           "rgb(240, 237, 235)",
           ["class", "==", "wetland"],
           "rgb(210, 233, 255)",
-          "default",
-          "rgba(0, 0, 0, 0)"
-        ]
-      }
-    },
-    {
-      "id": "landuse",
-      "source": "fills",
-      "layer": "landuse",
-      "type": "fill",
-      "filter": ["class", "==", "golf"],
-      "minzoom": 0,
-      "layout": {},
-      "paint": {
-        "color": [
-          "data-condition",
-          ["type", "has", ["course", "rough"]],
-          "rgb(201, 238, 201)",
-          ["type", "==", "fairway"],
-          "rgb(218, 245, 205)",
-          ["type", "==", "green"],
-          "rgb(233, 251, 217)",
-          ["type", "==", "bunker"],
-          "rgb(255, 239, 195)",
           "default",
           "rgba(0, 0, 0, 0)"
         ]
@@ -140,46 +116,6 @@
       }
     },
     {
-      "id": "boundaries",
-      "source": "fills",
-      "layer": "boundary",
-      "filter": ["all", ["class", "==", "State"], ["maritime", "==", false]],
-      "type": "line",
-      "minzoom": 0,
-      "layout": {
-        "cap": "butt",
-        "join": "bevel"
-      },
-      "paint": {
-        "color": "rgba(160, 160, 160, 0.7)",
-        "width": 0.85
-      }
-    },
-    {
-      "id": "boundaries",
-      "source": "fills",
-      "layer": "boundary",
-      "filter": ["all", ["class", "==", "Country"], ["maritime", "==", false]],
-      "type": "line",
-      "minzoom": 0,
-      "layout": {
-        "cap": "butt",
-        "join": "bevel"
-      },
-      "paint": {
-        "color": "rgb(145, 145, 145)",
-        "width": [
-          "input-range",
-          "zoom",
-          "lin",
-          1,
-          0.5,
-          2,
-          0.85
-        ]
-      }
-    },
-    {
       "id": "equator",
       "source": "fills",
       "layer": "equator",
@@ -204,13 +140,19 @@
       }
     },
     {
-      "id": "buildings",
-      "source": "fills",
-      "layer": "building",
-      "type": "fill",
-      "layout": {},
+      "id": "state",
+      "source": "utah",
+      "layer": "default",
+      "type": "line",
+      "minzoom": 0,
+      "maxzoom": 10,
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
       "paint": {
-        "color": "rgb(229, 231, 237)"
+        "color": "rgb(216, 85, 77)",
+        "width": 0.85
       }
     }
   ]

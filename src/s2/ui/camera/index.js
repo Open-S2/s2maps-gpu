@@ -8,7 +8,7 @@ import type { MapOptions } from '../map'
 import { OrthographicProjection, BlendProjection } from './projections'
 import type { Projection } from './projections'
 /** SOURCES **/
-import { Wallpaper, Tile, TileCache } from '../../source'
+import { Tile, TileCache } from '../../source'
 
 export type ProjectionType = 'perspective' | 'persp' | 'ortho' | 'orthographic' | 'blend' | 'orthographicPerspective'
 
@@ -49,11 +49,6 @@ export default class Camera {
     this.projection.resize(width, height)
   }
 
-  _setupInitialScene () {
-    // create the wallpaper
-    this.wallpaper = new Wallpaper(this.style, this.projection)
-  }
-
   // TODO: On zooming start (this.lastTileViewState is empty) we set to tilesInView
   // during the zooming process, all newTiles need to be injected with whatever tiles
   // fit within it's view of lastTileViewState. Everytime we get zooming === false,
@@ -72,7 +67,7 @@ export default class Camera {
       //   }, 150)
       // }
       // grab zoom change
-      // const zoomChange = self.projection.zoomChange()
+      const zoomChange = self.projection.zoomChange()
       // no matter what we need to update what's in view
       const newTiles = []
       // update tiles in view
@@ -83,8 +78,8 @@ export default class Camera {
         if (!self.tileCache.has(hash)) {
           // tile not found, so we create it
           const newTile = new Tile(self.painter.context, face, zoom, x, y, hash)
-          // inject parent/children should they exist
-          // if (zoomChange) newTile.injectParentChildTiles(self.lastTileViewState)
+          // inject parent should one exist
+          if (zoomChange) newTile.injectParentTile(this.tileCache)
           // store the tile
           self.tileCache.set(hash, newTile)
           newTiles.push(newTile)
@@ -114,14 +109,14 @@ export default class Camera {
   }
 
   injectVectorSourceData (source: string, tileID: number, vertexBuffer: ArrayBuffer,
-    indexBuffer: ArrayBuffer, featureIndexBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer) {
+    indexBuffer: ArrayBuffer, codeOffsetBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer) {
     if (this.tileCache.has(tileID)) {
       const tile = this.tileCache.get(tileID)
-      tile.injectVectorSourceData(source, new Float32Array(vertexBuffer), new Uint32Array(indexBuffer), new Uint8Array(featureIndexBuffer), new Uint32Array(featureGuideBuffer), this.style.layers)
-      // call a re-render only if the tile is in our current viewing
-      if (this.tilesInView.map(tArr => tArr[4]).includes(tileID)) this._render()
+      tile.injectVectorSourceData(source, new Float32Array(vertexBuffer), new Uint32Array(indexBuffer), new Uint8Array(codeOffsetBuffer), new Uint32Array(featureGuideBuffer), this.style.layers)
       // new paint, so painter is dirty
       this.painter.dirty = true
+      // call a re-render only if the tile is in our current viewing
+      if (this.tilesInView.map(tArr => tArr[4]).includes(tileID)) this._render()
     }
   }
 
@@ -131,7 +126,7 @@ export default class Camera {
     // prep tiles
     const tiles = this._getTiles(isZooming)
     // paint scene
-    this.painter.paint(this.wallpaper, this.projection, this.style, tiles)
+    this.painter.paint(this.projection, this.style, tiles)
     // at the end of a scene render, we know Projection and Style are up to date
     this.painter.dirty = false
     this.style.dirty = false

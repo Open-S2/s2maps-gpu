@@ -186,6 +186,11 @@ function parseDataRange (input) {
   }
 }
 
+
+/**
+Prep functions that take properties and encoding array and stores the proper code
+according to the properties input.
+**/
 function parseDataCondition (input) {
   const conditions = []
   let encodeResultID = 1
@@ -193,7 +198,6 @@ function parseDataCondition (input) {
     if (Array.isArray(input[0])) {
       const filter = input.shift()
       conditions.push({
-        key: filter[0],
         encodeID: encodeResultID,
         condition: parseFilter(filter),
         result: encodeFeatureFunction(input.shift())
@@ -220,6 +224,31 @@ function parseDataCondition (input) {
   }
 }
 
+/**
+Prep functions that take properties and encoding array and stores the proper code
+according to the properties input.
+Because it's entirely reliant upon the current input state,
+we just run the encodeFeatureFunction on every one just incase sub data is reliant.
+**/
+function parseInputCondition (input) {
+  const conditions = []
+  while (input.length) {
+    if (Array.isArray(input[0])) {
+      input.shift() // move past the filter function. Not valid here.
+      conditions.push(encodeFeatureFunction(input.shift()))
+    }
+  }
+  return (properties, encoding) => {
+    // Basically, since we don't know which zoom we will encounter,
+    // we have to pre-run every case, and the decoder will also have to pre-run each one:
+    if (properties) {
+      for (const condition of conditions) { // run through the conditions
+        condition(properties, encoding)
+      }
+    }
+  }
+}
+
 function encodeDataCondition (input) {
   const encoding = []
   let i = 1
@@ -242,8 +271,10 @@ function encodeRange (input) {
   const encoding = []
 
   while (input.length) {
-    const condition = ~~input.shift() // convert true and false to 0 and 1 respectively
+    const condition = input.shift() // convert true and false to 0 and 1 respectively
     const value = input.shift()
+    console.log('condition', condition)
+    console.log('value', value)
     encoding.push(condition, ...encodeLayerFunction(value))
   }
 
@@ -256,7 +287,7 @@ let trigger = 0
 function decodeFeature (conditionEncodings, featureEncoding, inputs, color, index, featureIndex) {
   let res = new Float32Array([-1, -1, -1, -1])
   // prep variables
-  const startingOffset = index
+  let startingOffset = index
   const featureSize = conditionEncodings[index] >> 10
   const conditionStack = new Float32Array(6)
   const tStack = new Float32Array(6)
@@ -265,19 +296,29 @@ function decodeFeature (conditionEncodings, featureEncoding, inputs, color, inde
   conditionStack[stackIndex] = index
   stackIndex++
 
+  console.log('startingOffset', startingOffset)
+  console.log('featureSize', featureSize)
+  console.log('conditionStack', conditionStack)
+  console.log('tStack', tStack)
+
   do {
     stackIndex--
-    // pull out current stackIndex condition an decode
-    index = conditionStack[stackIndex]
+    // pull out current stackIndex condition and decode
+    startingOffset = index = conditionStack[stackIndex]
     const conditionSet = conditionEncodings[index]
     const length = conditionSet >> 10
     const condition = (conditionSet & 1008) >> 4
+    console.log('conditionSet', conditionSet)
+    console.log('length', length)
+    console.log('condition', condition)
     index++
     // for each following condition, pull out the eventual color and set to val
     if (condition === 1) {
       if (res[0] === -1) {
+        console.log('HERERE', index, conditionEncodings)
         for (let i = 0; i < length - 1; i++) res[i] = conditionEncodings[index + i]
       } else {
+        console.log('HERERE2', index, conditionEncodings)
         const t = tStack[stackIndex]
         const val = [conditionEncodings[index], conditionEncodings[index + 1], conditionEncodings[index + 2], conditionEncodings[index + 3]]
         if (color) res = interpolateColor(res, val, t)
@@ -288,18 +329,24 @@ function decodeFeature (conditionEncodings, featureEncoding, inputs, color, inde
       let input, conditionInput
       if (condition === 2) {
         input = featureEncoding[featureIndex]
+        console.log('condition input', input)
         featureIndex++
       } else { input = inputs[(conditionSet & 14) >> 1] }
       // now that we have the input, we iterate through and find a match
       conditionInput = conditionEncodings[index]
+      console.log('conditionInput START', conditionInput)
       while (input !== conditionInput) {
+        console.log('INCREMENT')
         // increment index & find length
         index += (conditionEncodings[index + 1] >> 10) + 1
         conditionInput = conditionEncodings[index]
+        if (conditionInput == 0) break
       }
+      console.log('conditionInput END', conditionInput)
       index++ // increment to conditionEncoding
       // now add subCondition to be parsed
       conditionStack[stackIndex] = index
+      console.log('conditionStack[stackIndex]', conditionStack[stackIndex])
       tStack[stackIndex] = 1
       stackIndex++ // increment size of stackIndex
     } else if (condition === 4 || condition === 5) { // data-range & input-range
@@ -318,9 +365,12 @@ function decodeFeature (conditionEncodings, featureEncoding, inputs, color, inde
         input = featureEncoding[featureIndex]
         featureIndex++
       } else { input = inputs[inputType] }
+      console.log('range input', input)
       // create a start point
       start = end = conditionEncodings[index]
+      console.log('start', start)
       startIndex = endIndex = index + 1
+      console.log('startIndex', startIndex)
       while (end < input && endIndex < length + startingOffset) {
         // if current sub condition is an input-range, we must check if if the "start"
         // subCondition was a data-condition or data-range, and if so,
@@ -334,8 +384,18 @@ function decodeFeature (conditionEncodings, featureEncoding, inputs, color, inde
         // set new start and end
         start = end
         startIndex = endIndex
-        end = conditionEncodings[index]
         endIndex = index + 1
+        if (endIndex < length + startingOffset) {
+          end = conditionEncodings[index]
+        }
+        console.log('*')
+        console.log('start', start)
+        console.log('startIndex', startIndex)
+        console.log('end', end)
+        console.log('endIndex', endIndex)
+        console.log('startingOffset', startingOffset)
+        console.log('length + startingOffset', length + startingOffset)
+        console.log('*')
       }
       // if start and end are the same, we only need to process the first piece
       if (startIndex === endIndex) {

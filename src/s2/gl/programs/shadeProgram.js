@@ -1,32 +1,27 @@
 // @flow
 import Program from './program'
 
-import wallpaperVertex from '../../shaders/wallpaper.vertex.glsl'
-import wallpaperFragment from '../../shaders/wallpaper.fragment.glsl'
+import shadeVertex from '../../shaders/shade.vertex.glsl'
+import shadeFragment from '../../shaders/shade.fragment.glsl'
 
 import type { Context } from '../contexts'
 
-export default class WallpaperProgram extends Program {
+export default class ShadeProgram extends Program {
   vao: VertexArrayObject
   vertexBuffer: WebGLVertexArrayObject
   aPos: GLint // 'a_pos' vec4 attribute
-  uScale: WebGLUniformLocation // 'u_scale' vec2 uniform
-  backgroundColor: WebGLUniformLocation
-  haloColor: WebGLUniformLocation
-  fade1Color: WebGLUniformLocation
-  fade2Color: WebGLUniformLocation
+  offset: WebGLUniformLocation
+  radius: WebGLUniformLocation
+  update: boolean = true
   constructor (context: Context) {
     // get gl from context
     const { gl } = context
     // upgrade
-    super(gl, wallpaperVertex, wallpaperFragment, false)
+    super(gl, shadeVertex, shadeFragment, false)
     // acquire the attributes & uniforms
     this.aPos = gl.getAttribLocation(this.glProgram, 'aPos')
-    this.uScale = gl.getUniformLocation(this.glProgram, 'uScale')
-    this.backgroundColor = gl.getUniformLocation(this.glProgram, 'backgroundColor')
-    this.haloColor = gl.getUniformLocation(this.glProgram, 'haloColor')
-    this.fade1Color = gl.getUniformLocation(this.glProgram, 'fade1Color')
-    this.fade2Color = gl.getUniformLocation(this.glProgram, 'fade2Color')
+    this.offset = gl.getUniformLocation(this.glProgram, 'uOffset')
+    this.radius = gl.getUniformLocation(this.glProgram, 'uRadius')
     // create a vertex array object
     this.vao = context.createVertexArray()
     // bind the vao so we can work on it

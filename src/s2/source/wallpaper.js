@@ -38,6 +38,7 @@ export default class Wallpaper {
     }
 
     if (!dirty) return null
+    this.dirty = true
     return this.uniforms
   }
 
@@ -48,10 +49,10 @@ export default class Wallpaper {
   }
 
   _updateStyle () {
-    const { wallpaper } = this.style
-    for (let key in wallpaper) {
+    const { wallpaperStyle } = this.style
+    for (let key in wallpaperStyle) {
       if (this.uniforms[key]) {
-        this.uniforms[key] = wallpaper[key].getRGB()
+        this.uniforms[key] = wallpaperStyle[key].getRGB()
       }
     }
   }

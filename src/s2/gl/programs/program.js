@@ -1,4 +1,6 @@
 // @flow
+import loadShader from './loadShader'
+
 export type ProgramTypes = 'mask' | 'fill' | 'line' | 'fill3D' | 'line3D'
 
 export default class Program {
@@ -14,7 +16,7 @@ export default class Program {
   updateMatrix: Float32Array // pointer
   updateFaceST: Float32Array // pointer
   updateInputs: Float32Array // pointer
-  constructor (gl: WebGLRenderingContext, vertexShaderSource: string, fragmentShaderSource: string) {
+  constructor (gl: WebGLRenderingContext, vertexShaderSource: string, fragmentShaderSource: string, defaultUniforms?: boolean = true) {
     const program = this.glProgram = gl.createProgram()
     const vertexShader = loadShader(gl, vertexShaderSource, gl.VERTEX_SHADER)
     const fragmentShader = loadShader(gl, fragmentShaderSource, gl.FRAGMENT_SHADER)
@@ -34,25 +36,27 @@ export default class Program {
       this.gl = gl
     } else { throw Error('missing shaders') }
     // now build uniforms
-    this.matrix = gl.getUniformLocation(program, 'uMatrix')
-    this.faceST = gl.getUniformLocation(program, 'uFaceST')
-    this.inputs = gl.getUniformLocation(program, 'uInputs')
-    this.layerCode = gl.getUniformLocation(program, 'uLayerCode')
-    this.featureCode = gl.getUniformLocation(program, 'uFeatureCode')
+    if (defaultUniforms) {
+      this.matrix = gl.getUniformLocation(program, 'uMatrix')
+      this.faceST = gl.getUniformLocation(program, 'uFaceST')
+      this.inputs = gl.getUniformLocation(program, 'uInputs')
+      this.layerCode = gl.getUniformLocation(program, 'uLayerCode')
+      this.featureCode = gl.getUniformLocation(program, 'uFeatureCode')
+    }
   }
 
   use () {
     this.gl.useProgram(this.glProgram)
-    this._flush()
+    this.flush()
   }
 
   injectFrameUniforms (matrix: Float32Array, view: Float32Array, faceST: Float32Array) {
-    this.updateMatrix = matrix
-    this.updateInputs = view
-    this.updateFaceST = faceST
+    if (matrix) this.updateMatrix = matrix
+    if (view) this.updateInputs = view
+    if (faceST) this.updateFaceST = faceST
   }
 
-  _flush () {
+  flush () {
     if (this.updateMatrix) this.setMatrix(this.updateMatrix)
     if (this.updateInputs) this.setInputs(this.updateInputs)
     if (this.updateFaceST) this.setFaceST(this.updateFaceST)
@@ -77,24 +81,4 @@ export default class Program {
   setLayerCode (layerCode: Float32Array) {
     this.gl.uniform1fv(this.layerCode, layerCode, 0, layerCode.length)
   }
-}
-
-function loadShader (gl: WebGLRenderingContext, shaderSource: string, shaderType: number) {
-  // Create the shader object
-  const shader = gl.createShader(shaderType)
-  // Load the shader source
-  gl.shaderSource(shader, shaderSource)
-  // Compile the shader
-  gl.compileShader(shader)
-  // Check the compile status
-  const compiled = gl.getShaderParameter(shader, gl.COMPILE_STATUS)
-  if (!compiled) {
-    // Something went wrong during compilation get the error
-    const lastError = gl.getShaderInfoLog(shader)
-    console.log("*** Error compiling shader '" + shader + "':" + lastError)
-    gl.deleteShader(shader)
-    return null
-  }
-
-  return shader
 }

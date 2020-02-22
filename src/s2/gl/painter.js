@@ -7,17 +7,20 @@ import {
   Program,
   FillProgram,
   LineProgram,
+  ShadeProgram,
   TextProgram,
   WallpaperProgram
 } from './programs'
 /** DRAWING **/
 import {
   drawFill,
+  drawLine,
   drawMask,
+  // drawShade,
   drawWallpaper
 } from './draw'
 /** SOURCES **/
-import { Wallpaper, Tile } from '../source'
+import { Tile } from '../source'
 
 import type { MapOptions } from '../ui/map'
 import type { Projection } from '../ui/camera/projections'
@@ -44,7 +47,7 @@ export default class Painter {
     // const contextTypes = ['webgl2', 'webgl', 'experimental-webgl']
 
     // first webgl2
-    let context = this._canvas.getContext('webgl2', { alpha: true, stencil: true })
+    let context = this._canvas.getContext('webgl2', { antialias: true, premultipliedAlpha: false, alpha: true, stencil: true })
     if (context && typeof context.getParameter === 'function') {
       this.indexSize = context.UNSIGNED_INT
       this.webglState = 2
@@ -65,11 +68,10 @@ export default class Painter {
     programs.forEach(program => { self.getProgram(program) })
   }
 
-  injectFrameUniforms (matrix: Float32Array, eyePosHigh: Float32Array,
-    eyePosLow: Float32Array, view: Float32Array) {
+  injectFrameUniforms (matrix: Float32Array, view: Float32Array, faceST: Float32Array) {
     const { programs } = this
     for (const programName in programs) {
-      programs[programName].injectFrameUniforms(matrix, eyePosHigh, eyePosLow, view)
+      programs[programName].injectFrameUniforms(matrix, view, faceST)
     }
   }
 
@@ -83,6 +85,9 @@ export default class Painter {
         break
       case 'line':
         programs[programName] = new LineProgram(this.context)
+        break
+      case 'shade':
+        programs[programName] = new ShadeProgram(this.context)
         break
       case 'text':
         programs[programName] = new TextProgram(this.context)
@@ -103,12 +108,12 @@ export default class Painter {
     return program
   }
 
-  paint (wallpaper: Wallpaper, projection: Projection, style: Style, tiles: Array<Tile>) {
+  paint (projection: Projection, style: Style, tiles: Array<Tile>) {
     const { context } = this
     // prep painting
     context.newScene()
     // first draw the wallpaper
-    drawWallpaper(this, wallpaper)
+    if (style.wallpaper) drawWallpaper(this, style.wallpaper)
     // prep stencil
     context.enableStencilTest()
     // for each tile, draw background & features as necessary
@@ -120,13 +125,14 @@ export default class Painter {
       // inject values to programs
       this.injectFrameUniforms(matrix, view, faceST)
       // now draw the tile according to the features it contains
-      // if (this.dirty) this.paintLayers(tile, style, style.layers)
       this.paintLayers(tile, style, style.layers)
       // no matter what, clear the stencil to ensure it's ready for the next tile
       context.clearStencil()
     }
     // disable stencil
     context.disableStencilTest()
+    // draw shade layer
+    // if (style.shade) drawShade(this, style.shade)
     // cleanup
     context.cleanup()
   }
@@ -136,12 +142,14 @@ export default class Painter {
     const { context } = this
     const { gl } = context
     // grab the featureGuide and vao from current tile
-    const { sourceData, featureGuide } = tile
+    const { faceST, sourceData, featureGuide } = tile
     const { mask } = sourceData
     // setup variables
     let curSource: string = 'mask'
     let curProgram: ProgramTypes = 'fill'
-    let program = this.useProgram('fill')
+    let program: Program = this.useProgram('fill')
+    let parentSet: boolean = false
+    let flush: boolean = false
     let curLayer: number = -1
     // use mask vao and fill program
     context.bindVertexArray(mask.vao)
@@ -153,27 +161,42 @@ export default class Painter {
     if (sphereBackground) drawFill(this, mask.indexArray.length, 0, null, gl.TRIANGLE_STRIP)
     // now we start drawing feature batches
     for (const featureBatch of featureGuide) {
-      const { source, layerID, count, offset, type, featureCode } = featureBatch
+      const { parent, source, layerID, count, offset, type, featureCode } = featureBatch
+      // if a parent tile, be sure to bind the parent tiles vao
+      // rebind back to current vao and matrix when the parent is not being used
+      if (parent && (!parentSet || source !== curSource)) {
+        parentSet = true
+        context.bindVertexArray(featureBatch.tile.sourceData[source].vao)
+        this.injectFrameUniforms(null, null, featureBatch.tile.faceST)
+        curSource = source
+        flush = true
+      } else if (!parent && (parentSet || source !== curSource)) {
+        parentSet = false
+        context.bindVertexArray(sourceData[source].vao)
+        this.injectFrameUniforms(null, null, faceST)
+        curSource = source
+        flush = true
+      }
       // if type is not the same as the curProgram, we have to update curProgram and set uniforms
       if (type !== curProgram) {
         program = this.useProgram(type)
         curProgram = type
       }
+      if (flush) {
+        flush = false
+        program.flush()
+      }
+      program.flush()
       // if new layerID, update layerCode
       if (layerID !== curLayer) {
         program.setLayerCode(layers[layerID].code)
         curLayer = layerID
       }
-      // if source is not the same, update vao
-      if (source !== curSource) {
-        context.bindVertexArray(sourceData[source].vao)
-        curSource = source
-      }
       // now draw according to type
       if (type === 'fill') {
         drawFill(this, count, offset, featureCode)
       } else if (type === 'line') {
-        // drawLine(this, count, offset, featureCode)
+        drawLine(this, count, offset, featureCode)
       } else if (type === 'text') {
 
       } else if (type === 'billboard') {

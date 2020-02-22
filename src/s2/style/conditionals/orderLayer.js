@@ -8,7 +8,6 @@ export default function orderLayer (layer: Layer) {
 }
 
 // line order: (layout)cap->join->(paint)color->width->dasharray->gapwidth->blur
-// TODO: set layer.maxWidth appropriately
 function orderLine (layer: Layer) {
   const { paint } = layer
   const newLinePaint = {
@@ -17,12 +16,6 @@ function orderLine (layer: Layer) {
     dasharray: paint.dasharray,
     gapwidth: paint.gapwidth,
     blur: paint.blur
-  }
-  // find maxWidth
-  if (Array.isArray(paint.width)) {
-    layer.maxWidth = 1
-  } else {
-    layer.maxWidth = paint.width
   }
   layer.paint = newLinePaint
 }

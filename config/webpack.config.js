@@ -149,8 +149,8 @@ module.exports = function(webpackEnv) {
       // changing JS code would still trigger a refresh.
     ].filter(Boolean),
     output: {
-      // // https://github.com/webpack-contrib/worker-loader/issues/166
-      // globalObject: 'this',
+      // https://github.com/webpack-contrib/worker-loader/issues/166 & https://github.com/GoogleChromeLabs/worker-plugin/issues/20
+      globalObject: 'self',
       // The build folder.
       path: isEnvProduction ? paths.appBuild : undefined,
       // Add /* filename */ comments to generated require()s in the output.
@@ -166,6 +166,8 @@ module.exports = function(webpackEnv) {
       chunkFilename: isEnvProduction
         ? 'static/js/[name].[contenthash:8].chunk.js'
         : isEnvDevelopment && 'static/js/[name].chunk.js',
+      // add support for wasm
+      webassemblyModuleFilename: '[hash].wasm',
       // We inferred the "public path" (such as / or /my-project) from homepage.
       // We use "/" in development.
       publicPath: publicPath,
@@ -300,6 +302,12 @@ module.exports = function(webpackEnv) {
       rules: [
         // Disable require.ensure as it's not a standard language feature.
         { parser: { requireEnsure: false } },
+
+        // WebAssembly config
+        // {
+  			// 	test: /\.wasm$/,
+  			// 	type: "webassembly/async"
+  			// },
 
         // First, run the linter.
         // It's important to do this before Babel processes the JS.
@@ -495,6 +503,10 @@ module.exports = function(webpackEnv) {
         },
       ],
     },
+    // experiments: {
+  	// 	asyncWebAssembly: true,
+  	// 	importAwait: true
+  	// },
     plugins: [
       new WorkerPlugin(),
       // Generates an `index.html` file with the <script> injected.

@@ -1,3 +1,5 @@
 export { default as drawFill } from './drawFill'
+export { default as drawLine } from './drawLine'
 export { default as drawMask } from './drawMask'
+export { default as drawShade } from './drawShade'
 export { default as drawWallpaper } from './drawWallpaper'

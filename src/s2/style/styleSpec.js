@@ -2,7 +2,7 @@
 /** SOURCES **/
 type SourceType = {
   path: string,
-  type: 'vector' | 'raster' | 'font' | 'billboard',
+  type: 'vector' | 'json' | 'raster' | 'font' | 'billboard',
   fileType: 'json' | 's2json' | 'pbf' | 's2tile' | 'png' | 'jpeg' | 'ttf' | 'woff',
   sourceName?: string // if you want to make requests without getting metadata, you need this
 }

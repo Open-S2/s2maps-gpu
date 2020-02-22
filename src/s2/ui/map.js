@@ -44,8 +44,6 @@ export default class Map extends Camera {
     this.style = new Style(options, this)
     // inject minzoom and maxzoom
     this.projection.setZoomRange(this.style.minzoom, this.style.maxzoom)
-    // now that we have a painter and style object, let's create the initial scene
-    this._setupInitialScene()
     // render our first pass
     this._render()
   }

@@ -34,7 +34,7 @@ vec4 interpolateColor (vec4 color1, vec4 color2, float t) {
   return vec4(hue, sat, lbv, alpha);
 }
 
-vec4 decodeFeature (bool color, int index, inout int featureIndex) {
+vec4 decodeFeature (bool color, inout int index, inout int featureIndex) {
   // prep result and variables
   int startingOffset = index;
   int featureSize = int(uLayerCode[index]) >> 10;
@@ -48,7 +48,7 @@ vec4 decodeFeature (bool color, int index, inout int featureIndex) {
   do {
     stackIndex--;
     // pull out current stackIndex condition an decode
-    index = conditionStack[stackIndex];
+    startingOffset = index = conditionStack[stackIndex];
     conditionSet = int(uLayerCode[index]);
     len = conditionSet >> 10;
     condition = (conditionSet & 1008) >> 4;
@@ -79,6 +79,8 @@ vec4 decodeFeature (bool color, int index, inout int featureIndex) {
         // increment index & find length
         index += (int(uLayerCode[index + 1]) >> 10) + 1;
         conditionInput = uLayerCode[index];
+        // if we hit the default, than the value does not exist
+        if (conditionInput == 0.) break;
       }
       index++; // increment to conditionEncoding
       // now add subCondition to be parsed
@@ -118,8 +120,8 @@ vec4 decodeFeature (bool color, int index, inout int featureIndex) {
         // set new start and end
         start = end;
         startIndex = endIndex;
-        end = uLayerCode[index];
         endIndex = index + 1;
+        if (endIndex < len + startingOffset) end = uLayerCode[index];
       }
       // if start and end are the same, we only need to process the first piece
       if (startIndex == endIndex) {

@@ -1,7 +1,7 @@
 // @flow
 import Color from './color'
 import Map from '../ui/map'
-import { Tile } from '../source'
+import { Shade, Wallpaper, Tile } from '../source'
 import requestData from '../util/xmlHttpRequest'
 import { encodeLayerAttribute, orderLayer } from './conditionals'
 
@@ -13,15 +13,17 @@ export default class Style {
   webworker: boolean = false
   zoom: number = 0
   minzoom: number = 0
-  maxzoom: number = 20
+  maxzoom: number = 15
   lon: number = 0
   lat: number = 0
   sources: SourceTypes = {}
   fonts: SourceTypes = {}
   billboards: SourceTypes = {}
   layers: Array<Layer> = []
-  wallpaper: WallpaperStyle
+  wallpaper: undefined | Wallpaper
+  wallpaperStyle: undefined | WallpaperStyle
   sphereBackground: void | Float32Array // Attribute Code - limited to input-range or input-condition
+  shade: undefined | Shade
   dirty: boolean = true
   constructor (options: MapOptions, map: Map) {
     const { style } = options
@@ -37,6 +39,8 @@ export default class Style {
         if (res) { self._buildStyle(res) }
       })
     } else if (typeof style === 'object') {
+      // check style & fill default params
+      this._prebuildStyle(style)
       // Before manipulating the style, send it off to the worker pool manager
       this._sendStyleDataToWorkers(style)
       // extract starting values
@@ -44,19 +48,33 @@ export default class Style {
         self.lon = style.center[0]
         self.lat = style.center[1]
       }
-      if (style.zoom) self.zoom = style.zoom
-      if (style.minzoom) self.minzoom = style.minzoom
-      if (style.maxzoom) self.maxzoom = style.maxzoom
+      if (!isNaN(style.zoom)) self.zoom = style.zoom
+      if (!isNaN(style.minzoom) && style.minzoom >= 0) self.minzoom = style.minzoom
+      if (!isNaN(style.maxzoom)) {
+        if (style.maxzoom <= self.minzoom) self.maxzoom = self.minzoom + 1
+        else if (style.maxzoom <= 15) self.maxzoom = style.maxzoom
+      }
       // extract sources
       if (style.sources) self.sources = style.sources
       if (style.fonts) self.fonts = style.fonts
       if (style.billboards) self.billboards = style.billboards
       // build wallpaper and sphere background if applicable
-      self._buildWallpaper(style.wallpaper || {})
+      if (style.wallpaper) self._buildWallpaper(style.wallpaper)
       self._buildSphereBackground(style['sphere-background'])
+      // build shade if applicable
+      if (style.shade) self._buildShade()
       // build the layers
       if (style.layers) self.layers = style.layers
       self._buildLayers()
+    }
+  }
+
+  _prebuildStyle(style) {
+    // layers
+    for (const layer of style.layers) {
+      if (!layer.minzoom) layer.minzoom = 0
+      if (!layer.maxzoom) layer.maxzoom = 30
+      if (!layer.layer) layer.layer = 'default'
     }
   }
 
@@ -78,7 +96,10 @@ export default class Style {
   }
 
   _buildWallpaper (background: Object) {
-    this.wallpaper = {
+    // create the wallpaper
+    this.wallpaper = new Wallpaper(this, this.map.projection)
+    // prep style
+    this.wallpaperStyle = {
       backgroundColor: new Color(background['background-color']),
       fade1Color: new Color(background['fade-1']),
       fade2Color: new Color(background['fade-2']),
@@ -88,6 +109,11 @@ export default class Style {
 
   _buildSphereBackground (sphereBackground?: Object) {
     if (sphereBackground) this.sphereBackground = encodeLayerAttribute(sphereBackground['background-color'])
+  }
+
+  _buildShade () {
+    // create the wallpaper
+    this.shade = new Shade(this, this.map.projection)
   }
 
   // 1) ensure "bad" layers are removed (missing important keys or subkeys)
@@ -118,9 +144,9 @@ export default class Style {
     const tileRequests: Array<TileRequest> = []
     tiles.forEach(tile => {
       // grab request values
-      const { id, face, zoom, x, y, bbox, division, extent } = tile
+      const { id, face, zoom, x, y, division, size } = tile
       // build tileRequests
-      tileRequests.push({ hash: id, face, zoom, x, y, bbox, division, extent })
+      tileRequests.push({ hash: id, face, zoom, x, y, division, size })
     })
     // send the tiles over to the worker pool manager to split the workload
     if (this.webworker) {

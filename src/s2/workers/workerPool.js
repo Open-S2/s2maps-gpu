@@ -23,8 +23,8 @@ class WorkerPool {
     const { type } = data
     if (type === 'vectordata') {
       // a worker has processed tiles, so we are going to send it back to the appropriate mapID
-      const { source, mapID, tileID, vertexBuffer, indexBuffer, featureIndexBuffer, featureGuideBuffer } = data
-      this.maps[mapID].injectVectorSourceData(source, tileID, vertexBuffer, indexBuffer, featureIndexBuffer, featureGuideBuffer)
+      const { source, mapID, tileID, vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer } = data
+      this.maps[mapID].injectVectorSourceData(source, tileID, vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer)
     }
   }
 
