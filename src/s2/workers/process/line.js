@@ -2,7 +2,6 @@
 import drawLine from 'line-gl'
 
 import type { Attributes } from 'line-gl'
-import type { TileRequest } from '../tile.worker'
 type Point = [number, number]
 
 const PRECISION = 4096

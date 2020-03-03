@@ -3,7 +3,7 @@ import { WebGL2Context, WebGLContext } from '../gl/contexts'
 import { S2Point, tileHash, bboxST } from 's2projection' // https://github.com/Regia-Corporation/s2projection
 
 import type { Face } from 's2projection' // https://github.com/Regia-Corporation/s2projection/blob/master/src/S2Projection.js#L4
-import type { Layer } from '../styleSpec'
+import type { Layer, Mask } from '../styleSpec'
 
 // The layer guide helps identify how to properly draw from the vertexBuffer/vertexIndex stack.
 // All layers are merged into one VAO/indexBuffer/vertexBuffer/codeOffsetBuffer set. This reduces complexity and improves draw speed.
@@ -17,24 +17,28 @@ export type FeatureGuide = {
   count: number,
   offset: number,
   type: string,
-  featureCode: Float32Array
+  featureCode: Float32Array,
+  layerCode: Float32Array
 }
 
 export type VectorTileSource = {
   type: 'vector',
   vertexArray: Float32Array,
+  radiiArray?: Float32Array,
   indexArray: Uint32Array,
   codeOffsetArray: Uint8Array,
   vertexBuffer?: WebGLBuffer,
+  radiiBuffer?: WebGLBuffer,
   indexBuffer?: WebGLBuffer,
   codeOffsetBuffer?: WebGLBuffer,
   vao?: WebGLVertexArrayObject,
-  drawMode?: GLenum // gl.TRIANGLE_FAN, gl.TRIANGLE_STRIP, etc.
+  mode?: GLenum // TRIANGLES | TRIANGLE_STRIP | TRIANGLE_FAN | etc
 }
 
 export type RasterTileSource = {
   type: 'raster',
-  texture: WebGLTexture
+  texture: WebGLTexture,
+  mode?: GLenum // TRIANGLES | TRIANGLE_STRIP | TRIANGLE_FAN | etc
 }
 
 // SourceData will either be the current tiles VectorTileSource, RasterTileSource,
@@ -46,7 +50,6 @@ export type SourceData = { [string | number]: RasterTileSource | VectorTileSourc
 // whenever rerenders are called, they will access these tile objects for the layer data / vaos
 // before managing sources asyncronously, a tile needs to synchronously place spherical background
 // data to ensure we get no awkward visuals.
-// TODO: Every tile needs access to the painters context for creating and deleting the WebGLBuffer and WebGLVertexArrayObject
 export default class Tile {
   id: number
   face: Face
@@ -59,7 +62,6 @@ export default class Tile {
   division: number
   sourceData: SourceData = {}
   featureGuide: Array<FeatureGuide> = []
-  children: Array<Tile>
   context: WebGL2Context | WebGLContext
   constructor (context: WebGL2Context | WebGLContext, face: number, zoom: number,
     x: number, y: number, hash: number, size?: number = 512, children?: Array<Tile>) {
@@ -85,6 +87,7 @@ export default class Tile {
         if (source.vertexBuffer) gl.deleteBuffer(source.vertexBuffer)
         if (source.codeOffsetBuffer) gl.deleteBuffer(source.codeOffsetBuffer)
         if (source.indexBuffer) gl.deleteBuffer(source.indexBuffer)
+        if (source.radiiBuffer) gl.deleteBuffer(source.radiiBuffer)
         if (source.vao) this.context.deleteVertexArray(source.vao)
       } else if (source.type === 'raster') {
         if (source.texture) gl.deleteTexture(source.texture)
@@ -103,8 +106,9 @@ export default class Tile {
       // inject references to featureGuide from each parentTile. Sometimes if we zoom really fast, we inject
       // a parents' parent or deeper, so we need to reflect that int the tile property
       for (const featureGuide of parent.featureGuide) {
-        const { tile, source, layerID, count, offset, type, featureCode } = featureGuide
-        this.featureGuide.push({ parent: true, tile: (tile) ? tile : parent, source, layerID, count, offset, type, featureCode })
+        const { tile, source, layerID, count, offset, type, layerCode, featureCode, texture } = featureGuide
+        if (type === 'raster' && featureGuide.parent) continue
+        this.featureGuide.push({ parent: true, tile: (tile) ? tile : parent, source, layerID, count, offset, type, layerCode, featureCode, texture })
       }
       this.featureGuide.sort((a, b) => a.layerID - b.layerID)
     }
@@ -112,11 +116,10 @@ export default class Tile {
 
   // if a style has a raster source & layer pointing to it, we request the tiles
   // four children (if size is 512 and images are 512, otherwise we may store
-  // 16 images of 256). Create a texture of size this.size x this.size to house
-  // said data.
+  // 16 images of 256). Create a texture of size length x length to house
+  // said data (length being this.size * 2).
   buildSourceTexture (source: string, layer: Layer) {
     const { gl } = this.context
-    const { mask } = this.sourceData
     // Build sourceData
     const raster = this.sourceData[source] = {
       type: 'raster'
@@ -124,23 +127,15 @@ export default class Tile {
     // Create a texture.
     const texture = raster.texture = gl.createTexture()
     // store information to featureGuide
-    this.featureGuide.push({
+    const guide = raster.guide = {
       parent: false,
-      layerID: 0,
+      layerID: layer.index,
       source: 'mask', // when pulling from the vao, we still use the mask vertices
-      count: mask.indexArray.length,
       type: 'raster',
       texture
-    })
-    // setup texture params
-    const length = this.size * 2
-    gl.bindTexture(gl.TEXTURE_2D, texture)
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, length, length, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+    }
+    this.featureGuide.push(guide)
+    this.buildSource(raster)
     // setup image requests
     const { face, zoom, x, y } = this
     const pieces = [
@@ -156,9 +151,11 @@ export default class Tile {
   _injectRasterData (source: string, image: Image, leftShift: number, bottomShift: number) {
     const { gl } = this.context
     const length = image.width
-    const { texture } = this.sourceData[source]
+    const currentSource = this.sourceData[source]
+    const { texture } = currentSource
     // put into texture
     gl.bindTexture(gl.TEXTURE_2D, texture)
+    // gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, leftShift * length, bottomShift * length, width, height, 0)
     gl.texSubImage2D(gl.TEXTURE_2D, 0, leftShift * length, bottomShift * length, gl.RGBA, gl.UNSIGNED_BYTE, image)
   }
 
@@ -178,6 +175,8 @@ export default class Tile {
       // grab the size, layerID, count, and offset, and update the index
       const [layerID, count, offset, encodingSize] = featureGuideArray.slice(i, i + 4)
       i += 4
+      // grab the layers type and code
+      const { type, code } = layers[layerID]
       // create and store the featureGuide
       this.featureGuide.push({
         parent: false,
@@ -185,8 +184,9 @@ export default class Tile {
         source,
         count,
         offset,
-        type: layers[layerID].type,
-        featureCode: new Float32Array([...featureGuideArray.slice(i, i + encodingSize)])
+        type,
+        featureCode: new Float32Array([...featureGuideArray.slice(i, i + encodingSize)]),
+        layerCode: code
       })
       i += encodingSize
     }
@@ -198,21 +198,7 @@ export default class Tile {
       return a.layerID - b.layerID
     })
     // build the VAO
-    this.buildVAO(builtSource)
-    // if children, store featureGuide in each child
-    if (this.children) this._injectSourceInChildren()
-  }
-
-  _injectSourceInChildren (sourceInject: string) {
-    // for all children, copy this tiles featureGuide over
-    for (const child of this.children) {
-      for (const featureGuide of this.featureGuide) {
-        const { source, layerID, count, offset, type, featureCode } = featureGuide
-        if (source === sourceInject) child.featureGuide.push({ parent: true, tile: this, source, layerID, count, offset, type, featureCode })
-      }
-    }
-    // flush the children out, as we don't need to keep anymore
-    this.children = null
+    this.buildSource(builtSource)
   }
 
   _createDivision () {
@@ -260,21 +246,33 @@ export default class Tile {
       type: 'vector',
       vertexArray: new Float32Array(vertices),
       indexArray: new Uint32Array(indices),
-      drawMode: this.context.gl.TRIANGLE_STRIP
+      mode: this.context.gl.TRIANGLE_STRIP
     }
-    this.buildVAO(mask)
+    this.buildSource(mask)
   }
 
-  // TODO: For future 3D terrain geometry, we would create a new mask
-  _injectNewMaskGeometry() {}
+  // For future 3D terrain geometry, we create a new mask
+  injectMaskGeometry (vertexArray: Float32Array, indexArray: Uint32Array,
+    radiiArray: Float32Array, styleMask: Mask) {
+    const mask = this.sourceData.mask = {
+      type: 'vector',
+      vertexArray,
+      indexArray,
+      radiiArray,
+      threeD: true,
+      mode: this.context.gl.TRIANGLES
+    }
+    this.buildSource(mask)
+  }
 
-  buildVAO (source: VectorTileSource) {
+  buildSource (source: RasterTileSource | VectorTileSource) {
     const { context } = this
     const { gl } = context
     // type vector
     if (source.type === 'vector') {
       // cleanup old setup
       if (source.vertexBuffer) gl.deleteBuffer(source.vertexBuffer)
+      if (source.radiiBuffer) gl.deleteBuffer(source.radiiBuffer)
       if (source.codeOffsetBuffer) gl.deleteBuffer(source.codeOffsetBuffer)
       if (source.indexBuffer) gl.deleteBuffer(source.indexBuffer)
       if (source.vao) context.deleteVertexArray(source.vao)
@@ -292,13 +290,26 @@ export default class Tile {
       // link attributes:
       // fill
       gl.enableVertexAttribArray(0)
-      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 8, 0)
+      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0)
       // line
       gl.enableVertexAttribArray(1)
       gl.enableVertexAttribArray(2)
       gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 16, 0)
       gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 16, 8)
       // gl.vertexAttribPointer(3, 1, gl.FLOAT, false, 16, 12)
+      // RADII
+      if (source.radiiArray) {
+        // Create a vertex buffer
+        source.radiiBuffer = gl.createBuffer()
+        // Bind the buffer
+        gl.bindBuffer(gl.ARRAY_BUFFER, source.radiiBuffer)
+        // Buffer the data
+        gl.bufferData(gl.ARRAY_BUFFER, source.radiiArray, gl.STATIC_DRAW)
+        // radii attribute
+        gl.enableVertexAttribArray(6)
+        // tell attribute how to get data out of radii buffer
+        gl.vertexAttribPointer(6, 1, gl.FLOAT, false, 0, 0)
+      }
       // FEATURE INDEX
       if (source.codeOffsetArray && source.codeOffsetArray.length) {
         // Create the feature index buffer
@@ -307,10 +318,12 @@ export default class Tile {
         gl.bindBuffer(gl.ARRAY_BUFFER, source.codeOffsetBuffer)
         // Buffer the data
         gl.bufferData(gl.ARRAY_BUFFER, source.codeOffsetArray, gl.STATIC_DRAW)
-        // link attribute
-        gl.enableVertexAttribArray(5)
+        // feature attribute
+        gl.enableVertexAttribArray(7)
+        gl.enableVertexAttribArray(8)
         // tell attribute how to get data out of feature index buffer
-        gl.vertexAttribPointer(5, 1, gl.UNSIGNED_BYTE, false, 1, 0)
+        gl.vertexAttribPointer(7, 1, gl.UNSIGNED_BYTE, false, 2, 0)
+        gl.vertexAttribPointer(8, 1, gl.UNSIGNED_BYTE, false, 2, 1)
       }
       // INDEX
       // Create an index buffer
@@ -319,6 +332,16 @@ export default class Tile {
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, source.indexBuffer)
       // buffer the data
       gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, source.indexArray, gl.STATIC_DRAW)
+    } else if (source.type === 'raster') {
+      // setup texture params
+      const length = this.size * 2
+      gl.bindTexture(gl.TEXTURE_2D, source.texture)
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, length, length, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true)
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
     }
   }
 }

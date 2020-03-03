@@ -36,6 +36,7 @@ vec4 interpolateColor (vec4 color1, vec4 color2, float t) {
 
 vec4 decodeFeature (bool color, inout int index, inout int featureIndex) {
   // prep result and variables
+  int decodeOffset = index;
   int startingOffset = index;
   int featureSize = int(uLayerCode[index]) >> 10;
   vec4 res = vec4(-1, -1, -1, -1);
@@ -162,13 +163,13 @@ vec4 decodeFeature (bool color, inout int index, inout int featureIndex) {
     }
     // safety precaution
     if (stackIndex > 5) {
-      index = featureSize + startingOffset;
+      index = featureSize + decodeOffset;
       return res;
     }
   } while (stackIndex > 0);
 
   // update index to the next Layer property
-  index = featureSize + startingOffset;
+  index = featureSize + decodeOffset;
 
   return res;
 }

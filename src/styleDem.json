@@ -1,14 +1,22 @@
 {
   "version": 1,
   "name": "rasterTest",
-  "center": [-90, 0],
-  "zoom": 0,
+  "center": [86.9250, 27.9881],
+  "zoom": 8,
   "minzoom": 0,
-  "maxzoom": 7.9,
+  "maxzoom": 8,
   "sources": {
     "satellite": {
       "path": "http://192.168.0.22:8000/data/satellite",
       "type": "raster",
+      "fileType": "png",
+      "minzoom": 0,
+      "maxzoom": 8,
+      "tileSize": 512
+    },
+    "rgb-dem": {
+      "path": "http://192.168.0.22:8000/data/dem",
+      "type": "mask",
       "fileType": "png",
       "minzoom": 0,
       "maxzoom": 8,
@@ -21,7 +29,7 @@
   },
   "wallpaper": {
     "skybox": "http://localhost:8000/backgrounds/milkyway",
-    "size": 1024,
+    "size": 2048,
     "type": "png"
   },
   "sphere-background": {

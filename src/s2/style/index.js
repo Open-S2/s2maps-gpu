@@ -1,11 +1,11 @@
 // @flow
 import Color from './color'
 import Map from '../ui/map'
-import { Shade, Wallpaper, Tile } from '../source'
+import { Shade, Wallpaper, Skybox, Tile } from '../source'
 import requestData from '../util/xmlHttpRequest'
 import { encodeLayerAttribute, orderLayer } from './conditionals'
 
-import type { Sources, Layer, WallpaperStyle } from './styleSpec'
+import type { Sources, Layer, Mask, WallpaperStyle } from './styleSpec'
 import type { TileRequest } from '../workers/tile.worker'
 
 export default class Style {
@@ -20,8 +20,9 @@ export default class Style {
   fonts: Sources = {}
   billboards: Sources = {}
   layers: Array<Layer> = []
+  mask: Mask
   rasterLayers: { [string]: Layer } = {} // rasterLayers[sourceName]: Layer
-  wallpaper: undefined | Wallpaper
+  wallpaper: undefined | Wallpaper | Skybox
   wallpaperStyle: undefined | WallpaperStyle
   sphereBackground: void | Float32Array // Attribute Code - limited to input-range or input-condition
   shade: undefined | Shade
@@ -45,7 +46,7 @@ export default class Style {
       // Before manipulating the style, send it off to the worker pool manager
       this._sendStyleDataToWorkers(style)
       // extract starting values
-      if (style.center) {
+      if (style.center && Array.isArray(style.center)) {
         self.lon = style.center[0]
         self.lat = style.center[1]
       }
@@ -70,7 +71,7 @@ export default class Style {
     }
   }
 
-  _prebuildStyle(style) {
+  _prebuildStyle (style: Object) {
     // ensure certain default layer values exist. If it is a raster layer: seggregate
     for (const layer of style.layers) {
       if (layer.type === 'raster' && layer.source) this.rasterLayers[layer.source] = layer
@@ -78,6 +79,9 @@ export default class Style {
       if (!layer.maxzoom) layer.maxzoom = 30
       if (!layer.layer) layer.layer = 'default'
     }
+    // create mask if it doesn't exist (just incase)
+    if (!style.mask) style.mask = {}
+    if (!style.mask.exaggeration) style.mask.exaggeration = 1
   }
 
   _sendStyleDataToWorkers (style: Object) {
@@ -97,15 +101,19 @@ export default class Style {
     }
   }
 
-  _buildWallpaper (background: Object) {
-    // create the wallpaper
-    this.wallpaper = new Wallpaper(this, this.map.projection)
-    // prep style
-    this.wallpaperStyle = {
-      backgroundColor: new Color(background['background-color']),
-      fade1Color: new Color(background['fade-1']),
-      fade2Color: new Color(background['fade-2']),
-      haloColor: new Color(background['halo'])
+  _buildWallpaper (background: WallpaperStyle) {
+    if (background.skybox) {
+      this.wallpaper = new Skybox(background, this.map.projection)
+    } else if (background.uBackgroundColor) {
+      // create the wallpaper
+      this.wallpaper = new Wallpaper(this, this.map.projection)
+      // prep style
+      this.wallpaperStyle = {
+        uBackgroundColor: new Color(background['background-color']),
+        uFade1Color: new Color(background['fade-1']),
+        uFade2Color: new Color(background['fade-2']),
+        uHaloColor: new Color(background['halo'])
+      }
     }
   }
 
@@ -123,7 +131,8 @@ export default class Style {
   _buildLayers () {
     // now we build our program set simultaneous to encoding our layers
     const programs = new Set()
-    for (const layer of this.layers) {
+    for (let i = 0, ll = this.layers.length; i < ll; i++) {
+      const layer = this.layers[i]
       // TODO: if bad layer, remove
       const code = []
       programs.add(layer.type)
@@ -135,10 +144,21 @@ export default class Style {
         code.push(...encodeLayerAttribute(layer.layout[key]))
       }
       // PAINTS
-      for (let key in layer.paint) code.push(...encodeLayerAttribute(layer.paint[key]))
-      layer.code = new Float32Array(code)
+      for (let key in layer.paint) {
+        const encode = encodeLayerAttribute(layer.paint[key])
+        code.push(...encode)
+      }
+      if (layer.type === 'raster') layer.index = i
+      if (code.length) layer.code = new Float32Array(code)
     }
+    // tell the painter what we are using
     this.map.painter.prebuildPrograms(programs)
+    // prebuild wallpaper
+    if (this.wallpaper) {
+      const { skybox } = this.wallpaper
+      const wallpaperProgram = this.map.painter.getProgram(skybox ? 'skybox' : 'wallpaper')
+      if (skybox) wallpaperProgram.injectImages(this.wallpaper, this.map)
+    }
   }
 
   requestTiles (tiles: Array<Tile>) {

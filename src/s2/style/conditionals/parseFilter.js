@@ -1,11 +1,11 @@
 // @flow
 // examples:
-// "filter": ["any", ["class", "==", "ocean"], ["class", "==", "river"]]
-// "filter": ["all", ["class", "==", "ocean"], ["class", "==", "lake"], ["class", "!=", "river"]]
+// "filter": ["or", ["class", "==", "ocean"], ["class", "==", "river"]]
+// "filter": ["and", ["class", "==", "ocean"], ["class", "==", "lake"], ["class", "!=", "river"]]
 export default function parseFilter (filter: undefined | Array<string | Array<any>>) {
   if (!filter) return () => true
   // first attribute describes how if we have a bunch of && or ||
-  const andOr = (filter[0] === 'any' || filter[0] === 'all') ? filter.shift() : null
+  const andOr = (filter[0] === 'or' || filter[0] === 'and') ? filter.shift() : null
   if (!andOr) {
     const [key, condition, value] = filter
     const filterLambda = parseFilterCondition(condition, value)
@@ -17,7 +17,7 @@ export default function parseFilter (filter: undefined | Array<string | Array<an
   const conditionals = []
   for (const input of filter) {
     const [key, condition, value] = input
-    if (key === 'any' || key === 'all') {
+    if (key === 'or' || key === 'and') {
       conditionals.push({ condition: parseFilter(input) })
     } else {
       conditionals.push({
@@ -26,9 +26,9 @@ export default function parseFilter (filter: undefined | Array<string | Array<an
       })
     }
   }
-  // if any, join all conditionals into an array, if "any" as soon as we see a true, return true
-  // if "all" than ensure all cases return true
-  if (andOr === 'any') {
+  // if or, join all conditionals into an array, if "or" as soon as we see a true, return true
+  // if "and" than ensure all cases return true
+  if (andOr === 'or') {
     return (properties: Object) => {
       for (const condition of conditionals) {
         if (condition.key) {
@@ -37,7 +37,7 @@ export default function parseFilter (filter: undefined | Array<string | Array<an
       }
       return false
     }
-  } else { // andOr === 'all'
+  } else { // andOr === 'and'
     return (properties: Object) => {
       for (const condition of conditionals) {
         if (condition.key) {

@@ -2,8 +2,8 @@
 /** SOURCES **/
 type Source = {
   path: string,
-  type: 'vector' | 'json' | 'raster' | 'font' | 'billboard',
-  fileType: 'json' | 's2json' | 'pbf' | 's2tile' | 'png' | 'jpeg' | 'ttf' | 'woff',
+  type: 'vector' | 'json' | 'raster' | 'mask' | 'font' | 'billboard',
+  fileType: 'json' | 's2json' | 'pbf' | 'png' | 'jpg',
   sourceName?: string // if you want to make requests without getting metadata, you need this
 }
 type Sources = { [string]: Source }
@@ -18,10 +18,12 @@ export type StylePackage = {
 
 /** WALLPAPER **/
 export type WallpaperStyle = {
-  backgroundColor: Color,
-  fade1Color: Color,
-  fade2Color: Color,
-  haloColor: Color
+  skybox: string,
+  type: string,
+  backgroundColor: string,
+  fade1Color: string,
+  fade2Color: string,
+  haloColor: string
 }
 
 /** Layer **/
@@ -36,6 +38,11 @@ export type Layer = {
   layout: LineLayout | TextLayout | BillboardLayout,
   paint: FillPaint | LinePaint | TextPaint | BillboardPaint,
   code?: Float32Array
+}
+
+/** MASK **/
+export type Mask = {
+  exaggeration: string | Array<any>
 }
 
 /** FILL **/

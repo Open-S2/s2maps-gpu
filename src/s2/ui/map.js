@@ -43,7 +43,7 @@ export default class Map extends Camera {
     // style will tell the painter what programs it will be using
     this.style = new Style(options, this)
     // inject minzoom and maxzoom
-    this.projection.setZoomRange(this.style.minzoom, this.style.maxzoom)
+    this.projection.setStyleParameters(this.style)
     // render our first pass
     this._render()
   }

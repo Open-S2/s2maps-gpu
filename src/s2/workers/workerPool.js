@@ -25,6 +25,9 @@ class WorkerPool {
       // a worker has processed tiles, so we are going to send it back to the appropriate mapID
       const { source, mapID, tileID, vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer } = data
       this.maps[mapID].injectVectorSourceData(source, tileID, vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer)
+    } else if (type === 'maskdata') {
+      const { mapID, tileID, vertexBuffer, indexBuffer, radiiBuffer } = data
+      this.maps[mapID].injectMaskGeometry(tileID, vertexBuffer, indexBuffer, radiiBuffer)
     }
   }
 
@@ -33,7 +36,7 @@ class WorkerPool {
   }
 
   injectStyle (mapID: string, style: StylePackage) {
-    this.workers.forEach(worker => { worker.postMessage({ mapID, type: 'style', style }) })
+    this.workers.forEach((worker, index) => { worker.postMessage({ mapID, type: 'style', style, index }) })
   }
 
   tileRequest (mapID: string, tiles: Array<TileRequest>) {

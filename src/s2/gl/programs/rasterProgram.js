@@ -11,9 +11,6 @@ export default class RasterProgram extends Program {
     // get gl from context
     const { gl } = context
     // upgrade
-    super(gl, rasterVertex, rasterFragment, false)
-    // setup matrix
-    this.matrix = gl.getUniformLocation(this.glProgram, 'uMatrix')
-    this.faceST = gl.getUniformLocation(this.glProgram, 'uFaceST')
+    super(gl, rasterVertex, rasterFragment)
   }
 }

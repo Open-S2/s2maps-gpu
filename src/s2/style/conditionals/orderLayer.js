@@ -13,9 +13,9 @@ function orderLine (layer: Layer) {
   const newLinePaint = {
     color: paint.color,
     width: paint.width,
-    dasharray: paint.dasharray,
-    gapwidth: paint.gapwidth,
-    blur: paint.blur
+    // dasharray: paint.dasharray,
+    // gapwidth: paint.gapwidth,
+    // blur: paint.blur
   }
   layer.paint = newLinePaint
 }

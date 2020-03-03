@@ -2,9 +2,11 @@
 precision highp float;
 
 layout (location = 0) in vec2 aPos;
-layout (location = 5) in float aIndex;
+layout (location = 6) in float aRadius;
+layout (location = 7) in float aIndex;
 
 uniform mat4 uMatrix;
+uniform bool u3D;
 
 uniform float uInputs[16];
 uniform float uLayerCode[256];
@@ -21,6 +23,15 @@ void main () {
   int featureIndex = int(aIndex);
   // decode color
   color = decodeFeature(true, index, featureIndex);
+  // prep xyz
+  vec4 xyz = STtoXYZ(aPos);
+  // if 3D, add radius
+  if (u3D) {
+    float radius = 1. + (aRadius * 200.);
+    xyz.x *= radius;
+    xyz.y *= radius;
+    xyz.z *= radius;
+  }
   // set position
-  gl_Position = uMatrix * ST2XYZ(aPos);
+  gl_Position = uMatrix * xyz;
 }

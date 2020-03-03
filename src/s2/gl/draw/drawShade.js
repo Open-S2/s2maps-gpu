@@ -17,7 +17,6 @@ export default function drawShade (painter: Painter, shade: Shade) {
   painter.context.bindVertexArray(shadeProgram.vao)
   // set new uniforms should we need to
   const uniforms: null | ShadeUniforms = shade.getUniforms()
-  // console.log('uniforms',uniforms)
   if (uniforms) {
     gl.uniform2fv(shadeProgram.radius, uniforms.uRadius)
     gl.uniform2fv(shadeProgram.offset, uniforms.uOffset)

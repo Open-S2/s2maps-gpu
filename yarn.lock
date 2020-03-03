@@ -7406,6 +7406,11 @@ pn@^1.1.0:
   resolved "https://registry.yarnpkg.com/pn/-/pn-1.1.0.tgz#e2f4cef0e219f463c179ab37463e4e1ecdccbafb"
   integrity sha512-2qHaIQr2VLRFoxe2nASzsV6ef4yOOH+Fi9FBOVH6cqeSgUnoyySPZkxzLuzd+RYOQTRpROA0ztTMqxROKSb/nA==
 
+png.js@^0.2.1:
+  version "0.2.1"
+  resolved "https://registry.yarnpkg.com/png.js/-/png.js-0.2.1.tgz#da6b83c134bdc101940d9ab1c98e9154affbb1f2"
+  integrity sha1-2muDwTS9wQGUDZqxyY6RVK/7sfI=
+
 pnp-webpack-plugin@1.2.1:
   version "1.2.1"
   resolved "https://registry.yarnpkg.com/pnp-webpack-plugin/-/pnp-webpack-plugin-1.2.1.tgz#cd9d698df2a6fcf7255093c1c9511adf65b9421b"
@@ -8807,10 +8812,10 @@ rxjs@^6.4.0:
   dependencies:
     tslib "^1.9.0"
 
-s2-vector-tile@^1.3.3:
-  version "1.3.3"
-  resolved "https://registry.yarnpkg.com/s2-vector-tile/-/s2-vector-tile-1.3.3.tgz#5fa2a2b6f55d215352fa66fa7aa3702366302eff"
-  integrity sha512-CyejwrOE4FfMs3vRSe/8DtoB3DJX/ioLrCPXuEl2uYuTKh4pFYnrAM8enNC+5Am4ac1OY3H+1H8WzNuj8+ViVA==
+s2-vector-tile@^1.3.4:
+  version "1.3.4"
+  resolved "https://registry.yarnpkg.com/s2-vector-tile/-/s2-vector-tile-1.3.4.tgz#f68beb3b52918788c1785a7575473b08242f3a05"
+  integrity sha512-HWczCEg73ZMaW931jk7X/hEw6UaReahW0kM8Oq1T5RXD6nEloa3Ytbl/adxIj+lE6YipSHJyMUUS/6vVWfDr0g==
   dependencies:
     pbf "^3.2.1"
 
@@ -8823,6 +8828,11 @@ s2projection@^1.7.3:
   version "1.7.3"
   resolved "https://registry.yarnpkg.com/s2projection/-/s2projection-1.7.3.tgz#81381320a6b1201efe058096f0fc9a016030230d"
   integrity sha512-Z2kufy4SN+084nzg7nwNV/2GxJ+EfsoHm9nkoiknX1klfIn1dtvHOMAs4eLXPjFPszbU5YZdaJMC80JzagF33A==
+
+s2rtin@^0.2.7:
+  version "0.2.7"
+  resolved "https://registry.yarnpkg.com/s2rtin/-/s2rtin-0.2.7.tgz#8d959d03b38a6c5276faf0feb67daf23eb822747"
+  integrity sha512-cMqX3j7CS69PRmFKRKVeTOWmEf3PS03xmV0D3e8PzMlZ8D41Mm2eZRk77hTPNjgq/1kNVFX42hMNplW/AaqSVQ==
 
 safe-buffer@5.1.2, safe-buffer@~5.1.0, safe-buffer@~5.1.1:
   version "5.1.2"

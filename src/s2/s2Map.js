@@ -112,4 +112,12 @@ export default class S2Map {
       this.map.injectVectorSourceData(source, tileID, vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer)
     }
   }
+
+  injectMaskGeometry (tileID: string, vertexBuffer: ArrayBuffer, indexBuffer: ArrayBuffer, radiiBuffer: ArrayBuffer) {
+    if (this._offscreen) {
+      this.map.postMessage({ type: 'maskdata', tileID, vertexBuffer, indexBuffer, radiiBuffer }, [vertexBuffer, indexBuffer, radiiBuffer])
+    } else {
+      this.map.injectMaskGeometry(tileID, vertexBuffer, indexBuffer, radiiBuffer)
+    }
+  }
 }

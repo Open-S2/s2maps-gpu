@@ -25,6 +25,19 @@ export default class Context {
 
   enableDepthTest () {
     this.gl.enable(this.gl.DEPTH_TEST)
+    this.alwaysDepth() // start with a default less than or equal
+  }
+
+  lessDepth () {
+    this.gl.depthFunc(this.gl.LESS)
+  }
+
+  lequalDepth () {
+    this.gl.depthFunc(this.gl.LEQUAL)
+  }
+
+  alwaysDepth () {
+    this.gl.depthFunc(this.gl.ALWAYS)
   }
 
   disableDepthTest () {
@@ -45,6 +58,7 @@ export default class Context {
     // gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     // gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+    gl.blendColor(0, 0, 0, 0)
   }
 
   disableBlend () {

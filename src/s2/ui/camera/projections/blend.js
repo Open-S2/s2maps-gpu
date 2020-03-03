@@ -20,7 +20,7 @@ export type BlendConfig = {
 
 export default class BlendProjection extends Projector {
   zTranslateStart: number = -10
-  zTranslateEnd: number = -3
+  zTranslateEnd: number = -2
   zoomEnd: number = 2
   constructor (config?: BlendConfig = {}) {
     super(config)

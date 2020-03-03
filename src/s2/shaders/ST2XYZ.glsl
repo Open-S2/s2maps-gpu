@@ -6,7 +6,7 @@ float STtoUV (float s) {
   else return (1. / 3.) * (1. - 4. * (1. - s) * (1. - s));
 }
 
-vec4 ST2XYZ (in vec2 st) { // x -> s, y -> t
+vec4 STtoXYZ (in vec2 st) { // x -> s, y -> t
   int face = int(uFaceST[0]);
   // prep xyz
   vec3 xyz;

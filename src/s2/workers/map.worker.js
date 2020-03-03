@@ -11,6 +11,7 @@ class MapWorker {
     if (type === 'canvas') this._prepCanvas(data.options, data.canvas, data.id)
     if (type === 'resize') { this.map.resize(data.width, data.height) }
     if (type === 'vectordata') this.map.injectVectorSourceData(data.source, data.tileID, data.vertexBuffer, data.indexBuffer, data.codeOffsetBuffer, data.featureGuideBuffer)
+    if (type === 'maskdata') this.map.injectMaskGeometry(data.tileID, data.vertexBuffer, data.indexBuffer, data.radiiBuffer)
   }
 
   _prepCanvas (options: MapOptions, canvas: HTMLCanvasElement, id: string) {

@@ -39,7 +39,7 @@
       "source": "fills",
       "layer": "landuse",
       "type": "fill",
-      "filter": ["all", ["class", "has", ["park", "national_park", "protected_area",
+      "filter": ["and", ["class", "has", ["park", "national_park", "protected_area",
         "aboriginal_lands", "grass", "grassland", "garden", "meadow",
         "wood", "swamp", "forest", "wetland", "zoo", "cemetery", "indianReservation",
         "sand", "beach", "desert", "aeroway", "military", "hospital",
@@ -118,7 +118,7 @@
     {
       "id": "water",
       "source": "fills",
-      "filter": ["all", ["class", "!has", ["reef", "shoal"]]],
+      "filter": ["and", ["class", "!has", ["reef", "shoal"]]],
       "layer": "water",
       "type": "fill",
       "minzoom": 0,
@@ -130,7 +130,7 @@
     {
       "id": "reef",
       "source": "fills",
-      "filter": ["all", ["class", "has", ["reef", "shoal"]]],
+      "filter": ["and", ["class", "has", ["reef", "shoal"]]],
       "layer": "water",
       "type": "fill",
       "minzoom": 0,
@@ -140,26 +140,33 @@
       }
     },
     {
-      "id": "boundaries",
+      "id": "rivers",
       "source": "fills",
-      "layer": "boundary",
-      "filter": ["all", ["class", "==", "State"], ["maritime", "==", false]],
+      "layer": "water",
       "type": "line",
-      "minzoom": 0,
       "layout": {
         "cap": "butt",
         "join": "bevel"
       },
       "paint": {
-        "color": "rgba(160, 160, 160, 0.7)",
-        "width": 0.85
+        "color": "rgb(170, 218, 255)",
+        "width": [
+          "input-range",
+          "zoom",
+          "expo",
+          1.5,
+          9,
+          0.25,
+          12,
+          2
+        ]
       }
     },
     {
       "id": "boundaries",
       "source": "fills",
       "layer": "boundary",
-      "filter": ["all", ["class", "==", "Country"], ["maritime", "==", false]],
+      "filter": ["and", ["class", "has", ["Country", "State"]], ["maritime", "==", false]],
       "type": "line",
       "minzoom": 0,
       "layout": {
@@ -167,15 +174,27 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "rgb(145, 145, 145)",
+        "color": [
+          "data-condition",
+          ["class", "==", "State"],
+          "rgba(160, 160, 160, 0.7)",
+          "default",
+          "rgb(150, 150, 150)"
+        ],
         "width": [
-          "input-range",
-          "zoom",
-          "lin",
-          1,
-          0.5,
-          2,
-          0.85
+          "data-condition",
+          ["class", "==", "State"],
+          0.85,
+          "default",
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            1,
+            0.5,
+            2,
+            0.95
+          ]
         ]
       }
     },

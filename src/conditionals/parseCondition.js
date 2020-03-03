@@ -117,7 +117,7 @@ function encodeLayerFunction (input) {
       encodings.push(...color.getLCH()) // store that it is a value and than the values
     } else {
       encodings[0] += (1 << 4) // set the condition bits as 1 (value)
-      encodings.push(~~input) // store true as 1 and false as 0, otherwise it's a number
+      encodings.push(input) // store true as 1 and false as 0, otherwise it's a number
     }
   }
   // lastly store length of the current encoding
@@ -287,6 +287,7 @@ let trigger = 0
 function decodeFeature (conditionEncodings, featureEncoding, inputs, color, index, featureIndex) {
   let res = new Float32Array([-1, -1, -1, -1])
   // prep variables
+  let decodeOffset = index
   let startingOffset = index
   const featureSize = conditionEncodings[index] >> 10
   const conditionStack = new Float32Array(6)
@@ -296,15 +297,16 @@ function decodeFeature (conditionEncodings, featureEncoding, inputs, color, inde
   conditionStack[stackIndex] = index
   stackIndex++
 
-  console.log('startingOffset', startingOffset)
   console.log('featureSize', featureSize)
   console.log('conditionStack', conditionStack)
   console.log('tStack', tStack)
 
   do {
+    console.log('AGAAAAINNNNNN')
     stackIndex--
     // pull out current stackIndex condition and decode
     startingOffset = index = conditionStack[stackIndex]
+    console.log('startingOffset', startingOffset)
     const conditionSet = conditionEncodings[index]
     const length = conditionSet >> 10
     const condition = (conditionSet & 1008) >> 4
@@ -349,6 +351,7 @@ function decodeFeature (conditionEncodings, featureEncoding, inputs, color, inde
       console.log('conditionStack[stackIndex]', conditionStack[stackIndex])
       tStack[stackIndex] = 1
       stackIndex++ // increment size of stackIndex
+      console.log('startingOffset9', startingOffset)
     } else if (condition === 4 || condition === 5) { // data-range & input-range
       // get interpolation & base
       const interpolationType = conditionSet & 1
@@ -434,7 +437,7 @@ function decodeFeature (conditionEncodings, featureEncoding, inputs, color, inde
     }
   } while (stackIndex > 0)
 
-  index = featureSize + startingOffset
+  index = featureSize + decodeOffset
   return [res, index, featureIndex]
 }
 

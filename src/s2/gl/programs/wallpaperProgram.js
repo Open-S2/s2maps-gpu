@@ -11,10 +11,10 @@ export default class WallpaperProgram extends Program {
   vertexBuffer: WebGLVertexArrayObject
   aPos: GLint // 'a_pos' vec4 attribute
   uScale: WebGLUniformLocation // 'u_scale' vec2 uniform
-  backgroundColor: WebGLUniformLocation
-  haloColor: WebGLUniformLocation
-  fade1Color: WebGLUniformLocation
-  fade2Color: WebGLUniformLocation
+  uBackgroundColor: WebGLUniformLocation
+  uHaloColor: WebGLUniformLocation
+  uFade1Color: WebGLUniformLocation
+  uFade2Color: WebGLUniformLocation
   constructor (context: Context) {
     // get gl from context
     const { gl } = context
@@ -23,10 +23,10 @@ export default class WallpaperProgram extends Program {
     // acquire the attributes & uniforms
     this.aPos = gl.getAttribLocation(this.glProgram, 'aPos')
     this.uScale = gl.getUniformLocation(this.glProgram, 'uScale')
-    this.backgroundColor = gl.getUniformLocation(this.glProgram, 'backgroundColor')
-    this.haloColor = gl.getUniformLocation(this.glProgram, 'haloColor')
-    this.fade1Color = gl.getUniformLocation(this.glProgram, 'fade1Color')
-    this.fade2Color = gl.getUniformLocation(this.glProgram, 'fade2Color')
+    this.uBackgroundColor = gl.getUniformLocation(this.glProgram, 'backgroundColor')
+    this.uHaloColor = gl.getUniformLocation(this.glProgram, 'haloColor')
+    this.uFade1Color = gl.getUniformLocation(this.glProgram, 'fade1Color')
+    this.uFade2Color = gl.getUniformLocation(this.glProgram, 'fade2Color')
     // create a vertex array object
     this.vao = context.createVertexArray()
     // bind the vao so we can work on it

@@ -51,10 +51,14 @@ export default class Projector implements Projection {
     if (config.canvasMultiplier) this.multiplier = config.canvasMultiplier
   }
 
-  setZoomRange (minzoom: number, maxzoom: number) {
+  setStyleParameters (style) {
+    const { minzoom, maxzoom, zoom, lon, lat } = style
     // clamp values and ensure minzoom is less than maxzoom
     this.minzoom = (minzoom < -10) ? -10 : (minzoom > maxzoom) ? maxzoom - 1 : (minzoom > 29) ? 29 : minzoom
     this.maxzoom = (maxzoom > 30) ? 30 : (maxzoom < this.minzoom) ? this.minzoom + 1 : maxzoom
+    // set initial position
+    this.setLonLat(-lon, lat)
+    this.setZoom(zoom)
   }
 
   zoomChange (): number {
@@ -85,6 +89,7 @@ export default class Projector implements Projection {
     this.view[2] = this.lat
     // if we hit 360, just swing back to 0
     while (this.lon >= 360) { this.lon -= 360 }
+    while (this.lon <= 0) { this.lon += 360 }
     this.sizeMatrices = {}
     this.dirty = true
   }
@@ -97,13 +102,10 @@ export default class Projector implements Projection {
 
   getMatrix (size: number): Float32Array {
     const matrix = this.getMatrixAtSize(size)
-    const mv = mat4.create()
     // translate position
-    mat4.translate(mv, this.translation)
+    mat4.translate(matrix, this.translation)
     // rotate position
-    mat4.rotate(mv, [degToRad(this.lat), degToRad(this.lon), 0])
-    // if full, just build out the pmv projection and return
-    mat4.multiply(matrix, mv)
+    mat4.rotate(matrix, [degToRad(this.lat), degToRad(this.lon), 0])
 
     return matrix
   }

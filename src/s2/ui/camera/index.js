@@ -10,13 +10,12 @@ import type { Projection } from './projections'
 /** SOURCES **/
 import { Tile, TileCache } from '../../source'
 
-export type ProjectionType = 'perspective' | 'persp' | 'ortho' | 'orthographic' | 'blend' | 'orthographicPerspective'
+export type ProjectionType = 'perspective' | 'persp' | 'orthographic' | 'ortho' | 'orthographicPerspective' | 'blend'
 
 export default class Camera {
   style: Style
   painter: Painter
   projection: Projection
-  wallpaper: Wallpaper
   tileCache: TileCache
   tilesInView: Array<number> = [] // hash id's of the tiles
   lastTileViewState: Array<number> = []
@@ -90,23 +89,27 @@ export default class Camera {
     const { rasterLayers } = self.style
     for (const sourceName in rasterLayers) {
       // grab the source and layer details
-      const source = self.style.sources[sourceName]
+      const { path, fileType } = self.style.sources[sourceName]
       const layer = rasterLayers[sourceName]
       // create texture and recieve the pieces that need to be requested
       const pieces = tile.buildSourceTexture(sourceName, layer)
       // start requesting tiles
       for (const piece of pieces) {
         const image = new Image()
-        image.crossOrigin = 'anonymous'
-        image.src = `${source.path}/${piece.face}/${piece.zoom}/${piece.x}/${piece.y}.${source.fileType}`
-        image.onload = () => {
+        image.crossOrigin = path
+        image.src = `${path}/${piece.face}/${piece.zoom}/${piece.x}/${piece.y}.${fileType}`
+        const render = () => {
           // inject the image into the raster in its proper position
           tile._injectRasterData(sourceName, image, piece.leftShift, piece.bottomShift)
-          // new paint, so painter is dirty
+          // new 'paint', so painter is dirty
           self.painter.dirty = true
           // call a re-render only if the tile is in our current viewing
           if (self.tilesInView.map(t => t[4]).includes(tile.id)) self._render()
         }
+        // onload actually blocks the main thread during the decoding phase, so we await decode
+        // if (image.decode) image.decode().then(render).catch(e => { console.log(e) })
+        // else image.onload = render
+        image.onload = render
       }
     }
   }
@@ -127,7 +130,19 @@ export default class Camera {
     if (this.tileCache.has(tileID)) {
       const tile = this.tileCache.get(tileID)
       tile.injectVectorSourceData(source, new Float32Array(vertexBuffer), new Uint32Array(indexBuffer), new Uint8Array(codeOffsetBuffer), new Uint32Array(featureGuideBuffer), this.style.layers)
-      // new paint, so painter is dirty
+      // new 'paint', so painter is dirty
+      this.painter.dirty = true
+      // call a re-render only if the tile is in our current viewing
+      if (this.tilesInView.map(t => t[4]).includes(tileID)) this._render()
+    }
+  }
+
+  injectMaskGeometry (tileID: number, vertexBuffer: ArrayBuffer,
+    indexBuffer: ArrayBuffer, radiiBuffer: ArrayBuffer) {
+    if (this.tileCache.has(tileID)) {
+      const tile = this.tileCache.get(tileID)
+      tile.injectMaskGeometry(new Float32Array(vertexBuffer), new Uint32Array(indexBuffer), new Float32Array(radiiBuffer), this.style.mask)
+      // new 'paint', so painter is dirty
       this.painter.dirty = true
       // call a re-render only if the tile is in our current viewing
       if (this.tilesInView.map(t => t[4]).includes(tileID)) this._render()

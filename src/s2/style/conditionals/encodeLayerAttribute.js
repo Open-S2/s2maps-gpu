@@ -69,7 +69,7 @@ export default function encodeLayerAttribute (input: Array<any>): Float32Array {
       // encode and store
       encodings.push(...encodeRange(input))
     } else throw Error('unknown condition type')
-  } else if (input) { // assuming data exists, than it's just a value type
+  } else if (input || input === 0) { // assuming data exists, than it's just a value type
     // value
     if (isNaN(input)) {
       const color = new Color(input) // build the color as LCH

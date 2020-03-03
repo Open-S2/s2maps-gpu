@@ -2,15 +2,16 @@
 precision mediump float;
 // https://stackoverflow.com/questions/17638800/storing-two-float-values-in-a-single-float-variable
 
-#define DIVISOR 0.0009765625
-#define PRECISION 4096.
+#define DIVISOR 0.0009765625 // this has to do with a tile's precision
+// #define PRECISION 4096.
 
 layout (location = 1) in vec2 aPos;
 layout (location = 2) in vec2 aNormal;
 // layout (location = 3) in float aLengthSoFar;
-layout (location = 5) in float aIndex;
+layout (location = 8) in float aIndex;
 
 uniform mat4 uMatrix;
+uniform bool u3D;
 
 uniform float uInputs[16];
 uniform float uLayerCode[256];
@@ -51,5 +52,5 @@ void main () {
   // send off the length so far
   // lengthSoFar = aLengthSoFar;
   // set position
-  gl_Position = uMatrix * ST2XYZ(newPos);
+  gl_Position = uMatrix * STtoXYZ(newPos);
 }

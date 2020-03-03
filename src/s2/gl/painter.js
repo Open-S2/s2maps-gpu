@@ -10,6 +10,7 @@ import {
   LineProgram,
   ShadeProgram,
   TextProgram,
+  SkyboxProgram,
   WallpaperProgram
 } from './programs'
 /** DRAWING **/
@@ -27,7 +28,6 @@ import { Tile } from '../source'
 import type { MapOptions } from '../ui/map'
 import type { Projection } from '../ui/camera/projections'
 // import type { FeatureGuide, SourceData } from '../source/tile'
-import type { StyleLayers } from '../style'
 import type { ProgramTypes } from './programs/program'
 
 export default class Painter {
@@ -100,6 +100,9 @@ export default class Painter {
       case 'wallpaper':
         programs[programName] = new WallpaperProgram(this.context)
         break
+      case 'skybox':
+        programs[programName] = new SkyboxProgram(this.context)
+        break
       default: break
     }
     // check one more time the program exists
@@ -117,9 +120,7 @@ export default class Painter {
     const { context } = this
     // prep painting
     context.newScene()
-    // first draw the wallpaper
-    if (style.wallpaper) drawWallpaper(this, style.wallpaper)
-    // prep stencil
+    // prep depth & stencil
     context.enableStencilTest()
     // for each tile, draw background & features as necessary
     for (let tile of tiles) {
@@ -130,27 +131,30 @@ export default class Painter {
       // inject values to programs
       this.injectFrameUniforms(matrix, view, faceST)
       // now draw the tile according to the features it contains
-      this.paintLayers(tile, style, style.layers)
+      this.paintLayers(tile, style)
       // no matter what, clear the stencil to ensure it's ready for the next tile
       context.clearStencil()
     }
     // disable stencil
     context.disableStencilTest()
+    // draw the wallpaper
+    if (style.wallpaper) drawWallpaper(this, style.wallpaper)
     // draw shade layer
     // if (style.shade) drawShade(this, style.shade)
     // cleanup
     context.cleanup()
   }
 
-  paintLayers (tile: Tile, style: Style, layers: StyleLayers) {
-    // setup context
+  paintLayers (tile: Tile, style: Style) {
+    // setup context and style data
     const { context } = this
-    const { gl } = context
+    const { sphereBackground } = style
     // grab the featureGuide and vao from current tile
     const { faceST, sourceData, featureGuide } = tile
     const { mask } = sourceData
     // setup variables
     let curSource: string = 'mask'
+    let curSourceData: object = mask
     let curProgram: ProgramTypes = 'fill'
     let program: Program = this.useProgram('fill')
     let parentSet: boolean = false
@@ -159,31 +163,38 @@ export default class Painter {
     // use mask vao and fill program
     context.bindVertexArray(mask.vao)
     // First 'feature' is the mask feature
-    drawMask(this, mask.indexArray.length)
+    drawMask(this, mask.indexArray.length, mask.mode, mask.threeD)
+    // now that we have drawn a mask, we can start using depth testing
+    context.enableDepthTest()
     // Second feature is the sphere-background feature should it exist
-    const sphereBackground = style.sphereBackground
-    program.setLayerCode(sphereBackground)
-    if (sphereBackground) drawFill(this, mask.indexArray.length, 0, null, gl.TRIANGLE_STRIP)
+    if (sphereBackground) {
+      program.setLayerCode(sphereBackground)
+      drawFill(this, mask.indexArray.length, 0, null, mask.mode, mask.threeD)
+    }
     // now we start drawing feature batches
     for (const featureBatch of featureGuide) {
-      const { parent, source, layerID, count, offset, type, featureCode, texture } = featureBatch
+      const { parent, tile, source, layerID, count, offset, type, featureCode, layerCode, texture } = featureBatch
       // if a parent tile, be sure to bind the parent tiles vao
       // rebind back to current vao and matrix when the parent is not being used
       if (parent && (!parentSet || source !== curSource)) {
         parentSet = true
-        context.bindVertexArray(featureBatch.tile.sourceData[source].vao)
-        this.injectFrameUniforms(null, null, featureBatch.tile.faceST)
+        curSourceData = tile.sourceData[source]
+        context.bindVertexArray(curSourceData.vao)
+        this.injectFrameUniforms(null, null, tile.faceST)
         curSource = source
         flush = true
       } else if (!parent && (parentSet || source !== curSource)) {
         parentSet = false
-        context.bindVertexArray(sourceData[source].vao)
+        curSourceData = sourceData[source]
+        context.bindVertexArray(curSourceData.vao)
         this.injectFrameUniforms(null, null, faceST)
         curSource = source
         flush = true
       }
       // if type is not the same as the curProgram, we have to update curProgram and set uniforms
       if (type !== curProgram) {
+        // if (type === 'raster') context.lequalDepth()
+        // else context.alwaysDepth()
         program = this.useProgram(type)
         curProgram = type
       }
@@ -192,13 +203,13 @@ export default class Painter {
         program.flush()
       }
       // if new layerID, update layerCode
-      if (layerID !== curLayer && layers[layerID].code) {
-        program.setLayerCode(layers[layerID].code)
+      if (layerID !== curLayer && layerCode) {
+        program.setLayerCode(layerCode)
         curLayer = layerID
       }
       // now draw according to type
       if (type === 'raster') {
-        drawRaster(this, count, texture)
+        drawRaster(this, curSourceData.indexArray.length, texture, curSourceData.mode, curSourceData.threeD)
       } else if (type === 'fill') {
         drawFill(this, count, offset, featureCode)
       } else if (type === 'line') {
