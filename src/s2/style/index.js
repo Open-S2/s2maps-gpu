@@ -104,7 +104,7 @@ export default class Style {
   _buildWallpaper (background: WallpaperStyle) {
     if (background.skybox) {
       this.wallpaper = new Skybox(background, this.map.projection)
-    } else if (background.uBackgroundColor) {
+    } else if (background['background-color']) {
       // create the wallpaper
       this.wallpaper = new Wallpaper(this, this.map.projection)
       // prep style

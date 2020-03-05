@@ -5,8 +5,9 @@ import { VectorTile } from 's2-vector-tile'
 import { parseLayers } from '../style/conditionals'
 import { processFill, processLine, PNGReader } from './process'
 import requestData from '../util/xmlHttpRequest'
+import { tileHash } from 's2projection'
 
-import type { Face } from 'S2Projection'
+import type { Face } from 's2projection'
 import type { StylePackage } from '../styleSpec'
 
 type Point = [number, number]
@@ -21,6 +22,16 @@ export type TileRequest = {
   y: number,
   division: number,
   size: number
+}
+
+export type ParentLayers = {
+  [string | number]: { // tileHash:
+    face: Face,
+    zoom: number,
+    x: number,
+    y: number,
+    layers: Array<number>
+  }
 }
 
 type Feature = {
@@ -61,6 +72,7 @@ const MAX_INDEX_BUFFER_SIZE = 4294967295 // 16bit: 65535
 // after every update of
 export default class TileWorker {
   id: number
+  chrome: boolean = navigator.userAgent.indexOf('Chrome') !== -1
   maps: { [string]: StylePackage } = {} // mapID: StylePackage
   status: 'building' | 'busy' | 'ready' = 'ready'
   cache: { [string]: Array<TileRequest> } = {} // mapID: TileRequests
@@ -104,7 +116,6 @@ export default class TileWorker {
       const sources = this.maps[mapID].sources
       for (const sourceName in sources) {
         const source = sources[sourceName]
-        if (source.type === 'raster') continue
         this.requestTiles(mapID, sourceName, source, tiles)
       }
     }
@@ -196,6 +207,23 @@ export default class TileWorker {
             if (data && !self.cancelCache.includes(hash)) self._processTileData(mapID, sourceName, source, tile, data)
           })
         }
+      } else if (type === 'raster') {
+        const tilezoom = zoom + 1
+        if (minzoom <= tilezoom && maxzoom >= tilezoom) { // check zoom bounds
+          const pieces = [
+            { x: x * 2, y: y * 2, leftShift: 0, bottomShift: 0 },
+            { x: x * 2 + 1, y: y * 2, leftShift: 1, bottomShift: 0 },
+            { x: x * 2, y: y * 2 + 1, leftShift: 0, bottomShift: 1 },
+            { x: x * 2 + 1, y: y * 2 + 1, leftShift: 1, bottomShift: 1 }
+          ]
+
+          for (const piece of pieces) {
+            const { x, y, leftShift, bottomShift } = piece
+            requestData(`${path}/${face}/${tilezoom}/${x}/${y}`, fileType, (data) => {
+              if (data && !self.cancelCache.includes(hash)) self._processTileData(mapID, sourceName, source, tile, data, { leftShift, bottomShift })
+            })
+          }
+        }
       } else if (type === 'json') {
         if (s2json.faces.has(face)) {
           const data = s2json.getTile(face, zoom, x, y)
@@ -215,95 +243,127 @@ export default class TileWorker {
   }
 
   _processTileData (mapID: string, sourceName: string, source: Object,
-    tile: TileRequest, data: Object | ArrayBuffer | Blob) {
+    tile: TileRequest, data: Object | ArrayBuffer | Blob, params?: Object) {
     // grab tiles basics
-    const { zoom, division, size, hash } = tile
+    const { face, zoom, x, y, division, size, hash } = tile
     // Check the source metadata. If it's a vector run through all
     // layers and process accordingly. If image, no pre-processing needed.
     const { type } = source
     if (type === 'vector' || type === 'json') {
       const features: Array<Feature> = []
+      const parentLayers: ParentLayers = {}
       const vectorTile = (type === 'vector') ? new VectorTile(data) : data
       const { layers } = this.maps[mapID]
       for (let layerID = 0, ll = layers.length; layerID < ll; layerID++) {
         const layer = layers[layerID]
-        if (
-          layer.source === sourceName && // the layer source matches
-          vectorTile.layers[layer.layer] && // the vectorTile has said layer in it
-          layer.minzoom <= zoom && layer.maxzoom >= zoom // zoom attributes fit
-        ) {
-          // run through the vectorTile's features of said layer and build batches
-          // to reduce draw counts, we batch data of the same layer and type.
-          // When a feature batch size exceeds the max batch size, finish out the
-          // draw batch and start again
-          const vectorTileLayer = vectorTile.layers[layer.layer]
-          const { extent } = vectorTileLayer
-          // prep a mapping of layer and paint properties (feature encodings)
-          for (let f = 0; f < vectorTileLayer.length; f++) {
-            let featureCode = []
-            const feature = vectorTileLayer.feature(f)
-            const { properties, type } = feature
-            // lastly we need to filter according to the layer
-            if (layer.filter(properties)) {
-              // create encodings for the feature, if it is different than the previous feature, we start a new encoding set
-              for (const l in layer.layout) layer.layout[l](properties, featureCode)
-              for (const p in layer.paint) layer.paint[p](properties, featureCode)
-              // we can now process according to type
-              let vertices = []
-              let indices = []
-              let vertexSize
-              let vertexDivisor
-              if (layer.type === 'fill' && (type === 3 || type === 4)) {
-                processFill(feature.loadGeometry(), type, vertices, indices, division, extent)
-                vertexSize = vertices.length / 2
-                vertexDivisor = 2
-              } else if (layer.type === 'fill3D' && (type === 7 || type === 8)) {
+        if (layer.source === sourceName) { // ensure we are in the right source
+          if (
+            vectorTile.layers[layer.layer] && // the vectorTile has said layer in it
+            layer.minzoom <= zoom && layer.maxzoom >= zoom // zoom attributes fit
+          ) {
+            // run through the vectorTile's features of said layer and build batches
+            // to reduce draw counts, we batch data of the same layer and type.
+            // When a feature batch size exceeds the max batch size, finish out the
+            // draw batch and start again
+            const vectorTileLayer = vectorTile.layers[layer.layer]
+            const { extent } = vectorTileLayer
+            // prep a mapping of layer and paint properties (feature encodings)
+            for (let f = 0; f < vectorTileLayer.length; f++) {
+              let featureCode = []
+              const feature = vectorTileLayer.feature(f)
+              const { properties, type } = feature
+              // lastly we need to filter according to the layer
+              if (layer.filter(properties)) {
+                // create encodings for the feature, if it is different than the previous feature, we start a new encoding set
+                for (const l in layer.layout) layer.layout[l](properties, featureCode)
+                for (const p in layer.paint) layer.paint[p](properties, featureCode)
+                // we can now process according to type
+                let vertices = []
+                let indices = []
+                let vertexSize
+                let vertexDivisor
+                if (layer.type === 'fill' && (type === 3 || type === 4)) {
+                  processFill(feature.loadGeometry(), type, vertices, indices, division, extent)
+                  vertexSize = vertices.length / 2
+                  vertexDivisor = 2
+                } else if (layer.type === 'fill3D' && (type === 7 || type === 8)) {
 
-              } else if (layer.type === 'line' && (type === 2 || type === 3 || type === 4)) {
-                const attributes = { cap: layer.layout.cap(), join: layer.layout.join(), maxDistance: extent / division, dashed: true }
-                processLine(feature.loadGeometry(), type, attributes, vertices, indices, extent)
-                vertexSize = vertices.length / 4
-                vertexDivisor = 4
-              } else if (layer.type === 'line3D' && type === 2) {
+                } else if (layer.type === 'line' && (type === 2 || type === 3 || type === 4)) {
+                  const attributes = { cap: layer.layout.cap(), join: layer.layout.join(), maxDistance: extent / division, dashed: true }
+                  processLine(feature.loadGeometry(), type, attributes, vertices, indices, extent)
+                  vertexSize = vertices.length / 4
+                  vertexDivisor = 4
+                } else if (layer.type === 'line3D' && type === 2) {
 
-              } else if (layer.type === 'text' && type === 1) {
+                } else if (layer.type === 'text' && type === 1) {
 
-              } else if (layer.type === 'billboard' && type === 1) {
+                } else if (layer.type === 'billboard' && type === 1) {
 
+                } else { continue }
+                features.push({ vertices, indices, code: featureCode, size: vertexSize, divisor: vertexDivisor, layerID })
               } else { continue }
-              features.push({ vertices, indices, code: featureCode, size: vertexSize, divisor: vertexDivisor, layerID })
-            } else { continue }
+            } // for (let f = 0; f < vectorTileLayer.length; f++)
+          } else if (source.layers && source.layers[layer.layer] && source.layers[layer.layer].maxzoom < zoom) {
+            // we have passed the limit at which this data is stored. Rather than
+            // processing the data more than once, we reference where to look for the layer
+            const layerMaxZoom = source.layers[layer.layer].maxzoom
+            let pZoom = zoom
+            let pX = x
+            let pY = y
+            while (pZoom > layerMaxZoom) {
+              pZoom--
+              pX = Math.floor(pX / 2)
+              pY = Math.floor(pY / 2)
+            }
+            const hash = tileHash(face, pZoom, pX, pY)
+            // store parent reference
+            if (!parentLayers[hash]) parentLayers[hash] = { face, zoom: pZoom, x: pX, y: pY, layers: [] }
+            parentLayers[hash].layers.push(layerID)
           }
         }
       }
       // now post process triangles
-      this._processVectorFeatures(mapID, sourceName, hash, features)
+      this._processVectorFeatures(mapID, sourceName, hash, features, parentLayers)
+    } else if (type === 'raster') {
+      const { leftShift, bottomShift } = params
+      const getImage = (this.chrome) ? createImageBitmap(data, { imageOrientation: 'flipY', premultiplyAlpha: 'premultiply' }) : createImageBitmap(data)
+      getImage
+        .then(image => {
+          postMessage({ mapID, type: 'rasterdata', source: sourceName, tileID: hash, image, leftShift, bottomShift }, [image])
+        })
+        .catch(err => { console.log('image bitmap error: ', err) })
     } else if (type === 'mask') {
       // grab the RTIN object
       const { s2rtin } = source
       // create the terrain grid
-      const reader = new PNGReader(data)
-      reader.parse((err, png) => {
-      	if (!err) {
-          const dem = { width: size, data: png.pixels }
-          const terrain = terrainToGrid(dem)
-          // create a tile object
-          const tile = s2rtin.createTile(terrain)
-          // find the appropriate margin of error
-          const approxBestError = s2rtin.approximateBestError(zoom)
-          // build the mesh
-          const mesh = tile.getMesh(approxBestError)
-          const vertexBuffer = mesh.vertices.buffer
-          const indexBuffer = mesh.triangles.buffer
-          const radiiBuffer = mesh.radii.buffer
-          // ship it
-          postMessage({ mapID, type: 'maskdata', tileID: hash, vertexBuffer, indexBuffer, radiiBuffer }, [vertexBuffer, indexBuffer, radiiBuffer])
-        }
-      })
+      data.arrayBuffer()
+        .then(ab => {
+          const reader = new PNGReader(ab)
+          reader.parse((err, png) => {
+          	if (!err) {
+              const dem = { width: size, data: png.pixels }
+              const terrain = terrainToGrid(dem)
+              // create a tile object
+              const tile = s2rtin.createTile(terrain)
+              // find the appropriate margin of error
+              const approxBestError = s2rtin.approximateBestError(zoom)
+              // build the mesh
+              const mesh = tile.getMesh(approxBestError)
+              const vertexBuffer = mesh.vertices.buffer
+              const indexBuffer = mesh.triangles.buffer
+              const radiiBuffer = mesh.radii.buffer
+              // ship it
+              postMessage({ mapID, type: 'maskdata', tileID: hash, vertexBuffer, indexBuffer, radiiBuffer }, [vertexBuffer, indexBuffer, radiiBuffer])
+            } else { console.log('parse error', err)}
+          })
+        })
+      // createImageBitmap(data)
+      //   .then(image => {})
     }
   }
 
-  _processVectorFeatures (mapID: string, sourceName: string, tileID: string, features: Array<Feature>) {
+  _processVectorFeatures (mapID: string, sourceName: string, tileID: string,
+    features: Array<Feature>, parentLayers: ParentLayers) {
     // now that we have created all triangles, let's merge into bundled buffer sets
     // for the main thread to build VAOs.
     // Step 1: Sort by layerID, than sort by feature code.
@@ -333,7 +393,6 @@ export default class TileWorker {
     let encodingIndexes = { '': 0 }
     let encodingIndex
     let prevLayerID
-    let count = 0
     // if (this.id === 0) console.log('START', features)
     for (const feature of features) {
       // TODO: If vertex size + current vertexLength > MAX_INDEX_BUFFER_SIZE we start a new VAO set
@@ -343,13 +402,8 @@ export default class TileWorker {
         (prevLayerID !== undefined && prevLayerID !== feature.layerID) ||
         (encodings.length + feature.code.length > MAX_FEATURE_BATCH_SIZE)
       ) {
-        count++
-        // if (this.id === 0) console.log('layer', prevLayerID, feature.layerID)
-        // if (this.id === 0) console.log('close out layer', count, encodings, (prevLayerID !== undefined && prevLayerID !== feature.layerID), (encodings.length + feature.code.length > MAX_FEATURE_BATCH_SIZE))
         featureGuide.push(prevLayerID, indices.length - indicesOffset, indicesOffset, encodings.length, ...encodings) // layerID, count, offset, encoding size, encodings
-        // if (this.id === 0) console.log('BEFORE', indicesOffset)
         indicesOffset = indices.length
-        // if (this.id === 0) console.log('AFTER', indicesOffset)
         encodings = []
         encodingIndexes = { '': 0 }
       }
@@ -357,7 +411,6 @@ export default class TileWorker {
       const feKey = feature.code.toString()
       encodingIndex = encodingIndexes[feKey]
       if (encodingIndex === undefined) {
-        // if (this.id === 0) console.log('encodingIndex', feKey, encodingIndexes, encodingIndex)
         encodingIndex = encodingIndexes[feKey] = encodings.length
         encodings.push(...feature.code)
       }
@@ -376,14 +429,11 @@ export default class TileWorker {
         indices.push(index)
         codeOffset[(index * 2) + codePosition] = encodingIndex
       }
-      // for (let s = 0; s < feature.size; s++) codeOffset.push(encodingIndex)
       // update previous layerID
       prevLayerID = feature.layerID
     }
-    // if (this.id === 0) console.log('close out layer', encodings)
     // store the very last featureGuide batch
     if (indices.length - indicesOffset) featureGuide.push(prevLayerID, indices.length - indicesOffset, indicesOffset, encodings.length, ...encodings) // layerID, count, offset, encoding size, encodings
-    // if (this.id === 0) console.log('DONE', indicesOffset, indices.length)
 
     // Upon building the batches, convert to buffers and ship.
     const vertexBuffer = new Float32Array(vertices).buffer
@@ -391,7 +441,17 @@ export default class TileWorker {
     const codeOffsetBuffer = new Uint8Array(codeOffset).buffer
     const featureGuideBuffer = new Uint32Array(featureGuide).buffer
     // ship the vector data.
-    postMessage({ mapID, type: 'vectordata', source: sourceName, tileID, vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer }, [vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer])
+    postMessage({
+      mapID,
+      type: 'vectordata',
+      source: sourceName,
+      tileID,
+      parentLayers,
+      vertexBuffer,
+      indexBuffer,
+      codeOffsetBuffer,
+      featureGuideBuffer
+    }, [vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer])
   }
 }
 

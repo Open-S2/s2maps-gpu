@@ -4,10 +4,10 @@
   "center": [-90, 0],
   "zoom": 0,
   "minzoom": 0,
-  "maxzoom": 7.9,
+  "maxzoom": 8,
   "sources": {
     "satellite": {
-      "path": "http://192.168.0.22:8000/data/satellite",
+      "path": "http://localhost:8000/data/satellite",
       "type": "raster",
       "fileType": "png",
       "minzoom": 0,
@@ -21,7 +21,7 @@
   },
   "wallpaper": {
     "skybox": "http://localhost:8000/backgrounds/milkyway",
-    "size": 1024,
+    "size": 2048,
     "type": "png"
   },
   "sphere-background": {

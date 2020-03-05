@@ -105,11 +105,19 @@ export default class S2Map {
     return this._canvasContainer
   }
 
-  injectVectorSourceData (source: string, tileID: string, vertexBuffer: ArrayBuffer, indexBuffer: ArrayBuffer, codeOffsetBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer) {
+  injectVectorSourceData (source: string, tileID: string, parentLayers, vertexBuffer: ArrayBuffer, indexBuffer: ArrayBuffer, codeOffsetBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer) {
     if (this._offscreen) {
-      this.map.postMessage({ type: 'vectordata', source, tileID, vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer }, [vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer])
+      this.map.postMessage({ type: 'vectordata', source, tileID, parentLayers, vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer }, [vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer])
     } else {
-      this.map.injectVectorSourceData(source, tileID, vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer)
+      this.map.injectVectorSourceData(source, tileID, parentLayers, vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer)
+    }
+  }
+
+  injectRasterData (source: string, tileID: string, image: ImageBitmap, leftShift: number, bottomShift: number) {
+    if (this._offscreen) {
+      this.map.postMessage({ type: 'rasterdata', source, tileID, image, leftShift, bottomShift }, [image])
+    } else {
+      this.map.injectRasterData(source, tileID, image, leftShift, bottomShift)
     }
   }
 

@@ -23,18 +23,6 @@ uniform float uFeatureCode[128];
 // out float lengthSoFar;
 out vec4 color;
 
-// float map (float value, float min1, float max1, float min2, float max2) {
-//   return min2 + (value - min1) * (max2 - min2) / (max1 - min1);
-// }
-
-// vec2 unpack (float pNorm) {
-//   float denom = PRECISION - 1.;
-//   return vec2(
-//     floor(pNorm / PRECISION) / denom,
-//     mod(pNorm, PRECISION) / denom
-//   );
-// }
-
 void main () {
   // prep layer index and feature index positions
   int index = 0;
@@ -44,6 +32,9 @@ void main () {
   // decode line width
   float width = decodeFeature(false, index, featureIndex)[0];
   float scale = 1. - mod(uInputs[0], 1.);
+  int tileScale = 1 << int(floor(uInputs[0]) - uFaceST[1]);
+  if (tileScale != 0) scale /= float(tileScale);
+  // float scale = uInputs[0] - uFaceST[1];
   scale = 0.5 + (scale) * (1. - 0.5); // map the scale from 0->1 to 0.5->1
   width = width * DIVISOR * scale;
   // multiply width by pos and normal
@@ -54,3 +45,27 @@ void main () {
   // set position
   gl_Position = uMatrix * STtoXYZ(newPos);
 }
+
+// void main () {
+//   // prep layer index and feature index positions
+//   int index = 0;
+//   int featureIndex = int(aIndex);
+//   // decode color
+//   color = decodeFeature(true, index, featureIndex);
+//   // decode line width
+//   float width = decodeFeature(false, index, featureIndex)[0];
+//   float scale = 1. - mod(uInputs[0], 1.);
+//   scale = 0.5 + (scale) * (1. - 0.5); // map the scale from 0->1 to 0.5->1
+//   width = width * scale;
+//   // multiply width by pos and normal
+//   // vec2 normal = unpack(aNormal);
+//   // vec2 newPos = vec2(aPos.x + (aNormal.x * width), aPos.y + (aNormal.y * width));
+//   vec4 newPos = uMatrix * STtoXYZ(aPos);
+//   // newPos = vec2(newPos.x + (aNormal.x * width), newPos.y + (aNormal.y * width)) * scale;
+//   newPos.x = (newPos.x + (aNormal.x * width)) * scale;
+//   newPos.y = (newPos.y + (aNormal.y * width)) * scale;
+//   // send off the length so far
+//   // lengthSoFar = aLengthSoFar;
+//   // set position
+//   gl_Position = newPos;
+// }

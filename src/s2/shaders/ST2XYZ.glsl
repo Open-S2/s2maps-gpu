@@ -1,4 +1,4 @@
-uniform float uFaceST[5]; // [face, sLow, deltaS, tLow, deltaT]
+uniform float uFaceST[6]; // [face, zoom, sLow, deltaS, tLow, deltaT]
 
 float STtoUV (float s) {
   // compressed VTs are extended, so we must squeeze them back to [0,1]
@@ -12,8 +12,8 @@ vec4 STtoXYZ (in vec2 st) { // x -> s, y -> t
   vec3 xyz;
   // convert to uv
   vec2 uv = vec2(
-    STtoUV(uFaceST[1] * st.x + uFaceST[2]), // deltaS * sPos + sLow
-    STtoUV(uFaceST[3] * st.y + uFaceST[4]) // deltaT * tPos + tLow
+    STtoUV(uFaceST[2] * st.x + uFaceST[3]), // deltaS * sPos + sLow
+    STtoUV(uFaceST[4] * st.y + uFaceST[5]) // deltaT * tPos + tLow
   ); // x -> u, y -> v
   // convert uv to xyz according to face
   if (face == 0) xyz = vec3(uv.x, uv.y, 1);

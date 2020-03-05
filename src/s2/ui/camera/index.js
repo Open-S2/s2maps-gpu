@@ -5,10 +5,13 @@ import Style from '../../style'
 import { Painter } from '../../gl'
 import type { MapOptions } from '../map'
 /** PROJECTIONS **/
+import { tileHash } from 's2projection' // https://github.com/Regia-Corporation/s2projection
 import { OrthographicProjection, BlendProjection } from './projections'
 import type { Projection } from './projections'
 /** SOURCES **/
 import { Tile, TileCache } from '../../source'
+
+import type { Face } from 's2projection'
 
 export type ProjectionType = 'perspective' | 'persp' | 'orthographic' | 'ortho' | 'orthographicPerspective' | 'blend'
 
@@ -55,62 +58,59 @@ export default class Camera {
   // if updateTiles is set to false, we don't requestTiles unless zooming is off.
   // no matter what, if zooming is false, we check that each tile has made requests
   _getTiles (isZooming?: boolean) {
-    const self = this
-    if (self.projection.dirty) {
+    if (this.projection.dirty) {
       // grab zoom change
-      const zoomChange = self.projection.zoomChange()
+      // const zoomChange = this.projection.zoomChange()
       // no matter what we need to update what's in view
       const newTiles = []
       // update tiles in view
-      self.tilesInView = self.projection.getTilesInView()
+      this.tilesInView = this.projection.getTilesInView()
       // check if any of the tiles don't exist in the cache. If they don't create a new tile
-      for (const tile of self.tilesInView) {
+      for (const tile of this.tilesInView) {
         const [face, zoom, x, y, hash] = tile
-        if (!self.tileCache.has(hash)) {
+        if (!this.tileCache.has(hash)) {
           // tile not found, so we create it
-          const newTile = new Tile(self.painter.context, face, zoom, x, y, hash)
-          // inject parent should one exist
-          if (zoomChange) newTile.injectParentTile(this.tileCache)
-          // start requesting raster data if exists
-          self._requestRasterData(newTile)
-          // store the tile
-          self.tileCache.set(hash, newTile)
+          const newTile = this._createTile(face, zoom, x, y, hash)
+          // store reference for the style to request from webworker(s)
           newTiles.push(newTile)
         }
       }
       if (newTiles.length) this.painter.dirty = true
-      self.style.requestTiles(newTiles)
+      this.style.requestTiles(newTiles)
     }
-    return self.tileCache.getBatch(self.tilesInView.map(t => t[4]))
+    return this.tileCache.getBatch(this.tilesInView.map(t => t[4]))
   }
 
-  _requestRasterData (tile: Tile) {
+  _createTile (face: Face, zoom: number, x: number, y: number, hash: number): Tile {
+    // create tile
+    const tile = new Tile(this.painter.context, face, zoom, x, y, hash)
+    // inject parent should one exist
+    if (tile.zoom !== 0) {
+      // get closest parent hash. If actively zooming, the parent tile will pass along
+      // it's parent tile (and so forth) if its own data has not been processed yet.
+      const parentHash = tileHash(tile.face, tile.zoom - 1, Math.floor(tile.x / 2), Math.floor(tile.y / 2))
+      // check if parent tile exists, if so inject
+      if (this.tileCache.has(parentHash)) {
+        const parent = this.tileCache.get(parentHash)
+        tile.injectParentTile(parent)
+      }
+    }
+    // prep raster containers if said layers exist
+    this.prepRasterContainers(tile)
+    // store the tile
+    this.tileCache.set(hash, tile)
+
+    return tile
+  }
+
+  prepRasterContainers (tile: Tile) {
     const self = this
     const { rasterLayers } = self.style
     for (const sourceName in rasterLayers) {
       // grab the source and layer details
-      const { path, fileType } = self.style.sources[sourceName]
       const layer = rasterLayers[sourceName]
       // create texture and recieve the pieces that need to be requested
-      const pieces = tile.buildSourceTexture(sourceName, layer)
-      // start requesting tiles
-      for (const piece of pieces) {
-        const image = new Image()
-        image.crossOrigin = path
-        image.src = `${path}/${piece.face}/${piece.zoom}/${piece.x}/${piece.y}.${fileType}`
-        const render = () => {
-          // inject the image into the raster in its proper position
-          tile._injectRasterData(sourceName, image, piece.leftShift, piece.bottomShift)
-          // new 'paint', so painter is dirty
-          self.painter.dirty = true
-          // call a re-render only if the tile is in our current viewing
-          if (self.tilesInView.map(t => t[4]).includes(tile.id)) self._render()
-        }
-        // onload actually blocks the main thread during the decoding phase, so we await decode
-        // if (image.decode) image.decode().then(render).catch(e => { console.log(e) })
-        // else image.onload = render
-        image.onload = render
-      }
+      tile.buildSourceTexture(sourceName, layer)
     }
   }
 
@@ -125,11 +125,40 @@ export default class Camera {
     }, 150)
   }
 
-  injectVectorSourceData (source: string, tileID: number, vertexBuffer: ArrayBuffer,
+  injectVectorSourceData (source: string, tileID: number, parentLayers, vertexBuffer: ArrayBuffer,
     indexBuffer: ArrayBuffer, codeOffsetBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer) {
+    let children: boolean = false
     if (this.tileCache.has(tileID)) {
       const tile = this.tileCache.get(tileID)
+      children = Object.keys(tile.childrenRequests).length > 0
       tile.injectVectorSourceData(source, new Float32Array(vertexBuffer), new Uint32Array(indexBuffer), new Uint8Array(codeOffsetBuffer), new Uint32Array(featureGuideBuffer), this.style.layers)
+      // for each parentLayer, inject specified layers
+      for (let hash in parentLayers) {
+        hash = +hash
+        if (this.tileCache.has(hash)) {
+          const parent = this.tileCache.get(hash)
+          tile.injectParentTile(parent, parentLayers[hash].layers)
+        } else {
+          // if parent tile does not exist: create, set all the child's requests,
+          // and tell the styler to request the webworker(s) to process the tile
+          const { face, zoom, x, y } = parentLayers[hash]
+          const newTile = this._createTile(face, zoom, x, y, hash)
+          for (const layer of parentLayers[hash].layers) newTile.childrenRequests[layer] = [tile]
+          this.style.requestTiles([newTile])
+        }
+      }
+      // new 'paint', so painter is dirty
+      this.painter.dirty = true
+      // call a re-render only if the tile is in our current viewing or it had children
+      if (this.tilesInView.map(t => t[4]).includes(tileID) || children) this._render()
+    }
+  }
+
+  injectRasterData (source: string, tileID: string, image: ImageBitmap,
+    leftShift: number, bottomShift: number) {
+    if (this.tileCache.has(tileID)) {
+      const tile = this.tileCache.get(tileID)
+      tile.injectRasterData(source, image, leftShift, bottomShift)
       // new 'paint', so painter is dirty
       this.painter.dirty = true
       // call a re-render only if the tile is in our current viewing

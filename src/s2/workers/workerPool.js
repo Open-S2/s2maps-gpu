@@ -23,8 +23,11 @@ class WorkerPool {
     const { type } = data
     if (type === 'vectordata') {
       // a worker has processed tiles, so we are going to send it back to the appropriate mapID
-      const { source, mapID, tileID, vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer } = data
-      this.maps[mapID].injectVectorSourceData(source, tileID, vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer)
+      const { source, mapID, tileID, parentLayers, vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer } = data
+      this.maps[mapID].injectVectorSourceData(source, tileID, parentLayers, vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer)
+    } else if (type === 'rasterdata') {
+      const { source, mapID, tileID, image, leftShift, bottomShift } = data
+      this.maps[mapID].injectRasterData(source, tileID, image, leftShift, bottomShift)
     } else if (type === 'maskdata') {
       const { mapID, tileID, vertexBuffer, indexBuffer, radiiBuffer } = data
       this.maps[mapID].injectMaskGeometry(tileID, vertexBuffer, indexBuffer, radiiBuffer)

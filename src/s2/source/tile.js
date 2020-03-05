@@ -1,6 +1,6 @@
 // @flow
 import { WebGL2Context, WebGLContext } from '../gl/contexts'
-import { S2Point, tileHash, bboxST } from 's2projection' // https://github.com/Regia-Corporation/s2projection
+import { S2Point, bboxST } from 's2projection' // https://github.com/Regia-Corporation/s2projection
 
 import type { Face } from 's2projection' // https://github.com/Regia-Corporation/s2projection/blob/master/src/S2Projection.js#L4
 import type { Layer, Mask } from '../styleSpec'
@@ -41,6 +41,10 @@ export type RasterTileSource = {
   mode?: GLenum // TRIANGLES | TRIANGLE_STRIP | TRIANGLE_FAN | etc
 }
 
+export type ChildRequest = { // eslint-disable-next-line
+  [string | number]: Array<Tile> // layerID (hash):
+}
+
 // SourceData will either be the current tiles VectorTileSource, RasterTileSource,
 // or reference tile(s) to be masked + created.
 // eslint-disable-next-line
@@ -63,8 +67,9 @@ export default class Tile {
   sourceData: SourceData = {}
   featureGuide: Array<FeatureGuide> = []
   context: WebGL2Context | WebGLContext
+  childrenRequests: ChildRequest = {}
   constructor (context: WebGL2Context | WebGLContext, face: number, zoom: number,
-    x: number, y: number, hash: number, size?: number = 512, children?: Array<Tile>) {
+    x: number, y: number, hash: number, size?: number = 512) {
     this.context = context
     this.face = face
     this.zoom = zoom
@@ -72,45 +77,32 @@ export default class Tile {
     this.y = y
     this.id = hash
     this.size = size
-    if (children) this.children = children
     const bbox = this.bbox = bboxST(x, y, zoom)
-    this.faceST = new Float32Array([face, bbox[2] - bbox[0], bbox[0], bbox[3] - bbox[1], bbox[1]])
+    this.faceST = new Float32Array([face, zoom, bbox[2] - bbox[0], bbox[0], bbox[3] - bbox[1], bbox[1]])
     this._createDivision()
     this._buildMaskGeometry()
   }
 
-  destroy () {
-    const { gl } = this.context
-    for (const sourceName in this.sourceData) {
-      const source = this.sourceData[sourceName]
-      if (source.type === 'vector') {
-        if (source.vertexBuffer) gl.deleteBuffer(source.vertexBuffer)
-        if (source.codeOffsetBuffer) gl.deleteBuffer(source.codeOffsetBuffer)
-        if (source.indexBuffer) gl.deleteBuffer(source.indexBuffer)
-        if (source.radiiBuffer) gl.deleteBuffer(source.radiiBuffer)
-        if (source.vao) this.context.deleteVertexArray(source.vao)
-      } else if (source.type === 'raster') {
-        if (source.texture) gl.deleteTexture(source.texture)
-      }
+  // inject references to featureGuide from each parentTile. Sometimes if we zoom really fast, we inject
+  // a parents' parent or deeper, so we need to reflect that int the tile property. The other case
+  // is the tile wants to display a layer that exists in a 'lower' zoom than this one.
+  injectParentTile (parentTile: Tile, filterLayers?: Array<number>) {
+    const foundLayers = new Set()
+    for (const featureGuide of parentTile.featureGuide) {
+      const { parent, tile, source, layerID, count, offset, type, layerCode, featureCode, texture } = featureGuide
+      if (type === 'raster' && parent) continue
+      // if (type === 'raster') continue
+      if (!parent) foundLayers.add(layerID)
+      this.featureGuide.push({ parent: true, tile: (tile) ? tile : parentTile, source, layerID, count, offset, type, layerCode, featureCode, texture })
     }
-  }
-
-  injectParentTile (tileCache: TileCache) {
-    // corner case, we are at min zoom
-    if (this.zoom === 0) return
-    // get closest parent hash. Max distance of 3 zooms
-    const parentHash = tileHash(this.face, this.zoom - 1, Math.floor(this.x / 2), Math.floor(this.y / 2))
-    // check if parent tile exists, if so inject
-    if (tileCache.has(parentHash)) {
-      const parent = tileCache.get(parentHash)
-      // inject references to featureGuide from each parentTile. Sometimes if we zoom really fast, we inject
-      // a parents' parent or deeper, so we need to reflect that int the tile property
-      for (const featureGuide of parent.featureGuide) {
-        const { tile, source, layerID, count, offset, type, layerCode, featureCode, texture } = featureGuide
-        if (type === 'raster' && featureGuide.parent) continue
-        this.featureGuide.push({ parent: true, tile: (tile) ? tile : parent, source, layerID, count, offset, type, layerCode, featureCode, texture })
+    this.featureGuide.sort((a, b) => a.layerID - b.layerID)
+    // if filterLayers, we need to check what layers were missing
+    if (filterLayers) {
+      const missingLayers = filterLayers.filter(layerID => !foundLayers.has(layerID))
+      for (const missingLayer of missingLayers) {
+        if (!parentTile.childrenRequests[missingLayer]) parentTile.childrenRequests[missingLayer] = []
+        parentTile.childrenRequests[missingLayer].push(this)
       }
-      this.featureGuide.sort((a, b) => a.layerID - b.layerID)
     }
   }
 
@@ -136,26 +128,15 @@ export default class Tile {
     }
     this.featureGuide.push(guide)
     this.buildSource(raster)
-    // setup image requests
-    const { face, zoom, x, y } = this
-    const pieces = [
-      { face, zoom: zoom + 1, x: x * 2, y: y * 2, leftShift: 0, bottomShift: 0 },
-      { face, zoom: zoom + 1, x: x * 2 + 1, y: y * 2, leftShift: 1, bottomShift: 0 },
-      { face, zoom: zoom + 1, x: x * 2, y: y * 2 + 1, leftShift: 0, bottomShift: 1 },
-      { face, zoom: zoom + 1, x: x * 2 + 1, y: y * 2 + 1, leftShift: 1, bottomShift: 1 }
-    ]
-
-    return pieces
   }
 
-  _injectRasterData (source: string, image: Image, leftShift: number, bottomShift: number) {
+  injectRasterData (source: string, image: Image, leftShift: number, bottomShift: number) {
     const { gl } = this.context
     const length = image.width
     const currentSource = this.sourceData[source]
     const { texture } = currentSource
     // put into texture
     gl.bindTexture(gl.TEXTURE_2D, texture)
-    // gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, leftShift * length, bottomShift * length, width, height, 0)
     gl.texSubImage2D(gl.TEXTURE_2D, 0, leftShift * length, bottomShift * length, gl.RGBA, gl.UNSIGNED_BYTE, image)
   }
 
@@ -191,14 +172,37 @@ export default class Tile {
       i += encodingSize
     }
     // Since a parent can be injected, we need to remove any instances of the "old" source data.
-    this.featureGuide = this.featureGuide.filter(lg => !(lg.parent && lg.source === source))
+    this.featureGuide = this.featureGuide.filter(fg => !(fg.parent && fg.source === source))
     // because sources may be utilized in an out of order fashion inside the style.layers property,
     // but come in linearly, we need to sort.
-    this.featureGuide.sort((a, b) => {
-      return a.layerID - b.layerID
-    })
+    this.featureGuide.sort((a, b) => { return a.layerID - b.layerID })
     // build the VAO
     this.buildSource(builtSource)
+    // if we have children requesting this tiles data, we send the data over
+    if (Object.keys(this.childrenRequests).length) this._injectSourceIntoChildren(source)
+  }
+
+  _injectSourceIntoChildren (sourceName: string) {
+    // clean the children's current featureGuide's of said layer
+    for (let layerID in this.childrenRequests) {
+      layerID = +layerID
+      for (const tile of this.childrenRequests[layerID]) {
+        tile.featureGuide = tile.featureGuide.filter(fg => !(fg.parent && fg.layerID === layerID))
+      }
+    }
+    // run through every layer in the guide and see if any of the tiles need said layer
+    for (const featureGuide of this.featureGuide) {
+      if (featureGuide.source === sourceName && this.childrenRequests[featureGuide.layerID]) {
+        for (const tile of this.childrenRequests[featureGuide.layerID]) {
+          // first remove all instances of source
+          const { source, layerID, count, offset, type, layerCode, featureCode, texture } = featureGuide
+          tile.featureGuide.push({ parent: true, tile: this, source, layerID, count, offset, type, layerCode, featureCode, texture })
+          tile.featureGuide.sort((a, b) => { return a.layerID - b.layerID })
+        }
+        // cleanup
+        delete this.childrenRequests[featureGuide.layerID]
+      }
+    }
   }
 
   _createDivision () {

@@ -13,5 +13,6 @@ export default function requestData (path: string, extension: Extension, callbac
 
 function getResposeType (extension: Extension) {
   if (extension === 'json' || extension === 'geojson' || extension === 's2json') return 'json'
-  else return 'arraybuffer' // 'pbf' | 'jpeg' | 'png' | 'webp' | etc.
+  else if (extension === 'png' || extension === 'jpeg' || extension === 'jpg' || extension === 'webp') return 'blob'
+  else return 'arraybuffer' // 'pbf' | etc.
 }

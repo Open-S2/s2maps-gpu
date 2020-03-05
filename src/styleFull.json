@@ -1,8 +1,8 @@
 {
   "version": 1,
   "name": "s2test",
-  "center": [0, 0],
-  "zoom": 0,
+  "center": [-111, 40],
+  "zoom": 5,
   "minzoom": 0,
   "maxzoom": 20,
   "sources": {
@@ -25,26 +25,30 @@
       "rgb(244, 239, 226)",
       3,
       "rgb(245, 245, 245)",
-      6,
-      "rgb(245, 245, 245)",
-      8.5,
+      7.5,
       "rgb(236, 234, 231)",
-      11,
+      9.5,
+      "rgb(229, 229, 229)",
+      11.5,
+      "rgb(238,240,239)",
+      13,
+      "rgb(238,240,239)",
+      14,
       "rgb(248, 249, 250)"
     ]
   },
   "layers": [
     {
-      "id": "landuse",
+      "name": "landuse",
       "source": "fills",
       "layer": "landuse",
       "type": "fill",
-      "filter": ["and", ["class", "has", ["park", "national_park", "protected_area",
+      "filter": ["class", "has", ["park", "national_park", "protected_area",
         "aboriginal_lands", "grass", "grassland", "garden", "meadow",
         "wood", "swamp", "forest", "wetland", "zoo", "cemetery", "indianReservation",
         "sand", "beach", "desert", "aeroway", "military", "hospital",
         "university", "college", "school", "kindergarten", "parking", "glacier",
-        "quarry", "industrial", "retail"]]],
+        "quarry", "industrial", "retail"]],
       "minzoom": 0,
       "layout": {},
       "paint": {
@@ -92,7 +96,7 @@
       }
     },
     {
-      "id": "landuse",
+      "name": "golf",
       "source": "fills",
       "layer": "landuse",
       "type": "fill",
@@ -116,9 +120,9 @@
       }
     },
     {
-      "id": "water",
+      "name": "water",
       "source": "fills",
-      "filter": ["and", ["class", "!has", ["reef", "shoal"]]],
+      "filter": ["class", "!has", ["reef", "shoal"]],
       "layer": "water",
       "type": "fill",
       "minzoom": 0,
@@ -128,9 +132,9 @@
       }
     },
     {
-      "id": "reef",
+      "name": "reef",
       "source": "fills",
-      "filter": ["and", ["class", "has", ["reef", "shoal"]]],
+      "filter": ["class", "has", ["reef", "shoal"]],
       "layer": "water",
       "type": "fill",
       "minzoom": 0,
@@ -140,7 +144,7 @@
       }
     },
     {
-      "id": "rivers",
+      "name": "rivers",
       "source": "fills",
       "layer": "water",
       "type": "line",
@@ -163,7 +167,171 @@
       }
     },
     {
-      "id": "boundaries",
+      "name": "transport_borders",
+      "source": "fills",
+      "layer": "transport",
+      "filter": ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited"]],
+      "type": "line",
+      "minzoom": 2,
+      "layout": {
+        "cap": "round",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": [
+          "data-condition",
+          ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited"]],
+          "rgb(218, 220, 224)",
+          "default",
+          "rgba(0, 0, 0, 0)"
+        ],
+        "width": [
+          "data-condition",
+          ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link"]],
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            4,
+            0.85,
+            6.5,
+            0.85,
+            7,
+            2,
+            10,
+            2.5,
+            13,
+            7
+          ],
+          ["or", ["class", "==", "street"], ["class", "==", "street_limited"]],
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            10,
+            0.5,
+            15,
+            4.85
+          ],
+          "default",
+          1.85
+        ]
+      }
+    },
+    {
+      "name": "transport",
+      "source": "fills",
+      "layer": "transport",
+      "filter": ["or",
+        ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited", "ferry"]],
+        ["and", ["class", "==", "railway"], ["type", "==", "rail"]],
+        ["and", ["class", "==", "path"], ["type", "==", "path"]]
+      ],
+      "type": "line",
+      "minzoom": 2,
+      "layout": {
+        "cap": "round",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": [
+          "data-condition",
+          ["class", "==", "ferry"],
+          "#9fccf9",
+          ["class", "==", "path"],
+          "rgb(136, 190, 150)",
+          ["class", "==", "railway"],
+          "rgb(214, 217, 220)",
+          ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited"]],
+          "rgb(255, 255, 255)",
+          "default",
+          "rgba(0, 0, 0, 0)"
+        ],
+        "width": [
+          "data-condition",
+          ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link"]],
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            7,
+            0.85,
+            10,
+            1.5,
+            13,
+            6
+          ],
+          ["or", ["class", "==", "street"], ["class", "==", "street_limited"]],
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            10,
+            0.5,
+            15,
+            4
+          ],
+          ["class", "==", "path"],
+          1,
+          "default",
+          1
+        ]
+      }
+    },
+    {
+      "name": "motor_trunk_borders",
+      "source": "fills",
+      "layer": "transport",
+      "filter": ["class", "has", ["motorway", "motorway_link", "trunk", "trunk_link"]],
+      "type": "line",
+      "minzoom": 2,
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "rgb(246, 207, 101)",
+        "width": [
+          "input-range",
+          "zoom",
+          "lin",
+          7,
+          1.85,
+          11,
+          3,
+          15,
+          10
+        ]
+      }
+    },
+    {
+      "name": "motor_trunk",
+      "source": "fills",
+      "layer": "transport",
+      "filter": ["class", "has", ["motorway", "motorway_link", "trunk", "trunk_link"]],
+      "type": "line",
+      "minzoom": 2,
+      "layout": {
+        "cap": "round",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "rgb(255, 235, 161)",
+        "width": [
+          "input-range",
+          "zoom",
+          "lin",
+          7,
+          0.5,
+          11,
+          1.5,
+          15,
+          9
+        ]
+      }
+    },
+    {
+      "name": "boundaries",
       "source": "fills",
       "layer": "boundary",
       "filter": ["and", ["class", "has", ["Country", "State"]], ["maritime", "==", false]],
@@ -199,7 +367,7 @@
       }
     },
     {
-      "id": "equator",
+      "name": "equator",
       "source": "fills",
       "layer": "equator",
       "type": "line",
@@ -223,7 +391,7 @@
       }
     },
     {
-      "id": "buildings",
+      "name": "buildings",
       "source": "fills",
       "layer": "building",
       "type": "fill",
