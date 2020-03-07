@@ -74,7 +74,7 @@ export default function encodeLayerAttribute (input: Array<any>): Float32Array {
     if (isNaN(input)) {
       const color = new Color(input) // build the color as LCH
       encodings[0] += (1 << 4) // set the condition bits as 1 (value)
-      encodings.push(...color.getLCH()) // store that it is a value and than the values
+      encodings.push(...color.getValue()) // store that it is a value and than the values
     } else {
       encodings[0] += (1 << 4) // set the condition bits as 1 (value)
       encodings.push(input) // store true as 1 and false as 0, otherwise it's a number
