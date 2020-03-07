@@ -9,18 +9,43 @@ export default class Context {
   newScene () {
     this.clearScene()
     this.enableCullFace()
-    this.disableDepthTest()
+    this.enableDepthTest()
+    this.enableStencilTest()
     this.enableBlend()
   }
 
   clearScene () {
     this.gl.clear(this.gl.DEPTH_BUFFER_BIT | this.gl.STENCIL_BUFFER_BIT | this.gl.COLOR_BUFFER_BIT)
+    this.gl.clearStencil(0xFF)
+    this.clearStencil()
     this.clearColor()
   }
 
   clearColor () {
     this.gl.clearColor(0, 0, 0, 0)
+  }
+
+  enableColorMask () {
     this.gl.colorMask(true, true, true, true)
+  }
+
+  disableColorMask () {
+    this.gl.colorMask(false, false, false, false)
+  }
+
+  enableMask () {
+    this.disableColorMask()
+    this.setStencilFunc(this.gl.ALWAYS, 0)
+  }
+
+  lockMask (depth?: boolean = false) {
+    this.enableColorMask()
+    this.gl.stencilOp(this.gl.KEEP, (depth) ? this.gl.KEEP : this.gl.REPLACE, this.gl.REPLACE)
+    // this.setStencilFunc()
+  }
+
+  setStencilFunc (func: GLenum = this.gl.GREATER, ref: GLint = 255, mask: GLuint = 0xFF) {
+    this.gl.stencilFunc(func, ref, mask)
   }
 
   enableDepthTest () {
@@ -73,22 +98,7 @@ export default class Context {
     this.gl.disable(this.gl.STENCIL_TEST)
   }
 
-  enableStencil () {
-    this.gl.stencilOp(this.gl.KEEP, this.gl.KEEP, this.gl.REPLACE)
-  	this.gl.stencilFunc(this.gl.ALWAYS, 1, 0xFF)
-  	this.gl.stencilMask(0xFF)
-  	this.gl.colorMask(false, false, false, false)
-  }
-
-  lockStencil () {
-    this.gl.stencilFunc(this.gl.EQUAL, 1, 0xFF)
-  	this.gl.stencilMask(0x00)
-  	this.gl.colorMask(true, true, true, true)
-  }
-
   clearStencil () {
-    this.gl.clearStencil(0x0)
-  	this.gl.stencilMask(0xFF)
     this.gl.clear(this.gl.STENCIL_BUFFER_BIT)
   }
 

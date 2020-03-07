@@ -1,8 +1,8 @@
 {
   "version": 1,
   "name": "s2test",
-  "center": [-111, 40],
-  "zoom": 5,
+  "center": [0, 0],
+  "zoom": 0,
   "minzoom": 0,
   "maxzoom": 20,
   "sources": {
@@ -28,7 +28,7 @@
       7.5,
       "rgb(236, 234, 231)",
       9.5,
-      "rgb(229, 229, 229)",
+      "rgb(227, 227, 227)",
       11.5,
       "rgb(238,240,239)",
       13,
@@ -45,10 +45,10 @@
       "type": "fill",
       "filter": ["class", "has", ["park", "national_park", "protected_area",
         "aboriginal_lands", "grass", "grassland", "garden", "meadow",
-        "wood", "swamp", "forest", "wetland", "zoo", "cemetery", "indianReservation",
+        "wood", "swamp", "forest", "wetland", "zoo", "cemetery",
         "sand", "beach", "desert", "aeroway", "military", "hospital",
         "university", "college", "school", "kindergarten", "parking", "glacier",
-        "quarry", "industrial", "retail"]],
+        "quarry", "retail"]],
       "minzoom": 0,
       "layout": {},
       "paint": {
@@ -345,7 +345,7 @@
         "color": [
           "data-condition",
           ["class", "==", "State"],
-          "rgba(160, 160, 160, 0.7)",
+          "rgb(200, 200, 200)",
           "default",
           "rgb(150, 150, 150)"
         ],
@@ -378,7 +378,7 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "rgba(125, 102, 97, 0.8)",
+        "color": "rgb(125, 102, 97)",
         "width": [
           "input-range",
           "zoom",

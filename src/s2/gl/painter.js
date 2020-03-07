@@ -49,7 +49,7 @@ export default class Painter {
     // const contextTypes = ['webgl2', 'webgl', 'experimental-webgl']
 
     // first webgl2
-    let context = this._canvas.getContext('webgl2', { antialias: true, premultipliedAlpha: false, alpha: true, stencil: true })
+    let context = this._canvas.getContext('webgl2', { antialias: true, premultipliedAlpha: true, alpha: true, stencil: true })
     if (context && typeof context.getParameter === 'function') {
       this.indexSize = context.UNSIGNED_INT
       this.webglState = 2
@@ -118,16 +118,14 @@ export default class Painter {
 
   paint (projection: Projection, style: Style, tiles: Array<Tile>) {
     const { context } = this
+    const { view } = projection
     // prep painting
     context.newScene()
-    // prep depth & stencil
-    context.enableStencilTest()
     // for each tile, draw background & features as necessary
     for (let tile of tiles) {
       const { size, faceST } = tile
       // grab the matrix (duplicate created) and view (input) properties
       const matrix = projection.getMatrix(size)
-      const { view } = projection
       // inject values to programs
       this.injectFrameUniforms(matrix, view, faceST)
       // now draw the tile according to the features it contains
@@ -164,15 +162,15 @@ export default class Painter {
     context.bindVertexArray(mask.vao)
     // First 'feature' is the mask feature
     drawMask(this, mask.indexArray.length, mask.mode, mask.threeD)
-    // now that we have drawn a mask, we can start using depth testing
-    context.enableDepthTest()
-    // Second feature is the sphere-background feature should it exist
+    // if we have a background, draw to fill in what's left
     if (sphereBackground) {
       program.setLayerCode(sphereBackground)
       drawFill(this, mask.indexArray.length, 0, null, mask.mode, mask.threeD)
     }
     // now we start drawing feature batches
-    for (const featureBatch of featureGuide) {
+    let stencilRef = 254
+    for (let i = featureGuide.length - 1; i >= 0; i--) {
+      const featureBatch = featureGuide[i]
       const { parent, tile, source, layerID, count, offset, type, featureCode, layerCode, texture } = featureBatch
       // if a parent tile, be sure to bind the parent tiles vao
       // rebind back to current vao and matrix when the parent is not being used
@@ -193,8 +191,6 @@ export default class Painter {
       }
       // if type is not the same as the curProgram, we have to update curProgram and set uniforms
       if (type !== curProgram) {
-        // if (type === 'raster') context.lequalDepth()
-        // else context.alwaysDepth()
         program = this.useProgram(type)
         curProgram = type
       }
@@ -204,7 +200,9 @@ export default class Painter {
       }
       // if new layerID, update layerCode
       if (layerID !== curLayer && layerCode) {
+        context.setStencilFunc(context.gl.GREATER, stencilRef)
         program.setLayerCode(layerCode)
+        stencilRef--
         curLayer = layerID
       }
       // now draw according to type

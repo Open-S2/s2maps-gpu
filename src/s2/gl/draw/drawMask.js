@@ -11,12 +11,12 @@ export default function drawMask (painter: Painter, length: number, mode?: GLenu
   const fillProgram: FillProgram = painter.getProgram('fill')
   if (!fillProgram) return
   if (threeD) fillProgram._set3D(true)
-  // setup the mask
-  context.enableStencil()
+  // disable color mask as we prep the total mask
+  context.enableMask()
   // grab mode
   if (!mode) mode = gl.TRIANGLE_STRIP
   // draw elements
   gl.drawElements(mode, length, indexSize, 0)
   // lock the mask in
-  context.lockStencil()
+  context.lockMask()
 }

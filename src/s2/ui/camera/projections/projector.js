@@ -111,6 +111,7 @@ export default class Projector implements Projection {
   }
 
   getTilesInView (size?: number = 512): Array<[number, number, number, number, number]> { // [face, zoom, x, y, hash]
+    // return [[0, 0, 0, 0, 2], [1, 0, 0, 0, 3], [2, 0, 0, 0, 4], [3, 0, 0, 0, 5], [4, 0, 0, 0, 6], [5, 0, 0, 0, 7]]
     if (this.zoom < 1) return [[0, 0, 0, 0, 2], [1, 0, 0, 0, 3], [2, 0, 0, 0, 4], [3, 0, 0, 0, 5], [4, 0, 0, 0, 6], [5, 0, 0, 0, 7]]
     const tiles = []
     const checkList = []

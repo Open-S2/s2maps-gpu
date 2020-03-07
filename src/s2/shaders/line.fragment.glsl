@@ -10,5 +10,7 @@ out vec4 fragColor;
 void main () {
   // float dash = floor(2.0 * fract(lengthSoFar * 20.));
   // if (dash < 0.5) discard;
-  fragColor = LCH2RGB(color);
+  vec4 c = LCH2RGB(color);
+  if (c.a < 0.01) discard;
+  fragColor = c;
 }

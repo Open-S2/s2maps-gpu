@@ -373,7 +373,7 @@ export default class TileWorker {
       let index = 0
       let maxSize = Math.min(a.code.length, b.code.length)
       while (diff === 0 && index < maxSize) {
-        diff = a.code[index] - b.code[index]
+        diff = b.code[index] - a.code[index]
         index++
       }
       return diff
