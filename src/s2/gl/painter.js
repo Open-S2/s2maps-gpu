@@ -49,7 +49,7 @@ export default class Painter {
     // const contextTypes = ['webgl2', 'webgl', 'experimental-webgl']
 
     // first webgl2
-    let context = this._canvas.getContext('webgl2', { antialias: true, premultipliedAlpha: true, alpha: true, stencil: true })
+    let context = this._canvas.getContext('webgl2', { antialias: false, premultipliedAlpha: false, alpha: true, stencil: true })
     if (context && typeof context.getParameter === 'function') {
       this.indexSize = context.UNSIGNED_INT
       this.webglState = 2
