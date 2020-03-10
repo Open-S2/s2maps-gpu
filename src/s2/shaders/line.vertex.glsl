@@ -22,6 +22,7 @@ uniform float uFeatureCode[128];
 
 // out float lengthSoFar;
 out vec4 color;
+out float w;
 
 void main () {
   // prep layer index and feature index positions
@@ -37,6 +38,7 @@ void main () {
   // float scale = uInputs[0] - uFaceST[1];
   scale = 0.5 + (scale) * (1. - 0.5); // map the scale from 0->1 to 0.5->1
   width = width * DIVISOR * scale;
+  w = width;
   // multiply width by pos and normal
   // vec2 normal = unpack(aNormal);
   vec2 newPos = vec2(aPos.x + (aNormal.x * width), aPos.y + (aNormal.y * width));

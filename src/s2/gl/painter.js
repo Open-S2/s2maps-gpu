@@ -48,8 +48,10 @@ export default class Painter {
   _createContext () {
     // const contextTypes = ['webgl2', 'webgl', 'experimental-webgl']
 
+    // prep options
+    const webglOptions = { antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: true, alpha: true, stencil: true }
     // first webgl2
-    let context = this._canvas.getContext('webgl2', { antialias: true, premultipliedAlpha: false, alpha: true, stencil: true })
+    let context = this._canvas.getContext('webgl2', webglOptions)
     if (context && typeof context.getParameter === 'function') {
       this.indexSize = context.UNSIGNED_INT
       this.webglState = 2
@@ -58,10 +60,10 @@ export default class Painter {
     }
 
     // webgl
-    // context = this._canvas.getContext('webgl', { alpha: false, stencil: true })
+    // context = this._canvas.getContext('webgl', webglOptions)
 
     // esxperimental-webgl
-    // context = this._canvas.getContext('experimental-webgl', { alpha: false, stencil: true })
+    // context = this._canvas.getContext('experimental-webgl', webglOptions)
   }
 
   // programs are pre-set for tiles to create their VAO vertexAttribPointers

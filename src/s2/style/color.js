@@ -19,8 +19,11 @@ export default class Color {
       this.val = [x, y, z, a]
       this.type = type
     }
-    // for future interpolation, convert to lch immediately
-    this.toLCH()
+  }
+
+  getValue (): [number, number, number, number] {
+    if (this.type === 'rgb') return [this.val[0] / 255, this.val[1] / 255, this.val[2] / 255, this.val[3]]
+    return this.val
   }
 
   getRGB (): [number, number, number, number] {
@@ -29,6 +32,8 @@ export default class Color {
   }
 
   getLCH (): [number, number, number, number] {
+    this.toLCH()
+
     return this.val
   }
 
