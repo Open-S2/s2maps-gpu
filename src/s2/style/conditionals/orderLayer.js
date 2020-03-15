@@ -2,7 +2,8 @@
 import type { Layer } from '../styleSpec'
 
 export default function orderLayer (layer: Layer) {
-  if (layer.type === 'line' || layer.type === 'line3D') orderLine(layer)
+  if (layer.type === 'fill' && !layer.color) layer.color = 'rgba(0, 0, 0, 0)'
+  else if (layer.type === 'line' || layer.type === 'line3D') orderLine(layer)
   else if (layer.type === 'text') orderText(layer)
   else if (layer.type === 'billboard') orderBillboard(layer)
 }
@@ -11,33 +12,27 @@ export default function orderLayer (layer: Layer) {
 function orderLine (layer: Layer) {
   const { paint } = layer
   const newLinePaint = {
-    color: paint.color,
-    width: paint.width,
-    // dasharray: paint.dasharray,
-    // gapwidth: paint.gapwidth,
-    // blur: paint.blur
+    color: paint.color || 'rgba(0, 0, 0, 0)',
+    width: paint.width || 1
   }
   layer.paint = newLinePaint
 }
 
-// line order: (layout)family->field->offset->padding->(paint)color->size->halowidth->halocolor
+// line order: (layout)family->field->offset->padding->(paint)size->fillStyle->strokeStyle->strokeWidth
 function orderText (layer: Layer) {
   const { layout, paint } = layer
   const newtextLayout = {
-    family: layout.family,
-    field: layout.field,
-    offset: layout.offset,
-    padding: layout.padding
+    family: layout.family || 'Arial',
+    field: layout.field || '',
+    anchor: layout.anchor || 'center',
+    offset: layout.offset || [0, 0],
+    padding: layout.padding || [2, 2]
   }
   const newTextPaint = {
-    family: paint.family,
-    field: paint.field,
-    offset: paint.offset,
-    padding: paint.padding,
-    color: paint.color,
-    size: paint.size,
-    halowidth: paint.halowidth,
-    halocolor: paint.halocolor
+    size: paint.size || 16,
+    fillStyle: paint.color || 'rgba(0, 0, 0, 0)',
+    strokeStyle: paint.strokeStyle,
+    strokeWidth: paint.strokeWidth || 1
   }
   layer.layout = newtextLayout
   layer.paint = newTextPaint

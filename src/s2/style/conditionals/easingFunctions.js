@@ -5,7 +5,7 @@ import Color from '../color'
 
 export type EaseType = 'lin' | 'expo' | 'quad' | 'cubic'
 
-export default function getEasingFunction(easeType: EaseType, base: number = 1): Function {
+export default function getEasingFunction (easeType: EaseType, base: number = 1): Function {
   const func = (easeType === 'lin')
     ? linear
     : (easeType === 'expo')
@@ -18,7 +18,8 @@ export default function getEasingFunction(easeType: EaseType, base: number = 1):
   return (zoom, start, end, startValue, endValue) => {
     const t = func(zoom, start, end, base)
     if (isNaN(startValue)) { // we are dealing with colors
-      return Color.interpolate(startValue, endValue, t)
+      if (startValue instanceof Color) return Color.interpolate(startValue, endValue, t)
+      else return startValue // if for instance a string, just ignore the easing (same as a step function)
     } else { // perhaps line-width or some other number value; Given our t depth, convert to a new value
       return startValue + t * (endValue - startValue)
     }

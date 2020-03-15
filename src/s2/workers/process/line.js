@@ -4,7 +4,7 @@ import drawLine from 'line-gl'
 import type { Attributes } from 'line-gl'
 type Point = [number, number]
 
-const PRECISION = 4096
+// const PRECISION = 4096
 
 export default function processLine (geometry: Array<Array<Point>>,
   type: 2 | 3 | 4, attributes: Attributes, vertices: Array<number>,

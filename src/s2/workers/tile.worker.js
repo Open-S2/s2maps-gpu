@@ -3,7 +3,7 @@ import S2JsonVT from 's2json-vt'
 import S2RTIN from 's2rtin'
 import { VectorTile } from 's2-vector-tile'
 import { parseLayers } from '../style/conditionals'
-import { processFill, processLine, PNGReader } from './process'
+import { processFill, processLine, processText, PNGReader, TextureBuilder } from './process'
 import requestData from '../util/xmlHttpRequest'
 import { tileHash } from 's2projection'
 
@@ -34,7 +34,7 @@ export type ParentLayers = {
   }
 }
 
-type Feature = {
+export type Feature = {
   vertices: Array<number>,
   indices: Array<number>,
   code: Array<number>,
@@ -43,13 +43,39 @@ type Feature = {
   layerID: number
 }
 
+export type Text = {
+  // organization parameters
+  id: number,
+  layerID: number,
+  code: Array<number>,
+  // layout
+  family: string,
+  field: string | Array<string>,
+  anchor: number, // 0 => auto ; 1 => center ; 2 => top; 3 => topRight ; 4 => right ; 5 => bottomRight ; 6 => bottom ; 7 => bottomLeft ; 8 => left ; 9 => topLeft
+  offset: [number, number],
+  padding: [number, number],
+  // paint
+  size: number,
+  fillStyle: string,
+  strokeStyle: string,
+  strokeWidth: number,
+  // tile's position
+  s: number,
+  t: number,
+  // canvas properties
+  x?: number,
+  y?: number,
+  width?: number,
+  height?: number,
+}
+
 const S2Rtin = S2RTIN.default
 const terrainToGrid = S2RTIN.terrainToGrid
 
 // TODO: If source is raster, delete it so that each request does not loop through layers and such
 
 const MAX_FEATURE_BATCH_SIZE = 128
-const MAX_INDEX_BUFFER_SIZE = 4294967295 // 16bit: 65535
+const MAX_INDEX_BUFFER_SIZE = 4294967295 // 32bit: 4,294,967,295 --- 16bit: 65,535
 
 // A TileWorker on spin up will get style "guide". It will have all layers "filter" and "layout" properties
 // This is the tileworkers time to prepare the the style data for future requests from said mapID.
@@ -73,15 +99,23 @@ const MAX_INDEX_BUFFER_SIZE = 4294967295 // 16bit: 65535
 export default class TileWorker {
   id: number
   chrome: boolean = navigator.userAgent.indexOf('Chrome') !== -1
+  offscreenSupport: boolean = global.OffscreenCanvas && global.FontFace
+  textureBuilder: TextureBuilder
   maps: { [string]: StylePackage } = {} // mapID: StylePackage
   status: 'building' | 'busy' | 'ready' = 'ready'
   cache: { [string]: Array<TileRequest> } = {} // mapID: TileRequests
   cancelCache: Array<number> = []
+  idGen: number = 1
+  constructor () {
+    if (this.offscreenSupport) this.textureBuilder = new TextureBuilder(true)
+  }
+
   onMessage ({ data }) {
     const { mapID, type } = data
     if (type === 'style') this._styleMessage(mapID, data.style, data.index)
     else if (type === 'request') this._requestMessage(mapID, data.tiles)
     else if (type === 'status') postMessage({ type: 'status', status: this.status })
+    else if (type === 'texture') this._processTexture(mapID, data.source, data.tileID, data.texts, data.texture)
     else if (type === 'cancel') this._cancelTiles(mapID, data.tiles)
   }
 
@@ -124,8 +158,7 @@ export default class TileWorker {
   // grab the metadata from each source, grab necessary fonts / billboards
   // this may seem wasteful that each worker has to do this, but these assets are cached, so it will be fast.
   async buildSources (mapID: string) {
-    const self = this
-    const style = self.maps[mapID]
+    const style = this.maps[mapID]
     // check all values are non-null
     if (!style.sources) style.sources = {}
     if (!style.fonts) style.fonts = {}
@@ -167,7 +200,24 @@ export default class TileWorker {
         source.s2rtin = new S2Rtin(source.tileSize)
       }
     }
-    // TODO: get and replace billboard strings with svg-gl class objects
+    // build fonts if we can utilize them
+    if (this.offscreenSupport) {
+      for (const fontName in fonts) {
+        promises.push(new Promise((resolve, _) => {
+          const font = new FontFace(fontName, `url(${fonts[fontName]})`)
+          font.load()
+            .then(loadedFontFace => {
+              global.fonts.add(loadedFontFace)
+              resolve()
+            })
+            .catch(err => {
+              console.log(`Could not load font "${fontName}"`, err)
+              resolve()
+            })
+        }))
+      }
+    }
+    // TODO: get billboard data
 
     // run the style config
     Promise.all(promises)
@@ -251,6 +301,7 @@ export default class TileWorker {
     const { type } = source
     if (type === 'vector' || type === 'json') {
       const features: Array<Feature> = []
+      const texts: Array<Text> = []
       const parentLayers: ParentLayers = {}
       const vectorTile = (type === 'vector') ? new VectorTile(data) : data
       const { layers } = this.maps[mapID]
@@ -271,6 +322,11 @@ export default class TileWorker {
             for (let f = 0; f < vectorTileLayer.length; f++) {
               let featureCode = []
               const feature = vectorTileLayer.feature(f)
+              // every feature MUST have an id associated with it for lookups
+              feature._id = this.idGen
+              this.idGen++
+              if (this.idGen >= 4294967295) this.idGen = 1
+              // get prelude properties
               const { properties, type } = feature
               // lastly we need to filter according to the layer
               if (layer.filter(properties)) {
@@ -296,7 +352,7 @@ export default class TileWorker {
                 } else if (layer.type === 'line3D' && type === 2) {
 
                 } else if (layer.type === 'text' && type === 1) {
-
+                  texts.push(...processText(feature, zoom, layer, layerID, extent))
                 } else if (layer.type === 'billboard' && type === 1) {
 
                 } else { continue }
@@ -324,6 +380,15 @@ export default class TileWorker {
       }
       // now post process triangles
       this._processVectorFeatures(mapID, sourceName, hash, features, parentLayers)
+      // process text
+      if (this.offscreenSupport) {
+        if (texts.length) {
+          // create the texture
+          const texture = this.textureBuilder.createTexture(texts)
+          // build vertex data and send off
+          this._processTexture(mapID, sourceName, hash, texts, texture)
+        }
+      } else { this._requestTexture(mapID, sourceName, hash, texts) }
     } else if (type === 'raster') {
       const { leftShift, bottomShift } = params
       const getImage = (this.chrome) ? createImageBitmap(data, { imageOrientation: 'flipY', premultiplyAlpha: 'premultiply' }) : createImageBitmap(data)
@@ -367,17 +432,7 @@ export default class TileWorker {
     // now that we have created all triangles, let's merge into bundled buffer sets
     // for the main thread to build VAOs.
     // Step 1: Sort by layerID, than sort by feature code.
-    features = features.sort((a, b) => {
-      // layerID
-      let diff = a.layerID - b.layerID
-      let index = 0
-      let maxSize = Math.min(a.code.length, b.code.length)
-      while (diff === 0 && index < maxSize) {
-        diff = a.code[index] - b.code[index]
-        index++
-      }
-      return diff
-    })
+    features.sort(featureSort)
 
     // step 2: Run through all features and bundle into the fewest VAOs and fewest featureBatches. Caveats:
     // 1) don't store VAO set larger than index size (if webgl1 we can only store 16 bits, otherwise 32)
@@ -393,7 +448,6 @@ export default class TileWorker {
     let encodingIndexes = { '': 0 }
     let encodingIndex
     let prevLayerID
-    // if (this.id === 0) console.log('START', features)
     for (const feature of features) {
       // TODO: If vertex size + current vertexLength > MAX_INDEX_BUFFER_SIZE we start a new VAO set
 
@@ -420,7 +474,6 @@ export default class TileWorker {
       // store
       vertexOffset = vertices.length / feature.divisor
       codePosition = (feature.divisor === 2) ? 0 : 1
-      // if (this.id === 0) console.log('vertexOffset', feature.layerID, feature.divisor, vertexOffset, (feature.vertices.length / feature.divisor), vertexOffset + (feature.vertices.length / feature.divisor))
       // NOTE: Spreader functions on large arrays are failing in chrome right now -_-
       // so we just do a for loop
       for (let f = 0, fl = feature.vertices.length; f < fl; f++) vertices.push(feature.vertices[f])
@@ -453,6 +506,57 @@ export default class TileWorker {
       featureGuideBuffer
     }, [vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer])
   }
+
+  _processTexture (mapID: string, source: string, tileID: string,
+    texts: Array<Text>, texture: ImageData) {
+    const { width, height } = texture
+    // sort by layer than feature code
+    texts.sort(featureSort)
+    // now that the texture pack is built, we can specify all the vertex sets
+    // Uint16Array: [x + x-offset, y + y-offset, width, height, id,     x2 + x2-offset, ...]
+    const vertices = []
+    const texPositions = []
+    for (const text of texts) {
+      // store the vertex set
+      vertices.push(text.s, text.t, text.width, text.height, text.anchor, text.id)
+      // prep texture position variables
+      const left = text.x / width
+      const right = (text.x + text.width) / width
+      const top = text.y / height
+      const bottom = (text.y + text.height) / height
+      // store quad
+      texPositions.push(left, top,   left, bottom,   right, top,   right, bottom)
+    }
+    // get the buffer
+    const vertexBuffer = new Uint16Array(vertices).buffer
+    const textPositionBuffer = new Float32Array(texPositions).buffer
+    // post
+    // postMessage({
+    //   mapID,
+    //   type: 'textdata',
+    //   source,
+    //   tileID,
+    //   vertexBuffer,
+    //   texture
+    // }, [vertexBuffer, texture])
+  }
+
+  _requestTexture (mapID: string, source: string, tileID: string, texts: Array<Text>) {
+    console.log('REQUEST')
+    // postMessage({ mapID, type: 'processText', source, tileID, texts })
+  }
+}
+
+function featureSort (a: Text | Feature, b: Text | Feature): number {
+  // layerID
+  let diff = a.layerID - b.layerID
+  let index = 0
+  let maxSize = Math.min(a.code.length, b.code.length)
+  while (diff === 0 && index < maxSize) {
+    diff = a.code[index] - b.code[index]
+    index++
+  }
+  return diff
 }
 
 // create the tileworker

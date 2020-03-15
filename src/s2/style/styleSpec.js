@@ -61,22 +61,22 @@ export type LinePaint = {
   color: string | Array<any>,
   width: number | Array<any>,
   dasharray?: string | Array<any>,
-  gapwidth?: number | Array<any>,
-  blur?:number | Array<any>
+  gapwidth?: number | Array<any>
 }
 
 /** TEXT **/
 export type TextLayout = {
   family: string | Array<any>,
   field: string | Array<string> | Array<any>,
-  offset?: number | Array<any>,
-  padding?: number | Array<any>
+  anchor?: string,
+  offset?: number | Array<any>, // default: [0, 0]
+  padding?: number | Array<any> // default: [0, 0]
 }
 export type TextPaint = {
-  color: string | Array<any>,
   size: number | Array<any>,
-  halowidth?: number | Array<any>,
-  halocolor?: string | Array<any>
+  fillStyle: string | Array<any>,
+  strokeStyle?: number | Array<any>,
+  strokeWidth?: string | Array<any>
 }
 
 /** BILLBOARD **/

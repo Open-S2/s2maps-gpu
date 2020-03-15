@@ -49,7 +49,7 @@ export default class Painter {
     // const contextTypes = ['webgl2', 'webgl', 'experimental-webgl']
 
     // prep options
-    const webglOptions = { antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: true, alpha: true, stencil: true }
+    const webglOptions = { antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: false, alpha: true, stencil: true }
     // first webgl2
     let context = this._canvas.getContext('webgl2', webglOptions)
     if (context && typeof context.getParameter === 'function') {
@@ -157,6 +157,7 @@ export default class Painter {
     // setup variables
     let curSource: string = 'mask'
     let curSourceData: object = mask
+    let curTileID: number = 0
     let curProgram: ProgramTypes = 'fill'
     let program: Program = this.useProgram('fill')
     let parentSet: boolean = false
@@ -178,8 +179,9 @@ export default class Painter {
       const { parent, tile, source, layerID, count, offset, type, featureCode, layerCode, texture } = featureBatch
       // if a parent tile, be sure to bind the parent tiles vao
       // rebind back to current vao and matrix when the parent is not being used
-      if (parent && (!parentSet || source !== curSource)) {
+      if (parent && (!parentSet || curTileID !== tile.id || source !== curSource)) {
         parentSet = true
+        curTileID = tile.id
         curSourceData = tile.sourceData[source]
         context.bindVertexArray(curSourceData.vao)
         this.injectFrameUniforms(null, null, tile.faceST)

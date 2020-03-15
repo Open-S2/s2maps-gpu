@@ -1,7 +1,132 @@
-const Color = require('./conditionals/color').default
-const { encodeFeatureFunction, encodeLayerFunction, decodeFeature } = require('./conditionals/parseCondition').default
+// const Color = require('./conditionals/color').default
+// const { encodeFeatureFunction, encodeLayerFunction, decodeFeature } = require('./conditionals/parseCondition').default
 // const chroma = require('chroma-js')
 // const filterFunction = require('./conditionals/filterFunction').default
+
+const { parseFeatureFunction } = require('./conditionals/parseFeatureFunction')
+
+// const field = ["\"", "$abbr,$name", "\""] - here we coallese to abbr if the property exists, otherwise we fallback on name
+// const field = ["$text", "-16"]
+
+const layer = {
+  "name": "places",
+  "source": "fills",
+  "filter": ["class", "has", ["Country", "State"]],
+  "layer": "place",
+  "type": "text",
+  "layout": {
+    "family": [
+      "input-range",
+      "zoom",
+      "step",
+      0,
+      'Roboto-Medium',
+      2,
+      'Roboto-Regular'
+    ],
+    "field": [
+      "data-condition",
+      ["class", "==", "State"],
+      [
+        "input-range",
+        "zoom",
+        "step",
+        0,
+        "?abbr",
+        3,
+        "?name"
+      ],
+      "default",
+      "?name"
+    ],
+    "offset": [0, 0],
+    "padding": [2, 2]
+  },
+  "paint": {
+    "size": [
+      "data-condition",
+      ["class", "==", "State"],
+      [
+        "input-range",
+        "zoom",
+        "step",
+        1,
+        0.5,
+        2,
+        0.95
+      ],
+      ["class", "==", "Country"],
+      [
+        "input-range",
+        "zoom",
+        "step",
+        0,
+        26,
+        2,
+        20
+      ],
+      "default",
+      14
+    ],
+    "fillStyle": [
+      "data-condition",
+      ["class", "==", "State"],
+      "rgb(135, 135, 135)",
+      ["class", "==", "Country"],
+      "rgb(38, 38, 38)",
+      "default",
+      "rgba(0, 0, 0, 0)"
+    ],
+    "strokeStyle": "rgb(250, 250, 250)",
+    "strokeWidth": 1
+  }
+}
+
+const feature = {
+  properties: {
+    class: 'Country',
+    abbr: 'N.C.',
+    name: 'North Carolina'
+  }
+}
+
+const zoom = 3
+
+
+for (const l in layer.layout) layer.layout[l] = parseFeatureFunction(layer.layout[l])
+for (const p in layer.paint) layer.paint[p] = parseFeatureFunction(layer.paint[p])
+
+const code = []
+const size = layer.paint.size(feature.properties, zoom, code)
+
+console.log('size', size, code)
+// console.log(coalesceField(field, feature.properties))
+
+
+
+
+function coalesceField (field, properties) {
+  if (Array.isArray(field)) return field.reduce((acc, cur) => acc + coalesceText(cur, properties))
+  else return coalesceText(field, properties)
+}
+
+function coalesceText (field, properties) {
+  if (field[0] === '?') {
+    if (field[1] === '?') return field.slice(1)
+    const pieces = field.split(',')
+    for (const piece of pieces) {
+      const key = piece.slice(1)
+      if (properties[key]) return properties[key]
+    }
+  } else { return field }
+}
+//
+// console.log(coalesceField('?abbr,?name', feature.properties))
+// console.log(coalesceField(['\"', '?abbr,?name', '\"'], feature.properties))
+// console.log(coalesceField(['\"', '?abbr,?name', '??'], feature.properties))
+
+
+
 
 // const input2 = [
 //   "data-condition",
@@ -133,142 +258,142 @@ const input2 = [
 //   "rgb(239, 238, 105)"
 // ]
 
-const colorZoom = [
-  "data-condition",
-  ["class", "has", ["golf", "grass", "garden", "meadow", "wood", "swamp", "forest", "wetland", "zoo"]],
-  "rgb(201, 238, 201)",
-  ["class", "has", ["park", "national_park", "protected_area"]],
-  [
-    "input-range",
-    "zoom",
-    "lin",
-    3,
-    "rgb(205, 236, 205)",
-    4,
-    "rgb(197, 232, 197)"
-  ],
-  ["class", "==", "cemetery"],
-  "rgb(208, 236, 208)",
-  ["class", "==", "indianReservation"],
-  "rgb(240, 237, 235)",
-  "default",
-  "rgba(0, 0, 0, 0)"
-]
-
-const inputZoom = [
-  "input-range",
-  "zoom",
-  "lin",
-  0.9, // zoom
-  0, // VALUE
-  5, // zoom
-  5, // VALUE
-  7, // zoom
-  7  // VALUE
-]
-
-const inputCondition = [
-  "input-condition",
-  ["zoom", "==", "5"],
-  "rgba(5, 100, 125, .5)",
-  ["lat", ">", "90"],
-  "rgba(200, 160, 100, .8)",
-  "default",
-  "rgba(20, 200, 200, 1)"
-]
-
-const exampleFailing = {
-  "id": "boundaries",
-  "source": "fills",
-  "layer": "boundary",
-  "filter": ["all", ["class", "has", ["Country", "State"]], ["maritime", "==", false]],
-  "type": "line",
-  "minzoom": 0,
-  "layout": {
-    "cap": "butt",
-    "join": "bevel"
-  },
-  "paint": {
-    "color": [
-      "data-condition",
-      ["class", "==", "State"],
-      "rgba(160, 160, 160, 0.7)",
-      "default",
-      "rgb(145, 145, 145)"
-    ],
-    "width": [
-      "data-condition",
-      ["class", "==", "State"],
-      0.85,
-      "default",
-      [
-        "input-range",
-        "zoom",
-        "lin",
-        1,
-        2,
-        2,
-        3
-      ]
-    ]
-  }
-}
-
-// const failingColor = [
+// const colorZoom = [
+//   "data-condition",
+//   ["class", "has", ["golf", "grass", "garden", "meadow", "wood", "swamp", "forest", "wetland", "zoo"]],
+//   "rgb(201, 238, 201)",
+//   ["class", "has", ["park", "national_park", "protected_area"]],
+//   [
+//     "input-range",
+//     "zoom",
+//     "lin",
+//     3,
+//     "rgb(205, 236, 205)",
+//     4,
+//     "rgb(197, 232, 197)"
+//   ],
+//   ["class", "==", "cemetery"],
+//   "rgb(208, 236, 208)",
+//   ["class", "==", "indianReservation"],
+//   "rgb(240, 237, 235)",
+//   "default",
+//   "rgba(0, 0, 0, 0)"
+// ]
+//
+// const inputZoom = [
+//   "input-range",
+//   "zoom",
+//   "lin",
+//   0.9, // zoom
+//   0, // VALUE
+//   5, // zoom
+//   5, // VALUE
+//   7, // zoom
+//   7  // VALUE
+// ]
+//
+// const inputCondition = [
+//   "input-condition",
+//   ["zoom", "==", "5"],
+//   "rgba(5, 100, 125, .5)",
+//   ["lat", ">", "90"],
+//   "rgba(200, 160, 100, .8)",
+//   "default",
+//   "rgba(20, 200, 200, 1)"
+// ]
+//
+// const exampleFailing = {
+//   "id": "boundaries",
+//   "source": "fills",
+//   "layer": "boundary",
+//   "filter": ["all", ["class", "has", ["Country", "State"]], ["maritime", "==", false]],
+//   "type": "line",
+//   "minzoom": 0,
+//   "layout": {
+//     "cap": "butt",
+//     "join": "bevel"
+//   },
+//   "paint": {
+//     "color": [
+//       "data-condition",
+//       ["class", "==", "State"],
+//       "rgba(160, 160, 160, 0.7)",
+//       "default",
+//       "rgb(145, 145, 145)"
+//     ],
+//     "width": [
+//       "data-condition",
+//       ["class", "==", "State"],
+//       0.85,
+//       "default",
+//       [
+//         "input-range",
+//         "zoom",
+//         "lin",
+//         1,
+//         2,
+//         2,
+//         3
+//       ]
+//     ]
+//   }
+// }
+//
+// // const failingColor = [
+// //   "data-condition",
+// //   ["class", "==", "State"],
+// //   "rgba(160, 160, 160, 0.7)",
+// //   "default",
+// //   "rgb(145, 145, 145)"
+// // ]
+//
+// const failingWidth = [
 //   "data-condition",
 //   ["class", "==", "State"],
-//   "rgba(160, 160, 160, 0.7)",
+//   0.85,
 //   "default",
-//   "rgb(145, 145, 145)"
+//   [
+//     "input-range",
+//     "zoom",
+//     "lin",
+//     1,
+//     2,
+//     2,
+//     3
+//   ]
 // ]
-
-const failingWidth = [
-  "data-condition",
-  ["class", "==", "State"],
-  0.85,
-  "default",
-  [
-    "input-range",
-    "zoom",
-    "lin",
-    1,
-    2,
-    2,
-    3
-  ]
-]
-// const failingWidth = 0.85
-
-const input = 5
-
-const inputClone = JSON.parse(JSON.stringify(failingWidth))
-const inputCloneEncode = JSON.parse(JSON.stringify(failingWidth))
-// const widthInputClone = JSON.parse(JSON.stringify(failingWidth))
-// const widthInputCloneEncode = JSON.parse(JSON.stringify(failingWidth))
-
-const layerCode = []
-
-const encodeFeatureFunc = encodeFeatureFunction(inputClone)
-layerCode.push(...encodeLayerFunction(inputCloneEncode))
-// const colorencodeFeatureFunc = encodeFeatureFunction(widthInputClone)
-// console.log('encodeLayerFunction(widthInputCloneEncode)', encodeLayerFunction(widthInputCloneEncode))
-// layerCode.push(...encodeLayerFunction(widthInputCloneEncode))
-console.log('layerCode', layerCode.length, layerCode)
-
-const featureCode = []
-
-// colorencodeFeatureFunc({ class: 'park' }, featureCode)
-encodeFeatureFunc({ class: 'Country' }, featureCode)
-console.log('featureCode', featureCode)
-// featureCode[0] = 3
-
-// const color = decodeFeature(layerCode, featureCode, [0.5, 0, 0], true, 0, 0)
+// // const failingWidth = 0.85
+//
+// const input = 5
+//
+// const inputClone = JSON.parse(JSON.stringify(failingWidth))
+// const inputCloneEncode = JSON.parse(JSON.stringify(failingWidth))
+// // const widthInputClone = JSON.parse(JSON.stringify(failingWidth))
+// // const widthInputCloneEncode = JSON.parse(JSON.stringify(failingWidth))
+//
+// const layerCode = []
+//
+// const encodeFeatureFunc = encodeFeatureFunction(inputClone)
+// layerCode.push(...encodeLayerFunction(inputCloneEncode))
+// // const colorencodeFeatureFunc = encodeFeatureFunction(widthInputClone)
+// // console.log('encodeLayerFunction(widthInputCloneEncode)', encodeLayerFunction(widthInputCloneEncode))
+// // layerCode.push(...encodeLayerFunction(widthInputCloneEncode))
+// console.log('layerCode', layerCode.length, layerCode)
+//
+// const featureCode = []
+//
+// // colorencodeFeatureFunc({ class: 'park' }, featureCode)
+// encodeFeatureFunc({ class: 'Country' }, featureCode)
+// console.log('featureCode', featureCode)
+// // featureCode[0] = 3
+//
+// // const color = decodeFeature(layerCode, featureCode, [0.5, 0, 0], true, 0, 0)
+// // console.log(color)
+//
+// console.log('***********************')
+// // find position
+// const color = decodeFeature(layerCode, featureCode, [1.5, 0, 0], false, 0, 0)
 // console.log(color)
-
-console.log('***********************')
-// find position
-const color = decodeFeature(layerCode, featureCode, [1.5, 0, 0], false, 0, 0)
-console.log(color)
 
 
 
