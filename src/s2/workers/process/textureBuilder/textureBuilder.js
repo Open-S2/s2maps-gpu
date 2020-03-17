@@ -9,14 +9,16 @@ export type Canvas = {
 }
 
 export default class TextureBuilder {
+  offscreen: boolean
   canvas: HTMLCanvasElement
   context: CanvasRenderingContext2D
   constructor (offscreen?: boolean = false) {
+    this.offscreen = offscreen
     this.canvas = (offscreen) ? new OffscreenCanvas(1, 1) : document.createElement('canvas')
     this.context = this.canvas.getContext('2d')
   }
 
-  createTexture (texts: Array<Text>): ImageData {
+  createTexture (texts: Array<Text>): ImageBitmap {
     // define the width & height parameters
     for (const text of texts) {
       // prep the fontDefinition to get the proper width
@@ -32,7 +34,7 @@ export default class TextureBuilder {
     return this._createTexture(width, height, texts)
   }
 
-  _createTexture (width: number, height: number, texts: Array<any>): ImageData {
+  _createTexture (width: number, height: number, texts: Array<any>): ImageBitmap {
     // clear canvas
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height)
     // build the total size to house all the text
@@ -61,6 +63,7 @@ export default class TextureBuilder {
       this.context.fillText(text.field, text.x + text.padding[0] + text.strokeWidth, middle + text.y + text.padding[1] + text.strokeWidth)
     }
 
-    return this.context.getImageData(0, 0, width, height)
+    if (this.offscreen) return this.canvas.transferToImageBitmap()
+    else return this.canvas
   }
 }

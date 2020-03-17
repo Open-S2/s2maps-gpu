@@ -155,14 +155,13 @@ export default class Camera {
   }
 
   injectTextSourceData (source: string, tileID: string, vertexBuffer: ArrayBuffer,
-    texPositionBuffer: ArrayBuffer, texture: HTMLCanvasElement | ImageData,
-    width: number, height: number) {
+    texPositionBuffer: ArrayBuffer, imageBitmap: ImageBitmap) {
     // store the vertexBuffer and texture in the gpu.
     let children: boolean = false
     if (this.tileCache.has(tileID)) {
       const tile = this.tileCache.get(tileID)
       children = Object.keys(tile.childrenRequests).length > 0
-      tile.injectTextSourceData(source, new Float32Array(vertexBuffer), new Uint16Array(texPositionBuffer), new Uint8ClampedArray(texture), width, height)
+      tile.injectTextSourceData(source, new Float32Array(vertexBuffer), new Uint16Array(texPositionBuffer), imageBitmap)
     }
     // new 'paint', so painter is dirty
     this.painter.dirty = true

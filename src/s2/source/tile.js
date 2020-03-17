@@ -39,7 +39,7 @@ export type TextureMapTileSource = {
   type: 'text',
   vertexArray: Float32Array,
   texPositionArray: Uint16Array,
-  imageData: HTMLCanvasElement | ImageData,
+  imageBitmap: ImageBitmap,
   texture: WebGLTexture,
   vertexBuffer?: WebGLBuffer,
   texPositionBuffer?: WebGLBuffer,
@@ -196,7 +196,7 @@ export default class Tile {
   }
 
   injectTextSourceData (source: string, vertexArray: Float32Array, texPositionArray: Uint16Array,
-    imageData: Uint8ClampedArray, width: number, height: number) {
+    imageBitmap: ImageBitmap) {
     const textSource = `${source}:text`
     // create the source. This will naturally replace whatever was already there
     const builtSource = this.sourceData[textSource] = {
@@ -204,9 +204,7 @@ export default class Tile {
       texture: this.context.gl.createTexture(),
       vertexArray,
       texPositionArray,
-      imageData,
-      width,
-      height
+      imageBitmap
     }
     // build the VAO
     this.buildSource(builtSource)
@@ -396,7 +394,8 @@ export default class Tile {
       gl.vertexAttribDivisor(1, 4) // texture width & height & anchor & id
       // TEXTURE
       gl.bindTexture(gl.TEXTURE_2D, source.texture)
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, source.width, source.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, source.imageData)
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source.imageBitmap)
+      // gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, source.width, source.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, source.imageData)
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true)
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)

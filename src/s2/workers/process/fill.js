@@ -1,6 +1,6 @@
 // @flow
-import { earclip } from 'earclip'
-// import { zeroClip } from 'zero-clip'
+// import { earclip } from 'earclip'
+import { zeroClip } from 'zero-clip'
 
 type Point = [number, number]
 
@@ -16,8 +16,8 @@ export default function processFill (geometry: Array<Array<Point>> | Array<Point
   // process
   for (const poly of polys) {
     // create triangle mesh
-    const data = earclip(poly, extent / division, vertices.length / 2)
-    // const data = zeroClip(poly, vertices.length / 2)
+    // const data = earclip(poly, extent / division, vertices.length / 2)
+    const data = zeroClip(poly, vertices.length / 2)
     // store vertices
     for (let i = 0, vl = data.vertices.length; i < vl; i++) vertices.push(data.vertices[i] / extent)
     // store indices

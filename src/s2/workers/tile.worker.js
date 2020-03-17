@@ -384,9 +384,9 @@ export default class TileWorker {
       if (texts.length) {
         if (this.offscreenSupport) {
           // create the texture
-          const texture = this.textureBuilder.createTexture(texts)
+          const imageBitmap = this.textureBuilder.createTexture(texts)
           // build vertex data and send off
-          this._processTexture(mapID, sourceName, hash, texts, texture)
+          this._processTexture(mapID, sourceName, hash, texts, imageBitmap)
         } else { this._requestTexture(mapID, sourceName, hash, texts) }
       }
     } else if (type === 'raster') {
@@ -512,8 +512,9 @@ export default class TileWorker {
   }
 
   _processTexture (mapID: string, source: string, tileID: string,
-    texts: Array<Text>, imageData: ImageData) {
-    let { data, width, height } = imageData
+    texts: Array<Text>, imageBitmap: ImageBitmap) {
+      const { width, height } = imageBitmap
+    // let { data, width, height } = imageData
     // sort by layer than feature code
     texts.sort(featureSort)
     // now that the texture pack is built, we can specify all the vertex sets
@@ -539,7 +540,7 @@ export default class TileWorker {
     // get the buffer
     const vertexBuffer = new Float32Array(vertices).buffer
     const texPositionBuffer = new Uint16Array(texPositions).buffer
-    const texture = data.buffer
+    // const texture = data.buffer
     // post
     postMessage({
       mapID,
@@ -548,10 +549,8 @@ export default class TileWorker {
       tileID,
       vertexBuffer,
       texPositionBuffer,
-      texture,
-      width,
-      height
-    }, [vertexBuffer, texPositionBuffer, texture])
+      imageBitmap
+    }, [vertexBuffer, texPositionBuffer, imageBitmap])
   }
 
   _requestTexture (mapID: string, source: string, tileID: string, texts: Array<Text>) {

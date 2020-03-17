@@ -113,11 +113,11 @@ export default class S2Map {
     }
   }
 
-  injectTextSourceData (source: string, tileID: string, vertexBuffer: ArrayBuffer, texPositionBuffer: ArrayBuffer, texture: HTMLCanvasElement | ImageData, width: number, height: number) {
+  injectTextSourceData (source: string, tileID: string, vertexBuffer: ArrayBuffer, texPositionBuffer: ArrayBuffer, imageBitmap: ImageBitmap) {
     if (this._offscreen) {
-      this.map.postMessage({ type: 'textdata', source, tileID, vertexBuffer, texPositionBuffer, texture, width, height }, [vertexBuffer, texPositionBuffer, texture])
+      this.map.postMessage({ type: 'textdata', source, tileID, vertexBuffer, texPositionBuffer, imageBitmap }, [vertexBuffer, texPositionBuffer, imageBitmap])
     } else {
-      this.map.injectTextSourceData(source, tileID, vertexBuffer, texPositionBuffer, texture, width, height)
+      this.map.injectTextSourceData(source, tileID, vertexBuffer, texPositionBuffer, imageBitmap)
     }
   }
 
