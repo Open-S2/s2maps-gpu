@@ -356,7 +356,7 @@ export default class TileWorker {
                 } else if (layer.type === 'billboard' && type === 1) {
 
                 } else { continue }
-                features.push({ vertices, indices, code: featureCode, size: vertexSize, divisor: vertexDivisor, layerID })
+                features.push({ type: layer.type, vertices, indices, code: featureCode, codeStr: featureCode.toString(), size: vertexSize, divisor: vertexDivisor, layerID })
               } else { continue }
             } // for (let f = 0; f < vectorTileLayer.length; f++)
           } else if (source.layers && source.layers[layer.layer] && source.layers[layer.layer].maxzoom < zoom) {
@@ -381,14 +381,14 @@ export default class TileWorker {
       // now post process triangles
       this._processVectorFeatures(mapID, sourceName, hash, features, parentLayers)
       // process text
-      if (this.offscreenSupport) {
-        if (texts.length) {
+      if (texts.length) {
+        if (this.offscreenSupport) {
           // create the texture
           const texture = this.textureBuilder.createTexture(texts)
           // build vertex data and send off
           this._processTexture(mapID, sourceName, hash, texts, texture)
-        }
-      } else { this._requestTexture(mapID, sourceName, hash, texts) }
+        } else { this._requestTexture(mapID, sourceName, hash, texts) }
+      }
     } else if (type === 'raster') {
       const { leftShift, bottomShift } = params
       const getImage = (this.chrome) ? createImageBitmap(data, { imageOrientation: 'flipY', premultiplyAlpha: 'premultiply' }) : createImageBitmap(data)
@@ -448,14 +448,18 @@ export default class TileWorker {
     let encodingIndexes = { '': 0 }
     let encodingIndex
     let prevLayerID
+    let prevCodeStr
+    // console.log('features', features)
     for (const feature of features) {
       // TODO: If vertex size + current vertexLength > MAX_INDEX_BUFFER_SIZE we start a new VAO set
 
       // on layer change or max encoding size, we have to setup a new featureGuide, encodings, and encodingIndexes
       if (
         (prevLayerID !== undefined && prevLayerID !== feature.layerID) ||
+        // (feature.type === 'fill' && prevCodeStr !== feature.codeStr) ||
         (encodings.length + feature.code.length > MAX_FEATURE_BATCH_SIZE)
       ) {
+        prevCodeStr = feature.codeStr
         featureGuide.push(prevLayerID, indices.length - indicesOffset, indicesOffset, encodings.length, ...encodings) // layerID, count, offset, encoding size, encodings
         indicesOffset = indices.length
         encodings = []
@@ -508,8 +512,8 @@ export default class TileWorker {
   }
 
   _processTexture (mapID: string, source: string, tileID: string,
-    texts: Array<Text>, texture: ImageData) {
-    const { width, height } = texture
+    texts: Array<Text>, imageData: ImageData) {
+    let { data, width, height } = imageData
     // sort by layer than feature code
     texts.sort(featureSort)
     // now that the texture pack is built, we can specify all the vertex sets
@@ -518,27 +522,36 @@ export default class TileWorker {
     const texPositions = []
     for (const text of texts) {
       // store the vertex set
-      vertices.push(text.s, text.t, text.width, text.height, text.anchor, text.id)
+      vertices.push(text.s, text.t)
       // prep texture position variables
       const left = text.x / width
       const right = (text.x + text.width) / width
       const top = text.y / height
       const bottom = (text.y + text.height) / height
       // store quad
-      texPositions.push(left, top,   left, bottom,   right, top,   right, bottom)
+      texPositions.push(
+        // descriptors
+        text.width, text.height, text.anchor, text.id,
+        // positions
+        left, top,   left, bottom,   right, top,   right, bottom
+      )
     }
     // get the buffer
-    const vertexBuffer = new Uint16Array(vertices).buffer
-    const textPositionBuffer = new Float32Array(texPositions).buffer
+    const vertexBuffer = new Float32Array(vertices).buffer
+    const texPositionBuffer = new Uint16Array(texPositions).buffer
+    const texture = data.buffer
     // post
-    // postMessage({
-    //   mapID,
-    //   type: 'textdata',
-    //   source,
-    //   tileID,
-    //   vertexBuffer,
-    //   texture
-    // }, [vertexBuffer, texture])
+    postMessage({
+      mapID,
+      type: 'textdata',
+      source,
+      tileID,
+      vertexBuffer,
+      texPositionBuffer,
+      texture,
+      width,
+      height
+    }, [vertexBuffer, texPositionBuffer, texture])
   }
 
   _requestTexture (mapID: string, source: string, tileID: string, texts: Array<Text>) {

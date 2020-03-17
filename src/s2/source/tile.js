@@ -35,6 +35,17 @@ export type VectorTileSource = {
   mode?: GLenum // TRIANGLES | TRIANGLE_STRIP | TRIANGLE_FAN | etc
 }
 
+export type TextureMapTileSource = {
+  type: 'text',
+  vertexArray: Float32Array,
+  texPositionArray: Uint16Array,
+  imageData: HTMLCanvasElement | ImageData,
+  texture: WebGLTexture,
+  vertexBuffer?: WebGLBuffer,
+  texPositionBuffer?: WebGLBuffer,
+  vao?: WebGLVertexArrayObject
+}
+
 export type RasterTileSource = {
   type: 'raster',
   texture: WebGLTexture,
@@ -91,7 +102,6 @@ export default class Tile {
     for (const featureGuide of parentTile.featureGuide) {
       const { parent, tile, source, layerID, count, offset, type, layerCode, featureCode, texture } = featureGuide
       if (type === 'raster' && parent) continue
-      // if (type === 'raster') continue
       if (!parent) foundLayers.add(layerID)
       this.featureGuide.push({ parent: true, tile: (tile) ? tile : parentTile, source, layerID, count, offset, type, layerCode, featureCode, texture })
     }
@@ -104,6 +114,11 @@ export default class Tile {
         parentTile.childrenRequests[missingLayer].push(this)
       }
     }
+    // lastly inject text
+    for (const source in parentTile.sourceData) {
+      const parentSource = parentTile.sourceData[source]
+      if (parentSource.type === 'text') this.sourceData[source] = parentSource
+    }
   }
 
   // if a style has a raster source & layer pointing to it, we request the tiles
@@ -113,9 +128,7 @@ export default class Tile {
   buildSourceTexture (source: string, layer: Layer) {
     const { gl } = this.context
     // Build sourceData
-    const raster = this.sourceData[source] = {
-      type: 'raster'
-    }
+    const raster = this.sourceData[source] = { type: 'raster' }
     // Create a texture.
     const texture = raster.texture = gl.createTexture()
     // store information to featureGuide
@@ -180,6 +193,23 @@ export default class Tile {
     this.buildSource(builtSource)
     // if we have children requesting this tiles data, we send the data over
     if (Object.keys(this.childrenRequests).length) this._injectSourceIntoChildren(source)
+  }
+
+  injectTextSourceData (source: string, vertexArray: Float32Array, texPositionArray: Uint16Array,
+    imageData: Uint8ClampedArray, width: number, height: number) {
+    const textSource = `${source}:text`
+    // create the source. This will naturally replace whatever was already there
+    const builtSource = this.sourceData[textSource] = {
+      type: 'text',
+      texture: this.context.gl.createTexture(),
+      vertexArray,
+      texPositionArray,
+      imageData,
+      width,
+      height
+    }
+    // build the VAO
+    this.buildSource(builtSource)
   }
 
   _injectSourceIntoChildren (sourceName: string) {
@@ -269,7 +299,7 @@ export default class Tile {
     this.buildSource(mask)
   }
 
-  buildSource (source: RasterTileSource | VectorTileSource) {
+  buildSource (source: RasterTileSource | VectorTileSource | TextureMapTileSource) {
     const { context } = this
     const { gl } = context
     // type vector
@@ -336,6 +366,41 @@ export default class Tile {
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, source.indexBuffer)
       // buffer the data
       gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, source.indexArray, gl.STATIC_DRAW)
+    } else if (source.type === 'text') {
+      // VERTEX
+      // Create a vertex buffer
+      source.vertexBuffer = gl.createBuffer()
+      // Bind the buffer
+      gl.bindBuffer(gl.ARRAY_BUFFER, source.vertexBuffer)
+      // Buffer the data
+      gl.bufferData(gl.ARRAY_BUFFER, source.vertexArray, gl.STATIC_DRAW)
+      // TEXTURE POSITION
+      // Create a tex buffer
+      source.texPositionBuffer = gl.createBuffer()
+      // Bind the buffer
+      gl.bindBuffer(gl.ARRAY_BUFFER, source.texPositionBuffer)
+      // Buffer the data
+      gl.bufferData(gl.ARRAY_BUFFER, source.texPositionArray, gl.STATIC_DRAW)
+      // link attributes:
+      // s & t positions
+      gl.enableVertexAttribArray(0)
+      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0)
+      // texture width & height & anchor & id
+      gl.enableVertexAttribArray(1)
+      gl.vertexAttribPointer(1, 2, gl.UNSIGNED_SHORT, false, 24, 0)
+      // texture x & y data
+      gl.enableVertexAttribArray(2)
+      gl.vertexAttribPointer(2, 2, gl.UNSIGNED_SHORT, false, 24, 8)
+      // add divisors to reuse positions
+      gl.vertexAttribDivisor(0, 4) // s & t
+      gl.vertexAttribDivisor(1, 4) // texture width & height & anchor & id
+      // TEXTURE
+      gl.bindTexture(gl.TEXTURE_2D, source.texture)
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, source.width, source.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, source.imageData)
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
     } else if (source.type === 'raster') {
       // setup texture params
       const length = this.size * 2

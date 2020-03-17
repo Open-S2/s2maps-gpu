@@ -25,6 +25,9 @@ class WorkerPool {
       // a worker has processed tiles, so we are going to send it back to the appropriate mapID
       const { source, mapID, tileID, parentLayers, vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer } = data
       this.maps[mapID].injectVectorSourceData(source, tileID, parentLayers, vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer)
+    } else if (type === 'textdata') {
+      const { source, mapID, tileID, vertexBuffer, texPositionBuffer, texture, width, height } = data
+      this.maps[mapID].injectTextSourceData(source, tileID, vertexBuffer, texPositionBuffer, texture, width, height)
     } else if (type === 'rasterdata') {
       const { source, mapID, tileID, image, leftShift, bottomShift } = data
       this.maps[mapID].injectRasterData(source, tileID, image, leftShift, bottomShift)

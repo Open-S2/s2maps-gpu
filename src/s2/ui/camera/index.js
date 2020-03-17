@@ -154,6 +154,22 @@ export default class Camera {
     }
   }
 
+  injectTextSourceData (source: string, tileID: string, vertexBuffer: ArrayBuffer,
+    texPositionBuffer: ArrayBuffer, texture: HTMLCanvasElement | ImageData,
+    width: number, height: number) {
+    // store the vertexBuffer and texture in the gpu.
+    let children: boolean = false
+    if (this.tileCache.has(tileID)) {
+      const tile = this.tileCache.get(tileID)
+      children = Object.keys(tile.childrenRequests).length > 0
+      tile.injectTextSourceData(source, new Float32Array(vertexBuffer), new Uint16Array(texPositionBuffer), new Uint8ClampedArray(texture), width, height)
+    }
+    // new 'paint', so painter is dirty
+    this.painter.dirty = true
+    // call a re-render only if the tile is in our current viewing or it had children
+    if (this.tilesInView.map(t => t[4]).includes(tileID) || children) this._render()
+  }
+
   injectRasterData (source: string, tileID: string, image: ImageBitmap,
     leftShift: number, bottomShift: number) {
     if (this.tileCache.has(tileID)) {
