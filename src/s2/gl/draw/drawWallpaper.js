@@ -27,7 +27,7 @@ export default function drawWallpaper (painter: Painter, wallpaper: Wallpaper) {
       // set box texture
       gl.uniform1i(wallpaperProgram.uSkybox, 0)
       // Draw the geometry.
-      gl.drawArrays(gl.TRIANGLES, 0, 6)
+      gl.drawArrays(gl.TRIANGLE_FAN, 0, 4)
     }
   } else {
     // set new uniforms should we need to

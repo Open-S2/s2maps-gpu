@@ -15,7 +15,6 @@ export default class Shade {
     uOffset: new Float32Array(2),
     uRadius: new Float32Array(2)
   }
-  dirty: boolean = true
   constructor (style: Style, projection: Projection) {
     this.style = style
     this.projection = projection
@@ -24,15 +23,14 @@ export default class Shade {
   getUniforms (): null | ShadeUniforms {
     if (this.projection.dirty) {
       this._updateUniforms()
-      this.dirty = true
       return this.uniforms
     } else { return null }
   }
 
   _updateUniforms () {
     const radius = 512 * Math.min(Math.pow(2, this.projection.zoom), 32768)
-    this.uniforms.uRadius[0] = radius / (this.projection.width * this.projection.multiplier)
-    this.uniforms.uRadius[1] = radius / (this.projection.height * this.projection.multiplier)
+    this.uniforms.uRadius[0] = radius / (this.projection.aspect[0] * this.projection.multiplier)
+    this.uniforms.uRadius[1] = radius / (this.projection.aspect[1] * this.projection.multiplier)
     this.uniforms.uOffset[0] = this.offsetPos[0] * this.uniforms.uRadius[0]
     this.uniforms.uOffset[1] = this.offsetPos[1] * this.uniforms.uRadius[1]
     // console.log('this.uniforms.uRadius', this.uniforms.uOffset)

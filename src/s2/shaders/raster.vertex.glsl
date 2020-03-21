@@ -19,9 +19,7 @@ void main () {
   // if 3D, add radius
   if (u3D) {
     float radius = 1. + (aRadius * 200.);
-    xyz.x *= radius;
-    xyz.y *= radius;
-    xyz.z *= radius;
+    xyz.xyz *= radius;
   }
   // set position
   gl_Position = uMatrix * xyz;

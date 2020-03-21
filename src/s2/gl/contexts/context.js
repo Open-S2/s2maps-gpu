@@ -2,6 +2,7 @@
 
 export default class Context {
   gl: WebGLRenderingContext | WebGL2RenderingContext
+  clearColorRGBA: [number, number, number, number] = [0, 0, 0, 0]
   constructor (context: WebGLRenderingContext | WebGL2RenderingContext) {
     this.gl = context
   }
@@ -19,13 +20,17 @@ export default class Context {
   }
 
   clearColor () {
-    this.gl.clearColor(0, 0, 0, 0)
+    this.gl.clearColor(...this.clearColorRGBA)
     this.gl.colorMask(true, true, true, true)
+  }
+
+  setClearColor (clearColor: [number, number, number, number]) {
+    this.clearColorRGBA = clearColor
   }
 
   enableDepthTest () {
     this.gl.enable(this.gl.DEPTH_TEST)
-    this.alwaysDepth() // start with a default less than or equal
+    this.alwaysDepth() // start with an always pass depth function
   }
 
   lessDepth () {

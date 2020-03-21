@@ -9,7 +9,7 @@ import {
   FillProgram,
   LineProgram,
   ShadeProgram,
-  TextProgram,
+  TextureProgram,
   SkyboxProgram,
   WallpaperProgram
 } from './programs'
@@ -20,6 +20,7 @@ import {
   drawMask,
   drawRaster,
   // drawShade,
+  drawTexture,
   drawWallpaper
 } from './draw'
 /** SOURCES **/
@@ -66,6 +67,10 @@ export default class Painter {
     // context = this._canvas.getContext('experimental-webgl', webglOptions)
   }
 
+  setClearColor (clearColor: [number, number, number, number]) {
+    this.context.setClearColor(clearColor)
+  }
+
   // programs are pre-set for tiles to create their VAO vertexAttribPointers
   prebuildPrograms (programs: Set) {
     const self = this
@@ -97,7 +102,9 @@ export default class Painter {
         programs[programName] = new ShadeProgram(this.context)
         break
       case 'text':
-        programs[programName] = new TextProgram(this.context)
+      case 'texture':
+      case 'billboard':
+        programs.text = programs.texture = programs.billboard = new TextureProgram(this.context)
         break
       case 'wallpaper':
         programs[programName] = new WallpaperProgram(this.context)
@@ -118,12 +125,30 @@ export default class Painter {
     return program
   }
 
+  resize () {
+    // If we are using the text program, update the text program's framebuffer component's sizes
+    const texProgram = this.programs.texture
+    if (texProgram) texProgram.resize()
+  }
+
   paint (projection: Projection, style: Style, tiles: Array<Tile>) {
     const { context } = this
+    const { gl } = context
     // prep painting
     context.newScene()
+    // if we have a texture program, we draw
+    const texProgram = this.programs.texture
+    if (texProgram) {
+      texProgram.bindPointFrameBuffer()
+      context.newScene()
+      texProgram.bindQuadFrameBuffer()
+      context.newScene()
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+    }
     // prep depth & stencil
     context.enableStencilTest()
+    // prep the depth test
+    context.enableDepthTest()
     // for each tile, draw background & features as necessary
     for (let tile of tiles) {
       const { size, faceST } = tile
@@ -139,12 +164,65 @@ export default class Painter {
     }
     // disable stencil
     context.disableStencilTest()
+    // draw any text & billboards that exist
+    // if (texProgram) this.paintTextures(projection, tiles)
     // draw the wallpaper
     if (style.wallpaper) drawWallpaper(this, style.wallpaper)
     // draw shade layer
     // if (style.shade) drawShade(this, style.shade)
     // cleanup
     context.cleanup()
+  }
+
+  paintTextures (projection: Projection, tiles: Array<Tile>) {
+    const { context } = this
+    const { gl } = context
+
+    // grab the texture program
+    const texProgram = this.useProgram('texture')
+    // setup uniforms
+    texProgram.flush()
+    texProgram.setAspect(projection.aspect)
+
+    // PASS 1 - draw points
+    // ensure we equip depth testing
+    context.lequalDepth()
+    // bind the points framebuffer
+    texProgram.bindPointFrameBuffer()
+    // run through each tile and draw a point should it make it through the z-pass
+    for (let tile of tiles) {
+      for (const texSource of tile.textureSources) {
+        texProgram.setFaceST(tile.faceST)
+        context.bindVertexArray(texSource.vao)
+        drawTexture(this, texSource.primcount, 0)
+      }
+    }
+
+    // TEMP: While figuring out how to draw quads
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+
+    // PASS 2 - draw quads
+    context.alwaysDepth()
+    // all depth passes from now on
+    // bind the quads framebuffer
+    // texProgram.bindQuadFrameBuffer()
+    // setup the scene
+    // context.clearColor()
+    // TEMP: bind pointTexture as our sampler
+    texProgram.samplePointTexture()
+    // run through each tile and draw a quad if the point exists
+    for (let tile of tiles) {
+      for (const texSource of tile.textureSources) {
+        texProgram.setFaceST(tile.faceST)
+        context.bindVertexArray(texSource.vao)
+        // gl.bindTexture(gl.TEXTURE_2D, texSource.texture)
+        drawTexture(this, texSource.primcount, 1)
+      }
+    }
+
+    // PASS 3 - draw textures
+    // return back to our main renderbuffer
+    // gl.bindFramebuffer(gl.FRAMEBUFFER, null)
   }
 
   paintLayers (tile: Tile, style: Style) {
@@ -167,8 +245,6 @@ export default class Painter {
     context.bindVertexArray(mask.vao)
     // First 'feature' is the mask feature
     drawMask(this, mask.indexArray.length, mask.mode, mask.threeD)
-    // now that we have drawn a mask, we can start using depth testing
-    context.enableDepthTest()
     // Second feature is the sphere-background feature should it exist
     if (sphereBackground) {
       program.setLayerCode(sphereBackground)
@@ -197,8 +273,6 @@ export default class Painter {
       }
       // if type is not the same as the curProgram, we have to update curProgram and set uniforms
       if (type !== curProgram) {
-        // if (type === 'raster') context.lequalDepth()
-        // else context.alwaysDepth()
         program = this.useProgram(type)
         curProgram = type
       }

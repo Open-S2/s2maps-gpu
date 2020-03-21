@@ -1,7 +1,7 @@
 export { default as FillProgram } from './fillProgram'
 export { default as LineProgram } from './lineProgram'
 export { default as RasterProgram } from './rasterProgram'
-export { default as TextProgram } from './textProgram'
+export { default as TextureProgram } from './textureProgram'
 export { default as ShadeProgram } from './shadeProgram'
 export { default as SkyboxProgram } from './skyboxProgram'
 export { default as WallpaperProgram } from './wallpaperProgram'

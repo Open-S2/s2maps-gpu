@@ -60,8 +60,8 @@ export default class PerspectiveProjection extends Projector {
     if (this.sizeMatrices[tileSize]) return mat4.clone(this.sizeMatrices[tileSize])
     const matrix = mat4.create()
     // get height and width ratios for each tile
-    const widthRatio = this.width / (tileSize * this.scale)
-    const heightRatio = this.height / (tileSize * this.scale)
+    const widthRatio = this.aspect[0] / (tileSize * this.scale)
+    const heightRatio = this.aspect[1] / (tileSize * this.scale)
     // create projection
     mat4.blend(matrix, widthRatio * (-1 / this.translation[2]), heightRatio * (-1 / this.translation[2]), this.zNear, this.zFar)
     // updated matrix

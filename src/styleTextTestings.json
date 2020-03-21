@@ -8,7 +8,10 @@
   "sources": {
     "fills": "http://localhost:8000/data/fills"
   },
-  "fonts": {},
+  "fonts": {
+    "roboto-medium": "http://localhost:8000/fonts/roboto-medium.ttf",
+    "roboto-regular": "http://localhost:8000/fonts/roboto-regular.ttf"
+  },
   "shade": true,
   "wallpaper": {
     "background-color": "rgb(25, 28, 80)",
@@ -152,6 +155,58 @@
       "layout": {},
       "paint": {
         "color": "rgb(235, 235, 235)"
+      }
+    },
+    {
+      "name": "places",
+      "source": "fills",
+      "filter": ["class", "has", ["Country"]],
+      "layer": "place",
+      "type": "text",
+      "layout": {
+        "family": "roboto-medium",
+        "field": "?abbr,?name",
+        "anchor": "center",
+        "offset": [0, 0],
+        "padding": [1, 1]
+      },
+      "paint": {
+        "size": [
+          "data-condition",
+          ["class", "==", "State"],
+          [
+            "input-range",
+            "zoom",
+            "step",
+            1,
+            20,
+            2,
+            18
+          ],
+          ["class", "==", "Country"],
+          [
+            "input-range",
+            "zoom",
+            "step",
+            0,
+            20,
+            2,
+            30
+          ],
+          "default",
+          14
+        ],
+        "fillStyle": [
+          "data-condition",
+          ["class", "==", "State"],
+          "rgb(135, 135, 135)",
+          ["class", "==", "Country"],
+          "rgb(38, 38, 38)",
+          "default",
+          "rgba(0, 0, 0, 0)"
+        ],
+        "strokeStyle": "rgb(250, 250, 250)",
+        "strokeWidth": 1
       }
     }
   ]

@@ -51,8 +51,8 @@ export default class BlendProjection extends Projector {
       this.zTranslateEnd
     )
     // update movement
-    // let moveX = ((this.width / 2) - canvasX) / (this.width / 2)
-    // let moveY = ((this.height / 2) - canvasX) / (this.height / 2)
+    // let moveX = ((this.aspect[0] / 2) - canvasX) / (this.aspect[0] / 2)
+    // let moveY = ((this.aspect[1] / 2) - canvasX) / (this.aspect[1] / 2)
     // if (zoom < 0) this.onMove(moveX, -moveY, 1, 6)
     // else this.onMove(-moveX, moveY, 1, 6)
     // cleanup
@@ -65,8 +65,8 @@ export default class BlendProjection extends Projector {
     if (this.sizeMatrices[tileSize]) return mat4.clone(this.sizeMatrices[tileSize])
     const matrix = mat4.create()
     // get height and width ratios for each tile
-    const widthRatio = this.width / (tileSize * this.scale)
-    const heightRatio = this.height / (tileSize * this.scale)
+    const widthRatio = this.aspect[0] / (tileSize * this.scale)
+    const heightRatio = this.aspect[1] / (tileSize * this.scale)
     // create projection
     mat4.blend(matrix, widthRatio * (-1 / this.translation[2]), heightRatio * (-1 / this.translation[2]), this.zNear, this.zFar)
     // updated matrix

@@ -24,8 +24,8 @@ export default class TextureBuilder {
       // prep the fontDefinition to get the proper width
       this.context.font = `${text.size}px ${text.family}`
       // build out the width and height
-      text.width = this.context.measureText(text.field).width + ((text.padding[0] + text.strokeWidth) * 2)
-      text.height = text.size + ((text.padding[1] + text.strokeWidth) * 2)
+      text.width = Math.ceil(this.context.measureText(text.field).width + ((text.padding[0] + text.strokeWidth) * 2))
+      text.height = text.size + text.padding[1]
     }
 
     // add's the x and y parameters to each text while also resolving the necessary texture size

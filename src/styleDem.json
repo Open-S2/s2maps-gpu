@@ -29,6 +29,7 @@
   },
   "wallpaper": {
     "skybox": "http://localhost:8000/backgrounds/milkyway",
+    "loadingBackground": "rgb(9, 8, 17)",
     "size": 2048,
     "type": "png"
   },

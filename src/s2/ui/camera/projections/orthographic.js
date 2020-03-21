@@ -40,8 +40,8 @@ export default class OrthographicProjection extends Projector {
     if (this.sizeMatrices[tileSize]) return mat4.clone(this.sizeMatrices[tileSize])
     const matrix = mat4.create()
     // get height and width ratios for each tile
-    const widthRatio = this.width / (tileSize * this.scale)
-    const heightRatio = this.height / (tileSize * this.scale)
+    const widthRatio = this.aspect[0] / (tileSize * this.scale)
+    const heightRatio = this.aspect[1] / (tileSize * this.scale)
     // create projection
     mat4.ortho(matrix, widthRatio, heightRatio, this.zFar)
     // store the matrix for future use

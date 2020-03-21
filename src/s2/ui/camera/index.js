@@ -49,6 +49,7 @@ export default class Camera {
 
   resizeCamera (width: number, height: number) {
     this.projection.resize(width, height)
+    if (this.painter) this.painter.resize(width, height)
   }
 
   // TODO: On zooming start (this.lastTileViewState is empty) we set to tilesInView
@@ -161,7 +162,7 @@ export default class Camera {
     if (this.tileCache.has(tileID)) {
       const tile = this.tileCache.get(tileID)
       children = Object.keys(tile.childrenRequests).length > 0
-      tile.injectTextSourceData(source, new Float32Array(vertexBuffer), new Uint16Array(texPositionBuffer), imageBitmap)
+      tile.injectTextSourceData(source, new Float32Array(vertexBuffer), new Int16Array(texPositionBuffer), imageBitmap)
     }
     // new 'paint', so painter is dirty
     this.painter.dirty = true

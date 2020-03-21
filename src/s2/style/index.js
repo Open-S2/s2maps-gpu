@@ -24,6 +24,7 @@ export default class Style {
   rasterLayers: { [string]: Layer } = {} // rasterLayers[sourceName]: Layer
   wallpaper: undefined | Wallpaper | Skybox
   wallpaperStyle: undefined | WallpaperStyle
+  clearColor: undefined | [number, number, number, number]
   sphereBackground: void | Float32Array // Attribute Code - limited to input-range or input-condition
   shade: undefined | Shade
   dirty: boolean = true
@@ -32,6 +33,8 @@ export default class Style {
     if (options.webworker) this.webworker = true
     this.map = map
     this._buildStyle(style)
+    // if style has a clearColor, set it now
+    if (this.clearColor) map.painter.setClearColor(this.clearColor)
   }
 
   _buildStyle (style: string | Object) {
@@ -81,6 +84,18 @@ export default class Style {
       if (!layer.maxzoom) layer.maxzoom = 30
       if (!layer.layer) layer.layer = 'default'
     }
+    // ensure if wallpaper, we have proper default values
+    if (style.background) {
+      if (style.background.skybox) {
+        if (!style.background.size) style.background.size = 1024
+        if (!style.background.type) style.background.type = 'png'
+        if (!style.background.loadingBackground) style.background.loadingBackground = 'rgb(0, 0, 0)'
+      } else if (style.background['background-color']) {
+        if (!style.background['fade-1']) style.background['fade-1'] = 'rgb(138, 204, 255)'
+        if (!style.background['fade-2']) style.background['fade-2'] = 'rgb(217, 255, 255)'
+        if (!style.background['halo']) style.background['halo'] = 'rgb(230, 255, 255)'
+      }
+    }
     // create mask if it doesn't exist (just incase)
     if (!style.mask) style.mask = {}
     if (!style.mask.exaggeration) style.mask.exaggeration = 1
@@ -105,6 +120,7 @@ export default class Style {
 
   _buildWallpaper (background: WallpaperStyle) {
     if (background.skybox) {
+      this.clearColor = (new Color(background.loadingBackground)).getRGB()
       this.wallpaper = new Skybox(background, this.map.projection)
     } else if (background['background-color']) {
       // create the wallpaper
@@ -135,10 +151,10 @@ export default class Style {
     const programs = new Set()
     for (let i = 0, ll = this.layers.length; i < ll; i++) {
       const layer = this.layers[i]
-      if (layer.type === 'text') continue
       // TODO: if bad layer, remove
-      const code = []
       programs.add(layer.type)
+      if (layer.type === 'text') continue
+      const code = []
       // order layers for GPU
       orderLayer(layer)
       // LAYOUTS

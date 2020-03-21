@@ -1,17 +1,16 @@
 // @flow
 
 export interface Projection {
-  translation?: [number, number, number];
+  translation: Float32Array; // [x, y, z]
   zTranslateStart?: number;
   zTranslateEnd?: number;
   zoomEnd?: number;
-  rotation?: [number, number, number];
-  zoom?: number;
-  scale?: number;
-  zNear?: number;
-  zFar?: number;
-  width?: number;
-  height?: number;
+  rotation: [number, number, number];
+  zoom: number;
+  scale: number;
+  zNear: number;
+  zFar: number;
+  aspect: Float32Array; // [width, height]
 
   resize(width: number, height: number): null;
   setZoom(zoom: number): null;

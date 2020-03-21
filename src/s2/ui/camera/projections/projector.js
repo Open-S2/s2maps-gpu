@@ -32,8 +32,7 @@ export default class Projector implements Projection {
   scale: number = 1 // this is always going to be between 1 and 2
   zNear: number = 0.5 // static; just for draw calls
   zFar: number = 100 // static; just for draw calls
-  width: number = 400 // default canvas width
-  height: number = 300 // default canvas height
+  aspect: Float32Array = new Float32Array([400, 300]) // default canvas width x height
   multiplier: number = 1
   sizeMatrices: { [number | string]: Float32Array } = {} // key is tileSize
   dirty: boolean = true
@@ -46,8 +45,8 @@ export default class Projector implements Projection {
     if (config.scale) this.scale = config.scale
     if (config.zNear) this.zNear = config.zNear
     if (config.zFar) this.zFar = config.zFar
-    if (config.width) this.width = config.width
-    if (config.height) this.height = config.height
+    if (config.width) this.aspect[0] = config.width
+    if (config.height) this.aspect[1] = config.height
     if (config.canvasMultiplier) this.multiplier = config.canvasMultiplier
   }
 
@@ -66,8 +65,8 @@ export default class Projector implements Projection {
   }
 
   resize (width: number, height: number) {
-    this.width = width
-    this.height = height
+    this.aspect[0] = width
+    this.aspect[1] = height
     this.sizeMatrices = {}
     this.dirty = true
   }
@@ -112,6 +111,8 @@ export default class Projector implements Projection {
 
   getTilesInView (size?: number = 512): Array<[number, number, number, number, number]> { // [face, zoom, x, y, hash]
     if (this.zoom < 1) return [[0, 0, 0, 0, 2], [1, 0, 0, 0, 3], [2, 0, 0, 0, 4], [3, 0, 0, 0, 5], [4, 0, 0, 0, 6], [5, 0, 0, 0, 7]]
+    // if (true) return [[4, 0, 0, 0, 6]]
+    // if (true) return [[0, 0, 0, 0, 2], [1, 0, 0, 0, 3], [2, 0, 0, 0, 4], [3, 0, 0, 0, 5], [4, 0, 0, 0, 6], [5, 0, 0, 0, 7]]
     const tiles = []
     const checkList = []
     const checkedTiles = new Set()

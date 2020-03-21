@@ -25,7 +25,6 @@ export class Wallpaper {
     uFade2Color: new Float32Array(4)
   }
   skybox: boolean = false
-  dirty: boolean = true
   constructor (style: Style, projection: Projection) {
     this.style = style
     this.projection = projection
@@ -49,8 +48,8 @@ export class Wallpaper {
 
   _updateScale () {
     const radius = 512 * Math.min(Math.pow(2, this.projection.zoom), 32768)
-    this.uniforms.uScale[0] = radius / (this.projection.width * this.projection.multiplier)
-    this.uniforms.uScale[1] = radius / (this.projection.height * this.projection.multiplier)
+    this.uniforms.uScale[0] = radius / (this.projection.aspect[0] * this.projection.multiplier)
+    this.uniforms.uScale[1] = radius / (this.projection.aspect[1] * this.projection.multiplier)
   }
 
   _updateStyle () {
@@ -71,7 +70,6 @@ export class Skybox {
   fov: number = degToRad(80)
   angle: number = degToRad(40)
   skybox: boolean = true
-  dirty: boolean = true
   constructor (style: WallpaperStyle, projection: Projection) {
     const { skybox, type, size } = style
     this.path = skybox
@@ -82,10 +80,10 @@ export class Skybox {
 
   getMatrix (): null | Float32Array {
     if (this.projection.dirty) {
-      const { width, height, lon, lat } = this.projection
+      const { aspect, lon, lat } = this.projection
       const matrix = mat4.create()
       // create a perspective matrix
-      mat4.perspective(matrix, this.fov, width / height, 1, 2000)
+      mat4.perspective(matrix, this.fov, aspect[0] / aspect[1], 1, 2000)
       // rotate perspective
       mat4.rotate(matrix, [degToRad(lat), degToRad(lon), this.angle])
       // this is a simplified "lookat", since we maintain a set camera position

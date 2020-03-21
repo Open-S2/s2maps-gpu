@@ -74,8 +74,10 @@ const terrainToGrid = S2RTIN.terrainToGrid
 
 // TODO: If source is raster, delete it so that each request does not loop through layers and such
 
-const MAX_FEATURE_BATCH_SIZE = 128
-const MAX_INDEX_BUFFER_SIZE = 4294967295 // 32bit: 4,294,967,295 --- 16bit: 65,535
+// 32bit: 4,294,967,295 --- 24bit: 16,777,216 --- 16bit: 65,535 --- 7bit: 128
+const MAX_FEATURE_BATCH_SIZE = 1 << 7
+const MAX_INDEX_BUFFER_SIZE = 1 << 32
+const ID_MAX_SIZE = 1 << 24
 
 // A TileWorker on spin up will get style "guide". It will have all layers "filter" and "layout" properties
 // This is the tileworkers time to prepare the the style data for future requests from said mapID.
@@ -324,8 +326,9 @@ export default class TileWorker {
               const feature = vectorTileLayer.feature(f)
               // every feature MUST have an id associated with it for lookups
               feature._id = this.idGen
-              this.idGen++
-              if (this.idGen >= 4294967295) this.idGen = 1
+              // this.idGen++
+              this.idGen += 20000
+              if (this.idGen >= ID_MAX_SIZE) this.idGen = 1
               // get prelude properties
               const { properties, type } = feature
               // lastly we need to filter according to the layer
@@ -396,7 +399,7 @@ export default class TileWorker {
         .then(image => {
           postMessage({ mapID, type: 'rasterdata', source: sourceName, tileID: hash, image, leftShift, bottomShift }, [image])
         })
-        .catch(err => { console.log('image bitmap error: ', err) })
+        .catch(err => {})
     } else if (type === 'mask') {
       // grab the RTIN object
       const { s2rtin } = source
@@ -513,34 +516,30 @@ export default class TileWorker {
 
   _processTexture (mapID: string, source: string, tileID: string,
     texts: Array<Text>, imageBitmap: ImageBitmap) {
-      const { width, height } = imageBitmap
-    // let { data, width, height } = imageData
     // sort by layer than feature code
     texts.sort(featureSort)
-    // now that the texture pack is built, we can specify all the vertex sets
-    // Uint16Array: [x + x-offset, y + y-offset, width, height, id,     x2 + x2-offset, ...]
+    // in the case of textures, we want to draw top down
+    // texts.reverse()
+    // now that the texture pack is built, we can specify all the attribute sets
     const vertices = []
     const texPositions = []
     for (const text of texts) {
       // store the vertex set
-      vertices.push(text.s, text.t)
+      vertices.push(text.s, text.t, text.id)
+      // vertices.push(text.s, text.t, Math.floor(Math.random() * (16777215 - 1 + 1) + 1))
       // prep texture position variables
-      const left = text.x / width
-      const right = (text.x + text.width) / width
-      const top = text.y / height
-      const bottom = (text.y + text.height) / height
-      // store quad
       texPositions.push(
-        // descriptors
-        text.width, text.height, text.anchor, text.id,
-        // positions
-        left, top,   left, bottom,   right, top,   right, bottom
+        // uv positions
+        text.x, text.y,
+        // scale
+        text.width, text.height,
+        // descriptor
+        text.anchor
       )
     }
     // get the buffer
     const vertexBuffer = new Float32Array(vertices).buffer
-    const texPositionBuffer = new Uint16Array(texPositions).buffer
-    // const texture = data.buffer
+    const texPositionBuffer = new Int16Array(texPositions).buffer
     // post
     postMessage({
       mapID,

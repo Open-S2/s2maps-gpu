@@ -37,10 +37,12 @@ export type VectorTileSource = {
 
 export type TextureMapTileSource = {
   type: 'text',
+  uvArray: Float32Array,
   vertexArray: Float32Array,
   texPositionArray: Uint16Array,
   imageBitmap: ImageBitmap,
   texture: WebGLTexture,
+  uvBuffer?: WebGLBuffer,
   vertexBuffer?: WebGLBuffer,
   texPositionBuffer?: WebGLBuffer,
   vao?: WebGLVertexArrayObject
@@ -59,7 +61,7 @@ export type ChildRequest = { // eslint-disable-next-line
 // SourceData will either be the current tiles VectorTileSource, RasterTileSource,
 // or reference tile(s) to be masked + created.
 // eslint-disable-next-line
-export type SourceData = { [string | number]: RasterTileSource | VectorTileSource | Array<Tile> }
+export type SourceData = { [string | number]: RasterTileSource | VectorTileSource | TextureMapTileSource | Array<Tile> }
 
 // tiles are designed to create mask geometry and store prebuilt layer data handed off by the worker pool
 // whenever rerenders are called, they will access these tile objects for the layer data / vaos
@@ -76,6 +78,7 @@ export default class Tile {
   faceST: Float32Array
   division: number
   sourceData: SourceData = {}
+  textureSources: Array<TextureMapTileSource> = []
   featureGuide: Array<FeatureGuide> = []
   context: WebGL2Context | WebGLContext
   childrenRequests: ChildRequest = {}
@@ -115,10 +118,10 @@ export default class Tile {
       }
     }
     // lastly inject text
-    for (const source in parentTile.sourceData) {
-      const parentSource = parentTile.sourceData[source]
-      if (parentSource.type === 'text') this.sourceData[source] = parentSource
-    }
+    // for (const source in parentTile.sourceData) {
+    //   const parentSource = parentTile.sourceData[source]
+    //   if (parentSource.type === 'text') this.sourceData[source] = parentSource
+    // }
   }
 
   // if a style has a raster source & layer pointing to it, we request the tiles
@@ -202,12 +205,16 @@ export default class Tile {
     const builtSource = this.sourceData[textSource] = {
       type: 'text',
       texture: this.context.gl.createTexture(),
+      uvArray: new Float32Array([0, 0,  1, 0,  1, 1,  0, 1]),
       vertexArray,
+      primcount: vertexArray.length / 3,
       texPositionArray,
       imageBitmap
     }
     // build the VAO
     this.buildSource(builtSource)
+    // store as a texture source
+    this.textureSources.push(builtSource)
   }
 
   _injectSourceIntoChildren (sourceName: string) {
@@ -365,6 +372,20 @@ export default class Tile {
       // buffer the data
       gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, source.indexArray, gl.STATIC_DRAW)
     } else if (source.type === 'text') {
+      // Create a starting vertex array object (attribute state)
+      source.vao = context.createVertexArray()
+      // and make it the one we're currently working with
+      context.bindVertexArray(source.vao)
+      // UV
+      // Create a vertex buffer
+      source.uvBuffer = gl.createBuffer()
+      // Bind the buffer
+      gl.bindBuffer(gl.ARRAY_BUFFER, source.uvBuffer)
+      // Buffer the data
+      gl.bufferData(gl.ARRAY_BUFFER, source.uvArray, gl.STATIC_DRAW)
+      gl.enableVertexAttribArray(0) // u-v
+      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0)
+
       // VERTEX
       // Create a vertex buffer
       source.vertexBuffer = gl.createBuffer()
@@ -372,6 +393,32 @@ export default class Tile {
       gl.bindBuffer(gl.ARRAY_BUFFER, source.vertexBuffer)
       // Buffer the data
       gl.bufferData(gl.ARRAY_BUFFER, source.vertexArray, gl.STATIC_DRAW)
+      // link attributes:
+      // s, t & id positions
+      gl.enableVertexAttribArray(1) // s-t
+      gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 12, 0)
+      gl.enableVertexAttribArray(2) // id
+      gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 12, 8)
+      // add divisors to reuse for entire instance
+      gl.vertexAttribDivisor(1, 1) // s-t
+      gl.vertexAttribDivisor(2, 1) // id
+
+      // RADII
+      if (source.radiiArray) {
+        // Create a vertex buffer
+        source.radiiBuffer = gl.createBuffer()
+        // Bind the buffer
+        gl.bindBuffer(gl.ARRAY_BUFFER, source.radiiBuffer)
+        // Buffer the data
+        gl.bufferData(gl.ARRAY_BUFFER, source.radiiArray, gl.STATIC_DRAW)
+        // radii attribute
+        gl.enableVertexAttribArray(6)
+        // tell attribute how to get data out of radii buffer
+        gl.vertexAttribPointer(6, 1, gl.FLOAT, false, 0, 0)
+        // add divisors to reuse for entire instance
+        gl.vertexAttribDivisor(6, 1) // r
+      }
+
       // TEXTURE POSITION
       // Create a tex buffer
       source.texPositionBuffer = gl.createBuffer()
@@ -380,22 +427,21 @@ export default class Tile {
       // Buffer the data
       gl.bufferData(gl.ARRAY_BUFFER, source.texPositionArray, gl.STATIC_DRAW)
       // link attributes:
-      // s & t positions
-      gl.enableVertexAttribArray(0)
-      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0)
-      // texture width & height & anchor & id
-      gl.enableVertexAttribArray(1)
-      gl.vertexAttribPointer(1, 2, gl.UNSIGNED_SHORT, false, 24, 0)
-      // texture x & y data
-      gl.enableVertexAttribArray(2)
-      gl.vertexAttribPointer(2, 2, gl.UNSIGNED_SHORT, false, 24, 8)
-      // add divisors to reuse positions
-      gl.vertexAttribDivisor(0, 4) // s & t
-      gl.vertexAttribDivisor(1, 4) // texture width & height & anchor & id
+      // texture x, y, width, height, & anchor
+      gl.enableVertexAttribArray(3) // x-y
+      gl.vertexAttribPointer(3, 2, gl.SHORT, false, 10, 0)
+      gl.enableVertexAttribArray(4) // width-height
+      gl.vertexAttribPointer(4, 2, gl.SHORT, false, 10, 4)
+      gl.enableVertexAttribArray(5) // anchor
+      gl.vertexAttribPointer(5, 1, gl.SHORT, false, 10, 8)
+      // add divisors to reuse for entire instance
+      gl.vertexAttribDivisor(3, 1) // x-y
+      gl.vertexAttribDivisor(4, 1) // width-height
+      gl.vertexAttribDivisor(5, 1) // anchor
+
       // TEXTURE
       gl.bindTexture(gl.TEXTURE_2D, source.texture)
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source.imageBitmap)
-      // gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, source.width, source.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, source.imageData)
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true)
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
