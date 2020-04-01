@@ -15,7 +15,7 @@ export default function drawWallpaper (painter: Painter, wallpaper: Wallpaper) {
   // now we draw
   gl.useProgram(wallpaperProgram.glProgram)
   // bind the vao
-  context.bindVertexArray(wallpaperProgram.vao)
+  gl.bindVertexArray(wallpaperProgram.vao)
   // ensure we are using equal depth test like rasters
   context.lequalDepth()
   // depending upon type, setup variables and draw

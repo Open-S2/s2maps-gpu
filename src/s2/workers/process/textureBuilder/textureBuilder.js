@@ -1,5 +1,6 @@
 // @flow
 import { texturePack } from './'
+import { mapOverlap } from 'map-overlap'
 
 import type { Text } from '../workers/tile.worker'
 
@@ -27,7 +28,8 @@ export default class TextureBuilder {
       text.width = Math.ceil(this.context.measureText(text.field).width + ((text.padding[0] + text.strokeWidth) * 2))
       text.height = text.size + text.padding[1]
     }
-
+    // filter obvious overlaps
+    texts = mapOverlap(texts, 1024).filter(t => !t.overlap)
     // add's the x and y parameters to each text while also resolving the necessary texture size
     const { width, height } = texturePack(texts)
 

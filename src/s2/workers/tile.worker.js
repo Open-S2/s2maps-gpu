@@ -14,6 +14,8 @@ type Point = [number, number]
 
 export type CancelTileRequest = Array<number> // hashe IDs of tiles e.g. ['204', '1003', '1245', ...]
 
+// https://stackoverflow.com/questions/53996916/unable-to-turn-off-eslint-no-unused-expressions
+
 export type TileRequest = {
   hash: number,
   face: Face,
@@ -72,12 +74,10 @@ export type Text = {
 const S2Rtin = S2RTIN.default
 const terrainToGrid = S2RTIN.terrainToGrid
 
-// TODO: If source is raster, delete it so that each request does not loop through layers and such
-
 // 32bit: 4,294,967,295 --- 24bit: 16,777,216 --- 16bit: 65,535 --- 7bit: 128
-const MAX_FEATURE_BATCH_SIZE = 1 << 7
 const MAX_INDEX_BUFFER_SIZE = 1 << 32
 const ID_MAX_SIZE = 1 << 24
+const MAX_FEATURE_BATCH_SIZE = 1 << 7
 
 // A TileWorker on spin up will get style "guide". It will have all layers "filter" and "layout" properties
 // This is the tileworkers time to prepare the the style data for future requests from said mapID.
@@ -459,7 +459,7 @@ export default class TileWorker {
       // on layer change or max encoding size, we have to setup a new featureGuide, encodings, and encodingIndexes
       if (
         (prevLayerID !== undefined && prevLayerID !== feature.layerID) ||
-        // (feature.type === 'fill' && prevCodeStr !== feature.codeStr) ||
+        (feature.type === 'fill' && prevCodeStr !== feature.codeStr) ||
         (encodings.length + feature.code.length > MAX_FEATURE_BATCH_SIZE)
       ) {
         prevCodeStr = feature.codeStr

@@ -23,9 +23,9 @@ export default class ShadeProgram extends Program {
     this.offset = gl.getUniformLocation(this.glProgram, 'uOffset')
     this.radius = gl.getUniformLocation(this.glProgram, 'uRadius')
     // create a vertex array object
-    this.vao = context.createVertexArray()
+    this.vao = gl.createVertexArray()
     // bind the vao so we can work on it
-    context.bindVertexArray(this.vao)
+    gl.bindVertexArray(this.vao)
     // Create a vertex buffer
     this.vertexBuffer = gl.createBuffer()
     // Bind it to ARRAY_BUFFER (think of it as ARRAY_BUFFER = vertexBuffer)

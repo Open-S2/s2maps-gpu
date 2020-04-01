@@ -9,8 +9,8 @@ import type { Layer, Mask } from '../styleSpec'
 // All layers are merged into one VAO/indexBuffer/vertexBuffer/codeOffsetBuffer set. This reduces complexity and improves draw speed.
 // To ensure we draw in order and know the index ranges exist per layer, we maintain a 'Layer Guide'.
 // the attributes object is for dataConditions and dataRanges.
-export type FeatureGuide = {
-  parent?: boolean, // eslint-disable-next-line
+export type FeatureGuide = { // eslint-disable-next-line
+  parent?: Tile, // eslint-disable-next-line
   tile?: Tile,
   layerID: number,
   source: string,
@@ -103,10 +103,10 @@ export default class Tile {
   injectParentTile (parentTile: Tile, filterLayers?: Array<number>) {
     const foundLayers = new Set()
     for (const featureGuide of parentTile.featureGuide) {
-      const { parent, tile, source, layerID, count, offset, type, layerCode, featureCode, texture } = featureGuide
+      const { parent, source, layerID, count, offset, type, layerCode, featureCode, texture } = featureGuide
       if (type === 'raster' && parent) continue
       if (!parent) foundLayers.add(layerID)
-      this.featureGuide.push({ parent: true, tile: (tile) ? tile : parentTile, source, layerID, count, offset, type, layerCode, featureCode, texture })
+      this.featureGuide.push({ parent: (parent) ? parent : parentTile, tile: this, source, layerID, count, offset, type, layerCode, featureCode, texture })
     }
     this.featureGuide.sort((a, b) => a.layerID - b.layerID)
     // if filterLayers, we need to check what layers were missing
@@ -136,7 +136,7 @@ export default class Tile {
     const texture = raster.texture = gl.createTexture()
     // store information to featureGuide
     const guide = raster.guide = {
-      parent: false,
+      tile: this,
       layerID: layer.index,
       source: 'mask', // when pulling from the vao, we still use the mask vertices
       type: 'raster',
@@ -176,7 +176,7 @@ export default class Tile {
       const { type, code } = layers[layerID]
       // create and store the featureGuide
       this.featureGuide.push({
-        parent: false,
+        tile: this,
         layerID,
         source,
         count,
@@ -198,8 +198,8 @@ export default class Tile {
     if (Object.keys(this.childrenRequests).length) this._injectSourceIntoChildren(source)
   }
 
-  injectTextSourceData (source: string, vertexArray: Float32Array, texPositionArray: Uint16Array,
-    imageBitmap: ImageBitmap) {
+  injectTextSourceData (source: string, vertexArray: Float32Array,
+    texPositionArray: Uint16Array, imageBitmap: ImageBitmap) {
     const textSource = `${source}:text`
     // create the source. This will naturally replace whatever was already there
     const builtSource = this.sourceData[textSource] = {
@@ -231,7 +231,7 @@ export default class Tile {
         for (const tile of this.childrenRequests[featureGuide.layerID]) {
           // first remove all instances of source
           const { source, layerID, count, offset, type, layerCode, featureCode, texture } = featureGuide
-          tile.featureGuide.push({ parent: true, tile: this, source, layerID, count, offset, type, layerCode, featureCode, texture })
+          tile.featureGuide.push({ parent: this, tile, source, layerID, count, offset, type, layerCode, featureCode, texture })
           tile.featureGuide.sort((a, b) => { return a.layerID - b.layerID })
         }
         // cleanup
@@ -240,13 +240,13 @@ export default class Tile {
     }
   }
 
+  // the zoom determines the number of divisions necessary to maintain a visually
+  // asthetic spherical shape. As we zoom in, the tiles are practically flat,
+  // so division is less useful.
+  // 0, 1 => 16  ;  2, 3 => 8  ;  4, 5 => 4  ;  6, 7 => 2  ;  8+ => 1
   _createDivision () {
-    // the zoom determines the number of divisions necessary to maintain a visually
-    // asthetic spherical shape. As we zoom in, the tiles are practically flat,
-    // so division is less useful.
-    // 0, 1 => 32  ;  2, 3 => 16  ;  4, 5 => 8  ;  6, 7 => 4  ;  8, 9 => 2  ;  10+ => 1
-    const level = 1 << Math.max(Math.min(Math.floor(this.zoom / 2), 5), 0) // max 5 as its binary position is 32
-    this.division = 32 / level
+    const level = 1 << Math.max(Math.min(Math.floor(this.zoom / 2), 4), 0) // max 5 as its binary position is 32
+    this.division = 16 / level
   }
 
   _buildMaskGeometry () {
@@ -285,6 +285,7 @@ export default class Tile {
       type: 'vector',
       vertexArray: new Float32Array(vertices),
       indexArray: new Uint32Array(indices),
+      count: indices.length,
       mode: this.context.gl.TRIANGLE_STRIP
     }
     this.buildSource(mask)
@@ -298,6 +299,7 @@ export default class Tile {
       vertexArray,
       indexArray,
       radiiArray,
+      count: indexArray.length,
       threeD: true,
       mode: this.context.gl.TRIANGLES
     }
@@ -314,11 +316,11 @@ export default class Tile {
       if (source.radiiBuffer) gl.deleteBuffer(source.radiiBuffer)
       if (source.codeOffsetBuffer) gl.deleteBuffer(source.codeOffsetBuffer)
       if (source.indexBuffer) gl.deleteBuffer(source.indexBuffer)
-      if (source.vao) context.deleteVertexArray(source.vao)
+      if (source.vao) gl.deleteVertexArray(source.vao)
       // Create a starting vertex array object (attribute state)
-      source.vao = context.createVertexArray()
+      source.vao = gl.createVertexArray()
       // and make it the one we're currently working with
-      context.bindVertexArray(source.vao)
+      gl.bindVertexArray(source.vao)
       // VERTEX
       // Create a vertex buffer
       source.vertexBuffer = gl.createBuffer()
@@ -373,9 +375,9 @@ export default class Tile {
       gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, source.indexArray, gl.STATIC_DRAW)
     } else if (source.type === 'text') {
       // Create a starting vertex array object (attribute state)
-      source.vao = context.createVertexArray()
+      source.vao = gl.createVertexArray()
       // and make it the one we're currently working with
-      context.bindVertexArray(source.vao)
+      gl.bindVertexArray(source.vao)
       // UV
       // Create a vertex buffer
       source.uvBuffer = gl.createBuffer()

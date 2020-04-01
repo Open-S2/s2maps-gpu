@@ -3,9 +3,6 @@ import Map from './ui/map'
 
 import type { MapOptions } from './ui/map'
 
-// const uints_for_indices = gl.getExtension("OES_element_index_uint")
-// if uints_for_indices is not null, it works.
-
 // This is a builder / api instance for the end user.
 // We want individual map instances in their own web worker thread. However,
 // we only want one instance of webWorkerPool to run for all map instances.

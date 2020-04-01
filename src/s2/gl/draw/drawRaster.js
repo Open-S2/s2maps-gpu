@@ -7,7 +7,7 @@ import { RasterProgram } from '../programs'
 export default function drawRaster (painter: Painter, length: number,
   texture: WebGLTexture, mode?: GLenum, threeD?: boolean = false) {
   // setup variables
-  const { context, indexSize } = painter
+  const { context } = painter
   const { gl } = context
   const rasterProgram: RasterProgram = painter.getProgram('raster')
   if (!rasterProgram) return
@@ -17,5 +17,5 @@ export default function drawRaster (painter: Painter, length: number,
   // setup the texture
   gl.bindTexture(gl.TEXTURE_2D, texture)
   // draw elements
-  gl.drawElements(mode, length, indexSize, 0)
+  gl.drawElements(mode, length, gl.UNSIGNED_INT, 0)
 }

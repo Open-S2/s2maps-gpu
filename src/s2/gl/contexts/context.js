@@ -1,5 +1,4 @@
 // @flow
-
 export default class Context {
   gl: WebGLRenderingContext | WebGL2RenderingContext
   clearColorRGBA: [number, number, number, number] = [0, 0, 0, 0]
@@ -10,13 +9,14 @@ export default class Context {
   newScene () {
     this.clearScene()
     this.enableCullFace()
-    this.disableDepthTest()
+    this.enableStencilTest()
     this.enableBlend()
   }
 
   clearScene () {
     this.gl.clear(this.gl.DEPTH_BUFFER_BIT | this.gl.STENCIL_BUFFER_BIT | this.gl.COLOR_BUFFER_BIT)
     this.clearColor()
+    this.clearStencil()
   }
 
   clearColor () {
@@ -80,14 +80,35 @@ export default class Context {
 
   enableStencil () {
     this.gl.stencilOp(this.gl.KEEP, this.gl.KEEP, this.gl.REPLACE)
-  	this.gl.stencilFunc(this.gl.ALWAYS, 1, 0xFF)
-  	this.gl.stencilMask(0xFF)
   	this.gl.colorMask(false, false, false, false)
   }
 
+  stencilFunc (ref: number) {
+    this.gl.stencilFunc(this.gl.ALWAYS, ref, 0xFF)
+  }
+
+  fillFirstPass (ref) {
+    this.gl.colorMask(false, false, false, false)
+    this.gl.stencilOpSeparate(this.gl.FRONT, this.gl.KEEP, this.gl.INCR, this.gl.INCR)
+    this.gl.stencilFuncSeparate(this.gl.FRONT, this.gl.EQUAL, ref, 0xFF)
+    this.gl.stencilOpSeparate(this.gl.BACK, this.gl.KEEP, this.gl.KEEP, this.gl.KEEP)
+    this.gl.stencilFuncSeparate(this.gl.BACK, this.gl.EQUAL, ref, 0xFF)
+  }
+
+  fillSecondPass (ref) {
+    this.gl.stencilOpSeparate(this.gl.FRONT, this.gl.KEEP, this.gl.KEEP, this.gl.KEEP)
+    this.gl.stencilFuncSeparate(this.gl.FRONT, this.gl.EQUAL, ref + 1, 0xFF)
+    this.gl.stencilOpSeparate(this.gl.BACK, this.gl.KEEP, this.gl.DECR, this.gl.DECR)
+    this.gl.stencilFuncSeparate(this.gl.BACK, this.gl.EQUAL, ref + 1, 0xFF)
+  }
+
+  fillThirdPass (ref) {
+    this.gl.colorMask(true, true, true, true)
+    this.gl.stencilFunc(this.gl.EQUAL, ref + 1, 0xFF)
+    this.gl.stencilOp(this.gl.KEEP, this.gl.DECR, this.gl.DECR)
+  }
+
   lockStencil () {
-    this.gl.stencilFunc(this.gl.EQUAL, 1, 0xFF)
-  	this.gl.stencilMask(0x00)
   	this.gl.colorMask(true, true, true, true)
   }
 
@@ -98,7 +119,7 @@ export default class Context {
   }
 
   cleanup () {
-    this.bindVertexArray(null)
+    this.gl.bindVertexArray(null)
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null)
     this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, null)
   }

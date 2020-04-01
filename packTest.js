@@ -13,103 +13,117 @@ const { width, height } = texturePack(boxes)
 
 console.log(boxes[0]) // [width1, height1, posX, posY]
 ********/
+// @flow
+// flow/standard modified version of https://github.com/mapbox/potpack
+// we avoid objects in 'spaces' because it is an uneccessary waste of lookups and garbage collection
+/*******
+Example:
+const boxes = [
+  { w: w1, h: h1 },
+  { w: w2, h: h2 },
+  { w: w3, h: h3 },
+  ...
+]
+const { width, height } = texturePack(boxes)
+
+console.log(boxes[0]) // { w: number, h: number, x: number, y: number }
+********/
+
 function texturePack (boxes) {
-    // calculate total box area and maximum box width
-    let area = 0
-    let maxWidth = 0
+  // sort the boxes for insertion by height, descending
+  boxes.sort((a, b) => b.h - a.h)
+  // calculate total box area and maximum box width
+  let area = 0
+  let maxWidth = 0
 
-    for (const box of boxes) {
-      area += box[0] * box[1]
-      maxWidth = Math.max(maxWidth, box[0])
-    }
+  for (const box of boxes) {
+    area += box.w * box.h
+    maxWidth = Math.max(maxWidth, box.w)
+  }
 
-    // sort the boxes for insertion by height, descending
-    boxes.sort((a, b) => b[1] - a[1])
+  // aim for a squarish resulting container,
+  // slightly adjusted for sub-100% space utilization
+  const startWidth = Math.max(Math.ceil(Math.sqrt(area / 0.95)), maxWidth)
 
-    // aim for a squarish resulting container,
-    // slightly adjusted for sub-100% space utilization
-    const startWidth = Math.max(Math.ceil(Math.sqrt(area / 0.95)), maxWidth)
+  // start with a single empty space, unbounded at the bottom
+  const spaces = [[startWidth, Infinity, 0, 0]] // [width, height, x, y]
 
-    // start with a single empty space, unbounded at the bottom
-    const spaces = [[startWidth, Infinity, 0, 0]] // [width, height, x, y]
+  let width = 0
+  let height = 0
 
-    let width = 0
-    let height = 0
+  for (const box of boxes) {
+    // look through spaces backwards so that we check smaller spaces first
+    for (let i = spaces.length - 1; i >= 0; i--) {
+      const space = spaces[i]
 
-    for (const box of boxes) {
-      // look through spaces backwards so that we check smaller spaces first
-      for (let i = spaces.length - 1; i >= 0; i--) {
-        const space = spaces[i]
+      // look for empty spaces that can accommodate the current box
+      if (box.w > space[0] || box.h > space[1]) continue
 
-        // look for empty spaces that can accommodate the current box
-        if (box[0] > space[0] || box[1] > space[1]) continue
+      // found the space; add the box to its top-left corner
+      // |-------|-------|
+      // |  box  |       |
+      // |_______|       |
+      // |         space |
+      // |_______________|
+      box.x = space[2]
+      box.y = space[3]
 
-        // found the space: add the box to its top-left corner
-        // |-------|-------|
-        // |  box  |       |
-        // |_______|       |
-        // |         space |
-        // |_______________|
-        box.push(space[2])
-        box.push(space[3])
+      height = Math.max(height, box.y + box.h)
+      width = Math.max(width, box.x + box.w)
 
-        height = Math.max(height, box[3] + box[2])
-        width = Math.max(width, box[2] + box[0])
-
-        if (box[0] === space[0] && box[1] === space[1]) {
-          // space matches the box exactly: remove it
+      if (box.w === space[0] && box.h === space[1]) {
+          // space matches the box exactly; remove it
           const last = spaces.pop()
           if (i < spaces.length) spaces[i] = last
-        } else if (box[1] === space[1]) {
-          // space matches the box height: update it accordingly
+      } else if (box.h === space[1]) {
+          // space matches the box height; update it accordingly
           // |-------|---------------|
           // |  box  | updated space |
           // |_______|_______________|
-          space[2] += box[0]
-          space[0] -= box[0]
-        } else if (box[0] === space[0]) {
-          // space matches the box width: update it accordingly
-          // |---------------|
-          // |      box      |
-          // |_______________|
-          // | updated space |
-          // |_______________|
-          space[3] += box[1]
-          space[1] -= box[1]
-        } else {
-          // otherwise the box splits the space into two spaces
-          // |-------|-----------|
-          // |  box  | new space |
-          // |_______|___________|
-          // | updated space     |
-          // |___________________|
-          spaces.push([space[2] + box[0], space[1], space[0] - box[0], box[1]])
-          space[3] += box[1]
-          space[1] -= box[1]
-        }
+          space[2] += box.w
+          space[0] -= box.w
+      } else if (box.w === space[0]) {
+        // space matches the box width; update it accordingly
+        // |---------------|
+        // |      box      |
+        // |_______________|
+        // | updated space |
+        // |_______________|
+        space[3] += box.h
+        space[1] -= box.h
+      } else {
+        // otherwise the box splits the space into two spaces
+        // |-------|-----------|
+        // |  box  | new space |
+        // |_______|___________|
+        // | updated space     |
+        // |___________________|
+        spaces.push([space[0] - box.w, box.h, space[2] + box.w, space[3]])
 
-        break
+        space[3] += box.h
+        space[1] -= box.h
       }
-    }
 
-    return {
-      width: width, // container width
-      height: height // container height
+      break
     }
+  }
+
+  return { width, height }
 }
 
+
 const boxes = [
-  [50, 100],
-  [100, 50],
-  [75, 75],
-  [200, 75],
-  [10, 50],
-  [45, 100],
-  [55, 20],
-  [22, 500],
-  [100, 100],
-  [90, 10],
-  [25, 25]
+  { w: 300, h: 100 },
+  { w: 100,h:  50 },
+  { w: 100, h: 75 },
+  { w: 200,h:  75 },
+  { w: 500, h: 50 },
+  { w: 200, h: 100 },
+  { w: 175, h: 20 },
+  { w: 322, h: 500 },
+  { w: 100,h:  100 },
+  { w: 265, h: 10 },
+  { w: 400, h: 25 }
 ]
 const { width, height } = texturePack(boxes)
 

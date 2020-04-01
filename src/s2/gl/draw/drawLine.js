@@ -7,7 +7,7 @@ import { LineProgram } from '../programs'
 export default function drawLine (painter: Painter, segmentLength: number,
   segmentOffset: number, featureEncoding?: null | Float32Array, mode?: GLenum) {
   // setup variables
-  const { context, indexSize, offsetSize } = painter
+  const { context } = painter
   const { gl } = context
   const lineProgram: LineProgram = painter.getProgram('line')
   if (!lineProgram) return
@@ -16,5 +16,5 @@ export default function drawLine (painter: Painter, segmentLength: number,
   // get mode
   if (!mode) mode = gl.TRIANGLES
   // draw elements
-  gl.drawElements(mode, segmentLength, indexSize, segmentOffset * offsetSize)
+  gl.drawElements(mode, segmentLength, gl.UNSIGNED_INT, segmentOffset * 4)
 }

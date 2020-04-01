@@ -14,7 +14,7 @@ export default function drawShade (painter: Painter, shade: Shade) {
   // now we draw
   gl.useProgram(shadeProgram.glProgram)
   // bind the vao
-  painter.context.bindVertexArray(shadeProgram.vao)
+  gl.bindVertexArray(shadeProgram.vao)
   // set new uniforms should we need to
   const uniforms: null | ShadeUniforms = shade.getUniforms()
   if (uniforms) {

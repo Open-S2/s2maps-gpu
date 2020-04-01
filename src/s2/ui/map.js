@@ -91,11 +91,8 @@ export default class Map extends Camera {
     // if the projection sees a zoom change, we need to render, but don't request new tiles until
     // done zooming if the updateWhileZooming flag is set to false
     if (update) {
-      const stats = window.stats
-      stats.begin()
       this.painter.dirty = true
       this._render(true)
-      stats.end()
     }
   }
 
@@ -121,15 +118,15 @@ export default class Map extends Camera {
 
   swipeAnimation (now: number) {
     if (!this.dragPan.swipeActive) return
-    const stats = window.stats
-    stats.begin()
+    // const stats = window.stats
+    // stats.begin()
     const [newMovementX, newMovementY, time] = this.dragPan.getNextFrame(now)
     if (time) {
       this.projection.onMove(newMovementX, newMovementY, 6, 6)
       this._render()
-      stats.end()
+      // stats.end()
       requestAnimationFrame(this.swipeAnimation.bind(this))
-    } else { stats.end() }
+    } // else { stats.end() }
   }
 
   _onClick (e: Event) {

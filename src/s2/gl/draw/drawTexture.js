@@ -6,7 +6,8 @@ import { TextureProgram } from '../programs'
 // https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays/drawArraysInstancedANGLE
 export default function drawTexture (painter: Painter, primcount: number, mode: 0 | 1 | 2) {
   // setup variables
-  const { gl } = painter.context
+  const { context } = painter
+  const { gl } = context
   const texProgram: TextureProgram = painter.getProgram('texture')
   if (!texProgram) return
   // set the proper mode

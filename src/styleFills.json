@@ -8,11 +8,7 @@
   "sources": {
     "fills": "http://localhost:8000/data/fills"
   },
-  "fonts": {
-    "roboto-medium": "http://localhost:8000/fonts/roboto-medium.ttf",
-    "roboto-regular": "http://localhost:8000/fonts/roboto-regular.ttf"
-  },
-  "shade": true,
+  "shade": false,
   "wallpaper": {
     "background-color": "rgb(25, 28, 80)",
     "fade-1": "rgb(138, 204, 255)",
@@ -58,7 +54,7 @@
       "paint": {
         "color": [
           "data-condition",
-          ["class", "has", ["desert", "sand", "beach"]],
+          ["class", "has", ["desert", "sand"]],
           "rgb(242, 236, 207)",
           ["class", "==", "aeroway"],
           "rgb(219, 222, 235)",
@@ -88,6 +84,8 @@
           "rgb(201, 238, 201)",
           ["class", "==", "cemetery"],
           "rgb(208, 236, 208)",
+          ["class", "==", "beach"],
+          "rgb(242, 236, 207)",
           ["class", "==", "glacier"],
           "rgb(249, 249, 249)",
           ["class", "==", "aboriginal_lands"],

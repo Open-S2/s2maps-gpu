@@ -11,7 +11,7 @@ export default function loadShader (gl: WebGLRenderingContext, shaderSource: str
   if (!compiled) {
     // Something went wrong during compilation get the error
     const lastError = gl.getShaderInfoLog(shader)
-    console.log("*** Error compiling shader '" + shader + "':" + lastError)
+    console.log(`*** Error compiling shader '${shader}': ${lastError}`)
     gl.deleteShader(shader)
     return null
   }

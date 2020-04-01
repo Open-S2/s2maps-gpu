@@ -11,7 +11,7 @@ export default class TextureProgram extends Program {
   uMode: WebGLUniformLocation
   uFeatureSampler: WebGLUniformLocation
   uTextureSampler: WebGLUniformLocation
-  currentMode: number = -1
+  curMode: number = -1
   pointFramebuffer: WebGLFramebuffer
   pointTexture: WebGLTexture
   quadTexture: WebGLTexture
@@ -139,9 +139,9 @@ export default class TextureProgram extends Program {
   }
 
   setMode (mode: number) {
-    if (this.currentMode !== mode) {
+    if (this.curMode !== mode) {
       // update current value
-      this.currentMode = mode
+      this.curMode = mode
       // update gpu uniform
       this.gl.uniform1i(this.uMode, mode)
     }

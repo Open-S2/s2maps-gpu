@@ -1,13 +1,8 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
-import Stats from 'stats.js'
 import './index.css'
 import App from './App'
 import * as serviceWorker from './serviceWorker'
-
-const stats = window.stats = new Stats()
-// stats.showPanel(0)
-// document.body.appendChild( stats.dom )
 
 ReactDOM.render(<App />, document.getElementById('root'))
 

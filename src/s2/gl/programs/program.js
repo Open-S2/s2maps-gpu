@@ -1,6 +1,8 @@
 // @flow
+import Painter from '../painter'
 import loadShader from './loadShader'
 
+import type { FeatureGuide } from '../../source/tile'
 export type ProgramTypes = 'mask' | 'fill' | 'line' | 'fill3D' | 'line3D'
 
 export default class Program {
@@ -10,15 +12,16 @@ export default class Program {
   gl: WebGLRenderingContext
   glProgram: WebGLProgram
   uMatrix: WebGLUniformLocation
+  uMode: WebGLUniformLocation
   u3D: WebGLUniformLocation
   uFaceST: WebGLUniformLocation
   uInputs: WebGLUniformLocation
   uLayerCode: WebGLUniformLocation
   uFeatureCode: WebGLUniformLocation
   updateMatrix: Float32Array // pointer
-  updateFaceST: Float32Array // pointer
   updateInputs: Float32Array // pointer
-  update3D: boolean
+  curMode: number = -1
+  threeD: boolean
   constructor (gl: WebGLRenderingContext, vertexShaderSource: string, fragmentShaderSource: string, defaultUniforms?: boolean = true) {
     const program = this.glProgram = gl.createProgram()
     const vertexShader = loadShader(gl, vertexShaderSource, gl.VERTEX_SHADER)
@@ -42,13 +45,12 @@ export default class Program {
     if (defaultUniforms) {
       // get uniform locations
       this.uMatrix = gl.getUniformLocation(program, 'uMatrix')
+      this.uMode = gl.getUniformLocation(program, 'uMode')
       this.u3D = gl.getUniformLocation(program, 'u3D')
       this.uFaceST = gl.getUniformLocation(program, 'uFaceST')
       this.uInputs = gl.getUniformLocation(program, 'uInputs')
       this.uLayerCode = gl.getUniformLocation(program, 'uLayerCode')
       this.uFeatureCode = gl.getUniformLocation(program, 'uFeatureCode')
-      // set defaults
-      this.update3D = false
     }
   }
 
@@ -57,17 +59,14 @@ export default class Program {
     this.flush()
   }
 
-  injectFrameUniforms (matrix: Float32Array, view: Float32Array, faceST: Float32Array) {
+  injectFrameUniforms (matrix: Float32Array, view: Float32Array) {
     if (matrix && this.uMatrix) this.updateMatrix = matrix
     if (view && this.uInputs) this.updateInputs = view
-    if (faceST && this.uFaceST) this.updateFaceST = faceST
   }
 
   flush () {
     if (this.updateMatrix) this.setMatrix(this.updateMatrix)
     if (this.updateInputs) this.setInputs(this.updateInputs)
-    if (this.updateFaceST) this.setFaceST(this.updateFaceST)
-    if (this.update3D) this.set3D(this.update3D)
   }
 
   setMatrix (matrix: Float32Array) {
@@ -83,19 +82,41 @@ export default class Program {
 
   setFaceST (faceST: Float32Array) {
     this.gl.uniform1fv(this.uFaceST, faceST, 0, faceST.length)
-    this.updateFaceST = null // ensure updateInputs is "flushed"
   }
 
   setLayerCode (layerCode: Float32Array) {
     this.gl.uniform1fv(this.uLayerCode, layerCode, 0, layerCode.length)
   }
 
-  set3D () {
-    this.gl.uniform1i(this.u3D, this.update3D)
-    this.update3D = null // ensure 3D is "flushed"
+  set3D (state?: boolean = false) {
+    if (this.u3D && this.threeD !== state) {
+      this.threeD = state
+      this.gl.uniform1i(this.u3D, state)
+    }
   }
 
-  _set3D (state?: boolean = false) {
-    if (this.u3D) this.gl.uniform1i(this.u3D, state)
+  setMode (mode: number) {
+    if (this.curMode !== mode) {
+      // update current value
+      this.curMode = mode
+      // update gpu uniform
+      this.gl.uniform1i(this.uMode, mode)
+    }
+  }
+
+  draw (painter: Painter, featureGuide: FeatureGuide) {
+    // grab context
+    const { context } = painter
+    const { gl } = context
+    // get current source data
+    let { count, featureCode, offset, mode, threeD } = featureGuide
+    // set 3D uniform
+    this.set3D(threeD)
+    // set feature code
+    if (featureCode && featureCode.length) gl.uniform1fv(this.uFeatureCode, featureCode)
+    // get mode
+    if (!mode) mode = gl.TRIANGLES
+    // draw elements
+    gl.drawElements(mode, count, gl.UNSIGNED_INT, (offset | 0) * 4)
   }
 }
