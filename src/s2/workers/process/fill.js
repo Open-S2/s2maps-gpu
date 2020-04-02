@@ -1,7 +1,7 @@
 // @flow
 import { earclip } from 'earclip'
-import { zeroClip } from 'zero-clip'
-import { meshelate } from 'meshelate'
+// import { zeroClip } from 'zero-clip'
+// import { meshelate } from 'meshelate'
 
 type Point = [number, number]
 
