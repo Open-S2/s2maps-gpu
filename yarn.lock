@@ -6186,6 +6186,11 @@ lazy-cache@^1.0.3:
   resolved "https://registry.yarnpkg.com/lazy-cache/-/lazy-cache-1.0.4.tgz#a1d78fc3a50474cb80845d3b3b6e1da49a446e8e"
   integrity sha1-odePw6UEdMuAhF07O24dpJpEbo4=
 
+lazyload-webpack-plugin@^0.1.1:
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/lazyload-webpack-plugin/-/lazyload-webpack-plugin-0.1.1.tgz#2020b2d25945e74d5f4cb77e5e19e8c5bc6f9109"
+  integrity sha512-YJUjBHNnsH1Wq4/EUeBUQMyGa0JfCHB7fYZkWOYlHD8EUHO+3l0+srRkfqVZZ7FzSlW1H/miA6+9QVSWo2Nk+Q==
+
 lcid@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/lcid/-/lcid-2.0.0.tgz#6ef5d2df60e52f82eb228a4c373e8d1f397253cf"

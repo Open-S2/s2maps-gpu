@@ -1,125 +1,65 @@
 // const Color = require('./conditionals/color').default
-// const { encodeFeatureFunction, encodeLayerFunction, decodeFeature } = require('./conditionals/parseCondition').default
+const { encodeFeatureFunction, encodeLayerFunction, decodeFeature, decodeFeature2 } = require('./conditionals/parseCondition').default
 // const chroma = require('chroma-js')
 // const filterFunction = require('./conditionals/filterFunction').default
 
-const { parseFeatureFunction } = require('./conditionals/parseFeatureFunction')
+// const { parseFeatureFunction } = require('./conditionals/parseFeatureFunction')
 
 // const field = ["\"", "$abbr,$name", "\""] - here we coallese to abbr if the property exists, otherwise we fallback on name
 // const field = ["$text", "-16"]
 
-const layer = {
-  "name": "places",
-  "source": "fills",
-  "filter": ["class", "has", ["Country", "State"]],
-  "layer": "place",
-  "type": "text",
-  "layout": {
-    "family": [
-      "input-range",
-      "zoom",
-      "step",
-      0,
-      'Roboto-Medium',
-      2,
-      'Roboto-Regular'
-    ],
-    "field": [
-      "data-condition",
-      ["class", "==", "State"],
-      [
-        "input-range",
-        "zoom",
-        "step",
-        0,
-        "?abbr",
-        3,
-        "?name"
-      ],
-      "default",
-      "?name"
-    ],
-    "offset": [0, 0],
-    "padding": [2, 2]
-  },
-  "paint": {
-    "size": [
-      "data-condition",
-      ["class", "==", "State"],
-      [
-        "input-range",
-        "zoom",
-        "step",
-        1,
-        0.5,
-        2,
-        0.95
-      ],
-      ["class", "==", "Country"],
-      [
-        "input-range",
-        "zoom",
-        "step",
-        0,
-        26,
-        2,
-        20
-      ],
-      "default",
-      14
-    ],
-    "fillStyle": [
-      "data-condition",
-      ["class", "==", "State"],
-      "rgb(135, 135, 135)",
-      ["class", "==", "Country"],
-      "rgb(38, 38, 38)",
-      "default",
-      "rgba(0, 0, 0, 0)"
-    ],
-    "strokeStyle": "rgb(250, 250, 250)",
-    "strokeWidth": 1
-  }
-}
-
-const feature = {
-  properties: {
-    class: 'Country',
-    abbr: 'N.C.',
-    name: 'North Carolina'
-  }
-}
-
-const zoom = 3
+// const layer = {
+//   "name": "water",
+//   "source": "fills",
+//   "filter": ["class", "!has", ["reef", "shoal"]],
+//   "layer": "water",
+//   "type": "fill",
+//   "minzoom": 0,
+//   "layout": {},
+//   "paint": {
+//     "color": "rgb(170, 218, 255)"
+//   }
+// }
+//
+// const feature = {
+//   properties: {
+//     class: 'water',
+//     stuff: 'doesntMatter'
+//   }
+// }
+//
+// const zoom = 0
+//
+//
+// for (const l in layer.layout) layer.layout[l] = parseFeatureFunction(layer.layout[l])
+// for (const p in layer.paint) layer.paint[p] = parseFeatureFunction(layer.paint[p])
+//
+// const code = []
+// const size = layer.paint.size(feature.properties, zoom, code)
+//
+// console.log('size', size, code)
+// // console.log(coalesceField(field, feature.properties))
+//
+//
+//
+//
+// function coalesceField (field, properties) {
+//   if (Array.isArray(field)) return field.reduce((acc, cur) => acc + coalesceText(cur, properties))
+//   else return coalesceText(field, properties)
+// }
+//
+// function coalesceText (field, properties) {
+//   if (field[0] === '?') {
+//     if (field[1] === '?') return field.slice(1)
+//     const pieces = field.split(',')
+//     for (const piece of pieces) {
+//       const key = piece.slice(1)
+//       if (properties[key]) return properties[key]
+//     }
+//   } else { return field }
+// }
 
 
-for (const l in layer.layout) layer.layout[l] = parseFeatureFunction(layer.layout[l])
-for (const p in layer.paint) layer.paint[p] = parseFeatureFunction(layer.paint[p])
-
-const code = []
-const size = layer.paint.size(feature.properties, zoom, code)
-
-console.log('size', size, code)
-// console.log(coalesceField(field, feature.properties))
-
-
-
-
-function coalesceField (field, properties) {
-  if (Array.isArray(field)) return field.reduce((acc, cur) => acc + coalesceText(cur, properties))
-  else return coalesceText(field, properties)
-}
-
-function coalesceText (field, properties) {
-  if (field[0] === '?') {
-    if (field[1] === '?') return field.slice(1)
-    const pieces = field.split(',')
-    for (const piece of pieces) {
-      const key = piece.slice(1)
-      if (properties[key]) return properties[key]
-    }
-  } else { return field }
-}
 //
 // console.log(coalesceField('?abbr,?name', feature.properties))
 // console.log(coalesceField(['\"', '?abbr,?name', '\"'], feature.properties))
@@ -181,18 +121,18 @@ function coalesceText (field, properties) {
 //   "rgba(20, 200, 200, 1)"
 // ]
 
-const input2 = [
-  "data-range",
-  "expo",
-  0.5,
-  "elev",
-  2,
-  "rgba(5, 100, 125, .5)",
-  5,
-  "rgba(200, 160, 100, .8)",
-  7,
-  "rgba(20, 200, 200, 1)"
-]
+// const input2 = [
+//   "data-range",
+//   "expo",
+//   0.5,
+//   "elev",
+//   2,
+//   "rgba(5, 100, 125, .5)",
+//   5,
+//   "rgba(200, 160, 100, .8)",
+//   7,
+//   "rgba(20, 200, 200, 1)"
+// ]
 
 // const input = [
 //   "input-range",
@@ -218,23 +158,25 @@ const input2 = [
 //   "rgba(20, 200, 200, 1)"
 // ]
 
-// const input = "rgba(200, 160, 100, .8)"
-//
-// const inputClone = JSON.parse(JSON.stringify(input2))
-// const inputCloneEncode = JSON.parse(JSON.stringify(input2))
-//
-// const encodeFeatureFunc = encodeFeatureFunction(inputClone)
-// const encodedLayer = encodeLayerFunction(inputCloneEncode)
-// console.log('encodedLayer', encodedLayer)
-//
-// const featureEncoding = []
-//
-// encodeFeatureFunc({ class: 'ocean', elev: 3 }, featureEncoding)
-// featureEncoding.unshift(featureEncoding.length)
-// console.log('featureEncoding', featureEncoding)
-//
-// const decoded = decodeFeature(encodedLayer, featureEncoding, [9, 0, 0], true, 0, 1)
-// console.log(decoded)
+const input = "rgba(200, 160, 100, .8)"
+
+const inputClone = JSON.parse(JSON.stringify(input))
+const inputCloneEncode = JSON.parse(JSON.stringify(input))
+
+const encodeFeatureFunc = encodeFeatureFunction(inputClone)
+const encodedLayer = encodeLayerFunction(inputCloneEncode)
+console.log('encodedLayer', encodedLayer)
+
+const featureEncoding = []
+
+encodeFeatureFunc({ class: 'ocean', elev: 3 }, featureEncoding)
+featureEncoding.unshift(featureEncoding.length)
+console.log('featureEncoding', featureEncoding)
+
+const decoded = decodeFeature(encodedLayer, featureEncoding, [9, 0, 0], true, 0, 1)
+const decoded2 = decodeFeature2(encodedLayer, featureEncoding, [9, 0, 0], true, 0, 1)
+console.log('decoded', decoded)
+console.log('decoded2', decoded2)
 
 
 

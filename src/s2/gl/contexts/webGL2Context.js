@@ -1,4 +1,9 @@
 // @flow
 import Context from './context'
 
-export default class WebGL2Context extends Context {}
+export default class WebGL2Context extends Context {
+  constructor (context: WebGL2RenderingContext) {
+    super(context)
+    this.type = 2
+  }
+}

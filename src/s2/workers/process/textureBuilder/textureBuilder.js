@@ -1,6 +1,6 @@
 // @flow
 import { texturePack } from './'
-import { mapOverlap } from 'map-overlap'
+import mapOverlap from './mapOverlap'
 
 import type { Text } from '../workers/tile.worker'
 
@@ -17,8 +17,12 @@ export default class TextureBuilder {
     this.offscreen = offscreen
     this.canvas = (offscreen) ? new OffscreenCanvas(1, 1) : document.createElement('canvas')
     this.context = this.canvas.getContext('2d')
+    // turn of smoothing
+    this.context.imageSmoothingEnabled = false
+    this.context.mozImageSmoothingEnabled = false
   }
 
+  // https://stackoverflow.com/questions/40066166/canvas-text-rendering-blurry
   createTexture (texts: Array<Text>): ImageBitmap {
     // define the width & height parameters
     for (const text of texts) {
@@ -29,26 +33,23 @@ export default class TextureBuilder {
       text.height = text.size + text.padding[1]
     }
     // filter obvious overlaps
-    texts = mapOverlap(texts, 1024).filter(t => !t.overlap)
+    texts = mapOverlap(texts, 512).filter(t => !t.overlap) // 768 is the average between 512 and 1024, balance of performance and population of information
     // add's the x and y parameters to each text while also resolving the necessary texture size
     const { width, height } = texturePack(texts)
 
-    return this._createTexture(width, height, texts)
+    return [texts, this._createTexture(width, height, texts)]
   }
 
   _createTexture (width: number, height: number, texts: Array<any>): ImageBitmap {
-    // clear canvas
-    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height)
     // build the total size to house all the text
     this.canvas.width = width * 2
     this.canvas.height = height * 2
-    // if (this.canvas.style) {
-    //   this.canvas.style.width = `${width}px`
-    //   this.canvas.style.height = `${height}px`
-    // }
+    // clear canvas
+    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height)
     // prep consistant context variables
     this.context.textBaseline = 'middle'
-    this.context.scale(2, 2)
+    this.context.scale(2, -2)
+    this.context.translate(0, -height)
 
     for (const text of texts) {
       // prep variables
@@ -61,8 +62,8 @@ export default class TextureBuilder {
       this.context.strokeStyle = text.strokeStyle
       this.context.lineWidth = text.strokeWidth
       // draw
-      this.context.strokeText(text.field, text.x + text.padding[0] + text.strokeWidth, middle + text.y + text.padding[1] + text.strokeWidth)
-      this.context.fillText(text.field, text.x + text.padding[0] + text.strokeWidth, middle + text.y + text.padding[1] + text.strokeWidth)
+      this.context.strokeText(text.field, text.x + (text.padding[0] / 2) + text.strokeWidth, middle + text.y + (text.padding[1] / 2) + text.strokeWidth)
+      this.context.fillText(text.field, text.x + (text.padding[0] / 2) + text.strokeWidth, middle + text.y + (text.padding[1] / 2) + text.strokeWidth)
     }
 
     if (this.offscreen) return this.canvas.transferToImageBitmap()

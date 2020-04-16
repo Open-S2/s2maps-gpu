@@ -1,7 +1,7 @@
 #version 300 es
 precision highp float;
 
-@import ./color;
+#include ./color;
 
 in vec4 color;
 out vec4 fragColor;

@@ -1,9 +1,6 @@
 // @flow
 import Program from './program'
 
-import wallpaperVertex from '../../shaders/wallpaper.vertex.glsl'
-import wallpaperFragment from '../../shaders/wallpaper.fragment.glsl'
-
 import type { Context } from '../contexts'
 
 export default class WallpaperProgram extends Program {
@@ -15,11 +12,11 @@ export default class WallpaperProgram extends Program {
   uHaloColor: WebGLUniformLocation
   uFade1Color: WebGLUniformLocation
   uFade2Color: WebGLUniformLocation
-  constructor (context: Context) {
+  constructor (context: Context, vertexShaderSource: string, fragmentShaderSource: string) {
     // get gl from context
-    const { gl } = context
-    // upgrade
-    super(gl, wallpaperVertex, wallpaperFragment, false)
+    const { gl, type } = context
+    // install shaders
+    super(gl, require(`../../shaders/wallpaper${type}.vertex.glsl`), require(`../../shaders/wallpaper${type}.fragment.glsl`), false)
     // acquire the attributes & uniforms
     this.aPos = gl.getAttribLocation(this.glProgram, 'aPos')
     this.uScale = gl.getUniformLocation(this.glProgram, 'uScale')
@@ -42,5 +39,28 @@ export default class WallpaperProgram extends Program {
     // tell attribute how to get data out of vertexBuffer
     // (attribute pointer, compenents per iteration (size), data size (type), normalize, stride, offset)
     gl.vertexAttribPointer(this.aPos, 2, gl.FLOAT, false, 0, 0)
+  }
+
+  draw (painter: Painter, wallpaper: Wallpaper) {
+    // setup variables
+    const { context } = painter
+    const { gl } = context
+    // now we draw
+    gl.useProgram(this.glProgram)
+    // bind the vao
+    gl.bindVertexArray(this.vao)
+    // ensure we are using equal depth test like rasters
+    context.lequalDepth()
+    // set new uniforms should we need to
+    const uniforms: null | WallpaperUniforms = wallpaper.getUniforms()
+    if (uniforms) {
+      gl.uniform2fv(this.uScale, uniforms.uScale)
+      gl.uniform4fv(this.uBackgroundColor, uniforms.uBackgroundColor)
+      gl.uniform4fv(this.uFade1Color, uniforms.uFade1Color)
+      gl.uniform4fv(this.uFade2Color, uniforms.uFade2Color)
+      gl.uniform4fv(this.uHaloColor, uniforms.uHaloColor)
+    }
+    wallpaper.dirty = false
+    gl.drawArrays(gl.TRIANGLE_FAN, 0, 4)
   }
 }

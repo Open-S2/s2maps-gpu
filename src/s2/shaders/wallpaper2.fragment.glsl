@@ -1,13 +1,6 @@
 #version 300 es
 precision mediump float;
 
-// float sqrt2 = 1.4142135623730951;
-
-// vec3 haloColor = vec3(0.95, 1., 1.);
-// vec3 fade2Color = vec3(0.88, 1., 1.);
-// vec3 fade1Color = vec3(0.54, 0.8, 1.);
-// vec3 backgroundColor = vec3(0.11372549, 0.15, 0.33333333);
-
 vec2 fade1SmoothSteps = vec2(0.15, 1.);
 vec2 fade2SmoothSteps = vec2(0.55, 1.);
 vec2 haloSmoothSteps = vec2(0.77, 0.825);

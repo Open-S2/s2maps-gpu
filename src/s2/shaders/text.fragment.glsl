@@ -12,7 +12,11 @@ uniform sampler2D uTexture;
 out vec4 fragColor;
 
 void main () {
-  if (iMode == 0 || iMode == 1) fragColor = color;
+  // if (iMode == 0 || iMode == 1) fragColor = color;
+  // else fragColor = texture(uTexture, vTexcoord);
+  // if (fragColor.a <= 0.01) discard;
+
+  if (iMode == 0) fragColor = color;
   else fragColor = texture(uTexture, vTexcoord);
   if (fragColor.a <= 0.01) discard;
 }

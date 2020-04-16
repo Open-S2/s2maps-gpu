@@ -11,12 +11,13 @@ layout (location = 6) in float aRadius; // float radius      (INSTANCED)
 
 uniform mat4 uMatrix;
 uniform vec2 uAspect;
+uniform vec2 uTexWH;
 uniform int uMode; // 0 => points ; 1 => quads ; 2 => textures
 uniform bool u3D;
 
 uniform sampler2D uFeatures;
 
-@import ./ST2XYZ;
+#include ./ST2XYZ;
 
 flat out int iMode;
 out vec2 vTexcoord;
@@ -57,12 +58,16 @@ void main () {
     // use the UV to map the quad, use
     glPos.x += (width * aUV.x) - (width / 2.);
     glPos.y += (height * aUV.y) - (height / 2.);
+
+    vTexcoord = vec2((aXY.x + (aWH.x * aUV.x * 2.)) / uTexWH.x, (aXY.y + (aWH.y * aUV.y * 2.)) / uTexWH.y);
   } else {
-    // set where we are on the texture
-    // If we are using the textAnchor "auto" placement feature, we check the texture to see
-    // if the font can be displayed or not. If any of the corners are already covered by another
-    // text or billboard, we check another corner and draw there. For simplicity, only
-    // left and right are checked. Offsets are determined based upon
+    // we check that all 4 corners of the quad are visible, than draw
+    // convert aID (really a uint32) to an rgba equivalent (split into 4 pieces of 8 bits)
+    // int id = int(aID);
+    // ivec3 colorID = ivec3(float(id & 255), float((id >> 8) & 255), float(id >> 16));
+    // // check if the point exists with the same id in our sampler
+    // vec4 storedID = texelFetch(uFeatures, ivec2((glPos.x / 2. + 0.5) * uAspect.x * 2., (glPos.y / 2. + 0.5) * uAspect.y * 2.), 0);
+    // ivec3 value = ivec3(storedID.rgb * 256.);
 
     // update glPos by width and height
     float width = aWH.x / uAspect.x;

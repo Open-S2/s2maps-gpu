@@ -1,6 +1,7 @@
 // @flow
 export default class Context {
   gl: WebGLRenderingContext | WebGL2RenderingContext
+  type: 1 | 2
   clearColorRGBA: [number, number, number, number] = [0, 0, 0, 0]
   constructor (context: WebGLRenderingContext | WebGL2RenderingContext) {
     this.gl = context
@@ -10,11 +11,13 @@ export default class Context {
     this.clearScene()
     this.enableCullFace()
     this.enableStencilTest()
+    this.enableDepthTest()
     this.enableBlend()
   }
 
   clearScene () {
-    this.gl.clear(this.gl.DEPTH_BUFFER_BIT | this.gl.STENCIL_BUFFER_BIT | this.gl.COLOR_BUFFER_BIT)
+    const { gl } = this
+    gl.clear(gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT | gl.COLOR_BUFFER_BIT)
     this.clearColor()
     this.clearStencil()
   }
@@ -79,8 +82,9 @@ export default class Context {
   }
 
   enableStencil () {
-    this.gl.stencilOp(this.gl.KEEP, this.gl.KEEP, this.gl.REPLACE)
-  	this.gl.colorMask(false, false, false, false)
+    const { gl } = this
+    gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE)
+  	gl.colorMask(false, false, false, false)
   }
 
   stencilFunc (ref: number) {
@@ -88,24 +92,27 @@ export default class Context {
   }
 
   fillFirstPass (ref) {
-    this.gl.colorMask(false, false, false, false)
-    this.gl.stencilOpSeparate(this.gl.FRONT, this.gl.KEEP, this.gl.INCR, this.gl.INCR)
-    this.gl.stencilFuncSeparate(this.gl.FRONT, this.gl.EQUAL, ref, 0xFF)
-    this.gl.stencilOpSeparate(this.gl.BACK, this.gl.KEEP, this.gl.KEEP, this.gl.KEEP)
-    this.gl.stencilFuncSeparate(this.gl.BACK, this.gl.EQUAL, ref, 0xFF)
+    const { gl } = this
+    gl.colorMask(false, false, false, false)
+    gl.stencilOpSeparate(gl.FRONT, gl.KEEP, gl.INCR, gl.INCR)
+    gl.stencilFuncSeparate(gl.FRONT, gl.EQUAL, ref, 0xFF)
+    gl.stencilOpSeparate(gl.BACK, gl.KEEP, gl.KEEP, gl.KEEP)
+    gl.stencilFuncSeparate(gl.BACK, gl.EQUAL, ref, 0xFF)
   }
 
   fillSecondPass (ref) {
-    this.gl.stencilOpSeparate(this.gl.FRONT, this.gl.KEEP, this.gl.KEEP, this.gl.KEEP)
-    this.gl.stencilFuncSeparate(this.gl.FRONT, this.gl.EQUAL, ref + 1, 0xFF)
-    this.gl.stencilOpSeparate(this.gl.BACK, this.gl.KEEP, this.gl.DECR, this.gl.DECR)
-    this.gl.stencilFuncSeparate(this.gl.BACK, this.gl.EQUAL, ref + 1, 0xFF)
+    const { gl } = this
+    gl.stencilOpSeparate(gl.FRONT, gl.KEEP, gl.KEEP, gl.KEEP)
+    gl.stencilFuncSeparate(gl.FRONT, gl.EQUAL, ref + 1, 0xFF)
+    gl.stencilOpSeparate(gl.BACK, gl.KEEP, gl.DECR, gl.DECR)
+    gl.stencilFuncSeparate(gl.BACK, gl.EQUAL, ref + 1, 0xFF)
   }
 
   fillThirdPass (ref) {
-    this.gl.colorMask(true, true, true, true)
-    this.gl.stencilFunc(this.gl.EQUAL, ref + 1, 0xFF)
-    this.gl.stencilOp(this.gl.KEEP, this.gl.DECR, this.gl.DECR)
+    const { gl } = this
+    gl.colorMask(true, true, true, true)
+    gl.stencilFunc(gl.EQUAL, ref + 1, 0xFF)
+    gl.stencilOp(gl.KEEP, gl.DECR, gl.DECR)
   }
 
   lockStencil () {
@@ -113,14 +120,16 @@ export default class Context {
   }
 
   clearStencil () {
-    this.gl.clearStencil(0x0)
-  	this.gl.stencilMask(0xFF)
-    this.gl.clear(this.gl.STENCIL_BUFFER_BIT)
+    const { gl } = this
+    gl.clearStencil(0x0)
+  	gl.stencilMask(0xFF)
+    gl.clear(gl.STENCIL_BUFFER_BIT)
   }
 
   cleanup () {
-    this.gl.bindVertexArray(null)
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null)
-    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, null)
+    const { gl } = this
+    gl.bindVertexArray(null)
+    gl.bindBuffer(gl.ARRAY_BUFFER, null)
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null)
   }
 }

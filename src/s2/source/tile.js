@@ -1,5 +1,6 @@
 // @flow
 import { WebGL2Context, WebGLContext } from '../gl/contexts'
+import buildSource from './buildSource'
 import { S2Point, bboxST } from 's2projection' // https://github.com/Regia-Corporation/s2projection
 
 import type { Face } from 's2projection' // https://github.com/Regia-Corporation/s2projection/blob/master/src/S2Projection.js#L4
@@ -65,7 +66,7 @@ export type SourceData = { [string | number]: RasterTileSource | VectorTileSourc
 
 // tiles are designed to create mask geometry and store prebuilt layer data handed off by the worker pool
 // whenever rerenders are called, they will access these tile objects for the layer data / vaos
-// before managing sources asyncronously, a tile needs to synchronously place spherical background
+// before managing sources asyncronously, a tile needs to synchronously build spherical background
 // data to ensure we get no awkward visuals.
 export default class Tile {
   id: number
@@ -78,7 +79,6 @@ export default class Tile {
   faceST: Float32Array
   division: number
   sourceData: SourceData = {}
-  textureSources: Array<TextureMapTileSource> = []
   featureGuide: Array<FeatureGuide> = []
   context: WebGL2Context | WebGLContext
   childrenRequests: ChildRequest = {}
@@ -95,6 +95,15 @@ export default class Tile {
     this.faceST = new Float32Array([face, zoom, bbox[2] - bbox[0], bbox[0], bbox[3] - bbox[1], bbox[1]])
     this._createDivision()
     this._buildMaskGeometry()
+  }
+
+  // the zoom determines the number of divisions necessary to maintain a visually
+  // asthetic spherical shape. As we zoom in, the tiles are practically flat,
+  // so division is less useful.
+  // 0, 1 => 16  ;  2, 3 => 8  ;  4, 5 => 4  ;  6, 7 => 2  ;  8+ => 1
+  _createDivision () {
+    const level = 1 << Math.max(Math.min(Math.floor(this.zoom / 2), 4), 0) // max 5 as its binary position is 32
+    this.division = 16 / level
   }
 
   // inject references to featureGuide from each parentTile. Sometimes if we zoom really fast, we inject
@@ -117,104 +126,6 @@ export default class Tile {
         parentTile.childrenRequests[missingLayer].push(this)
       }
     }
-    // lastly inject text
-    // for (const source in parentTile.sourceData) {
-    //   const parentSource = parentTile.sourceData[source]
-    //   if (parentSource.type === 'text') this.sourceData[source] = parentSource
-    // }
-  }
-
-  // if a style has a raster source & layer pointing to it, we request the tiles
-  // four children (if size is 512 and images are 512, otherwise we may store
-  // 16 images of 256). Create a texture of size length x length to house
-  // said data (length being this.size * 2).
-  buildSourceTexture (source: string, layer: Layer) {
-    const { gl } = this.context
-    // Build sourceData
-    const raster = this.sourceData[source] = { type: 'raster' }
-    // Create a texture.
-    const texture = raster.texture = gl.createTexture()
-    // store information to featureGuide
-    const guide = raster.guide = {
-      tile: this,
-      layerID: layer.index,
-      source: 'mask', // when pulling from the vao, we still use the mask vertices
-      type: 'raster',
-      texture
-    }
-    this.featureGuide.push(guide)
-    this.buildSource(raster)
-  }
-
-  injectRasterData (source: string, image: Image, leftShift: number, bottomShift: number) {
-    const { gl } = this.context
-    const length = image.width
-    const currentSource = this.sourceData[source]
-    const { texture } = currentSource
-    // put into texture
-    gl.bindTexture(gl.TEXTURE_2D, texture)
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, leftShift * length, bottomShift * length, gl.RGBA, gl.UNSIGNED_BYTE, image)
-  }
-
-  injectVectorSourceData (source: string, vertexArray: Float32Array, indexArray: Uint32Array,
-    codeOffsetArray: Uint8Array, featureGuideArray: Uint32Array, layers: Array<Layer>) {
-    // store a reference to the source
-    const builtSource = this.sourceData[source] = {
-      type: 'vector',
-      vertexArray,
-      indexArray,
-      codeOffsetArray
-    }
-    // we work off the featureGuideArray, adding to the buffer as we go
-    const lgl = featureGuideArray.length
-    let i = 0
-    while (i < lgl) {
-      // grab the size, layerID, count, and offset, and update the index
-      const [layerID, count, offset, encodingSize] = featureGuideArray.slice(i, i + 4)
-      i += 4
-      // grab the layers type and code
-      const { type, code } = layers[layerID]
-      // create and store the featureGuide
-      this.featureGuide.push({
-        tile: this,
-        layerID,
-        source,
-        count,
-        offset,
-        type,
-        featureCode: new Float32Array([...featureGuideArray.slice(i, i + encodingSize)]),
-        layerCode: code
-      })
-      i += encodingSize
-    }
-    // Since a parent can be injected, we need to remove any instances of the "old" source data.
-    this.featureGuide = this.featureGuide.filter(fg => !(fg.parent && fg.source === source))
-    // because sources may be utilized in an out of order fashion inside the style.layers property,
-    // but come in linearly, we need to sort.
-    this.featureGuide.sort((a, b) => { return a.layerID - b.layerID })
-    // build the VAO
-    this.buildSource(builtSource)
-    // if we have children requesting this tiles data, we send the data over
-    if (Object.keys(this.childrenRequests).length) this._injectSourceIntoChildren(source)
-  }
-
-  injectTextSourceData (source: string, vertexArray: Float32Array,
-    texPositionArray: Uint16Array, imageBitmap: ImageBitmap) {
-    const textSource = `${source}:text`
-    // create the source. This will naturally replace whatever was already there
-    const builtSource = this.sourceData[textSource] = {
-      type: 'text',
-      texture: this.context.gl.createTexture(),
-      uvArray: new Float32Array([0, 0,  1, 0,  1, 1,  0, 1]),
-      vertexArray,
-      primcount: vertexArray.length / 3,
-      texPositionArray,
-      imageBitmap
-    }
-    // build the VAO
-    this.buildSource(builtSource)
-    // store as a texture source
-    this.textureSources.push(builtSource)
   }
 
   _injectSourceIntoChildren (sourceName: string) {
@@ -238,15 +149,6 @@ export default class Tile {
         delete this.childrenRequests[featureGuide.layerID]
       }
     }
-  }
-
-  // the zoom determines the number of divisions necessary to maintain a visually
-  // asthetic spherical shape. As we zoom in, the tiles are practically flat,
-  // so division is less useful.
-  // 0, 1 => 16  ;  2, 3 => 8  ;  4, 5 => 4  ;  6, 7 => 2  ;  8+ => 1
-  _createDivision () {
-    const level = 1 << Math.max(Math.min(Math.floor(this.zoom / 2), 4), 0) // max 5 as its binary position is 32
-    this.division = 16 / level
   }
 
   _buildMaskGeometry () {
@@ -288,7 +190,7 @@ export default class Tile {
       count: indices.length,
       mode: this.context.gl.TRIANGLE_STRIP
     }
-    this.buildSource(mask)
+    buildSource(this.context, mask)
   }
 
   // For future 3D terrain geometry, we create a new mask
@@ -303,163 +205,121 @@ export default class Tile {
       threeD: true,
       mode: this.context.gl.TRIANGLES
     }
-    this.buildSource(mask)
+    buildSource(this.context, mask)
   }
 
-  buildSource (source: RasterTileSource | VectorTileSource | TextureMapTileSource) {
-    const { context } = this
-    const { gl } = context
-    // type vector
-    if (source.type === 'vector') {
-      // cleanup old setup
-      if (source.vertexBuffer) gl.deleteBuffer(source.vertexBuffer)
-      if (source.radiiBuffer) gl.deleteBuffer(source.radiiBuffer)
-      if (source.codeOffsetBuffer) gl.deleteBuffer(source.codeOffsetBuffer)
-      if (source.indexBuffer) gl.deleteBuffer(source.indexBuffer)
-      if (source.vao) gl.deleteVertexArray(source.vao)
-      // Create a starting vertex array object (attribute state)
-      source.vao = gl.createVertexArray()
-      // and make it the one we're currently working with
-      gl.bindVertexArray(source.vao)
-      // VERTEX
-      // Create a vertex buffer
-      source.vertexBuffer = gl.createBuffer()
-      // Bind the buffer
-      gl.bindBuffer(gl.ARRAY_BUFFER, source.vertexBuffer)
-      // Buffer the data
-      gl.bufferData(gl.ARRAY_BUFFER, source.vertexArray, gl.STATIC_DRAW)
-      // link attributes:
-      // fill
-      gl.enableVertexAttribArray(0)
-      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0)
-      // line
-      gl.enableVertexAttribArray(1)
-      gl.enableVertexAttribArray(2)
-      gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 16, 0)
-      gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 16, 8)
-      // gl.vertexAttribPointer(3, 1, gl.FLOAT, false, 16, 12)
-      // RADII
-      if (source.radiiArray) {
-        // Create a vertex buffer
-        source.radiiBuffer = gl.createBuffer()
-        // Bind the buffer
-        gl.bindBuffer(gl.ARRAY_BUFFER, source.radiiBuffer)
-        // Buffer the data
-        gl.bufferData(gl.ARRAY_BUFFER, source.radiiArray, gl.STATIC_DRAW)
-        // radii attribute
-        gl.enableVertexAttribArray(6)
-        // tell attribute how to get data out of radii buffer
-        gl.vertexAttribPointer(6, 1, gl.FLOAT, false, 0, 0)
-      }
-      // FEATURE INDEX
-      if (source.codeOffsetArray && source.codeOffsetArray.length) {
-        // Create the feature index buffer
-        source.codeOffsetBuffer = gl.createBuffer()
-        // Bind the buffer
-        gl.bindBuffer(gl.ARRAY_BUFFER, source.codeOffsetBuffer)
-        // Buffer the data
-        gl.bufferData(gl.ARRAY_BUFFER, source.codeOffsetArray, gl.STATIC_DRAW)
-        // feature attribute
-        gl.enableVertexAttribArray(7)
-        gl.enableVertexAttribArray(8)
-        // tell attribute how to get data out of feature index buffer
-        gl.vertexAttribPointer(7, 1, gl.UNSIGNED_BYTE, false, 2, 0)
-        gl.vertexAttribPointer(8, 1, gl.UNSIGNED_BYTE, false, 2, 1)
-      }
-      // INDEX
-      // Create an index buffer
-      source.indexBuffer = gl.createBuffer()
-      // bind to ELEMENT_ARRAY
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, source.indexBuffer)
-      // buffer the data
-      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, source.indexArray, gl.STATIC_DRAW)
-    } else if (source.type === 'text') {
-      // Create a starting vertex array object (attribute state)
-      source.vao = gl.createVertexArray()
-      // and make it the one we're currently working with
-      gl.bindVertexArray(source.vao)
-      // UV
-      // Create a vertex buffer
-      source.uvBuffer = gl.createBuffer()
-      // Bind the buffer
-      gl.bindBuffer(gl.ARRAY_BUFFER, source.uvBuffer)
-      // Buffer the data
-      gl.bufferData(gl.ARRAY_BUFFER, source.uvArray, gl.STATIC_DRAW)
-      gl.enableVertexAttribArray(0) // u-v
-      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0)
-
-      // VERTEX
-      // Create a vertex buffer
-      source.vertexBuffer = gl.createBuffer()
-      // Bind the buffer
-      gl.bindBuffer(gl.ARRAY_BUFFER, source.vertexBuffer)
-      // Buffer the data
-      gl.bufferData(gl.ARRAY_BUFFER, source.vertexArray, gl.STATIC_DRAW)
-      // link attributes:
-      // s, t & id positions
-      gl.enableVertexAttribArray(1) // s-t
-      gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 12, 0)
-      gl.enableVertexAttribArray(2) // id
-      gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 12, 8)
-      // add divisors to reuse for entire instance
-      gl.vertexAttribDivisor(1, 1) // s-t
-      gl.vertexAttribDivisor(2, 1) // id
-
-      // RADII
-      if (source.radiiArray) {
-        // Create a vertex buffer
-        source.radiiBuffer = gl.createBuffer()
-        // Bind the buffer
-        gl.bindBuffer(gl.ARRAY_BUFFER, source.radiiBuffer)
-        // Buffer the data
-        gl.bufferData(gl.ARRAY_BUFFER, source.radiiArray, gl.STATIC_DRAW)
-        // radii attribute
-        gl.enableVertexAttribArray(6)
-        // tell attribute how to get data out of radii buffer
-        gl.vertexAttribPointer(6, 1, gl.FLOAT, false, 0, 0)
-        // add divisors to reuse for entire instance
-        gl.vertexAttribDivisor(6, 1) // r
-      }
-
-      // TEXTURE POSITION
-      // Create a tex buffer
-      source.texPositionBuffer = gl.createBuffer()
-      // Bind the buffer
-      gl.bindBuffer(gl.ARRAY_BUFFER, source.texPositionBuffer)
-      // Buffer the data
-      gl.bufferData(gl.ARRAY_BUFFER, source.texPositionArray, gl.STATIC_DRAW)
-      // link attributes:
-      // texture x, y, width, height, & anchor
-      gl.enableVertexAttribArray(3) // x-y
-      gl.vertexAttribPointer(3, 2, gl.SHORT, false, 10, 0)
-      gl.enableVertexAttribArray(4) // width-height
-      gl.vertexAttribPointer(4, 2, gl.SHORT, false, 10, 4)
-      gl.enableVertexAttribArray(5) // anchor
-      gl.vertexAttribPointer(5, 1, gl.SHORT, false, 10, 8)
-      // add divisors to reuse for entire instance
-      gl.vertexAttribDivisor(3, 1) // x-y
-      gl.vertexAttribDivisor(4, 1) // width-height
-      gl.vertexAttribDivisor(5, 1) // anchor
-
-      // TEXTURE
-      gl.bindTexture(gl.TEXTURE_2D, source.texture)
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source.imageBitmap)
-      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true)
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
-    } else if (source.type === 'raster') {
-      // setup texture params
-      const length = this.size * 2
-      gl.bindTexture(gl.TEXTURE_2D, source.texture)
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, length, length, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
-      if (navigator.userAgent.indexOf('Chrome') === -1) {
-        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true)
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1)
-      }
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+  // if a style has a raster source & layer pointing to it, we request the tiles
+  // four children (if size is 512 and images are 512, otherwise we may store
+  // 16 images of 256). Create a texture of size length x length to house
+  // said data (length being this.size * 2).
+  buildSourceTexture (source: string, layer: Layer) {
+    const { gl } = this.context
+    // Build sourceData
+    const raster = this.sourceData[source] = { type: 'raster' }
+    // Create a texture.
+    const texture = raster.texture = gl.createTexture()
+    // store information to featureGuide
+    const guide = raster.guide = {
+      tile: this,
+      layerID: layer.index,
+      source: 'mask', // when pulling from the vao, we still use the mask vertices
+      type: 'raster',
+      featureCode: [0],
+      texture
     }
+    this.featureGuide.push(guide)
+    buildSource(this.context, raster)
+  }
+
+  injectRasterData (source: string, image: Image, leftShift: number, bottomShift: number) {
+    const { gl } = this.context
+    const length = image.width
+    const currentSource = this.sourceData[source]
+    const { texture } = currentSource
+    // put into texture
+    gl.bindTexture(gl.TEXTURE_2D, texture)
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, leftShift * length, bottomShift * length, gl.RGBA, gl.UNSIGNED_BYTE, image)
+  }
+
+  injectVectorSourceData (source: string, vertexArray: Float32Array, indexArray: Uint32Array,
+    codeOffsetArray: Uint8Array, featureGuideArray: Uint32Array, layers: Array<Layer>) {
+    // store a reference to the source
+    const builtSource = this.sourceData[source] = {
+      type: 'vector',
+      vertexArray,
+      indexArray,
+      codeOffsetArray
+    }
+    // we work off the featureGuideArray, adding to the buffer as we go
+    const lgl = featureGuideArray.length
+    let i = 0
+    while (i < lgl) {
+      // grab the size, layerID, count, and offset, and update the index
+      const [layerID, count, offset, encodingSize] = featureGuideArray.slice(i, i + 4)
+      i += 4
+      // grab the layers type and code
+      const { type, code } = layers[layerID]
+      // create and store the featureGuide
+      this.featureGuide.push({
+        tile: this,
+        layerID,
+        source,
+        count,
+        offset,
+        type,
+        featureCode: new Float32Array(encodingSize ? [...featureGuideArray.slice(i, i + encodingSize)] : [0]), // NOTE: The sorting algorithm doesn't work if an array is empty, so we have to have at least one number, just set it to 0
+        layerCode: code
+      })
+      i += encodingSize
+    }
+    // Since a parent can be injected, we need to remove any instances of the "old" source data.
+    this.featureGuide = this.featureGuide.filter(fg => !(fg.parent && fg.source === source))
+    // build the VAO
+    buildSource(this.context, builtSource)
+    // if we have children requesting this tiles data, we send the data over
+    if (Object.keys(this.childrenRequests).length) this._injectSourceIntoChildren(source)
+  }
+
+  injectTextSourceData (source: string, vertexArray: Float32Array, texPositionArray: Uint16Array,
+    featureGuideArray: Uint16Array, imageBitmap: ImageBitmap, layers: Array<Layer>) {
+    const textSource = `${source}:text`
+    // create the source. This will naturally replace whatever was already there
+    const builtSource = this.sourceData[textSource] = {
+      type: 'text',
+      texture: this.context.gl.createTexture(),
+      textureWH: new Float32Array([imageBitmap.width, imageBitmap.height]),
+      uvArray: new Float32Array([0, 0,  1, 0,  1, 1,  0, 1]),
+      vertexArray,
+      texPositionArray,
+      imageBitmap
+    }
+    // use the featureGuide to build out the layers
+    // we work off the featureGuideArray, adding to the buffer as we go
+    const lgl = featureGuideArray.length
+    let i = 0
+    while (i < lgl) {
+      // grab the layerID, primcount, and offset, and update the index
+      const [layerID, primcount, offset] = featureGuideArray.slice(i, i + 3)
+      i += 3
+      // grab the layers type and code
+      const { type, code } = layers[layerID]
+      // create and store the featureGuide
+      this.featureGuide.push({
+        tile: this,
+        layerID,
+        source: textSource,
+        primcount,
+        offset,
+        type,
+        featureCode: [0],
+        layerCode: code
+      })
+    }
+    // Since a parent can be injected, we need to remove any instances of the "old" source data.
+    this.featureGuide = this.featureGuide.filter(fg => !(fg.parent && fg.source === textSource))
+    // build the VAO
+    buildSource(this.context, builtSource)
+    // if we have children requesting this tiles data, we send the data over
+    if (Object.keys(this.childrenRequests).length) this._injectSourceIntoChildren(textSource)
   }
 }

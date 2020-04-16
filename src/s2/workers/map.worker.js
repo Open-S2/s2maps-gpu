@@ -8,11 +8,16 @@ class MapWorker {
   map: Map
   onMessage ({ data }) {
     const { type } = data
+    
     if (type === 'canvas') this._prepCanvas(data.options, data.canvas, data.id)
-    if (type === 'resize') { this.map.resize(data.width, data.height) }
-    if (type === 'vectordata') this.map.injectVectorSourceData(data.source, data.tileID, data.vertexBuffer, data.indexBuffer, data.codeOffsetBuffer, data.featureGuideBuffer)
-    if (type === 'textdata') this.maps.injectTextSourceData(data.source, data.tileID, data.vertexBuffer, data.texPositionBuffer, data.imageBitmap)
+    if (type === 'resize') this.map.resize(data.width, data.height)
+    if (type === 'vectordata') this.map.injectVectorSourceData(data.source, data.tileID, data.parentLayers, data.vertexBuffer, data.indexBuffer, data.codeOffsetBuffer, data.featureGuideBuffer)
+    if (type === 'textdata') this.map.injectTextSourceData(data.source, data.tileID, data.vertexBuffer, data.texPositionBuffer, data.featureGuideBuffer, data.imageBitmap)
     if (type === 'maskdata') this.map.injectMaskGeometry(data.tileID, data.vertexBuffer, data.indexBuffer, data.radiiBuffer)
+    if (type === 'scroll') this.map._onScroll(data.rect, data.clientX, data.clientY, data.deltaY)
+    if (type === 'mousedown') this.map.dragPan.onMouseDown()
+    if (type === 'mouseup') this.map.dragPan.onMouseUp()
+    if (type === 'mousemove') this.map.dragPan.onMouseMove(data.movementX, data.movementY)
   }
 
   _prepCanvas (options: MapOptions, canvas: HTMLCanvasElement, id: string) {

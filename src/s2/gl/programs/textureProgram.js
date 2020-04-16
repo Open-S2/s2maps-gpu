@@ -1,14 +1,12 @@
 // @flow
 import Program from './program'
 
-import textVertex from '../../shaders/text.vertex.glsl'
-import textFragment from '../../shaders/text.fragment.glsl'
-
 import type { Context } from '../contexts'
 
 export default class TextureProgram extends Program {
   uAspect: WebGLUniformLocation
   uMode: WebGLUniformLocation
+  uTexWH: WebGLUniformLocation
   uFeatureSampler: WebGLUniformLocation
   uTextureSampler: WebGLUniformLocation
   curMode: number = -1
@@ -20,12 +18,13 @@ export default class TextureProgram extends Program {
     // get gl from context
     const { gl } = context
     // upgrade
-    super(gl, textVertex, textFragment)
+    super(gl, require('../../shaders/text.vertex.glsl'), require('../../shaders/text.fragment.glsl'))
     // since we need to set texture positions, we use
     gl.useProgram(this.glProgram)
     // set uniforms
     this.uAspect = gl.getUniformLocation(this.glProgram, 'uAspect')
     this.uMode = gl.getUniformLocation(this.glProgram, 'uMode')
+    this.uTexWH = gl.getUniformLocation(this.glProgram, 'uTexWH')
     this.uTextureSampler = gl.getUniformLocation(this.glProgram, 'uTexture')
     gl.uniform1i(this.uTextureSampler, 0)
     this.uFeatureSampler = gl.getUniformLocation(this.glProgram, 'uFeatures')
@@ -102,6 +101,15 @@ export default class TextureProgram extends Program {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
   }
 
+  newScene (context) {
+    const { gl } = this
+    this.bindPointFrameBuffer()
+    context.newScene()
+    this.bindQuadFrameBuffer()
+    context.newScene()
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+  }
+
   bindPointFrameBuffer () {
     const { gl } = this
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.pointFramebuffer)
@@ -138,12 +146,43 @@ export default class TextureProgram extends Program {
     this.gl.uniform2fv(this.uAspect, aspect)
   }
 
-  setMode (mode: number) {
+  setTexWH (textureSize: Float32Array) { // [TextureWidth, TextureHeight]
+    this.gl.uniform2fv(this.uTexWH, textureSize)
+  }
+
+  setMode (mode: 0 | 1 | 2) {
     if (this.curMode !== mode) {
       // update current value
       this.curMode = mode
       // update gpu uniform
       this.gl.uniform1i(this.uMode, mode)
     }
+  }
+
+  draw (painter: Painter, featureGuide: FeatureGuide, sourceData: Object, maskID: number) {
+    // grab context
+    const { context } = painter
+    const { gl } = context
+    const { textureWH } = sourceData
+    // set texture size for uniform
+    this.setTexWH(textureWH)
+    // set z-testing
+    context.lequalDepth()
+    // get current source data
+    let { primcount, offset, threeD } = featureGuide
+    // set 3D uniform
+    this.set3D(threeD)
+    // draw points
+    this.bindPointFrameBuffer()
+    this.setMode(0)
+    gl.drawArraysInstanced(gl.POINTS, offset, 1, primcount)
+    // draw quads if point exists
+    context.alwaysDepth()
+    context.stencilFunc(maskID)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+    this.samplePointTexture()
+    gl.bindTexture(gl.TEXTURE_2D, sourceData.texture)
+    this.setMode(1)
+    gl.drawArraysInstanced(gl.TRIANGLE_FAN, offset, 4, primcount)
   }
 }

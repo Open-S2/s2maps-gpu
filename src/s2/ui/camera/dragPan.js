@@ -1,11 +1,12 @@
 // @flow
+import EventListener from '../../util/EventListener'
 
 // t: time | b: start value | c: change in value | d: duration
 const easeOutExp = (delta, movement, animationLength) => {
   return -movement * ( -Math.pow( 2, -10 * delta / animationLength ) + 1 ) + movement
 }
 
-export default class DragPan extends EventTarget {
+export default class DragPan extends EventListener {
   mouseActive: boolean = false // when a user presses left click and moves during the press
   swipeActive: boolean = false // when user clicks and drags at a fast enough pace to cause the world to keep moving after unpressing the left mouse button
   wasActive: boolean = false // if a onMouseDown event comes up, we want to check if the map was previously active to avoid unecessary click events
@@ -23,7 +24,7 @@ export default class DragPan extends EventTarget {
     this.time = -1
   }
 
-  onMouseDown (e: MouseEvent) {
+  onMouseDown () {
     // if we were actively moving (swipe animation) than we should not register a click. this is prep for that
     // NOTE: We don't have to study if we were zooming because browsers naturally ignore propogating clicks during a zoom
     if (this.mouseActive || this.swipeActive) this.wasActive = true
@@ -36,7 +37,7 @@ export default class DragPan extends EventTarget {
     this.totalMovementY = 0
   }
 
-  onMouseUp (e: MouseEvent) {
+  onMouseUp () {
     this.mouseActive = false
     this.time = 0
     // if movement is greater than mins, animate swipe,
@@ -50,9 +51,8 @@ export default class DragPan extends EventTarget {
 
   // tracks movement if the left click actively pressed
   // or it tracks what features are currently active
-  onMouseMove (e: MouseEvent) {
+  onMouseMove (movementX, movementY) {
     if (this.mouseActive) {
-      const { movementX, movementY } = e
       this.movementX = movementX
       this.movementY = movementY
       this.totalMovementX += movementX

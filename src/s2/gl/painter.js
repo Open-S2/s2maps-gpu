@@ -13,15 +13,6 @@ import {
   SkyboxProgram,
   WallpaperProgram
 } from './programs'
-/** DRAWING **/
-import {
-  // drawLine,
-  // drawMask,
-  // drawRaster,
-  // drawShade,
-  drawTexture,
-  drawWallpaper
-} from './draw'
 /** SOURCES **/
 import { Tile } from '../source'
 
@@ -67,10 +58,10 @@ export default class Painter {
     programs.forEach(program => { self.getProgram(program) })
   }
 
-  injectFrameUniforms (matrix: Float32Array, view: Float32Array) {
+  injectFrameUniforms (matrix: Float32Array, view: Float32Array, aspect: Float32Array) {
     const { programs } = this
     for (const programName in programs) {
-      programs[programName].injectFrameUniforms(matrix, view)
+      programs[programName].injectFrameUniforms(matrix, view, aspect)
     }
   }
 
@@ -123,86 +114,96 @@ export default class Painter {
 
   paint (projection: Projection, style: Style, tiles: Array<Tile>) {
     const { context } = this
+    const { gl } = context
     const { sphereBackground } = style
     // prep painting
     context.newScene()
     // if we have a texture program, we draw
-    // const texProgram: TextureProgram = this.programs.texture
-    // if (texProgram) {
-    //   texProgram.bindPointFrameBuffer()
-    //   context.newScene()
-    //   texProgram.bindQuadFrameBuffer()
-    //   context.newScene()
-    //   gl.bindFramebuffer(gl.FRAMEBUFFER, null)
-    // }
+    const texProgram: TextureProgram = this.programs.texture
+    if (texProgram) texProgram.newScene(context)
 
     // prep frame uniforms
-    const { view } = projection
+    const { view, aspect } = projection
     const matrix = projection.getMatrix(512) // NOTE: For now, we have a default size of 512.
-    this.injectFrameUniforms(matrix, view)
+    this.injectFrameUniforms(matrix, view, aspect)
 
     // merge tile features
     const features = tiles.flatMap(tile => tile.featureGuide).sort(featureSort)
+    // prep stencil - don't draw color, only to the stencil
+    context.enableStencil()
     // prep masks
-    this.paintMasks(tiles, sphereBackground)
+    this.paintMasks(tiles)
+    if (texProgram) {
+      texProgram.bindPointFrameBuffer()
+      this.paintMasks(tiles)
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+    }
+    // lock in the stencil
+    context.lockStencil()
+    // now we use the depth test
+    context.enableDepthTest()
+    // draw the sphere background should it exist
+    if (sphereBackground) this.paintSphereBackground(tiles, sphereBackground)
     // paint features
     this.paintFeatures(projection, style, features)
     // disable stencil
     context.disableStencilTest()
     // draw the wallpaper
-    if (style.wallpaper) drawWallpaper(this, style.wallpaper)
-    // draw any text & billboards that exist
-    // if (texProgram) this.paintTextures(projection, tiles)
+    if (style.wallpaper) {
+      const wallpaperProgram: WallpaperProgram = this.getProgram(style.wallpaper.skybox ? 'skybox' : 'wallpaper')
+      if (wallpaperProgram) wallpaperProgram.draw(this, style.wallpaper)
+    }
     // draw shade layer
     // if (style.shade) drawShade(this, style.shade)
     // cleanup
     context.cleanup()
   }
 
-  paintMasks (tiles: Array<Tile>, sphereBackground) {
-    const { context } = this
-    const { gl } = context
+  paintMasks (tiles: Array<Tile>) {
+    // get context
+    const { gl } = this.context
     // prep the fill program
     const fillProgram: FillProgram = this.useProgram('fill')
     if (!fillProgram) return new Error('The "fill" program does not exist, can not paint.')
-    // prep stencil - don't draw color, only to the stencil
-    context.enableStencil()
     // get a starting mask index
-    let maskIndex = 2
+    let maskRef = 2
     for (const tile of tiles) {
       const { faceST, sourceData } = tile
       const { mask } = sourceData
       // set uniforms & stencil test
       fillProgram.setFaceST(faceST)
-      gl.stencilFunc(gl.ALWAYS, maskIndex, 0xFF)
+      // set correct tile mask
+      gl.stencilFunc(gl.ALWAYS, maskRef, 0xFF)
       // use mask vao and fill program
       gl.bindVertexArray(mask.vao)
       // draw mask
       fillProgram.draw(this, mask)
       // keep tabs on the mask identifier
-      tile.tmpMaskID = maskIndex
+      tile.tmpMaskID = maskRef
       // update mask index
-      maskIndex += 3
+      maskRef += 3
     }
-    // lock in the stencil
-    context.lockStencil()
-    // now we use the depth test
-    context.enableDepthTest()
+  }
 
-    // draw the sphere background should it exist
-    if (sphereBackground) {
-      fillProgram.setLayerCode(sphereBackground)
-      for (const tile of tiles) {
-        const { faceST, sourceData, tmpMaskID } = tile
-        const { mask } = sourceData
-        // set uniforms & stencil test
-        fillProgram.setFaceST(faceST)
-        gl.stencilFunc(gl.EQUAL, tmpMaskID, 0xFF)
-        // bind vao
-        gl.bindVertexArray(mask.vao)
-        // draw background
-        fillProgram.draw(this, mask)
-      }
+  paintSphereBackground (tiles: Array<Tile>, sphereBackground) {
+    // get context
+    const { context } = this
+    const { gl } = context
+    // grab the fillProgram
+    const fillProgram: FillProgram = this.getProgram('fill')
+    // set layerCode
+    fillProgram.setLayerCode(sphereBackground)
+    // for each tile, draw a background
+    for (const tile of tiles) {
+      const { faceST, sourceData, tmpMaskID } = tile
+      const { mask } = sourceData
+      // set uniforms & stencil test
+      fillProgram.setFaceST(faceST)
+      gl.stencilFunc(gl.EQUAL, tmpMaskID, 0xFF)
+      // bind vao
+      gl.bindVertexArray(mask.vao)
+      // draw background
+      fillProgram.draw(this, mask)
     }
   }
 
@@ -215,6 +216,7 @@ export default class Painter {
     let curLayer: number = -1
     let curProgram: string = 'fill'
     let program: ProgramTypes = this.getProgram('fill')
+    if (!program) return new Error('The "fill" program does not exist, can not paint.')
     // run through the features, and upon tile, layer, or program change, adjust accordingly
     for (const feature of features) {
       const { parent, tile, layerID, source, type, layerCode } = feature
@@ -223,11 +225,12 @@ export default class Painter {
       if (type !== curProgram) {
         curProgram = type
         program = this.useProgram(type)
+        if (!program) return new Error(`The "${type}" program does not exist, can not paint.`)
       }
       // set stencil
       gl.stencilFunc(gl.EQUAL, tmpMaskID, 0xFF)
       // update layerID
-      if (curLayer !== layerID) {
+      if (curLayer !== layerID && layerCode) {
         curLayer = layerID
         program.setLayerCode(layerCode)
       }
@@ -237,134 +240,9 @@ export default class Painter {
       program.setFaceST(faceST)
       gl.bindVertexArray(sourceData[source].vao)
       // draw
-      program.draw(this, feature, tmpMaskID)
+      program.draw(this, feature, sourceData[source], tmpMaskID)
     }
   }
-
-  paintTextures (projection: Projection, tiles: Array<Tile>) {
-    const { context } = this
-    const { gl } = context
-
-    // grab the texture program
-    const texProgram = this.useProgram('texture')
-    // setup uniforms
-    texProgram.flush()
-    texProgram.setAspect(projection.aspect)
-
-    // PASS 1 - draw points
-    // ensure we equip depth testing
-    context.lequalDepth()
-    // bind the points framebuffer
-    texProgram.bindPointFrameBuffer()
-    // run through each tile and draw a point should it make it through the z-pass
-    for (let tile of tiles) {
-      for (const texSource of tile.textureSources) {
-        texProgram.setFaceST(tile.faceST)
-        gl.bindVertexArray(texSource.vao)
-        drawTexture(this, texSource.primcount, 0)
-      }
-    }
-
-    // TEMP: While figuring out how to draw quads
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
-
-    // PASS 2 - draw quads
-    context.alwaysDepth()
-    // all depth passes from now on
-    // bind the quads framebuffer
-    // texProgram.bindQuadFrameBuffer()
-    // setup the scene
-    // context.clearColor()
-    // TEMP: bind pointTexture as our sampler
-    texProgram.samplePointTexture()
-    // run through each tile and draw a quad if the point exists
-    for (let tile of tiles) {
-      for (const texSource of tile.textureSources) {
-        texProgram.setFaceST(tile.faceST)
-        gl.bindVertexArray(texSource.vao)
-        // gl.bindTexture(gl.TEXTURE_2D, texSource.texture)
-        drawTexture(this, texSource.primcount, 1)
-      }
-    }
-
-    // PASS 3 - draw textures
-    // return back to our main renderbuffer
-    // gl.bindFramebuffer(gl.FRAMEBUFFER, null)
-  }
-
-  // paintLayers (tile: Tile, style: Style) {
-  //   // setup context and style data
-  //   const { context } = this
-  //   const { gl } = context
-  //   const { sphereBackground } = style
-  //   // grab the featureGuide and vao from current tile
-  //   const { faceST, sourceData, featureGuide } = tile
-  //   const { mask } = sourceData
-  //   // setup variables
-  //   let curSource: string = 'mask'
-  //   let curSourceData: object = mask
-  //   let curTileID: number = 0
-  //   let curProgram: ProgramTypes = 'fill'
-  //   let program: Program = this.useProgram('fill')
-  //   let parentSet: boolean = false
-  //   let flush: boolean = false
-  //   let curLayer: number = -1
-  //   program.setFaceST(faceST)
-  //   // use mask vao and fill program
-  //   gl.bindVertexArray(mask.vao)
-  //   // First 'feature' is the mask feature
-  //   drawMask(this, mask.indexArray.length, mask.mode, mask.threeD)
-  //   // Second feature is the sphere-background feature should it exist
-  //   if (sphereBackground) {
-  //     program.setLayerCode(sphereBackground)
-  //     drawFill(this, mask.indexArray.length, 0, null, mask.mode, mask.threeD)
-  //   }
-  //   // now we start drawing feature batches
-  //   for (const featureBatch of featureGuide) {
-  //     const { parent, tile, source, layerID, count, offset, type, featureCode, layerCode, texture } = featureBatch
-  //     // if a parent tile, be sure to bind the parent tiles vao
-  //     // rebind back to current vao and matrix when the parent is not being used
-  //     if (parent && (!parentSet || curTileID !== tile.id || source !== curSource)) {
-  //       parentSet = true
-  //       curTileID = tile.id
-  //       curSourceData = tile.sourceData[source]
-  //       gl.bindVertexArray(curSourceData.vao)
-  //       curSource = source
-  //       flush = true
-  //     } else if (!parent && (parentSet || source !== curSource)) {
-  //       parentSet = false
-  //       curSourceData = sourceData[source]
-  //       gl.bindVertexArray(curSourceData.vao)
-  //       curSource = source
-  //       flush = true
-  //     }
-  //     // if type is not the same as the curProgram, we have to update curProgram and set uniforms
-  //     if (type !== curProgram) {
-  //       program = this.useProgram(type)
-  //       curProgram = type
-  //       program.setFaceST(tile.faceST)
-  //     }
-  //     if (flush) {
-  //       flush = false
-  //       program.flush()
-  //     }
-  //     // if new layerID, update layerCode
-  //     if (layerID !== curLayer && layerCode) {
-  //       program.setLayerCode(layerCode)
-  //       curLayer = layerID
-  //     }
-  //     // now draw according to type
-  //     if (type === 'raster') {
-  //       drawRaster(this, curSourceData.indexArray.length, texture, curSourceData.mode, curSourceData.threeD)
-  //     } else if (type === 'fill') {
-  //       drawFill(this, count, offset, featureCode)
-  //     } else if (type === 'line') {
-  //       drawLine(this, count, offset, featureCode)
-  //     } else if (type === 'text' || type === 'billboard') {
-  //
-  //     }
-  //   }
-  // }
 }
 
 function featureSort (a: FeatureGuide, b: FeatureGuide): number {

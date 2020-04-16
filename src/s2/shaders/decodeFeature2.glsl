@@ -1,73 +1,3 @@
-// https://gist.github.com/EliCDavis/f35a9e4afb8e1c9ae94cce8f3c2c9b9a
-int AND (int n1, int n2) {
-  float v1 = float(n1);
-  float v2 = float(n2);
-
-  int byteVal = 1;
-  int result = 0;
-
-  for (int i = 0; i < 32; i++) {
-    bool keepGoing = v1 > 0.0 || v2 > 0.0;
-    if (keepGoing) {
-      bool addOn = mod(v1, 2.0) > 0.0 && mod(v2, 2.0) > 0.0;
-
-      if (addOn) result += byteVal;
-
-      v1 = floor(v1 / 2.0);
-      v2 = floor(v2 / 2.0);
-      byteVal *= 2;
-    } else { return result; }
-  }
-
-  return result;
-}
-
-int rightShift (int num, float shifts) {
-  return int(floor(float(num) / pow(2.0, shifts)));
-}
-
-float getLayerCode (int id) {
-  for (int i = 0; i < 128; i++) {
-    if (i == id) return uLayerCode[i];
-  }
-}
-
-float getFeatureCode (int id) {
-  for (int i = 0; i < 128; i++) {
-    if (i == id) return uFeatureCode[i];
-  }
-}
-
-int getConditionStack (inout int conditionStack[6], int id) {
-  for (int i = 0; i < 7; i++) {
-    if (i == id) return conditionStack[i];
-  }
-}
-
-void putConditionStack (inout int conditionStack[6], int val, int id) {
-  for (int i = 0; i < 7; i++) {
-    if (i == id) {
-      conditionStack[i] = val;
-      return;
-    }
-  }
-}
-
-float getTStack (inout float tStack[6], int id) {
-  for (int i = 0; i < 7; i++) {
-    if (i == id) return tStack[i];
-  }
-}
-
-void putTStack (inout float tStack[6], float val, int id) {
-  for (int i = 0; i < 7; i++) {
-    if (i == id) {
-      tStack[i] = val;
-      return;
-    }
-  }
-}
-
 // y = e^x OR y = Math.pow(2, 10 * x)
 float exponentialInterpolation (float inputVal, float start, float end, float base) {
   // grab change
@@ -108,7 +38,7 @@ vec4 decodeFeature (bool color, inout int index, inout int featureIndex) {
   // prep result and variables
   int decodeOffset = index;
   int startingOffset = index;
-  int featureSize = rightShift(int(getLayerCode(index)), 10.);
+  int featureSize = int(uLayerCode[index]) >> 10;
   vec4 res = vec4(-1, -1, -1, -1);
   int conditionStack[6];
   float tStack[6];
@@ -116,63 +46,55 @@ vec4 decodeFeature (bool color, inout int index, inout int featureIndex) {
   conditionStack[0] = index;
   int len, conditionSet, condition;
 
-  for (int w = 0; w < 20; w++) {
+  do {
     stackIndex--;
     // pull out current stackIndex condition an decode
-    startingOffset = index = getConditionStack(conditionStack, stackIndex);
-    conditionSet = int(getLayerCode(index));
-    len = rightShift(conditionSet, 10.);
-    condition = rightShift(AND(conditionSet, 1008), 4.);
+    startingOffset = index = conditionStack[stackIndex];
+    conditionSet = int(uLayerCode[index]);
+    len = conditionSet >> 10;
+    condition = (conditionSet & 1008) >> 4;
     index++;
     // for each following condition, pull out the eventual color and set to val
     if (condition == 0) {
     } else if (condition == 1) { // value
-      int totalLen = len - 1;
       if (res[0] == -1.) {
-        for (int i = 0; i < 100; i++) {
-          if (i >= totalLen) break;
-          res[i] = getLayerCode(index + i);
-        }
+        for (int i = 0; i < len - 1; i++) res[i] = uLayerCode[index + i];
       } else {
         if (color) {
-          vec4 val = vec4(getLayerCode(index), getLayerCode(index + 1), getLayerCode(index + 2), getLayerCode(index + 3));
-          res = interpolateColor(res, val, getTStack(tStack, stackIndex));
+          vec4 val = vec4(uLayerCode[index], uLayerCode[index + 1], uLayerCode[index + 2], uLayerCode[index + 3]);
+          res = interpolateColor(res, val, tStack[stackIndex]);
         } else {
-          for (int i = 0; i < 100; i++) {
-            if (i > totalLen) break;
-            res[i] = res[i] + getTStack(tStack, stackIndex) * (getLayerCode(index + i) - res[i]);
-          }
+          for (int i = 0; i < len - 1; i++) res[i] = res[i] + tStack[stackIndex] * (uLayerCode[index + i] - res[i]);
         }
       }
     } else if (condition == 2 || condition == 3) { // data-condition & input-condition
       // get the input from either uFeatureCode or uInputs
       float inputVal, conditionInput;
       if (condition == 2) {
-        inputVal = getFeatureCode(featureIndex);
+        inputVal = uFeatureCode[featureIndex];
         featureIndex++;
-      } else { inputVal = uInputs[rightShift(AND(conditionSet, 14), 1.)]; }
+      } else { inputVal = uInputs[(conditionSet & 14) >> 1]; }
       // now that we have the inputVal, we iterate through and find a match
-      conditionInput = getLayerCode(index);
-      for (int l = 0; l < 100; l++) {
-        if (inputVal == conditionInput) break;
+      conditionInput = uLayerCode[index];
+      while (inputVal != conditionInput) {
         // increment index & find length
-        index += rightShift(int(getLayerCode(index + 1)), 10.) + 1;
-        conditionInput = getLayerCode(index);
+        index += (int(uLayerCode[index + 1]) >> 10) + 1;
+        conditionInput = uLayerCode[index];
         // if we hit the default, than the value does not exist
         if (conditionInput == 0.) break;
       }
       index++; // increment to conditionEncoding
       // now add subCondition to be parsed
-      putConditionStack(conditionStack, index, stackIndex);
-      putTStack(tStack, 1., stackIndex);
+      conditionStack[stackIndex] = index;
+      tStack[stackIndex] = 1.;
       stackIndex++; // increment size of stackIndex
     } else if (condition == 4 || condition == 5) { // data-range & input-range
       // get interpolation & base
-      int interpolationType = AND(conditionSet, 1);
-      int inputType = rightShift(AND(conditionSet, 14), 1.);
+      int interpolationType = conditionSet & 1;
+      int inputType = (conditionSet & 14) >> 1;
       float base = 1.;
       if (interpolationType == 1) {
-        base = getLayerCode(index);
+        base = uLayerCode[index];
         index++;
       }
       // find the two values and run them
@@ -180,60 +102,58 @@ vec4 decodeFeature (bool color, inout int index, inout int featureIndex) {
       int startIndex, endIndex, subCondition;
       // grab the inputVal value
       if (condition == 4) {
-        inputVal = getFeatureCode(featureIndex);
+        inputVal = uFeatureCode[featureIndex];
         featureIndex++;
       } else { inputVal = uInputs[inputType]; }
       // create a start point
-      start = end = getLayerCode(index);
+      start = end = uLayerCode[index];
       startIndex = endIndex = index + 1;
-      for (int l = 0; l < 100; l++) {
-        if (!(end < inputVal && endIndex < len + startingOffset)) break;
+      while (end < inputVal && endIndex < len + startingOffset) {
         // if current sub condition is an input-range, we must check if if the "start"
         // subCondition was a data-condition or data-range, and if so,
         // we must move past the uFeatureCode that was stored there
-        subCondition = rightShift(AND(int(getLayerCode(startIndex)), 1008), 4.);
+        subCondition = (int(uLayerCode[startIndex]) & 1008) >> 4;
         if (subCondition == 2 || subCondition == 4) featureIndex++;
         // increment to subCondition
         index++;
         // increment by subConditions length
-        index += rightShift(int(getLayerCode(index)), 10.);
+        index += int(uLayerCode[index]) >> 10;
         // set new start and end
         start = end;
         startIndex = endIndex;
         endIndex = index + 1;
-        if (endIndex < len + startingOffset) end = getLayerCode(index);
+        if (endIndex < len + startingOffset) end = uLayerCode[index];
       }
       // if start and end are the same, we only need to process the first piece
       if (startIndex == endIndex) {
-        putConditionStack(conditionStack, startIndex, stackIndex);
-        if (stackIndex > 0) putTStack(tStack, getTStack(tStack, stackIndex - 1), stackIndex);
-        else putTStack(tStack, 1., stackIndex);
+        conditionStack[stackIndex] = startIndex;
+        if (stackIndex > 0) tStack[stackIndex] = tStack[stackIndex - 1];
+        else tStack[stackIndex] = 1.;
         stackIndex++;
       } else if (end == inputVal) {
-        putConditionStack(conditionStack, endIndex, stackIndex);
-        if (stackIndex > 0) putTStack(tStack, getTStack(tStack, stackIndex - 1), stackIndex);
-        else putTStack(tStack, 1., stackIndex);
+        conditionStack[stackIndex] = endIndex;
+        if (stackIndex > 0) tStack[stackIndex] = tStack[stackIndex - 1];
+        else tStack[stackIndex] = 1.;
         stackIndex++;
       } else { // otherwise we process startIndex and endIndex
         float t = exponentialInterpolation(inputVal, start, end, base);
-        putConditionStack(conditionStack, startIndex, stackIndex);
-        putTStack(tStack, 1. - t, stackIndex);
+        conditionStack[stackIndex] = startIndex;
+        tStack[stackIndex] = 1. - t;
         stackIndex++;
-        putConditionStack(conditionStack, endIndex, stackIndex);
-        putTStack(tStack, t, stackIndex);
+        conditionStack[stackIndex] = endIndex;
+        tStack[stackIndex] = t;
         stackIndex++;
       }
       // now that we got the information we need - we need to ensure we flush all feature subCondition data
       // hidden in zooms that we had to parse in the setup stage
-      for (int l = 0; l < 100; l++) {
-        if (!(endIndex < len + startingOffset)) break;
+      while (endIndex < len + startingOffset) {
         // if current sub condition is an input-range, we must check if if the "start"
         // subCondition was a data-condition or data-range, and if so,
         // we must move past the uFeatureCode that was stored there
-        subCondition = rightShift(AND(int(getLayerCode(startIndex)), 1008), 4.);
+        subCondition = (int(uLayerCode[startIndex]) & 1008) >> 4;
         if (subCondition == 2 || subCondition == 4) featureIndex++;
         index++;
-        index += rightShift(int(getLayerCode(index)), 10.);
+        index += int(uLayerCode[index]) >> 10;
         endIndex = index + 1;
       }
     } else if (condition == 6) { // animation-state
@@ -246,9 +166,7 @@ vec4 decodeFeature (bool color, inout int index, inout int featureIndex) {
       index = featureSize + decodeOffset;
       return res;
     }
-
-    if (stackIndex == 0) break;
-  }
+  } while (stackIndex > 0);
 
   // update index to the next Layer property
   index = featureSize + decodeOffset;

@@ -22,7 +22,7 @@ function orderLine (layer: Layer) {
 function orderText (layer: Layer) {
   const { layout, paint } = layer
   const newtextLayout = {
-    family: layout.family || 'Arial',
+    family: layout.family || '-apple-system, Roboto, Arial, sans-serif',
     field: layout.field || '',
     anchor: layout.anchor || 'center',
     offset: layout.offset || [0, 0],
@@ -30,7 +30,7 @@ function orderText (layer: Layer) {
   }
   const newTextPaint = {
     size: paint.size || 16,
-    fillStyle: paint.color || 'rgba(0, 0, 0, 0)',
+    fillStyle: paint.fillStyle || paint.color || 'rgba(0, 0, 0, 0)',
     strokeStyle: paint.strokeStyle,
     strokeWidth: paint.strokeWidth || 1
   }

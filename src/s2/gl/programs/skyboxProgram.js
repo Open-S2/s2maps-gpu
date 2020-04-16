@@ -2,9 +2,6 @@
 import Program from './program'
 import Map from '../../ui/map'
 
-import skyboxVertex from '../../shaders/skybox.vertex.glsl'
-import skyboxFragment from '../../shaders/skybox.fragment.glsl'
-
 import type { Context } from '../contexts'
 
 export default class SkyboxProgram extends Program {
@@ -15,11 +12,11 @@ export default class SkyboxProgram extends Program {
   cubeMap: WebGLTexture
   facesReady: number = 0
   renderable: boolean = false
-  constructor (context: Context) {
+  constructor (context: Context, vertexShaderSource: string, fragmentShaderSource: string) {
     // get gl from context
-    const { gl } = context
+    const { gl, type } = context
     // upgrade
-    super(gl, skyboxVertex, skyboxFragment, false)
+    super(gl, require(`../../shaders/skybox${type}.vertex.glsl`), require(`../../shaders/skybox${type}.fragment.glsl`), false)
     // acquire the attributes & uniforms
     this.aPos = gl.getAttribLocation(this.glProgram, 'aPos')
     this.uMatrix = gl.getUniformLocation(this.glProgram, 'uMatrix')
@@ -42,6 +39,7 @@ export default class SkyboxProgram extends Program {
     // prep a cube texture
     this.cubeMap = gl.createTexture()
     gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.cubeMap)
+    gl.bindVertexArray(null)
   }
 
   injectImages (skybox: Skybox, map: Map) {
@@ -56,7 +54,7 @@ export default class SkyboxProgram extends Program {
       image.src = `${path}/${size}/${i}.${type}`
       const render = () => {
         gl.bindTexture(gl.TEXTURE_CUBE_MAP, self.cubeMap)
-        gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.UNSIGNED_BYTE, image)
+        gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
         // ensure size X size is a power of 2 (only way to generate mips)
         self.facesReady++
         if (self.facesReady === 6) {
@@ -72,6 +70,28 @@ export default class SkyboxProgram extends Program {
       }
       if (image.decode) image.decode().then(render).catch(e => { console.log(e) })
       else image.onload = render
+    }
+  }
+
+  draw (painter: Painter, wallpaper: Wallpaper) {
+    // setup variables
+    const { context } = painter
+    const { gl } = context
+    // now we draw
+    gl.useProgram(this.glProgram)
+    // bind the vao
+    gl.bindVertexArray(this.vao)
+    // ensure we are using equal depth test like rasters
+    context.lequalDepth()
+    // if renderable, time to draw
+    if (this.renderable) {
+      // set matrix if necessary
+      const matrix = wallpaper.getMatrix()
+      if (matrix) gl.uniformMatrix4fv(this.uMatrix, false, matrix)
+      // set box texture
+      gl.uniform1i(this.uSkybox, 0)
+      // Draw the geometry.
+      gl.drawArrays(gl.TRIANGLE_FAN, 0, 4)
     }
   }
 }

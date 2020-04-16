@@ -143,7 +143,7 @@ module.exports = function (webpackEnv) {
       isEnvDevelopment &&
         require.resolve('react-dev-utils/webpackHotDevClient'),
       // Finally, this is your app's code:
-      paths.appIndexJs
+      paths.appIndexS2
       // We include the app code last so that if there is a runtime error during
       // initialization, it doesn't blow up the WebpackDevServer client, and
       // changing JS code would still trigger a refresh.
@@ -165,7 +165,7 @@ module.exports = function (webpackEnv) {
       // There are also additional JS chunk files if you use code splitting.
       chunkFilename: isEnvProduction
         ? 'static/js/[name].[contenthash:8].chunk.js'
-        : isEnvDevelopment && 'static/js/[name].[contenthash:8].chunk.js',
+        : isEnvDevelopment && 'static/js/[name].chunk.js',
       // add support for wasm
       webassemblyModuleFilename: '[hash].wasm',
       // We inferred the "public path" (such as / or /my-project) from homepage.
@@ -334,7 +334,11 @@ module.exports = function (webpackEnv) {
             },
             {
               test: /\.glsl$/,
-              loader: require.resolve('./glsl-loader.js')
+              loader: require.resolve('./glsl-loader.js'),
+              // options: {
+              //   name: 'static/glsl/[name].[hash:8].glsl',
+              //   cacheDirectory: true,
+              // }
             },
             {
               test: [/\.bmp$/, /\.gif$/, /\.jpe?g$/, /\.png$/],

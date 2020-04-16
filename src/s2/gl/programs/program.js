@@ -8,7 +8,6 @@ export type ProgramTypes = 'mask' | 'fill' | 'line' | 'fill3D' | 'line3D'
 export default class Program {
   radii: boolean = false
   compiled: boolean = false
-  linked: boolean = false
   gl: WebGLRenderingContext
   glProgram: WebGLProgram
   uMatrix: WebGLUniformLocation
@@ -18,12 +17,17 @@ export default class Program {
   uInputs: WebGLUniformLocation
   uLayerCode: WebGLUniformLocation
   uFeatureCode: WebGLUniformLocation
-  updateMatrix: Float32Array // pointer
-  updateInputs: Float32Array // pointer
+  updateMatrix: null | Float32Array = null // pointer
+  updateInputs: null | Float32Array = null // pointer
+  updateAspect: null | Float32Array = null // pointer
   curMode: number = -1
   threeD: boolean
   constructor (gl: WebGLRenderingContext, vertexShaderSource: string, fragmentShaderSource: string, defaultUniforms?: boolean = true) {
     const program = this.glProgram = gl.createProgram()
+    // setup attribute location data if necessary
+    const attrLoc = gl.attributeLocations
+    if (attrLoc) for (const attr in attrLoc) gl.bindAttribLocation(program, attrLoc[attr], attr)
+    // load vertex and fragment shaders
     const vertexShader = loadShader(gl, vertexShaderSource, gl.VERTEX_SHADER)
     const fragmentShader = loadShader(gl, fragmentShaderSource, gl.FRAGMENT_SHADER)
 
@@ -37,7 +41,6 @@ export default class Program {
         const lastError = gl.getProgramInfoLog(program)
         throw Error(lastError)
       }
-      this.linked = true
       // if we made it here, link gl
       this.gl = gl
     } else { throw Error('missing shaders') }
@@ -45,6 +48,7 @@ export default class Program {
     if (defaultUniforms) {
       // get uniform locations
       this.uMatrix = gl.getUniformLocation(program, 'uMatrix')
+      this.uAspect = gl.getUniformLocation(program, 'uAspect')
       this.uMode = gl.getUniformLocation(program, 'uMode')
       this.u3D = gl.getUniformLocation(program, 'u3D')
       this.uFaceST = gl.getUniformLocation(program, 'uFaceST')
@@ -59,14 +63,16 @@ export default class Program {
     this.flush()
   }
 
-  injectFrameUniforms (matrix: Float32Array, view: Float32Array) {
+  injectFrameUniforms (matrix: Float32Array, view: Float32Array, aspect: Float32Array) {
     if (matrix && this.uMatrix) this.updateMatrix = matrix
     if (view && this.uInputs) this.updateInputs = view
+    if (aspect && this.uAspect) this.updateAspect = aspect
   }
 
   flush () {
     if (this.updateMatrix) this.setMatrix(this.updateMatrix)
     if (this.updateInputs) this.setInputs(this.updateInputs)
+    if (this.updateAspect) this.setAspect(this.updateAspect)
   }
 
   setMatrix (matrix: Float32Array) {
@@ -78,6 +84,11 @@ export default class Program {
   setInputs (inputs: Float32Array) {
     this.gl.uniform1fv(this.uInputs, inputs, 0, inputs.length)
     this.updateInputs = null // ensure updateInputs is "flushed"
+  }
+
+  setAspect (aspect: Float32Array) {
+    this.gl.uniform2fv(this.uAspect, aspect)
+    this.updateAspect = null
   }
 
   setFaceST (faceST: Float32Array) {

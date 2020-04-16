@@ -1,9 +1,8 @@
-#version 300 es
 precision highp float;
 
-layout (location = 0) in vec2 aPos;
-layout (location = 6) in float aRadius;
-layout (location = 7) in float aIndex;
+attribute vec2 aPos;
+attribute float aRadius;
+attribute float aIndex;
 
 uniform mat4 uMatrix;
 uniform bool u3D;
@@ -12,10 +11,10 @@ uniform float uInputs[16];
 uniform float uLayerCode[256];
 uniform float uFeatureCode[128];
 
-@import ./decodeFeature;
-@import ./ST2XYZ;
+#include ./decodeFeature;
+#include ./ST2XYZ;
 
-out vec4 color;
+varying vec4 color;
 
 void main () {
   // prep layer index and feature index positions

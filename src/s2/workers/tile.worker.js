@@ -10,6 +10,8 @@ import { tileHash } from 's2projection'
 import type { Face } from 's2projection'
 import type { StylePackage } from '../styleSpec'
 
+const IS_NOT_CHROME = navigator.userAgent.indexOf('Chrome') !== -1
+
 type Point = [number, number]
 
 export type CancelTileRequest = Array<number> // hashe IDs of tiles e.g. ['204', '1003', '1245', ...]
@@ -100,7 +102,6 @@ const MAX_FEATURE_BATCH_SIZE = 1 << 7
 // after every update of
 export default class TileWorker {
   id: number
-  chrome: boolean = navigator.userAgent.indexOf('Chrome') !== -1
   offscreenSupport: boolean = global.OffscreenCanvas && global.FontFace
   textureBuilder: TextureBuilder
   maps: { [string]: StylePackage } = {} // mapID: StylePackage
@@ -303,7 +304,7 @@ export default class TileWorker {
     const { type } = source
     if (type === 'vector' || type === 'json') {
       const features: Array<Feature> = []
-      const texts: Array<Text> = []
+      let texts: Array<Text> = []
       const parentLayers: ParentLayers = {}
       const vectorTile = (type === 'vector') ? new VectorTile(data) : data
       const { layers } = this.maps[mapID]
@@ -387,14 +388,16 @@ export default class TileWorker {
       if (texts.length) {
         if (this.offscreenSupport) {
           // create the texture
-          const imageBitmap = this.textureBuilder.createTexture(texts)
+          const [newTexts, imageBitmap] = this.textureBuilder.createTexture(texts)
+          texts = newTexts
           // build vertex data and send off
           this._processTexture(mapID, sourceName, hash, texts, imageBitmap)
         } else { this._requestTexture(mapID, sourceName, hash, texts) }
       }
     } else if (type === 'raster') {
       const { leftShift, bottomShift } = params
-      const getImage = (this.chrome) ? createImageBitmap(data, { imageOrientation: 'flipY', premultiplyAlpha: 'premultiply' }) : createImageBitmap(data)
+      // https://bugzilla.mozilla.org/show_bug.cgi?id=1335594
+      const getImage = (IS_NOT_CHROME) ? createImageBitmap(data, { imageOrientation: 'flipY', premultiplyAlpha: 'premultiply' }) : createImageBitmap(data)
       getImage
         .then(image => {
           postMessage({ mapID, type: 'rasterdata', source: sourceName, tileID: hash, image, leftShift, bottomShift }, [image])
@@ -523,23 +526,37 @@ export default class TileWorker {
     // now that the texture pack is built, we can specify all the attribute sets
     const vertices = []
     const texPositions = []
-    for (const text of texts) {
+    const featureGuide = []
+    const textsLength = texts.length
+    const { height } = imageBitmap
+    let curLayerID = texts[0].layerID
+    let curOffset = 0
+    for (let i = 0; i < textsLength; i++) {
+      const text = texts[i]
       // store the vertex set
       vertices.push(text.s, text.t, text.id)
       // vertices.push(text.s, text.t, Math.floor(Math.random() * (16777215 - 1 + 1) + 1))
       // prep texture position variables
       texPositions.push(
         // uv positions
-        text.x, text.y,
+        text.x, text.y, // invert y since webgl reads bottom left to top right
         // scale
         text.width, text.height,
         // descriptor
         text.anchor
       )
+      if (text.layerID !== curLayerID) {
+        featureGuide.push(curLayerID, i - curOffset, curOffset) // layerID, primcount, offset
+        curLayerID = text.layerID
+        curOffset = i
+      }
     }
+    // store the last feature set
+    featureGuide.push(curLayerID, textsLength - curOffset, curOffset)
     // get the buffer
     const vertexBuffer = new Float32Array(vertices).buffer
     const texPositionBuffer = new Int16Array(texPositions).buffer
+    const featureGuideBuffer = new Uint32Array(featureGuide).buffer
     // post
     postMessage({
       mapID,
@@ -548,8 +565,9 @@ export default class TileWorker {
       tileID,
       vertexBuffer,
       texPositionBuffer,
+      featureGuideBuffer,
       imageBitmap
-    }, [vertexBuffer, texPositionBuffer, imageBitmap])
+    }, [vertexBuffer, texPositionBuffer, featureGuideBuffer, imageBitmap])
   }
 
   _requestTexture (mapID: string, source: string, tileID: string, texts: Array<Text>) {

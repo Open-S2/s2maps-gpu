@@ -7,6 +7,8 @@ export default class WebGLContext extends Context {
   vertexArrayObject: 'OES_vertex_array_object'
   constructor (context: WebGLRenderingContext) {
     super(context)
+    // set type
+    this.type = 1
     // grab extensions
     this.elementIndexUint = this.gl.getExtension('OES_element_index_uint')
     if (!this.elementIndexUint) console.log('*** Error - "OES_element_index_uint" is not a supported extension')
@@ -22,19 +24,19 @@ export default class WebGLContext extends Context {
     // OES_vertex_array_object
     if (this.vertexArrayObject) {
       // createVertexArray
-      this.gl.createVertexArray = this.vertexArrayObject.createVertexArrayOES
+      this.gl.createVertexArray = () => this.vertexArrayObject.createVertexArrayOES()
       // bindVertexArray
-      this.gl.bindVertexArray = this.vertexArrayObject.bindVertexArrayOES
+      this.gl.bindVertexArray = (vao) => this.vertexArrayObject.bindVertexArrayOES(vao)
       // deleteVertexArray
-      this.gl.deleteVertexArray = this.vertexArrayObject.deleteVertexArrayOES
+      this.gl.deleteVertexArray = (vao) => this.vertexArrayObject.deleteVertexArrayOES(vao)
     }
 
     // ANGLE_instanced_arrays
     if (this.angledInstancedArrays) {
       // vertexAttribDivisor
-      this.gl.vertexAttribDivisor = this.angledInstancedArrays.vertexAttribDivisorANGLE
+      this.gl.vertexAttribDivisor = (index, divisor) => this.angledInstancedArrays.vertexAttribDivisorANGLE(index, divisor)
       // drawArraysInstanced
-      this.gl.drawArraysInstanced = this.angledInstancedArrays.drawArraysInstancedANGLE
+      this.gl.drawArraysInstanced = (mode, first, count, instanceCount) => this.angledInstancedArrays.drawArraysInstancedANGLE(mode, first, count, instanceCount)
     }
   }
 }

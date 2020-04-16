@@ -1,6 +1,4 @@
 // @flow
-import Map from './ui/map'
-
 import type { MapOptions } from './ui/map'
 
 // This is a builder / api instance for the end user.
@@ -11,6 +9,7 @@ export default class S2Map {
   _canvasContainer: HTMLElement
   _canvasMultiplier: number = window.devicePixelRatio || 1
   _offscreen: boolean = false
+  _canvas: HTMLCanvasElement
   map: Map | Worker
   id: string = Math.random().toString(36).replace('0.', '')
   constructor (options: MapOptions) {
@@ -26,7 +25,7 @@ export default class S2Map {
     // we now remove container from options for potential webworker
     delete options.container
     // prep container, creating the canvas
-    const canvas = this._setupContainer()
+    const canvas = this._canvas = this._setupContainer()
     // create map via a webworker if possible, otherwise just load it in directly
     this._setupCanvas(canvas, options)
     // now that canvas is setup, support resizing
@@ -59,7 +58,13 @@ export default class S2Map {
 
   _setupCanvas (canvas: HTMLCanvasElement, options: MapOptions) {
     // if browser supports it, create an instance of the mapWorker
-    if (canvas.transferControlToOffscreen && false) {
+    if (canvas.transferControlToOffscreen) {
+      if (options.interactive === undefined || options.interactive === true) {
+        if (options.scrollZoom === undefined || options.scrollZoom === true) canvas.addEventListener('wheel', this._onScroll.bind(this))
+        canvas.addEventListener('mousedown', this._onMouseDown.bind(this))
+        canvas.addEventListener('mouseup', this._onMouseUp.bind(this))
+        canvas.addEventListener('mousemove', this._onMouseMove.bind(this))
+      }
       const offscreen = canvas.transferControlToOffscreen()
       this._offscreen = true
       this.map = new Worker('./workers/map.worker.js', { type: 'module' })
@@ -67,7 +72,32 @@ export default class S2Map {
       options.canvasWidth = this._container.clientWidth
       options.canvasHeight = this._container.clientHeight
       this.map.postMessage({ type: 'canvas', options, canvas: offscreen, id: this.id }, [offscreen])
-    } else { this.map = new Map(options, canvas, this.id) }
+    } else {
+      const self = this
+      import('./ui/map').then(map => {
+        self.map = new map.default(options, canvas, this.id)
+      })
+    }
+  }
+
+  _onScroll (e) {
+    e.preventDefault()
+    const { clientX, clientY, deltaY } = e
+    const rect = this._canvas.getBoundingClientRect()
+    this.map.postMessage({ type: 'scroll', rect, clientX, clientY, deltaY })
+  }
+
+  _onMouseDown () {
+    this.map.postMessage({ type: 'mousedown' })
+  }
+
+  _onMouseUp () {
+    this.map.postMessage({ type: 'mouseup' })
+  }
+
+  _onMouseMove (e) {
+    const { movementX, movementY } = e
+    this.map.postMessage({ type: 'mousemove', movementX, movementY })
   }
 
   _mapMessage ({ data }) {
@@ -110,11 +140,11 @@ export default class S2Map {
     }
   }
 
-  injectTextSourceData (source: string, tileID: string, vertexBuffer: ArrayBuffer, texPositionBuffer: ArrayBuffer, imageBitmap: ImageBitmap) {
+  injectTextSourceData (source: string, tileID: string, vertexBuffer: ArrayBuffer, texPositionBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer, imageBitmap: ImageBitmap) {
     if (this._offscreen) {
-      this.map.postMessage({ type: 'textdata', source, tileID, vertexBuffer, texPositionBuffer, imageBitmap }, [vertexBuffer, texPositionBuffer, imageBitmap])
+      this.map.postMessage({ type: 'textdata', source, tileID, vertexBuffer, texPositionBuffer, featureGuideBuffer, imageBitmap }, [vertexBuffer, texPositionBuffer, featureGuideBuffer, imageBitmap])
     } else {
-      this.map.injectTextSourceData(source, tileID, vertexBuffer, texPositionBuffer, imageBitmap)
+      this.map.injectTextSourceData(source, tileID, vertexBuffer, texPositionBuffer, featureGuideBuffer, imageBitmap)
     }
   }
 
