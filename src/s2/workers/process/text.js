@@ -10,29 +10,26 @@ export default function processText (feature: VectorFeature, zoom: number, layer
   layerID: number, extent: number): Array<Text> {
   const geometry: Array<Point> = feature.loadGeometry()
   const { _id, properties } = feature
+  const { layoutLocal, paintLocal } = layer
 
   // build all layout and paint parameters
-  const code = []
-  const family = layer.layout.family(properties, zoom, code)
-  const field = coalesceField(layer.layout.field(properties, zoom, code), properties)
-  const anchor = coalesceAnchor(layer.layout.anchor(properties, zoom, code))
-  const offset = layer.layout.offset(properties, zoom, code)
-  const padding = layer.layout.padding(properties, zoom, code)
-  const size = layer.paint.size(properties, zoom, code)
-  const fillStyle = layer.paint.fillStyle(properties, zoom, code)
-  const strokeStyle = layer.paint.strokeStyle(properties, zoom, code)
-  const strokeWidth = layer.paint.strokeWidth(properties, zoom, code)
+  const family = layoutLocal.family(properties, zoom)
+  const field = coalesceField(layoutLocal.field(properties, zoom), properties)
+  const anchor = coalesceAnchor(layoutLocal.anchor(properties, zoom))
+  const padding = layoutLocal.padding(properties, zoom)
+  const size = paintLocal.size(properties, zoom)
+  const strokeWidth = paintLocal.strokeWidth(properties, zoom)
 
   // build out all the individual s,t tile positions from the feature geometry
   const texts = []
   for (const point of geometry) {
     const text = {
       // organization parameters
-      id: _id, layerID, code,
+      id: _id, layerID,
       // layout
-      family, field, anchor, offset, padding,
+      family, field, anchor, padding,
       // paint
-      size, fillStyle, strokeStyle, strokeWidth,
+      height: size, strokeWidth,
       // tile position
       s: point[0] / extent,
       t: point[1] / extent
@@ -40,6 +37,13 @@ export default function processText (feature: VectorFeature, zoom: number, layer
     // store
     texts.push(text)
   }
+
+  // get all individual glyph data
+
+  // filter out any points that obviously overlaps
+
+  // build text boxes and exact glyph locations
+
 
   return texts
 }

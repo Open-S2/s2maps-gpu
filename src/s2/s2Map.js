@@ -48,10 +48,8 @@ export default class S2Map {
     canvas.className = 's2-canvas'
     canvas.setAttribute('tabindex', '0')
     canvas.setAttribute('aria-label', 'S2Map')
-    const width = container.clientWidth * this._canvasMultiplier | 0
-    const height = container.clientHeight * this._canvasMultiplier | 0
-    canvas.width = width
-    canvas.height = height
+    canvas.width = container.clientWidth * this._canvasMultiplier | 0
+    canvas.height = container.clientHeight * this._canvasMultiplier | 0
     canvasContainer.appendChild(canvas)
     return canvas
   }

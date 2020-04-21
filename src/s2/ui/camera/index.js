@@ -9,7 +9,8 @@ import { tileHash } from 's2projection' // https://github.com/Regia-Corporation/
 import { OrthographicProjection, BlendProjection } from './projections'
 import type { Projection } from './projections'
 /** SOURCES **/
-import { Tile, TileCache } from '../../source'
+import { Tile } from '../../source'
+import MapCache from '../../util/mapCache'
 
 import type { Face } from 's2projection'
 
@@ -19,7 +20,7 @@ export default class Camera {
   style: Style
   painter: Painter
   projection: Projection
-  tileCache: TileCache
+  tileCache: MapCache
   tilesInView: Array<number> = [] // hash id's of the tiles
   lastTileViewState: Array<number> = []
   requestQueue: Array<Tile> = []
@@ -31,7 +32,7 @@ export default class Camera {
     // setup projection
     this._createProjection(options)
     // prep the tileCache for future tiles
-    this.tileCache = new TileCache()
+    this.tileCache = new MapCache(75)
   }
 
   // TODO: Perspective Projection

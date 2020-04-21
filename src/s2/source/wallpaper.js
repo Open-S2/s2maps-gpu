@@ -48,8 +48,8 @@ export class Wallpaper {
 
   _updateScale () {
     const radius = 512 * Math.min(Math.pow(2, this.projection.zoom), 32768)
-    this.uniforms.uScale[0] = radius / (this.projection.aspect[0] * this.projection.multiplier)
-    this.uniforms.uScale[1] = radius / (this.projection.aspect[1] * this.projection.multiplier)
+    this.uniforms.uScale[0] = radius / (this.projection.aspect[0] * 2)
+    this.uniforms.uScale[1] = radius / (this.projection.aspect[1] * 2)
   }
 
   _updateStyle () {

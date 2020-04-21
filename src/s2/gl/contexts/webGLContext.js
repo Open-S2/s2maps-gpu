@@ -18,6 +18,8 @@ export default class WebGLContext extends Context {
     if (!this.vertexArrayObject) console.log('*** Error - "OES_vertex_array_object" is not a supported extension')
     // polyfill
     this._polyfill()
+    // create default quad
+    this._createDefaultQuad()
   }
 
   _polyfill () {

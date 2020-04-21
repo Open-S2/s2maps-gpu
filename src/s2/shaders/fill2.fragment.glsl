@@ -3,6 +3,7 @@ precision highp float;
 
 #include ./color;
 
+flat in int iMode;
 in vec4 color;
 out vec4 fragColor;
 

@@ -63,8 +63,6 @@ export default class Style {
       if (style.sources) self.sources = style.sources
       if (style.fonts) self.fonts = style.fonts
       if (style.billboards) self.billboards = style.billboards
-      // build out the fonts
-      self._buildFonts()
       // build wallpaper and sphere background if applicable
       if (style.wallpaper) self._buildWallpaper(style.wallpaper)
       self._buildSphereBackground(style['sphere-background'])
@@ -177,16 +175,6 @@ export default class Style {
       const { skybox } = this.wallpaper
       const wallpaperProgram = this.map.painter.getProgram(skybox ? 'skybox' : 'wallpaper')
       if (skybox) wallpaperProgram.injectImages(this.wallpaper, this.map)
-    }
-  }
-
-  _buildFonts () {
-    let doc = (this.webworker) ? global : document
-    for (const fontName in this.fonts) {
-      const font = new FontFace(fontName, `url(${this.fonts[fontName]})`)
-      font.load()
-        .then(loadedFontFace => { doc.fonts.add(loadedFontFace) })
-        .catch(err => { console.log(`Could not load font "${fontName}"`, err) })
     }
   }
 

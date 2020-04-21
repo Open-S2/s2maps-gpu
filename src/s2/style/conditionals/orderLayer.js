@@ -8,7 +8,7 @@ export default function orderLayer (layer: Layer) {
   else if (layer.type === 'billboard') orderBillboard(layer)
 }
 
-// line order: (layout)cap->join->(paint)color->width->dasharray->gapwidth->blur
+// line order: (paint)color->width->dasharray->(layout)cap->join
 function orderLine (layer: Layer) {
   const { paint } = layer
   const newLinePaint = {
@@ -18,27 +18,37 @@ function orderLine (layer: Layer) {
   layer.paint = newLinePaint
 }
 
-// line order: (layout)family->field->offset->padding->(paint)size->fillStyle->strokeStyle->strokeWidth
+// text order: (paint)size->color->(layout)anchor->padding->offset
 function orderText (layer: Layer) {
   const { layout, paint } = layer
-  const newtextLayout = {
-    family: layout.family || '-apple-system, Roboto, Arial, sans-serif',
-    field: layout.field || '',
+  const newTextLayout = {
     anchor: layout.anchor || 'center',
-    offset: layout.offset || [0, 0],
-    padding: layout.padding || [2, 2]
+    padding: layout.padding || [0, 0],
+    offset: layout.offset || [0, 0]
   }
   const newTextPaint = {
     size: paint.size || 16,
-    fillStyle: paint.fillStyle || paint.color || 'rgba(0, 0, 0, 0)',
-    strokeStyle: paint.strokeStyle,
-    strokeWidth: paint.strokeWidth || 1
+    fill: paint.fill || paint.color || 'rgba(0, 0, 0, 0)'
   }
-  layer.layout = newtextLayout
+  const newTextLayoutLocal = {
+    family: layout.family || 'default',
+    field: layout.field || '',
+    anchor: layout.anchor || 'center',
+    padding: layout.padding || [0, 0]
+  }
+  const newTextPaintLocal = {
+    size: paint.size || 16,
+    fill: paint.fill || paint.color || 'rgba(0, 0, 0, 0)',
+    stroke: paint.stroke || 'rgba(0, 0, 0, 0)',
+    strokeWidth: paint.strokeWidth || 0
+  }
+  layer.layoutLocal = newTextLayoutLocal
+  layer.paintLocal = newTextPaintLocal
+  layer.layout = newTextLayout
   layer.paint = newTextPaint
 }
 
-// line order: (layout)field->offset->padding->(paint)size->opacity
+// line order: (paint)size->color->(layout)anchor->padding->offset
 function orderBillboard (layer: Layer) {
   const { layout, paint } = layer
   const newBillboardLayout = {

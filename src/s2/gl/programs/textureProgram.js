@@ -104,9 +104,9 @@ export default class TextureProgram extends Program {
   newScene (context) {
     const { gl } = this
     this.bindPointFrameBuffer()
-    context.newScene()
+    context.clearBuffer()
     this.bindQuadFrameBuffer()
-    context.newScene()
+    context.clearBuffer()
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
   }
 

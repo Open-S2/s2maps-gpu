@@ -1,13 +1,13 @@
 // @flow
-import { earclip } from 'earclip'
-// import { zeroClip } from 'zero-clip'
+// import { earclip } from 'earclip'
+import { zeroClip } from 'zero-clip'
 // import { meshelate } from 'meshelate'
 
 type Point = [number, number]
 
 export default function processFill (geometry: Array<Array<Point>> | Array<Point>,
   type: 3 | 4, vertices: Array<number>, indices: Array<number>,
-  division: number, extent: number): number {
+  division: number, extent: number) {
   // prep polys
   const polys = []
   // prep for processing
@@ -19,8 +19,8 @@ export default function processFill (geometry: Array<Array<Point>> | Array<Point
     // get current vertices offset
     let offset = vertices.length / 2
     // create triangle mesh
-    let data = earclip(poly, extent / division, offset)
-    // let data = zeroClip(poly, offset)
+    // let data = earclip(poly, extent / division, offset)
+    let data = zeroClip(poly, offset)
     // tesselate if necessary
     // if (division > 1) data = meshelate(data.vertices, data.indices, extent / division, offset)
     // store vertices

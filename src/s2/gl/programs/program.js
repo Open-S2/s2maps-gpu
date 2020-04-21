@@ -107,7 +107,7 @@ export default class Program {
   }
 
   setMode (mode: number) {
-    if (this.curMode !== mode) {
+    if (this.uMode && this.curMode !== mode) {
       // update current value
       this.curMode = mode
       // update gpu uniform

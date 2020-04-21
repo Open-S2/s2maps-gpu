@@ -13,7 +13,10 @@ export default function parseFeatureFunction (input) {
       return dataRangeFunction(input)
     } else if (conditionType === 'input-range') {
       return inputRangeFunction(input)
-    } else { return () => [conditionType, ...input] }
+    } else {
+      const data = [conditionType, ...input]
+      return () => data
+    }
   } else { return () => input }
 }
 

@@ -39,6 +39,8 @@ export default class WallpaperProgram extends Program {
     // tell attribute how to get data out of vertexBuffer
     // (attribute pointer, compenents per iteration (size), data size (type), normalize, stride, offset)
     gl.vertexAttribPointer(this.aPos, 2, gl.FLOAT, false, 0, 0)
+    // clear vao
+    gl.bindVertexArray(null)
   }
 
   draw (painter: Painter, wallpaper: Wallpaper) {
@@ -47,8 +49,6 @@ export default class WallpaperProgram extends Program {
     const { gl } = context
     // now we draw
     gl.useProgram(this.glProgram)
-    // bind the vao
-    gl.bindVertexArray(this.vao)
     // ensure we are using equal depth test like rasters
     context.lequalDepth()
     // set new uniforms should we need to
@@ -61,6 +61,6 @@ export default class WallpaperProgram extends Program {
       gl.uniform4fv(this.uHaloColor, uniforms.uHaloColor)
     }
     wallpaper.dirty = false
-    gl.drawArrays(gl.TRIANGLE_FAN, 0, 4)
+    context.drawQuad()
   }
 }

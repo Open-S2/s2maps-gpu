@@ -108,8 +108,8 @@ export default class Painter {
 
   resize () {
     // If we are using the text program, update the text program's framebuffer component's sizes
-    const texProgram: TextureProgram = this.programs.texture
-    if (texProgram) texProgram.resize()
+    // const fillProgram: FillProgram = this.programs.fill
+    // if (fillProgram) fillProgram.resize()
   }
 
   paint (projection: Projection, style: Style, tiles: Array<Tile>) {
@@ -120,7 +120,7 @@ export default class Painter {
     context.newScene()
     // if we have a texture program, we draw
     const texProgram: TextureProgram = this.programs.texture
-    if (texProgram) texProgram.newScene(context)
+    // if (texProgram) texProgram.newScene(context)
 
     // prep frame uniforms
     const { view, aspect } = projection
@@ -135,7 +135,7 @@ export default class Painter {
     this.paintMasks(tiles)
     if (texProgram) {
       texProgram.bindPointFrameBuffer()
-      this.paintMasks(tiles)
+      this.paintMasks(tiles, true)
       gl.bindFramebuffer(gl.FRAMEBUFFER, null)
     }
     // lock in the stencil
@@ -159,21 +159,21 @@ export default class Painter {
     context.cleanup()
   }
 
-  paintMasks (tiles: Array<Tile>) {
+  paintMasks (tiles: Array<Tile>, fb: boolean = false) {
     // get context
     const { gl } = this.context
     // prep the fill program
     const fillProgram: FillProgram = this.useProgram('fill')
     if (!fillProgram) return new Error('The "fill" program does not exist, can not paint.')
     // get a starting mask index
-    let maskRef = 2
+    let maskRef = 1
     for (const tile of tiles) {
       const { faceST, sourceData } = tile
       const { mask } = sourceData
       // set uniforms & stencil test
       fillProgram.setFaceST(faceST)
       // set correct tile mask
-      gl.stencilFunc(gl.ALWAYS, maskRef, 0xFF)
+      if (!fb) gl.stencilFunc(gl.ALWAYS, maskRef, 0xFF)
       // use mask vao and fill program
       gl.bindVertexArray(mask.vao)
       // draw mask
@@ -181,7 +181,7 @@ export default class Painter {
       // keep tabs on the mask identifier
       tile.tmpMaskID = maskRef
       // update mask index
-      maskRef += 3
+      maskRef++
     }
   }
 
@@ -240,7 +240,8 @@ export default class Painter {
       program.setFaceST(faceST)
       gl.bindVertexArray(sourceData[source].vao)
       // draw
-      program.draw(this, feature, sourceData[source], tmpMaskID)
+      if (curProgram === 'fill') program.drawFill(this, feature, sourceData[source], tmpMaskID)
+      else program.draw(this, feature, sourceData[source], tmpMaskID)
     }
   }
 }

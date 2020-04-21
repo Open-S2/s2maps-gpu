@@ -1,18 +1,17 @@
 // @flow
-type Anchor = 'auto' | 'center' | 'topRight' | 'right' | 'bottomRight' | 'bottom' | 'bottomLeft' | 'left' | 'topLeft'
+type Anchor = 'center' | 'topRight' | 'right' | 'bottomRight' | 'bottom' | 'bottomLeft' | 'left' | 'topLeft'
 
 export default function coalesceAnchor (anchor: Anchor): number {
   switch (anchor) {
-    case 'auto': return 0
-    case 'center': return 1
-    case 'top': return 2
-    case 'topRight': return 3
-    case 'right': return 4
-    case 'bottomRight': return 5
-    case 'bottom': return 6
-    case 'bottomLeft': return 7
-    case 'left': return 8
-    case 'topLeft': return 9
-    default: return 1
+    case 'center': return 0
+    case 'top': return 1
+    case 'topRight': return 2
+    case 'right': return 3
+    case 'bottomRight': return 4
+    case 'bottom': return 5
+    case 'bottomLeft': return 6
+    case 'left': return 7
+    case 'topLeft': return 8
+    default: return 0
   }
 }

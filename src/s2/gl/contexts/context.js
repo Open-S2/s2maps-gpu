@@ -7,6 +7,39 @@ export default class Context {
     this.gl = context
   }
 
+  _createDefaultQuad () {
+    const { gl } = this
+    // create a vertex array object
+    this.vao = gl.createVertexArray()
+    // bind the vao so we can work on it
+    gl.bindVertexArray(this.vao)
+    // Create a vertex buffer
+    this.vertexBuffer = gl.createBuffer()
+    // Bind it to ARRAY_BUFFER (think of it as ARRAY_BUFFER = vertexBuffer)
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
+    // Buffer the data
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1,  1, -1,  1, 1,  -1, 1]), gl.STATIC_DRAW)
+    // Turn on the attribute
+    gl.enableVertexAttribArray(this.aPos)
+    // tell attribute how to get data out of vertexBuffer
+    // (attribute pointer, compenents per iteration (size), data size (type), normalize, stride, offset)
+    gl.vertexAttribPointer(this.aPos, 2, gl.FLOAT, false, 0, 0)
+    // clear vao
+    gl.bindVertexArray(null)
+  }
+
+  drawQuad () {
+    const { gl } = this
+    // bind the vao
+    gl.bindVertexArray(this.vao)
+    // draw a fan
+    gl.drawArrays(gl.TRIANGLE_FAN, 0, 4)
+  }
+
+  setClearColor (clearColor: [number, number, number, number]) {
+    this.clearColorRGBA = clearColor
+  }
+
   newScene () {
     this.clearScene()
     this.enableCullFace()
@@ -17,18 +50,26 @@ export default class Context {
 
   clearScene () {
     const { gl } = this
-    gl.clear(gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT | gl.COLOR_BUFFER_BIT)
     this.clearColor()
     this.clearStencil()
+    gl.clear(gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT | gl.COLOR_BUFFER_BIT)
   }
 
   clearColor () {
-    this.gl.clearColor(...this.clearColorRGBA)
-    this.gl.colorMask(true, true, true, true)
+    const { gl } = this
+    gl.clearColor(...this.clearColorRGBA)
+    gl.colorMask(true, true, true, true)
   }
 
-  setClearColor (clearColor: [number, number, number, number]) {
-    this.clearColorRGBA = clearColor
+  clearBuffer () {
+    const { gl } = this
+    gl.clearColor(0, 0, 0, 0)
+    gl.clear(gl.COLOR_BUFFER_BIT)
+  }
+
+  clearStencil () {
+    const { gl } = this
+    gl.clearStencil(0x0)
   }
 
   enableDepthTest () {
@@ -41,7 +82,8 @@ export default class Context {
   }
 
   lequalDepth () {
-    this.gl.depthFunc(this.gl.LEQUAL)
+    const { gl } = this
+    gl.depthFunc(gl.LEQUAL)
   }
 
   alwaysDepth () {
@@ -63,10 +105,18 @@ export default class Context {
   enableBlend () {
     const { gl } = this
     gl.enable(gl.BLEND)
-    // gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    // gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     gl.blendColor(0, 0, 0, 0)
+    this.setBlendDefault()
+  }
+
+  setBlendDefault () {
+    const { gl } = this
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
+  }
+
+  setBlendOne () {
+    const { gl } = this
+    gl.blendFunc(gl.ONE, gl.ONE)
   }
 
   disableBlend () {
@@ -88,42 +138,50 @@ export default class Context {
   }
 
   stencilFunc (ref: number) {
-    this.gl.stencilFunc(this.gl.ALWAYS, ref, 0xFF)
+    const { gl } = this
+    gl.stencilFunc(gl.ALWAYS, ref, 0xFF)
   }
 
+  // first pass ensures we only draw to the tiles boundaries
   fillFirstPass (ref) {
     const { gl } = this
+    // gl.stencilFunc(gl.ALWAYS, ref, 0b10000000)
+    gl.stencilFunc(gl.EQUAL, ref + 0b10000000, ref)
+    gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE)
     gl.colorMask(false, false, false, false)
-    gl.stencilOpSeparate(gl.FRONT, gl.KEEP, gl.INCR, gl.INCR)
-    gl.stencilFuncSeparate(gl.FRONT, gl.EQUAL, ref, 0xFF)
-    gl.stencilOpSeparate(gl.BACK, gl.KEEP, gl.KEEP, gl.KEEP)
-    gl.stencilFuncSeparate(gl.BACK, gl.EQUAL, ref, 0xFF)
+    this.disableCullFace()
   }
 
-  fillSecondPass (ref) {
+  // now that we have established our boundaries, draw using inversion rules
+  fillSecondPass () {
     const { gl } = this
-    gl.stencilOpSeparate(gl.FRONT, gl.KEEP, gl.KEEP, gl.KEEP)
-    gl.stencilFuncSeparate(gl.FRONT, gl.EQUAL, ref + 1, 0xFF)
-    gl.stencilOpSeparate(gl.BACK, gl.KEEP, gl.DECR, gl.DECR)
-    gl.stencilFuncSeparate(gl.BACK, gl.EQUAL, ref + 1, 0xFF)
+    gl.stencilFunc(gl.GEQUAL, 0, 0xFF)
+    gl.stencilOp(gl.KEEP, gl.KEEP, gl.ZERO)
   }
+
+  // // now that we know our boundaries, we
+  // fillSecondPass (ref) {
+  //   const { gl } = this
+  //   gl.stencilFunc(gl.EQUAL, ref ^ 255, 0xFF)
+  //   // gl.colorMask(true, true, true, true)
+  //   // this.enableCullFace()
+  // }
 
   fillThirdPass (ref) {
     const { gl } = this
+    gl.stencilFunc(gl.GEQUAL, 0b10000000, 0xFF)
+    gl.colorMask(false, false, false, false)
+    // this.disableCullFace()
+  }
+
+  fillFinish () {
+    const { gl } = this
     gl.colorMask(true, true, true, true)
-    gl.stencilFunc(gl.EQUAL, ref + 1, 0xFF)
-    gl.stencilOp(gl.KEEP, gl.DECR, gl.DECR)
+    this.enableCullFace()
   }
 
   lockStencil () {
   	this.gl.colorMask(true, true, true, true)
-  }
-
-  clearStencil () {
-    const { gl } = this
-    gl.clearStencil(0x0)
-  	gl.stencilMask(0xFF)
-    gl.clear(gl.STENCIL_BUFFER_BIT)
   }
 
   cleanup () {

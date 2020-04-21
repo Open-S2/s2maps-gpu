@@ -9,11 +9,10 @@ export default function parseLayers (layers: Array<Layer>) {
     orderLayer(layer)
     // parse
     if (layer.type === 'text') {
-      for (const l in layer.layout) layer.layout[l] = parseFeatureFunction(layer.layout[l])
-      for (const p in layer.paint) layer.paint[p] = parseFeatureFunction(layer.paint[p])
-    } else {
-      for (const l in layer.layout) layer.layout[l] = encodeFeatureFunction(layer.layout[l])
-      for (const p in layer.paint) layer.paint[p] = encodeFeatureFunction(layer.paint[p])
+      for (const l in layer.layoutLocal) layer.layoutLocal[l] = parseFeatureFunction(layer.layoutLocal[l])
+      for (const p in layer.paintLocal) layer.paintLocal[p] = parseFeatureFunction(layer.paintLocal[p])
     }
+    for (const l in layer.layout) layer.layout[l] = encodeFeatureFunction(layer.layout[l])
+    for (const p in layer.paint) layer.paint[p] = encodeFeatureFunction(layer.paint[p])
   }
 }

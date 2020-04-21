@@ -1,63 +1,75 @@
 // @flow
-export default function mapOverlap (quads, scale = 1) { // { s: number, t: number, width: number, height: number }
-  let root = null
-  let evenOdd, node, less, leftRight
+export type Quad = {
+  s: number,
+  t: number,
+  width: number,
+  height: number,
+  key?: number,
+  left?: number,
+  right?: number
+}
 
-  for (const quad of quads) {
-    if (isNaN(quad.s) || isNaN(quad.t)) continue
+export default class MapOverlap {
+  root: null | Quad = null
+  scale: number = 1
+  constructor (scale?: number) {
+    if (scale) this.scale = scale
+  }
+
+  clear () {
+    this.root = null
+  }
+
+  testQuad (quad: Quad): boolean {
+    let evenOdd, node, less, leftRight
+
+    if (isNaN(quad.s) || isNaN(quad.t)) return false
     // first quad
-    if (!root) {
-      quad.overlap = false
+    if (!this.root) {
       quad.key = quad.s
-      root = quad
-      continue
+      this.root = quad
+      return true
     }
     // traverse the rtree
-    node = root
+    node = this.root
     evenOdd = false
     while (true) {
       evenOdd = !evenOdd
       // always check overlap first
-      if (isOverlap(node, quad, scale)) {
-        quad.overlap = true
-        break
-      }
-      // work down the tree, if no left or no right, just store,
+      if (this.isOverlap(node, quad)) return true
+      // work down the tree, if no left or no right, just store and return no overlap,
       // otherwise update node and continue
       less = (evenOdd ? quad.s : quad.t) < node.key
       leftRight = less ? node.left : node.right
       if (leftRight) {
         node = leftRight
       } else {
-        // store
-        quad.overlap = false
         quad.key = evenOdd ? quad.t : quad.s
         if (less) node.left = quad
         else node.right = quad
-        break
+        return false
       }
     }
   }
 
-  return quads
-}
-
-// if quad has an align, check.
-function isOverlap (ref, val, scale) {
-  let s, t
-  // setup rectangles [left, bottom, right, top]
-  // ref
-  const [refOffsetS, refOffsetT] = offsets(ref)
-  s = (ref.s * scale) | 0
-  t = (ref.t * scale) | 0
-  const a = [s + refOffsetS, t + refOffsetT, s + ref.width + refOffsetS, t + ref.height + refOffsetT]
-  // val
-  const [valOffsetS, valOffsetT] = offsets(val)
-  s = (val.s * scale) | 0
-  t = (val.t * scale) | 0
-  const b = [s + valOffsetS, t + valOffsetT, s + val.width + valOffsetS, t + val.height + valOffsetT]
-  // check overlap
-  return !(a[0] > b[2]) && !(a[2] < b[0]) && !(a[1] > b[3]) && !(a[3] < b[1])
+  // if quad has an align, check.
+  isOverlap (ref: Quad, val: Quad) {
+    const { scale } = this
+    let s, t
+    // setup rectangles [left, bottom, right, top]
+    // ref
+    const [refOffsetS, refOffsetT] = offsets(ref)
+    s = (ref.s * scale) | 0
+    t = (ref.t * scale) | 0
+    const a = [s + refOffsetS, t + refOffsetT, s + ref.width + refOffsetS, t + ref.height + refOffsetT]
+    // val
+    const [valOffsetS, valOffsetT] = offsets(val)
+    s = (val.s * scale) | 0
+    t = (val.t * scale) | 0
+    const b = [s + valOffsetS, t + valOffsetT, s + val.width + valOffsetS, t + val.height + valOffsetT]
+    // check overlap
+    return !(a[0] > b[2]) && !(a[2] < b[0]) && !(a[1] > b[3]) && !(a[3] < b[1])
+  }
 }
 
 function offsets (val) {
