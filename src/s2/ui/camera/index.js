@@ -16,6 +16,16 @@ import type { Face } from 's2projection'
 
 export type ProjectionType = 'perspective' | 'persp' | 'orthographic' | 'ortho' | 'orthographicPerspective' | 'blend'
 
+type ParentLayers = {
+  [string | number]: { // tileHash:
+    face: Face,
+    zoom: number,
+    x: number,
+    y: number,
+    layers: Array<number>
+  }
+}
+
 export default class Camera {
   style: Style
   painter: Painter
@@ -127,8 +137,9 @@ export default class Camera {
     }, 150)
   }
 
-  injectVectorSourceData (source: string, tileID: number, parentLayers, vertexBuffer: ArrayBuffer,
-    indexBuffer: ArrayBuffer, codeOffsetBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer) {
+  injectVectorSourceData (source: string, tileID: number, parentLayers: ParentLayers = {},
+    vertexBuffer: ArrayBuffer, indexBuffer: ArrayBuffer, codeOffsetBuffer: ArrayBuffer,
+    featureGuideBuffer: ArrayBuffer) {
     let children: boolean = false
     if (this.tileCache.has(tileID)) {
       const tile = this.tileCache.get(tileID)
@@ -156,16 +167,21 @@ export default class Camera {
     }
   }
 
-  injectTextSourceData (source: string, tileID: string, vertexBuffer: ArrayBuffer,
-    texPositionBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer, imageBitmap: ImageBitmap) {
+  injectGlyphSourceData (source: string, tileID: string, glyphFilterBuffer: ArrayBuffer,
+    glyphVertexBuffer: ArrayBuffer, glyphIndexBuffer: ArrayBuffer,
+    glyphQuadBuffer: ArrayBuffer, colorBuffer: ArrayBuffer, layerGuideBuffer: ArrayBuffer) {
     // store the vertexBuffer and texture in the gpu.
     let children: boolean = false
     if (this.tileCache.has(tileID)) {
       const tile = this.tileCache.get(tileID)
       children = Object.keys(tile.childrenRequests).length > 0
-      tile.injectTextSourceData(source, new Float32Array(vertexBuffer),
-        new Int16Array(texPositionBuffer), new Uint32Array(featureGuideBuffer),
-        imageBitmap, this.style.layers)
+      const glyphSource = tile.injectGlyphSourceData(
+        source, new Float32Array(glyphFilterBuffer), new Float32Array(glyphVertexBuffer),
+        new Uint32Array(glyphIndexBuffer), new Float32Array(glyphQuadBuffer),
+        new Uint8Array(colorBuffer), new Uint32Array(layerGuideBuffer)
+      )
+      // tell the painter it needs to paint the glyph texture on it's next render pass
+      this.painter.addGlyphSource(glyphSource)
     }
     // new 'paint', so painter is dirty
     this.painter.dirty = true

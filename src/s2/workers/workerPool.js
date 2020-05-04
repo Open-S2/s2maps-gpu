@@ -25,9 +25,9 @@ class WorkerPool {
       // a worker has processed tiles, so we are going to send it back to the appropriate mapID
       const { source, mapID, tileID, parentLayers, vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer } = data
       this.maps[mapID].injectVectorSourceData(source, tileID, parentLayers, vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer)
-    } else if (type === 'textdata') {
-      const { source, mapID, tileID, vertexBuffer, texPositionBuffer, featureGuideBuffer, imageBitmap } = data
-      this.maps[mapID].injectTextSourceData(source, tileID, vertexBuffer, texPositionBuffer, featureGuideBuffer, imageBitmap)
+    } else if (type === 'glyphdata') {
+      const { source, mapID, tileID, glyphFilterBuffer, glyphVertexBuffer, glyphIndexBuffer, glyphQuadBuffer, colorBuffer, layerGuideBuffer } = data
+      this.maps[mapID].injectGlyphSourceData(source, tileID, glyphFilterBuffer, glyphVertexBuffer, glyphIndexBuffer, glyphQuadBuffer, colorBuffer, layerGuideBuffer)
     } else if (type === 'rasterdata') {
       const { source, mapID, tileID, image, leftShift, bottomShift } = data
       this.maps[mapID].injectRasterData(source, tileID, image, leftShift, bottomShift)
@@ -42,7 +42,8 @@ class WorkerPool {
   }
 
   injectStyle (mapID: string, style: StylePackage) {
-    this.workers.forEach((worker, index) => { worker.postMessage({ mapID, type: 'style', style, index }) })
+    const totalWorkers = this.workers.length
+    this.workers.forEach((worker, id) => { worker.postMessage({ mapID, type: 'style', style, id, totalWorkers }) })
   }
 
   tileRequest (mapID: string, tiles: Array<TileRequest>) {

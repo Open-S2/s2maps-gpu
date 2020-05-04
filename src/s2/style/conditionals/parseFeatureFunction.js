@@ -1,39 +1,43 @@
 // @flow
+import Color from '../color'
 import { parseFilter, getEasingFunction } from './'
 
 // This functionality is built for the draw thread
-export default function parseFeatureFunction (input) {
+export default function parseFeatureFunction (input: any, attr: string) {
   if (!input) {
     return () => null
   } else if (Array.isArray(input)) { // we hit a conditional
     const conditionType = input.shift()
     if (conditionType === 'data-condition') {
-      return dataConditionFunction(input)
+      return dataConditionFunction(input, attr)
     } else if (conditionType === 'data-range') {
-      return dataRangeFunction(input)
+      return dataRangeFunction(input, attr)
     } else if (conditionType === 'input-range') {
-      return inputRangeFunction(input)
+      return inputRangeFunction(input, attr)
     } else {
       const data = [conditionType, ...input]
       return () => data
     }
+  } else if (attr === 'color' || attr === 'fill' || attr === 'stroke') {
+    const color = new Color(input)
+    return () => color
   } else { return () => input }
 }
 
-function dataConditionFunction (input) {
+function dataConditionFunction (input, attr) {
   const conditions = []
   let defaultExists = false
   while (input.length) {
     if (Array.isArray(input[0])) {
       const filter = input.shift()
-      const result = parseFeatureFunction(input.shift())
+      const result = parseFeatureFunction(input.shift(), attr)
       conditions.push({
         condition: parseFilter(filter),
         result
       })
     } else if (input[0] === 'default') {
       input.shift()
-      conditions['default'] = parseFeatureFunction(input.shift())
+      conditions['default'] = parseFeatureFunction(input.shift(), attr)
       defaultExists = true
     }
   }
@@ -55,7 +59,7 @@ function dataConditionFunction (input) {
   }
 }
 
-function dataRangeFunction (input) {
+function dataRangeFunction (input, attr) {
   // grab function type
   const zoomType = input.shift()
   const key = input.shift()
@@ -65,7 +69,7 @@ function dataRangeFunction (input) {
   let c = 1
   let il = input.length
   while (c < il) {
-    input[c] = parseFeatureFunction(input[c])
+    input[c] = parseFeatureFunction(input[c], attr)
     c += 2
   }
 
@@ -90,7 +94,7 @@ function dataRangeFunction (input) {
   }
 }
 
-function inputRangeFunction (input) {
+function inputRangeFunction (input, attr) {
   // grab function type
   input.shift() // get input type - currently only zoom
   const easeType = input.shift()
@@ -100,7 +104,7 @@ function inputRangeFunction (input) {
   let c = 1
   let il = input.length
   while (c < il) {
-    input[c] = parseFeatureFunction(input[c])
+    input[c] = parseFeatureFunction(input[c], attr)
     c += 2
   }
 

@@ -7,6 +7,16 @@ export default class Context {
     this.gl = context
   }
 
+  resetViewport () {
+    const { gl } = this
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
+  }
+
+  bindMainBuffer () {
+    const { gl } = this
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+  }
+
   _createDefaultQuad () {
     const { gl } = this
     // create a vertex array object
@@ -58,10 +68,16 @@ export default class Context {
   clearColor () {
     const { gl } = this
     gl.clearColor(...this.clearColorRGBA)
-    gl.colorMask(true, true, true, true)
+    // gl.colorMask(true, true, true, true)
   }
 
-  clearBuffer () {
+  clearColorDepthBuffers () {
+    const { gl } = this
+    gl.clearColor(0, 0, 0, 0)
+    gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT)
+  }
+
+  clearColorBuffer () {
     const { gl } = this
     gl.clearColor(0, 0, 0, 0)
     gl.clear(gl.COLOR_BUFFER_BIT)
@@ -114,7 +130,7 @@ export default class Context {
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
   }
 
-  setBlendOne () {
+  additiveBlending () {
     const { gl } = this
     gl.blendFunc(gl.ONE, gl.ONE)
   }
@@ -140,44 +156,6 @@ export default class Context {
   stencilFunc (ref: number) {
     const { gl } = this
     gl.stencilFunc(gl.ALWAYS, ref, 0xFF)
-  }
-
-  // first pass ensures we only draw to the tiles boundaries
-  fillFirstPass (ref) {
-    const { gl } = this
-    // gl.stencilFunc(gl.ALWAYS, ref, 0b10000000)
-    gl.stencilFunc(gl.EQUAL, ref + 0b10000000, ref)
-    gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE)
-    gl.colorMask(false, false, false, false)
-    this.disableCullFace()
-  }
-
-  // now that we have established our boundaries, draw using inversion rules
-  fillSecondPass () {
-    const { gl } = this
-    gl.stencilFunc(gl.GEQUAL, 0, 0xFF)
-    gl.stencilOp(gl.KEEP, gl.KEEP, gl.ZERO)
-  }
-
-  // // now that we know our boundaries, we
-  // fillSecondPass (ref) {
-  //   const { gl } = this
-  //   gl.stencilFunc(gl.EQUAL, ref ^ 255, 0xFF)
-  //   // gl.colorMask(true, true, true, true)
-  //   // this.enableCullFace()
-  // }
-
-  fillThirdPass (ref) {
-    const { gl } = this
-    gl.stencilFunc(gl.GEQUAL, 0b10000000, 0xFF)
-    gl.colorMask(false, false, false, false)
-    // this.disableCullFace()
-  }
-
-  fillFinish () {
-    const { gl } = this
-    gl.colorMask(true, true, true, true)
-    this.enableCullFace()
   }
 
   lockStencil () {

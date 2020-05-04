@@ -1,6 +1,7 @@
 // @flow
 import Program from './program'
 import Map from '../../ui/map'
+import requestData from '../../util/xmlHttpRequest'
 
 import type { Context } from '../contexts'
 
@@ -12,7 +13,7 @@ export default class SkyboxProgram extends Program {
   cubeMap: WebGLTexture
   facesReady: number = 0
   renderable: boolean = false
-  constructor (context: Context, vertexShaderSource: string, fragmentShaderSource: string) {
+  constructor (context: Context) {
     // get gl from context
     const { gl, type } = context
     // upgrade
@@ -48,28 +49,26 @@ export default class SkyboxProgram extends Program {
     const { path, type, size } = skybox
     // request each face and assign to cube map
     for (let i = 0; i < 6; i++) {
-      // request image
-      const image = new Image()
-      image.crossOrigin = path
-      image.src = `${path}/${size}/${i}.${type}`
-      const render = () => {
-        gl.bindTexture(gl.TEXTURE_CUBE_MAP, self.cubeMap)
-        gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
-        // ensure size X size is a power of 2 (only way to generate mips)
-        self.facesReady++
-        if (self.facesReady === 6) {
-          gl.generateMipmap(gl.TEXTURE_CUBE_MAP)
-          gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-          gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-          this.renderable = true
-          // set the projection as dirty to ensure a proper initial render
-          map.projection.dirty = true
-          // call the full re-render
-          map._render()
-        }
-      }
-      if (image.decode) image.decode().then(render).catch(e => { console.log(e) })
-      else image.onload = render
+      // createImageBitmap(data)
+      requestData(`${path}/${size}/${i}`, type, (data) => {
+        createImageBitmap(data)
+          .then(image => {
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, self.cubeMap)
+            gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
+            // ensure size X size is a power of 2 (only way to generate mips)
+            self.facesReady++
+            if (self.facesReady === 6) {
+              gl.generateMipmap(gl.TEXTURE_CUBE_MAP)
+              gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+              gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+              this.renderable = true
+              // set the projection as dirty to ensure a proper initial render
+              map.projection.dirty = true
+              // call the full re-render
+              map._render()
+            }
+          })
+      })
     }
   }
 

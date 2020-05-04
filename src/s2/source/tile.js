@@ -36,21 +36,35 @@ export type VectorTileSource = {
   mode?: GLenum // TRIANGLES | TRIANGLE_STRIP | TRIANGLE_FAN | etc
 }
 
-export type TextureMapTileSource = {
-  type: 'text',
+export type GlyphTileSource = {
+  type: 'glyph',
   uvArray: Float32Array,
-  vertexArray: Float32Array,
-  texPositionArray: Uint16Array,
-  imageBitmap: ImageBitmap,
   texture: WebGLTexture,
+  width: number,
+  height: number,
+  texSize: Float32Array,
+  glyphFilterVertices: Float32Array,
+  boxPrimcount: number,
+  glyphVertices: Float32Array,
+  glyphIndices: Uint32Array,
+  glyphQuads: Float32Array,
+  glyphPrimcount: number,
+  color: Uint8Array,
+  glyphFramebuffer: WebGLFramebuffer,
+  boxVAO?: WebGLVertexArrayObject,
+  glyphVAO?: WebGLVertexArrayObject,
+  glyphQuadVAO?: WebGLVertexArrayObject,
   uvBuffer?: WebGLBuffer,
-  vertexBuffer?: WebGLBuffer,
-  texPositionBuffer?: WebGLBuffer,
-  vao?: WebGLVertexArrayObject
+  glyphFilterBuffer?: WebGLBuffer,
+  glyphVertexBuffer?: WebGLBuffer,
+  glyphIndexBuffer?: WebGLBuffer,
+  glyphQuadBuffer?: WebGLBuffer,
+  colorBuffer?: WebGLBuffer
 }
 
 export type RasterTileSource = {
   type: 'raster',
+  size: number,
   texture: WebGLTexture,
   mode?: GLenum // TRIANGLES | TRIANGLE_STRIP | TRIANGLE_FAN | etc
 }
@@ -59,10 +73,8 @@ export type ChildRequest = { // eslint-disable-next-line
   [string | number]: Array<Tile> // layerID (hash):
 }
 
-// SourceData will either be the current tiles VectorTileSource, RasterTileSource,
-// or reference tile(s) to be masked + created.
 // eslint-disable-next-line
-export type SourceData = { [string | number]: RasterTileSource | VectorTileSource | TextureMapTileSource | Array<Tile> }
+export type SourceData = { [string | number]: RasterTileSource | VectorTileSource | GlyphTileSource }
 
 // tiles are designed to create mask geometry and store prebuilt layer data handed off by the worker pool
 // whenever rerenders are called, they will access these tile objects for the layer data / vaos
@@ -215,7 +227,7 @@ export default class Tile {
   buildSourceTexture (source: string, layer: Layer) {
     const { gl } = this.context
     // Build sourceData
-    const raster = this.sourceData[source] = { type: 'raster' }
+    const raster = this.sourceData[source] = { type: 'raster', size: this.size }
     // Create a texture.
     const texture = raster.texture = gl.createTexture()
     // store information to featureGuide
@@ -280,46 +292,48 @@ export default class Tile {
     if (Object.keys(this.childrenRequests).length) this._injectSourceIntoChildren(source)
   }
 
-  injectTextSourceData (source: string, vertexArray: Float32Array, texPositionArray: Uint16Array,
-    featureGuideArray: Uint16Array, imageBitmap: ImageBitmap, layers: Array<Layer>) {
-    const textSource = `${source}:text`
-    // create the source. This will naturally replace whatever was already there
-    const builtSource = this.sourceData[textSource] = {
-      type: 'text',
-      texture: this.context.gl.createTexture(),
-      textureWH: new Float32Array([imageBitmap.width, imageBitmap.height]),
+  injectGlyphSourceData (source: string, glyphFilterVertices: Float32Array, glyphVertices: Float32Array,
+    glyphIndices: Uint32Array, glyphQuads: Float32Array, color: Uint8Array,
+    layerGuideBuffer: Uint32Array): GlyphTileSource {
+    // setup source data
+    const glyphSource = this.sourceData[source] = {
+      type: 'glyph',
       uvArray: new Float32Array([0, 0,  1, 0,  1, 1,  0, 1]),
-      vertexArray,
-      texPositionArray,
-      imageBitmap
+      width: layerGuideBuffer[0],
+      height: layerGuideBuffer[1],
+      glyphFilterVertices,
+      glyphVertices,
+      glyphIndices,
+      glyphQuads,
+      color
     }
-    // use the featureGuide to build out the layers
-    // we work off the featureGuideArray, adding to the buffer as we go
-    const lgl = featureGuideArray.length
-    let i = 0
+
+    // we work off the layerGuideBuffer, adding to the buffer as we go
+    const lgl = layerGuideBuffer.length
+    let i = 2
     while (i < lgl) {
-      // grab the layerID, primcount, and offset, and update the index
-      const [layerID, primcount, offset] = featureGuideArray.slice(i, i + 3)
+      // grab the size, layerID, count, and offset, and update the index
+      const [layerID, offset, count] = layerGuideBuffer.slice(i, i + 3)
       i += 3
-      // grab the layers type and code
-      const { type, code } = layers[layerID]
       // create and store the featureGuide
       this.featureGuide.push({
         tile: this,
+        type: 'glyph',
         layerID,
-        source: textSource,
-        primcount,
+        source,
         offset,
-        type,
-        featureCode: [0],
-        layerCode: code
+        count,
+        featureCode: [0]
       })
     }
+
     // Since a parent can be injected, we need to remove any instances of the "old" source data.
-    this.featureGuide = this.featureGuide.filter(fg => !(fg.parent && fg.source === textSource))
+    this.featureGuide = this.featureGuide.filter(fg => !(fg.parent && fg.source === source))
     // build the VAO
-    buildSource(this.context, builtSource)
+    buildSource(this.context, glyphSource)
     // if we have children requesting this tiles data, we send the data over
-    if (Object.keys(this.childrenRequests).length) this._injectSourceIntoChildren(textSource)
+    if (Object.keys(this.childrenRequests).length) this._injectSourceIntoChildren(source)
+    // return the source
+    return glyphSource
   }
 }

@@ -4,11 +4,11 @@ import Program from './program'
 import type { Context } from '../contexts'
 
 export default class RasterProgram extends Program {
-  constructor (context: Context, vertexShaderSource: string, fragmentShaderSource: string) {
+  constructor (context: Context) {
     // get gl from context
     const { gl, type } = context
     // if webgl1, setup attribute locations
-    if (type === 1) gl.attributeLocations = { 'aPos': 0, 'aRadius': 6 }
+    if (type === 1) gl.attributeLocations = { aPos: 0, aRadius: 6 }
     // upgrade
     super(gl, require(`../../shaders/raster${type}.vertex.glsl`), require(`../../shaders/raster${type}.fragment.glsl`))
   }
@@ -19,6 +19,8 @@ export default class RasterProgram extends Program {
     const { gl } = context
 
     // get current source data
+    // console.log('sourceData', sourceData)
+    // console.log('featureGuide', featureGuide)
     let { count, mode } = sourceData
     let { texture, threeD } = featureGuide
     // set 3D uniform

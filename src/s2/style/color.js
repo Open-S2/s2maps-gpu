@@ -21,8 +21,8 @@ export default class Color {
     }
   }
 
-  getValue (): [number, number, number, number] {
-    if (this.type === 'rgb') return [this.val[0] / 255, this.val[1] / 255, this.val[2] / 255, this.val[3]]
+  getValue (normalize: boolean = true): [number, number, number, number] {
+    if (this.type === 'rgb' && normalize) return [this.val[0] / 255, this.val[1] / 255, this.val[2] / 255, this.val[3]]
     return this.val
   }
 

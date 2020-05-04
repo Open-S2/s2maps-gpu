@@ -5,11 +5,13 @@ import { WebGL2Context, WebGLContext } from './contexts'
 /** PROGRAMS **/
 import {
   Program,
-  RasterProgram,
   FillProgram,
+  GlyphFilterProgram,
+  GlyphProgram,
+  GlyphQuadProgram,
   LineProgram,
+  RasterProgram,
   ShadeProgram,
-  TextureProgram,
   SkyboxProgram,
   WallpaperProgram
 } from './programs'
@@ -18,13 +20,14 @@ import { Tile } from '../source'
 
 import type { MapOptions } from '../ui/map'
 import type { Projection } from '../ui/camera/projections'
-import type { FeatureGuide } from '../source/tile'
+import type { FeatureGuide, GlyphTileSource } from '../source/tile'
 import type { ProgramTypes } from './programs/program'
 
 export default class Painter {
   _canvas: HTMLCanvasElement
   context: WebGL2Context | WebGLContext
   programs: { [string]: Program } = {}
+  glyphSources: Array<GlyphTileSource> = []
   dirty: boolean = true
   constructor (canvas: HTMLCanvasElement, options: MapOptions) {
     // setup canvas
@@ -46,6 +49,11 @@ export default class Painter {
     if (context && typeof context.getParameter === 'function') {
       return this.context = new WebGLContext(context)
     }
+  }
+
+  addGlyphSource (glyphSource: GlyphTileSource) {
+    // if (this.glyphSources.length > 0) return
+    this.glyphSources.push(glyphSource)
   }
 
   setClearColor (clearColor: [number, number, number, number]) {
@@ -71,27 +79,29 @@ export default class Painter {
     // if program not created yet, let's make it
     switch (programName) {
       case 'raster':
-        programs[programName] = new RasterProgram(this.context)
+        programs.raster = new RasterProgram(this.context)
         break
       case 'fill':
-        programs[programName] = new FillProgram(this.context)
+        programs.fill = new FillProgram(this.context)
         break
       case 'line':
-        programs[programName] = new LineProgram(this.context)
+        programs.line = new LineProgram(this.context)
         break
       case 'shade':
-        programs[programName] = new ShadeProgram(this.context)
+        programs.shade = new ShadeProgram(this.context)
         break
       case 'text':
-      case 'texture':
       case 'billboard':
-        programs.text = programs.texture = programs.billboard = new TextureProgram(this.context)
+      case 'glyph':
+        programs.glyph = new GlyphQuadProgram(this.context)
+        programs.glyphTex = new GlyphProgram(this.context)
+        programs.glyphFilter = new GlyphFilterProgram(this.context)
         break
       case 'wallpaper':
-        programs[programName] = new WallpaperProgram(this.context)
+        programs.wallpaper = new WallpaperProgram(this.context)
         break
       case 'skybox':
-        programs[programName] = new SkyboxProgram(this.context)
+        programs.skybox = new SkyboxProgram(this.context)
         break
       default: break
     }
@@ -108,49 +118,50 @@ export default class Painter {
 
   resize () {
     // If we are using the text program, update the text program's framebuffer component's sizes
-    // const fillProgram: FillProgram = this.programs.fill
-    // if (fillProgram) fillProgram.resize()
+    const glyphFilter: GlyphFilterProgram = this.programs.glyphFilter
+    if (glyphFilter) glyphFilter.resize()
   }
 
   paint (projection: Projection, style: Style, tiles: Array<Tile>) {
     const { context } = this
-    const { gl } = context
     const { sphereBackground } = style
-    // prep painting
+
+    // prep tiles features to draw
+    const features = tiles.flatMap(tile => tile.featureGuide).sort(featureSort)
+    // prep glyph features for drawing box filters
+    const glyphFeatures = features.filter(feature => feature.type === 'glyph')
+
+    // if any glyph textures are not readya, we do so now
+    if (this.glyphSources.length) this.buildGlyphTextures()
+
+    if (glyphFeatures.length) this.paintGlyphFilter(tiles, glyphFeatures)
+
+    // incase we have glyph source data or glyph feature data, reset to the main framebuffer
+    context.bindMainBuffer()
+    // clear main buffer
     context.newScene()
-    // if we have a texture program, we draw
-    const texProgram: TextureProgram = this.programs.texture
-    // if (texProgram) texProgram.newScene(context)
 
     // prep frame uniforms
     const { view, aspect } = projection
     const matrix = projection.getMatrix(512) // NOTE: For now, we have a default size of 512.
     this.injectFrameUniforms(matrix, view, aspect)
 
-    // merge tile features
-    const features = tiles.flatMap(tile => tile.featureGuide).sort(featureSort)
-    // prep stencil - don't draw color, only to the stencil
-    context.enableStencil()
     // prep masks
     this.paintMasks(tiles)
-    if (texProgram) {
-      texProgram.bindPointFrameBuffer()
-      this.paintMasks(tiles, true)
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null)
-    }
-    // lock in the stencil
-    context.lockStencil()
     // now we use the depth test
     context.enableDepthTest()
     // draw the sphere background should it exist
     if (sphereBackground) this.paintSphereBackground(tiles, sphereBackground)
     // paint features
-    this.paintFeatures(projection, style, features)
+    this.paintFeatures(features)
+    // paint glyph "filter" quads
+    // if (glyphFeatures.length) this.paintGlyphFilter(tiles, glyphFeatures)
     // disable stencil
     context.disableStencilTest()
+    // if (this.glyphSources.length) this.buildGlyphTextures()
     // draw the wallpaper
     if (style.wallpaper) {
-      const wallpaperProgram: WallpaperProgram = this.getProgram(style.wallpaper.skybox ? 'skybox' : 'wallpaper')
+      const wallpaperProgram: WallpaperProgram = this.useProgram(style.wallpaper.skybox ? 'skybox' : 'wallpaper')
       if (wallpaperProgram) wallpaperProgram.draw(this, style.wallpaper)
     }
     // draw shade layer
@@ -159,12 +170,36 @@ export default class Painter {
     context.cleanup()
   }
 
+  buildGlyphTextures () {
+    const { context } = this
+    // get the glyphProgram
+    const glyphProgram: GlyphProgram = this.useProgram('glyphTex')
+    if (!glyphProgram) return new Error('The "glyphTex" program does not exist, can not paint.')
+    // use additive blending
+    context.additiveBlending()
+    // allow front and back faces
+    context.disableCullFace()
+    // build the glyph textures
+    for (const glyphSource of this.glyphSources) glyphProgram.drawToTexture(glyphSource)
+    // clear the glyph sources as they are prepped for drawing
+    this.glyphSources = []
+    // reset the viewport to our canvas size
+    context.resetViewport()
+    // reset blend type
+    context.setBlendDefault()
+    // turn cull face back on
+    context.enableCullFace()
+  }
+
   paintMasks (tiles: Array<Tile>, fb: boolean = false) {
     // get context
-    const { gl } = this.context
+    const { context } = this
+    const { gl } = context
     // prep the fill program
     const fillProgram: FillProgram = this.useProgram('fill')
     if (!fillProgram) return new Error('The "fill" program does not exist, can not paint.')
+    // prep stencil - don't draw color, only to the stencil
+    context.enableStencil()
     // get a starting mask index
     let maskRef = 1
     for (const tile of tiles) {
@@ -183,9 +218,11 @@ export default class Painter {
       // update mask index
       maskRef++
     }
+    // lock in the stencil
+    context.lockStencil()
   }
 
-  paintSphereBackground (tiles: Array<Tile>, sphereBackground) {
+  paintSphereBackground (tiles: Array<Tile>, sphereBackground: Float32Array) {
     // get context
     const { context } = this
     const { gl } = context
@@ -207,7 +244,7 @@ export default class Painter {
     }
   }
 
-  paintFeatures (projection: Projection, style: Style, features: Array<FeatureGuide>) {
+  paintFeatures (features: Array<FeatureGuide>) {
     // setup context
     const { context } = this
     const { gl } = context
@@ -240,8 +277,54 @@ export default class Painter {
       program.setFaceST(faceST)
       gl.bindVertexArray(sourceData[source].vao)
       // draw
-      if (curProgram === 'fill') program.drawFill(this, feature, sourceData[source], tmpMaskID)
-      else program.draw(this, feature, sourceData[source], tmpMaskID)
+      program.draw(this, feature, sourceData[source], tmpMaskID)
+    }
+  }
+
+  paintGlyphFilter (tiles: Array<Tile>, glyphFeatures: Array<FeatureGuide>) {
+    const { context } = this
+    const glyphFilterProgram: GlyphFilter = this.getProgram('glyphFilter')
+    if (!glyphFilterProgram) return new Error('The "glyphFilter" program does not exist, can not paint.')
+    // Step 1: draw points
+    glyphFilterProgram.bindPointFrameBuffer(context)
+    this.paintMasks(tiles, true)
+    // use the box program
+    glyphFilterProgram.use()
+    // paint the glyph "filter" quads
+    this._paintGlyphFilter(glyphFilterProgram, glyphFeatures, 0)
+    // Step 2: draw quads
+    glyphFilterProgram.bindQuadFrameBuffer(context)
+    this._paintGlyphFilter(glyphFilterProgram, glyphFeatures, 1)
+    // return to our default framebuffer
+    context.bindMainBuffer()
+  }
+
+  _paintGlyphFilter (glyphFilterProgram: GlyphFilter, glyphFeatures: Array<FeatureGuide>, mode: 0 | 1 | 2) {
+    const { gl } = this.context
+    let drawTile: Tile, glyphSource: GlyphTileSource
+    let tileSet = new Set()
+    // set mode
+    glyphFilterProgram.setMode(mode)
+    // draw each feature
+    for (const glyphFeature of glyphFeatures) {
+      const { parent, tile, source } = glyphFeature
+      drawTile = (parent) ? parent : tile
+      // ensure no overdraw
+      if (tileSet.has(drawTile.id)) continue
+      else tileSet.add(drawTile.id)
+      // setup vao and uniforms
+      const { faceST, sourceData, tmpMaskID } = drawTile
+      glyphSource = sourceData[source]
+      glyphFilterProgram.setFaceST(faceST)
+      gl.bindVertexArray(glyphSource.boxVAO)
+      // draw
+      if (mode === 0) {
+        glyphFilterProgram.drawPoints(this, glyphSource)
+      } else if (mode === 1) {
+        glyphFilterProgram.drawQuads(this, glyphSource, tmpMaskID)
+      } else if (mode === 2) {
+
+      }
     }
   }
 }

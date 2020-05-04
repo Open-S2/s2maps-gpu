@@ -18,34 +18,33 @@ function orderLine (layer: Layer) {
   layer.paint = newLinePaint
 }
 
-// text order: (paint)size->color->(layout)anchor->padding->offset
+// text order: (paint)size->color->strokeWidth->(layout)anchor->padding->offset
+// text is unique:
+// 1) minimum padding of 2
+// 2) join fill and stroke into a color
+// 3) since we are joining stroke and fill, the "inner-offset" of fill must be added by strokeWidth
+//    and the stroke size must always be 2 * strokeWidth + size
 function orderText (layer: Layer) {
   const { layout, paint } = layer
-  const newTextLayout = {
-    anchor: layout.anchor || 'center',
-    padding: layout.padding || [0, 0],
-    offset: layout.offset || [0, 0]
-  }
-  const newTextPaint = {
-    size: paint.size || 16,
-    fill: paint.fill || paint.color || 'rgba(0, 0, 0, 0)'
-  }
+  // build out according to cpu and gpu
   const newTextLayoutLocal = {
     family: layout.family || 'default',
     field: layout.field || '',
     anchor: layout.anchor || 'center',
-    padding: layout.padding || [0, 0]
+    padding: layout.padding || [0, 0],
+    offset: layout.offset || [0, 0]
   }
   const newTextPaintLocal = {
     size: paint.size || 16,
-    fill: paint.fill || paint.color || 'rgba(0, 0, 0, 0)',
+    fill: paint.fill || 'rgba(0, 0, 0, 0)',
     stroke: paint.stroke || 'rgba(0, 0, 0, 0)',
     strokeWidth: paint.strokeWidth || 0
   }
+  // store
   layer.layoutLocal = newTextLayoutLocal
   layer.paintLocal = newTextPaintLocal
-  layer.layout = newTextLayout
-  layer.paint = newTextPaint
+  layer.layout = {}
+  layer.paint = {}
 }
 
 // line order: (paint)size->color->(layout)anchor->padding->offset

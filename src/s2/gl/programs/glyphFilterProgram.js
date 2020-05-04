@@ -2,35 +2,20 @@
 import Program from './program'
 
 import type { Context } from '../contexts'
+import type { GlyphTileSource } from '../../source/tile'
 
-export default class TextureProgram extends Program {
-  uAspect: WebGLUniformLocation
-  uMode: WebGLUniformLocation
-  uTexWH: WebGLUniformLocation
-  uFeatureSampler: WebGLUniformLocation
-  uTextureSampler: WebGLUniformLocation
-  curMode: number = -1
+export default class GlyphFilterProgram extends Program {
   pointFramebuffer: WebGLFramebuffer
   pointTexture: WebGLTexture
   quadTexture: WebGLTexture
   depthBuffer: WebGLRenderbuffer
   constructor (context: Context) {
     // get gl from context
-    const { gl } = context
+    const { gl, type } = context
+    // if webgl1, setup attribute locations
+    if (type === 1) gl.attributeLocations = { 'aUV': 0, 'aST': 1, 'aXY': 2, 'aWH': 3, 'aID': 4, 'aRadius': 6 }
     // upgrade
-    super(gl, require('../../shaders/text.vertex.glsl'), require('../../shaders/text.fragment.glsl'))
-    // since we need to set texture positions, we use
-    gl.useProgram(this.glProgram)
-    // set uniforms
-    this.uAspect = gl.getUniformLocation(this.glProgram, 'uAspect')
-    this.uMode = gl.getUniformLocation(this.glProgram, 'uMode')
-    this.uTexWH = gl.getUniformLocation(this.glProgram, 'uTexWH')
-    this.uTextureSampler = gl.getUniformLocation(this.glProgram, 'uTexture')
-    gl.uniform1i(this.uTextureSampler, 0)
-    this.uFeatureSampler = gl.getUniformLocation(this.glProgram, 'uFeatures')
-    gl.uniform1i(this.uFeatureSampler, 1)
-    // set defaults
-    this.update3D = false
+    super(gl, require(`../../shaders/glyphFilter${type}.vertex.glsl`), require(`../../shaders/glyphFilter${type}.fragment.glsl`))
 
     // TEXTURES
     // POINT TEXTURE
@@ -69,11 +54,13 @@ export default class TextureProgram extends Program {
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.pointTexture, 0)
     // attach depthBuffer renderbuffer to pointFramebuffer
     gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this.depthBuffer)
+    context.clearColorDepthBuffers()
     // QUAD FRAMEBUFFER
     this.quadFramebuffer = gl.createFramebuffer()
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.quadFramebuffer)
     // attach quadTexture to quadFramebuffer
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.quadTexture, 0)
+    context.clearColorBuffer()
 
     // we are finished, so go back to our main buffer
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
@@ -89,7 +76,7 @@ export default class TextureProgram extends Program {
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.canvas.width, gl.canvas.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
     // bind the depthBuffer buffer
     gl.bindRenderbuffer(gl.RENDERBUFFER, this.depthBuffer)
-    // update the renderbuffer's aspect
+    // update the depthBuffer's aspect
     gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, gl.canvas.width, gl.canvas.height)
     // bind the quadFramebuffer
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.quadFramebuffer)
@@ -101,88 +88,47 @@ export default class TextureProgram extends Program {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
   }
 
-  newScene (context) {
-    const { gl } = this
-    this.bindPointFrameBuffer()
-    context.clearBuffer()
-    this.bindQuadFrameBuffer()
-    context.clearBuffer()
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
-  }
-
-  bindPointFrameBuffer () {
+  bindPointFrameBuffer (context) {
     const { gl } = this
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.pointFramebuffer)
-    this.sampleQuadTexture()
+    context.clearColorDepthBuffers()
+    gl.bindTexture(gl.TEXTURE_2D, this.quadTexture)
+    // set z-testing
+    context.lequalDepth()
   }
 
-  bindQuadFrameBuffer () {
+  bindQuadFrameBuffer (context) {
     const { gl } = this
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.quadFramebuffer)
-    this.samplePointTexture()
-  }
-
-  samplePointTexture () {
-    const { gl } = this
-    // activate texture 1
-    gl.activeTexture(gl.TEXTURE1)
+    context.clearColorBuffer()
+    // gl.bindFramebuffer(gl.FRAMEBUFFER, null)
     gl.bindTexture(gl.TEXTURE_2D, this.pointTexture)
-    // go back to texture0 for future bindings
-    gl.activeTexture(gl.TEXTURE0)
+    // remove z-testing
+    context.alwaysDepth()
+    context.stencilFunc(0)
   }
 
-  sampleQuadTexture () {
-    const { gl } = this
-    // activate texture 1
-    gl.activeTexture(gl.TEXTURE1)
-    gl.bindTexture(gl.TEXTURE_2D, this.quadTexture)
-    // go back to texture0 for future bindings
-    gl.activeTexture(gl.TEXTURE0)
-  }
-
-  // because setting uniforms are cheap, once per draw call regardless of whether
-  // the window size changed, we update the aspect ratio
-  setAspect (aspect: Float32Array) { // [CanvasWidth, CanvasHeight]
-    this.gl.uniform2fv(this.uAspect, aspect)
-  }
-
-  setTexWH (textureSize: Float32Array) { // [TextureWidth, TextureHeight]
-    this.gl.uniform2fv(this.uTexWH, textureSize)
-  }
-
-  setMode (mode: 0 | 1 | 2) {
-    if (this.curMode !== mode) {
-      // update current value
-      this.curMode = mode
-      // update gpu uniform
-      this.gl.uniform1i(this.uMode, mode)
-    }
-  }
-
-  draw (painter: Painter, featureGuide: FeatureGuide, sourceData: Object, maskID: number) {
+  drawPoints (painter: Painter, sourceData: GlyphTileSource) {
     // grab context
     const { context } = painter
     const { gl } = context
-    const { textureWH } = sourceData
-    // set texture size for uniform
-    this.setTexWH(textureWH)
-    // set z-testing
-    context.lequalDepth()
-    // get current source data
-    let { primcount, offset, threeD } = featureGuide
+    const { boxPrimcount } = sourceData
     // set 3D uniform
-    this.set3D(threeD)
+    // this.set3D(threeD)
     // draw points
-    this.bindPointFrameBuffer()
-    this.setMode(0)
-    gl.drawArraysInstanced(gl.POINTS, offset, 1, primcount)
-    // draw quads if point exists
-    context.alwaysDepth()
-    context.stencilFunc(maskID)
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
-    this.samplePointTexture()
-    gl.bindTexture(gl.TEXTURE_2D, sourceData.texture)
-    this.setMode(1)
-    gl.drawArraysInstanced(gl.TRIANGLE_FAN, offset, 4, primcount)
+    gl.drawArraysInstanced(gl.POINTS, 0, 1, boxPrimcount)
+  }
+
+  drawQuads (painter: Painter, sourceData: GlyphTileSource, tmpMaskID: number) {
+    // grab context
+    const { context } = painter
+    const { gl } = context
+    const { boxPrimcount } = sourceData
+    // draw quads
+    gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, boxPrimcount)
+  }
+
+  drawTextBounds (painter: Painter, sourceData: GlyphTileSource) {
+
   }
 }

@@ -130,7 +130,9 @@ export default class S2Map {
     return this._canvasContainer
   }
 
-  injectVectorSourceData (source: string, tileID: string, parentLayers, vertexBuffer: ArrayBuffer, indexBuffer: ArrayBuffer, codeOffsetBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer) {
+  injectVectorSourceData (source: string, tileID: string, parentLayers,
+    vertexBuffer: ArrayBuffer, indexBuffer: ArrayBuffer, codeOffsetBuffer: ArrayBuffer,
+    featureGuideBuffer: ArrayBuffer) {
     if (this._offscreen) {
       this.map.postMessage({ type: 'vectordata', source, tileID, parentLayers, vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer }, [vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer])
     } else {
@@ -138,15 +140,18 @@ export default class S2Map {
     }
   }
 
-  injectTextSourceData (source: string, tileID: string, vertexBuffer: ArrayBuffer, texPositionBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer, imageBitmap: ImageBitmap) {
+  injectGlyphSourceData (source: string, tileID: string, glyphFilterBuffer: ArrayBuffer,
+    glyphVertexBuffer: ArrayBuffer, glyphIndexBuffer: ArrayBuffer,
+    glyphQuadBuffer: ArrayBuffer, colorBuffer: ArrayBuffer, layerGuideBuffer: ArrayBuffer) {
     if (this._offscreen) {
-      this.map.postMessage({ type: 'textdata', source, tileID, vertexBuffer, texPositionBuffer, featureGuideBuffer, imageBitmap }, [vertexBuffer, texPositionBuffer, featureGuideBuffer, imageBitmap])
+      this.map.postMessage({ type: 'glyphdata', source, tileID, glyphFilterBuffer, glyphVertexBuffer, glyphIndexBuffer, glyphQuadBuffer, colorBuffer, layerGuideBuffer }, [glyphFilterBuffer, glyphVertexBuffer, glyphIndexBuffer, glyphQuadBuffer, colorBuffer, layerGuideBuffer])
     } else {
-      this.map.injectTextSourceData(source, tileID, vertexBuffer, texPositionBuffer, featureGuideBuffer, imageBitmap)
+      this.map.injectGlyphSourceData(source, tileID, glyphFilterBuffer, glyphVertexBuffer, glyphIndexBuffer, glyphQuadBuffer, colorBuffer, layerGuideBuffer)
     }
   }
 
-  injectRasterData (source: string, tileID: string, image: ImageBitmap, leftShift: number, bottomShift: number) {
+  injectRasterData (source: string, tileID: string, image: ImageBitmap,
+    leftShift: number, bottomShift: number) {
     if (this._offscreen) {
       this.map.postMessage({ type: 'rasterdata', source, tileID, image, leftShift, bottomShift }, [image])
     } else {
@@ -154,7 +159,8 @@ export default class S2Map {
     }
   }
 
-  injectMaskGeometry (tileID: string, vertexBuffer: ArrayBuffer, indexBuffer: ArrayBuffer, radiiBuffer: ArrayBuffer) {
+  injectMaskGeometry (tileID: string, vertexBuffer: ArrayBuffer,
+    indexBuffer: ArrayBuffer, radiiBuffer: ArrayBuffer) {
     if (this._offscreen) {
       this.map.postMessage({ type: 'maskdata', tileID, vertexBuffer, indexBuffer, radiiBuffer }, [vertexBuffer, indexBuffer, radiiBuffer])
     } else {

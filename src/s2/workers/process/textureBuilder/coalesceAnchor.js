@@ -1,5 +1,5 @@
 // @flow
-type Anchor = 'center' | 'topRight' | 'right' | 'bottomRight' | 'bottom' | 'bottomLeft' | 'left' | 'topLeft'
+export type Anchor = 'center' | 'topRight' | 'right' | 'bottomRight' | 'bottom' | 'bottomLeft' | 'left' | 'topLeft'
 
 export default function coalesceAnchor (anchor: Anchor): number {
   switch (anchor) {

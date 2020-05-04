@@ -12,7 +12,7 @@ export default class WallpaperProgram extends Program {
   uHaloColor: WebGLUniformLocation
   uFade1Color: WebGLUniformLocation
   uFade2Color: WebGLUniformLocation
-  constructor (context: Context, vertexShaderSource: string, fragmentShaderSource: string) {
+  constructor (context: Context) {
     // get gl from context
     const { gl, type } = context
     // install shaders
