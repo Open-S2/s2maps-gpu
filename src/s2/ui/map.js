@@ -67,9 +67,12 @@ export default class Map extends Camera {
           self._onScroll(rect, clientX, clientY, deltaY)
         })
         // listen to mouse movement
+        self._canvas.addEventListener('touchstart', self.dragPan.onMouseDown.bind(self.dragPan))
         self._canvas.addEventListener('mousedown', self.dragPan.onMouseDown.bind(self.dragPan))
         self._canvas.addEventListener('mouseup', self.dragPan.onMouseUp.bind(self.dragPan))
+        self._canvas.addEventListener('touchend', self.dragPan.onMouseUp.bind(self.dragPan))
         self._canvas.addEventListener('mousemove', (e) => { self.dragPan.onMouseMove(e.movementX, e.movementY) })
+        self._canvas.addEventListener('touchmove', (e) => { self.dragPan.onMouseMove(e.movementX, e.movementY) })
       }
       // listen to dragPans updates
       self.dragPan.addEventListener('move', self._onMovement.bind(self))

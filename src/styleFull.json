@@ -6,7 +6,7 @@
   "minzoom": 0,
   "maxzoom": 20,
   "sources": {
-    "fills": "http://localhost:8000/data/fills"
+    "fills": "http://192.168.0.7:8000/data/fills"
   },
   "fonts": {
     "default": "http://localhost:8000/fonts/default",

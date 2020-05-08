@@ -61,7 +61,8 @@ export default class Context {
   clearScene () {
     const { gl } = this
     this.clearColor()
-    this.clearStencil()
+    gl.clearStencil(0x0)
+    gl.clearDepth(1)
     gl.clear(gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT | gl.COLOR_BUFFER_BIT)
   }
 
@@ -81,11 +82,6 @@ export default class Context {
     const { gl } = this
     gl.clearColor(0, 0, 0, 0)
     gl.clear(gl.COLOR_BUFFER_BIT)
-  }
-
-  clearStencil () {
-    const { gl } = this
-    gl.clearStencil(0x0)
   }
 
   enableDepthTest () {

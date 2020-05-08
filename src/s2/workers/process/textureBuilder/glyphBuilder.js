@@ -112,26 +112,20 @@ export default class GlyphBuilder {
     // 1) add to our glyphFilterVertices the text dimesions
     this.glyphFilterVertices.push(s, t, x, y, width, height, id)
     // 2 & 3) build our texture and glyph vertices
-    let glyph: Box
+    let glyph: { box: Box, yOffset: number }
     let xOffset = 0
     // for each glyph in
     for (const char of glyphData) {
       if (char) {
         const [family, code] = char
-        // first do stroke
-        // if (strokeWidth && stroke[3] !== 0) {
-        //   glyph = this.texturePack.getTexture(family, size + strokeSize, padding[1] + strokeWidth, code, this.getGlyph.bind(this))
-        //   this.glyphQuads.push(s, t, x + xOffset + padding[0], y + padding[1], ...glyph, id)
-        //   this.color.push(...stroke)
-        // }
         // now the fill
         if (fill[3] !== 0) {
           glyph = this.texturePack.getTexture(family, size, padding[1] + strokeWidth, code, this.getGlyph.bind(this))
-          this.glyphQuads.push(s, t, x + xOffset + strokeWidth + padding[0], y + strokeWidth + padding[1], ...glyph, id)
+          this.glyphQuads.push(s, t, x + xOffset + strokeWidth + padding[0], y + strokeWidth + padding[1] + glyph.yOffset, ...glyph.box, id)
           this.color.push(...fill)
         }
         // update offset (remove the glyph AA padding)
-        xOffset += glyph[2] - 4
+        xOffset += glyph.box[2] - 4
       }
     }
   }
@@ -144,7 +138,7 @@ export default class GlyphBuilder {
     } else {
       const glyph = glyphSet.get(code)
       const path = glyph.getPath()
-      const res = { advanceWidth: glyph.advanceWidth, path }
+      const res = { advanceWidth: glyph.advanceWidth, yOffset: glyph.yOffset, path }
       cache.set(code, res)
       return res
     }

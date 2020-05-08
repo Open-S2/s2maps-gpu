@@ -38,7 +38,7 @@ export default class Painter {
 
   _createContext () {
     // prep options
-    const webglOptions = { antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: false, alpha: true, stencil: true }
+    const webglOptions = { antialias: true, premultipliedAlpha: true, preserveDrawingBuffer: true, alpha: true, stencil: true }
     // first try webgl2
     let context = this._canvas.getContext('webgl2', webglOptions)
     if (context && typeof context.getParameter === 'function') {

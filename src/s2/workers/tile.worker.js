@@ -142,11 +142,13 @@ export default class TileWorker {
       let source = sources[sourceName]
       if (typeof source === 'string') {
         // if there is a filetype at the end, we parse it differently.
-        const [fileName, fileType] = source.split('.')
+        const fileName = source
+        const fileType = source.split('.').pop()
 
-        promises.push(new Promise((resolve, _) => {
+        promises.push(new Promise((resolve, reject) => {
           if (fileType === 's2json' || fileType === 'geojson' || fileType === 'json') { // s2json request
             requestData(fileName, fileType, (json) => {
+              if (!json) reject(new Error(`Request failed: "${fileName}.${fileType}"`))
               // create an S2JsonVT object
               if (json) {
                 sources[sourceName] = source = {
@@ -158,6 +160,7 @@ export default class TileWorker {
             })
           } else { // standard metadata request
             requestData(`${fileName}/metadata`, 'json', (metadata) => {
+              if (!metadata) reject(new Error(`Request failed: "${fileName}/metadata"`))
               // build & add proper path to metadata if it does not exist
               if (!metadata.path) metadata.path = source
               // update source to said metadata
@@ -383,7 +386,7 @@ export default class TileWorker {
     // now post process data, this groups data for fewer draw calls
     // we seperate by type to make it seem like data is loading quicker, and to handle different vertex sizes
     if (fillFeatures.length) this._processVectorFeatures(mapID, `${sourceName}:fill`, hash, fillFeatures, 2, parentLayers)
-    // if (lineFeatures.length) this._processVectorFeatures(mapID, `${sourceName}:line`, hash, lineFeatures, 4, null)
+    if (lineFeatures.length) this._processVectorFeatures(mapID, `${sourceName}:line`, hash, lineFeatures, 4, null)
     if (texts.length) this._processGlyphs(mapID, `${sourceName}:glyph`, hash, texts)
   }
 
@@ -508,9 +511,6 @@ export default class TileWorker {
         encodingIndex = encodingIndexes[feKey] = encodings.length
         encodings.push(...feature.code)
       }
-      // each draw type has it's own vertex alignment, we must pad accordingly
-      let vertexalignment = vertices.length % divisor
-      while (vertexalignment--) vertices.push(0)
       // store
       vertexOffset = vertices.length / divisor
       // NOTE: Spreader functions on large arrays are failing in chrome right now -_-

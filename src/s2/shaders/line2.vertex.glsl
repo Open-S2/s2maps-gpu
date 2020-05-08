@@ -5,7 +5,7 @@ layout (location = 1) in vec2 aPos;
 layout (location = 2) in vec2 aNormal;
 // layout (location = 3) in float aLengthSoFar;
 layout (location = 6) in float aRadius;
-layout (location = 8) in float aIndex;
+layout (location = 7) in float aIndex;
 
 uniform mat4 uMatrix;
 // uniform vec2 uAspect;

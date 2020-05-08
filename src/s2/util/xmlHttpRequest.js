@@ -5,8 +5,8 @@ export default function requestData (path: string, extension: Extension, callbac
   const oReq = new XMLHttpRequest()
 
   oReq.responseType = getResposeType(extension)
-  oReq.onload = (e) => { callback(oReq.response) }
-  oReq.onerror = () => { callback(null) }
+  oReq.onload = () => { callback(oReq.response) }
+  oReq.onerror = (e) => { console.log('ERROR', e); callback(null) }
   oReq.open('GET', `${path}.${extension}`)
   oReq.send()
 }

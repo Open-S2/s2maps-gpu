@@ -11,19 +11,43 @@ export default function orderLayer (layer: Layer) {
 // line order: (paint)color->width->dasharray->(layout)cap->join
 function orderLine (layer: Layer) {
   const { paint } = layer
-  const newLinePaint = {
+  // store
+  layer.paint = {
     color: paint.color || 'rgba(0, 0, 0, 0)',
     width: paint.width || 1
   }
-  layer.paint = newLinePaint
 }
 
-// text order: (paint)size->color->strokeWidth->(layout)anchor->padding->offset
-// text is unique:
-// 1) minimum padding of 2
-// 2) join fill and stroke into a color
-// 3) since we are joining stroke and fill, the "inner-offset" of fill must be added by strokeWidth
-//    and the stroke size must always be 2 * strokeWidth + size
+// text order: (paint)size->strokeWidth->fill->stroke->(layout)padding->offset
+// function orderText (layer: Layer) {
+//   const { layout, paint } = layer
+//   const localLayout = JSON.parse(JSON.stringify(layout))
+//   const localPaint = JSON.parse(JSON.stringify(paint))
+//   // store
+//   layer.layoutLocal = {
+//     family: localLayout.family || 'default',
+//     field: localLayout.field || '',
+//     anchor: localLayout.anchor || 'center',
+//     padding: localLayout.padding || [0, 0],
+//     offset: localLayout.offset || [0, 0]
+//   }
+//   layer.paintLocal = {
+//     size: localPaint.size || 16,
+//     fill: localPaint.fill || 'rgba(0, 0, 0, 0)',
+//     stroke: localPaint.stroke || 'rgba(0, 0, 0, 0)',
+//     strokeWidth: localPaint.strokeWidth || 0
+//   }
+//   layer.layout = {
+//     padding: layout.padding || [0, 0],
+//     offset: layout.offset || [0, 0]
+//   }
+//   layer.paint = {
+//     size: paint.size || 16,
+//     strokeWidth: paint.strokeWidth || 0,
+//     fill: paint.fill || 'rgba(0, 0, 0, 0)',
+//     stroke: paint.stroke || 'rgba(0, 0, 0, 0)'
+//   }
+// }
 function orderText (layer: Layer) {
   const { layout, paint } = layer
   // build out according to cpu and gpu
@@ -50,15 +74,14 @@ function orderText (layer: Layer) {
 // line order: (paint)size->color->(layout)anchor->padding->offset
 function orderBillboard (layer: Layer) {
   const { layout, paint } = layer
-  const newBillboardLayout = {
+  // store
+  layer.layout = {
     field: layout.field,
     offset: layout.offset,
     padding: layout.padding
   }
-  const newBillboardPaint = {
+  layer.paint = {
     size: paint.size,
     opacity: paint.opacity
   }
-  layer.layout = newBillboardLayout
-  layer.paint = newBillboardPaint
 }

@@ -17,9 +17,9 @@ export default function processFill (geometry: Array<Array<Point>> | Array<Point
   // process
   for (const poly of polys) {
     // get current vertices offset
-    let offset = vertices.length / 2
+    // let offset = vertices.length / 2
     // create triangle mesh
-    let data = earclip(poly, extent / division, offset)
+    let data = earclip(poly, extent / division, vertices.length / 2)
     // let data = zeroClip(poly, offset)
     // tesselate if necessary
     // if (division > 1) data = meshelate(data.vertices, data.indices, extent / division, offset)
