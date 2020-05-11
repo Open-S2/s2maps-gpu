@@ -4,18 +4,20 @@ precision highp float;
 #include ./color;
 
 in vec4 color;
-in float vWidth;
+in vec2 vWidth;
 in vec2 vNorm;
 // in float lengthSoFar;
 out vec4 fragColor;
 
 void main () {
-  // vec2 st = gl_FragCoord.xy / vWidth;
-  // float alpha = smoothstep(1.0, 0.0, st.x);
 
+  // Calculate the distance of the pixel from the line in pixels.
+  float dist = length(vNorm) * vWidth.s;
 
-  // float l = 0.0, delta = 0.0, alpha = 1.0;
-  // delta = fwidth(vWidth);
-  // alpha = 1.0 - smoothstep(0.5 - vWidth, 0.5 + vWidth, vWidth);
-  fragColor = color;
+  // Calculate the antialiasing fade factor. This is either when fading in
+  // the line in case of an offset line (vWidth.t) or when fading out (vWidth.s)
+  float blur2 = (1. + 1.0) * 0.5;
+  float alpha = clamp(min(dist - (vWidth.t - blur2), vWidth.s - dist) / blur2, 0.0, 1.0);
+
+  fragColor = color * alpha;
 }

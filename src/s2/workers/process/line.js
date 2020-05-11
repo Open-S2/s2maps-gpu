@@ -22,11 +22,11 @@ export default function processLine (geometry: Array<Array<Point>>,
     let verticesCount = data.vertices.length
     for (let i = 0; i < verticesCount; i += 2) {
       vertices.push(
-        data.vertices[i] / extent,
-        data.vertices[i + 1] / extent,
+        data.vertices[i],
+        data.vertices[i + 1],
         // pack(data.normals[i], data.normals[i + 1]),
-        data.normals[i],
-        data.normals[i + 1]
+        Math.round(data.normals[i] * 32767),
+        Math.round(data.normals[i + 1] * 32767)
         // data.lengthSoFar[i] / extent
       )
     }

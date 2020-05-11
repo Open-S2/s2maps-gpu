@@ -31,7 +31,7 @@ void main () {
   width /= scale * 512. * 2.;
 
   // multiply width by pos and normal
-  vec2 newPos = aPos + aNormal * width;
+  vec2 newPos = (aPos / 4096.) + aNormal * width;
   // send off the length so far
   // lengthSoFar = aLengthSoFar;
   // set position

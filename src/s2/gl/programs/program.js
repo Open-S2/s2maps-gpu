@@ -1,13 +1,14 @@
 // @flow
-import Painter from '../painter'
 import loadShader from './loadShader'
 
+import type { Context } from '../contexts'
 import type { FeatureGuide } from '../../source/tile'
 export type ProgramTypes = 'mask' | 'fill' | 'line' | 'fill3D' | 'line3D'
 
 export default class Program {
   radii: boolean = false
   compiled: boolean = false
+  context: Context
   gl: WebGLRenderingContext
   glProgram: WebGLProgram
   uMatrix: WebGLUniformLocation
@@ -22,7 +23,9 @@ export default class Program {
   updateAspect: null | Float32Array = null // pointer
   curMode: number = -1
   threeD: boolean
-  constructor (gl: WebGLRenderingContext, vertexShaderSource: string, fragmentShaderSource: string, defaultUniforms?: boolean = true) {
+  constructor (context: Context, vertexShaderSource: string, fragmentShaderSource: string, defaultUniforms?: boolean = true) {
+    this.context = context
+    const { gl } = context
     const program = this.glProgram = gl.createProgram()
     // setup attribute location data if necessary
     const attrLoc = gl.attributeLocations
@@ -115,9 +118,9 @@ export default class Program {
     }
   }
 
-  draw (painter: Painter, featureGuide: FeatureGuide) {
+  draw (featureGuide: FeatureGuide) {
     // grab context
-    const { context } = painter
+    const { context } = this
     const { gl } = context
     // get current source data
     let { count, featureCode, offset, mode, threeD } = featureGuide

@@ -1,6 +1,13 @@
 // @flow
 import Program from './program'
 
+// WEBGL1
+import vert1 from '../../shaders/glyphFilter1.vertex.glsl'
+import frag1 from '../../shaders/glyphFilter1.fragment.glsl'
+// WEBGL2
+import vert2 from '../../shaders/glyphFilter2.vertex.glsl'
+import frag2 from '../../shaders/glyphFilter2.fragment.glsl'
+
 import type { Context } from '../contexts'
 import type { GlyphTileSource } from '../../source/tile'
 
@@ -12,10 +19,13 @@ export default class GlyphFilterProgram extends Program {
   constructor (context: Context) {
     // get gl from context
     const { gl, type } = context
-    // if webgl1, setup attribute locations
-    if (type === 1) gl.attributeLocations = { 'aUV': 0, 'aST': 1, 'aXY': 2, 'aWH': 3, 'aID': 4, 'aRadius': 6 }
-    // upgrade
-    super(gl, require(`../../shaders/glyphFilter${type}.vertex.glsl`), require(`../../shaders/glyphFilter${type}.fragment.glsl`))
+    // build shaders
+    if (type === 1) {
+      gl.attributeLocations = { 'aUV': 0, 'aST': 1, 'aXY': 2, 'aWH': 3, 'aID': 4, 'aRadius': 6 }
+      super(context, vert1, frag1)
+    } else {
+      super(context, vert2, frag2)
+    }
 
     // TEXTURES
     // POINT TEXTURE
@@ -88,8 +98,8 @@ export default class GlyphFilterProgram extends Program {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
   }
 
-  bindPointFrameBuffer (context) {
-    const { gl } = this
+  bindPointFrameBuffer () {
+    const { context, gl } = this
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.pointFramebuffer)
     context.clearColorDepthBuffers()
     gl.bindTexture(gl.TEXTURE_2D, this.quadTexture)
@@ -97,8 +107,8 @@ export default class GlyphFilterProgram extends Program {
     context.lequalDepth()
   }
 
-  bindQuadFrameBuffer (context) {
-    const { gl } = this
+  bindQuadFrameBuffer () {
+    const { context, gl } = this
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.quadFramebuffer)
     context.clearColorBuffer()
     // gl.bindFramebuffer(gl.FRAMEBUFFER, null)
@@ -108,9 +118,9 @@ export default class GlyphFilterProgram extends Program {
     context.stencilFunc(0)
   }
 
-  drawPoints (painter: Painter, sourceData: GlyphTileSource) {
+  drawPoints (sourceData: GlyphTileSource) {
     // grab context
-    const { context } = painter
+    const { context } = this
     const { gl } = context
     const { boxPrimcount } = sourceData
     // set 3D uniform
@@ -119,16 +129,16 @@ export default class GlyphFilterProgram extends Program {
     gl.drawArraysInstanced(gl.POINTS, 0, 1, boxPrimcount)
   }
 
-  drawQuads (painter: Painter, sourceData: GlyphTileSource, tmpMaskID: number) {
+  drawQuads (sourceData: GlyphTileSource, tmpMaskID: number) {
     // grab context
-    const { context } = painter
+    const { context } = this
     const { gl } = context
     const { boxPrimcount } = sourceData
     // draw quads
     gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, boxPrimcount)
   }
 
-  drawTextBounds (painter: Painter, sourceData: GlyphTileSource) {
+  drawTextBounds (sourceData: GlyphTileSource) {
 
   }
 }

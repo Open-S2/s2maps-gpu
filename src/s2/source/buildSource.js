@@ -12,7 +12,7 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
     // cleanup old setup
     if (source.vertexBuffer) gl.deleteBuffer(source.vertexBuffer)
     if (source.radiiBuffer) gl.deleteBuffer(source.radiiBuffer)
-    if (source.codeOffsetBuffer) gl.deleteBuffer(source.codeOffsetBuffer)
+    if (source.codeTypeBuffer) gl.deleteBuffer(source.codeTypeBuffer)
     if (source.indexBuffer) gl.deleteBuffer(source.indexBuffer)
     if (source.vao) gl.deleteVertexArray(source.vao)
     // Create a starting vertex array object (attribute state)
@@ -29,12 +29,12 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
     // link attributes:
     // fill
     gl.enableVertexAttribArray(0)
-    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0)
+    gl.vertexAttribPointer(0, 2, gl.SHORT, false, 0, 0)
     // line
     gl.enableVertexAttribArray(1)
     gl.enableVertexAttribArray(2)
-    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 16, 0)
-    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 16, 8)
+    gl.vertexAttribPointer(1, 2, gl.SHORT, false, 8, 0)
+    gl.vertexAttribPointer(2, 2, gl.SHORT, false, 8, 4)
     // gl.vertexAttribPointer(3, 1, gl.FLOAT, false, 16, 12)
     // RADII
     if (source.radiiArray) {
@@ -48,12 +48,12 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
       gl.vertexAttribPointer(6, 1, gl.FLOAT, false, 0, 0)
     }
     // FEATURE INDEX
-    if (source.codeOffsetArray && source.codeOffsetArray.length) {
+    if (source.codeTypeArray && source.codeTypeArray.length) {
       // Create the feature index buffer
-      source.codeOffsetBuffer = gl.createBuffer()
+      source.codeTypeBuffer = gl.createBuffer()
       // Bind and buffer
-      gl.bindBuffer(gl.ARRAY_BUFFER, source.codeOffsetBuffer)
-      gl.bufferData(gl.ARRAY_BUFFER, source.codeOffsetArray, gl.STATIC_DRAW)
+      gl.bindBuffer(gl.ARRAY_BUFFER, source.codeTypeBuffer)
+      gl.bufferData(gl.ARRAY_BUFFER, source.codeTypeArray, gl.STATIC_DRAW)
       // setup feature attribute
       gl.enableVertexAttribArray(7)
       gl.vertexAttribPointer(7, 1, gl.UNSIGNED_BYTE, false, 0, 0)
@@ -64,6 +64,36 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
     // bind and buffer
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, source.indexBuffer)
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, source.indexArray, gl.STATIC_DRAW)
+
+    // if type is fill, we need to prep a FBO with textures
+    if (source.subType === 'fill') {
+      source.textures = []
+      // FRAMEBUFFER
+      source.fillFramebuffer = gl.createFramebuffer()
+      // bind the framebuffer
+      gl.bindFramebuffer(gl.FRAMEBUFFER, source.fillFramebuffer)
+      // attach the default stencilBuffer
+      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.STENCIL_ATTACHMENT, gl.RENDERBUFFER, context.stencilBuffer)
+      // attach texture(s) to fillFramebuffer
+      for (let i = 0; i < source.textureCount; i++) {
+        // create the texture
+        const texture = gl.createTexture()
+        // bind and create size
+        gl.bindTexture(gl.TEXTURE_2D, texture)
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1024, 1024, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
+        // set filter system
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+        // store the texture
+        source.textures.push(texture)
+        // add the texture to the framebuffer
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0 + i, gl.TEXTURE_2D, texture, 0)
+      }
+      // rebind our default framebuffer
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+    }
 
     // done setting up the VAO
     gl.bindVertexArray(null)
@@ -87,8 +117,6 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
     gl.bindFramebuffer(gl.FRAMEBUFFER, source.glyphFramebuffer)
     // attach texture to glyphFramebuffer
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, source.texture, 0)
-    // prep texture for the eventual draw calls
-    gl.clear(gl.COLOR_BUFFER_BIT)
     // rebind our default framebuffer
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
 
@@ -141,10 +169,10 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
     // setup attribute data
     // x, y
     gl.enableVertexAttribArray(0)
-    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 12, 0)
+    gl.vertexAttribPointer(0, 2, gl.SHORT, false, 12, 0)
     // type
-    gl.enableVertexAttribArray(1)
-    gl.vertexAttribPointer(1, 1, gl.FLOAT, false, 12, 8)
+    gl.enableVertexAttribArray(7)
+    gl.vertexAttribPointer(7, 1, gl.SHORT, false, 12, 8)
     // bind index and buffer data
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, source.glyphIndexBuffer)
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, source.glyphIndices, gl.STATIC_DRAW)

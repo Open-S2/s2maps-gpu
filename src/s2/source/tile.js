@@ -7,7 +7,7 @@ import type { Face } from 's2projection' // https://github.com/Regia-Corporation
 import type { Layer, Mask } from '../styleSpec'
 
 // The layer guide helps identify how to properly draw from the vertexBuffer/vertexIndex stack.
-// All layers are merged into one VAO/indexBuffer/vertexBuffer/codeOffsetBuffer set. This reduces complexity and improves draw speed.
+// All layers are merged into one VAO/indexBuffer/vertexBuffer/codeTypeBuffer set. This reduces complexity and improves draw speed.
 // To ensure we draw in order and know the index ranges exist per layer, we maintain a 'Layer Guide'.
 // the attributes object is for dataConditions and dataRanges.
 export type FeatureGuide = { // eslint-disable-next-line
@@ -19,20 +19,27 @@ export type FeatureGuide = { // eslint-disable-next-line
   offset: number,
   type: string,
   featureCode: Float32Array,
+  color?: Float32Array, // fill property
+  featureIndex?: number, // fill property
+  texIndex?: number, // fill property
   layerCode: Float32Array
 }
 
 export type VectorTileSource = {
   type: 'vector',
+  subType: 'fill' | 'line',
+  textureCount?: number, // fill property
   vertexArray: Float32Array,
   radiiArray?: Float32Array,
   indexArray: Uint32Array,
-  codeOffsetArray: Uint8Array,
+  codeTypeArray: Uint8Array,
   vertexBuffer?: WebGLBuffer,
   radiiBuffer?: WebGLBuffer,
   indexBuffer?: WebGLBuffer,
-  codeOffsetBuffer?: WebGLBuffer,
+  codeTypeBuffer?: WebGLBuffer,
   vao?: WebGLVertexArrayObject,
+  fillFramebuffer?: WebGLFramebuffer,
+  textures?: Array<WebGLTexture>,
   mode?: GLenum // TRIANGLES | TRIANGLE_STRIP | TRIANGLE_FAN | etc
 }
 
@@ -124,10 +131,10 @@ export default class Tile {
   injectParentTile (parentTile: Tile, filterLayers?: Array<number>) {
     const foundLayers = new Set()
     for (const featureGuide of parentTile.featureGuide) {
-      const { parent, source, layerID, count, offset, type, layerCode, featureCode, texture } = featureGuide
+      const { parent, source, layerID, count, offset, type, layerCode, featureCode, texture, color, texIndex } = featureGuide
       if (type === 'raster' && parent) continue
       if (!parent) foundLayers.add(layerID)
-      this.featureGuide.push({ parent: (parent) ? parent : parentTile, tile: this, source, layerID, count, offset, type, layerCode, featureCode, texture })
+      this.featureGuide.push({ parent: (parent) ? parent : parentTile, tile: this, source, layerID, count, offset, type, layerCode, featureCode, texture, color, texIndex })
     }
     this.featureGuide.sort((a, b) => a.layerID - b.layerID)
     // if filterLayers, we need to check what layers were missing
@@ -153,8 +160,8 @@ export default class Tile {
       if (featureGuide.source === sourceName && this.childrenRequests[featureGuide.layerID]) {
         for (const tile of this.childrenRequests[featureGuide.layerID]) {
           // first remove all instances of source
-          const { source, layerID, count, offset, type, layerCode, featureCode, texture } = featureGuide
-          tile.featureGuide.push({ parent: this, tile, source, layerID, count, offset, type, layerCode, featureCode, texture })
+          const { source, layerID, count, offset, type, layerCode, featureCode, texture, color, texIndex } = featureGuide
+          tile.featureGuide.push({ parent: this, tile, source, layerID, count, offset, type, layerCode, featureCode, texture, color, texIndex })
           tile.featureGuide.sort((a, b) => { return a.layerID - b.layerID })
         }
         // cleanup
@@ -173,9 +180,9 @@ export default class Tile {
     // now we can build out the vertices and indices
     // vertices
     for (let j = 0; j <= division; j++) {
-      t = 1 / division * j
+      t = 4096 / division * j
       for (let i = 0; i <= division; i++) {
-        s = 1 / division * i
+        s = 4096 / division * i
         // create s2Point using WebGL's projection scheme, normalize, and than store
         point = S2Point.fromSTGL(face, s, t)
         point.normalize()
@@ -197,7 +204,7 @@ export default class Tile {
     // create our initial vertices and indices:
     const mask = this.sourceData.mask = {
       type: 'vector',
-      vertexArray: new Float32Array(vertices),
+      vertexArray: new Int16Array(vertices),
       indexArray: new Uint32Array(indices),
       count: indices.length,
       mode: this.context.gl.TRIANGLE_STRIP
@@ -253,18 +260,22 @@ export default class Tile {
     gl.texSubImage2D(gl.TEXTURE_2D, 0, leftShift * length, bottomShift * length, gl.RGBA, gl.UNSIGNED_BYTE, image)
   }
 
-  injectVectorSourceData (source: string, vertexArray: Float32Array, indexArray: Uint32Array,
-    codeOffsetArray: Uint8Array, featureGuideArray: Uint32Array, layers: Array<Layer>) {
+  injectVectorSourceData (source: string, vertexArray: Int16Array, indexArray: Uint32Array,
+    codeTypeArray: Uint8Array, featureGuideArray: Uint32Array, layers: Array<Layer>): VectorTileSource {
     // store a reference to the source
     const builtSource = this.sourceData[source] = {
       type: 'vector',
+      subType: source.split(':').pop(),
+      features: [],
       vertexArray,
       indexArray,
-      codeOffsetArray
+      codeTypeArray
     }
     // we work off the featureGuideArray, adding to the buffer as we go
     const lgl = featureGuideArray.length
     let i = 0
+    let fillIndex = 0
+    let texIndex = 0
     while (i < lgl) {
       // grab the size, layerID, count, and offset, and update the index
       const [layerID, count, offset, encodingSize] = featureGuideArray.slice(i, i + 4)
@@ -272,7 +283,7 @@ export default class Tile {
       // grab the layers type and code
       const { type, code } = layers[layerID]
       // create and store the featureGuide
-      this.featureGuide.push({
+      const guide = {
         tile: this,
         layerID,
         source,
@@ -281,15 +292,36 @@ export default class Tile {
         type,
         featureCode: new Float32Array(encodingSize ? [...featureGuideArray.slice(i, i + encodingSize)] : [0]), // NOTE: The sorting algorithm doesn't work if an array is empty, so we have to have at least one number, just set it to 0
         layerCode: code
-      })
+      }
       i += encodingSize
+      // if type is fill, grab the feature offset
+      if (type === 'fill') {
+        guide.featureIndex = featureGuideArray[i++]
+        // store the 'index' position as a sudo Uint8Array color
+        guide.color = packNumber(fillIndex++)
+        // store the current texture
+        guide.texIndex = texIndex
+        if (fillIndex > 30) {
+          fillIndex = 0
+          texIndex++
+        }
+        // we store features we are building so that during fill texture prep phase
+        // we can quickly access all relevant features
+        builtSource.features.push(guide)
+      }
+
+      this.featureGuide.push(guide)
     }
     // Since a parent can be injected, we need to remove any instances of the "old" source data.
     this.featureGuide = this.featureGuide.filter(fg => !(fg.parent && fg.source === source))
+    // if fill, we need to see how many textures there are
+    if (builtSource.subType === 'fill') builtSource.textureCount = texIndex + 1
     // build the VAO
     buildSource(this.context, builtSource)
     // if we have children requesting this tiles data, we send the data over
     if (Object.keys(this.childrenRequests).length) this._injectSourceIntoChildren(source)
+    // return the source
+    return builtSource
   }
 
   injectGlyphSourceData (source: string, glyphFilterVertices: Float32Array, glyphVertices: Float32Array,
@@ -336,4 +368,20 @@ export default class Tile {
     // return the source
     return glyphSource
   }
+}
+
+function packNumber (num: number): Float32Array {
+  // set it's bit position
+  num = 1 << num
+  // prep an array
+  let arr = [0, 0, 0, 0]
+  // store the number in a Uint8Array like array
+  arr[0] = num & 255
+  arr[1] = (num & (255 * 256)) >> 8
+  arr[2] = (num & (255 * 256 * 256)) >> 16
+  arr[3] = (num & (255 * 256 * 256 * 256)) >> 24
+  // map to 0->1
+  arr = arr.map(n => n / 256)
+  // return a float32 representation
+  return new Float32Array(arr)
 }

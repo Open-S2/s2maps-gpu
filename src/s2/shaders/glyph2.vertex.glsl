@@ -2,7 +2,7 @@
 precision highp float;
 
 layout (location = 0) in vec2 aPos;
-layout (location = 1) in float aType;
+layout (location = 7) in float aType;
 
 uniform vec2 uTexSize;
 

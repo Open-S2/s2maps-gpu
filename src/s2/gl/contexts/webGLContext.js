@@ -7,7 +7,7 @@ export default class WebGLContext extends Context {
   vertexArrayObject: 'OES_vertex_array_object'
   constructor (context: WebGLRenderingContext) {
     super(context)
-    // set type
+    // let the painter know it's a WebGLContext
     this.type = 1
     // grab extensions
     this.elementIndexUint = this.gl.getExtension('OES_element_index_uint')
@@ -20,6 +20,8 @@ export default class WebGLContext extends Context {
     this._polyfill()
     // create default quad
     this._createDefaultQuad()
+    // create default stencil buffer
+    this._createDefaultStencilBuffer()
   }
 
   _polyfill () {

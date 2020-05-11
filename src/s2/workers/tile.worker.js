@@ -340,10 +340,11 @@ export default class TileWorker {
               // we can now process according to type
               let vertices = []
               let indices = []
+              let vertexType = []
               let vertexSize
               let divisor
               if (layer.type === 'fill' && (type === 3 || type === 4)) {
-                processFill(feature.loadGeometry(), type, vertices, indices, division, extent)
+                processFill(feature.loadGeometry(), type, vertices, indices, vertexType, division, extent)
                 featureSet = fillFeatures
               } else if (layer.type === 'fill3D' && (type === 7 || type === 8)) {
                 continue
@@ -359,7 +360,7 @@ export default class TileWorker {
               } else if (layer.type === 'billboard' && type === 1) {
                 continue
               } else { continue }
-              if (vertices.length && indices.length) featureSet.push({ type: layer.type, vertices, indices, code: featureCode, layerID })
+              if (vertices.length && indices.length) featureSet.push({ type: layer.type, vertices, indices, vertexType, code: featureCode, codeStr: featureCode.toString(), layerID })
             } else { continue }
           } // for (let f = 0; f < vectorTileLayer.length; f++)
         } else if (source.layers && source.layers[layer.layer] && source.layers[layer.layer].maxzoom < zoom) {
@@ -484,7 +485,7 @@ export default class TileWorker {
     // 2) don't store any feature code larger than MAX_FEATURE_BATCH_SIZE
     let vertices: Array<number> = []
     let indices: Array<number> = []
-    let codeOffset: Array<number> = []
+    let codeType: Array<number> = []
     let featureGuide: Array<number> = []
     let encodings: Array<number> = []
     let indicesOffset: number = 0
@@ -492,14 +493,22 @@ export default class TileWorker {
     let encodingIndexes = { '': 0 }
     let encodingIndex
     let curLayerID = features[0].layerID
+    let prevCodeStr: string = features[0].codeStr
+    let isFill: boolean
 
     for (const feature of features) {
+      isFill = feature.type === 'fill'
       // on layer change or max encoding size, we have to setup a new featureGuide, encodings, and encodingIndexes
       if (
         curLayerID !== feature.layerID ||
+        (isFill && prevCodeStr !== feature.codeStr) ||
         (encodings.length + feature.code.length > MAX_FEATURE_BATCH_SIZE)
       ) {
-        featureGuide.push(curLayerID, indices.length - indicesOffset, indicesOffset, encodings.length, ...encodings) // layerID, count, offset, encoding size, encodings
+        const count = indices.length - indicesOffset
+        prevCodeStr = feature.codeStr
+        featureGuide.push(curLayerID, indices.length - indicesOffset, indicesOffset, encodings.length) // layerID, count, offset, encoding size, encodings
+        featureGuide.push(...encodings)
+        if (isFill) featureGuide.push(encodingIndex) // encoding index
         indicesOffset = indices.length
         encodings = []
         encodingIndexes = { '': 0 }
@@ -516,21 +525,30 @@ export default class TileWorker {
       // NOTE: Spreader functions on large arrays are failing in chrome right now -_-
       // so we just do a for loop
       for (let f = 0, fl = feature.vertices.length; f < fl; f++) vertices.push(feature.vertices[f])
-      for (let f = 0, fl = feature.indices.length; f < fl; f++) {
-        const index = feature.indices[f] + vertexOffset
-        indices.push(index)
-        codeOffset[index] = encodingIndex
+      if (isFill) {
+        for (let f = 0, fl = feature.indices.length; f < fl; f++) indices.push(feature.indices[f] + vertexOffset)
+      } else {
+        for (let f = 0, fl = feature.indices.length; f < fl; f++) {
+          const index = feature.indices[f] + vertexOffset
+          indices.push(index)
+          codeType[index] = encodingIndex
+        }
       }
+      // store type for fills
+      if (feature.vertexType) for (let f = 0, fl = feature.vertexType.length; f < fl; f++) codeType.push(feature.vertexType[f])
       // update previous layerID
       curLayerID = feature.layerID
     }
     // store the very last featureGuide batch
-    if (indices.length - indicesOffset) featureGuide.push(curLayerID, indices.length - indicesOffset, indicesOffset, encodings.length, ...encodings) // layerID, count, offset, encoding size, encodings
+    if (indices.length - indicesOffset) {
+      featureGuide.push(curLayerID, indices.length - indicesOffset, indicesOffset, encodings.length, ...encodings) // layerID, count, offset, encoding size, encodings
+      if (isFill) featureGuide.push(encodingIndex) // encoding index
+    }
 
     // Upon building the batches, convert to buffers and ship.
-    const vertexBuffer = new Float32Array(vertices).buffer
+    const vertexBuffer = new Int16Array(vertices).buffer
     const indexBuffer = new Uint32Array(indices).buffer
-    const codeOffsetBuffer = new Uint8Array(codeOffset).buffer
+    const codeTypeBuffer = new Uint8Array(codeType).buffer
     const featureGuideBuffer = new Uint32Array(featureGuide).buffer
     // ship the vector data.
     postMessage({
@@ -541,9 +559,9 @@ export default class TileWorker {
       parentLayers,
       vertexBuffer,
       indexBuffer,
-      codeOffsetBuffer,
+      codeTypeBuffer,
       featureGuideBuffer
-    }, [vertexBuffer, indexBuffer, codeOffsetBuffer, featureGuideBuffer])
+    }, [vertexBuffer, indexBuffer, codeTypeBuffer, featureGuideBuffer])
   }
 }
 

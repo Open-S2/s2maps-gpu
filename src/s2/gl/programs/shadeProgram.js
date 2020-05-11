@@ -17,7 +17,7 @@ export default class ShadeProgram extends Program {
     // get gl from context
     const { gl } = context
     // upgrade
-    super(gl, shadeVertex, shadeFragment, false)
+    super(context, shadeVertex, shadeFragment, false)
     // acquire the attributes & uniforms
     this.aPos = gl.getAttribLocation(this.glProgram, 'aPos')
     this.offset = gl.getUniformLocation(this.glProgram, 'uOffset')

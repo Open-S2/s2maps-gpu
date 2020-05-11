@@ -352,23 +352,23 @@
         "color": [
           "data-condition",
           ["class", "==", "State"],
-          "rgba(160, 160, 160, 0.7)",
+          "rgba(160, 160, 160, 0.85)",
           "default",
           "rgb(150, 150, 150)"
         ],
         "width": [
           "data-condition",
           ["class", "==", "State"],
-          0.85,
+          0.95,
           "default",
           [
             "input-range",
             "zoom",
             "lin",
             1,
-            0.5,
+            0.85,
             2,
-            0.95
+            1.5
           ]
         ]
       }

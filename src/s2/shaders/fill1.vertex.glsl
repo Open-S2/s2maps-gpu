@@ -20,7 +20,7 @@ varying vec2 uvPos;
 void main () {
   // set position
   // prep xyz
-  vec4 xyz = STtoXYZ(aPos);
+  vec4 xyz = STtoXYZ(aPos / 4096.);
   // if 3D, add radius
   if (u3D) {
     float radius = 1. + (aRadius * 200.);

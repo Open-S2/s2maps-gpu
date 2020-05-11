@@ -3,6 +3,13 @@ import Program from './program'
 import Map from '../../ui/map'
 import requestData from '../../util/xmlHttpRequest'
 
+// WEBGL1
+import vert1 from '../../shaders/skybox1.vertex.glsl'
+import frag1 from '../../shaders/skybox1.fragment.glsl'
+// WEBGL2
+import vert2 from '../../shaders/skybox2.vertex.glsl'
+import frag2 from '../../shaders/skybox2.fragment.glsl'
+
 import type { Context } from '../contexts'
 
 export default class SkyboxProgram extends Program {
@@ -16,8 +23,9 @@ export default class SkyboxProgram extends Program {
   constructor (context: Context) {
     // get gl from context
     const { gl, type } = context
-    // upgrade
-    super(gl, require(`../../shaders/skybox${type}.vertex.glsl`), require(`../../shaders/skybox${type}.fragment.glsl`), false)
+    // install shaders
+    if (type === 1) super(context, vert1, frag1, false)
+    else super(context, vert2, frag2, false)
     // acquire the attributes & uniforms
     this.aPos = gl.getAttribLocation(this.glProgram, 'aPos')
     this.uMatrix = gl.getUniformLocation(this.glProgram, 'uMatrix')
@@ -72,9 +80,9 @@ export default class SkyboxProgram extends Program {
     }
   }
 
-  draw (painter: Painter, wallpaper: Wallpaper) {
+  draw (wallpaper: Wallpaper) {
     // setup variables
-    const { context } = painter
+    const { context } = this
     const { gl } = context
     // now we draw
     gl.useProgram(this.glProgram)

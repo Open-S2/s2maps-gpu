@@ -1,26 +1,35 @@
 // @flow
 import Program from './program'
 
+// WEBGL1
+import vert1 from '../../shaders/raster1.vertex.glsl'
+import frag1 from '../../shaders/raster1.fragment.glsl'
+// WEBGL2
+import vert2 from '../../shaders/raster2.vertex.glsl'
+import frag2 from '../../shaders/raster2.fragment.glsl'
+
 import type { Context } from '../contexts'
 
 export default class RasterProgram extends Program {
   constructor (context: Context) {
     // get gl from context
     const { gl, type } = context
-    // if webgl1, setup attribute locations
-    if (type === 1) gl.attributeLocations = { aPos: 0, aRadius: 6 }
-    // upgrade
-    super(gl, require(`../../shaders/raster${type}.vertex.glsl`), require(`../../shaders/raster${type}.fragment.glsl`))
+    // install shaders
+    if (type === 1) {
+      // if webgl1, setup attribute locations
+      gl.attributeLocations = { aPos: 0, aRadius: 6 }
+      super(context, vert1, frag1)
+    } else {
+      super(context, vert2, frag2)
+    }
   }
 
-  draw (painter: Painter, featureGuide: FeatureGuide, sourceData) {
+  draw (featureGuide: FeatureGuide, sourceData) {
     // setup variables
-    const { context } = painter
+    const { context } = this
     const { gl } = context
 
     // get current source data
-    // console.log('sourceData', sourceData)
-    // console.log('featureGuide', featureGuide)
     let { count, mode } = sourceData
     let { texture, threeD } = featureGuide
     // set 3D uniform
