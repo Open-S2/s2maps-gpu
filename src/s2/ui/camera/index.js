@@ -144,7 +144,7 @@ export default class Camera {
     if (this.tileCache.has(tileID)) {
       const tile = this.tileCache.get(tileID)
       children = Object.keys(tile.childrenRequests).length > 0
-      const vectorSource = tile.injectVectorSourceData(source, new Int16Array(vertexBuffer), new Uint32Array(indexBuffer), new Uint8Array(codeTypeBuffer), new Uint32Array(featureGuideBuffer), this.style.layers)
+      tile.injectVectorSourceData(source, new Int16Array(vertexBuffer), new Uint32Array(indexBuffer), new Uint8Array(codeTypeBuffer), new Uint32Array(featureGuideBuffer), this.style.layers)
       // for each parentLayer, inject specified layers
       for (let hash in parentLayers) {
         hash = +hash
@@ -160,8 +160,6 @@ export default class Camera {
           this.style.requestTiles([newTile])
         }
       }
-      // tell the painter it needs to paint the glyph texture on it's next render pass
-      if (vectorSource.subType === 'fill') this.painter.addFillSource(vectorSource)
       // new 'paint', so painter is dirty
       this.painter.dirty = true
       // call a re-render only if the tile is in our current viewing or it had children

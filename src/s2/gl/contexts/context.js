@@ -5,7 +5,6 @@ export default class Context {
   clearColorRGBA: [number, number, number, number] = [0, 0, 0, 0]
   vao: WebGLVertexArrayObject
   vertexBuffer:WebGLBuffer
-  stencilBuffer: WebGLRenderbuffer
   constructor (context: WebGLRenderingContext | WebGL2RenderingContext) {
     this.gl = context
   }
@@ -39,16 +38,6 @@ export default class Context {
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0)
     // clear vao
     gl.bindVertexArray(null)
-  }
-
-  _createDefaultStencilBuffer () {
-    const { gl } = this
-    // create the stencil
-    this.stencilBuffer = gl.createRenderbuffer()
-    // bind
-    gl.bindRenderbuffer(gl.RENDERBUFFER, this.stencilBuffer)
-    // allocate renderbuffer
-    gl.renderbufferStorage(gl.RENDERBUFFER, gl.STENCIL_INDEX8, 1024, 1024)
   }
 
   drawQuad () {
@@ -169,22 +158,6 @@ export default class Context {
 
   lockStencil () {
   	this.gl.colorMask(true, true, true, true)
-  }
-
-  // drawing only to the stencil
-  fillStepOne () {
-    const { gl } = this
-    gl.stencilOp(gl.INVERT, gl.INVERT, gl.INVERT)
-    gl.stencilFunc(gl.ALWAYS, 1, 0xFF)
-  	gl.colorMask(false, false, false, false)
-  }
-
-  // store resulting data to a textures RGBA bit while simultaneously reseting the stencil
-  fillStepTwo () {
-    const { gl } = this
-    gl.stencilOp(gl.KEEP, gl.REPLACE, gl.REPLACE)
-    gl.stencilFunc(gl.NOTEQUAL, 0, 0xFF)
-    gl.colorMask(true, true, true, true)
   }
 
   cleanup () {

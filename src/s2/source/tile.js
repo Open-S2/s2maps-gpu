@@ -19,16 +19,12 @@ export type FeatureGuide = { // eslint-disable-next-line
   offset: number,
   type: string,
   featureCode: Float32Array,
-  color?: Float32Array, // fill property
-  featureIndex?: number, // fill property
-  texIndex?: number, // fill property
   layerCode: Float32Array
 }
 
 export type VectorTileSource = {
   type: 'vector',
   subType: 'fill' | 'line',
-  textureCount?: number, // fill property
   vertexArray: Float32Array,
   radiiArray?: Float32Array,
   indexArray: Uint32Array,
@@ -131,10 +127,10 @@ export default class Tile {
   injectParentTile (parentTile: Tile, filterLayers?: Array<number>) {
     const foundLayers = new Set()
     for (const featureGuide of parentTile.featureGuide) {
-      const { parent, source, layerID, count, offset, type, layerCode, featureCode, texture, color, texIndex } = featureGuide
+      const { parent, source, layerID, count, offset, type, layerCode, featureCode, texture } = featureGuide
       if (type === 'raster' && parent) continue
       if (!parent) foundLayers.add(layerID)
-      this.featureGuide.push({ parent: (parent) ? parent : parentTile, tile: this, source, layerID, count, offset, type, layerCode, featureCode, texture, color, texIndex })
+      this.featureGuide.push({ parent: (parent) ? parent : parentTile, tile: this, source, layerID, count, offset, type, layerCode, featureCode, texture })
     }
     this.featureGuide.sort((a, b) => a.layerID - b.layerID)
     // if filterLayers, we need to check what layers were missing
@@ -160,8 +156,8 @@ export default class Tile {
       if (featureGuide.source === sourceName && this.childrenRequests[featureGuide.layerID]) {
         for (const tile of this.childrenRequests[featureGuide.layerID]) {
           // first remove all instances of source
-          const { source, layerID, count, offset, type, layerCode, featureCode, texture, color, texIndex } = featureGuide
-          tile.featureGuide.push({ parent: this, tile, source, layerID, count, offset, type, layerCode, featureCode, texture, color, texIndex })
+          const { source, layerID, count, offset, type, layerCode, featureCode, texture } = featureGuide
+          tile.featureGuide.push({ parent: this, tile, source, layerID, count, offset, type, layerCode, featureCode, texture })
           tile.featureGuide.sort((a, b) => { return a.layerID - b.layerID })
         }
         // cleanup
@@ -274,8 +270,6 @@ export default class Tile {
     // we work off the featureGuideArray, adding to the buffer as we go
     const lgl = featureGuideArray.length
     let i = 0
-    let fillIndex = 0
-    let texIndex = 0
     while (i < lgl) {
       // grab the size, layerID, count, and offset, and update the index
       const [layerID, count, offset, encodingSize] = featureGuideArray.slice(i, i + 4)
@@ -294,28 +288,11 @@ export default class Tile {
         layerCode: code
       }
       i += encodingSize
-      // if type is fill, grab the feature offset
-      if (type === 'fill') {
-        guide.featureIndex = featureGuideArray[i++]
-        // store the 'index' position as a sudo Uint8Array color
-        guide.color = packNumber(fillIndex++)
-        // store the current texture
-        guide.texIndex = texIndex
-        if (fillIndex > 30) {
-          fillIndex = 0
-          texIndex++
-        }
-        // we store features we are building so that during fill texture prep phase
-        // we can quickly access all relevant features
-        builtSource.features.push(guide)
-      }
 
       this.featureGuide.push(guide)
     }
     // Since a parent can be injected, we need to remove any instances of the "old" source data.
     this.featureGuide = this.featureGuide.filter(fg => !(fg.parent && fg.source === source))
-    // if fill, we need to see how many textures there are
-    if (builtSource.subType === 'fill') builtSource.textureCount = texIndex + 1
     // build the VAO
     buildSource(this.context, builtSource)
     // if we have children requesting this tiles data, we send the data over
@@ -368,20 +345,4 @@ export default class Tile {
     // return the source
     return glyphSource
   }
-}
-
-function packNumber (num: number): Float32Array {
-  // set it's bit position
-  num = 1 << num
-  // prep an array
-  let arr = [0, 0, 0, 0]
-  // store the number in a Uint8Array like array
-  arr[0] = num & 255
-  arr[1] = (num & (255 * 256)) >> 8
-  arr[2] = (num & (255 * 256 * 256)) >> 16
-  arr[3] = (num & (255 * 256 * 256 * 256)) >> 24
-  // map to 0->1
-  arr = arr.map(n => n / 256)
-  // return a float32 representation
-  return new Float32Array(arr)
 }

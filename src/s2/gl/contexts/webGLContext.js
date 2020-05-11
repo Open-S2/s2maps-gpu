@@ -20,8 +20,6 @@ export default class WebGLContext extends Context {
     this._polyfill()
     // create default quad
     this._createDefaultQuad()
-    // create default stencil buffer
-    this._createDefaultStencilBuffer()
   }
 
   _polyfill () {

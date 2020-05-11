@@ -8,7 +8,5 @@ export default class WebGL2Context extends Context {
     this.type = 2
     // create a default quad
     this._createDefaultQuad()
-    // create default stencil buffer
-    this._createDefaultStencilBuffer()
   }
 }

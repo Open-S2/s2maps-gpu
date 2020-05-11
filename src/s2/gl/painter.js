@@ -20,7 +20,7 @@ import { Tile } from '../source'
 
 import type { MapOptions } from '../ui/map'
 import type { Projection } from '../ui/camera/projections'
-import type { FeatureGuide, VectorTileSource, GlyphTileSource } from '../source/tile'
+import type { FeatureGuide, GlyphTileSource } from '../source/tile'
 import type { ProgramTypes } from './programs/program'
 
 export default class Painter {
@@ -28,7 +28,6 @@ export default class Painter {
   context: WebGL2Context | WebGLContext
   programs: { [string]: Program } = {}
   glyphSources: Array<GlyphTileSource> = []
-  fillSources: Array<VectorTileSource> = []
   dirty: boolean = true
   constructor (canvas: HTMLCanvasElement, options: MapOptions) {
     // setup canvas
@@ -54,10 +53,6 @@ export default class Painter {
 
   addGlyphSource (glyphSource: GlyphTileSource) {
     this.glyphSources.push(glyphSource)
-  }
-
-  addFillSource (fillSource: VectorTileSource) {
-    this.fillSources.push(fillSource)
   }
 
   setClearColor (clearColor: [number, number, number, number]) {
@@ -86,7 +81,6 @@ export default class Painter {
         programs.raster = new RasterProgram(this.context)
         break
       case 'fill':
-        if (!programs.glyphTex) programs.glyphTex = new GlyphProgram(this.context)
         programs.fill = new FillProgram(this.context)
         break
       case 'line':
@@ -98,7 +92,7 @@ export default class Painter {
       case 'text':
       case 'billboard':
       case 'glyph':
-        if (!programs.glyphTex) programs.glyphTex = new GlyphProgram(this.context)
+        programs.glyphTex = new GlyphProgram(this.context)
         programs.glyph = new GlyphQuadProgram(this.context)
         programs.glyphFilter = new GlyphFilterProgram(this.context)
         break
@@ -137,7 +131,7 @@ export default class Painter {
     const glyphFeatures = features.filter(feature => feature.type === 'glyph')
 
     // if any glyph or fill textures are not ready, we prep them now
-    if (this.glyphSources.length || this.fillSources.length) this.buildTextures()
+    if (this.glyphSources.length) this.buildTextures()
 
     if (glyphFeatures.length) this.paintGlyphFilter(tiles, glyphFeatures)
 
@@ -181,14 +175,11 @@ export default class Painter {
     if (!glyphProgram) return new Error('The "glyphTex" program does not exist, can not paint.')
     // prep program for drawing glyphs
     glyphProgram.prepContext()
-    // build any fill textures
-    for (const fillSource of this.fillSources) glyphProgram.drawFill(fillSource)
     // build any glyph textures
     for (const glyphSource of this.glyphSources) glyphProgram.drawGlyph(glyphSource)
     // cleanup from drawing glyphs
     glyphProgram.cleanupContext()
-    // clear the glyph & fill sources as they are prepped for drawing from
-    this.fillSources = []
+    // clear the glyph sources as they are prepped for drawing from
     this.glyphSources = []
   }
 
