@@ -1,15 +1,19 @@
 {
   "version": 1,
   "name": "s2test",
-  "center": [-111, 40],
+  "center": [-111.88, 40.75],
   "zoom": 0,
   "minzoom": 0,
   "maxzoom": 20,
   "sources": {
     "fills": "http://192.168.0.7:8000/data/fills"
   },
-  "fonts": {},
-  "shade": true,
+  "fonts": {
+    "default": "http://192.168.0.7:8000/fonts/default",
+    "roboto-regular": "http://192.168.0.7:8000/fonts/roboto-regular",
+    "roboto-medium": "http://192.168.0.7:8000/fonts/roboto-medium"
+  },
+  "shade": false,
   "wallpaper": {
     "background-color": "rgb(25, 28, 80)",
     "fade-1": "rgb(138, 204, 255)",
@@ -132,6 +136,339 @@
       "layout": {},
       "paint": {
         "color": "rgb(170, 218, 255)"
+      }
+    },
+    {
+      "name": "reef",
+      "source": "fills",
+      "filter": ["class", "has", ["reef", "shoal"]],
+      "layer": "water",
+      "type": "fill",
+      "minzoom": 0,
+      "layout": {},
+      "paint": {
+        "color": "rgb(210, 233, 255)"
+      }
+    },
+    {
+      "name": "rivers",
+      "source": "fills",
+      "layer": "water",
+      "type": "line",
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "rgb(170, 218, 255)",
+        "width": [
+          "input-range",
+          "zoom",
+          "expo",
+          1.5,
+          9,
+          1,
+          12,
+          2.5
+        ]
+      }
+    },
+    {
+      "name": "transport_borders",
+      "source": "fills",
+      "layer": "transport",
+      "filter": ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited"]],
+      "type": "line",
+      "minzoom": 2,
+      "layout": {
+        "cap": "round",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": [
+          "data-condition",
+          ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited"]],
+          "rgb(218, 220, 224)",
+          "default",
+          "rgba(0, 0, 0, 0)"
+        ],
+        "width": [
+          "data-condition",
+          ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link"]],
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            4,
+            1,
+            6.5,
+            1,
+            7,
+            2,
+            10,
+            3,
+            13,
+            8.5
+          ],
+          ["or", ["class", "==", "street"], ["class", "==", "street_limited"]],
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            10,
+            0.5,
+            15,
+            5.5
+          ],
+          "default",
+          1.85
+        ]
+      }
+    },
+    {
+      "name": "transport",
+      "source": "fills",
+      "layer": "transport",
+      "filter": ["or",
+        ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited", "ferry"]],
+        ["and", ["class", "==", "railway"], ["type", "==", "rail"]],
+        ["and", ["class", "==", "path"], ["type", "==", "path"]]
+      ],
+      "type": "line",
+      "minzoom": 2,
+      "layout": {
+        "cap": "round",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": [
+          "data-condition",
+          ["class", "==", "ferry"],
+          "#9fccf9",
+          ["class", "==", "path"],
+          "rgb(136, 190, 150)",
+          ["class", "==", "railway"],
+          "rgb(214, 217, 220)",
+          ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited"]],
+          "rgb(255, 255, 255)",
+          "default",
+          "rgba(0, 0, 0, 0)"
+        ],
+        "width": [
+          "data-condition",
+          ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link"]],
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            7,
+            1.25,
+            10,
+            1.85,
+            13,
+            6
+          ],
+          ["or", ["class", "==", "street"], ["class", "==", "street_limited"]],
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            10,
+            1.25,
+            15,
+            4
+          ],
+          ["class", "==", "path"],
+          1.5,
+          "default",
+          1.5
+        ]
+      }
+    },
+    {
+      "name": "motor_trunk_borders",
+      "source": "fills",
+      "layer": "transport",
+      "filter": ["class", "has", ["motorway", "motorway_link", "trunk", "trunk_link"]],
+      "type": "line",
+      "minzoom": 2,
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "rgb(246, 207, 101)",
+        "width": [
+          "input-range",
+          "zoom",
+          "lin",
+          7,
+          2.5,
+          11,
+          6,
+          14,
+          13,
+          15,
+          20
+        ]
+      }
+    },
+    {
+      "name": "motor_trunk",
+      "source": "fills",
+      "layer": "transport",
+      "filter": ["class", "has", ["motorway", "motorway_link", "trunk", "trunk_link"]],
+      "type": "line",
+      "minzoom": 2,
+      "layout": {
+        "cap": "round",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "rgb(255, 235, 161)",
+        "width": [
+          "input-range",
+          "zoom",
+          "lin",
+          7,
+          1,
+          11,
+          3,
+          14,
+          10,
+          15,
+          16
+        ]
+      }
+    },
+    {
+      "id": "boundaries",
+      "source": "fills",
+      "layer": "boundary",
+      "filter": ["and", ["class", "has", ["Country", "State"]], ["maritime", "==", false]],
+      "type": "line",
+      "minzoom": 0,
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": [
+          "data-condition",
+          ["class", "==", "State"],
+          "rgba(160, 160, 160, 0.9)",
+          "default",
+          "rgb(100, 100, 100)"
+        ],
+        "width": [
+          "data-condition",
+          ["class", "==", "State"],
+          1.1,
+          "default",
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            1,
+            0.85,
+            2,
+            1.25
+          ]
+        ]
+      }
+    },
+    {
+      "name": "equator",
+      "source": "fills",
+      "layer": "equator",
+      "type": "line",
+      "minzoom": 0,
+      "maxzoom": 10,
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "rgba(125, 102, 97, 0.8)",
+        "width": [
+          "input-range",
+          "zoom",
+          "lin",
+          0.99,
+          1.5,
+          1,
+          3
+        ]
+      }
+    },
+    {
+      "name": "buildings",
+      "source": "fills",
+      "layer": "building",
+      "type": "fill",
+      "layout": {},
+      "paint": {
+        "color": "rgb(235, 235, 235)"
+      }
+    },
+    {
+      "name": "places",
+      "source": "fills",
+      "filter": ["class", "has", ["Country", "State"]],
+      "layer": "place",
+      "type": "text",
+      "layout": {
+        "family": "roboto-medium",
+        "field": [
+          "input-range",
+          "zoom",
+          "step",
+          0,
+          "?abbr,?name",
+          2,
+          "?name"
+        ],
+        "anchor": "center",
+        "offset": [0, 0],
+        "padding": [6, 6]
+      },
+      "paint": {
+        "size": [
+          "data-condition",
+          ["class", "==", "Country"],
+          [
+            "input-range",
+            "zoom",
+            "step",
+            0,
+            22,
+            2,
+            26
+          ],
+          ["class", "==", "State"],
+          [
+            "input-range",
+            "zoom",
+            "step",
+            1,
+            16,
+            2,
+            18
+          ],
+          "default",
+          14
+        ],
+        "fill": [
+          "data-condition",
+          ["class", "==", "Country"],
+          "rgb(38, 38, 38)",
+          ["class", "==", "State"],
+          "rgb(105, 105, 105)",
+          "default",
+          "rgba(0, 0, 0, 0)"
+        ],
+        "stroke": "rgb(250, 250, 250)",
+        "strokeWidth": 1
       }
     }
   ]

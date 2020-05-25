@@ -34,8 +34,6 @@ export type VectorTileSource = {
   indexBuffer?: WebGLBuffer,
   codeTypeBuffer?: WebGLBuffer,
   vao?: WebGLVertexArrayObject,
-  fillFramebuffer?: WebGLFramebuffer,
-  textures?: Array<WebGLTexture>,
   mode?: GLenum // TRIANGLES | TRIANGLE_STRIP | TRIANGLE_FAN | etc
 }
 

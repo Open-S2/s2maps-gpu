@@ -5,6 +5,7 @@ export default class WebGLContext extends Context {
   elementIndexUint: 'OES_element_index_uint'
   angledInstancedArrays: 'ANGLE_instanced_arrays'
   vertexArrayObject: 'OES_vertex_array_object'
+  standardDerivatives: 'OES_standard_derivatives'
   constructor (context: WebGLRenderingContext) {
     super(context)
     // let the painter know it's a WebGLContext
@@ -16,6 +17,7 @@ export default class WebGLContext extends Context {
     if (!this.angledInstancedArrays) console.log('*** Error - "ANGLE_instanced_arrays" is not a supported extension')
     this.vertexArrayObject = this.gl.getExtension('OES_vertex_array_object')
     if (!this.vertexArrayObject) console.log('*** Error - "OES_vertex_array_object" is not a supported extension')
+    this.standardDerivatives = this.gl.getExtension('OES_standard_derivatives')
     // polyfill
     this._polyfill()
     // create default quad

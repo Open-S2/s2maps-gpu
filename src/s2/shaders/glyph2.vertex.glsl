@@ -4,6 +4,7 @@ precision highp float;
 layout (location = 0) in vec2 aPos;
 layout (location = 7) in float aType;
 
+uniform vec2 uOffset;
 uniform vec2 uTexSize;
 
 out vec2 vST;
@@ -28,5 +29,5 @@ void main () {
     vST = vec2(1., 1.);
   }
   // set position (reproject from "0 -> 1" to "(-1) -> 1")
-  gl_Position = vec4(2. * (aPos / uTexSize) - 1., 0., 1.);
+  gl_Position = vec4(2. * ((aPos + uOffset) / uTexSize) - 1., 0., 1.);
 }

@@ -46,8 +46,8 @@ export default class GlyphBuilder {
 
   testQuad (quad: Quad): boolean {
     // build the bbox
-    let s = Math.round(quad.s * 512)
-    let t = Math.round(quad.t * 512)
+    let s = Math.round(quad.s * 768)
+    let t = Math.round(quad.t * 768)
     quad.minX = s + quad.x
     quad.minY = t + quad.y
     quad.maxX = s + quad.x + quad.width
@@ -108,11 +108,10 @@ export default class GlyphBuilder {
   // 3) reference the texture when building quad glyph data
   buildText (text: Text) {
     const { s, t, x, y, size, width, height, id, padding, strokeWidth, stroke, fill, glyphData } = text
-    const strokeSize = size + (strokeWidth * 2)
     // 1) add to our glyphFilterVertices the text dimesions
     this.glyphFilterVertices.push(s, t, x, y, width, height, id)
     // 2 & 3) build our texture and glyph vertices
-    let glyph: { box: Box, yOffset: number }
+    let glyph: Box
     let xOffset = 0
     // for each glyph in
     for (const char of glyphData) {
@@ -120,12 +119,12 @@ export default class GlyphBuilder {
         const [family, code] = char
         // now the fill
         if (fill[3] !== 0) {
-          glyph = this.texturePack.getTexture(family, size, padding[1] + strokeWidth, code, this.getGlyph.bind(this))
-          this.glyphQuads.push(s, t, x + xOffset + strokeWidth + padding[0], y + strokeWidth + padding[1] + glyph.yOffset, ...glyph.box, id)
+          glyph = this.texturePack.getTexture(family, size, padding[1], code, this.getGlyph.bind(this))
+          this.glyphQuads.push(s, t, x + xOffset + padding[0], y + padding[1], ...glyph, id)
           this.color.push(...fill)
         }
         // update offset (remove the glyph AA padding)
-        xOffset += glyph.box[2] - 4
+        xOffset += glyph[2] - 4
       }
     }
   }
@@ -138,7 +137,7 @@ export default class GlyphBuilder {
     } else {
       const glyph = glyphSet.get(code)
       const path = glyph.getPath()
-      const res = { advanceWidth: glyph.advanceWidth, yOffset: glyph.yOffset, path }
+      const res = { advanceWidth: glyph.advanceWidth, path }
       cache.set(code, res)
       return res
     }

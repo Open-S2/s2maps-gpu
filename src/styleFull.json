@@ -1,7 +1,7 @@
 {
   "version": 1,
   "name": "s2test",
-  "center": [-111, 40],
+  "center": [-111.88, 40.75],
   "zoom": 0,
   "minzoom": 0,
   "maxzoom": 20,
@@ -9,11 +9,11 @@
     "fills": "http://192.168.0.7:8000/data/fills"
   },
   "fonts": {
-    "default": "http://localhost:8000/fonts/default",
-    "roboto-regular": "http://localhost:8000/fonts/roboto-regular",
-    "roboto-medium": "http://localhost:8000/fonts/roboto-medium"
+    "default": "http://192.168.0.7:8000/fonts/default",
+    "roboto-regular": "http://192.168.0.7:8000/fonts/roboto-regular",
+    "roboto-medium": "http://192.168.0.7:8000/fonts/roboto-medium"
   },
-  "shade": true,
+  "shade": false,
   "wallpaper": {
     "background-color": "rgb(25, 28, 80)",
     "fade-1": "rgb(138, 204, 255)",
@@ -167,9 +167,9 @@
           "expo",
           1.5,
           9,
-          0.25,
+          1,
           12,
-          2
+          2.5
         ]
       }
     },
@@ -200,9 +200,9 @@
             "zoom",
             "lin",
             4,
-            0.85,
+            1,
             6.5,
-            0.85,
+            1,
             7,
             2,
             10,
@@ -262,9 +262,9 @@
             "zoom",
             "lin",
             7,
-            0.85,
+            1.25,
             10,
-            1.5,
+            1.85,
             13,
             6
           ],
@@ -274,14 +274,14 @@
             "zoom",
             "lin",
             10,
-            0.5,
+            1.25,
             15,
             4
           ],
           ["class", "==", "path"],
-          1,
+          1.5,
           "default",
-          1
+          1.5
         ]
       }
     },
@@ -303,9 +303,9 @@
           "zoom",
           "lin",
           7,
-          1.85,
+          2,
           11,
-          3,
+          3.25,
           15,
           10
         ]
@@ -329,7 +329,7 @@
           "zoom",
           "lin",
           7,
-          0.5,
+          1,
           11,
           1.5,
           15,
@@ -338,7 +338,7 @@
       }
     },
     {
-      "name": "boundaries",
+      "id": "boundaries",
       "source": "fills",
       "layer": "boundary",
       "filter": ["and", ["class", "has", ["Country", "State"]], ["maritime", "==", false]],
@@ -352,14 +352,14 @@
         "color": [
           "data-condition",
           ["class", "==", "State"],
-          "rgba(160, 160, 160, 0.85)",
+          "rgba(160, 160, 160, 0.9)",
           "default",
-          "rgb(150, 150, 150)"
+          "rgb(100, 100, 100)"
         ],
         "width": [
           "data-condition",
           ["class", "==", "State"],
-          0.95,
+          1.1,
           "default",
           [
             "input-range",
@@ -368,7 +368,7 @@
             1,
             0.85,
             2,
-            1.5
+            1.25
           ]
         ]
       }
@@ -415,43 +415,51 @@
       "type": "text",
       "layout": {
         "family": "roboto-medium",
-        "field": "?abbr,?name",
+        "field": [
+          "input-range",
+          "zoom",
+          "step",
+          0,
+          "?abbr,?name",
+          2,
+          "?name"
+        ],
         "anchor": "center",
         "offset": [0, 0],
-        "padding": [2, 2]
+        "padding": [6, 6]
       },
       "paint": {
         "size": [
           "data-condition",
-          ["class", "==", "State"],
-          [
-            "input-range",
-            "zoom",
-            "step",
-            1,
-            20,
-            2,
-            18
-          ],
           ["class", "==", "Country"],
           [
             "input-range",
             "zoom",
             "step",
             0,
-            26,
+            22,
             2,
-            20
+            26
+          ],
+          ["class", "==", "State"],
+          [
+            "input-range",
+            "zoom",
+            "step",
+            1,
+            16,
+            2,
+            18
           ],
           "default",
           14
         ],
         "fill": [
           "data-condition",
-          ["class", "==", "State"],
-          "rgb(135, 135, 135)",
           ["class", "==", "Country"],
           "rgb(38, 38, 38)",
+          ["class", "==", "State"],
+          "rgb(105, 105, 105)",
           "default",
           "rgba(0, 0, 0, 0)"
         ],

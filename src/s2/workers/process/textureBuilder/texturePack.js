@@ -3,8 +3,6 @@ import type { Path } from './glyphBuilder'
 
 export type Box = [number, number, number, number] // u, v, width, height
 
-export type Glyph = { box: Box, yOffset: number }
-
 type Space = {
   widthOffset: number,
   heightOffset: number
@@ -17,33 +15,30 @@ export default class TexturePack {
   vertices: Array<number> = []
   indices: Array<number> = []
   spaces: { [number | string]: Space } = {}
-  // [string]: { box: Box, yOffset: number } // 'family:size:code'
+  // [string]: Box // 'family:size:code'
 
-  getTexture (family: string, size: number, padOffset: number, code: number, getGlyph: Function): Glyph {
+  getTexture (family: string, size: number, padOffset: number, code: number, getGlyph: Function): Box {
     const key = `${family}:${size}:${code}`
     let glyph = this[key]
     if (glyph) {
       return glyph
     } else {
-      let { advanceWidth, yOffset, path } = getGlyph(family, code)
+      let { advanceWidth, path } = getGlyph(family, code)
       advanceWidth *= size
-      yOffset *= size
       glyph = this._addTexture(key, advanceWidth, size)
-      glyph.yOffset = yOffset
       // Build the actual glyph using the path data with the box as a positional adivsor
-      this._buildGlyph(glyph, path, size, padOffset - yOffset)
+      this._buildGlyph(glyph, path, size, padOffset)
 
       return glyph
     }
   }
 
-  _buildGlyph (glyph: Box, path: Path, size: number, padOffset: number): Glyph {
-    const { box } = glyph
+  _buildGlyph (box: Box, path: Path, size: number, padOffset: number): Box {
     const offset = this.vertices.length / 3
     for (let v = 0, vl = path.vertices.length; v < vl; v += 3) {
       this.vertices.push(
         path.vertices[v] * size + box[0] + 2, // x (2 for the offset for AA)
-        path.vertices[v + 1] * size + box[1] + 4 + padOffset, // y (2 for the offset for AA)
+        path.vertices[v + 1] * size + box[1] + 2, // y (2 for the offset for AA)
         path.vertices[v + 2] // type
       )
     }
@@ -51,7 +46,7 @@ export default class TexturePack {
     this.indices.push(...path.quads.map(i => i + offset))
   }
 
-  _addTexture (key: string, width: number, height: number): Glyph {
+  _addTexture (key: string, width: number, height: number): Box {
     // round up the width and height and add the texture padding for AA
     width = Math.ceil(width) + 4
     height = Math.ceil(height) + 4
@@ -74,8 +69,7 @@ export default class TexturePack {
     this.width = Math.max(this.width, widthOffset + width)
     this.spaces[height].widthOffset += width
 
-    const glyph = { box, yOffset: 0 }
-    this[key] = glyph
-    return glyph
+    this[key] = box
+    return box
   }
 }

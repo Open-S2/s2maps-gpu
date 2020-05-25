@@ -53,12 +53,12 @@ export default class WallpaperProgram extends Program {
 
   draw (wallpaper: Wallpaper) {
     // setup variables
-    const { context } = this
-    const { gl } = context
-    // now we draw
-    gl.useProgram(this.glProgram)
+    const { context, gl } = this
+    // bind the vao
+    gl.bindVertexArray(this.vao)
+    // ignore z-fighting and only pass where stencil is 0
+    context.wallpaperState()
     // ensure we are using equal depth test like rasters
-    context.lequalDepth()
     // set new uniforms should we need to
     const uniforms: null | WallpaperUniforms = wallpaper.getUniforms()
     if (uniforms) {

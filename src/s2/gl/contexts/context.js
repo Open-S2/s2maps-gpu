@@ -53,11 +53,11 @@ export default class Context {
   }
 
   newScene () {
-    this.clearScene()
     this.enableCullFace()
     this.enableStencilTest()
     this.enableDepthTest()
     this.enableBlend()
+    this.clearScene()
   }
 
   clearScene () {
@@ -100,6 +100,12 @@ export default class Context {
     gl.depthFunc(gl.LEQUAL)
   }
 
+  wallpaperState () {
+    const { gl } = this
+    gl.depthFunc(gl.ALWAYS)
+    gl.stencilFunc(gl.EQUAL, 0, 0xFF)
+  }
+
   alwaysDepth () {
     this.gl.depthFunc(this.gl.ALWAYS)
   }
@@ -133,6 +139,21 @@ export default class Context {
     gl.blendFunc(gl.ONE, gl.ONE)
   }
 
+  zeroBlend () {
+    const { gl } = this
+    gl.blendFunc(gl.ZERO, gl.SRC_COLOR)
+  }
+
+  oneBlend () {
+    const { gl } = this
+    gl.blendFunc(gl.ONE, gl.ONE)
+  }
+
+  srcAlphaBlend () {
+    const { gl } = this
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_DST_COLOR)
+  }
+
   disableBlend () {
     this.gl.disable(this.gl.BLEND)
   }
@@ -145,7 +166,7 @@ export default class Context {
     this.gl.disable(this.gl.STENCIL_TEST)
   }
 
-  enableStencil () {
+  enableMaskTest () {
     const { gl } = this
     gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE)
   	gl.colorMask(false, false, false, false)
@@ -156,7 +177,12 @@ export default class Context {
     gl.stencilFunc(gl.ALWAYS, ref, 0xFF)
   }
 
-  lockStencil () {
+  stencilZero () {
+    const { gl } = this
+    gl.stencilFunc(gl.EQUAL, 0, 0xFF)
+  }
+
+  lockMasks () {
   	this.gl.colorMask(true, true, true, true)
   }
 

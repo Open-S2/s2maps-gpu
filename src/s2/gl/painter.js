@@ -38,7 +38,7 @@ export default class Painter {
 
   _createContext () {
     // prep options
-    const webglOptions = { antialias: false, premultipliedAlpha: true, preserveDrawingBuffer: false, alpha: true, stencil: true }
+    const webglOptions = { antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: false, alpha: true, stencil: true }
     // first try webgl2
     let context = this._canvas.getContext('webgl2', webglOptions)
     if (context && typeof context.getParameter === 'function') {
@@ -92,9 +92,9 @@ export default class Painter {
       case 'text':
       case 'billboard':
       case 'glyph':
-        programs.glyphTex = new GlyphProgram(this.context)
-        programs.glyph = new GlyphQuadProgram(this.context)
         programs.glyphFilter = new GlyphFilterProgram(this.context)
+        programs.glyphTex = new GlyphProgram(this.context)
+        programs.glyph = new GlyphQuadProgram(this.context, programs.glyphFilter)
         break
       case 'wallpaper':
         programs.wallpaper = new WallpaperProgram(this.context)
@@ -125,44 +125,38 @@ export default class Painter {
     const { context } = this
     const { sphereBackground } = style
 
-    // prep tiles features to draw
-    const features = tiles.flatMap(tile => tile.featureGuide).sort(featureSort)
-    // prep glyph features for drawing box filters
-    const glyphFeatures = features.filter(feature => feature.type === 'glyph')
-
-    // if any glyph or fill textures are not ready, we prep them now
+    // PREPARE PHASE
+    // if any glyph textures are not ready, we prep them now
     if (this.glyphSources.length) this.buildTextures()
-
-    if (glyphFeatures.length) this.paintGlyphFilter(tiles, glyphFeatures)
-
-    // incase we have glyph source data or glyph feature data, reset to the main framebuffer
-    context.bindMainBuffer()
-    // clear main buffer
-    context.newScene()
-
     // prep frame uniforms
     const { view, aspect } = projection
     const matrix = projection.getMatrix(512) // NOTE: For now, we have a default size of 512.
     this.injectFrameUniforms(matrix, view, aspect)
 
+    // prep tiles features to draw
+    const features = tiles.flatMap(tile => tile.featureGuide).sort(featureSort)
+    // prep glyph features for drawing box filters
+    const glyphFeatures = features.filter(feature => feature.type === 'glyph')
+    // use text boxes to filter out overlap
+    if (glyphFeatures.length) this.paintGlyphFilter(tiles, glyphFeatures)
+
+    // clear main buffer
+    context.newScene()
+
+    // DRAW PHASE
+    // draw the wallpaper
+    if (style.wallpaper) {
+      const wallpaperProgram: WallpaperProgram = this.useProgram(style.wallpaper.skybox ? 'skybox' : 'wallpaper')
+      if (wallpaperProgram) wallpaperProgram.draw(style.wallpaper)
+    }
     // prep masks
     this.paintMasks(tiles)
-    // now we use the depth test
-    context.enableDepthTest()
     // draw the sphere background should it exist
     if (sphereBackground) this.paintSphereBackground(tiles, sphereBackground)
     // paint features
     this.paintFeatures(features)
     // paint glyph "filter" quads
     // if (glyphFeatures.length) this.paintGlyphFilter(tiles, glyphFeatures)
-    // disable stencil
-    context.disableStencilTest()
-    // if (this.glyphSources.length) this.buildGlyphTextures()
-    // draw the wallpaper
-    if (style.wallpaper) {
-      const wallpaperProgram: WallpaperProgram = this.useProgram(style.wallpaper.skybox ? 'skybox' : 'wallpaper')
-      if (wallpaperProgram) wallpaperProgram.draw(style.wallpaper)
-    }
     // draw shade layer
     // if (style.shade) drawShade(this, style.shade)
     // cleanup
@@ -191,7 +185,7 @@ export default class Painter {
     const fillProgram: FillProgram = this.useProgram('fill')
     if (!fillProgram) return new Error('The "fill" program does not exist, can not paint.')
     // prep stencil - don't draw color, only to the stencil
-    context.enableStencil()
+    context.enableMaskTest()
     // get a starting mask index
     let maskRef = 1
     for (const tile of tiles) {
@@ -211,7 +205,7 @@ export default class Painter {
       maskRef++
     }
     // lock in the stencil
-    context.lockStencil()
+    context.lockMasks()
   }
 
   paintSphereBackground (tiles: Array<Tile>, sphereBackground: Float32Array) {
@@ -269,24 +263,30 @@ export default class Painter {
       program.setFaceST(faceST)
       gl.bindVertexArray(sourceData[source].vao)
       // draw
+      // if (feature.type !== 'glyph') program.draw(feature, sourceData[source], tmpMaskID)
       program.draw(feature, sourceData[source], tmpMaskID)
     }
   }
 
   paintGlyphFilter (tiles: Array<Tile>, glyphFeatures: Array<FeatureGuide>) {
     const { context } = this
+    // const { gl } = context
     const glyphFilterProgram: GlyphFilter = this.getProgram('glyphFilter')
     if (!glyphFilterProgram) return new Error('The "glyphFilter" program does not exist, can not paint.')
     // Step 1: draw points
-    glyphFilterProgram.bindPointFrameBuffer(context)
+    glyphFilterProgram.bindPointFrameBuffer()
+    // setup mask first (uses the "fillProgram" - that's why we have not 'used' the glyphFilterProgram yet)
     this.paintMasks(tiles, true)
     // use the box program
     glyphFilterProgram.use()
     // paint the glyph "filter" quads
     this._paintGlyphFilter(glyphFilterProgram, glyphFeatures, 0)
     // Step 2: draw quads
-    glyphFilterProgram.bindQuadFrameBuffer(context)
+    glyphFilterProgram.bindQuadFrameBuffer()
     this._paintGlyphFilter(glyphFilterProgram, glyphFeatures, 1)
+    // Step 3: draw result points
+    glyphFilterProgram.bindResultFramebuffer()
+    this._paintGlyphFilter(glyphFilterProgram, glyphFeatures, 2)
     // return to our default framebuffer
     context.bindMainBuffer()
   }
@@ -305,7 +305,7 @@ export default class Painter {
       if (tileSet.has(drawTile.id)) continue
       else tileSet.add(drawTile.id)
       // setup vao and uniforms
-      const { faceST, sourceData, tmpMaskID } = drawTile
+      const { faceST, sourceData } = drawTile
       glyphSource = sourceData[source]
       glyphFilterProgram.setFaceST(faceST)
       gl.bindVertexArray(glyphSource.boxVAO)
@@ -313,9 +313,9 @@ export default class Painter {
       if (mode === 0) {
         glyphFilterProgram.drawPoints(glyphSource)
       } else if (mode === 1) {
-        glyphFilterProgram.drawQuads(glyphSource, tmpMaskID)
+        glyphFilterProgram.drawQuads(glyphSource)
       } else if (mode === 2) {
-
+        glyphFilterProgram.drawResult(glyphSource)
       }
     }
   }

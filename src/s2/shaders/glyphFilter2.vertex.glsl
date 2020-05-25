@@ -25,7 +25,7 @@ void main () {
   // if 3D, add radius
   // if (u3D) xyz.xyz *= aRadius;
   // for points, add a little to ensure it doesn't get clipped
-  xyz.xyz *= 1.01;
+  xyz.xyz *= 1.001;
   // find the position on screen
   vec4 glPos = uMatrix * xyz;
   glPos.xyz /= glPos.w;
@@ -35,38 +35,70 @@ void main () {
     // convert aID (really a uint32) to an rgba equivalent (split into 4 pieces of 8 bits)
     int id = int(aID);
     color = vec4(float(id & 255) / 255., float((id >> 8) & 255) / 255., float(id >> 16) / 255., 1.);
-    // color = vec4(1., 1., 0., 1.);
     // set pointSize
-    gl_PointSize = 1.;
+    gl_PointSize = 5.;
   } else if (uMode == 1) {
     // convert aID (really a uint32) to an rgba equivalent (split into 4 pieces of 8 bits)
     int id = int(aID);
     ivec3 colorID = ivec3(id & 255, (id >> 8) & 255, id >> 16);
+
     // check if the point exists with the same id in our sampler
-    vec4 pointID = texelFetch(uFeatures, ivec2((glPos.x / 2. + 0.5) * uAspect.x * 2., (glPos.y / 2. + 0.5) * uAspect.y * 2.), 0);
-    ivec3 value = ivec3(pointID.rgb * 256.);
-    if (colorID == value) {
+    vec2 texPos = vec2(glPos.x / 2. + 0.5, glPos.y / 2. + 0.5);
+    vec4 pointID = texture(uFeatures, texPos);
+
+    // add x-y offset & use the UV to map the quad
+    glPos.xy += aXY / uAspect;
+    glPos.xy += aWH / uAspect * aUV;
+    // if colorID matches the existing pixels value, we draw the quad, otherwise we draw nothing
+    if (colorID == ivec3(pointID.rgb * 256.)) {
+      pointID.a = 0.025; // 2 / 255
       color = pointID;
     } else {
-      color = vec4(0, 0, 0, 0);
+      color = vec4(0., 0., 0., 0.);
     }
-    // add x-y offset
-    glPos.xy += aXY / uAspect;
-    // use the UV to map the quad
-    glPos.xy += aWH / uAspect * aUV;
-  } else {
-    // we check that all 4 corners of the quad are visible, than draw
+  } else { // uMode == 2 (result buffer)
+    // we check that all 4 corners of the quad are 1/255th opacity AND the same colorID
     // convert aID (really a uint32) to an rgba equivalent (split into 4 pieces of 8 bits)
-    // int id = int(aID);
-    // ivec3 colorID = ivec3(float(id & 255), float((id >> 8) & 255), float(id >> 16));
-    // // check if the point exists with the same id in our sampler
-    // vec4 storedID = texelFetch(uFeatures, ivec2((glPos.x / 2. + 0.5) * uAspect.x * 2., (glPos.y / 2. + 0.5) * uAspect.y * 2.), 0);
-    // ivec3 value = ivec3(storedID.rgb * 256.);
+    int id = int(aID);
+    ivec3 colorID = ivec3(float(id & 255), float((id >> 8) & 255), float(id >> 16));
 
-    // add x-y offset
-    glPos.xy += aXY / uAspect;
-    // use the UV to map the quad
-    glPos.xy += aWH / uAspect * aUV;
+    vec2 tPos = vec2(glPos.xy);
+    // add x-y offset & add half width and height position
+    tPos += aXY / uAspect;
+
+    // get bottom left
+    tPos += vec2(1., 1.) / uAspect;
+    vec4 btmLft = texture(uFeatures, vec2(tPos / 2. + 0.5));
+    // get top left
+    tPos.y += (aWH.y - 2.) / uAspect.y;
+    vec4 topLft = texture(uFeatures, vec2(tPos / 2. + 0.5));
+
+    if (colorID == ivec3(btmLft.rgb * 256.) && btmLft.a <= 0.025 && colorID == ivec3(topLft.rgb * 256.) && topLft.a <= 0.025) {
+      // check top right, if top right, we are done
+      tPos.x += (aWH.x - 2.) / uAspect.x;
+      vec4 topRght = texture(uFeatures, vec2(tPos / 2. + 0.5));
+      ivec3 topRghtValue = ivec3(topRght.rgb * 256.);
+      if (colorID == topRghtValue && topRght.a <= 0.025) {
+        color = btmLft;
+        color.a = 1.;
+      } else {
+        // check bottom right, bottom right we still pass colorID
+        tPos.y -= (aWH.y - 2.) / uAspect.y;
+        vec4 btmRght = texture(uFeatures, vec2(tPos / 2. + 0.5));
+        ivec3 btmRghtValue = ivec3(btmRght.rgb * 256.);
+        if (colorID == btmRghtValue && btmRght.a <= 0.025) {
+          color = btmLft;
+          color.a = 1.;
+        } else {
+          color = vec4(0., 0., 0., 0.);
+        }
+      }
+    } else {
+      color = vec4(0., 0., 0., 0.);
+    }
+
+    // set point size
+    gl_PointSize = 5.;
   }
 
   // set position

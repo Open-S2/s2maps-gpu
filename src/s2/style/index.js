@@ -13,7 +13,7 @@ export default class Style {
   webworker: boolean = false
   zoom: number = 0
   minzoom: number = 0
-  maxzoom: number = 15
+  maxzoom: number = 15.5
   lon: number = 0
   lat: number = 0
   sources: Sources = {}
@@ -57,7 +57,7 @@ export default class Style {
       if (!isNaN(style.minzoom) && style.minzoom >= 0) self.minzoom = style.minzoom
       if (!isNaN(style.maxzoom)) {
         if (style.maxzoom <= self.minzoom) self.maxzoom = self.minzoom + 1
-        else if (style.maxzoom <= 15) self.maxzoom = style.maxzoom
+        else if (style.maxzoom <= 15.5) self.maxzoom = style.maxzoom
       }
       // extract sources
       if (style.sources) self.sources = style.sources

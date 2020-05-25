@@ -33,7 +33,7 @@
     "fs-extra": "7.0.1",
     "gl-matrix": "^3.1.0",
     "gl-vignette-background": "^2.0.1",
-    "glyph-pbf": "^1.3.2",
+    "glyph-pbf": "^1.5.0",
     "html-webpack-plugin": "4.0.0-beta.5",
     "identity-obj-proxy": "3.0.0",
     "is-wsl": "^1.1.0",
