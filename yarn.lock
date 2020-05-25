@@ -6230,10 +6230,10 @@ levn@^0.3.0, levn@~0.3.0:
     prelude-ls "~1.1.2"
     type-check "~0.3.2"
 
-line-gl@^1.2.2:
-  version "1.2.2"
-  resolved "https://registry.yarnpkg.com/line-gl/-/line-gl-1.2.2.tgz#484f2e38fd8221b0626f1cfc61b979c33bca0cfb"
-  integrity sha512-kYL9KjmlHBS7XHCtU8coH/38MrhEb6vgjg3AXh3A+qA0YBbaU19JmQ+f5dJUUgx7X2rhiQvMJ8mK7ALtc4yd8Q==
+line-gl@^2.1.0:
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/line-gl/-/line-gl-2.1.0.tgz#1985285d899b6fcd9b194ac1338ff70569aafe2a"
+  integrity sha512-5WTM00Kq9Kzedg2v8+gXMuIhQTcgJ/QJaxDdGbo3RaP6oAy5fa0+WSQei1PnTzeQH89dS3BzY3wz4/FOExpEcA==
 
 lines-and-columns@^1.1.6:
   version "1.1.6"

@@ -3,12 +3,18 @@ import S2JsonVT from 's2json-vt'
 import { S2Rtin, terrainToGrid } from 's2rtin'
 import { VectorTile } from 's2-vector-tile'
 import { parseLayers } from '../style/conditionals'
-import { processFill, processLine, processText, PNGReader, GlyphBuilder, anchorOffset } from './process'
+import {
+  preprocessFill, postprocessFill,
+  preprocessLine, postprocessLine,
+  preprocessText, postprocessGlyph, GlyphBuilder, anchorOffset,
+  PNGReader
+} from './process'
 import requestData from '../util/xmlHttpRequest'
 import { tileHash } from 's2projection'
 
 import type { Face } from 's2projection'
 import type { StylePackage } from '../styleSpec'
+import type { Text } from './process'
 
 const IS_NOT_CHROME = navigator.userAgent.indexOf('Chrome') !== -1
 
@@ -51,8 +57,8 @@ export type Feature = {
 export type IDGen = { num: number, incrSize: number, maxNum: number, startNum: number }
 
 // 32bit: 4,294,967,295 --- 24bit: 16,777,216 --- 16bit: 65,535 --- 7bit: 128
-const ID_MAX_SIZE = 1 << 24
-const MAX_FEATURE_BATCH_SIZE = 1 << 7
+export const ID_MAX_SIZE = 1 << 24
+export const MAX_FEATURE_BATCH_SIZE = 1 << 7
 
 // A TileWorker on spin up will get style "guide". It will have all layers "filter" and "layout" properties
 // This is the tileworkers time to prepare the the style data for future requests from said mapID.
@@ -340,26 +346,25 @@ export default class TileWorker {
               // we can now process according to type
               let vertices = []
               let indices = []
-              let vertexSize
-              let divisor
               if (layer.type === 'fill' && (type === 3 || type === 4)) {
-                processFill(feature.loadGeometry(), type, vertices, indices, division, extent)
+                preprocessFill(feature.loadGeometry(), type, vertices, indices, division, extent)
                 featureSet = fillFeatures
               } else if (layer.type === 'fill3D' && (type === 7 || type === 8)) {
                 continue
               } else if (layer.type === 'line' && (type === 2 || type === 3 || type === 4)) {
-                const attributes = { cap: layer.layout.cap(), join: layer.layout.join(), maxDistance: extent / division, dashed: true }
-                processLine(feature.loadGeometry(), type, attributes, vertices, indices, extent)
+                // const attributes = { cap: layer.layout.cap(), join: layer.layout.join(), dashed: true }
+                preprocessLine(feature.loadGeometry(), type, false, vertices, division, extent)
                 featureSet = lineFeatures
               } else if (layer.type === 'line3D' && type === 9) {
                 continue
               } else if (layer.type === 'text' && type === 1) {
-                processText(feature, zoom, layer, layerID, extent, texts, this.idGen)
+                preprocessText(feature, zoom, layer, layerID, extent, texts, this.idGen)
                 continue
               } else if (layer.type === 'billboard' && type === 1) {
                 continue
               } else { continue }
-              if (vertices.length && indices.length) featureSet.push({ type: layer.type, vertices, indices, code: featureCode, layerID })
+              if (!featureCode.length) featureCode.push(0)
+              if (vertices.length) featureSet.push({ type: layer.type, vertices, indices, code: featureCode, layerID })
             } else { continue }
           } // for (let f = 0; f < vectorTileLayer.length; f++)
         } else if (source.layers && source.layers[layer.layer] && source.layers[layer.layer].maxzoom < zoom) {
@@ -385,183 +390,10 @@ export default class TileWorker {
     } // for (let layerID = 0, ll = layers.length; layerID < ll; layerID++) {
     // now post process data, this groups data for fewer draw calls
     // we seperate by type to make it seem like data is loading quicker, and to handle different vertex sizes
-    if (fillFeatures.length) this._processVectorFeatures(mapID, `${sourceName}:fill`, hash, fillFeatures, 2, parentLayers)
-    if (lineFeatures.length) this._processVectorFeatures(mapID, `${sourceName}:line`, hash, lineFeatures, 4, null)
-    if (texts.length) this._processGlyphs(mapID, `${sourceName}:glyph`, hash, texts)
+    if (fillFeatures.length) postprocessFill(mapID, `${sourceName}:fill`, hash, fillFeatures, postMessage)
+    // if (lineFeatures.length) postprocessLine(mapID, `${sourceName}:line`, hash, lineFeatures, postMessage)
+    if (texts.length) postprocessGlyph(mapID, `${sourceName}:glyph`, hash, texts, this.glyphBuilder, postMessage)
   }
-
-  _processGlyphs (mapID: string, sourceName: string, tileID: string, texts: Array<Text>) {
-    // sort by layerID
-    texts = texts.sort(featureSort)
-
-    // Get the width of the feature, and filter out any texts that overlap already
-    // existant text. Sometimes datapoints can range in the 100s in one tile, so
-    // this step reduces cost dramatically.
-    for (const text of texts) {
-      const { family, field, size, padding, offset, height, anchor } = text
-      let [width, glyphData] = this.glyphBuilder.getWidthAndGlyphData(family, field, size)
-      if (!width) continue
-      text.width = width + (padding[0] * 2)
-      text.glyphData = glyphData
-      // get anchor offset positions
-      let [x, y] = anchorOffset(anchor, width, height)
-      // add actual offset
-      text.x = x + offset[0]
-      text.y = y + offset[1]
-    }
-
-    // filter
-    texts = texts.filter(text => {
-      if (!text.width) return false
-      return this.glyphBuilder.testQuad(text)
-    })
-    if (!texts.length) return
-
-    // Assuming we pass the quad test, We need to build 3 components:
-    // 1) Glyph quads explaining where to draw, and where on the texture to look
-    // 2) The GlyphBuilder will build in the background any new glyphs it needs to a "texturePack"
-    // 3) For each text object we need a quad defining it's total shape.
-    //    This is for the pre-draw step to check overlap. The GlyphBuilder will also be building this.
-    //    Upon eventual request, it needs to first be sorted biggest to smallest.
-    let curLayerID = texts[0].layerID
-    for (const text of texts) {
-      const { layerID } = text
-      if (curLayerID !== layerID) {
-        this.glyphBuilder.finishLayer(curLayerID)
-        curLayerID = layerID
-      }
-      this.glyphBuilder.buildText(text)
-    }
-    // finish the last layer
-    this.glyphBuilder.finishLayer(curLayerID)
-    // if the layerGuide doesn't grow, we move on
-    if (!this.glyphBuilder.layerGuide.length) return
-
-    // pull out the data
-    const { texturePack, glyphFilterVertices, glyphQuads, color, layerGuide } = this.glyphBuilder
-    const { width, height, vertices, indices } = texturePack
-    // add the width and height to the beginning of the layerGuide
-    layerGuide.unshift(width, height)
-
-    // filter data
-    const glyphFilterBuffer = new Float32Array(glyphFilterVertices).buffer
-    // glyph texture data
-    const glyphVertexBuffer = new Float32Array(vertices).buffer
-    const glyphIndexBuffer = new Uint32Array(indices).buffer
-    // quad draw data
-    const glyphQuadBuffer = new Float32Array(glyphQuads).buffer
-    const colorBuffer = new Uint8Array(color).buffer
-    const layerGuideBuffer = new Uint32Array(layerGuide).buffer
-
-    // ship the data
-    postMessage({
-      mapID,
-      type: 'glyphdata',
-      source: sourceName,
-      tileID,
-      glyphFilterBuffer,
-      glyphVertexBuffer,
-      glyphIndexBuffer,
-      glyphQuadBuffer,
-      colorBuffer,
-      layerGuideBuffer
-    }, [glyphFilterBuffer, glyphVertexBuffer, glyphIndexBuffer, glyphQuadBuffer, colorBuffer, layerGuideBuffer])
-
-    // clear the glyphBuilder
-    this.glyphBuilder.clear()
-  }
-
-  _processVectorFeatures (mapID: string, sourceName: string, tileID: string,
-    features: Array<Feature>, divisor: number, parentLayers: ParentLayers) {
-    // now that we have created all triangles, let's merge into bundled buffer sets
-    // for the main thread to build VAOs.
-
-    // Step 1: Sort by layerID, than sort by feature code.
-    features.sort(featureSort)
-
-    // step 2: Run through all features and bundle into the fewest featureBatches. Caveats:
-    // 1) don't store VAO set larger than index size (we use an extension for WebGL1, so we will probably never go over 1 << 32)
-    // 2) don't store any feature code larger than MAX_FEATURE_BATCH_SIZE
-    let vertices: Array<number> = []
-    let indices: Array<number> = []
-    let codeType: Array<number> = []
-    let featureGuide: Array<number> = []
-    let encodings: Array<number> = []
-    let indicesOffset: number = 0
-    let vertexOffset: number = 0
-    let encodingIndexes = { '': 0 }
-    let encodingIndex
-    let curLayerID = features[0].layerID
-
-    for (const feature of features) {
-      // on layer change or max encoding size, we have to setup a new featureGuide, encodings, and encodingIndexes
-      if (
-        curLayerID !== feature.layerID ||
-        (encodings.length + feature.code.length > MAX_FEATURE_BATCH_SIZE)
-      ) {
-        const count = indices.length - indicesOffset
-        featureGuide.push(curLayerID, indices.length - indicesOffset, indicesOffset, encodings.length, ...encodings) // layerID, count, offset, encoding size, encodings
-        indicesOffset = indices.length
-        encodings = []
-        encodingIndexes = { '': 0 }
-      }
-      // setup encodings data. If we didn't have current feature's encodings already, create and set index
-      const feKey = feature.code.toString()
-      encodingIndex = encodingIndexes[feKey]
-      if (encodingIndex === undefined) {
-        encodingIndex = encodingIndexes[feKey] = encodings.length
-        encodings.push(...feature.code)
-      }
-      // store
-      vertexOffset = vertices.length / divisor
-      // NOTE: Spreader functions on large arrays are failing in chrome right now -_-
-      // so we just do a for loop
-      for (let f = 0, fl = feature.vertices.length; f < fl; f++) vertices.push(feature.vertices[f])
-      for (let f = 0, fl = feature.indices.length; f < fl; f++) {
-        const index = feature.indices[f] + vertexOffset
-        indices.push(index)
-        codeType[index] = encodingIndex
-      }
-      // store type for fills
-      if (feature.vertexType) for (let f = 0, fl = feature.vertexType.length; f < fl; f++) codeType.push(feature.vertexType[f])
-      // update previous layerID
-      curLayerID = feature.layerID
-    }
-    // store the very last featureGuide batch
-    if (indices.length - indicesOffset) {
-      featureGuide.push(curLayerID, indices.length - indicesOffset, indicesOffset, encodings.length, ...encodings) // layerID, count, offset, encoding size, encodings
-    }
-
-    // Upon building the batches, convert to buffers and ship.
-    const vertexBuffer = new Int16Array(vertices).buffer
-    const indexBuffer = new Uint32Array(indices).buffer
-    const codeTypeBuffer = new Uint8Array(codeType).buffer
-    const featureGuideBuffer = new Uint32Array(featureGuide).buffer
-    // ship the vector data.
-    postMessage({
-      mapID,
-      type: 'vectordata',
-      source: sourceName,
-      tileID,
-      parentLayers,
-      vertexBuffer,
-      indexBuffer,
-      codeTypeBuffer,
-      featureGuideBuffer
-    }, [vertexBuffer, indexBuffer, codeTypeBuffer, featureGuideBuffer])
-  }
-}
-
-function featureSort (a: Feature, b: Feature): number {
-  // layerID
-  let diff = a.layerID - b.layerID
-  let index = 0
-  let maxSize = Math.min(a.code.length, b.code.length)
-  while (diff === 0 && index < maxSize) {
-    diff = a.code[index] - b.code[index]
-    index++
-  }
-  return diff
 }
 
 // create the tileworker

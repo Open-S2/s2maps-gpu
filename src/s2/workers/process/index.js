@@ -1,5 +1,4 @@
-export * from './textureBuilder'
-export { default as processFill } from './fill'
-export { default as processLine } from './line'
+export * from './fill'
+export * from './line'
 export { default as PNGReader } from './png'
-export { default as processText } from './text'
+export * from './glyph'

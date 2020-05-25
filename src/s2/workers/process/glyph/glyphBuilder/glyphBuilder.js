@@ -1,9 +1,9 @@
 // @flow
 import { GlyphSet } from 'glyph-pbf'
 import { RTree, TexturePack } from './'
-import MapCache from '../../../util/mapCache'
+import MapCache from '../../../../util/mapCache'
 
-import type { Text } from '../workers/tile.worker'
+import type { Text } from '../../tile.worker'
 import type { Box } from './texturePack'
 import type { Quad } from './rtree'
 

@@ -137,33 +137,37 @@ export default class Camera {
     }, 150)
   }
 
-  injectVectorSourceData (source: string, tileID: number, parentLayers: ParentLayers = {},
-    vertexBuffer: ArrayBuffer, indexBuffer: ArrayBuffer, codeTypeBuffer: ArrayBuffer,
-    featureGuideBuffer: ArrayBuffer) {
+  injectFillSourceData (source: string, tileID: number, vertexBuffer: ArrayBuffer,
+    indexBuffer: ArrayBuffer, codeTypeBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer) {
     let children: boolean = false
     if (this.tileCache.has(tileID)) {
       const tile = this.tileCache.get(tileID)
       children = Object.keys(tile.childrenRequests).length > 0
       tile.injectVectorSourceData(source, new Int16Array(vertexBuffer), new Uint32Array(indexBuffer), new Uint8Array(codeTypeBuffer), new Uint32Array(featureGuideBuffer), this.style.layers)
-      // for each parentLayer, inject specified layers
-      for (let hash in parentLayers) {
-        hash = +hash
-        if (this.tileCache.has(hash)) {
-          const parent = this.tileCache.get(hash)
-          tile.injectParentTile(parent, parentLayers[hash].layers)
-        } else {
-          // if parent tile does not exist: create, set all the child's requests,
-          // and tell the styler to request the webworker(s) to process the tile
-          const { face, zoom, x, y } = parentLayers[hash]
-          const newTile = this._createTile(face, zoom, x, y, hash)
-          for (const layer of parentLayers[hash].layers) newTile.childrenRequests[layer] = [tile]
-          this.style.requestTiles([newTile])
-        }
-      }
       // new 'paint', so painter is dirty
       this.painter.dirty = true
       // call a re-render only if the tile is in our current viewing or it had children
       if (this.tilesInView.map(t => t[4]).includes(tileID) || children) this._render()
+    }
+  }
+
+  injectParentLayers (tileID: number, parentLayers: ParentLayers = {}) {
+    // grab the main tile
+    const tile = this.tileCache.get(tileID)
+    // for each parentLayer, inject specified layers
+    for (let hash in parentLayers) {
+      hash = +hash
+      if (this.tileCache.has(hash)) {
+        const parent = this.tileCache.get(hash)
+        tile.injectParentTile(parent, parentLayers[hash].layers)
+      } else {
+        // if parent tile does not exist: create, set all the child's requests,
+        // and tell the styler to request the webworker(s) to process the tile
+        const { face, zoom, x, y } = parentLayers[hash]
+        const newTile = this._createTile(face, zoom, x, y, hash)
+        for (const layer of parentLayers[hash].layers) newTile.childrenRequests[layer] = [tile]
+        this.style.requestTiles([newTile])
+      }
     }
   }
 

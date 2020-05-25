@@ -21,10 +21,10 @@ class WorkerPool {
 
   _onMessage ({ data }) {
     const { type } = data
-    if (type === 'vectordata') {
+    if (type === 'filldata') {
       // a worker has processed tiles, so we are going to send it back to the appropriate mapID
-      const { source, mapID, tileID, parentLayers, vertexBuffer, indexBuffer, codeTypeBuffer, featureGuideBuffer } = data
-      this.maps[mapID].injectVectorSourceData(source, tileID, parentLayers, vertexBuffer, indexBuffer, codeTypeBuffer, featureGuideBuffer)
+      const { source, mapID, tileID, vertexBuffer, indexBuffer, codeTypeBuffer, featureGuideBuffer } = data
+      this.maps[mapID].injectFillSourceData(source, tileID, vertexBuffer, indexBuffer, codeTypeBuffer, featureGuideBuffer)
     } else if (type === 'glyphdata') {
       const { source, mapID, tileID, glyphFilterBuffer, glyphVertexBuffer, glyphIndexBuffer, glyphQuadBuffer, colorBuffer, layerGuideBuffer } = data
       this.maps[mapID].injectGlyphSourceData(source, tileID, glyphFilterBuffer, glyphVertexBuffer, glyphIndexBuffer, glyphQuadBuffer, colorBuffer, layerGuideBuffer)
