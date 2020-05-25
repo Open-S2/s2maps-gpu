@@ -140,6 +140,14 @@ export default class S2Map {
     }
   }
 
+  injectParentLayers(tileID: string, parentLayers: ParentLayers) {
+    if (this._offscreen) {
+      this.map.postMessage({ type: 'parentlayers', tileID, parentLayers })
+    } else {
+      this.map.injectParentLayers(tileID, parentLayers)
+    }
+  }
+
   injectGlyphSourceData (source: string, tileID: string, glyphFilterBuffer: ArrayBuffer,
     glyphVertexBuffer: ArrayBuffer, glyphIndexBuffer: ArrayBuffer,
     glyphQuadBuffer: ArrayBuffer, colorBuffer: ArrayBuffer, layerGuideBuffer: ArrayBuffer) {

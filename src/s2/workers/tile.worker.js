@@ -393,6 +393,7 @@ export default class TileWorker {
     if (fillFeatures.length) postprocessFill(mapID, `${sourceName}:fill`, hash, fillFeatures, postMessage)
     // if (lineFeatures.length) postprocessLine(mapID, `${sourceName}:line`, hash, lineFeatures, postMessage)
     if (texts.length) postprocessGlyph(mapID, `${sourceName}:glyph`, hash, texts, this.glyphBuilder, postMessage)
+    if (Object.keys(parentLayers).length) postMessage({ mapID, type: 'parentlayers', tileID: hash, parentLayers })
   }
 }
 

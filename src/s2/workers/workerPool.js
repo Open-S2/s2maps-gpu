@@ -34,6 +34,9 @@ class WorkerPool {
     } else if (type === 'maskdata') {
       const { mapID, tileID, vertexBuffer, indexBuffer, radiiBuffer } = data
       this.maps[mapID].injectMaskGeometry(tileID, vertexBuffer, indexBuffer, radiiBuffer)
+    } else if (type === 'parentlayers') {
+      const { mapID, tileID, parentLayers } = data
+      this.maps[mapID].injectParentLayers(tileID, parentLayers)
     }
   }
 
