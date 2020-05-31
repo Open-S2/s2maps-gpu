@@ -41,6 +41,8 @@ export default class WebGLContext extends Context {
       this.gl.vertexAttribDivisor = (index, divisor) => this.angledInstancedArrays.vertexAttribDivisorANGLE(index, divisor)
       // drawArraysInstanced
       this.gl.drawArraysInstanced = (mode, first, count, instanceCount) => this.angledInstancedArrays.drawArraysInstancedANGLE(mode, first, count, instanceCount)
+      // drawElementsInstanced
+      // this.gl.drawElementsInstanced = (mode, count, type, offset, primcount) => this.angledInstancedArrays.drawElementsInstancedANGLE(mode, count, type, offset, primcount)
     }
   }
 }

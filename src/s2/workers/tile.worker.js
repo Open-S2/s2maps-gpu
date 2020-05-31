@@ -363,7 +363,6 @@ export default class TileWorker {
               } else if (layer.type === 'billboard' && type === 1) {
                 continue
               } else { continue }
-              if (!featureCode.length) featureCode.push(0)
               if (vertices.length) featureSet.push({ type: layer.type, vertices, indices, code: featureCode, layerID })
             } else { continue }
           } // for (let f = 0; f < vectorTileLayer.length; f++)
@@ -391,7 +390,7 @@ export default class TileWorker {
     // now post process data, this groups data for fewer draw calls
     // we seperate by type to make it seem like data is loading quicker, and to handle different vertex sizes
     if (fillFeatures.length) postprocessFill(mapID, `${sourceName}:fill`, hash, fillFeatures, postMessage)
-    // if (lineFeatures.length) postprocessLine(mapID, `${sourceName}:line`, hash, lineFeatures, postMessage)
+    if (lineFeatures.length) postprocessLine(mapID, `${sourceName}:line`, hash, lineFeatures, postMessage)
     if (texts.length) postprocessGlyph(mapID, `${sourceName}:glyph`, hash, texts, this.glyphBuilder, postMessage)
     if (Object.keys(parentLayers).length) postMessage({ mapID, type: 'parentlayers', tileID: hash, parentLayers })
   }

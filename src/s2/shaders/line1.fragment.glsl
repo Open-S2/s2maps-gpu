@@ -1,13 +1,10 @@
 precision highp float;
 
-#include ./color;
-
 varying vec4 color;
 varying vec2 vWidth;
 varying vec2 vNorm;
 
 void main () {
-
   // Calculate the distance of the pixel from the line in pixels.
   float dist = length(vNorm) * vWidth.s;
 

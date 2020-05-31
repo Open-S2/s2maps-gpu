@@ -29,6 +29,8 @@ export type VectorTileSource = {
   radiiArray?: Float32Array,
   indexArray: Uint32Array,
   codeTypeArray: Uint8Array,
+  typeArray?: Float32Array,
+  typeBuffer?: WebGLBuffer,
   vertexBuffer?: WebGLBuffer,
   radiiBuffer?: WebGLBuffer,
   indexBuffer?: WebGLBuffer,
@@ -45,7 +47,7 @@ export type GlyphTileSource = {
   height: number,
   texSize: Float32Array,
   glyphFilterVertices: Float32Array,
-  boxPrimcount: number,
+  instanceCount: number,
   glyphVertices: Float32Array,
   glyphIndices: Uint32Array,
   glyphQuads: Float32Array,
@@ -125,12 +127,12 @@ export default class Tile {
   injectParentTile (parentTile: Tile, filterLayers?: Array<number>) {
     const foundLayers = new Set()
     for (const featureGuide of parentTile.featureGuide) {
-      const { parent, source, layerID, count, offset, type, layerCode, featureCode, texture } = featureGuide
+      const { type, parent, layerID } = featureGuide
       if (type === 'raster' && parent) continue
       if (!parent) foundLayers.add(layerID)
-      this.featureGuide.push({ parent: (parent) ? parent : parentTile, tile: this, source, layerID, count, offset, type, layerCode, featureCode, texture })
+      // build the feature, set the correct parent and tile
+      this.featureGuide.push({ ...featureGuide, parent: (parent) ? parent : parentTile, tile: this })
     }
-    this.featureGuide.sort((a, b) => a.layerID - b.layerID)
     // if filterLayers, we need to check what layers were missing
     if (filterLayers) {
       const missingLayers = filterLayers.filter(layerID => !foundLayers.has(layerID))
@@ -154,9 +156,7 @@ export default class Tile {
       if (featureGuide.source === sourceName && this.childrenRequests[featureGuide.layerID]) {
         for (const tile of this.childrenRequests[featureGuide.layerID]) {
           // first remove all instances of source
-          const { source, layerID, count, offset, type, layerCode, featureCode, texture } = featureGuide
-          tile.featureGuide.push({ parent: this, tile, source, layerID, count, offset, type, layerCode, featureCode, texture })
-          tile.featureGuide.sort((a, b) => { return a.layerID - b.layerID })
+          tile.featureGuide.push({ ...featureGuide, parent: this, tile })
         }
         // cleanup
         delete this.childrenRequests[featureGuide.layerID]
@@ -198,6 +198,7 @@ export default class Tile {
     // create our initial vertices and indices:
     const mask = this.sourceData.mask = {
       type: 'vector',
+      subType: 'fill',
       vertexArray: new Int16Array(vertices),
       indexArray: new Uint32Array(indices),
       count: indices.length,
@@ -211,6 +212,7 @@ export default class Tile {
     radiiArray: Float32Array, styleMask: Mask) {
     const mask = this.sourceData.mask = {
       type: 'vector',
+      subType: 'fill',
       vertexArray,
       indexArray,
       radiiArray,
@@ -236,6 +238,7 @@ export default class Tile {
       tile: this,
       layerID: layer.index,
       source: 'mask', // when pulling from the vao, we still use the mask vertices
+      subType: 'fill',
       type: 'raster',
       featureCode: [0],
       texture
@@ -254,13 +257,12 @@ export default class Tile {
     gl.texSubImage2D(gl.TEXTURE_2D, 0, leftShift * length, bottomShift * length, gl.RGBA, gl.UNSIGNED_BYTE, image)
   }
 
-  injectVectorSourceData (source: string, vertexArray: Int16Array, indexArray: Uint32Array,
+  injectVectorSourceData (source: string, vertexArray: Int16Array, indexArray?: Uint32Array,
     codeTypeArray: Uint8Array, featureGuideArray: Uint32Array, layers: Array<Layer>): VectorTileSource {
     // store a reference to the source
     const builtSource = this.sourceData[source] = {
       type: 'vector',
       subType: source.split(':').pop(),
-      features: [],
       vertexArray,
       indexArray,
       codeTypeArray

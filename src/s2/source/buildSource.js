@@ -31,11 +31,15 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
     gl.enableVertexAttribArray(0)
     gl.vertexAttribPointer(0, 2, gl.SHORT, false, 0, 0)
     // line
-    gl.enableVertexAttribArray(1)
-    gl.enableVertexAttribArray(2)
-    gl.vertexAttribPointer(1, 2, gl.SHORT, false, 8, 0)
-    gl.vertexAttribPointer(2, 2, gl.SHORT, false, 8, 4)
-    // gl.vertexAttribPointer(3, 1, gl.FLOAT, false, 16, 12)
+    gl.enableVertexAttribArray(2) // prev
+    gl.enableVertexAttribArray(3) // curr
+    gl.enableVertexAttribArray(4) // next
+    gl.vertexAttribPointer(2, 2, gl.SHORT, false, 12, 0)
+    gl.vertexAttribPointer(3, 2, gl.SHORT, false, 12, 4)
+    gl.vertexAttribPointer(4, 2, gl.SHORT, false, 12, 8)
+    gl.vertexAttribDivisor(2, 1)
+    gl.vertexAttribDivisor(3, 1)
+    gl.vertexAttribDivisor(4, 1)
     // RADII
     if (source.radiiArray) {
       // Create a vertex buffer
@@ -59,17 +63,37 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
       gl.vertexAttribPointer(7, 1, gl.UNSIGNED_BYTE, false, 0, 0)
     }
     // INDEX
-    // Create an index buffer
-    source.indexBuffer = gl.createBuffer()
-    // bind and buffer
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, source.indexBuffer)
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, source.indexArray, gl.STATIC_DRAW)
+    if (source.indexArray && source.indexArray.length) {
+      // Create an index buffer
+      source.indexBuffer = gl.createBuffer()
+      // bind and buffer
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, source.indexBuffer)
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, source.indexArray, gl.STATIC_DRAW)
+    }
+
+    if (source.subType === 'line') {
+      // we build out the standard build
+      // 0 -> curr + (-1)
+      // 1 -> curr + (1)
+      // 2 -> next + (-1)
+      // 3 -> next + (1)
+      // create default triangle set
+      source.typeArray = new Float32Array([1, 3, 4, 1, 4, 2, 0, 5, 6])
+      // create buffer
+      source.typeBuffer = gl.createBuffer()
+      // bind and buffer
+      gl.bindBuffer(gl.ARRAY_BUFFER, source.typeBuffer)
+      gl.bufferData(gl.ARRAY_BUFFER, source.typeArray, gl.STATIC_DRAW)
+      // link attributes
+      gl.enableVertexAttribArray(1) // position type (how to re-adjust)
+      gl.vertexAttribPointer(1, 1, gl.FLOAT, false, 0, 0)
+    }
 
     // done setting up the VAO
     gl.bindVertexArray(null)
   } else if (source.type === 'glyph') {
     // find size data
-    source.boxPrimcount = source.glyphFilterVertices.length / 7
+    source.instanceCount = source.glyphFilterVertices.length / 7
     source.glyphPrimcount = source.glyphQuads.length / 9
     source.texSize = new Float32Array([source.width, source.height])
     // pre-build the glyph texture

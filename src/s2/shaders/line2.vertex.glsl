@@ -1,15 +1,22 @@
 #version 300 es
 precision highp float;
 
-layout (location = 1) in vec2 aPos;
-layout (location = 2) in vec2 aNormal;
-// layout (location = 3) in float aLengthSoFar;
-layout (location = 6) in float aRadius;
-layout (location = 7) in float aIndex;
+layout (location = 1) in float aType;
+layout (location = 2) in vec2 aPrev; //   (INSTANCED)
+layout (location = 3) in vec2 aCurr; //   (INSTANCED)
+layout (location = 4) in vec2 aNext; //   (INSTANCED)
+
+// POSITION TYPES:
+// 0 -> curr
+// 1 -> curr + (-currNormal)
+// 2 -> curr + (currNormal)
+// 3 -> next + (-currNormal)
+// 4 -> next + (currNormal)
+// 5 -> curr + (currNormal) + check ccw
+// 6 -> curr + (prevNormal) + check ccw
 
 uniform mat4 uMatrix;
 uniform vec2 uAspect;
-uniform bool u3D;
 
 uniform float uInputs[16];
 uniform float uLayerCode[256];
@@ -23,57 +30,82 @@ out vec2 vWidth;
 out vec2 vNorm;
 out vec4 color;
 
+bool isCCW (in vec2 prev, in vec2 curr, in vec2 next) {
+  float det = (curr.y - prev.y) * (next.x - curr.x) - (curr.x - prev.x) * (next.y - curr.y);
+
+  return det < 0.;
+}
+
 void main () {
   // prep layer index and feature index positions
   int index = 0;
-  int featureIndex = int(aIndex);
+  int featureIndex = 0;
   // decode color
   color = decodeFeature(true, index, featureIndex);
   // decode line width
   float width = decodeFeature(false, index, featureIndex)[0];
-
-  // get pos and vector normal
-  vec4 xyz = STtoXYZ(aPos / 4096.);
-  vec2 norm = aNormal / 32767.;
-  vNorm = norm;
+  // explain width to fragment shader
   vWidth = vec2(width, 0.);
-  // add radius if it exists
-  if (u3D) xyz.xyz *= aRadius;
-  // get position on the canvas
-  vec4 glPos = uMatrix * xyz;
-  // apply w correction
-  glPos.xyz /= glPos.w;
-  glPos.w = 1.;
-  // apply normal
-  glPos.xy += norm * width / uAspect;
-  // set position
-  gl_Position = glPos;
+
+  // get the position in projected space
+  vec4 curr = uMatrix * STtoXYZ(aCurr / 4096.);
+  vec4 next = uMatrix * STtoXYZ(aNext / 4096.);
+  vec4 zero = uMatrix * vec4(0., 0., 0., 1.);
+  // adjust by w
+  curr.xyz /= curr.w;
+  next.xyz /= next.w;
+  zero.xyz /= zero.w;
+  // get the position in screen space
+  vec2 currScreen = curr.xy;
+  vec2 nextScreen = next.xy;
+  // grab the perpendicular vector
+  vec2 currNorm = normalize(nextScreen - currScreen);
+  // get the perpendicular of the currNorm -> add the width -> adust by aspect.
+  currNorm = vec2(-currNorm.y, currNorm.x);
+
+  // if less than 0, ignore the line (zoomed out sphere)
+  if (curr.z > zero.z || next.z > zero.z) {
+    gl_Position = vec4(0., 0., 0., 0.);
+  } else if (aCurr != aNext) {
+    if (aType == 0.) {
+      gl_Position = vec4(currScreen, curr.z, 1.);
+    } else if (aType == 1.) {
+      // current point's perp normal with a flipped vector
+      currNorm *= -1.;
+      gl_Position = vec4(currScreen + (currNorm * width / uAspect), curr.z, 1.);
+    } else if (aType == 2.) {
+      // current point's perp normal
+      gl_Position = vec4(currScreen + (currNorm * width / uAspect), curr.z, 1.);
+    } else if (aType == 3.) {
+      // next point's perp normal with a flipped vector
+      currNorm *= -1.;
+      gl_Position = vec4(nextScreen + (currNorm * width / uAspect), curr.z, 1.);
+    } else if (aType == 4.) {
+      // next point's perp normal
+      gl_Position = vec4(nextScreen + (currNorm * width / uAspect), curr.z, 1.);
+    } else if (aType == 5. || aType == 6.) {
+      // get previous
+      vec4 prev = uMatrix * STtoXYZ(aPrev / 4096.);
+      prev.xyz /= prev.w;
+      vec2 prevScreen = prev.xy;
+      vec2 prevNorm = normalize(currScreen - prevScreen);
+      prevNorm = vec2(-prevNorm.y, prevNorm.x);
+      // if ccw, rotate normal
+      if (isCCW(prevScreen, currScreen, nextScreen)) {
+        prevNorm *= -1.;
+        currNorm *= -1.;
+      }
+      if (aType == 5.) {
+        gl_Position = vec4(currScreen + (currNorm * width / uAspect), curr.z, 1.);
+      } else { // aType == 6.
+        gl_Position = vec4(currScreen + (prevNorm * width / uAspect), curr.z, 1.);
+      }
+    } else {
+      gl_Position = vec4(0., 0., 0., 0.);
+    }
+  } else {
+    gl_Position = vec4(0., 0., 0., 0.);
+  }
+  // tell the fragment the normal vector
+  vNorm = currNorm;
 }
-
-
-// void main () {
-//   // prep layer index and feature index positions
-//   int index = 0;
-//   int featureIndex = int(aIndex);
-//   // get proper normal
-//   vec2 norm = aNormal / 32767.;
-//   // decode color
-//   color = decodeFeature(true, index, featureIndex);
-//   // decode line width
-//   float width = decodeFeature(false, index, featureIndex)[0];
-//   vWidth = vec2(width, 0.);
-//   // get scale
-//   float scale = pow(2., uInputs[0] - uFaceST[1]);
-//   // apply scale according to tile size
-//   width /= scale * 512. * 2.;
-//
-//   // set variants
-//   vNorm = norm;
-//
-//   // multiply width by pos and normal
-//   vec2 newPos = (aPos / 4096.) + norm * width;
-//   // send off the length so far
-//   // lengthSoFar = aLengthSoFar;
-//   // set position
-//   gl_Position = uMatrix * STtoXYZ(newPos);
-// }

@@ -6,7 +6,7 @@ import type { Feature } from '../../tile.worker'
 
 const MAX_FEATURE_BATCH_SIZE = 1 << 7
 
-export default function postprocessFill (mapID: string, sourceName: string, tileID: string,
+export default function postprocessFill (mapID: string, source: string, tileID: string,
   features: Array<Feature>, postMessage: Function) {
   // now that we have created all triangles, let's merge into bundled buffer sets
   // for the main thread to build VAOs.
@@ -34,8 +34,9 @@ export default function postprocessFill (mapID: string, sourceName: string, tile
       curLayerID !== feature.layerID ||
       (encodings.length + feature.code.length > MAX_FEATURE_BATCH_SIZE)
     ) {
-      const count = indices.length - indicesOffset
-      featureGuide.push(curLayerID, indices.length - indicesOffset, indicesOffset, encodings.length, ...encodings) // layerID, count, offset, encoding size, encodings
+      // only store if count is actually greater than 0
+      if (indices.length - indicesOffset) featureGuide.push(curLayerID, indices.length - indicesOffset, indicesOffset, encodings.length, ...encodings) // layerID, count, offset, encoding size, encodings
+      // update variables for reset
       indicesOffset = indices.length
       encodings = []
       encodingIndexes = { '': 0 }
@@ -57,8 +58,6 @@ export default function postprocessFill (mapID: string, sourceName: string, tile
       indices.push(index)
       codeType[index] = encodingIndex
     }
-    // store type for fills
-    if (feature.vertexType) for (let f = 0, fl = feature.vertexType.length; f < fl; f++) codeType.push(feature.vertexType[f])
     // update previous layerID
     curLayerID = feature.layerID
   }
@@ -76,7 +75,7 @@ export default function postprocessFill (mapID: string, sourceName: string, tile
   postMessage({
     mapID,
     type: 'filldata',
-    source: sourceName,
+    source,
     tileID,
     vertexBuffer,
     indexBuffer,

@@ -9,6 +9,7 @@ import vert2 from '../../shaders/line2.vertex.glsl'
 import frag2 from '../../shaders/line2.fragment.glsl'
 
 import type { Context } from '../contexts'
+import type { VectorTileSource } from '../../source/tile'
 
 export default class LineProgram extends Program {
   constructor (context: Context) {
@@ -16,10 +17,35 @@ export default class LineProgram extends Program {
     const { gl, type } = context
     // if webgl1, setup attribute locations
     if (type === 1) {
-      gl.attributeLocations = { aPos: 1, aNormal: 2, aRadius: 6, aIndex: 7 }
+      gl.attributeLocations = { aType: 1, aPrev: 2, aCurr: 3, aNext: 4, aRadius: 6, aIndex: 7 }
       super(context, vert1, frag1)
     } else {
       super(context, vert2, frag2)
     }
+  }
+
+  draw (featureGuide: FeatureGuide, source: VectorTileSource) {
+    // grab context
+    const { context } = this
+    const { gl } = context
+    // get current source data
+    let { count, offset, featureCode, mode } = featureGuide
+    // console.log('source', source)
+    // set feature code
+    if (featureCode && featureCode.length) gl.uniform1fv(this.uFeatureCode, featureCode)
+    // get mode
+    if (!mode) mode = gl.TRIANGLES
+    // disable culling
+    context.disableCullFace()
+    // apply the appropriate offset in the source vertexBuffer attribute
+    gl.bindBuffer(gl.ARRAY_BUFFER, source.vertexBuffer)
+    gl.vertexAttribPointer(2, 2, gl.SHORT, false, 12, 0 + ((offset | 0) * 12))
+    gl.vertexAttribPointer(3, 2, gl.SHORT, false, 12, 4 + ((offset | 0) * 12))
+    gl.vertexAttribPointer(4, 2, gl.SHORT, false, 12, 8 + ((offset | 0) * 12))
+
+    // draw elements
+    gl.drawArraysInstanced(mode, 0, 9, count) // gl.drawArraysInstancedANGLE(mode, first, count, primcount)
+    // re-enable culling
+    context.enableCullFace()
   }
 }

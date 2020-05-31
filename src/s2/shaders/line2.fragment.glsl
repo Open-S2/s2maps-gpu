@@ -1,8 +1,6 @@
 #version 300 es
 precision highp float;
 
-#include ./color;
-
 in vec4 color;
 in vec2 vWidth;
 in vec2 vNorm;
@@ -10,14 +8,14 @@ in vec2 vNorm;
 out vec4 fragColor;
 
 void main () {
-
   // Calculate the distance of the pixel from the line in pixels.
   float dist = length(vNorm) * vWidth.s;
 
-  // Calculate the antialiasing fade factor. This is either when fading in
-  // the line in case of an offset line (vWidth.t) or when fading out (vWidth.s)
-  float blur2 = (1. + 1.0) * 0.5;
-  float alpha = clamp(min(dist - (vWidth.t - blur2), vWidth.s - dist) / blur2, 0.0, 1.0);
+  // AA for width and length
+  float blur2 = min(1.2, vWidth.s * 0.85);
+  float wAlpha = clamp(min(dist - (vWidth.t - blur2), vWidth.s - dist) / blur2, 0., 1.);
+  // float lAlpha = clamp(, 0., 1.);
 
-  fragColor = color * alpha;
+  fragColor = color * wAlpha;
+  // fragColor = color * min(lAlpha, wAlpha);
 }

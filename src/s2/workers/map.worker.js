@@ -13,6 +13,7 @@ class MapWorker {
     if (type === 'resize') this.map.resize(data.width, data.height)
     if (type === 'parentlayers') this.map.injectParentLayers(data.tileID, data.parentLayers)
     if (type === 'filldata') this.map.injectFillSourceData(data.source, data.tileID, data.vertexBuffer, data.indexBuffer, data.codeTypeBuffer, data.featureGuideBuffer)
+    if (type === 'linedata') this.map.injectLineSourceData(data.source, data.tileID, data.vertexBuffer, data.featureGuideBuffer)
     if (type === 'rasterdata') this.map.injectRasterData(data.source, data.tileID, data.image, data.leftShift, data.bottomShift)
     if (type === 'glyphdata') this.map.injectGlyphSourceData(data.source, data.tileID, data.glyphFilterBuffer, data.glyphVertexBuffer, data.glyphIndexBuffer, data.glyphQuadBuffer, data.colorBuffer, data.layerGuideBuffer)
     if (type === 'maskdata') this.map.injectMaskGeometry(data.tileID, data.vertexBuffer, data.indexBuffer, data.radiiBuffer)

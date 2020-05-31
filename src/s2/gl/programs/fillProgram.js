@@ -26,4 +26,20 @@ export default class FillProgram extends Program {
       super(context, vertex2, fragment2)
     }
   }
+
+  draw (featureGuide: FeatureGuide) {
+    // grab context
+    const { context } = this
+    const { gl } = context
+    // get current source data
+    let { count, featureCode, offset, mode, threeD } = featureGuide
+    // set 3D uniform
+    this.set3D(threeD)
+    // set feature code
+    if (featureCode && featureCode.length) gl.uniform1fv(this.uFeatureCode, featureCode)
+    // get mode
+    if (!mode) mode = gl.TRIANGLES
+    // draw elements
+    gl.drawElements(mode, count, gl.UNSIGNED_INT, (offset | 0) * 4)
+  }
 }

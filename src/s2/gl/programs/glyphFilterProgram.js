@@ -143,26 +143,26 @@ export default class GlyphFilterProgram extends Program {
   drawPoints (sourceData: GlyphTileSource) {
     // grab context
     const { gl } = this
-    const { boxPrimcount } = sourceData
+    const { instanceCount } = sourceData
     // set 3D uniform
     // this.set3D(threeD)
     // draw points
-    gl.drawArraysInstanced(gl.POINTS, 0, 1, boxPrimcount)
+    gl.drawArraysInstanced(gl.POINTS, 0, 1, instanceCount)
   }
 
   drawQuads (sourceData: GlyphTileSource) {
     // grab context
     const { gl } = this
-    const { boxPrimcount } = sourceData
+    const { instanceCount } = sourceData
     // draw quads
-    gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, boxPrimcount)
+    gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, instanceCount)
   }
 
   drawResult (sourceData: GlyphTileSource) {
     // grab context
     const { gl } = this
-    const { boxPrimcount } = sourceData
+    const { instanceCount } = sourceData
     // draw result points
-    gl.drawArraysInstanced(gl.POINTS, 0, 1, boxPrimcount)
+    gl.drawArraysInstanced(gl.POINTS, 0, 1, instanceCount)
   }
 }

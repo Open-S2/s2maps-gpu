@@ -1,6 +1,6 @@
 #define PI 3.1415926538
 
-vec4 LCH2LAB (vec4 lch) { // r -> l ; g -> c ; b -> h
+vec4 LCH2LAB (in vec4 lch) { // r -> l ; g -> c ; b -> h
   float h = lch.b * (PI / 180.);
   return vec4(
     lch.r,
@@ -10,15 +10,15 @@ vec4 LCH2LAB (vec4 lch) { // r -> l ; g -> c ; b -> h
   );
 }
 
-float LAB2XYZ (float t) {
+float LAB2XYZ (in float t) {
   return t > 0.206896552 ? t * t * t : 0.12841855 * (t - 0.137931034);
 }
 
-float XYZ2RGB (float r) {
+float XYZ2RGB (in float r) {
   return 255. * (r <= 0.00304 ? 12.92 * r : 1.055 * pow(r, 1. / 2.4) - 0.055);
 }
 
-vec4 LAB2RGB (vec4 lab) { // r -> l ; g -> a ; b -> b
+vec4 LAB2RGB (in vec4 lab) { // r -> l ; g -> a ; b -> b
   float x, y, z, r, g, b;
   // prep move to xyz
   y = (lab.r + 16.) / 116.;
@@ -43,7 +43,7 @@ vec4 LAB2RGB (vec4 lab) { // r -> l ; g -> a ; b -> b
   return vec4(r, g, b, lab.a);
 }
 
-vec4 LCH2RGB (vec4 lch) {
+vec4 LCH2RGB (in vec4 lch) {
   vec4 res;
   // first convert to lab
   res = LCH2LAB(lch);
