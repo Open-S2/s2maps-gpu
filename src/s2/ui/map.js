@@ -26,6 +26,7 @@ export default class Map extends Camera {
   _canvas: HTMLCanvasElement
   _interactive: boolean = true // allow the user to make visual changes to the map, whether that be zooming, panning, or dragging
   _scrollZoom: boolean = true // allow the user to scroll over the canvas and cause a zoom change
+  renderNextFrame: boolean = false
   webworker: boolean = false
   dragPan: DragPan
   constructor (options: MapOptions, canvas: HTMLCanvasElement, id: string) {
@@ -47,7 +48,7 @@ export default class Map extends Camera {
     // inject minzoom and maxzoom
     this.projection.setStyleParameters(this.style)
     // render our first pass
-    this._render()
+    this.render()
   }
 
   _setupCanvas (options: MapOptions) {
@@ -91,7 +92,7 @@ export default class Map extends Camera {
   resize (width?: number, height?: number) {
     if (width && height) this.resizeCamera(width, height)
     else this.resizeCamera(this._canvas.clientWidth, this._canvas.clientHeight)
-    this._render()
+    this.render()
   }
 
   _onScroll (rect, clientX, clientY, deltaY) {
@@ -102,7 +103,7 @@ export default class Map extends Camera {
     // done zooming if the updateWhileZooming flag is set to false
     if (update) {
       this.painter.dirty = true
-      this._render(true)
+      this.render(true)
     }
   }
 
@@ -118,7 +119,19 @@ export default class Map extends Camera {
     const { movementX, movementY } = this.dragPan
     // update projection
     this.projection.onMove(movementX, movementY)
-    this._render()
+    this.render()
+  }
+
+  // we don't want to over request rendering, so we render with a limiter to
+  // safely call render as many times as we like
+  render (isZooming?: boolean = false) {
+    const self = this
+    if (self.renderNextFrame) return
+    self.renderNextFrame = true
+    requestAnimationFrame(() => {
+      self._render(isZooming)
+      self.renderNextFrame = false
+    })
   }
 
   _onSwipe (e: Event) {

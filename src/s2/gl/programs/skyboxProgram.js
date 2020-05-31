@@ -73,7 +73,7 @@ export default class SkyboxProgram extends Program {
               // set the projection as dirty to ensure a proper initial render
               map.projection.dirty = true
               // call the full re-render
-              map._render()
+              map.render()
             }
           })
       })

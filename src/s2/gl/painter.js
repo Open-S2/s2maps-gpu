@@ -27,7 +27,6 @@ export default class Painter {
   _canvas: HTMLCanvasElement
   context: WebGL2Context | WebGLContext
   programs: { [string]: Program } = {}
-  glyphSources: Array<GlyphTileSource> = []
   dirty: boolean = true
   constructor (canvas: HTMLCanvasElement, options: MapOptions) {
     // setup canvas
@@ -49,10 +48,6 @@ export default class Painter {
     if (context && typeof context.getParameter === 'function') {
       return this.context = new WebGLContext(context)
     }
-  }
-
-  addGlyphSource (glyphSource: GlyphTileSource) {
-    this.glyphSources.push(glyphSource)
   }
 
   setClearColor (clearColor: [number, number, number, number]) {
@@ -122,12 +117,11 @@ export default class Painter {
   }
 
   paint (projection: Projection, style: Style, tiles: Array<Tile>) {
+    // console.log('tiles', tiles)
     const { context } = this
     const { sphereBackground } = style
 
     // PREPARE PHASE
-    // if any glyph textures are not ready, we prep them now
-    if (this.glyphSources.length) this.buildTextures()
     // prep frame uniforms
     const { view, aspect } = projection
     const matrix = projection.getMatrix(512) // NOTE: For now, we have a default size of 512.
@@ -135,8 +129,10 @@ export default class Painter {
 
     // prep tiles features to draw
     const features = tiles.flatMap(tile => tile.featureGuide).sort(featureSort)
+    // console.log('features', features.length)
     // prep glyph features for drawing box filters
     const glyphFeatures = features.filter(feature => feature.type === 'glyph')
+    // console.log('glyphFeatures', glyphFeatures.length)
     // use text boxes to filter out overlap
     if (glyphFeatures.length) this.paintGlyphFilter(tiles, glyphFeatures)
 
@@ -155,26 +151,22 @@ export default class Painter {
     if (sphereBackground) this.paintSphereBackground(tiles, sphereBackground)
     // paint features
     this.paintFeatures(features)
-    // paint glyph "filter" quads
-    // if (glyphFeatures.length) this.paintGlyphFilter(tiles, glyphFeatures)
     // draw shade layer
     // if (style.shade) drawShade(this, style.shade)
     // cleanup
     context.cleanup()
   }
 
-  buildTextures () {
+  buildGlyphTexture (glyphSource: GlyphTileSource) {
     // get the glyphProgram
     const glyphProgram: GlyphProgram = this.useProgram('glyphTex')
     if (!glyphProgram) return new Error('The "glyphTex" program does not exist, can not paint.')
     // prep program for drawing glyphs
     glyphProgram.prepContext()
-    // build any glyph textures
-    for (const glyphSource of this.glyphSources) glyphProgram.drawGlyph(glyphSource)
+    // build any glyph texture
+    glyphProgram.drawGlyph(glyphSource)
     // cleanup from drawing glyphs
     glyphProgram.cleanupContext()
-    // clear the glyph sources as they are prepped for drawing from
-    this.glyphSources = []
   }
 
   paintMasks (tiles: Array<Tile>, fb: boolean = false) {
@@ -263,7 +255,6 @@ export default class Painter {
       program.setFaceST(faceST)
       gl.bindVertexArray(sourceData[source].vao)
       // draw
-      // if (feature.type !== 'glyph') program.draw(feature, sourceData[source], tmpMaskID)
       program.draw(feature, sourceData[source], tmpMaskID)
     }
   }

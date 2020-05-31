@@ -141,12 +141,11 @@ export default class Camera {
     indexBuffer: ArrayBuffer, codeTypeBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer) {
     if (this.tileCache.has(tileID)) {
       const tile = this.tileCache.get(tileID)
-      const children: boolean = Object.keys(tile.childrenRequests).length > 0
       tile.injectVectorSourceData(source, new Int16Array(vertexBuffer), new Uint32Array(indexBuffer), new Uint8Array(codeTypeBuffer), new Uint32Array(featureGuideBuffer), this.style.layers)
       // new 'paint', so painter is dirty
       this.painter.dirty = true
-      // call a re-render only if the tile is in our current viewing or it had children
-      if (this.tilesInView.map(t => t[4]).includes(tileID) || children) this._render()
+      // call a re-render
+      this.render()
     }
   }
 
@@ -154,12 +153,11 @@ export default class Camera {
     featureGuideBuffer: ArrayBuffer) {
     if (this.tileCache.has(tileID)) {
       const tile = this.tileCache.get(tileID)
-      const children: boolean = Object.keys(tile.childrenRequests).length > 0
       tile.injectVectorSourceData(source, new Int16Array(vertexBuffer), null, null, new Uint32Array(featureGuideBuffer), this.style.layers)
       // new 'paint', so painter is dirty
       this.painter.dirty = true
-      // call a re-render only if the tile is in our current viewing or it had children
-      if (this.tilesInView.map(t => t[4]).includes(tileID) || children) this._render()
+      // call a re-render
+      this.render()
     }
   }
 
@@ -183,30 +181,28 @@ export default class Camera {
     }
     // new 'paint', so painter is dirty
     this.painter.dirty = true
-    // call a re-render only if the tile is in our current viewing or it had children
-    if (this.tilesInView.map(t => t[4]).includes(tileID)) this._render()
+    // call a re-render
+    this.render()
   }
 
   injectGlyphSourceData (source: string, tileID: string, glyphFilterBuffer: ArrayBuffer,
     glyphVertexBuffer: ArrayBuffer, glyphIndexBuffer: ArrayBuffer,
     glyphQuadBuffer: ArrayBuffer, colorBuffer: ArrayBuffer, layerGuideBuffer: ArrayBuffer) {
     // store the vertexBuffer and texture in the gpu.
-    let children: boolean = false
     if (this.tileCache.has(tileID)) {
       const tile = this.tileCache.get(tileID)
-      children = Object.keys(tile.childrenRequests).length > 0
       const glyphSource = tile.injectGlyphSourceData(
         source, new Float32Array(glyphFilterBuffer), new Float32Array(glyphVertexBuffer),
         new Uint32Array(glyphIndexBuffer), new Float32Array(glyphQuadBuffer),
         new Uint8Array(colorBuffer), new Uint32Array(layerGuideBuffer)
       )
-      // tell the painter it needs to paint the glyph texture on it's next render pass
-      this.painter.addGlyphSource(glyphSource)
+      // tell the painter to prep the texture
+      this.painter.buildGlyphTexture(glyphSource)
+      // new 'paint', so painter is dirty
+      this.painter.dirty = true
+      // call a re-render
+      this.render()
     }
-    // new 'paint', so painter is dirty
-    this.painter.dirty = true
-    // call a re-render only if the tile is in our current viewing or it had children
-    if (this.tilesInView.map(t => t[4]).includes(tileID) || children) this._render()
   }
 
   injectRasterData (source: string, tileID: string, image: ImageBitmap,
@@ -216,8 +212,8 @@ export default class Camera {
       tile.injectRasterData(source, image, leftShift, bottomShift)
       // new 'paint', so painter is dirty
       this.painter.dirty = true
-      // call a re-render only if the tile is in our current viewing
-      if (this.tilesInView.map(t => t[4]).includes(tileID)) this._render()
+      // call a re-render
+      this.render()
     }
   }
 
@@ -228,8 +224,8 @@ export default class Camera {
       tile.injectMaskGeometry(new Float32Array(vertexBuffer), new Uint32Array(indexBuffer), new Float32Array(radiiBuffer), this.style.mask)
       // new 'paint', so painter is dirty
       this.painter.dirty = true
-      // call a re-render only if the tile is in our current viewing
-      if (this.tilesInView.map(t => t[4]).includes(tileID)) this._render()
+      // call a re-render
+      this.render()
     }
   }
 

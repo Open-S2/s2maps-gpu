@@ -129,6 +129,7 @@ export default class Tile {
     for (const featureGuide of parentTile.featureGuide) {
       const { type, parent, layerID } = featureGuide
       if (type === 'raster' && parent) continue
+      if (type === 'glyph') continue
       if (!parent) foundLayers.add(layerID)
       // build the feature, set the correct parent and tile
       this.featureGuide.push({ ...featureGuide, parent: (parent) ? parent : parentTile, tile: this })
@@ -277,7 +278,7 @@ export default class Tile {
       // grab the layers type and code
       const { type, code } = layers[layerID]
       // create and store the featureGuide
-      const guide = {
+      this.featureGuide.push({
         tile: this,
         layerID,
         source,
@@ -286,12 +287,10 @@ export default class Tile {
         type,
         featureCode: new Float32Array(encodingSize ? [...featureGuideArray.slice(i, i + encodingSize)] : [0]), // NOTE: The sorting algorithm doesn't work if an array is empty, so we have to have at least one number, just set it to 0
         layerCode: code
-      }
+      })
       i += encodingSize
-
-      this.featureGuide.push(guide)
     }
-    // Since a parent can be injected, we need to remove any instances of the "old" source data.
+    // Since a parent may have been injected, we need to remove any instances of the said source data.
     this.featureGuide = this.featureGuide.filter(fg => !(fg.parent && fg.source === source))
     // build the VAO
     buildSource(this.context, builtSource)
@@ -327,16 +326,16 @@ export default class Tile {
       // create and store the featureGuide
       this.featureGuide.push({
         tile: this,
-        type: 'glyph',
         layerID,
         source,
-        offset,
         count,
+        offset,
+        type: 'glyph',
         featureCode: [0]
       })
     }
 
-    // Since a parent can be injected, we need to remove any instances of the "old" source data.
+    // Since a parent may have been injected, we need to remove any instances of the said source data.
     this.featureGuide = this.featureGuide.filter(fg => !(fg.parent && fg.source === source))
     // build the VAO
     buildSource(this.context, glyphSource)

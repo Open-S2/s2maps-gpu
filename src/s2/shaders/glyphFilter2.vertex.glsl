@@ -51,7 +51,7 @@ void main () {
     glPos.xy += aWH / uAspect * aUV;
     // if colorID matches the existing pixels value, we draw the quad, otherwise we draw nothing
     if (colorID == ivec3(pointID.rgb * 256.)) {
-      pointID.a = 0.025; // 2 / 255
+      pointID.a = 0.1; // 2 / 255
       color = pointID;
     } else {
       color = vec4(0., 0., 0., 0.);
@@ -73,12 +73,12 @@ void main () {
     tPos.y += (aWH.y - 2.) / uAspect.y;
     vec4 topLft = texture(uFeatures, vec2(tPos / 2. + 0.5));
 
-    if (colorID == ivec3(btmLft.rgb * 256.) && btmLft.a <= 0.025 && colorID == ivec3(topLft.rgb * 256.) && topLft.a <= 0.025) {
+    if (colorID == ivec3(btmLft.rgb * 256.) && btmLft.a <= 0.1 && colorID == ivec3(topLft.rgb * 256.) && topLft.a <= 0.1) {
       // check top right, if top right, we are done
       tPos.x += (aWH.x - 2.) / uAspect.x;
       vec4 topRght = texture(uFeatures, vec2(tPos / 2. + 0.5));
       ivec3 topRghtValue = ivec3(topRght.rgb * 256.);
-      if (colorID == topRghtValue && topRght.a <= 0.025) {
+      if (colorID == topRghtValue && topRght.a <= 0.1) {
         color = btmLft;
         color.a = 1.;
       } else {
@@ -86,7 +86,7 @@ void main () {
         tPos.y -= (aWH.y - 2.) / uAspect.y;
         vec4 btmRght = texture(uFeatures, vec2(tPos / 2. + 0.5));
         ivec3 btmRghtValue = ivec3(btmRght.rgb * 256.);
-        if (colorID == btmRghtValue && btmRght.a <= 0.025) {
+        if (colorID == btmRghtValue && btmRght.a <= 0.1) {
           color = btmLft;
           color.a = 1.;
         } else {

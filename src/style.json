@@ -6,7 +6,7 @@
   "minzoom": 0,
   "maxzoom": 20,
   "sources": {
-    "fills": "http://192.168.0.7:8000/data/fills"
+    "world": "http://192.168.0.7:8000/data/fills"
   },
   "fonts": {
     "default": "http://192.168.0.7:8000/fonts/default",
@@ -45,7 +45,7 @@
   "layers": [
     {
       "name": "landuse",
-      "source": "fills",
+      "source": "world",
       "layer": "landuse",
       "type": "fill",
       "filter": ["class", "has", ["park", "national_park", "protected_area",
@@ -104,7 +104,7 @@
     },
     {
       "name": "golf",
-      "source": "fills",
+      "source": "world",
       "layer": "landuse",
       "type": "fill",
       "filter": ["class", "==", "golf"],
@@ -128,7 +128,7 @@
     },
     {
       "name": "water",
-      "source": "fills",
+      "source": "world",
       "filter": ["class", "!has", ["reef", "shoal"]],
       "layer": "water",
       "type": "fill",
@@ -140,7 +140,7 @@
     },
     {
       "name": "reef",
-      "source": "fills",
+      "source": "world",
       "filter": ["class", "has", ["reef", "shoal"]],
       "layer": "water",
       "type": "fill",
@@ -152,7 +152,7 @@
     },
     {
       "name": "rivers",
-      "source": "fills",
+      "source": "world",
       "layer": "water",
       "type": "line",
       "layout": {
@@ -175,7 +175,7 @@
     },
     {
       "name": "transport_borders",
-      "source": "fills",
+      "source": "world",
       "layer": "transport",
       "filter": ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited"]],
       "type": "line",
@@ -227,7 +227,7 @@
     },
     {
       "name": "transport",
-      "source": "fills",
+      "source": "world",
       "layer": "transport",
       "filter": ["or",
         ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited", "ferry"]],
@@ -287,7 +287,7 @@
     },
     {
       "name": "motor_trunk_borders",
-      "source": "fills",
+      "source": "world",
       "layer": "transport",
       "filter": ["class", "has", ["motorway", "motorway_link", "trunk", "trunk_link"]],
       "type": "line",
@@ -313,7 +313,7 @@
     },
     {
       "name": "motor_trunk",
-      "source": "fills",
+      "source": "world",
       "layer": "transport",
       "filter": ["class", "has", ["motorway", "motorway_link", "trunk", "trunk_link"]],
       "type": "line",
@@ -339,7 +339,7 @@
     },
     {
       "id": "boundaries",
-      "source": "fills",
+      "source": "world",
       "layer": "boundary",
       "filter": ["and", ["class", "has", ["Country", "State"]], ["maritime", "==", false]],
       "type": "line",
@@ -375,7 +375,7 @@
     },
     {
       "name": "equator",
-      "source": "fills",
+      "source": "world",
       "layer": "equator",
       "type": "line",
       "minzoom": 0,
@@ -399,7 +399,7 @@
     },
     {
       "name": "buildings",
-      "source": "fills",
+      "source": "world",
       "layer": "building",
       "type": "fill",
       "layout": {},
@@ -408,8 +408,55 @@
       }
     },
     {
-      "name": "places",
-      "source": "fills",
+      "name": "country_state",
+      "source": "world",
+      "minzoom": 4,
+      "filter": ["class", "==", "City"],
+      "layer": "place",
+      "type": "text",
+      "layout": {
+        "family": [
+          "input-range",
+          "zoom",
+          "step",
+          3,
+          "roboto-regular",
+          5,
+          "roboto-medium"
+        ],
+        "field": "?name",
+        "anchor": "center",
+        "offset": [0, 0],
+        "padding": [3, 3]
+      },
+      "paint": {
+        "size": [
+          "input-range",
+          "zoom",
+          "lin",
+          5,
+          15,
+          9,
+          26,
+          15,
+          30
+        ],
+        "fill": [
+          "input-range",
+          "zoom",
+          "step",
+          9,
+          "rgb(85, 85, 85)",
+          12,
+          "rgb(150, 150, 150)"
+        ],
+        "stroke": "rgb(250, 250, 250)",
+        "strokeWidth": 1
+      }
+    },
+    {
+      "name": "country_state",
+      "source": "world",
       "filter": ["class", "has", ["Country", "State"]],
       "layer": "place",
       "type": "text",
