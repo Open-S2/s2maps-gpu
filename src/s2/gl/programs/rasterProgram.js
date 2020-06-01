@@ -9,6 +9,7 @@ import vert2 from '../../shaders/raster2.vertex.glsl'
 import frag2 from '../../shaders/raster2.fragment.glsl'
 
 import type { Context } from '../contexts'
+import type { RasterTileSource } from '../../source/tile'
 
 export default class RasterProgram extends Program {
   constructor (context: Context) {
@@ -24,7 +25,7 @@ export default class RasterProgram extends Program {
     }
   }
 
-  draw (featureGuide: FeatureGuide, sourceData) {
+  draw (featureGuide: FeatureGuide, sourceData: RasterTileSource) {
     // setup variables
     const { context } = this
     const { gl } = context
@@ -34,11 +35,9 @@ export default class RasterProgram extends Program {
     let { texture, threeD } = featureGuide
     // set 3D uniform
     this.set3D(threeD)
-    // get mode
-    if (!mode) mode = gl.TRIANGLES
     // setup the texture
     gl.bindTexture(gl.TEXTURE_2D, texture)
     // draw elements
-    gl.drawElements(mode, count, gl.UNSIGNED_INT, 0)
+    gl.drawElements(mode ? mode : gl.TRIANGLES, count, gl.UNSIGNED_INT, 0)
   }
 }

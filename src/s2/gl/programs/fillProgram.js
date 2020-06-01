@@ -37,9 +37,7 @@ export default class FillProgram extends Program {
     this.set3D(threeD)
     // set feature code
     if (featureCode && featureCode.length) gl.uniform1fv(this.uFeatureCode, featureCode)
-    // get mode
-    if (!mode) mode = gl.TRIANGLES
     // draw elements
-    gl.drawElements(mode, count, gl.UNSIGNED_INT, (offset | 0) * 4)
+    gl.drawElements(mode ? mode : gl.TRIANGLES, count, gl.UNSIGNED_INT, (offset | 0) * 4)
   }
 }

@@ -27,6 +27,7 @@ export default class Map extends Camera {
   _interactive: boolean = true // allow the user to make visual changes to the map, whether that be zooming, panning, or dragging
   _scrollZoom: boolean = true // allow the user to scroll over the canvas and cause a zoom change
   renderNextFrame: boolean = false
+  injectionQueue: Array<Function> = []
   webworker: boolean = false
   dragPan: DragPan
   constructor (options: MapOptions, canvas: HTMLCanvasElement, id: string) {
@@ -103,7 +104,7 @@ export default class Map extends Camera {
     // done zooming if the updateWhileZooming flag is set to false
     if (update) {
       this.painter.dirty = true
-      this.render(true)
+      this.render()
     }
   }
 
@@ -120,18 +121,6 @@ export default class Map extends Camera {
     // update projection
     this.projection.onMove(movementX, movementY)
     this.render()
-  }
-
-  // we don't want to over request rendering, so we render with a limiter to
-  // safely call render as many times as we like
-  render (isZooming?: boolean = false) {
-    const self = this
-    if (self.renderNextFrame) return
-    self.renderNextFrame = true
-    requestAnimationFrame(() => {
-      self._render(isZooming)
-      self.renderNextFrame = false
-    })
   }
 
   _onSwipe (e: Event) {
@@ -151,5 +140,35 @@ export default class Map extends Camera {
 
   _onClick (e: Event) {
     console.log('CLICK')
+  }
+
+  // tile data is stored in the map, waiting for the render to
+  injectData (data) {
+    this.injectionQueue.push(data)
+    this.render()
+  }
+
+  // we don't want to over request rendering, so we render with a limiter to
+  // safely call render as many times as we like
+  render () {
+    const self = this
+    if (self.renderNextFrame) return
+    self.renderNextFrame = true
+    requestAnimationFrame(() => {
+      self.renderNextFrame = false
+      // if there is data to 'inject', we make sure to render another frame later
+      if (self.injectionQueue.length) {
+        // pull out the latest data we received (think about it, the newest data is the most constructive)
+        const data = self.injectionQueue.shift()
+        // inject
+        self._injectData(data)
+        // actually render
+        self._render()
+        // setup another render queue
+        self.render()
+      } else {
+        self._render()
+      }
+    })
   }
 }

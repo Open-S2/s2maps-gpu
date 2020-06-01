@@ -6,6 +6,15 @@ attribute vec2 aCurr; //   (INSTANCED)
 attribute vec2 aNext; //   (INSTANCED)
 attribute float aIndex; // (INSTANCED)
 
+// POSITION TYPES:
+// 0 -> curr
+// 1 -> curr + (-currNormal)
+// 2 -> curr + (currNormal)
+// 3 -> next + (-currNormal)
+// 4 -> next + (currNormal)
+// 5 -> curr + (currNormal) + check ccw
+// 6 -> curr + (prevNormal) + check ccw
+
 uniform mat4 uMatrix;
 uniform vec2 uAspect;
 
@@ -20,14 +29,20 @@ varying vec2 vWidth;
 varying vec2 vNorm;
 varying vec4 color;
 
+bool isCCW (in vec2 prev, in vec2 curr, in vec2 next) {
+  float det = (curr.y - prev.y) * (next.x - curr.x) - (curr.x - prev.x) * (next.y - curr.y);
+
+  return det < 0.;
+}
+
 void main () {
   // prep layer index and feature index positions
   int index = 0;
-  int featureIndex = int(aIndex);
+  int featureIndex = 0;
   // decode color
   color = decodeFeature(true, index, featureIndex);
   // decode line width
-  float width = decodeFeature(false, index, featureIndex)[0] / 2.;
+  float width = decodeFeature(false, index, featureIndex)[0];
   // explain width to fragment shader
   vWidth = vec2(width, 0.);
 
@@ -45,26 +60,45 @@ void main () {
   // grab the perpendicular vector
   vec2 currNorm = normalize(nextScreen - currScreen);
   // get the perpendicular of the currNorm -> add the width -> adust by aspect.
-  vec2 norm = vec2(-currNorm.y, currNorm.x);
+  currNorm = vec2(-currNorm.y, currNorm.x);
 
   // if less than 0, ignore the line (zoomed out sphere)
   if (curr.z > zero.z || next.z > zero.z) {
     gl_Position = vec4(0., 0., 0., 0.);
   } else if (aCurr != aNext) {
     if (aType == 0.) {
-      // current point's perp normal with a flipped vector
-      norm *= -1.;
-      gl_Position = vec4(currScreen + (norm * width / uAspect), curr.z, 1.);
+      gl_Position = vec4(currScreen, curr.z, 1.);
     } else if (aType == 1.) {
-      // current point's perp normal
-      gl_Position = vec4(currScreen + (norm * width / uAspect), curr.z, 1.);
+      // current point's perp normal with a flipped vector
+      currNorm *= -1.;
+      gl_Position = vec4(currScreen + (currNorm * width / uAspect), curr.z, 1.);
     } else if (aType == 2.) {
-      // next point's perp normal with a flipped vector
-      norm *= -1.;
-      gl_Position = vec4(nextScreen + (norm * width / uAspect), curr.z, 1.);
+      // current point's perp normal
+      gl_Position = vec4(currScreen + (currNorm * width / uAspect), curr.z, 1.);
     } else if (aType == 3.) {
+      // next point's perp normal with a flipped vector
+      currNorm *= -1.;
+      gl_Position = vec4(nextScreen + (currNorm * width / uAspect), curr.z, 1.);
+    } else if (aType == 4.) {
       // next point's perp normal
-      gl_Position = vec4(nextScreen + (norm * width / uAspect), curr.z, 1.);
+      gl_Position = vec4(nextScreen + (currNorm * width / uAspect), curr.z, 1.);
+    } else if (aType == 5. || aType == 6.) {
+      // get previous
+      vec4 prev = uMatrix * STtoXYZ(aPrev / 4096.);
+      prev.xyz /= prev.w;
+      vec2 prevScreen = prev.xy;
+      vec2 prevNorm = normalize(currScreen - prevScreen);
+      prevNorm = vec2(-prevNorm.y, prevNorm.x);
+      // if ccw, rotate normal
+      if (isCCW(prevScreen, currScreen, nextScreen)) {
+        prevNorm *= -1.;
+        currNorm *= -1.;
+      }
+      if (aType == 5.) {
+        gl_Position = vec4(currScreen + (currNorm * width / uAspect), curr.z, 1.);
+      } else { // aType == 6.
+        gl_Position = vec4(currScreen + (prevNorm * width / uAspect), curr.z, 1.);
+      }
     } else {
       gl_Position = vec4(0., 0., 0., 0.);
     }
@@ -72,5 +106,5 @@ void main () {
     gl_Position = vec4(0., 0., 0., 0.);
   }
   // tell the fragment the normal vector
-  vNorm = norm;
+  vNorm = currNorm;
 }

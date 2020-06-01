@@ -69,6 +69,7 @@ export class Skybox {
   size: number = 1024
   fov: number = degToRad(80)
   angle: number = degToRad(40)
+  matrix: Float32Array
   skybox: boolean = true
   constructor (style: WallpaperStyle, projection: Projection) {
     const { skybox, type, size } = style
@@ -79,19 +80,20 @@ export class Skybox {
   }
 
   getMatrix (): null | Float32Array {
-    if (this.projection.dirty) {
+    if (!this.matrix || this.projection.dirty) {
       const { aspect, lon, lat } = this.projection
       const matrix = mat4.create()
       // create a perspective matrix
-      mat4.perspective(matrix, this.fov, aspect[0] / aspect[1], 1, 2000)
+      mat4.perspective(matrix, this.fov, aspect[0] / aspect[1], 1, 10000)
       // rotate perspective
       mat4.rotate(matrix, [degToRad(lat), degToRad(lon), this.angle])
       // this is a simplified "lookat", since we maintain a set camera position
       mat4.multiply(matrix, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1])
       // invert view
       mat4.invert(matrix, matrix)
-
-      return matrix
+      // set the current matrix
+      this.matrix = new Float32Array(matrix)
     }
+    return this.matrix
   }
 }

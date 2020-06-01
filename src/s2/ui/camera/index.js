@@ -63,36 +63,6 @@ export default class Camera {
     if (this.painter) this.painter.resize(width, height)
   }
 
-  // TODO: On zooming start (this.lastTileViewState is empty) we set to tilesInView
-  // during the zooming process, all newTiles need to be injected with whatever tiles
-  // fit within it's view of lastTileViewState. Everytime we get zooming === false,
-  // we set lastTileViewState to null again to ensure we don't inject tiles...
-  // if updateTiles is set to false, we don't requestTiles unless zooming is off.
-  // no matter what, if zooming is false, we check that each tile has made requests
-  _getTiles (isZooming?: boolean) {
-    if (this.projection.dirty) {
-      // grab zoom change
-      // const zoomChange = this.projection.zoomChange()
-      // no matter what we need to update what's in view
-      const newTiles = []
-      // update tiles in view
-      this.tilesInView = this.projection.getTilesInView()
-      // check if any of the tiles don't exist in the cache. If they don't create a new tile
-      for (const tile of this.tilesInView) {
-        const [face, zoom, x, y, hash] = tile
-        if (!this.tileCache.has(hash)) {
-          // tile not found, so we create it
-          const newTile = this._createTile(face, zoom, x, y, hash)
-          // store reference for the style to request from webworker(s)
-          newTiles.push(newTile)
-        }
-      }
-      if (newTiles.length) this.painter.dirty = true
-      this.style.requestTiles(newTiles)
-    }
-    return this.tileCache.getBatch(this.tilesInView.map(t => t[4]))
-  }
-
   _createTile (face: Face, zoom: number, x: number, y: number, hash: number): Tile {
     // create tile
     const tile = new Tile(this.painter.context, face, zoom, x, y, hash)
@@ -137,31 +107,65 @@ export default class Camera {
     }, 150)
   }
 
-  injectFillSourceData (source: string, tileID: number, vertexBuffer: ArrayBuffer,
+  _injectData (data) {
+    // console.log('INJECT!', data)
+    const { type } = data
+    if (type === 'filldata' || type === 'linedata') this._injectVectorSourceData(data.source, data.tileID, data.vertexBuffer, data.indexBuffer, data.codeTypeBuffer, data.featureGuideBuffer)
+    else if (type === 'maskdata') this._injectMaskGeometry(data.tileID, data.vertexBuffer, data.indexBuffer, data.radiiBuffer)
+    else if (type === 'rasterdata') this._injectRasterData(data.source, data.tileID, data.image, data.leftShift, data.bottomShift)
+    else if (type === 'glyphdata') this._injectGlyphSourceData(data.source, data.tileID, data.glyphFilterBuffer, data.glyphVertexBuffer, data.glyphIndexBuffer, data.glyphQuadBuffer, data.colorBuffer, data.layerGuideBuffer)
+    else if (type === 'parentlayers') this._injectParentLayers(data.tileID, data.parentLayers)
+  }
+
+  _injectMaskGeometry (tileID: number, vertexBuffer: ArrayBuffer,
+    indexBuffer: ArrayBuffer, radiiBuffer: ArrayBuffer) {
+    if (this.tileCache.has(tileID)) {
+      const tile = this.tileCache.get(tileID)
+      tile.injectMaskGeometry(new Float32Array(vertexBuffer), new Uint32Array(indexBuffer), new Float32Array(radiiBuffer), this.style.mask)
+      // new 'paint', so painter is dirty
+      this.painter.dirty = true
+    }
+  }
+
+  _injectVectorSourceData (source: string, tileID: number, vertexBuffer: ArrayBuffer,
     indexBuffer: ArrayBuffer, codeTypeBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer) {
     if (this.tileCache.has(tileID)) {
       const tile = this.tileCache.get(tileID)
-      tile.injectVectorSourceData(source, new Int16Array(vertexBuffer), new Uint32Array(indexBuffer), new Uint8Array(codeTypeBuffer), new Uint32Array(featureGuideBuffer), this.style.layers)
+      tile.injectVectorSourceData(source, new Int16Array(vertexBuffer), (indexBuffer) ? new Uint32Array(indexBuffer) : null, codeTypeBuffer ? new Uint8Array(codeTypeBuffer) : null, new Uint32Array(featureGuideBuffer), this.style.layers)
       // new 'paint', so painter is dirty
       this.painter.dirty = true
-      // call a re-render
-      this.render()
     }
   }
 
-  injectLineSourceData (source: string, tileID: number, vertexBuffer: ArrayBuffer,
-    featureGuideBuffer: ArrayBuffer) {
+  _injectRasterData (source: string, tileID: string, image: ImageBitmap,
+    leftShift: number, bottomShift: number) {
     if (this.tileCache.has(tileID)) {
       const tile = this.tileCache.get(tileID)
-      tile.injectVectorSourceData(source, new Int16Array(vertexBuffer), null, null, new Uint32Array(featureGuideBuffer), this.style.layers)
+      tile.injectRasterData(source, image, leftShift, bottomShift)
       // new 'paint', so painter is dirty
       this.painter.dirty = true
-      // call a re-render
-      this.render()
     }
   }
 
-  injectParentLayers (tileID: number, parentLayers: ParentLayers = {}) {
+  _injectGlyphSourceData (source: string, tileID: string, glyphFilterBuffer: ArrayBuffer,
+    glyphVertexBuffer: ArrayBuffer, glyphIndexBuffer: ArrayBuffer,
+    glyphQuadBuffer: ArrayBuffer, colorBuffer: ArrayBuffer, layerGuideBuffer: ArrayBuffer) {
+    // store the vertexBuffer and texture in the gpu.
+    if (this.tileCache.has(tileID)) {
+      const tile = this.tileCache.get(tileID)
+      const glyphSource = tile.injectGlyphSourceData(
+        source, new Float32Array(glyphFilterBuffer), new Float32Array(glyphVertexBuffer),
+        new Uint32Array(glyphIndexBuffer), new Float32Array(glyphQuadBuffer),
+        new Uint8Array(colorBuffer), new Uint32Array(layerGuideBuffer)
+      )
+      // tell the painter to prep the texture
+      this.painter.buildGlyphTexture(glyphSource)
+      // new 'paint', so painter is dirty
+      this.painter.dirty = true
+    }
+  }
+
+  _injectParentLayers (tileID: number, parentLayers: ParentLayers = {}) {
     // grab the main tile
     const tile = this.tileCache.get(tileID)
     // for each parentLayer, inject specified layers
@@ -181,59 +185,43 @@ export default class Camera {
     }
     // new 'paint', so painter is dirty
     this.painter.dirty = true
-    // call a re-render
-    this.render()
   }
 
-  injectGlyphSourceData (source: string, tileID: string, glyphFilterBuffer: ArrayBuffer,
-    glyphVertexBuffer: ArrayBuffer, glyphIndexBuffer: ArrayBuffer,
-    glyphQuadBuffer: ArrayBuffer, colorBuffer: ArrayBuffer, layerGuideBuffer: ArrayBuffer) {
-    // store the vertexBuffer and texture in the gpu.
-    if (this.tileCache.has(tileID)) {
-      const tile = this.tileCache.get(tileID)
-      const glyphSource = tile.injectGlyphSourceData(
-        source, new Float32Array(glyphFilterBuffer), new Float32Array(glyphVertexBuffer),
-        new Uint32Array(glyphIndexBuffer), new Float32Array(glyphQuadBuffer),
-        new Uint8Array(colorBuffer), new Uint32Array(layerGuideBuffer)
-      )
-      // tell the painter to prep the texture
-      this.painter.buildGlyphTexture(glyphSource)
-      // new 'paint', so painter is dirty
-      this.painter.dirty = true
-      // call a re-render
-      this.render()
+  // TODO: On zooming start (this.lastTileViewState is empty) we set to tilesInView
+  // during the zooming process, all newTiles need to be injected with whatever tiles
+  // fit within it's view of lastTileViewState. Everytime we get zooming === false,
+  // we set lastTileViewState to null again to ensure we don't inject tiles...
+  // if updateTiles is set to false, we don't requestTiles unless zooming is off.
+  // no matter what, if zooming is false, we check that each tile has made requests
+  _getTiles () {
+    if (this.projection.dirty) {
+      // grab zoom change
+      // const zoomChange = this.projection.zoomChange()
+      // no matter what we need to update what's in view
+      const newTiles = []
+      // update tiles in view
+      this.tilesInView = this.projection.getTilesInView()
+      // check if any of the tiles don't exist in the cache. If they don't create a new tile
+      for (const tile of this.tilesInView) {
+        const [face, zoom, x, y, hash] = tile
+        if (!this.tileCache.has(hash)) {
+          // tile not found, so we create it
+          const newTile = this._createTile(face, zoom, x, y, hash)
+          // store reference for the style to request from webworker(s)
+          newTiles.push(newTile)
+        }
+      }
+      if (newTiles.length) this.painter.dirty = true
+      this.style.requestTiles(newTiles)
     }
+    return this.tileCache.getBatch(this.tilesInView.map(t => t[4]))
   }
 
-  injectRasterData (source: string, tileID: string, image: ImageBitmap,
-    leftShift: number, bottomShift: number) {
-    if (this.tileCache.has(tileID)) {
-      const tile = this.tileCache.get(tileID)
-      tile.injectRasterData(source, image, leftShift, bottomShift)
-      // new 'paint', so painter is dirty
-      this.painter.dirty = true
-      // call a re-render
-      this.render()
-    }
-  }
-
-  injectMaskGeometry (tileID: number, vertexBuffer: ArrayBuffer,
-    indexBuffer: ArrayBuffer, radiiBuffer: ArrayBuffer) {
-    if (this.tileCache.has(tileID)) {
-      const tile = this.tileCache.get(tileID)
-      tile.injectMaskGeometry(new Float32Array(vertexBuffer), new Uint32Array(indexBuffer), new Float32Array(radiiBuffer), this.style.mask)
-      // new 'paint', so painter is dirty
-      this.painter.dirty = true
-      // call a re-render
-      this.render()
-    }
-  }
-
-  _render (isZooming?: boolean = false) {
+  _render () {
     // dummy check, if nothing has changed, do nothing
     if (!this.painter.dirty && !this.style.dirty && !this.projection.dirty) return
     // prep tiles
-    const tiles = this._getTiles(isZooming)
+    const tiles = this._getTiles()
     // paint scene
     this.painter.paint(this.projection, this.style, tiles)
     // at the end of a scene render, we know Projection and Style are up to date

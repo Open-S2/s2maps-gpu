@@ -17,7 +17,7 @@ export default class LineProgram extends Program {
     const { gl, type } = context
     // if webgl1, setup attribute locations
     if (type === 1) {
-      gl.attributeLocations = { aType: 1, aPrev: 2, aCurr: 3, aNext: 4, aRadius: 6, aIndex: 7 }
+      gl.attributeLocations = { aType: 1, aPrev: 2, aCurr: 3, aNext: 4 }
       super(context, vert1, frag1)
     } else {
       super(context, vert2, frag2)
@@ -33,8 +33,6 @@ export default class LineProgram extends Program {
     // console.log('source', source)
     // set feature code
     if (featureCode && featureCode.length) gl.uniform1fv(this.uFeatureCode, featureCode)
-    // get mode
-    if (!mode) mode = gl.TRIANGLES
     // disable culling
     context.disableCullFace()
     // apply the appropriate offset in the source vertexBuffer attribute
@@ -44,7 +42,7 @@ export default class LineProgram extends Program {
     gl.vertexAttribPointer(4, 2, gl.SHORT, false, 12, 8 + ((offset | 0) * 12))
 
     // draw elements
-    gl.drawArraysInstanced(mode, 0, 9, count) // gl.drawArraysInstancedANGLE(mode, first, count, primcount)
+    gl.drawArraysInstanced(mode ? mode : gl.TRIANGLES, 0, 9, count) // gl.drawArraysInstancedANGLE(mode, first, count, primcount)
     // re-enable culling
     context.enableCullFace()
   }

@@ -130,57 +130,18 @@ export default class S2Map {
     return this._canvasContainer
   }
 
-  injectFillSourceData (source: string, tileID: string, vertexBuffer: ArrayBuffer,
-    indexBuffer: ArrayBuffer, codeTypeBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer) {
+  injectData (data) {
     if (this._offscreen) {
-      this.map.postMessage({ type: 'filldata', source, tileID, vertexBuffer, indexBuffer, codeTypeBuffer, featureGuideBuffer }, [vertexBuffer, indexBuffer, codeTypeBuffer, featureGuideBuffer])
+      // prep ArrayBuffer 0 copy transfer
+      const { type } = data
+      if (type === 'filldata') this.map.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.codeTypeBuffer, data.featureGuideBuffer])
+      else if (type === 'linedata') this.map.postMessage(data, [data.vertexBuffer, data.featureGuideBuffer])
+      else if (type === 'glyphdata') this.map.postMessage(data, [data.glyphFilterBuffer, data.glyphVertexBuffer, data.glyphIndexBuffer, data.glyphQuadBuffer, data.colorBuffer, data.layerGuideBuffer])
+      else if (type === 'rasterdata') this.map.postMessage(data, [data.image])
+      else if (type === 'maskdata') this.map.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.radiiBuffer])
+      else this.map.postMessage(data)
     } else {
-      this.map.injectFillSourceData(source, tileID, vertexBuffer, indexBuffer, codeTypeBuffer, featureGuideBuffer)
-    }
-  }
-
-  injectLineSourceData (source: string, tileID: string, vertexBuffer: ArrayBuffer,
-    featureGuideBuffer: ArrayBuffer) {
-    if (this._offscreen) {
-      this.map.postMessage({ type: 'linedata', source, tileID, vertexBuffer, featureGuideBuffer }, [vertexBuffer, featureGuideBuffer])
-    } else {
-      this.map.injectLineSourceData(source, tileID, vertexBuffer, featureGuideBuffer)
-    }
-  }
-
-  injectParentLayers(tileID: string, parentLayers: ParentLayers) {
-    if (this._offscreen) {
-      this.map.postMessage({ type: 'parentlayers', tileID, parentLayers })
-    } else {
-      this.map.injectParentLayers(tileID, parentLayers)
-    }
-  }
-
-  injectGlyphSourceData (source: string, tileID: string, glyphFilterBuffer: ArrayBuffer,
-    glyphVertexBuffer: ArrayBuffer, glyphIndexBuffer: ArrayBuffer,
-    glyphQuadBuffer: ArrayBuffer, colorBuffer: ArrayBuffer, layerGuideBuffer: ArrayBuffer) {
-    if (this._offscreen) {
-      this.map.postMessage({ type: 'glyphdata', source, tileID, glyphFilterBuffer, glyphVertexBuffer, glyphIndexBuffer, glyphQuadBuffer, colorBuffer, layerGuideBuffer }, [glyphFilterBuffer, glyphVertexBuffer, glyphIndexBuffer, glyphQuadBuffer, colorBuffer, layerGuideBuffer])
-    } else {
-      this.map.injectGlyphSourceData(source, tileID, glyphFilterBuffer, glyphVertexBuffer, glyphIndexBuffer, glyphQuadBuffer, colorBuffer, layerGuideBuffer)
-    }
-  }
-
-  injectRasterData (source: string, tileID: string, image: ImageBitmap,
-    leftShift: number, bottomShift: number) {
-    if (this._offscreen) {
-      this.map.postMessage({ type: 'rasterdata', source, tileID, image, leftShift, bottomShift }, [image])
-    } else {
-      this.map.injectRasterData(source, tileID, image, leftShift, bottomShift)
-    }
-  }
-
-  injectMaskGeometry (tileID: string, vertexBuffer: ArrayBuffer,
-    indexBuffer: ArrayBuffer, radiiBuffer: ArrayBuffer) {
-    if (this._offscreen) {
-      this.map.postMessage({ type: 'maskdata', tileID, vertexBuffer, indexBuffer, radiiBuffer }, [vertexBuffer, indexBuffer, radiiBuffer])
-    } else {
-      this.map.injectMaskGeometry(tileID, vertexBuffer, indexBuffer, radiiBuffer)
+      this.map.injectData(data)
     }
   }
 }

@@ -16,7 +16,6 @@ export default class SkyboxProgram extends Program {
   vao: VertexArrayObject
   vertexBuffer: WebGLVertexArrayObject
   aPos: GLint // 'a_pos' vec4 attribute
-  uSkybox: WebGLUniformLocation // 'u_scale' vec2 uniform
   cubeMap: WebGLTexture
   facesReady: number = 0
   renderable: boolean = false
@@ -29,26 +28,8 @@ export default class SkyboxProgram extends Program {
     // acquire the attributes & uniforms
     this.aPos = gl.getAttribLocation(this.glProgram, 'aPos')
     this.uMatrix = gl.getUniformLocation(this.glProgram, 'uMatrix')
-    this.uSkybox = gl.getUniformLocation(this.glProgram, 'uSkybox')
-    // create a vertex array object
-    this.vao = gl.createVertexArray()
-    // bind the vao so we can work on it
-    gl.bindVertexArray(this.vao)
-    // Create a vertex buffer
-    this.vertexBuffer = gl.createBuffer()
-    // Bind it to ARRAY_BUFFER (think of it as ARRAY_BUFFER = vertexBuffer)
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
-    // Buffer the data
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1,  1, -1,  1, 1,  -1, 1]), gl.STATIC_DRAW)
-    // Turn on the attribute
-    gl.enableVertexAttribArray(this.aPos)
-    // tell attribute how to get data out of vertexBuffer
-    // (attribute pointer, compenents per iteration (size), data size (type), normalize, stride, offset)
-    gl.vertexAttribPointer(this.aPos, 2, gl.FLOAT, false, 0, 0)
     // prep a cube texture
     this.cubeMap = gl.createTexture()
-    gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.cubeMap)
-    gl.bindVertexArray(null)
   }
 
   injectImages (skybox: Skybox, map: Map) {
@@ -88,17 +69,15 @@ export default class SkyboxProgram extends Program {
     gl.useProgram(this.glProgram)
     // bind the vao
     gl.bindVertexArray(this.vao)
-    // ensure we are using equal depth test like rasters
-    context.lequalDepth()
     // if renderable, time to draw
     if (this.renderable) {
+      // ignore z-fighting and only pass where stencil is 0
+      context.wallpaperState()
       // set matrix if necessary
       const matrix = wallpaper.getMatrix()
-      if (matrix) gl.uniformMatrix4fv(this.uMatrix, false, matrix)
-      // set box texture
-      gl.uniform1i(this.uSkybox, 0)
+      gl.uniformMatrix4fv(this.uMatrix, false, matrix)
       // Draw the geometry.
-      gl.drawArrays(gl.TRIANGLE_FAN, 0, 4)
+      context.drawQuad()
     }
   }
 }

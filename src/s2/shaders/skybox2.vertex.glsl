@@ -9,5 +9,5 @@ out vec4 vPos;
 void main () {
   vPos = uMatrix * aPos;
   gl_Position = aPos;
-  gl_Position.z = 1.0;
+  gl_Position.z = 1.;
 }

@@ -21,26 +21,7 @@ class WorkerPool {
 
   _onMessage ({ data }) {
     // a worker has processed tiles, so we are going to send it back to the appropriate mapID
-    const { type } = data
-    if (type === 'filldata') {
-      const { source, mapID, tileID, vertexBuffer, indexBuffer, codeTypeBuffer, featureGuideBuffer } = data
-      this.maps[mapID].injectFillSourceData(source, tileID, vertexBuffer, indexBuffer, codeTypeBuffer, featureGuideBuffer)
-    } else if (type === 'linedata') {
-      const { source, mapID, tileID, vertexBuffer, featureGuideBuffer } = data
-      this.maps[mapID].injectLineSourceData(source, tileID, vertexBuffer, featureGuideBuffer)
-    } else if (type === 'glyphdata') {
-      const { source, mapID, tileID, glyphFilterBuffer, glyphVertexBuffer, glyphIndexBuffer, glyphQuadBuffer, colorBuffer, layerGuideBuffer } = data
-      this.maps[mapID].injectGlyphSourceData(source, tileID, glyphFilterBuffer, glyphVertexBuffer, glyphIndexBuffer, glyphQuadBuffer, colorBuffer, layerGuideBuffer)
-    } else if (type === 'rasterdata') {
-      const { source, mapID, tileID, image, leftShift, bottomShift } = data
-      this.maps[mapID].injectRasterData(source, tileID, image, leftShift, bottomShift)
-    } else if (type === 'maskdata') {
-      const { mapID, tileID, vertexBuffer, indexBuffer, radiiBuffer } = data
-      this.maps[mapID].injectMaskGeometry(tileID, vertexBuffer, indexBuffer, radiiBuffer)
-    } else if (type === 'parentlayers') {
-      const { mapID, tileID, parentLayers } = data
-      this.maps[mapID].injectParentLayers(tileID, parentLayers)
-    }
+    this.maps[data.mapID].injectData(data)
   }
 
   addMap (map: S2Map) {
