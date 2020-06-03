@@ -177,7 +177,7 @@
       "name": "transport_borders",
       "source": "world",
       "layer": "transport",
-      "filter": ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited"]],
+      "filter": ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited", "pedestrian"]],
       "type": "line",
       "minzoom": 2,
       "layout": {
@@ -187,7 +187,7 @@
       "paint": {
         "color": [
           "data-condition",
-          ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited"]],
+          ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited", "pedestrian"]],
           "rgb(218, 220, 224)",
           "default",
           "rgba(0, 0, 0, 0)"
@@ -199,16 +199,12 @@
             "input-range",
             "zoom",
             "lin",
-            4,
-            1,
-            6.5,
-            1,
-            7,
-            2,
             10,
             2.5,
             13,
-            7
+            9,
+            15,
+            19
           ],
           ["or", ["class", "==", "street"], ["class", "==", "street_limited"]],
           [
@@ -216,12 +212,14 @@
             "zoom",
             "lin",
             10,
-            0.5,
+            1,
+            13,
+            5.5,
             15,
-            4.85
+            14
           ],
           "default",
-          1.85
+          3.5
         ]
       }
     },
@@ -230,7 +228,7 @@
       "source": "world",
       "layer": "transport",
       "filter": ["or",
-        ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited", "ferry"]],
+        ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited", "pedestrian", "ferry"]],
         ["and", ["class", "==", "railway"], ["type", "==", "rail"]],
         ["and", ["class", "==", "path"], ["type", "==", "path"]]
       ],
@@ -246,10 +244,10 @@
           ["class", "==", "ferry"],
           "#9fccf9",
           ["class", "==", "path"],
-          "rgb(136, 190, 150)",
+          "rgb(91, 185, 116)",
           ["class", "==", "railway"],
           "rgb(214, 217, 220)",
-          ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited"]],
+          ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited", "pedestrian"]],
           "rgb(255, 255, 255)",
           "default",
           "rgba(0, 0, 0, 0)"
@@ -261,12 +259,12 @@
             "input-range",
             "zoom",
             "lin",
-            7,
-            1.25,
             10,
-            1.85,
+            2,
             13,
-            6
+            6,
+            15,
+            15
           ],
           ["or", ["class", "==", "street"], ["class", "==", "street_limited"]],
           [
@@ -274,14 +272,16 @@
             "zoom",
             "lin",
             10,
-            1.25,
+            1.5,
+            13,
+            4,
             15,
-            4
+            10
           ],
           ["class", "==", "path"],
           1.5,
           "default",
-          1.5
+          2
         ]
       }
     },
@@ -390,10 +390,10 @@
           "input-range",
           "zoom",
           "step",
-          0,
+          0.99,
           1.5,
           1,
-          2.5
+          3
         ]
       }
     },
@@ -405,6 +405,113 @@
       "layout": {},
       "paint": {
         "color": "rgb(235, 235, 235)"
+      }
+    },
+    {
+      "name": "city",
+      "source": "world",
+      "minzoom": 4,
+      "filter": ["class", "==", "City"],
+      "layer": "place",
+      "type": "text",
+      "layout": {
+        "family": [
+          "input-range",
+          "zoom",
+          "step",
+          3,
+          "roboto-regular",
+          5,
+          "roboto-medium"
+        ],
+        "field": "?name",
+        "anchor": "center",
+        "offset": [0, 0],
+        "padding": [3, 3]
+      },
+      "paint": {
+        "size": [
+          "input-range",
+          "zoom",
+          "lin",
+          5,
+          15,
+          9,
+          26,
+          15,
+          30
+        ],
+        "fill": [
+          "input-range",
+          "zoom",
+          "step",
+          9,
+          "rgb(85, 85, 85)",
+          12,
+          "rgb(150, 150, 150)"
+        ],
+        "stroke": "rgb(250, 250, 250)",
+        "strokeWidth": 1
+      }
+    },
+    {
+      "name": "country_state",
+      "source": "world",
+      "filter": ["class", "has", ["Country", "State"]],
+      "layer": "place",
+      "type": "text",
+      "layout": {
+        "family": "roboto-medium",
+        "field": [
+          "input-range",
+          "zoom",
+          "step",
+          0,
+          "?abbr,?name",
+          2,
+          "?name"
+        ],
+        "anchor": "center",
+        "offset": [0, 0],
+        "padding": [6, 6]
+      },
+      "paint": {
+        "size": [
+          "data-condition",
+          ["class", "==", "Country"],
+          [
+            "input-range",
+            "zoom",
+            "step",
+            0,
+            22,
+            2,
+            26
+          ],
+          ["class", "==", "State"],
+          [
+            "input-range",
+            "zoom",
+            "step",
+            1,
+            16,
+            2,
+            18
+          ],
+          "default",
+          14
+        ],
+        "fill": [
+          "data-condition",
+          ["class", "==", "Country"],
+          "rgb(38, 38, 38)",
+          ["class", "==", "State"],
+          "rgb(105, 105, 105)",
+          "default",
+          "rgba(0, 0, 0, 0)"
+        ],
+        "stroke": "rgb(250, 250, 250)",
+        "strokeWidth": 1
       }
     }
   ]

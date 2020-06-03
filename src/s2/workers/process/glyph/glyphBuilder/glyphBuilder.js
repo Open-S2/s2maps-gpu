@@ -23,7 +23,7 @@ export default class GlyphBuilder {
   layerOffset: number = 0
   font: { [string]: GlyphStore } = new Map()
   rtree: RTree = new RTree()
-  dneGlyph: undefined | Path
+  dneGlyph: undefined | Path // Does Not Exist Glyph
 
   clear () {
     this.rtree.clear()
@@ -64,7 +64,7 @@ export default class GlyphBuilder {
       glyphSet
     }
     // if default font, try to setup the "char doesn't exist" glyph
-    if (name === 'default') this.dneGlyph = this.getGlyph('default', 9633)
+    if (name === 'default') this.dneGlyph = this.getGlyph('default', String.fromCharCode(9633))
   }
 
   getWidthAndGlyphData (family: string, field: string, size: number) {
@@ -73,8 +73,7 @@ export default class GlyphBuilder {
     let width = 0
     let found
     // run through each character in the field param and build out glyph data & width
-    for (let i = 0, sl = field.length; i < sl; i++) {
-      const code = field.charCodeAt(i)
+    for (const code of field) {
       found = false
       // we check glyphsets first
       for (const fam of families) {

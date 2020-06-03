@@ -199,16 +199,12 @@
             "input-range",
             "zoom",
             "lin",
-            4,
-            1,
-            6.5,
-            1,
-            7,
-            2,
             10,
             2.5,
             13,
-            7
+            9,
+            15,
+            19
           ],
           ["or", ["class", "==", "street"], ["class", "==", "street_limited"]],
           [
@@ -216,12 +212,14 @@
             "zoom",
             "lin",
             10,
-            0.5,
+            1,
+            13,
+            5.5,
             15,
-            4.85
+            14
           ],
           "default",
-          1.85
+          3.5
         ]
       }
     },
@@ -261,12 +259,12 @@
             "input-range",
             "zoom",
             "lin",
-            7,
-            1.25,
             10,
-            1.85,
+            2,
             13,
-            6
+            6,
+            15,
+            15
           ],
           ["or", ["class", "==", "street"], ["class", "==", "street_limited"]],
           [
@@ -274,14 +272,16 @@
             "zoom",
             "lin",
             10,
-            1.25,
+            1.5,
+            13,
+            4,
             15,
-            4
+            10
           ],
           ["class", "==", "path"],
-          1.5,
+          2,
           "default",
-          1.5
+          2
         ]
       }
     },
@@ -408,7 +408,7 @@
       }
     },
     {
-      "name": "country_state",
+      "name": "city",
       "source": "world",
       "minzoom": 4,
       "filter": ["class", "==", "City"],

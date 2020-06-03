@@ -22,9 +22,9 @@ void main () {
   if (aType == 0.) {
     vST = vec2(0., 1.);
   } else if (aType == 1.) {
-    vST = vec2(0., 0.);
+    vST = vec2(-1., 1.);
   } else if (aType == 2.) {
-    vST = vec2(0.5, 0.);
+    vST = vec2(0, -1.);
   } else { // aType == 3.
     vST = vec2(1., 1.);
   }

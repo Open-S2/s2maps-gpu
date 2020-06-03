@@ -4689,10 +4689,10 @@ glslify@^5.0.0:
     through2 "^0.6.3"
     xtend "^4.0.0"
 
-glyph-pbf@^1.5.0:
-  version "1.5.0"
-  resolved "https://registry.yarnpkg.com/glyph-pbf/-/glyph-pbf-1.5.0.tgz#b15e4bbde8c504fcdf48c5c0953d1dbd86d7135d"
-  integrity sha512-zKgM3VAmIwgIQwF7b4VPq6/oToieWAKeBZ9wu6gpF+tTNrDTFMjnBgSFh0MsBRkLwFRYOjn29dz8Fxpqlx0Keg==
+glyph-pbf@^1.6.0:
+  version "1.6.0"
+  resolved "https://registry.yarnpkg.com/glyph-pbf/-/glyph-pbf-1.6.0.tgz#78e605ce1525f1a2570393a8eb32f9a0089eb7d7"
+  integrity sha512-67It1yLhvmE2CJ625LIcyCH++7bmpZT7yX5WQms+szPPOFbksrnwtBA4QSckijeSlWdraXvj/F0K9hNtYlkWGQ==
   dependencies:
     pbf "^3.2.1"
 
@@ -6230,10 +6230,10 @@ levn@^0.3.0, levn@~0.3.0:
     prelude-ls "~1.1.2"
     type-check "~0.3.2"
 
-line-gl@^2.1.1:
-  version "2.1.1"
-  resolved "https://registry.yarnpkg.com/line-gl/-/line-gl-2.1.1.tgz#bf76ef22afdb4af95808ecf707f34f5fab25cdf0"
-  integrity sha512-H5fLiJALTXWzUw54jg0/q3zGOB2VLW1JfR7FDN3R5vPj0WzWmxgcIeclq6ZsXo2uKEfrjL2z7+0mA+nWR2dERA==
+line-gl@^2.1.2:
+  version "2.1.2"
+  resolved "https://registry.yarnpkg.com/line-gl/-/line-gl-2.1.2.tgz#fcb5b9e7a749e2f5230ef1a1d42e2fc27620b0a7"
+  integrity sha512-u/GdZEkPq350+MAgb8U1VMweJuuVUNQ1oubq7E+cFtdlHmDupxfWiAQJWMuRjoLXlOve3QTcjqUMeSTdMQ4hRQ==
 
 lines-and-columns@^1.1.6:
   version "1.1.6"

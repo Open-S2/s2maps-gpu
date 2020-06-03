@@ -2,8 +2,6 @@
 import { WebGL2Context, WebGLContext } from '../gl/contexts'
 import type { RasterTileSource, VectorTileSource, TextureMapTileSource } from './tile'
 
-const IS_NOT_CHROME = navigator.userAgent.indexOf('Chrome') === -1
-
 // given
 export default function buildSource (context: WebGL2Context | WebGLContext, source: RasterTileSource | VectorTileSource | TextureMapTileSource) {
   const { gl } = context
@@ -73,10 +71,13 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
 
     if (source.subType === 'line') {
       // we build out the standard build
-      // 0 -> curr + (-1)
-      // 1 -> curr + (1)
-      // 2 -> next + (-1)
-      // 3 -> next + (1)
+      // 0 -> curr
+      // 1 -> curr + (-1 * normal)
+      // 2 -> curr + (normal)
+      // 3 -> next + (-1 * normal)
+      // 4 -> next + (normal)
+      // 5 -> curr + (normal) [check that prev, curr, and next is CCCW otherwise invert normal]
+      // 6 -> curr + (previous-normal) [check that prev, curr, and next is CCCW otherwise invert normal]
       // create default triangle set
       source.typeArray = new Float32Array([1, 3, 4, 1, 4, 2, 0, 5, 6])
       // create buffer
@@ -218,13 +219,5 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
     const length = source.size * 2
     gl.bindTexture(gl.TEXTURE_2D, source.texture)
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, length, length, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
-    if (IS_NOT_CHROME) {
-      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false)
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1)
-    }
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
   }
 }

@@ -16,7 +16,7 @@ import type { Face } from 's2projection'
 import type { StylePackage } from '../styleSpec'
 import type { Text } from './process'
 
-const IS_NOT_CHROME = navigator.userAgent.indexOf('Chrome') !== -1
+const IS_CHROME = navigator.userAgent.indexOf('Chrome') !== -1
 
 type Point = [number, number]
 
@@ -270,7 +270,7 @@ export default class TileWorker {
     tileID: number, data: Object | ArrayBuffer | Blob, params?: Object) {
       const { leftShift, bottomShift } = params
       // https://bugzilla.mozilla.org/show_bug.cgi?id=1335594
-      const getImage = (IS_NOT_CHROME) ? createImageBitmap(data, { imageOrientation: 'flipY', premultiplyAlpha: 'premultiply' }) : createImageBitmap(data)
+      const getImage = (IS_CHROME) ? createImageBitmap(data, { imageOrientation: 'flipY', premultiplyAlpha: 'premultiply' }) : createImageBitmap(data)
       getImage
         .then(image => {
           postMessage({ mapID, type: 'rasterdata', source: sourceName, tileID, image, leftShift, bottomShift }, [image])

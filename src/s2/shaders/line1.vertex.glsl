@@ -29,6 +29,13 @@ varying vec2 vWidth;
 varying vec2 vNorm;
 varying vec4 color;
 
+vec2 normal (in vec2 a, in vec2 b) {
+  vec2 delta = a - b;
+  float mag = sqrt(delta.x * delta.x + delta.y * delta.y);
+  if (mag == 0.) return vec2(0., 0.);
+  else return vec2(-delta.y / mag, delta.x / mag);
+}
+
 bool isCCW (in vec2 prev, in vec2 curr, in vec2 next) {
   float det = (curr.y - prev.y) * (next.x - curr.x) - (curr.x - prev.x) * (next.y - curr.y);
 
@@ -58,9 +65,7 @@ void main () {
   vec2 currScreen = curr.xy;
   vec2 nextScreen = next.xy;
   // grab the perpendicular vector
-  vec2 currNorm = normalize(nextScreen - currScreen);
-  // get the perpendicular of the currNorm -> add the width -> adust by aspect.
-  currNorm = vec2(-currNorm.y, currNorm.x);
+  vec2 currNorm = normal(nextScreen, currScreen);
 
   // if less than 0, ignore the line (zoomed out sphere)
   if (curr.z > zero.z || next.z > zero.z) {
@@ -87,8 +92,7 @@ void main () {
       vec4 prev = uMatrix * STtoXYZ(aPrev / 4096.);
       prev.xyz /= prev.w;
       vec2 prevScreen = prev.xy;
-      vec2 prevNorm = normalize(currScreen - prevScreen);
-      prevNorm = vec2(-prevNorm.y, prevNorm.x);
+      vec2 prevNorm = normal(currScreen, prevScreen);
       // if ccw, rotate normal
       if (isCCW(prevScreen, currScreen, nextScreen)) {
         prevNorm *= -1.;

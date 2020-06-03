@@ -77,23 +77,10 @@ export default class Camera {
         tile.injectParentTile(parent)
       }
     }
-    // prep raster containers if said layers exist
-    this.prepRasterContainers(tile)
     // store the tile
     this.tileCache.set(hash, tile)
 
     return tile
-  }
-
-  prepRasterContainers (tile: Tile) {
-    const self = this
-    const { rasterLayers } = self.style
-    for (const sourceName in rasterLayers) {
-      // grab the source and layer details
-      const layer = rasterLayers[sourceName]
-      // create texture and recieve the pieces that need to be requested
-      tile.buildSourceTexture(sourceName, layer)
-    }
   }
 
   // avoid over-asking for tiles if we are zooming quickly
@@ -130,7 +117,9 @@ export default class Camera {
   _injectVectorSourceData (source: string, tileID: number, vertexBuffer: ArrayBuffer,
     indexBuffer: ArrayBuffer, codeTypeBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer) {
     if (this.tileCache.has(tileID)) {
+      // get tile
       const tile = this.tileCache.get(tileID)
+      // inject into tile
       tile.injectVectorSourceData(source, new Int16Array(vertexBuffer), (indexBuffer) ? new Uint32Array(indexBuffer) : null, codeTypeBuffer ? new Uint8Array(codeTypeBuffer) : null, new Uint32Array(featureGuideBuffer), this.style.layers)
       // new 'paint', so painter is dirty
       this.painter.dirty = true
@@ -140,8 +129,12 @@ export default class Camera {
   _injectRasterData (source: string, tileID: string, image: ImageBitmap,
     leftShift: number, bottomShift: number) {
     if (this.tileCache.has(tileID)) {
+      // get tile
       const tile = this.tileCache.get(tileID)
-      tile.injectRasterData(source, image, leftShift, bottomShift)
+      // find all layers that utilize the raster data
+      const layerIDs = this.style.layers.filter(layer => layer.source === source).map((layer, i) => i)
+      // inject into tile
+      tile.injectRasterData(source, layerIDs, image, leftShift, bottomShift)
       // new 'paint', so painter is dirty
       this.painter.dirty = true
     }
@@ -224,7 +217,7 @@ export default class Camera {
     const tiles = this._getTiles()
     // paint scene
     this.painter.paint(this.projection, this.style, tiles)
-    // at the end of a scene render, we know Projection and Style are up to date
+    // at the end of a scene render, we know Painter, Projection, and Style are up to date
     this.painter.dirty = false
     this.style.dirty = false
     this.projection.dirty = false

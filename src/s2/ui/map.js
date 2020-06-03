@@ -144,7 +144,8 @@ export default class Map extends Camera {
 
   // tile data is stored in the map, waiting for the render to
   injectData (data) {
-    this.injectionQueue.push(data)
+    if (data.type === 'parentlayers') this.injectionQueue.unshift(data)
+    else this.injectionQueue.push(data)
     this.render()
   }
 
@@ -159,7 +160,7 @@ export default class Map extends Camera {
       // if there is data to 'inject', we make sure to render another frame later
       if (self.injectionQueue.length) {
         // pull out the latest data we received (think about it, the newest data is the most constructive)
-        const data = self.injectionQueue.shift()
+        const data = self.injectionQueue.pop()
         // inject
         self._injectData(data)
         // actually render

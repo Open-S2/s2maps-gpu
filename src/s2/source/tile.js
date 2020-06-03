@@ -128,7 +128,7 @@ export default class Tile {
     const foundLayers = new Set()
     for (const featureGuide of parentTile.featureGuide) {
       const { type, parent, layerID } = featureGuide
-      if (type === 'raster' && parent) continue
+      if (type === 'raster') continue
       if (type === 'glyph') continue
       if (!parent) foundLayers.add(layerID)
       // build the feature, set the correct parent and tile
@@ -228,33 +228,44 @@ export default class Tile {
   // four children (if size is 512 and images are 512, otherwise we may store
   // 16 images of 256). Create a texture of size length x length to house
   // said data (length being this.size * 2).
-  buildSourceTexture (source: string, layer: Layer) {
-    const { gl } = this.context
-    // Build sourceData
-    const raster = this.sourceData[source] = { type: 'raster', size: this.size }
-    // Create a texture.
-    const texture = raster.texture = gl.createTexture()
-    // store information to featureGuide
-    const guide = raster.guide = {
-      tile: this,
-      layerID: layer.index,
-      source: 'mask', // when pulling from the vao, we still use the mask vertices
-      subType: 'fill',
-      type: 'raster',
-      featureCode: [0],
-      texture
-    }
-    this.featureGuide.push(guide)
-    buildSource(this.context, raster)
-  }
-
-  injectRasterData (source: string, image: Image, leftShift: number, bottomShift: number) {
+  injectRasterData (source: string, layerIDs: Array<number>, image: Image,
+    leftShift: number, bottomShift: number) {
     const { gl } = this.context
     const length = image.width
-    const currentSource = this.sourceData[source]
-    const { texture } = currentSource
-    // put into texture
+    let rasterSource = this.sourceData[source]
+    // prep phase (should the source not exist)
+    if (!rasterSource) {
+      // Build sourceData
+      rasterSource = this.sourceData[source] = { type: 'raster', size: this.size }
+      // Create a texture.
+      const texture = rasterSource.texture = gl.createTexture()
+      // store texture information to featureGuide
+      for (const layerID of layerIDs) {
+        const guide = {
+          tile: this,
+          layerID: layerID,
+          source: 'mask', // when pulling from the vao, we still use the mask vertices
+          subType: 'fill',
+          type: 'raster',
+          featureCode: [0],
+          texture
+        }
+        this.featureGuide.push(guide)
+      }
+      // build out the source
+      buildSource(this.context, rasterSource)
+    }
+    // pull out the texture
+    const { texture } = rasterSource
+    // step 1:
+    // store in texture
     gl.bindTexture(gl.TEXTURE_2D, texture)
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true)
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
     gl.texSubImage2D(gl.TEXTURE_2D, 0, leftShift * length, bottomShift * length, gl.RGBA, gl.UNSIGNED_BYTE, image)
   }
 
