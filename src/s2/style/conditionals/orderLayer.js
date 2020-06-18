@@ -19,56 +19,28 @@ function orderLine (layer: Layer) {
 }
 
 // text order: (paint)size->strokeWidth->fill->stroke->(layout)padding->offset
-// function orderText (layer: Layer) {
-//   const { layout, paint } = layer
-//   const localLayout = JSON.parse(JSON.stringify(layout))
-//   const localPaint = JSON.parse(JSON.stringify(paint))
-//   // store
-//   layer.layoutLocal = {
-//     family: localLayout.family || 'default',
-//     field: localLayout.field || '',
-//     anchor: localLayout.anchor || 'center',
-//     padding: localLayout.padding || [0, 0],
-//     offset: localLayout.offset || [0, 0]
-//   }
-//   layer.paintLocal = {
-//     size: localPaint.size || 16,
-//     fill: localPaint.fill || 'rgba(0, 0, 0, 0)',
-//     stroke: localPaint.stroke || 'rgba(0, 0, 0, 0)',
-//     strokeWidth: localPaint.strokeWidth || 0
-//   }
-//   layer.layout = {
-//     padding: layout.padding || [0, 0],
-//     offset: layout.offset || [0, 0]
-//   }
-//   layer.paint = {
-//     size: paint.size || 16,
-//     strokeWidth: paint.strokeWidth || 0,
-//     fill: paint.fill || 'rgba(0, 0, 0, 0)',
-//     stroke: paint.stroke || 'rgba(0, 0, 0, 0)'
-//   }
-// }
 function orderText (layer: Layer) {
   const { layout, paint } = layer
-  // build out according to cpu and gpu
-  const newTextLayoutLocal = {
-    family: layout.family || 'default',
-    field: layout.field || '',
-    anchor: layout.anchor || 'center',
-    padding: layout.padding || [0, 0],
-    offset: layout.offset || [0, 0]
-  }
-  const newTextPaintLocal = {
-    size: paint.size || 16,
-    fill: paint.fill || 'rgba(0, 0, 0, 0)',
-    stroke: paint.stroke || 'rgba(0, 0, 0, 0)',
-    strokeWidth: paint.strokeWidth || 0
-  }
+  const localLayout = JSON.parse(JSON.stringify(layout))
+  const localPaint = JSON.parse(JSON.stringify(paint))
   // store
-  layer.layoutLocal = newTextLayoutLocal
-  layer.paintLocal = newTextPaintLocal
+  layer.layoutLocal = {
+    family: localLayout.family || 'default',
+    field: localLayout.field || '',
+    anchor: localLayout.anchor || 'center',
+    padding: localLayout.padding || [0, 0],
+    offset: localLayout.offset || [0, 0]
+  }
+  layer.paintLocal = {
+    size: localPaint.size || 16
+  }
   layer.layout = {}
-  layer.paint = {}
+  layer.paint = {
+    size: paint.size || 16,
+    strokeWidth: paint.strokeWidth || 0,
+    fill: paint.fill || 'rgba(0, 0, 0, 0)',
+    stroke: paint.stroke || 'rgba(0, 0, 0, 0)'
+  }
 }
 
 // line order: (paint)size->color->(layout)anchor->padding->offset

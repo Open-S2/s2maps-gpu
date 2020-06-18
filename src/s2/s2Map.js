@@ -136,7 +136,7 @@ export default class S2Map {
       const { type } = data
       if (type === 'filldata') this.map.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.codeTypeBuffer, data.featureGuideBuffer])
       else if (type === 'linedata') this.map.postMessage(data, [data.vertexBuffer, data.featureGuideBuffer])
-      else if (type === 'glyphdata') this.map.postMessage(data, [data.glyphFilterBuffer, data.glyphVertexBuffer, data.glyphIndexBuffer, data.glyphQuadBuffer, data.colorBuffer, data.layerGuideBuffer])
+      else if (type === 'glyphdata') this.map.postMessage(data, [data.glyphFilterBuffer, data.glyphFillVertexBuffer, data.glyphFillIndexBuffer, data.glyphLineVertexBuffer, data.glyphQuadBuffer, data.layerGuideBuffer])
       else if (type === 'rasterdata') this.map.postMessage(data, [data.image])
       else if (type === 'maskdata') this.map.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.radiiBuffer])
       else this.map.postMessage(data)

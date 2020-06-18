@@ -3,10 +3,10 @@ precision highp float;
 
 layout (location = 0) in vec2 aUV; // float [u, v]
 layout (location = 1) in vec2 aST; // float [s, t]           (INSTANCED)
-layout (location = 2) in vec2 aXY; // uint16 [x, y]          (INSTANCED)
-layout (location = 3) in vec2 aWH; // uint16 [width, height] (INSTANCED)
-layout (location = 4) in float aID; // float ID              (INSTANCED)
-layout (location = 6) in float aRadius; // float radius      (INSTANCED)
+layout (location = 2) in vec2 aXY; // float [x, y]           (INSTANCED)
+layout (location = 3) in vec2 aPad; // float [x, y]          (INSTANCED)
+layout (location = 4) in float aWidth; // float width        (INSTANCED)
+layout (location = 5) in float aID; // float ID              (INSTANCED)
 
 uniform mat4 uMatrix;
 uniform vec2 uAspect;
@@ -22,8 +22,6 @@ out vec4 color;
 void main () {
   // prep xyz
   vec4 xyz = STtoXYZ(aST);
-  // if 3D, add radius
-  // if (u3D) xyz.xyz *= aRadius;
   // for points, add a little to ensure it doesn't get clipped
   xyz.xyz *= 1.001;
   // find the position on screen
@@ -41,41 +39,49 @@ void main () {
     // convert aID (really a uint32) to an rgba equivalent (split into 4 pieces of 8 bits)
     int id = int(aID);
     ivec3 colorID = ivec3(id & 255, (id >> 8) & 255, id >> 16);
+    // grab the size
+    float size = 26. * 2.;
+    // create width & height, adding padding to the total size
+    vec2 WH = vec2(aWidth * size, size) + (aPad * 2.);
 
     // check if the point exists with the same id in our sampler
     vec2 texPos = vec2(glPos.x / 2. + 0.5, glPos.y / 2. + 0.5);
     vec4 pointID = texture(uFeatures, texPos);
 
     // add x-y offset & use the UV to map the quad
-    glPos.xy += aXY / uAspect;
-    glPos.xy += aWH / uAspect * aUV;
+    glPos.xy += (aXY * size) / uAspect;
+    glPos.xy += WH / uAspect * aUV;
     // if colorID matches the existing pixels value, we draw the quad, otherwise we draw nothing
     if (colorID == ivec3(pointID.rgb * 256.)) {
       pointID.a = 0.1; // 2 / 255
       color = pointID;
     } else {
-      color = vec4(0., 0., 0., 0.);
+      color = vec4(0.);
     }
   } else { // uMode == 2 (result buffer)
     // we check that all 4 corners of the quad are 1/255th opacity AND the same colorID
     // convert aID (really a uint32) to an rgba equivalent (split into 4 pieces of 8 bits)
     int id = int(aID);
     ivec3 colorID = ivec3(float(id & 255), float((id >> 8) & 255), float(id >> 16));
+    // grab the size
+    float size = 26. * 2.;
+    // create width & height, adding padding to the total size
+    vec2 WH = vec2(aWidth * size, size) + (aPad * 2.);
 
     vec2 tPos = vec2(glPos.xy);
     // add x-y offset & add half width and height position
-    tPos += aXY / uAspect;
+    tPos += (aXY * size) / uAspect;
 
     // get bottom left
     tPos += vec2(1., 1.) / uAspect;
     vec4 btmLft = texture(uFeatures, vec2(tPos / 2. + 0.5));
     // get top left
-    tPos.y += (aWH.y - 2.) / uAspect.y;
+    tPos.y += (WH.y - 2.) / uAspect.y;
     vec4 topLft = texture(uFeatures, vec2(tPos / 2. + 0.5));
 
     if (colorID == ivec3(btmLft.rgb * 256.) && btmLft.a <= 0.1 && colorID == ivec3(topLft.rgb * 256.) && topLft.a <= 0.1) {
       // check top right, if top right, we are done
-      tPos.x += (aWH.x - 2.) / uAspect.x;
+      tPos.x += (WH.x - 2.) / uAspect.x;
       vec4 topRght = texture(uFeatures, vec2(tPos / 2. + 0.5));
       ivec3 topRghtValue = ivec3(topRght.rgb * 256.);
       if (colorID == topRghtValue && topRght.a <= 0.1) {
@@ -83,18 +89,18 @@ void main () {
         color.a = 1.;
       } else {
         // check bottom right, bottom right we still pass colorID
-        tPos.y -= (aWH.y - 2.) / uAspect.y;
+        tPos.y -= (WH.y - 2.) / uAspect.y;
         vec4 btmRght = texture(uFeatures, vec2(tPos / 2. + 0.5));
         ivec3 btmRghtValue = ivec3(btmRght.rgb * 256.);
         if (colorID == btmRghtValue && btmRght.a <= 0.1) {
           color = btmLft;
           color.a = 1.;
         } else {
-          color = vec4(0., 0., 0., 0.);
+          color = vec4(0.);
         }
       }
     } else {
-      color = vec4(0., 0., 0., 0.);
+      color = vec4(0.);
     }
 
     // set point size

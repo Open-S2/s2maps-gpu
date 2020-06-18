@@ -134,24 +134,9 @@ export default class Context {
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
   }
 
-  additiveBlending () {
+  inversionBlending () {
     const { gl } = this
-    gl.blendFunc(gl.ONE, gl.ONE)
-  }
-
-  zeroBlend () {
-    const { gl } = this
-    gl.blendFunc(gl.ZERO, gl.SRC_COLOR)
-  }
-
-  oneBlend () {
-    const { gl } = this
-    gl.blendFunc(gl.ONE, gl.ONE)
-  }
-
-  srcAlphaBlend () {
-    const { gl } = this
-    gl.blendFunc(gl.ONE, gl.ONE_MINUS_DST_COLOR)
+    gl.blendFunc(gl.ONE_MINUS_DST_COLOR, gl.ZERO)
   }
 
   disableBlend () {
@@ -177,9 +162,17 @@ export default class Context {
     gl.stencilFunc(gl.ALWAYS, ref, 0xFF)
   }
 
+  stencilInvert () {
+    const { gl } = this
+    gl.colorMask(false, false, false, false)
+    gl.stencilOp(gl.KEEP, gl.KEEP, gl.INVERT)
+    gl.stencilFunc(gl.ALWAYS, 0, 0xFF)
+  }
+
   stencilZero () {
     const { gl } = this
-    gl.stencilFunc(gl.EQUAL, 0, 0xFF)
+    gl.stencilOp(gl.KEEP, gl.REPLACE, gl.REPLACE)
+    gl.stencilFunc(gl.NOTEQUAL, 0, 0xFF)
   }
 
   lockMasks () {

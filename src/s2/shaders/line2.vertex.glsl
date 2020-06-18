@@ -40,28 +40,30 @@ vec2 perpNormal (in vec2 a, in vec2 b) {
 bool isCCW (in vec2 prev, in vec2 curr, in vec2 next) {
   float det = (curr.y - prev.y) * (next.x - curr.x) - (curr.x - prev.x) * (next.y - curr.y);
 
-  return det < 0.;
+  return det <= 0.;
 }
 
 void main () {
   // prep layer index and feature index positions
   int index = 0;
   int featureIndex = 0;
+  float width;
+  vec4 prev, curr, next, zero;
   // decode color
   color = decodeFeature(true, index, featureIndex);
   // decode line width
-  float width = decodeFeature(false, index, featureIndex)[0];
+  width = decodeFeature(false, index, featureIndex)[0];
   // explain width to fragment shader
   vWidth = vec2(width, 0.);
-
   // get the position in projected space
-  vec4 curr = uMatrix * STtoXYZ(aCurr / 4096.);
-  vec4 next = uMatrix * STtoXYZ(aNext / 4096.);
-  vec4 zero = uMatrix * vec4(0., 0., 0., 1.);
+  curr = uMatrix * STtoXYZ(aCurr / 4096.);
+  next = uMatrix * STtoXYZ(aNext / 4096.);
+  zero = uMatrix * vec4(0., 0., 0., 1.);
   // adjust by w & get the position in screen space
   curr.xyz /= curr.w;
   next.xyz /= next.w;
   zero.xyz /= zero.w;
+
   vec2 currScreen = curr.xy;
   vec2 nextScreen = next.xy;
   // grab the perpendicular vector
@@ -70,7 +72,7 @@ void main () {
   // if less than 0, ignore the line (zoomed out sphere - ignore lines that
   // go behind what is seen by the projection)
   if (curr.z > zero.z || next.z > zero.z) {
-    gl_Position = vec4(0., 0., 0., 0.);
+    gl_Position = vec4(0.);
   } else if (aCurr != aNext) {
     // 1, 3, 4, 1, 4, 2, 0, 5, 6
     if (aType == 0.) {
@@ -91,7 +93,7 @@ void main () {
       gl_Position = vec4(nextScreen + (currPerp * width / uAspect), next.z, 1.);
     } else if ((aType == 5. || aType == 6.) && aPrev != aCurr) {
       // get previous
-      vec4 prev = uMatrix * STtoXYZ(aPrev / 4096.);
+      prev = uMatrix * STtoXYZ(aPrev / 4096.);
       prev.xyz /= prev.w;
       vec2 prevScreen = prev.xy;
       vec2 prevPerp = perpNormal(currScreen, prevScreen);
@@ -108,10 +110,10 @@ void main () {
         currPerp = prevPerp * -1.;
       }
     } else {
-      gl_Position = vec4(0., 0., 0., 0.);
+      gl_Position = vec4(0.);
     }
   } else {
-    gl_Position = vec4(0., 0., 0., 0.);
+    gl_Position = vec4(0.);
   }
   // tell the fragment the normal vector
   vNorm = currPerp;

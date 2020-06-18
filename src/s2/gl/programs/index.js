@@ -1,5 +1,6 @@
 export { default as FillProgram } from './fillProgram'
 export { default as GlyphFilterProgram } from './glyphFilterProgram'
+export { default as GlyphLineProgram } from './glyphLineProgram'
 export { default as GlyphProgram } from './glyphProgram'
 export { default as GlyphQuadProgram } from './glyphQuadProgram'
 export { default as LineProgram } from './lineProgram'

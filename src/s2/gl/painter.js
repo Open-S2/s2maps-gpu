@@ -7,6 +7,7 @@ import {
   Program,
   FillProgram,
   GlyphFilterProgram,
+  GlyphLineProgram,
   GlyphProgram,
   GlyphQuadProgram,
   LineProgram,
@@ -87,9 +88,10 @@ export default class Painter {
       case 'text':
       case 'billboard':
       case 'glyph':
+        programs.glyphLineProgram = new GlyphLineProgram(this.context)
         programs.glyphFilter = new GlyphFilterProgram(this.context)
-        programs.glyphTex = new GlyphProgram(this.context)
-        programs.glyph = new GlyphQuadProgram(this.context, programs.glyphFilter)
+        programs.glyphTex = new GlyphProgram(this.context, programs.glyphLineProgram)
+        programs.glyph = new GlyphQuadProgram(this.context, programs.glyphFilter, programs.glyphTex)
         break
       case 'wallpaper':
         programs.wallpaper = new WallpaperProgram(this.context)
@@ -129,10 +131,8 @@ export default class Painter {
 
     // prep tiles features to draw
     const features = tiles.flatMap(tile => tile.featureGuide).sort(featureSort)
-    // console.log('features', features.length)
     // prep glyph features for drawing box filters
     const glyphFeatures = features.filter(feature => feature.type === 'glyph')
-    // console.log('glyphFeatures', glyphFeatures.length)
     // use text boxes to filter out overlap
     if (glyphFeatures.length) this.paintGlyphFilter(tiles, glyphFeatures)
 
@@ -152,6 +152,7 @@ export default class Painter {
     // paint features
     this.paintFeatures(features)
     // draw shade layer
+    // if (glyphFeatures.length) this.paintGlyphFilter(tiles, glyphFeatures)
     // if (style.shade) drawShade(this, style.shade)
     // cleanup
     context.cleanup()
@@ -159,14 +160,10 @@ export default class Painter {
 
   buildGlyphTexture (glyphSource: GlyphTileSource) {
     // get the glyphProgram
-    const glyphProgram: GlyphProgram = this.useProgram('glyphTex')
+    const glyphProgram: GlyphProgram = this.getProgram('glyphTex')
     if (!glyphProgram) return new Error('The "glyphTex" program does not exist, can not paint.')
-    // prep program for drawing glyphs
-    glyphProgram.prepContext()
     // build any glyph texture
-    glyphProgram.drawGlyph(glyphSource)
-    // cleanup from drawing glyphs
-    glyphProgram.cleanupContext()
+    glyphProgram.draw(glyphSource)
   }
 
   paintMasks (tiles: Array<Tile>, fb: boolean = false) {
@@ -255,6 +252,7 @@ export default class Painter {
       program.setFaceST(faceST)
       gl.bindVertexArray(sourceData[source].vao)
       // draw
+      // if (feature.type !== 'glyph') program.draw(feature, sourceData[source], tmpMaskID)
       program.draw(feature, sourceData[source], tmpMaskID)
     }
   }

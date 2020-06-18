@@ -154,6 +154,7 @@
       "name": "rivers",
       "source": "world",
       "layer": "water",
+      "onlyLines": true,
       "type": "line",
       "layout": {
         "cap": "butt",
@@ -411,7 +412,7 @@
       "name": "city",
       "source": "world",
       "minzoom": 4,
-      "filter": ["class", "==", "City"],
+      "filter": ["class", "has", ["City", "Town"]],
       "layer": "place",
       "type": "text",
       "layout": {
@@ -421,7 +422,7 @@
           "step",
           3,
           "roboto-regular",
-          5,
+          7,
           "roboto-medium"
         ],
         "field": "?name",

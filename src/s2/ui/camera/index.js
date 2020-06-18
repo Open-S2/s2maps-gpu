@@ -100,7 +100,7 @@ export default class Camera {
     if (type === 'filldata' || type === 'linedata') this._injectVectorSourceData(data.source, data.tileID, data.vertexBuffer, data.indexBuffer, data.codeTypeBuffer, data.featureGuideBuffer)
     else if (type === 'maskdata') this._injectMaskGeometry(data.tileID, data.vertexBuffer, data.indexBuffer, data.radiiBuffer)
     else if (type === 'rasterdata') this._injectRasterData(data.source, data.tileID, data.image, data.leftShift, data.bottomShift)
-    else if (type === 'glyphdata') this._injectGlyphSourceData(data.source, data.tileID, data.glyphFilterBuffer, data.glyphVertexBuffer, data.glyphIndexBuffer, data.glyphQuadBuffer, data.colorBuffer, data.layerGuideBuffer)
+    else if (type === 'glyphdata') this._injectGlyphSourceData(data.source, data.tileID, data.glyphFilterBuffer, data.glyphFillVertexBuffer, data.glyphFillIndexBuffer, data.glyphLineVertexBuffer, data.glyphQuadBuffer, data.layerGuideBuffer)
     else if (type === 'parentlayers') this._injectParentLayers(data.tileID, data.parentLayers)
   }
 
@@ -141,15 +141,15 @@ export default class Camera {
   }
 
   _injectGlyphSourceData (source: string, tileID: string, glyphFilterBuffer: ArrayBuffer,
-    glyphVertexBuffer: ArrayBuffer, glyphIndexBuffer: ArrayBuffer,
-    glyphQuadBuffer: ArrayBuffer, colorBuffer: ArrayBuffer, layerGuideBuffer: ArrayBuffer) {
+    glyphFillVertexBuffer: ArrayBuffer, glyphFillIndexBuffer: ArrayBuffer,
+    glyphLineVertexBuffer: ArrayBuffer, glyphQuadBuffer: ArrayBuffer, layerGuideBuffer: ArrayBuffer) {
     // store the vertexBuffer and texture in the gpu.
     if (this.tileCache.has(tileID)) {
       const tile = this.tileCache.get(tileID)
       const glyphSource = tile.injectGlyphSourceData(
-        source, new Float32Array(glyphFilterBuffer), new Float32Array(glyphVertexBuffer),
-        new Uint32Array(glyphIndexBuffer), new Float32Array(glyphQuadBuffer),
-        new Uint8Array(colorBuffer), new Uint32Array(layerGuideBuffer)
+        source, new Float32Array(glyphFilterBuffer), new Float32Array(glyphFillVertexBuffer),
+        new Float32Array(glyphFillIndexBuffer), new Float32Array(glyphLineVertexBuffer),
+        new Float32Array(glyphQuadBuffer), new Uint32Array(layerGuideBuffer)
       )
       // tell the painter to prep the texture
       this.painter.buildGlyphTexture(glyphSource)
@@ -213,6 +213,7 @@ export default class Camera {
   _render () {
     // dummy check, if nothing has changed, do nothing
     if (!this.painter.dirty && !this.style.dirty && !this.projection.dirty) return
+    // console.log('this.projection', this.projection)
     // prep tiles
     const tiles = this._getTiles()
     // paint scene

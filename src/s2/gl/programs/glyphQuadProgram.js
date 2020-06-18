@@ -13,42 +13,44 @@ import type { FeatureGuide, GlyphTileSource } from '../../source/tile'
 
 export default class GlyphQuadProgram extends Program {
   uTexSize: WebGLUniformLocation
-  uColor: WebGLUniformLocation
   uFeatures: WebGLUniformLocation
   uGlyphTex: WebGLUniformLocation
+  uSdfAspect: WebGLUniformLocation
   glyphFilterProgram: Program
-  constructor (context: Context, glyphFilterProgram: Program) {
+  glyphProgram: Program
+  constructor (context: Context, glyphFilterProgram: Program, glyphProgram: Program) {
     const { gl, type } = context
     // build shaders
     if (type === 1) {
-      gl.attributeLocations = { aUV: 0, aST: 1, aXY: 2, aTexUV: 3, aWH: 4, aID: 5, aColor: 6, aRadius: 7 }
+      gl.attributeLocations = { aUV: 0, aST: 1, aXY: 2, aXOffset: 3, aTexUV: 4, aWH: 5, aID: 6, aColor: 7 }
       super(context, vert1, frag1)
     } else {
       super(context, vert2, frag2)
     }
-    // set glyphFilterProgram
+    // set programs
     this.glyphFilterProgram = glyphFilterProgram
+    this.glyphProgram = glyphProgram
     // get program
     const { glProgram } = this
     // activate so we can setup samplers
     gl.useProgram(glProgram)
     // get uniform locations
     this.uTexSize = gl.getUniformLocation(glProgram, 'uTexSize')
-    this.uColor = gl.getUniformLocation(glProgram, 'uColor')
+    this.uSdfAspect = gl.getUniformLocation(glProgram, 'uSdfAspect')
     // get the samplers
     this.uFeatures = gl.getUniformLocation(glProgram, 'uFeatures')
     this.uGlyphTex = gl.getUniformLocation(glProgram, 'uGlyphTex')
     // set texture positions
-    gl.uniform1i(this.uFeatures, 0)  // uFeatures texture unit 0
-    gl.uniform1i(this.uGlyphTex, 1)  // uGlyphTex texture unit 1
+    gl.uniform1i(this.uFeatures, 0) // uFeatures texture unit 0
+    gl.uniform1i(this.uGlyphTex, 1) // uGlyphTex texture unit 1
   }
 
   setTexSize (texSize: Float32Array) {
     this.gl.uniform2fv(this.uTexSize, texSize)
   }
 
-  setColor (set?: bool = false) {
-    this.gl.uniform1i(this.uColor, set)
+  setSdfAspect (sdfSize: number) {
+    this.gl.uniform1f(this.uSdfAspect, sdfSize)
   }
 
   draw (featureGuide: FeatureGuide, source: GlyphTileSource) {
@@ -57,30 +59,35 @@ export default class GlyphQuadProgram extends Program {
     gl.activeTexture(gl.TEXTURE0)
     glyphFilterProgram.bindResultTexture()
     // pull out the appropriate data from the source
-    // const { offset, count } = featureGuide
-    const { texSize, texture, glyphQuadVAO, glyphPrimcount } = source
+    const { offset, count } = featureGuide
+    const { textureID, glyphQuadVAO, glyphQuadBuffer } = source
+    // grab glyph texture
+    const { texSize, texture } = this.glyphProgram.getFBO(textureID)
     // turn depth testing off
     context.stencilFunc(0)
-    // set source blend
-    context.zeroBlend()
-    // ensure we are not drawing color this step
-    this.setColor(false)
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     // set the correct vao
     gl.bindVertexArray(glyphQuadVAO)
     // set the texture size uniform
     this.setTexSize(texSize)
+    // set sdf size
+    this.setSdfAspect(1 / 42)
     // bind the correct glyph texture
     gl.activeTexture(gl.TEXTURE1)
     gl.bindTexture(gl.TEXTURE_2D, texture)
+    // apply the appropriate offset in the source vertexBuffer attribute
+    gl.bindBuffer(gl.ARRAY_BUFFER, glyphQuadBuffer)
+    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 40, 0 + ((offset | 0) * 40)) // s, t
+    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 40, 8 + ((offset | 0) * 40)) // x, y
+    gl.vertexAttribPointer(3, 1, gl.FLOAT, false, 40, 16 + ((offset | 0) * 40)) // xOffset
+    gl.vertexAttribPointer(4, 2, gl.FLOAT, false, 40, 20 + ((offset | 0) * 40)) // texture u, v
+    gl.vertexAttribPointer(5, 2, gl.FLOAT, false, 40, 28 + ((offset | 0) * 40)) // width, height
+    gl.vertexAttribPointer(6, 1, gl.FLOAT, false, 40, 36 + ((offset | 0) * 40)) // id
     // draw
-    gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, glyphPrimcount)
-    // draw color this time
-    context.oneBlend()
-    this.setColor(true)
-    gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, glyphPrimcount)
-    // reset default blend
-    context.setBlendDefault()
+    gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count)
     // reset to active texture 0
     gl.activeTexture(gl.TEXTURE0)
+    // set default blend
+    context.setBlendDefault()
   }
 }

@@ -90,34 +90,16 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
       gl.vertexAttribPointer(1, 1, gl.FLOAT, false, 0, 0)
     }
 
-    // done setting up the VAO
-    gl.bindVertexArray(null)
+    // cleanup
+    context.cleanup()
   } else if (source.type === 'glyph') {
     // find size data
-    source.instanceCount = source.glyphFilterVertices.length / 7
-    source.glyphPrimcount = source.glyphQuads.length / 9
-    source.texSize = new Float32Array([source.width, source.height])
-    // pre-build the glyph texture
-    source.texture = gl.createTexture()
-    gl.bindTexture(gl.TEXTURE_2D, source.texture)
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, source.width, source.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
-    // set filter system
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-
-    // FRAMEBUFFER
-    source.glyphFramebuffer = gl.createFramebuffer()
-    gl.bindFramebuffer(gl.FRAMEBUFFER, source.glyphFramebuffer)
-    // attach texture to glyphFramebuffer
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, source.texture, 0)
-    // rebind our default framebuffer
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+    source.instanceCount = source.glyphFilterVertices.length / 8
 
     // Create VAOS
     source.boxVAO = gl.createVertexArray()
-    source.glyphVAO = gl.createVertexArray()
+    source.glyphFillVAO = gl.createVertexArray()
+    source.glyphLineVAO = gl.createVertexArray()
     source.glyphQuadVAO = gl.createVertexArray()
 
     // STEP 1 - build box VAO
@@ -138,30 +120,34 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
     // setup attrinute data
     // s, t
     gl.enableVertexAttribArray(1)
-    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 28, 0)
+    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 32, 0)
     gl.vertexAttribDivisor(1, 1)
     // x, y
     gl.enableVertexAttribArray(2)
-    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 28, 8)
+    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 32, 8)
     gl.vertexAttribDivisor(2, 1)
-    // width, height
+    // padding
     gl.enableVertexAttribArray(3)
-    gl.vertexAttribPointer(3, 2, gl.FLOAT, false, 28, 16)
+    gl.vertexAttribPointer(3, 2, gl.FLOAT, false, 32, 16)
     gl.vertexAttribDivisor(3, 1)
-    // id
+    // width
     gl.enableVertexAttribArray(4)
-    gl.vertexAttribPointer(4, 1, gl.FLOAT, false, 28, 24)
+    gl.vertexAttribPointer(4, 1, gl.FLOAT, false, 32, 24)
     gl.vertexAttribDivisor(4, 1)
+    // id
+    gl.enableVertexAttribArray(5)
+    gl.vertexAttribPointer(5, 1, gl.FLOAT, false, 32, 28)
+    gl.vertexAttribDivisor(5, 1)
 
-    // STEP 2 - Drawing Glyph to texture data
-    gl.bindVertexArray(source.glyphVAO)
-    // create the vertex and index buffers
-    source.glyphVertexBuffer = gl.createBuffer()
-    source.glyphIndexBuffer = gl.createBuffer()
-    // bind vertex and buffer the data
-    gl.bindBuffer(gl.ARRAY_BUFFER, source.glyphVertexBuffer)
-    gl.bufferData(gl.ARRAY_BUFFER, source.glyphVertices, gl.STATIC_DRAW)
-    // setup attribute data
+    // STEP 2 - Drawing Glyph Fills to texture data
+    gl.bindVertexArray(source.glyphFillVAO)
+    // create the vertex fill and index buffers
+    source.glyphFillVertexBuffer = gl.createBuffer()
+    source.glyphFillIndexBuffer = gl.createBuffer()
+    // bind vertex fill and buffer the data
+    gl.bindBuffer(gl.ARRAY_BUFFER, source.glyphFillVertexBuffer)
+    gl.bufferData(gl.ARRAY_BUFFER, source.glyphFillVertices, gl.STATIC_DRAW)
+    // setup fill attribute data
     // x, y
     gl.enableVertexAttribArray(0)
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 12, 0)
@@ -169,10 +155,28 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
     gl.enableVertexAttribArray(7)
     gl.vertexAttribPointer(7, 1, gl.FLOAT, false, 12, 8)
     // bind index and buffer data
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, source.glyphIndexBuffer)
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, source.glyphIndices, gl.STATIC_DRAW)
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, source.glyphFillIndexBuffer)
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, source.glyphFillIndices, gl.STATIC_DRAW)
 
-    // STEP 3 - Drawing glyphs from texture to screen space
+    // STEP 3 - Drawing Glyph Lines to texture data
+    gl.bindVertexArray(source.glyphLineVAO)
+    // Create a vertex buffer
+    source.glyphLineVertexBuffer = gl.createBuffer()
+    // Bind the buffer
+    gl.bindBuffer(gl.ARRAY_BUFFER, source.glyphLineVertexBuffer)
+    // Buffer the data
+    gl.bufferData(gl.ARRAY_BUFFER, source.glyphLineVertices, gl.STATIC_DRAW)
+    // link attributes:
+    gl.enableVertexAttribArray(0) // aPos
+    gl.enableVertexAttribArray(1) // aPar
+    gl.enableVertexAttribArray(2) // aLimits
+    gl.enableVertexAttribArray(3) // aScale
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 28, 0) // aPos
+    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 28, 8) // aPar
+    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 28, 16) // aLimits
+    gl.vertexAttribPointer(3, 1, gl.FLOAT, false, 28, 24) // aScale
+
+    // STEP 4 - Drawing glyphs from texture to screen space
     gl.bindVertexArray(source.glyphQuadVAO)
     // add UV again
     gl.bindBuffer(gl.ARRAY_BUFFER, source.uvBuffer)
@@ -180,40 +184,37 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0)
     // create the vertex and color buffers
     source.glyphQuadBuffer = gl.createBuffer()
-    source.colorBuffer = gl.createBuffer()
     // bind each and buffer the data
     gl.bindBuffer(gl.ARRAY_BUFFER, source.glyphQuadBuffer)
     gl.bufferData(gl.ARRAY_BUFFER, source.glyphQuads, gl.STATIC_DRAW)
     // setup attribute data
     // s, t
     gl.enableVertexAttribArray(1)
-    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 9 * 4, 0)
+    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 40, 0)
     gl.vertexAttribDivisor(1, 1)
     // x, y
     gl.enableVertexAttribArray(2)
-    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 9 * 4, 8)
+    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 40, 8)
     gl.vertexAttribDivisor(2, 1)
-    // texture u, v
+    // xOffset
     gl.enableVertexAttribArray(3)
-    gl.vertexAttribPointer(3, 2, gl.FLOAT, false, 9 * 4, 16)
+    gl.vertexAttribPointer(3, 1, gl.FLOAT, false, 40, 16)
     gl.vertexAttribDivisor(3, 1)
-    // width, height
+    // texture u, v
     gl.enableVertexAttribArray(4)
-    gl.vertexAttribPointer(4, 2, gl.FLOAT, false, 9 * 4, 24)
+    gl.vertexAttribPointer(4, 2, gl.FLOAT, false, 40, 20)
     gl.vertexAttribDivisor(4, 1)
-    // id
+    // width, height
     gl.enableVertexAttribArray(5)
-    gl.vertexAttribPointer(5, 1, gl.FLOAT, false, 9 * 4, 32)
+    gl.vertexAttribPointer(5, 2, gl.FLOAT, false, 40, 28)
     gl.vertexAttribDivisor(5, 1)
-    // color
-    gl.bindBuffer(gl.ARRAY_BUFFER, source.colorBuffer)
-    gl.bufferData(gl.ARRAY_BUFFER, source.color, gl.STATIC_DRAW)
+    // id
     gl.enableVertexAttribArray(6)
-    gl.vertexAttribPointer(6, 4, gl.UNSIGNED_BYTE, true, 0, 0)
+    gl.vertexAttribPointer(6, 1, gl.FLOAT, false, 40, 36)
     gl.vertexAttribDivisor(6, 1)
 
-    // done setting up the VAO
-    gl.bindVertexArray(null)
+    // cleanup
+    context.cleanup()
   } else if (source.type === 'raster') {
     // setup texture params
     const length = source.size * 2

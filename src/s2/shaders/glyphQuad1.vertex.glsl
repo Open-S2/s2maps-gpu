@@ -1,13 +1,13 @@
 precision highp float;
 
 attribute vec2 aUV; // float [u, v]
-attribute vec2 aST; // float [s, t]                     (INSTANCED)
-attribute vec2 aXY; // uint16 [x, y]                    (INSTANCED)
-attribute vec2 aTexUV; // uint16 [u, v]                 (INSTANCED)
-attribute vec2 aWH; // uint16 [width, height]           (INSTANCED)
-attribute float aID; // float ID                        (INSTANCED)
-attribute vec4 aColor; // normalized uint8 [r, g, b, a] (INSTANCED)
-attribute float aRadius; // float radius                (INSTANCED)
+attribute vec2 aST; // float [s, t]                                  (INSTANCED)
+attribute vec2 aXY; // uint16 [x, y]                                 (INSTANCED)
+attribute vec2 aTexUV; // uint16 [u, v]                              (INSTANCED)
+attribute vec2 aWH; // uint16 [width, height]                        (INSTANCED)
+attribute float aID; // float ID                                     (INSTANCED)
+attribute vec4 aColor; // normalized uint8 [r, g, b, a]              (INSTANCED)
+attribute float aRadius; // float radius                             (INSTANCED)
 
 // glyph texture
 uniform vec2 uTexSize;

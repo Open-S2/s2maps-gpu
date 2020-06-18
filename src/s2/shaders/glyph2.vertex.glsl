@@ -4,7 +4,6 @@ precision highp float;
 layout (location = 0) in vec2 aPos;
 layout (location = 7) in float aType;
 
-uniform vec2 uOffset;
 uniform vec2 uTexSize;
 
 out vec2 vST;
@@ -19,15 +18,10 @@ the end of a quad is defined by type 3: [1, 1]
 
 void main () {
   // setup type
-  if (aType == 0.) {
-    vST = vec2(0., 1.);
-  } else if (aType == 1.) {
-    vST = vec2(-1., 1.);
-  } else if (aType == 2.) {
-    vST = vec2(0, -1.);
-  } else { // aType == 3.
-    vST = vec2(1., 1.);
-  }
+  if (aType == 0.) vST = vec2(0., 1.);
+  else if (aType == 1.) vST = vec2(-1., 1.);
+  else if (aType == 2.) vST = vec2(0., -1.);
+  else vST = vec2(1., 1.);
   // set position (reproject from "0 -> 1" to "(-1) -> 1")
-  gl_Position = vec4(2. * ((aPos + uOffset) / uTexSize) - 1., 0., 1.);
+  gl_Position = vec4(2. * aPos / uTexSize - 1., 0., 1.);
 }

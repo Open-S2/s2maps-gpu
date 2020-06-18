@@ -1,47 +1,52 @@
 // @flow
-import { GlyphSet } from 'glyph-pbf'
 import { RTree, TexturePack } from './'
-import MapCache from '../../../../util/mapCache'
 
 import type { Text } from '../../tile.worker'
-import type { Box } from './texturePack'
+import type { Glyph } from './texturePack'
 import type { Quad } from './rtree'
 
-export type Path = { vertices: Array<number>, indices: Array<number>, quads: Array<number> }
+export type Path = {
+  vertices: Array<number>,
+  indices: Array<number>,
+  quads: Array<number>,
+  strokes: Array<Array<number>>
+}
 
-type GlyphStore = {
-  cache: MapCache,
-  glyphSet: GlyphSet
+export type FontOptions = {
+  fontSize: number
 }
 
 export default class GlyphBuilder {
   texturePack: TexturePack = new TexturePack()
   glyphFilterVertices: Array<number> = []
   glyphQuads: Array<number> = []
-  color: Array<number> = []
   layerGuide: Array<number> = []
   layerOffset: number = 0
-  font: { [string]: GlyphStore } = new Map()
   rtree: RTree = new RTree()
-  dneGlyph: undefined | Path // Does Not Exist Glyph
+  dneGlyph: Glyph
 
   clear () {
     this.rtree.clear()
+    this.texturePack.clear()
     this.glyphFilterVertices = []
     this.layerGuide = []
     this.glyphQuads = []
-    this.color = []
     this.layerOffset = 0
-    this.texturePack = new TexturePack()
   }
 
   finishLayer (layerID: number) {
-    const offset = this.color.length / 4
+    const offset = this.glyphQuads.length / 10
     const count = offset - this.layerOffset
     if (count > 0) {
       this.layerGuide.push(layerID, this.layerOffset, count) // layerID, offset, count
       this.layerOffset = offset
     }
+  }
+
+  addFont (familyName: string, pbf: ArrayBuffer, opts: FontOptions = {}) {
+    this.texturePack.addFont(familyName, pbf, opts)
+    // if default font, try to setup the "char doesn't exist" glyph
+    if (familyName === 'default') this.dneGlyph = this.texturePack.getGlyph('default', String.fromCharCode(9633))
   }
 
   testQuad (quad: Quad): boolean {
@@ -50,38 +55,25 @@ export default class GlyphBuilder {
     let t = Math.round(quad.t * 768)
     quad.minX = s + quad.x
     quad.minY = t + quad.y
-    quad.maxX = s + quad.x + quad.width
+    quad.maxX = s + quad.x + (quad.width * quad.size)
     quad.maxY = t + quad.y + quad.height
-    const passFail = !this.rtree.collides(quad)
-    // check if it passes
-    return passFail
+    return !this.rtree.collides(quad)
   }
 
-  addFont (name: string, pbf: ArrayBuffer) {
-    const glyphSet = new GlyphSet(pbf)
-    this.font[name] = {
-      cache: new MapCache(400),
-      glyphSet
-    }
-    // if default font, try to setup the "char doesn't exist" glyph
-    if (name === 'default') this.dneGlyph = this.getGlyph('default', String.fromCharCode(9633))
-  }
-
-  getWidthAndGlyphData (family: string, field: string, size: number) {
+  getWidthAndGlyphData (family: string, field: string) {
     const families = [family, 'default']
     const glyphData = []
     let width = 0
     let found
     // run through each character in the field param and build out glyph data & width
-    for (const code of field) {
+    for (const char of field) {
       found = false
       // we check glyphsets first
       for (const fam of families) {
-        let glyphSet = this.font[fam] && this.font[fam].glyphSet
-        if (glyphSet && glyphSet.has(code)) {
-          const glyph = glyphSet.get(code)
-          width += glyph.advanceWidth * size
-          glyphData.push([fam, code])
+        const glyph = this.texturePack.getGlyph(fam, char)
+        if (glyph) {
+          width += glyph.advanceWidth
+          glyphData.push([fam, char])
           found = true
           break
         }
@@ -95,50 +87,36 @@ export default class GlyphBuilder {
         } else { glyphData.push(null) }
       }
     }
-    // ensure a whole number for width
-    width = Math.ceil(width)
 
     return [width, glyphData]
   }
 
   // by far the most complex component of the glyph builder.
+  // all text is build via 0 to 1 glyph scale. That way everything can be multiplied by the font size
+  // for the texture and eventual quad draw, width needs to be a multiplier of height
   // 1) add to our glyphFilterVertices the text dimesions
   // 2) add any missing glyphs to our texturePack
-  // 3) reference the texture when building quad glyph data
+  // 3) reference the texture when building quad glyph data (always put strokes in the front, fills in the back)
   buildText (text: Text) {
-    const { s, t, x, y, size, width, height, id, padding, strokeWidth, stroke, fill, glyphData } = text
+    const { s, t, x, y, family, width, id, padding, offset, strokeWidth, glyphData } = text
     // 1) add to our glyphFilterVertices the text dimesions
-    this.glyphFilterVertices.push(s, t, x, y, width, height, id)
+    this.glyphFilterVertices.push(s, t, x, y, ...padding, width, id)
     // 2 & 3) build our texture and glyph vertices
-    let glyph: Box
+    let glyph: Glyph
     let xOffset = 0
     // for each glyph in
-    for (const char of glyphData) {
-      if (char) {
-        const [family, code] = char
-        // now the fill
-        if (fill[3] !== 0) {
-          glyph = this.texturePack.getTexture(family, size, padding[1], code, this.getGlyph.bind(this))
-          this.glyphQuads.push(s, t, x + xOffset + padding[0], y + padding[1], ...glyph, id)
-          this.color.push(...fill)
+    for (const gData of glyphData) {
+      if (gData) {
+        const [family, char] = gData
+        // grab the glyph
+        glyph = this.texturePack.getGlyph(family, char)
+        if (!glyph) glyph = this.dneGlyph
+        if (glyph) {
+          this.glyphQuads.push(s, t, x, y, xOffset, ...glyph.bbox, id)
+          // update offset (remove the glyph excess padding)
+          xOffset += glyph.advanceWidth
         }
-        // update offset (remove the glyph AA padding)
-        xOffset += glyph[2] - 4
       }
-    }
-  }
-
-  getGlyph (family: string, code: number): Path {
-    let glyphStore = this.font[family]
-    const { cache, glyphSet } = glyphStore
-    if (cache.has(code)) {
-      return cache.get(code)
-    } else {
-      const glyph = glyphSet.get(code)
-      const path = glyph.getPath()
-      const res = { advanceWidth: glyph.advanceWidth, path }
-      cache.set(code, res)
-      return res
     }
   }
 }

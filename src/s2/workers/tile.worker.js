@@ -352,6 +352,8 @@ export default class TileWorker {
               } else if (layer.type === 'fill3D' && (type === 7 || type === 8)) {
                 continue
               } else if (layer.type === 'line' && (type === 2 || type === 3 || type === 4)) {
+                // check that we are not exluding fills
+                if (layer.onlyLines && type !== 2) continue
                 // const attributes = { cap: layer.layout.cap(), join: layer.layout.join(), dashed: true }
                 preprocessLine(feature.loadGeometry(), type, false, vertices, division, extent)
                 featureSet = lineFeatures
@@ -391,7 +393,7 @@ export default class TileWorker {
     // we seperate by type to make it seem like data is loading quicker, and to handle different vertex sizes
     if (fillFeatures.length) postprocessFill(mapID, `${sourceName}:fill`, hash, fillFeatures, postMessage)
     if (lineFeatures.length) postprocessLine(mapID, `${sourceName}:line`, hash, lineFeatures, postMessage)
-    if (texts.length) postprocessGlyph(mapID, `${sourceName}:glyph`, hash, texts, this.glyphBuilder, postMessage)
+    if (texts.length) postprocessGlyph(mapID, `${sourceName}:glyph`, hash, texts, this.glyphBuilder, this.id, postMessage)
     if (Object.keys(parentLayers).length) postMessage({ mapID, type: 'parentlayers', tileID: hash, parentLayers })
   }
 }

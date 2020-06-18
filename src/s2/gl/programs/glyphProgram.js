@@ -11,13 +11,20 @@ import frag2 from '../../shaders/glyph2.fragment.glsl'
 import type { Context } from '../contexts'
 import type { GlyphTileSource } from '../../source/tile'
 
+type FBO = {
+  width: number,
+  height: number,
+  texSize: Float32Array,
+  texture: WebGLTexture,
+  depthStencil: WebGLRenderbuffer,
+  glyphFramebuffer: WebGLFramebuffer
+}
+
 export default class GlyphProgram extends Program {
   uTexSize: WebGLUniformLocation
-  uColor: WebGLUniformLocation
-  uOffset: WebGLUniformLocation
-  offsets: Array<Float32Array>
-  fillAspect: Float32Array = new Float32Array([4096, 4096])
-  constructor (context: Context) {
+  glyphLineProgram: Program
+  fbos: Array<FBO> = []
+  constructor (context: Context, glyphLineProgram: Program) {
     // get gl from context
     const { gl, type } = context
     // build shaders
@@ -27,105 +34,165 @@ export default class GlyphProgram extends Program {
     } else {
       super(context, vert2, frag2, false)
     }
+    // store line program
+    this.glyphLineProgram = glyphLineProgram
     // get uniform locations
     this.uTexSize = gl.getUniformLocation(this.glProgram, 'uTexSize')
-    this.uColor = gl.getUniformLocation(this.glProgram, 'uColor')
-    this.uOffset = gl.getUniformLocation(this.glProgram, 'uOffset')
-    // set offset array
-    this.offsets = [
-      new Float32Array([-1 / 16, -5 / 16]),
-      new Float32Array([1 / 16, 1 / 16]),
-      new Float32Array([3 / 16, -1 / 16]),
-      new Float32Array([5 / 16, 5 / 16]),
-      new Float32Array([7 / 16, -3 / 16]),
-      new Float32Array([9 / 16, 3 / 16])
-    ]
   }
 
   injectFrameUniforms () {}
   flush () {}
 
+  getFBO (id: number, height?: number = 0): FBO {
+    // if texture exists, return it, otherwise we have to create the texture and fbo
+    const fbo = (this.fbos[id]) ? this.fbos[id] : this._buildTexture(id)
+    // if the height doesn't match the source, we update the height
+    if (height && height > fbo.height) this._increaseFBOSize(fbo, height)
+
+    return fbo
+  }
+
+  _buildTexture (id: number): FBO {
+    const { gl } = this
+    const fbo = {
+      height: 2048,
+      texSize: new Float32Array([2048, 2048]),
+      texture: gl.createTexture(),
+      depthStencil: gl.createRenderbuffer(),
+      glyphFramebuffer: gl.createFramebuffer()
+    }
+    // TEXTURE BUFFER
+    // pre-build the glyph texture
+    // bind
+    gl.bindTexture(gl.TEXTURE_2D, fbo.texture)
+    // allocate size
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 2048, 2048, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
+    // set filter system
+    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+    // DEPTH & STENCIL BUFFER
+    // bind
+    gl.bindRenderbuffer(gl.RENDERBUFFER, fbo.depthStencil)
+    // allocate size
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_STENCIL, 2048, 2048)
+    // FRAMEBUFFER
+    // bind
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo.glyphFramebuffer)
+    // attach texture to glyphFramebuffer
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, fbo.texture, 0)
+    // attach stencil renderbuffer to framebuffer
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, fbo.depthStencil)
+    // rebind our default framebuffer
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+
+    // store the fbo
+    this.fbos[id] = fbo
+
+    return fbo
+  }
+
+  _increaseFBOSize (fbo: FBO, height: number) {
+    // TODO: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/copyTexSubImage2D
+    const { gl } = this
+    // TEXTURE
+    // bind
+    gl.bindTexture(gl.TEXTURE_2D, fbo.texture)
+    // allocate size
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 2048, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
+    // STENCIL
+    // bind
+    gl.bindRenderbuffer(gl.RENDERBUFFER, fbo.depthStencil)
+    // allocate size
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_STENCIL, 2048, height)
+    // update new size
+    fbo.height = height
+    fbo.texSize[1] = height
+  }
+
   setTexSize (texSize: Float32Array) {
     this.gl.uniform2fv(this.uTexSize, texSize)
   }
 
-  setOffset (offset: Float32Array) {
-    this.gl.uniform2fv(this.uOffset, offset)
-  }
-
-  setColor (color: Float32Array) {
-    this.gl.uniform4fv(this.uColor, color)
-  }
-
-  prepContext () {
-    const { context } = this
-    // use additive blending
-    context.additiveBlending()
-    // allow front and back faces
-    context.disableCullFace()
-  }
-
-  cleanupContext () {
-    const { context } = this
-    // reset the viewport to our canvas size
-    context.resetViewport()
-    // reset blend type
-    context.setBlendDefault()
-    // turn cull face back on
-    context.enableCullFace()
-  }
-
-  // drawFill (source: VectorTileSource) {
-  //   const { context, gl } = this
-  //   const { vao, fillFramebuffer, features } = source
-  //   // bind the framebuffer
-  //   gl.bindFramebuffer(gl.FRAMEBUFFER, fillFramebuffer)
-  //   // set the viewport
-  //   gl.viewport(0, 0, 1024, 1024)
-  //   // set the texture size uniform
-  //   this.setTexSize(this.fillAspect)
-  //   // set the vao
-  //   gl.bindVertexArray(vao)
-  //
-  //   // draw
-  //   for (const feature of features) {
-  //     let { color, count, offset, texIndex, mode } = feature
-  //     // get mode
-  //     if (!mode) mode = gl.TRIANGLES
-  //     // set the appropriate color buffer
-  //     gl.drawBuffers([gl.COLOR_ATTACHMENT0 + texIndex])
-  //     // set the color uniform
-  //     this.setColor(color)
-  //     // clear stencil
-  //     // gl.clearStencil(0x0)
-  //     // gl.clear(gl.STENCIL_BUFFER_BIT)
-  //     // Step 1: Draw to the stencil using "nonzero rule" (inverting the stencil)
-  //     context.fillStepOne()
-  //     gl.drawElements(mode, count, gl.UNSIGNED_INT, (offset | 0) * 4)
-  //     // Step 2: Draw the tile mask and use the stencil as a guide on when to draw or not.
-  //     // The "color" is the bit we want to store the feature's on/off information at.
-  //     context.fillStepTwo()
-  //     gl.drawElements(mode, count, gl.UNSIGNED_INT, (offset | 0) * 4)
-  //   }
-  // }
-
-  drawGlyph (source: GlyphTileSource) {
+  cleanGlyphSource (source: GlyphTileSource) {
     const { gl } = this
+
+    gl.deleteBuffer(source.glyphFillVertexBuffer)
+    gl.deleteBuffer(source.glyphFillIndexBuffer)
+    gl.deleteBuffer(source.glyphLineVertexBuffer)
+    gl.deleteVertexArray(source.glyphFillVAO)
+    gl.deleteVertexArray(source.glyphLineVAO)
+    delete source.glyphFillVertexBuffer
+    delete source.glyphFillIndexBuffer
+    delete source.glyphLineVertexBuffer
+    delete source.glyphFillVAO
+    delete source.glyphLineVAO
+    delete source.glyphLineVertices
+    delete source.glyphLineTypeArray
+    delete source.glyphFillVertices
+    delete source.glyphFillIndices
+  }
+
+  draw (source: GlyphTileSource) {
+    const { context, gl, glyphLineProgram } = this
     // pull out the appropriate data from the source
-    const { width, height, texSize, glyphFramebuffer, glyphVAO, glyphIndices } = source
+    const { textureID, glyphFillVAO, glyphFillIndices } = source
+
+    // PREPARE
+    // grab the correct framebuffer variables
+    const { height, texSize, glyphFramebuffer } = this.getFBO(textureID, source.height)
     // bind the framebuffer
     gl.bindFramebuffer(gl.FRAMEBUFFER, glyphFramebuffer)
     // set the viewport
-    gl.viewport(0, 0, width, height)
-    // set the correct vao
-    gl.bindVertexArray(glyphVAO)
+    gl.viewport(0, 0, 2048, height)
+    // allow front and back faces
+    context.disableCullFace()
+
+    // LINE
+    // set depth test is on
+    context.enableDepthTest()
+    context.lessDepth()
+    // disable stencil
+    context.disableStencilTest()
+    // set program as current
+    glyphLineProgram.use()
+    // set appropriate aspect
+    glyphLineProgram.setAspect(texSize)
+    // draw lines
+    glyphLineProgram.draw(source)
+    // enable stencil
+    context.enableStencilTest()
+
+    // FILL
+    // prep blending type
+    context.inversionBlending()
+    // now use current program
+    this.use()
     // set the texture size uniform
     this.setTexSize(texSize)
-    // draw
-    for (let i = 0; i < 6; i++) {
-      if (i % 2 === 0) this.setColor(new Float32Array([i === 0 ? 1 : 0, i === 2 ? 1 : 0, i === 4 ? 1 : 0, 0]))
-      this.setOffset(this.offsets[i])
-      gl.drawElements(gl.TRIANGLES, glyphIndices.length, gl.UNSIGNED_INT, 0)
-    }
+    // disable depth test
+    context.disableDepthTest()
+    // set the correct vao
+    gl.bindVertexArray(glyphFillVAO)
+    // draw fill onto the stencil
+    context.stencilInvert()
+    const indexLength = glyphFillIndices.length
+    gl.drawElements(gl.TRIANGLES, indexLength, gl.UNSIGNED_INT, 0)
+    // draw fill using the stencil as a guide
+    context.stencilZero()
+    context.lockMasks()
+    gl.drawElements(gl.TRIANGLES, indexLength, gl.UNSIGNED_INT, 0)
+    // turn depth testing back on
+    context.enableDepthTest()
+
+    this.cleanGlyphSource(source)
+
+    // rebind default framebuffer
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+    // reset viewport
+    context.resetViewport()
   }
 }

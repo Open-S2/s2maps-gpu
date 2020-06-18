@@ -42,27 +42,26 @@ export type VectorTileSource = {
 export type GlyphTileSource = {
   type: 'glyph',
   uvArray: Float32Array,
-  texture: WebGLTexture,
-  width: number,
+  textureID: number,
   height: number,
-  texSize: Float32Array,
   glyphFilterVertices: Float32Array,
   instanceCount: number,
-  glyphVertices: Float32Array,
-  glyphIndices: Uint32Array,
+  glyphFillVertices: Float32Array,
+  glyphFillIndices: Uint32Array,
+  glyphLineVertices: Float32Array,
+  glyphLineTypeArray: Float32Array,
   glyphQuads: Float32Array,
-  glyphPrimcount: number,
-  color: Uint8Array,
-  glyphFramebuffer: WebGLFramebuffer,
   boxVAO?: WebGLVertexArrayObject,
-  glyphVAO?: WebGLVertexArrayObject,
+  glyphFillVAO?: WebGLVertexArrayObject,
+  glyphLineVAO?: WebGLVertexArrayObject,
   glyphQuadVAO?: WebGLVertexArrayObject,
   uvBuffer?: WebGLBuffer,
   glyphFilterBuffer?: WebGLBuffer,
-  glyphVertexBuffer?: WebGLBuffer,
+  glyphFillVertexBuffer?: WebGLBuffer,
+  glyphLineVertexBuffer?: WebGLBuffer,
+  glyphLineTypeBuffer?: WebGLBuffer,
   glyphIndexBuffer?: WebGLBuffer,
-  glyphQuadBuffer?: WebGLBuffer,
-  colorBuffer?: WebGLBuffer
+  glyphQuadBuffer?: WebGLBuffer
 }
 
 export type RasterTileSource = {
@@ -149,7 +148,7 @@ export default class Tile {
     for (let layerID in this.childrenRequests) {
       layerID = +layerID
       for (const tile of this.childrenRequests[layerID]) {
-        tile.featureGuide = tile.featureGuide.filter(fg => !(fg.parent && fg.layerID === layerID))
+        if (tile) tile.featureGuide = tile.featureGuide.filter(fg => !(fg.parent && fg.layerID === layerID))
       }
     }
     // run through every layer in the guide and see if any of the tiles need said layer
@@ -157,7 +156,7 @@ export default class Tile {
       if (featureGuide.source === sourceName && this.childrenRequests[featureGuide.layerID]) {
         for (const tile of this.childrenRequests[featureGuide.layerID]) {
           // first remove all instances of source
-          tile.featureGuide.push({ ...featureGuide, parent: this, tile })
+          if (tile) tile.featureGuide.push({ ...featureGuide, parent: this, tile })
         }
         // cleanup
         delete this.childrenRequests[featureGuide.layerID]
@@ -311,20 +310,21 @@ export default class Tile {
     return builtSource
   }
 
-  injectGlyphSourceData (source: string, glyphFilterVertices: Float32Array, glyphVertices: Float32Array,
-    glyphIndices: Uint32Array, glyphQuads: Float32Array, color: Uint8Array,
+  injectGlyphSourceData (source: string, glyphFilterVertices: Float32Array,
+    glyphFillVertices: Float32Array, glyphFillIndices: Float32Array,
+    glyphLineVertices: Float32Array, glyphQuads: Float32Array,
     layerGuideBuffer: Uint32Array): GlyphTileSource {
     // setup source data
     const glyphSource = this.sourceData[source] = {
       type: 'glyph',
       uvArray: new Float32Array([0, 0,  1, 0,  1, 1,  0, 1]),
-      width: layerGuideBuffer[0],
+      textureID: layerGuideBuffer[0],
       height: layerGuideBuffer[1],
       glyphFilterVertices,
-      glyphVertices,
-      glyphIndices,
-      glyphQuads,
-      color
+      glyphFillVertices,
+      glyphFillIndices,
+      glyphLineVertices,
+      glyphQuads
     }
 
     // we work off the layerGuideBuffer, adding to the buffer as we go

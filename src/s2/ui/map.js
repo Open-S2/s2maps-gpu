@@ -129,12 +129,13 @@ export default class Map extends Camera {
   }
 
   swipeAnimation (now: number) {
-    if (!this.dragPan.swipeActive) return
-    const [newMovementX, newMovementY, time] = this.dragPan.getNextFrame(now)
+    const self = this
+    if (!self.dragPan.swipeActive) return
+    const [newMovementX, newMovementY, time] = self.dragPan.getNextFrame(now)
     if (time) {
-      this.projection.onMove(newMovementX, newMovementY, 6, 6)
-      this._render()
-      requestAnimationFrame(this.swipeAnimation.bind(this))
+      self.projection.onMove(newMovementX, newMovementY, 6, 6)
+      self.render()
+      requestAnimationFrame(self.swipeAnimation.bind(self))
     }
   }
 

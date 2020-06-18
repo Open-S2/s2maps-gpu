@@ -4689,10 +4689,10 @@ glslify@^5.0.0:
     through2 "^0.6.3"
     xtend "^4.0.0"
 
-glyph-pbf@^1.6.0:
-  version "1.6.0"
-  resolved "https://registry.yarnpkg.com/glyph-pbf/-/glyph-pbf-1.6.0.tgz#78e605ce1525f1a2570393a8eb32f9a0089eb7d7"
-  integrity sha512-67It1yLhvmE2CJ625LIcyCH++7bmpZT7yX5WQms+szPPOFbksrnwtBA4QSckijeSlWdraXvj/F0K9hNtYlkWGQ==
+glyph-pbf@^1.8.2:
+  version "1.8.2"
+  resolved "https://registry.yarnpkg.com/glyph-pbf/-/glyph-pbf-1.8.2.tgz#ce12b6a48eb664893b70687c9dd3cdfa4c3c1146"
+  integrity sha512-fjFBv9yR64FGl7kC6Wc2lon/ji/A7ZrSBoramlK5kPIentRaqBpoEsqZs2Q+ATovR233D23BZJ9xOtE0Y3hsbg==
   dependencies:
     pbf "^3.2.1"
 

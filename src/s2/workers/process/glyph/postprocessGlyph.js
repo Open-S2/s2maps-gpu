@@ -5,7 +5,7 @@ import { GlyphBuilder, anchorOffset } from './glyphBuilder'
 import type { Text } from '../../tile.worker'
 
 export default function postprocessGlyph (mapID: string, sourceName: string,
-  tileID: string, texts: Array<Text>, glyphBuilder, postMessage: Function) {
+  tileID: string, texts: Array<Text>, glyphBuilder: GlyphBuilder, id: number, postMessage: Function) {
   // sort by layerID
   texts = texts.sort(featureSort)
 
@@ -13,16 +13,16 @@ export default function postprocessGlyph (mapID: string, sourceName: string,
   // existant text. Sometimes datapoints can range in the 100s in one tile, so
   // this step reduces cost dramatically.
   for (const text of texts) {
-    const { family, field, size, padding, offset, height, anchor } = text
-    let [width, glyphData] = glyphBuilder.getWidthAndGlyphData(family, field, size)
+    const { family, field, padding, offset, height, anchor } = text
+    let [width, glyphData] = glyphBuilder.getWidthAndGlyphData(family, field)
     if (!width) continue
-    text.width = width + (padding[0] * 2)
+    text.width = width
     text.glyphData = glyphData
     // get anchor offset positions
-    let [x, y] = anchorOffset(anchor, width, height)
+    let [x, y] = anchorOffset(anchor, width)
     // add actual offset
-    text.x = x + offset[0]
-    text.y = y + offset[1]
+    text.x = x
+    text.y = y
   }
 
   // filter
@@ -53,19 +53,19 @@ export default function postprocessGlyph (mapID: string, sourceName: string,
   if (!glyphBuilder.layerGuide.length) return
 
   // pull out the data
-  const { texturePack, glyphFilterVertices, glyphQuads, color, layerGuide } = glyphBuilder
-  const { width, height, vertices, indices } = texturePack
+  const { texturePack, glyphFilterVertices, glyphQuads, layerGuide } = glyphBuilder
+  const { height, fillVertices, lineVertices, fillIndices } = texturePack
   // add the width and height to the beginning of the layerGuide
-  layerGuide.unshift(width, height)
+  layerGuide.unshift(id, height)
 
   // filter data
   const glyphFilterBuffer = new Float32Array(glyphFilterVertices).buffer
   // glyph texture data
-  const glyphVertexBuffer = new Float32Array(vertices).buffer
-  const glyphIndexBuffer = new Uint32Array(indices).buffer
+  const glyphFillVertexBuffer = new Float32Array(fillVertices).buffer
+  const glyphFillIndexBuffer = new Uint32Array(fillIndices).buffer
+  const glyphLineVertexBuffer = new Float32Array(lineVertices).buffer
   // quad draw data
   const glyphQuadBuffer = new Float32Array(glyphQuads).buffer
-  const colorBuffer = new Uint8Array(color).buffer
   const layerGuideBuffer = new Uint32Array(layerGuide).buffer
 
   // ship the data
@@ -75,12 +75,12 @@ export default function postprocessGlyph (mapID: string, sourceName: string,
     source: sourceName,
     tileID,
     glyphFilterBuffer,
-    glyphVertexBuffer,
-    glyphIndexBuffer,
+    glyphFillVertexBuffer,
+    glyphFillIndexBuffer,
+    glyphLineVertexBuffer,
     glyphQuadBuffer,
-    colorBuffer,
     layerGuideBuffer
-  }, [glyphFilterBuffer, glyphVertexBuffer, glyphIndexBuffer, glyphQuadBuffer, colorBuffer, layerGuideBuffer])
+  }, [glyphFilterBuffer, glyphFillVertexBuffer, glyphFillIndexBuffer, glyphLineVertexBuffer, glyphQuadBuffer, layerGuideBuffer])
 
   // clear the glyphBuilder
   glyphBuilder.clear()

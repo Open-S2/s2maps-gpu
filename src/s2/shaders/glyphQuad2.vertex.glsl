@@ -2,33 +2,29 @@
 precision highp float;
 
 layout (location = 0) in vec2 aUV; // float [u, v]
-layout (location = 1) in vec2 aST; // float [s, t]                     (INSTANCED)
-layout (location = 2) in vec2 aXY; // uint16 [x, y]                    (INSTANCED)
-layout (location = 3) in vec2 aTexUV; // uint16 [u, v]                 (INSTANCED)
-layout (location = 4) in vec2 aTexWH; // uint16 [width, height]        (INSTANCED)
-layout (location = 5) in float aID; // float ID                        (INSTANCED)
-layout (location = 6) in vec4 aColor; // normalized uint8 [r, g, b, a] (INSTANCED)
-layout (location = 7) in float aRadius; // float radius                (INSTANCED)
+layout (location = 1) in vec2 aST; // float [s, t]                   (INSTANCED)
+layout (location = 2) in vec2 aXY; // float [x, y]                   (INSTANCED)
+layout (location = 3) in float aXOffset; // float xOffset            (INSTANCED)
+layout (location = 4) in vec2 aTexUV; // float [u, v]                (INSTANCED)
+layout (location = 5) in vec2 aTexWH; // float [width, height]       (INSTANCED)
+layout (location = 6) in float aID; // float ID                      (INSTANCED)
 
 // glyph texture
 uniform vec2 uTexSize;
 uniform mat4 uMatrix;
 uniform vec2 uAspect;
-uniform bool u3D;
 // The glyph filter texture.
 uniform sampler2D uFeatures;
 
 #include ./ST2XYZ;
 
+out float draw;
 out vec2 vTexcoord;
 out vec4 color;
-
 
 void main () {
   // prep xyz
   vec4 xyz = STtoXYZ(aST);
-  // if 3D, add radius
-  // if (u3D) xyz.xyz *= aRadius;
   // for points, add a little to ensure it doesn't get clipped
   xyz.xyz *= 1.001;
   // find the position on screen
@@ -44,17 +40,21 @@ void main () {
 
   // set color if inputID is same as colorID, otherwise run a "null" color to discard in the frag
   if (colorID == ivec3(inputID.rgb * 256.)) {
-    color = aColor;
+    draw = 1.;
+    // get size
+    float size = 26. * 2.;
+    vec2 glyphSize = vec2(aTexWH.x * size, size);
+    // add x-y offset as well as use the UV to map the quad
+    vec2 XY = vec2((aXY.x * size) + (aXOffset * size), aXY.y);
+    glPos.xy += (XY / uAspect) + (glyphSize / uAspect * aUV);
+    // set texture position
+    vTexcoord = (aTexUV / uTexSize) + (vec2(aTexWH.x * aTexWH.y, aTexWH.y) / uTexSize * aUV);
+    // set color
+    color = vec4(0.35, 0.35, 0.35, 1.);
   } else {
-    color = vec4(1., 1., 1., 1.);
+    draw = 0.;
+    vTexcoord = vec2(0., 0.);
   }
-  // color = vec4(float(id & 255), float((id >> 8) & 255), float(id >> 16), 0.);
-  // color = inputID;
-
-  // add x-y offset as well as use the UV to map the quad
-  glPos.xy += (aXY / uAspect) + (aTexWH / uAspect * aUV);
   // set position (reproject from "0 - 1" to "(-1) - 1")
   gl_Position = glPos;
-  // set texture position
-  vTexcoord = (aTexUV / uTexSize) + (aTexWH / uTexSize * aUV);
 }

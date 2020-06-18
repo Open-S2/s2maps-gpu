@@ -25,7 +25,7 @@ export default class GlyphFilterProgram extends Program {
     const { gl, type } = context
     // build shaders
     if (type === 1) {
-      gl.attributeLocations = { 'aUV': 0, 'aST': 1, 'aXY': 2, 'aWH': 3, 'aID': 4, 'aRadius': 6 }
+      gl.attributeLocations = { 'aUV': 0, 'aST': 1, 'aXY': 2, 'aPad': 3, 'aWidth': 4, 'aID': 5 }
       super(context, vert1, frag1)
     } else {
       super(context, vert2, frag2)
@@ -125,7 +125,6 @@ export default class GlyphFilterProgram extends Program {
     const { context, gl } = this
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.quadFramebuffer)
     context.clearColorBuffer()
-    context.oneBlend()
     gl.bindTexture(gl.TEXTURE_2D, this.pointTexture)
     context.setBlendDefault()
     // remove z-testing
@@ -144,8 +143,6 @@ export default class GlyphFilterProgram extends Program {
     // grab context
     const { gl } = this
     const { instanceCount } = sourceData
-    // set 3D uniform
-    // this.set3D(threeD)
     // draw points
     gl.drawArraysInstanced(gl.POINTS, 0, 1, instanceCount)
   }

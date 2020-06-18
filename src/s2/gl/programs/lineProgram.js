@@ -26,11 +26,9 @@ export default class LineProgram extends Program {
 
   draw (featureGuide: FeatureGuide, source: VectorTileSource) {
     // grab context
-    const { context } = this
-    const { gl } = context
+    const { gl, context } = this
     // get current source data
     let { count, offset, featureCode, mode } = featureGuide
-    // console.log('source', source)
     // set feature code
     if (featureCode && featureCode.length) gl.uniform1fv(this.uFeatureCode, featureCode)
     // disable culling
