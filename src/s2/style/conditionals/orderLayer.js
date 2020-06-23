@@ -18,7 +18,7 @@ function orderLine (layer: Layer) {
   }
 }
 
-// text order: (paint)size->strokeWidth->fill->stroke->(layout)padding->offset
+// text order: (paint)size->strokeWidth->fill->stroke
 function orderText (layer: Layer) {
   const { layout, paint } = layer
   const localLayout = JSON.parse(JSON.stringify(layout))

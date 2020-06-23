@@ -14,7 +14,7 @@ import type { VectorTileSource } from '../../source/tile'
 export default class LineProgram extends Program {
   constructor (context: Context) {
     // get gl from context
-    const { gl, type } = context
+    const { gl, type, devicePixelRatio } = context
     // if webgl1, setup attribute locations
     if (type === 1) {
       gl.attributeLocations = { aType: 1, aPrev: 2, aCurr: 3, aNext: 4 }
@@ -22,6 +22,9 @@ export default class LineProgram extends Program {
     } else {
       super(context, vert2, frag2)
     }
+    // setup the devicePixelRatio
+    this.use()
+    this.setDevicePixelRatio(devicePixelRatio)
   }
 
   draw (featureGuide: FeatureGuide, source: VectorTileSource) {

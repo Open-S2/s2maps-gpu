@@ -36,13 +36,16 @@ export default class glyphLineProgram extends Program {
     const { gl } = this
     // grab necessary source data
     const { glyphLineVAO, glyphLineVertices } = source
-    // TODO: set maxDistance if exists (for now, just set to 4)
-    this.setLineWidth(4)
-    // this.setLineWidth(maxDistance | 4)
-    gl.blendFunc(gl.ONE, gl.ZERO)
-    // set the line vao
-    gl.bindVertexArray(glyphLineVAO)
-    // draw elements
-    gl.drawArrays(gl.TRIANGLES, 0, glyphLineVertices.length / 7) // gl.drawArrays(mode, first, count)
+    const count = glyphLineVertices.length / 7
+    if (count) {
+      // TODO: set maxDistance if exists (for now, just set to 4)
+      this.setLineWidth(4)
+      // this.setLineWidth(maxDistance | 4)
+      gl.blendFunc(gl.ONE, gl.ZERO)
+      // set the line vao
+      gl.bindVertexArray(glyphLineVAO)
+      // draw elements
+      gl.drawArrays(gl.TRIANGLES, 0, count) // gl.drawArrays(mode, first, count)
+    }
   }
 }

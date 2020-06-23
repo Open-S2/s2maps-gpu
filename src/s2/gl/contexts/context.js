@@ -1,12 +1,14 @@
 // @flow
 export default class Context {
   gl: WebGLRenderingContext | WebGL2RenderingContext
+  devicePixelRatio: number
   type: 1 | 2
   clearColorRGBA: [number, number, number, number] = [0, 0, 0, 0]
   vao: WebGLVertexArrayObject
-  vertexBuffer:WebGLBuffer
-  constructor (context: WebGLRenderingContext | WebGL2RenderingContext) {
+  vertexBuffer: WebGLBuffer
+  constructor (context: WebGLRenderingContext | WebGL2RenderingContext, devicePixelRatio: number) {
     this.gl = context
+    this.devicePixelRatio = devicePixelRatio
   }
 
   resetViewport () {

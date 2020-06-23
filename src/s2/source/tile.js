@@ -17,6 +17,8 @@ export type FeatureGuide = { // eslint-disable-next-line
   source: string,
   count: number,
   offset: number,
+  filterOffset?: number, // glyph
+  filterCount?: number, // glyph
   type: string,
   featureCode: Float32Array,
   layerCode: Float32Array
@@ -45,7 +47,6 @@ export type GlyphTileSource = {
   textureID: number,
   height: number,
   glyphFilterVertices: Float32Array,
-  instanceCount: number,
   glyphFillVertices: Float32Array,
   glyphFillIndices: Uint32Array,
   glyphLineVertices: Float32Array,
@@ -144,24 +145,24 @@ export default class Tile {
   }
 
   _injectSourceIntoChildren (sourceName: string) {
-    // clean the children's current featureGuide's of said layer
-    for (let layerID in this.childrenRequests) {
-      layerID = +layerID
-      for (const tile of this.childrenRequests[layerID]) {
-        if (tile) tile.featureGuide = tile.featureGuide.filter(fg => !(fg.parent && fg.layerID === layerID))
-      }
-    }
-    // run through every layer in the guide and see if any of the tiles need said layer
-    for (const featureGuide of this.featureGuide) {
-      if (featureGuide.source === sourceName && this.childrenRequests[featureGuide.layerID]) {
-        for (const tile of this.childrenRequests[featureGuide.layerID]) {
-          // first remove all instances of source
-          if (tile) tile.featureGuide.push({ ...featureGuide, parent: this, tile })
-        }
-        // cleanup
-        delete this.childrenRequests[featureGuide.layerID]
-      }
-    }
+    // // clean the children's current featureGuide's of said layer
+    // for (let layerID in this.childrenRequests) {
+    //   layerID = +layerID
+    //   for (const tile of this.childrenRequests[layerID]) {
+    //     if (tile) tile.featureGuide = tile.featureGuide.filter(fg => !(fg.parent && fg.layerID === layerID))
+    //   }
+    // }
+    // // run through every layer in the guide and see if any of the tiles need said layer
+    // for (const featureGuide of this.featureGuide) {
+    //   if (featureGuide.source === sourceName && this.childrenRequests[featureGuide.layerID]) {
+    //     for (const tile of this.childrenRequests[featureGuide.layerID]) {
+    //       // first remove all instances of source
+    //       if (tile) tile.featureGuide.push({ ...featureGuide, parent: this, tile })
+    //     }
+    //     // cleanup
+    //     delete this.childrenRequests[featureGuide.layerID]
+    //   }
+    // }
   }
 
   _buildMaskGeometry () {
@@ -286,7 +287,7 @@ export default class Tile {
       const [layerID, count, offset, encodingSize] = featureGuideArray.slice(i, i + 4)
       i += 4
       // grab the layers type and code
-      const { type, code } = layers[layerID]
+      const { type, code, lch } = layers[layerID]
       // create and store the featureGuide
       this.featureGuide.push({
         tile: this,
@@ -296,7 +297,8 @@ export default class Tile {
         offset,
         type,
         featureCode: new Float32Array(encodingSize ? [...featureGuideArray.slice(i, i + encodingSize)] : [0]), // NOTE: The sorting algorithm doesn't work if an array is empty, so we have to have at least one number, just set it to 0
-        layerCode: code
+        layerCode: code,
+        lch
       })
       i += encodingSize
     }
@@ -313,7 +315,7 @@ export default class Tile {
   injectGlyphSourceData (source: string, glyphFilterVertices: Float32Array,
     glyphFillVertices: Float32Array, glyphFillIndices: Float32Array,
     glyphLineVertices: Float32Array, glyphQuads: Float32Array,
-    layerGuideBuffer: Uint32Array): GlyphTileSource {
+    layerGuideBuffer: Uint32Array, layers: Array<Layer>): GlyphTileSource {
     // setup source data
     const glyphSource = this.sourceData[source] = {
       type: 'glyph',
@@ -327,23 +329,32 @@ export default class Tile {
       glyphQuads
     }
 
+    // LayerCode: layerID, offset, count, codeLength, code
     // we work off the layerGuideBuffer, adding to the buffer as we go
     const lgl = layerGuideBuffer.length
     let i = 2
     while (i < lgl) {
       // grab the size, layerID, count, and offset, and update the index
-      const [layerID, offset, count] = layerGuideBuffer.slice(i, i + 3)
-      i += 3
+      // layerID, filterOffset, filterCount, quadOffset, quadCount, codeLength, code
+      const [layerID, filterOffset, filterCount, offset, count, encodingSize] = layerGuideBuffer.slice(i, i + 6)
+      i += 6
+      // grab the layers type and code
+      const { code, lch } = layers[layerID]
       // create and store the featureGuide
       this.featureGuide.push({
         tile: this,
         layerID,
         source,
-        count,
+        filterOffset,
+        filterCount,
         offset,
+        count,
         type: 'glyph',
-        featureCode: [0]
+        featureCode: new Float32Array(encodingSize ? [...layerGuideBuffer.slice(i, i + encodingSize)] : [0]),
+        layerCode: code,
+        lch
       })
+      i += encodingSize
     }
 
     // Since a parent may have been injected, we need to remove any instances of the said source data.

@@ -360,7 +360,7 @@ export default class TileWorker {
               } else if (layer.type === 'line3D' && type === 9) {
                 continue
               } else if (layer.type === 'text' && type === 1) {
-                preprocessText(feature, zoom, layer, layerID, extent, texts, this.idGen)
+                preprocessText(feature, featureCode, zoom, layer, layerID, extent, texts, this.idGen)
                 continue
               } else if (layer.type === 'billboard' && type === 1) {
                 continue
@@ -386,8 +386,6 @@ export default class TileWorker {
           parentLayers[hash].layers.push(layerID)
         }
       } // if (layer.source === sourceName)
-      // incase we stored text or billboard data, tell the glyphBuilder we are done
-      this.glyphBuilder.finishLayer(layerID)
     } // for (let layerID = 0, ll = layers.length; layerID < ll; layerID++) {
     // now post process data, this groups data for fewer draw calls
     // we seperate by type to make it seem like data is loading quicker, and to handle different vertex sizes

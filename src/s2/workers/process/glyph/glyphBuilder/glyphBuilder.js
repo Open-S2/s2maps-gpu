@@ -21,7 +21,8 @@ export default class GlyphBuilder {
   glyphFilterVertices: Array<number> = []
   glyphQuads: Array<number> = []
   layerGuide: Array<number> = []
-  layerOffset: number = 0
+  filterOffset: number = 0
+  quadOffset: number = 0
   rtree: RTree = new RTree()
   dneGlyph: Glyph
 
@@ -31,15 +32,23 @@ export default class GlyphBuilder {
     this.glyphFilterVertices = []
     this.layerGuide = []
     this.glyphQuads = []
-    this.layerOffset = 0
+    this.filterOffset = 0
+    this.quadOffset = 0
   }
 
-  finishLayer (layerID: number) {
-    const offset = this.glyphQuads.length / 10
-    const count = offset - this.layerOffset
-    if (count > 0) {
-      this.layerGuide.push(layerID, this.layerOffset, count) // layerID, offset, count
-      this.layerOffset = offset
+  finishLayer (layerID: number, code: Array<number> = []) {
+    // get offsets
+    const filterOffset = this.glyphFilterVertices.length / 8
+    const quadOffset = this.glyphQuads.length / 10
+    // get counts
+    const filterCount = filterOffset - this.filterOffset
+    const quadCount = quadOffset - this.quadOffset
+    // if any non-zero, draw
+    if (filterCount > 0 || quadCount > 0) {
+      // layerID, filterOffset, filterCount, quadOffset, quadCount, codeLength, code
+      this.layerGuide.push(layerID, this.filterOffset, filterCount, this.quadOffset, quadCount, code.length, ...code)
+      this.filterOffset = filterOffset
+      this.quadOffset = quadOffset
     }
   }
 
@@ -51,8 +60,8 @@ export default class GlyphBuilder {
 
   testQuad (quad: Quad): boolean {
     // build the bbox
-    let s = Math.round(quad.s * 768)
-    let t = Math.round(quad.t * 768)
+    let s = Math.round(quad.s * 512)
+    let t = Math.round(quad.t * 512)
     quad.minX = s + quad.x
     quad.minY = t + quad.y
     quad.maxX = s + quad.x + (quad.width * quad.size)

@@ -93,9 +93,6 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
     // cleanup
     context.cleanup()
   } else if (source.type === 'glyph') {
-    // find size data
-    source.instanceCount = source.glyphFilterVertices.length / 8
-
     // Create VAOS
     source.boxVAO = gl.createVertexArray()
     source.glyphFillVAO = gl.createVertexArray()

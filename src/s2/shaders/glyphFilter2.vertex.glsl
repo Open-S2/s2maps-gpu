@@ -11,10 +11,15 @@ layout (location = 5) in float aID; // float ID              (INSTANCED)
 uniform mat4 uMatrix;
 uniform vec2 uAspect;
 uniform int uMode; // 0 => points ; 1 => quads ; 2 => textures
-uniform bool u3D;
+uniform float uDevicePixelRatio;
 
 uniform sampler2D uFeatures;
 
+uniform float uInputs[16];
+uniform float uLayerCode[256];
+uniform float uFeatureCode[128];
+
+#include ./decodeFeature2;
 #include ./ST2XYZ;
 
 out vec4 color;
@@ -36,13 +41,16 @@ void main () {
     // set pointSize
     gl_PointSize = 5.;
   } else if (uMode == 1) {
+    // prep the index and featureIndex
+    int index = 0;
+    int featureIndex = 0;
     // convert aID (really a uint32) to an rgba equivalent (split into 4 pieces of 8 bits)
     int id = int(aID);
     ivec3 colorID = ivec3(id & 255, (id >> 8) & 255, id >> 16);
     // grab the size
-    float size = 26. * 2.;
+    float size = decodeFeature(false, index, featureIndex)[0] * uDevicePixelRatio;
     // create width & height, adding padding to the total size
-    vec2 WH = vec2(aWidth * size, size) + (aPad * 2.);
+    vec2 WH = vec2(aWidth * size, size) + (aPad * 2. * uDevicePixelRatio);
 
     // check if the point exists with the same id in our sampler
     vec2 texPos = vec2(glPos.x / 2. + 0.5, glPos.y / 2. + 0.5);
@@ -59,14 +67,17 @@ void main () {
       color = vec4(0.);
     }
   } else { // uMode == 2 (result buffer)
+    // prep the index and featureIndex
+    int index = 0;
+    int featureIndex = 0;
     // we check that all 4 corners of the quad are 1/255th opacity AND the same colorID
     // convert aID (really a uint32) to an rgba equivalent (split into 4 pieces of 8 bits)
     int id = int(aID);
     ivec3 colorID = ivec3(float(id & 255), float((id >> 8) & 255), float(id >> 16));
     // grab the size
-    float size = 26. * 2.;
+    float size = decodeFeature(false, index, featureIndex)[0] * uDevicePixelRatio;
     // create width & height, adding padding to the total size
-    vec2 WH = vec2(aWidth * size, size) + (aPad * 2.);
+    vec2 WH = vec2(aWidth * size, size) + (aPad * 2. * uDevicePixelRatio);
 
     vec2 tPos = vec2(glPos.xy);
     // add x-y offset & add half width and height position

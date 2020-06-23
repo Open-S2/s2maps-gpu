@@ -15,14 +15,13 @@ export default class GlyphQuadProgram extends Program {
   uTexSize: WebGLUniformLocation
   uFeatures: WebGLUniformLocation
   uGlyphTex: WebGLUniformLocation
-  uSdfAspect: WebGLUniformLocation
   glyphFilterProgram: Program
   glyphProgram: Program
   constructor (context: Context, glyphFilterProgram: Program, glyphProgram: Program) {
-    const { gl, type } = context
+    const { gl, type, devicePixelRatio } = context
     // build shaders
     if (type === 1) {
-      gl.attributeLocations = { aUV: 0, aST: 1, aXY: 2, aXOffset: 3, aTexUV: 4, aWH: 5, aID: 6, aColor: 7 }
+      gl.attributeLocations = { aUV: 0, aST: 1, aXY: 2, aXOffset: 3, aTexUV: 4, aTexWH: 5, aID: 6 }
       super(context, vert1, frag1)
     } else {
       super(context, vert2, frag2)
@@ -36,21 +35,18 @@ export default class GlyphQuadProgram extends Program {
     gl.useProgram(glProgram)
     // get uniform locations
     this.uTexSize = gl.getUniformLocation(glProgram, 'uTexSize')
-    this.uSdfAspect = gl.getUniformLocation(glProgram, 'uSdfAspect')
     // get the samplers
     this.uFeatures = gl.getUniformLocation(glProgram, 'uFeatures')
     this.uGlyphTex = gl.getUniformLocation(glProgram, 'uGlyphTex')
     // set texture positions
     gl.uniform1i(this.uFeatures, 0) // uFeatures texture unit 0
     gl.uniform1i(this.uGlyphTex, 1) // uGlyphTex texture unit 1
+    // setup the devicePixelRatio
+    this.setDevicePixelRatio(devicePixelRatio)
   }
 
   setTexSize (texSize: Float32Array) {
     this.gl.uniform2fv(this.uTexSize, texSize)
-  }
-
-  setSdfAspect (sdfSize: number) {
-    this.gl.uniform1f(this.uSdfAspect, sdfSize)
   }
 
   draw (featureGuide: FeatureGuide, source: GlyphTileSource) {
@@ -59,10 +55,12 @@ export default class GlyphQuadProgram extends Program {
     gl.activeTexture(gl.TEXTURE0)
     glyphFilterProgram.bindResultTexture()
     // pull out the appropriate data from the source
-    const { offset, count } = featureGuide
+    const { featureCode, offset, count } = featureGuide
     const { textureID, glyphQuadVAO, glyphQuadBuffer } = source
     // grab glyph texture
     const { texSize, texture } = this.glyphProgram.getFBO(textureID)
+    // set feature code
+    if (featureCode && featureCode.length) gl.uniform1fv(this.uFeatureCode, featureCode)
     // turn depth testing off
     context.stencilFunc(0)
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
@@ -70,8 +68,6 @@ export default class GlyphQuadProgram extends Program {
     gl.bindVertexArray(glyphQuadVAO)
     // set the texture size uniform
     this.setTexSize(texSize)
-    // set sdf size
-    this.setSdfAspect(1 / 42)
     // bind the correct glyph texture
     gl.activeTexture(gl.TEXTURE1)
     gl.bindTexture(gl.TEXTURE_2D, texture)

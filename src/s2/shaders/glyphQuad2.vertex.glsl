@@ -13,15 +13,22 @@ layout (location = 6) in float aID; // float ID                      (INSTANCED)
 uniform vec2 uTexSize;
 uniform mat4 uMatrix;
 uniform vec2 uAspect;
+uniform float uDevicePixelRatio;
 // The glyph filter texture.
 uniform sampler2D uFeatures;
 
+uniform float uInputs[16];
+uniform float uLayerCode[256];
+uniform float uFeatureCode[128];
+
+#include ./decodeFeature2;
 #include ./ST2XYZ;
 
 out float draw;
 out vec2 vTexcoord;
 out vec4 color;
 
+// text order: (paint)size->strokeWidth->fill->stroke
 void main () {
   // prep xyz
   vec4 xyz = STtoXYZ(aST);
@@ -40,17 +47,24 @@ void main () {
 
   // set color if inputID is same as colorID, otherwise run a "null" color to discard in the frag
   if (colorID == ivec3(inputID.rgb * 256.)) {
+    // explain to fragment we are going to draw
     draw = 1.;
-    // get size
-    float size = 26. * 2.;
+    // prep the index and featureIndex
+    int index = 0;
+    int featureIndex = 0;
+    // decode size
+    float size = decodeFeature(false, index, featureIndex)[0] * uDevicePixelRatio;
+    float strokeWidth = decodeFeature(false, index, featureIndex)[0] * uDevicePixelRatio;
+    color = decodeFeature(true, index, featureIndex);
+    // float size = 26. * uDevicePixelRatio;
     vec2 glyphSize = vec2(aTexWH.x * size, size);
     // add x-y offset as well as use the UV to map the quad
-    vec2 XY = vec2((aXY.x * size) + (aXOffset * size), aXY.y);
+    vec2 XY = vec2((aXY.x + (aXOffset * 0.85)) * size - 4., aXY.y - 4.); // subtract the sdfWidth
     glPos.xy += (XY / uAspect) + (glyphSize / uAspect * aUV);
     // set texture position
     vTexcoord = (aTexUV / uTexSize) + (vec2(aTexWH.x * aTexWH.y, aTexWH.y) / uTexSize * aUV);
     // set color
-    color = vec4(0.35, 0.35, 0.35, 1.);
+    // color = vec4(0.35, 0.35, 0.35, 1.);
   } else {
     draw = 0.;
     vTexcoord = vec2(0., 0.);

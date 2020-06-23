@@ -68,13 +68,13 @@
           ["class", "==", "quarry"],
           "rgb(206, 208, 211)",
           ["class", "==", "retail"],
-          "rgb(254, 247, 224)",
+          "rgb(254, 245, 220)",
           ["class", "has", ["university", "college", "school", "kindergarten"]],
           "rgb(226, 233, 238)",
           ["class", "==", "parking"],
           "rgb(241, 243, 244)",
           ["class", "==", "hospital"],
-          "rgb(252, 232, 230)",
+          "rgb(252, 228, 228)",
           ["class", "has", ["park", "national_park", "protected_area"]],
           [
             "input-range",
@@ -90,7 +90,7 @@
           ["class", "==", "cemetery"],
           "rgb(208, 236, 208)",
           ["class", "==", "beach"],
-          "rgb(242, 236, 207)",
+          "rgb(255, 239, 195)",
           ["class", "==", "glacier"],
           "rgb(249, 249, 249)",
           ["class", "==", "aboriginal_lands"],
@@ -436,16 +436,16 @@
           "zoom",
           "lin",
           5,
-          15,
+          19,
           9,
           26,
-          15,
-          30
+          12,
+          50
         ],
         "fill": [
           "input-range",
           "zoom",
-          "step",
+          "lin",
           9,
           "rgb(85, 85, 85)",
           12,
@@ -474,7 +474,7 @@
         ],
         "anchor": "center",
         "offset": [0, 0],
-        "padding": [6, 6]
+        "padding": [3, 3]
       },
       "paint": {
         "size": [
@@ -483,21 +483,23 @@
           [
             "input-range",
             "zoom",
-            "step",
+            "lin",
             0,
-            22,
-            2,
-            26
+            28,
+            4,
+            40
           ],
           ["class", "==", "State"],
           [
             "input-range",
             "zoom",
-            "step",
-            1,
-            16,
+            "lin",
             2,
-            18
+            18,
+            4,
+            24,
+            6,
+            36
           ],
           "default",
           14
@@ -505,7 +507,7 @@
         "fill": [
           "data-condition",
           ["class", "==", "Country"],
-          "rgb(38, 38, 38)",
+          "rgb(42, 42, 42)",
           ["class", "==", "State"],
           "rgb(105, 105, 105)",
           "default",

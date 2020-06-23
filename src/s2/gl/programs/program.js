@@ -14,18 +14,24 @@ export default class Program {
   uMatrix: WebGLUniformLocation
   uMode: WebGLUniformLocation
   u3D: WebGLUniformLocation
+  uLCH: WebGLUniformLocation
   uFaceST: WebGLUniformLocation
   uInputs: WebGLUniformLocation
   uLayerCode: WebGLUniformLocation
   uFeatureCode: WebGLUniformLocation
+  uDevicePixelRatio: WebGLUniformLocation
   updateMatrix: null | Float32Array = null // pointer
   updateInputs: null | Float32Array = null // pointer
   updateAspect: null | Float32Array = null // pointer
   curMode: number = -1
   threeD: boolean
+  LCH: boolean
   constructor (context: Context, vertexShaderSource: string, fragmentShaderSource: string, defaultUniforms?: boolean = true) {
+    // set context
     this.context = context
+    // grab variables we need
     const { gl } = context
+    // create the program
     const program = this.glProgram = gl.createProgram()
     // setup attribute location data if necessary
     const attrLoc = gl.attributeLocations
@@ -54,10 +60,12 @@ export default class Program {
       this.uAspect = gl.getUniformLocation(program, 'uAspect')
       this.uMode = gl.getUniformLocation(program, 'uMode')
       this.u3D = gl.getUniformLocation(program, 'u3D')
+      this.uLCH = gl.getUniformLocation(program, 'uLCH')
       this.uFaceST = gl.getUniformLocation(program, 'uFaceST')
       this.uInputs = gl.getUniformLocation(program, 'uInputs')
       this.uLayerCode = gl.getUniformLocation(program, 'uLayerCode')
       this.uFeatureCode = gl.getUniformLocation(program, 'uFeatureCode')
+      this.uDevicePixelRatio = gl.getUniformLocation(program, 'uDevicePixelRatio')
     }
   }
 
@@ -76,6 +84,10 @@ export default class Program {
     if (this.updateMatrix) this.setMatrix(this.updateMatrix)
     if (this.updateInputs) this.setInputs(this.updateInputs)
     if (this.updateAspect) this.setAspect(this.updateAspect)
+  }
+
+  setDevicePixelRatio (ratio: number) {
+    this.gl.uniform1f(this.uDevicePixelRatio, ratio)
   }
 
   setMatrix (matrix: Float32Array) {
@@ -98,8 +110,13 @@ export default class Program {
     this.gl.uniform1fv(this.uFaceST, faceST, 0, faceST.length)
   }
 
-  setLayerCode (layerCode: Float32Array) {
+  setLayerCode (layerCode: Float32Array, lch?: boolean = false) {
     this.gl.uniform1fv(this.uLayerCode, layerCode, 0, layerCode.length)
+    // also set lch if we need to
+    if (this.uLCH && this.LCH !== lch) {
+      this.LCH = lch
+      this.gl.uniform1i(this.uLCH, lch)
+    }
   }
 
   set3D (state?: boolean = false) {

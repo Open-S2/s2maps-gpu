@@ -6,8 +6,8 @@ export default class WebGLContext extends Context {
   angledInstancedArrays: 'ANGLE_instanced_arrays'
   vertexArrayObject: 'OES_vertex_array_object'
   standardDerivatives: 'OES_standard_derivatives'
-  constructor (context: WebGLRenderingContext) {
-    super(context)
+  constructor (context: WebGLRenderingContext, devicePixelRatio: number) {
+    super(context, devicePixelRatio)
     // let the painter know it's a WebGLContext
     this.type = 1
     // grab extensions

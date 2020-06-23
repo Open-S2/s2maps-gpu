@@ -1,3 +1,7 @@
+uniform bool uLCH;
+
+#include ./color;
+
 // y = e^x OR y = Math.pow(2, 10 * x)
 float exponentialInterpolation (float inputVal, float start, float end, float base) {
   // grab change
@@ -19,11 +23,16 @@ vec4 interpolateColor (vec4 color1, vec4 color2, float t) {
   if (t == 0.) return color1;
   else if (t == 1.) return color2;
   float sat, hue, lbv, dh, alpha;
-  // create proper hue translation
-  if (color2[0] > color1[0] && color2[0] - color1[0] > 180.) dh = color2[0] - color1[0] + 360.;
-  else if (color2[0] < color1[0] && color1[0] - color2[0] > 180.) dh = color2[0] + 360. - color1[0];
-  else dh = color2[0] - color1[0];
-  hue = color1[0] + t * dh;
+  // LCH interpolation
+  if (uLCH) {
+    // create proper hue translation
+    if (color2[0] > color1[0] && color2[0] - color1[0] > 180.) dh = color2[0] - color1[0] + 360.;
+    else if (color2[0] < color1[0] && color1[0] - color2[0] > 180.) dh = color2[0] + 360. - color1[0];
+    else dh = color2[0] - color1[0];
+    hue = color1[0] + t * dh;
+  } else {
+    hue = color1[0] + t * (color2[0] - color1[0]);
+  }
   // saturation
   sat = color1[1] + t * (color2[1] - color1[1]);
   // luminosity
@@ -164,6 +173,8 @@ vec4 decodeFeature (bool color, inout int index, inout int featureIndex) {
     // safety precaution
     if (stackIndex > 5) {
       index = featureSize + decodeOffset;
+      // convert if lch
+      if (color && uLCH) res = LCH2RGB(res);
       return res;
     }
   } while (stackIndex > 0);
@@ -171,5 +182,7 @@ vec4 decodeFeature (bool color, inout int index, inout int featureIndex) {
   // update index to the next Layer property
   index = featureSize + decodeOffset;
 
+  // convert if lch
+  if (color && uLCH) res = LCH2RGB(res);
   return res;
 }

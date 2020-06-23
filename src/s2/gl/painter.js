@@ -23,6 +23,7 @@ import type { MapOptions } from '../ui/map'
 import type { Projection } from '../ui/camera/projections'
 import type { FeatureGuide, GlyphTileSource } from '../source/tile'
 import type { ProgramTypes } from './programs/program'
+import type { SphereBackground } from '../styleSpec'
 
 export default class Painter {
   _canvas: HTMLCanvasElement
@@ -33,21 +34,21 @@ export default class Painter {
     // setup canvas
     this._canvas = canvas
     // create a webgl or webgl2 context
-    this._createContext()
+    this._createContext(options)
   }
 
-  _createContext () {
+  _createContext (options: MapOptions) {
     // prep options
     const webglOptions = { antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: false, alpha: true, stencil: true }
     // first try webgl2
     let context = this._canvas.getContext('webgl2', webglOptions)
     if (context && typeof context.getParameter === 'function') {
-      return this.context = new WebGL2Context(context)
+      return this.context = new WebGL2Context(context, options.canvasMultiplier)
     }
     // webgl
     context = this._canvas.getContext('webgl', webglOptions)
     if (context && typeof context.getParameter === 'function') {
-      return this.context = new WebGLContext(context)
+      return this.context = new WebGLContext(context, options.canvasMultiplier)
     }
   }
 
@@ -90,8 +91,8 @@ export default class Painter {
       case 'glyph':
         programs.glyphLineProgram = new GlyphLineProgram(this.context)
         programs.glyphFilter = new GlyphFilterProgram(this.context)
-        programs.glyphTex = new GlyphProgram(this.context, programs.glyphLineProgram)
-        programs.glyph = new GlyphQuadProgram(this.context, programs.glyphFilter, programs.glyphTex)
+        programs.glyphFill = new GlyphProgram(this.context, programs.glyphLineProgram)
+        programs.text = programs.billboard = programs.glyph = new GlyphQuadProgram(this.context, programs.glyphFilter, programs.glyphFill)
         break
       case 'wallpaper':
         programs.wallpaper = new WallpaperProgram(this.context)
@@ -119,7 +120,6 @@ export default class Painter {
   }
 
   paint (projection: Projection, style: Style, tiles: Array<Tile>) {
-    // console.log('tiles', tiles)
     const { context } = this
     const { sphereBackground } = style
 
@@ -160,8 +160,8 @@ export default class Painter {
 
   buildGlyphTexture (glyphSource: GlyphTileSource) {
     // get the glyphProgram
-    const glyphProgram: GlyphProgram = this.getProgram('glyphTex')
-    if (!glyphProgram) return new Error('The "glyphTex" program does not exist, can not paint.')
+    const glyphProgram: GlyphProgram = this.getProgram('glyphFill')
+    if (!glyphProgram) return new Error('The "glyphFill" program does not exist, can not paint.')
     // build any glyph texture
     glyphProgram.draw(glyphSource)
   }
@@ -197,14 +197,16 @@ export default class Painter {
     context.lockMasks()
   }
 
-  paintSphereBackground (tiles: Array<Tile>, sphereBackground: Float32Array) {
+  paintSphereBackground (tiles: Array<Tile>, sphereBackground: SphereBackground) {
     // get context
     const { context } = this
     const { gl } = context
+    // grab sphere background properties
+    const { code, lch } = sphereBackground
     // grab the fillProgram
     const fillProgram: FillProgram = this.getProgram('fill')
     // set layerCode
-    fillProgram.setLayerCode(sphereBackground)
+    fillProgram.setLayerCode(code, lch)
     // for each tile, draw a background
     for (const tile of tiles) {
       const { faceST, sourceData, tmpMaskID } = tile
@@ -231,7 +233,7 @@ export default class Painter {
     if (!program) return new Error('The "fill" program does not exist, can not paint.')
     // run through the features, and upon tile, layer, or program change, adjust accordingly
     for (const feature of features) {
-      const { parent, tile, layerID, source, type, layerCode } = feature
+      const { parent, tile, layerID, source, type, layerCode, lch } = feature
       const { tmpMaskID } = tile
       // set program
       if (type !== curProgram) {
@@ -244,7 +246,7 @@ export default class Painter {
       // update layerID
       if (curLayer !== layerID && layerCode) {
         curLayer = layerID
-        program.setLayerCode(layerCode)
+        program.setLayerCode(layerCode, lch)
       }
       // update tile
       drawTile = (parent) ? parent : tile
@@ -268,7 +270,7 @@ export default class Painter {
     this.paintMasks(tiles, true)
     // use the box program
     glyphFilterProgram.use()
-    // paint the glyph "filter" quads
+    // paint the glyph "filter" points
     this._paintGlyphFilter(glyphFilterProgram, glyphFeatures, 0)
     // Step 2: draw quads
     glyphFilterProgram.bindQuadFrameBuffer()
@@ -283,29 +285,26 @@ export default class Painter {
   _paintGlyphFilter (glyphFilterProgram: GlyphFilter, glyphFeatures: Array<FeatureGuide>, mode: 0 | 1 | 2) {
     const { gl } = this.context
     let drawTile: Tile, glyphSource: GlyphTileSource
-    let tileSet = new Set()
+    let curLayer: number = -1
     // set mode
     glyphFilterProgram.setMode(mode)
     // draw each feature
     for (const glyphFeature of glyphFeatures) {
-      const { parent, tile, source } = glyphFeature
+      const { parent, tile, layerID, source, layerCode } = glyphFeature
+      // update layerID
+      if (curLayer !== layerID && layerCode) {
+        curLayer = layerID
+        glyphFilterProgram.setLayerCode(layerCode)
+      }
+      // update draw tile
       drawTile = (parent) ? parent : tile
-      // ensure no overdraw
-      if (tileSet.has(drawTile.id)) continue
-      else tileSet.add(drawTile.id)
       // setup vao and uniforms
       const { faceST, sourceData } = drawTile
       glyphSource = sourceData[source]
       glyphFilterProgram.setFaceST(faceST)
       gl.bindVertexArray(glyphSource.boxVAO)
       // draw
-      if (mode === 0) {
-        glyphFilterProgram.drawPoints(glyphSource)
-      } else if (mode === 1) {
-        glyphFilterProgram.drawQuads(glyphSource)
-      } else if (mode === 2) {
-        glyphFilterProgram.drawResult(glyphSource)
-      }
+      glyphFilterProgram.draw(glyphFeature, glyphSource, mode)
     }
   }
 }

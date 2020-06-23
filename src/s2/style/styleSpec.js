@@ -26,6 +26,12 @@ export type WallpaperStyle = {
   haloColor: string
 }
 
+/** SPHERE BACKGROUND **/
+export type SphereBackground = {
+  code: Float32Array,
+  lch: boolean
+}
+
 /** Layer **/
 export type Layer = {
   id: string,
@@ -37,6 +43,7 @@ export type Layer = {
   filter: Array<any>, // ["any", ["class", "==", "ocean"], ["class", "==", "river"]]
   layout: LineLayout | TextLayout | BillboardLayout,
   paint: FillPaint | LinePaint | TextPaint | BillboardPaint,
+  lch: boolean,
   code?: Float32Array
 }
 

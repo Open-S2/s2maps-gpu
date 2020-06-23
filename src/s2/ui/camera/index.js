@@ -149,7 +149,7 @@ export default class Camera {
       const glyphSource = tile.injectGlyphSourceData(
         source, new Float32Array(glyphFilterBuffer), new Float32Array(glyphFillVertexBuffer),
         new Float32Array(glyphFillIndexBuffer), new Float32Array(glyphLineVertexBuffer),
-        new Float32Array(glyphQuadBuffer), new Uint32Array(layerGuideBuffer)
+        new Float32Array(glyphQuadBuffer), new Uint32Array(layerGuideBuffer), this.style.layers
       )
       // tell the painter to prep the texture
       this.painter.buildGlyphTexture(glyphSource)

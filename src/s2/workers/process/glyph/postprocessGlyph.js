@@ -39,16 +39,21 @@ export default function postprocessGlyph (mapID: string, sourceName: string,
   //    This is for the pre-draw step to check overlap. The GlyphBuilder will also be building this.
   //    Upon eventual request, it needs to first be sorted biggest to smallest.
   let curLayerID = texts[0].layerID
+  let encoding: Array<number> = texts[0].code
+  let codeStr: string = texts[0].code.toString()
   for (const text of texts) {
-    const { layerID } = text
-    if (curLayerID !== layerID) {
-      glyphBuilder.finishLayer(curLayerID)
+    const { layerID, code } = text
+
+    if (curLayerID !== layerID || codeStr !== code.toString()) {
+      glyphBuilder.finishLayer(curLayerID, encoding)
       curLayerID = layerID
+      codeStr = code.toString()
+      encoding = code
     }
     glyphBuilder.buildText(text)
   }
   // finish the last layer
-  glyphBuilder.finishLayer(curLayerID)
+  glyphBuilder.finishLayer(curLayerID, encoding)
   // if the layerGuide doesn't grow, we move on
   if (!glyphBuilder.layerGuide.length) return
 

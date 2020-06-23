@@ -134,7 +134,10 @@ export default class Style {
   }
 
   _buildSphereBackground (sphereBackground?: Object) {
-    if (sphereBackground) this.sphereBackground = encodeLayerAttribute(sphereBackground['background-color'])
+    if (sphereBackground) this.sphereBackground = {
+      code: encodeLayerAttribute(sphereBackground['background-color'], sphereBackground.lch),
+      lch: sphereBackground.lch
+    }
   }
 
   _buildShade () {
@@ -151,7 +154,6 @@ export default class Style {
       const layer = this.layers[i]
       // TODO: if bad layer, remove
       programs.add(layer.type)
-      if (layer.type === 'text') continue
       const code = []
       // order layers for GPU
       orderLayer(layer)
@@ -162,7 +164,7 @@ export default class Style {
       }
       // PAINTS
       for (let key in layer.paint) {
-        const encode = encodeLayerAttribute(layer.paint[key])
+        const encode = encodeLayerAttribute(layer.paint[key], layer.lch)
         code.push(...encode)
       }
       if (layer.type === 'raster') layer.index = i

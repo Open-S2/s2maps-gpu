@@ -17,6 +17,7 @@ layout (location = 4) in vec2 aNext; //   (INSTANCED)
 
 uniform mat4 uMatrix;
 uniform vec2 uAspect;
+uniform float uDevicePixelRatio;
 
 uniform float uInputs[16];
 uniform float uLayerCode[256];
@@ -52,7 +53,7 @@ void main () {
   // decode color
   color = decodeFeature(true, index, featureIndex);
   // decode line width
-  width = decodeFeature(false, index, featureIndex)[0];
+  width = decodeFeature(false, index, featureIndex)[0] / 2. * uDevicePixelRatio;
   // explain width to fragment shader
   vWidth = vec2(width, 0.);
   // get the position in projected space

@@ -31,8 +31,8 @@ export type Text = {
   y?: number
 }
 
-export default function processText (feature: VectorFeature, zoom: number, layer: Layer,
-  layerID: number, extent: number, texts: Array<Text>, idGen: IDGen) {
+export default function processText (feature: VectorFeature, code: Array<number>, zoom: number,
+  layer: Layer, layerID: number, extent: number, texts: Array<Text>, idGen: IDGen) {
   const geometry: Array<Point> = feature.loadGeometry()
   const { properties } = feature
   const { layoutLocal, paintLocal } = layer
@@ -43,14 +43,12 @@ export default function processText (feature: VectorFeature, zoom: number, layer
   if (!field) return
   const family = layoutLocal.family(properties, zoom)
   const anchor = coalesceAnchor(layoutLocal.anchor(properties, zoom))
+  // NOTE: until we implement offsets, we just set them to 0
   const padding = layoutLocal.padding(properties, zoom)
-  const offset = layoutLocal.offset(properties, zoom)
+  // const offset = layoutLocal.offset(properties, zoom)
+  const offset = [0, 0]
   // variable properties
-  const code = []
-  // const fill = paintLocal.fill(properties, zoom, code).getValue(false)
-  // const stroke = paintLocal.stroke(properties, zoom, code).getValue(false)
-  const size = paintLocal.size(properties, zoom, code)
-  // const strokeWidth = paintLocal.strokeWidth(properties, zoom, code)
+  const size = paintLocal.size(properties, zoom)
 
   // ensure padding has a minimum of 2 for x and y
   if (padding[0] < 2) padding[0] = 2
