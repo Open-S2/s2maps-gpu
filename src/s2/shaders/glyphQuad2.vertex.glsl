@@ -13,6 +13,7 @@ layout (location = 6) in float aID; // float ID                      (INSTANCED)
 uniform vec2 uTexSize;
 uniform mat4 uMatrix;
 uniform vec2 uAspect;
+uniform bool uIsFill;
 uniform float uDevicePixelRatio;
 // The glyph filter texture.
 uniform sampler2D uFeatures;
@@ -25,6 +26,7 @@ uniform float uFeatureCode[128];
 #include ./ST2XYZ;
 
 out float draw;
+out float buf;
 out vec2 vTexcoord;
 out vec4 color;
 
@@ -56,10 +58,17 @@ void main () {
     float size = decodeFeature(false, index, featureIndex)[0] * uDevicePixelRatio;
     float strokeWidth = decodeFeature(false, index, featureIndex)[0] * uDevicePixelRatio;
     color = decodeFeature(true, index, featureIndex);
+    buf = 0.49;
+    if (!uIsFill) {
+      color = decodeFeature(true, index, featureIndex);
+      if (strokeWidth > 0.) {
+        buf = clamp((0.03 - 0.49) / (1. - 0.) * strokeWidth + 0.49, 0.03, 0.49); // deltaY / deltaX + y-intercept
+      }
+    }
     // float size = 26. * uDevicePixelRatio;
     vec2 glyphSize = vec2(aTexWH.x * size, size);
     // add x-y offset as well as use the UV to map the quad
-    vec2 XY = vec2((aXY.x + (aXOffset * 0.85)) * size - 4., aXY.y - 4.); // subtract the sdfWidth
+    vec2 XY = vec2((aXY.x + (aXOffset * 0.8)) * size - 4., aXY.y - 4.); // subtract the sdfWidth
     glPos.xy += (XY / uAspect) + (glyphSize / uAspect * aUV);
     // set texture position
     vTexcoord = (aTexUV / uTexSize) + (vec2(aTexWH.x * aTexWH.y, aTexWH.y) / uTexSize * aUV);

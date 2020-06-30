@@ -7,12 +7,6 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
   const { gl } = context
   // type vector
   if (source.type === 'vector') {
-    // cleanup old setup
-    if (source.vertexBuffer) gl.deleteBuffer(source.vertexBuffer)
-    if (source.radiiBuffer) gl.deleteBuffer(source.radiiBuffer)
-    if (source.codeTypeBuffer) gl.deleteBuffer(source.codeTypeBuffer)
-    if (source.indexBuffer) gl.deleteBuffer(source.indexBuffer)
-    if (source.vao) gl.deleteVertexArray(source.vao)
     // Create a starting vertex array object (attribute state)
     source.vao = gl.createVertexArray()
     // and make it the one we're currently working with

@@ -159,6 +159,7 @@ export default class Camera {
   }
 
   _injectParentLayers (tileID: number, parentLayers: ParentLayers = {}) {
+    return
     // grab the main tile
     const tile = this.tileCache.get(tileID)
     // for each parentLayer, inject specified layers

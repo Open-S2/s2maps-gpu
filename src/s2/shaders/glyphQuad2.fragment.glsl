@@ -3,6 +3,7 @@ precision highp float;
 
 // Passed in from the vertex shader.
 in float draw;
+in float buf;
 in vec2 vTexcoord;
 in vec4 color;
 
@@ -15,7 +16,6 @@ out vec4 fragColor;
 
 void main () {
   if (draw == 0.) discard;
-  float buf = 0.49;
   float gamma = (1.5 * 1.4142) / (26. * 2.);
   float dist = texture(uGlyphTex, vTexcoord).r;
   float alpha = smoothstep(buf - gamma, buf + gamma, dist);

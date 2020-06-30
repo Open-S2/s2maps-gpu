@@ -13,10 +13,12 @@ import type { FeatureGuide, GlyphTileSource } from '../../source/tile'
 
 export default class GlyphQuadProgram extends Program {
   uTexSize: WebGLUniformLocation
+  uIsFill: WebGLUniformLocation
   uFeatures: WebGLUniformLocation
   uGlyphTex: WebGLUniformLocation
   glyphFilterProgram: Program
   glyphProgram: Program
+  isFill: boolean
   constructor (context: Context, glyphFilterProgram: Program, glyphProgram: Program) {
     const { gl, type, devicePixelRatio } = context
     // build shaders
@@ -35,6 +37,7 @@ export default class GlyphQuadProgram extends Program {
     gl.useProgram(glProgram)
     // get uniform locations
     this.uTexSize = gl.getUniformLocation(glProgram, 'uTexSize')
+    this.uIsFill = gl.getUniformLocation(glProgram, 'uIsFill')
     // get the samplers
     this.uFeatures = gl.getUniformLocation(glProgram, 'uFeatures')
     this.uGlyphTex = gl.getUniformLocation(glProgram, 'uGlyphTex')
@@ -47,6 +50,13 @@ export default class GlyphQuadProgram extends Program {
 
   setTexSize (texSize: Float32Array) {
     this.gl.uniform2fv(this.uTexSize, texSize)
+  }
+
+  setFill (state: boolean) {
+    if (this.isFill !== state) {
+      this.isFill = state
+      this.gl.uniform1i(this.uIsFill, state)
+    }
   }
 
   draw (featureGuide: FeatureGuide, source: GlyphTileSource) {
@@ -79,7 +89,10 @@ export default class GlyphQuadProgram extends Program {
     gl.vertexAttribPointer(4, 2, gl.FLOAT, false, 40, 20 + ((offset | 0) * 40)) // texture u, v
     gl.vertexAttribPointer(5, 2, gl.FLOAT, false, 40, 28 + ((offset | 0) * 40)) // width, height
     gl.vertexAttribPointer(6, 1, gl.FLOAT, false, 40, 36 + ((offset | 0) * 40)) // id
-    // draw
+    // draw stroke
+    this.setFill(false)
+    gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count)
+    this.setFill(true)
     gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count)
     // reset to active texture 0
     gl.activeTexture(gl.TEXTURE0)

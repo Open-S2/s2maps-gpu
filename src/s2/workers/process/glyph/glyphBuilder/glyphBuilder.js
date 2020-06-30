@@ -60,8 +60,8 @@ export default class GlyphBuilder {
 
   testQuad (quad: Quad): boolean {
     // build the bbox
-    let s = Math.round(quad.s * 512)
-    let t = Math.round(quad.t * 512)
+    let s = Math.round(quad.s * 768) // 768 is between 512 and 1080 and is a
+    let t = Math.round(quad.t * 768) // compromise of zooming and reducing too much content
     quad.minX = s + quad.x
     quad.minY = t + quad.y
     quad.maxX = s + quad.x + (quad.width * quad.size)
@@ -92,7 +92,7 @@ export default class GlyphBuilder {
       if (!found) {
         if (this.dneGlyph) {
           width += this.dneGlyph.advanceWidth
-          glyphData.push(['default', 9633])
+          glyphData.push(['default', String.fromCharCode(9633)])
         } else { glyphData.push(null) }
       }
     }
@@ -114,18 +114,20 @@ export default class GlyphBuilder {
     let glyph: Glyph
     let xOffset = 0
     // for each glyph in
+    const quads = []
     for (const gData of glyphData) {
       if (gData) {
         const [family, char] = gData
         // grab the glyph
         glyph = this.texturePack.getGlyph(family, char)
-        if (!glyph) glyph = this.dneGlyph
         if (glyph) {
-          this.glyphQuads.push(s, t, x, y, xOffset, ...glyph.bbox, id)
+          // store the fill
+          quads.push(s, t, x, y, xOffset, ...glyph.bbox, id)
           // update offset (remove the glyph excess padding)
           xOffset += glyph.advanceWidth
         }
       }
     }
+    this.glyphQuads.push(...quads)
   }
 }

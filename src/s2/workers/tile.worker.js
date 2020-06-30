@@ -56,8 +56,8 @@ export type Feature = {
 
 export type IDGen = { num: number, incrSize: number, maxNum: number, startNum: number }
 
-// 32bit: 4,294,967,295 --- 24bit: 16,777,216 --- 16bit: 65,535 --- 7bit: 128
-export const ID_MAX_SIZE = 1 << 24
+// 32bit: 4,294,967,295 --- 24bit: 16,777,216 --- 22bit: 4,194,304 --- 16bit: 65,535 --- 7bit: 128
+export const ID_MAX_SIZE = 1 << 22
 export const MAX_FEATURE_BATCH_SIZE = 1 << 7
 
 // A TileWorker on spin up will get style "guide". It will have all layers "filter" and "layout" properties
@@ -98,7 +98,7 @@ export default class TileWorker {
     // set id
     this.id = id
     // setup idGenerator
-    this.idGen = { num: id + 1, startNum: id + 1, incrSize: totalWorkers, maxNum: 1 << 24 }
+    if (!this.idGen) this.idGen = { num: id + 1, startNum: id + 1, incrSize: totalWorkers, maxNum: ID_MAX_SIZE }
     // set status
     this.status = 'building'
     // store the style
