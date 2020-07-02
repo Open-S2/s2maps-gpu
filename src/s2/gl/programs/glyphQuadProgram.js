@@ -23,7 +23,7 @@ export default class GlyphQuadProgram extends Program {
     const { gl, type, devicePixelRatio } = context
     // build shaders
     if (type === 1) {
-      gl.attributeLocations = { aUV: 0, aST: 1, aXY: 2, aXOffset: 3, aTexUV: 4, aTexWH: 5, aID: 6 }
+      gl.attributeLocations = { aUV: 0, aST: 1, aXY: 2, aOffset: 3, aTexUV: 4, aTexWH: 5, aID: 6 }
       super(context, vert1, frag1)
     } else {
       super(context, vert2, frag2)
@@ -83,15 +83,16 @@ export default class GlyphQuadProgram extends Program {
     gl.bindTexture(gl.TEXTURE_2D, texture)
     // apply the appropriate offset in the source vertexBuffer attribute
     gl.bindBuffer(gl.ARRAY_BUFFER, glyphQuadBuffer)
-    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 40, 0 + ((offset | 0) * 40)) // s, t
-    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 40, 8 + ((offset | 0) * 40)) // x, y
-    gl.vertexAttribPointer(3, 1, gl.FLOAT, false, 40, 16 + ((offset | 0) * 40)) // xOffset
-    gl.vertexAttribPointer(4, 2, gl.FLOAT, false, 40, 20 + ((offset | 0) * 40)) // texture u, v
-    gl.vertexAttribPointer(5, 2, gl.FLOAT, false, 40, 28 + ((offset | 0) * 40)) // width, height
-    gl.vertexAttribPointer(6, 1, gl.FLOAT, false, 40, 36 + ((offset | 0) * 40)) // id
+    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 44, 0 + ((offset | 0) * 44)) // s, t
+    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 44, 8 + ((offset | 0) * 44)) // x, y
+    gl.vertexAttribPointer(3, 2, gl.FLOAT, false, 44, 16 + ((offset | 0) * 44)) // xOffset, yOffset
+    gl.vertexAttribPointer(4, 2, gl.FLOAT, false, 44, 24 + ((offset | 0) * 44)) // texture u, v
+    gl.vertexAttribPointer(5, 2, gl.FLOAT, false, 44, 32 + ((offset | 0) * 44)) // width, height
+    gl.vertexAttribPointer(6, 1, gl.FLOAT, false, 44, 40 + ((offset | 0) * 44)) // id
     // draw stroke
     this.setFill(false)
     gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count)
+    // draw fill
     this.setFill(true)
     gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count)
     // reset to active texture 0

@@ -13,7 +13,8 @@ export type GlyphStore = {
 
 export type Glyph = {
   bbox: BBox,
-  advanceWidth: number
+  advanceWidth: number,
+  yOffset: number
 }
 
 type Space = {
@@ -67,10 +68,13 @@ export default class TexturePack {
       // look for the char, build
       if (glyphSet.has(char)) {
         const g = glyphSet.get(char)
+        let { yOffset, advanceWidth } = g
         // store the glyph to the texture
-        const glyph = this._addGlyphToTexture(key, g.advanceWidth, size, sdfMaxSize)
+        const glyph = this._addGlyphToTexture(key, advanceWidth, yOffset, size, sdfMaxSize)
+        // adjust yOffset by size
+        yOffset *= size
         // now build the path using offset as a guide
-        const offset = [glyph.bbox[0], glyph.bbox[1]]
+        const offset = [glyph.bbox[0], glyph.bbox[1] + yOffset]
         const path = g.getPath(true, offset, size, sdfMaxSize)
         // Build the actual glyph using the path data with the box as a positional adivsor
         this._buildGlyph(glyph, path, offset, size, sdfMaxSize)
@@ -84,14 +88,14 @@ export default class TexturePack {
     size: number, sdfMaxSize: number) {
     const self = this
     // grab the box
-    const xOffset = glyphOffset[0]
-    const yOffset = glyphOffset[1]
+    const glyphXOffset = glyphOffset[0]
+    const glyphYOffset = glyphOffset[1]
     // fill data
     const offset = self.fillVertices.length / 3
     for (let v = 0, vl = path.vertices.length; v < vl; v += 3) {
       self.fillVertices.push(
-        path.vertices[v] * size + xOffset + sdfMaxSize, // (4 for the offset for SDF max distance)
-        path.vertices[v + 1] * size + yOffset + sdfMaxSize,
+        path.vertices[v] * size + glyphXOffset + sdfMaxSize, // (4 for the offset for SDF max distance)
+        path.vertices[v + 1] * size + glyphYOffset + sdfMaxSize,
         path.vertices[v + 2] // type
       )
     }
@@ -111,10 +115,13 @@ export default class TexturePack {
     })
   }
 
-  _addGlyphToTexture (key: string, advanceWidth: number, size: number, sdfMaxSize: number): Glyph {
+  _addGlyphToTexture (key: string, advanceWidth: number, yOffset: number,
+    size: number, sdfMaxSize: number): Glyph {
     // round up the width and height and add the texture padding for AA
     const width = Math.ceil(advanceWidth * size) + (sdfMaxSize * 2)
-    const height = Math.ceil(size) + (sdfMaxSize * 2)
+    const glyphHeight = Math.ceil(size)
+    const height = glyphHeight + (sdfMaxSize * 2)
+    const ratio = glyphHeight / height
 
     // create a box object
     const bbox: BBox = [0, 0, width, height]
@@ -137,7 +144,7 @@ export default class TexturePack {
     // adjust the width by the height
     bbox[2] /= bbox[3]
 
-    const glyph = { advanceWidth, bbox }
+    const glyph = { advanceWidth: advanceWidth * ratio, yOffset: yOffset * ratio, bbox } // update offsets by glyph ratios
     this.glyphs.set(key, glyph)
     return glyph
   }

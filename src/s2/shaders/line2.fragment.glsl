@@ -1,6 +1,8 @@
 #version 300 es
 precision highp float;
 
+uniform float uDevicePixelRatio;
+
 in vec4 color;
 in vec2 vWidth;
 in vec2 vNorm;

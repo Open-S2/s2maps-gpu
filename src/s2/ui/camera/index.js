@@ -108,7 +108,7 @@ export default class Camera {
     indexBuffer: ArrayBuffer, radiiBuffer: ArrayBuffer) {
     if (this.tileCache.has(tileID)) {
       const tile = this.tileCache.get(tileID)
-      tile.injectMaskGeometry(new Float32Array(vertexBuffer), new Uint32Array(indexBuffer), new Float32Array(radiiBuffer), this.style.mask)
+      tile.injectMaskGeometry(new Int16Array(vertexBuffer), new Uint32Array(indexBuffer), new Float32Array(radiiBuffer), this.style.mask)
       // new 'paint', so painter is dirty
       this.painter.dirty = true
     }
@@ -159,7 +159,7 @@ export default class Camera {
   }
 
   _injectParentLayers (tileID: number, parentLayers: ParentLayers = {}) {
-    return
+    if (true) return
     // grab the main tile
     const tile = this.tileCache.get(tileID)
     // for each parentLayer, inject specified layers

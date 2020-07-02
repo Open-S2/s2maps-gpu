@@ -181,27 +181,27 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
     // setup attribute data
     // s, t
     gl.enableVertexAttribArray(1)
-    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 40, 0)
+    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 44, 0)
     gl.vertexAttribDivisor(1, 1)
     // x, y
     gl.enableVertexAttribArray(2)
-    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 40, 8)
+    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 44, 8)
     gl.vertexAttribDivisor(2, 1)
-    // xOffset
+    // xOffset, yOffset
     gl.enableVertexAttribArray(3)
-    gl.vertexAttribPointer(3, 1, gl.FLOAT, false, 40, 16)
+    gl.vertexAttribPointer(3, 2, gl.FLOAT, false, 44, 16)
     gl.vertexAttribDivisor(3, 1)
     // texture u, v
     gl.enableVertexAttribArray(4)
-    gl.vertexAttribPointer(4, 2, gl.FLOAT, false, 40, 20)
+    gl.vertexAttribPointer(4, 2, gl.FLOAT, false, 44, 24)
     gl.vertexAttribDivisor(4, 1)
     // width, height
     gl.enableVertexAttribArray(5)
-    gl.vertexAttribPointer(5, 2, gl.FLOAT, false, 40, 28)
+    gl.vertexAttribPointer(5, 2, gl.FLOAT, false, 44, 32)
     gl.vertexAttribDivisor(5, 1)
     // id
     gl.enableVertexAttribArray(6)
-    gl.vertexAttribPointer(6, 1, gl.FLOAT, false, 40, 36)
+    gl.vertexAttribPointer(6, 1, gl.FLOAT, false, 44, 40)
     gl.vertexAttribDivisor(6, 1)
 
     // cleanup

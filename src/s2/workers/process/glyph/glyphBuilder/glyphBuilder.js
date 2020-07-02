@@ -23,6 +23,7 @@ export default class GlyphBuilder {
   layerGuide: Array<number> = []
   filterOffset: number = 0
   quadOffset: number = 0
+  charIgnoreList: Set = new Set([8206, 3640, 3633, 2509, 2492, 2497])
   rtree: RTree = new RTree()
   dneGlyph: Glyph
 
@@ -39,7 +40,7 @@ export default class GlyphBuilder {
   finishLayer (layerID: number, code: Array<number> = []) {
     // get offsets
     const filterOffset = this.glyphFilterVertices.length / 8
-    const quadOffset = this.glyphQuads.length / 10
+    const quadOffset = this.glyphQuads.length / 11
     // get counts
     const filterCount = filterOffset - this.filterOffset
     const quadCount = quadOffset - this.quadOffset
@@ -90,7 +91,11 @@ export default class GlyphBuilder {
       // if we couldn't find the character, we check if our default font has a DNE,
       // otherwise we store a null
       if (!found) {
-        if (this.dneGlyph) {
+        const unicode = char.charCodeAt(0)
+        if (this.charIgnoreList.has(unicode)) { // special cases - weird character that should not be there
+          glyphData.push(null)
+        } else if (this.dneGlyph) {
+          console.log('char', unicode)
           width += this.dneGlyph.advanceWidth
           glyphData.push(['default', String.fromCharCode(9633)])
         } else { glyphData.push(null) }
@@ -121,8 +126,8 @@ export default class GlyphBuilder {
         // grab the glyph
         glyph = this.texturePack.getGlyph(family, char)
         if (glyph) {
-          // store the fill
-          quads.push(s, t, x, y, xOffset, ...glyph.bbox, id)
+          // store the quad
+          quads.push(s, t, x, y, xOffset, glyph.yOffset, ...glyph.bbox, id)
           // update offset (remove the glyph excess padding)
           xOffset += glyph.advanceWidth
         }

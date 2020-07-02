@@ -209,7 +209,7 @@ export default class Tile {
   }
 
   // For future 3D terrain geometry, we create a new mask
-  injectMaskGeometry (vertexArray: Float32Array, indexArray: Uint32Array,
+  injectMaskGeometry (vertexArray: Int16Array, indexArray: Uint32Array,
     radiiArray: Float32Array, styleMask: Mask) {
     const mask = this.sourceData.mask = {
       type: 'vector',

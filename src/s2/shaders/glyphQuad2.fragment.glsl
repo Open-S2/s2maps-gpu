@@ -23,7 +23,6 @@ void main () {
   fragColor = vec4(color.rgb, alpha * color.a);
 }
 
-
 // void main () {
 // 	fragColor = texture(uGlyphTex, vTexcoord);
 // 	if (draw == 0. || fragColor.a == 0.) discard;

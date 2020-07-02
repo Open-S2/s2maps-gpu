@@ -1,10 +1,12 @@
 #version 300 es
 precision highp float;
 
+#define MIN_SDF_SIZE 0.03
+
 layout (location = 0) in vec2 aUV; // float [u, v]
 layout (location = 1) in vec2 aST; // float [s, t]                   (INSTANCED)
 layout (location = 2) in vec2 aXY; // float [x, y]                   (INSTANCED)
-layout (location = 3) in float aXOffset; // float xOffset            (INSTANCED)
+layout (location = 3) in vec2 aOffset; // float [xOffset, yOffset]   (INSTANCED)
 layout (location = 4) in vec2 aTexUV; // float [u, v]                (INSTANCED)
 layout (location = 5) in vec2 aTexWH; // float [width, height]       (INSTANCED)
 layout (location = 6) in float aID; // float ID                      (INSTANCED)
@@ -62,13 +64,12 @@ void main () {
     if (!uIsFill) {
       color = decodeFeature(true, index, featureIndex);
       if (strokeWidth > 0.) {
-        buf = clamp((0.03 - 0.49) / (1. - 0.) * strokeWidth + 0.49, 0.03, 0.49); // deltaY / deltaX + y-intercept
+        buf = clamp((MIN_SDF_SIZE - buf) * strokeWidth + buf, MIN_SDF_SIZE, buf); // deltaY / deltaX + y-intercept
       }
     }
-    // float size = 26. * uDevicePixelRatio;
     vec2 glyphSize = vec2(aTexWH.x * size, size);
     // add x-y offset as well as use the UV to map the quad
-    vec2 XY = vec2((aXY.x + (aXOffset * 0.8)) * size - 4., aXY.y - 4.); // subtract the sdfWidth
+    vec2 XY = vec2((aXY.x + aOffset.x) * size - 4., aXY.y - (aOffset.y * size) - 4.); // subtract the sdfWidth
     glPos.xy += (XY / uAspect) + (glyphSize / uAspect * aUV);
     // set texture position
     vTexcoord = (aTexUV / uTexSize) + (vec2(aTexWH.x * aTexWH.y, aTexWH.y) / uTexSize * aUV);

@@ -61,9 +61,14 @@ module.exports = function (source, map) {
       return cb(err)
     }
 
-    // remove comments
-    // bld = bld.replace(/(\/\*([\s\S]*?)\*\/)|(\/\/(.*)$)/gm, '')
+    bld = bld
+      .trim() // strip whitespace at the start/end
+      .replace(/\s*\/\/[^\n]*\n/g, '\n') // strip double-slash comments
+      .replace(/\n+/g, '\n') // collapse multi line breaks
+      .replace(/\n\s+/g, '\n') // strip identation
+      .replace(/\s?([+-\/*=,])\s?/g, '$1') // strip whitespace around operators
+      .replace(/([;\(\),\{\}])\n(?=[^#])/g, '$1'); // strip more line breaks
 
-    cb(null, 'module.exports = ' + JSON.stringify(bld), map)
+    cb(null, 'export default ' + JSON.stringify(bld), map)
   })
 }

@@ -68,13 +68,13 @@
           ["class", "==", "quarry"],
           "rgb(206, 208, 211)",
           ["class", "==", "retail"],
-          "rgb(254, 247, 224)",
+          "rgb(254, 245, 220)",
           ["class", "has", ["university", "college", "school", "kindergarten"]],
           "rgb(226, 233, 238)",
           ["class", "==", "parking"],
           "rgb(241, 243, 244)",
           ["class", "==", "hospital"],
-          "rgb(252, 232, 230)",
+          "rgb(252, 228, 228)",
           ["class", "has", ["park", "national_park", "protected_area"]],
           [
             "input-range",
@@ -90,7 +90,7 @@
           ["class", "==", "cemetery"],
           "rgb(208, 236, 208)",
           ["class", "==", "beach"],
-          "rgb(242, 236, 207)",
+          "rgb(255, 239, 195)",
           ["class", "==", "glacier"],
           "rgb(249, 249, 249)",
           ["class", "==", "aboriginal_lands"],
@@ -154,6 +154,7 @@
       "name": "rivers",
       "source": "world",
       "layer": "water",
+      "onlyLines": true,
       "type": "line",
       "layout": {
         "cap": "butt",
@@ -177,7 +178,7 @@
       "name": "transport_borders",
       "source": "world",
       "layer": "transport",
-      "filter": ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited"]],
+      "filter": ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian"]],
       "type": "line",
       "minzoom": 2,
       "layout": {
@@ -187,26 +188,40 @@
       "paint": {
         "color": [
           "data-condition",
-          ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited"]],
+          ["class", "has", ["secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian"]],
           "rgb(218, 220, 224)",
+          ["class", "has", ["primary", "primary_link"]],
+          "rgb(246, 207, 101)",
           "default",
           "rgba(0, 0, 0, 0)"
         ],
         "width": [
           "data-condition",
-          ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link"]],
+          ["class", "has", ["primary", "primary_link"]],
           [
             "input-range",
             "zoom",
             "lin",
-            10,
-            2.5,
-            13,
-            9,
+            7,
+            2,
+            12,
+            7,
             15,
             19
           ],
-          ["or", ["class", "==", "street"], ["class", "==", "street_limited"]],
+          ["class", "has", ["secondary", "secondary_link", "tertiary", "tertiary_link"]],
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            7,
+            1,
+            12,
+            7,
+            15,
+            19
+          ],
+          ["or", ["class", "==", "street"], ["class", "==", "street_limited"], ["class", "==", "residential"]],
           [
             "input-range",
             "zoom",
@@ -228,7 +243,7 @@
       "source": "world",
       "layer": "transport",
       "filter": ["or",
-        ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited", "ferry"]],
+        ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian", "ferry"]],
         ["and", ["class", "==", "railway"], ["type", "==", "rail"]],
         ["and", ["class", "==", "path"], ["type", "==", "path"]]
       ],
@@ -244,11 +259,13 @@
           ["class", "==", "ferry"],
           "#9fccf9",
           ["class", "==", "path"],
-          "rgb(136, 190, 150)",
+          "rgb(91, 185, 116)",
           ["class", "==", "railway"],
           "rgb(214, 217, 220)",
-          ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited"]],
+          ["class", "has", ["secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian"]],
           "rgb(255, 255, 255)",
+          ["class", "has", ["primary", "primary_link"]],
+          "rgb(255, 242, 175)",
           "default",
           "rgba(0, 0, 0, 0)"
         ],
@@ -259,14 +276,14 @@
             "input-range",
             "zoom",
             "lin",
-            10,
-            2,
-            13,
-            6,
+            7,
+            1,
+            12,
+            4,
             15,
             15
           ],
-          ["or", ["class", "==", "street"], ["class", "==", "street_limited"]],
+          ["or", ["class", "==", "street"], ["class", "==", "street_limited"], ["class", "==", "residential"]],
           [
             "input-range",
             "zoom",
@@ -279,7 +296,7 @@
             10
           ],
           ["class", "==", "path"],
-          2,
+          1.5,
           "default",
           2
         ]
@@ -302,10 +319,12 @@
           "input-range",
           "zoom",
           "lin",
-          7,
           2,
-          11,
-          5,
+          2,
+          7,
+          4,
+          10,
+          4.5,
           15,
           20
         ]
@@ -328,10 +347,12 @@
           "input-range",
           "zoom",
           "lin",
-          7,
-          1,
-          11,
           2,
+          1,
+          7,
+          2,
+          10,
+          2.5,
           15,
           15
         ]
@@ -390,10 +411,10 @@
           "input-range",
           "zoom",
           "step",
-          0,
+          0.99,
           1.5,
           1,
-          2.5
+          3
         ]
       }
     },
@@ -408,50 +429,104 @@
       }
     },
     {
-      "name": "city",
+      "name": "places",
       "source": "world",
       "minzoom": 4,
-      "filter": ["class", "==", "City"],
+      "filter": ["class", "has", ["City", "Town", "Village", "Hamlet", "Neighbourhood", "Island", "Indian Reservation"]],
       "layer": "place",
       "type": "text",
       "layout": {
         "family": [
-          "input-range",
-          "zoom",
-          "step",
-          3,
+          "data-condition",
+          ["class", "has", ["Town", "Hamlet"]],
           "roboto-regular",
-          5,
+          "default",
           "roboto-medium"
         ],
-        "field": "?name",
+        "field": [
+          "data-condition",
+          ["class", "has", ["Indian Reservation", "Hamlet", "Neighbourhood"]],
+          "?!Uname",
+          "default",
+          "?name"
+        ],
         "anchor": "center",
         "offset": [0, 0],
-        "padding": [3, 3]
+        "padding": [1, 1]
       },
       "paint": {
         "size": [
-          "input-range",
-          "zoom",
-          "lin",
-          5,
-          15,
-          9,
-          26,
-          15,
-          30
+          "data-condition",
+          ["class", "==", "City"],
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            5,
+            19,
+            9,
+            26,
+            12,
+            50
+          ],
+          ["class", "==", "Town"],
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            8,
+            19,
+            10,
+            22,
+            12,
+            40
+          ],
+          ["class", "==", "Neighbourhood"],
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            10,
+            18,
+            12,
+            36
+          ],
+          ["class", "has", ["Hamlet", "Village"]],
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            10.5,
+            18,
+            12,
+            28
+          ],
+          ["class", "==", "Indian Reservation"],
+          20,
+          "default",
+          24
         ],
         "fill": [
-          "input-range",
-          "zoom",
-          "step",
-          9,
-          "rgb(85, 85, 85)",
-          12,
-          "rgb(150, 150, 150)"
+          "data-condition",
+          ["class", "==", "Indian Reservation"],
+          "rgb(181, 177, 155)",
+          ["class", "has", ["Village", "Neighbourhood"]],
+          "rgb(132, 147, 169)",
+          ["class", "==", "Hamlet"],
+          "rgb(150, 150, 150)",
+          "default",
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            9,
+            "rgb(85, 85, 85)",
+            12,
+            "rgb(150, 150, 150)"
+          ]
         ],
-        "stroke": "rgb(250, 250, 250)",
-        "strokeWidth": 1
+        "stroke": "rgba(255, 255, 255, 0.7)",
+        "strokeWidth": 0.2
       }
     },
     {
@@ -463,17 +538,23 @@
       "layout": {
         "family": "roboto-medium",
         "field": [
-          "input-range",
-          "zoom",
-          "step",
-          0,
-          "?abbr,?name",
-          2,
+          "data-condition",
+          ["class", "==", "State"],
+          [
+            "input-range",
+            "zoom",
+            "step",
+            0,
+            "?abbr,?name",
+            2,
+            "?!Uname"
+          ],
+          "default",
           "?name"
         ],
         "anchor": "center",
         "offset": [0, 0],
-        "padding": [6, 6]
+        "padding": [3, 3]
       },
       "paint": {
         "size": [
@@ -482,21 +563,25 @@
           [
             "input-range",
             "zoom",
-            "step",
+            "expo",
+            1.5,
             0,
-            22,
-            2,
-            26
+            18,
+            4,
+            40
           ],
           ["class", "==", "State"],
           [
             "input-range",
             "zoom",
-            "step",
-            1,
-            16,
+            "expo",
+            1.5,
             2,
-            18
+            16,
+            4,
+            22,
+            7,
+            36
           ],
           "default",
           14
@@ -504,14 +589,20 @@
         "fill": [
           "data-condition",
           ["class", "==", "Country"],
-          "rgb(38, 38, 38)",
+          "rgb(42, 42, 42)",
           ["class", "==", "State"],
-          "rgb(105, 105, 105)",
+          "rgb(135, 135, 135)",
           "default",
           "rgba(0, 0, 0, 0)"
         ],
-        "stroke": "rgb(250, 250, 250)",
-        "strokeWidth": 1
+        "stroke": "rgba(255, 255, 255, 0.7)",
+        "strokeWidth": [
+          "data-condition",
+          ["class", "==", "State"],
+          0.3,
+          "default",
+          0.1
+        ]
       }
     }
   ]

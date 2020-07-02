@@ -187,7 +187,7 @@ export default class Painter {
       // use mask vao and fill program
       gl.bindVertexArray(mask.vao)
       // draw mask
-      fillProgram.draw(mask)
+      fillProgram.draw(mask, mask)
       // keep tabs on the mask identifier
       tile.tmpMaskID = maskRef
       // update mask index
@@ -217,7 +217,7 @@ export default class Painter {
       // bind vao
       gl.bindVertexArray(mask.vao)
       // draw background
-      fillProgram.draw(mask)
+      fillProgram.draw(mask, mask)
     }
   }
 
@@ -255,6 +255,7 @@ export default class Painter {
       gl.bindVertexArray(sourceData[source].vao)
       // draw
       // if (feature.type !== 'glyph') program.draw(feature, sourceData[source], tmpMaskID)
+      // console.log('DRAW', feature, sourceData[source])
       program.draw(feature, sourceData[source], tmpMaskID)
     }
   }

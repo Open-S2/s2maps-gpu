@@ -26,6 +26,7 @@ function useMapContainer () {
 
 function prepCanvas(container) {
   new S2Map({
+    canvasMultiplier: 2,
     style,
     container,
     projection: 'blend'

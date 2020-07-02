@@ -7,7 +7,7 @@
   "maxzoom": 8,
   "sources": {
     "satellite": {
-      "path": "http://192.168.0.22:8000/data/satellite",
+      "path": "http://192.168.0.19:8000/data/satellite",
       "type": "raster",
       "fileType": "png",
       "minzoom": 0,
@@ -15,7 +15,7 @@
       "tileSize": 512
     },
     "rgb-dem": {
-      "path": "http://192.168.0.22:8000/data/dem",
+      "path": "http://192.168.0.19:8000/data/dem",
       "type": "mask",
       "fileType": "png",
       "minzoom": 0,

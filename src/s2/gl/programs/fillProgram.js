@@ -9,8 +9,8 @@ import fragment1 from '../../shaders/fill1.fragment.glsl'
 import vertex2 from '../../shaders/fill2.vertex.glsl'
 import fragment2 from '../../shaders/fill2.fragment.glsl'
 
-// import type { FeatureGuide, VectorTileSource } from '../../source/tile'
 import type { Context } from '../contexts'
+import type { FeatureGuide, VectorTileSource } from '../../source/tile'
 
 export default class FillProgram extends Program {
   constructor (context: Context) {
@@ -27,12 +27,13 @@ export default class FillProgram extends Program {
     }
   }
 
-  draw (featureGuide: FeatureGuide) {
+  draw (featureGuide: FeatureGuide, source: VectorTileSource = {}) {
     // grab context
     const { context } = this
     const { gl } = context
     // get current source data
-    let { count, featureCode, offset, mode, threeD } = featureGuide
+    let { count, featureCode, offset, mode } = featureGuide
+    const { threeD } = source
     // set 3D uniform
     this.set3D(threeD)
     // set feature code

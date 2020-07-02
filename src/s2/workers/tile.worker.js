@@ -283,28 +283,45 @@ export default class TileWorker {
     const { hash, zoom, size } = tile
     // grab the RTIN object
     const { s2rtin } = source
+    let buildMesh = function (dem) {
+      const terrain = terrainToGrid(dem)
+      // create a tile object
+      const tile = s2rtin.createTile(terrain)
+      // find the appropriate margin of error
+      const approxBestError = s2rtin.approximateBestError(zoom)
+      // build the mesh
+      const mesh = tile.getMesh(approxBestError)
+      const vertexBuffer = mesh.vertices.buffer
+      const indexBuffer = mesh.triangles.buffer
+      const radiiBuffer = mesh.radii.buffer
+      // ship it
+      postMessage({ mapID, type: 'maskdata', tileID: hash, vertexBuffer, indexBuffer, radiiBuffer }, [vertexBuffer, indexBuffer, radiiBuffer])
+    }
     // create the terrain grid
-    data.arrayBuffer()
-      .then(ab => {
-        const reader = new PNGReader(ab)
-        reader.parse((err, png) => {
-          if (!err) {
-            const dem = { width: size, data: png.pixels }
-            const terrain = terrainToGrid(dem)
-            // create a tile object
-            const tile = s2rtin.createTile(terrain)
-            // find the appropriate margin of error
-            const approxBestError = s2rtin.approximateBestError(zoom)
-            // build the mesh
-            const mesh = tile.getMesh(approxBestError)
-            const vertexBuffer = mesh.vertices.buffer
-            const indexBuffer = mesh.triangles.buffer
-            const radiiBuffer = mesh.radii.buffer
-            // ship it
-            postMessage({ mapID, type: 'maskdata', tileID: hash, vertexBuffer, indexBuffer, radiiBuffer }, [vertexBuffer, indexBuffer, radiiBuffer])
-          } else { console.log('parse error', err)}
+    if (typeof OffscreenCanvas !== "undefined") { // GPU solution
+      createImageBitmap(data)
+        .then(image => {
+          // build the canvas and draw the image
+          const canvas = new OffscreenCanvas(size, size)
+          const context = canvas.getContext('2d')
+          context.drawImage(image, 0, 0)
+          // grab the data and send to mesh builder
+          const imageData = context.getImageData(0, 0, size, size)
+          buildMesh(imageData)
         })
-      })
+        .catch(err => {})
+    } else { // assuming PNG, we can use the CPU
+      data.arrayBuffer()
+        .then(ab => {
+          const reader = new PNGReader(ab)
+          reader.parse((err, png) => {
+            if (!err) {
+              const imageData = { width: size, data: png.pixels }
+              buildMesh(imageData)
+            } else { console.log('parse error', err) }
+          })
+        })
+    }
   }
 
   _processVectorData (mapID: string, sourceName: string, source: Object,

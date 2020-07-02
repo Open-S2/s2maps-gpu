@@ -31,8 +31,8 @@ export default class RasterProgram extends Program {
     const { gl } = context
 
     // get current source data
-    let { count, mode } = sourceData
-    let { texture, threeD } = featureGuide
+    let { count, mode, threeD } = sourceData
+    let { texture } = featureGuide
     // set 3D uniform
     this.set3D(threeD)
     // setup the texture

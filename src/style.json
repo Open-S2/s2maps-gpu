@@ -6,12 +6,12 @@
   "minzoom": 0,
   "maxzoom": 20,
   "sources": {
-    "world": "http://192.168.0.7:8000/data/fills"
+    "world": "http://localhost:8000/data/fills"
   },
   "fonts": {
-    "default": "http://192.168.0.7:8000/fonts/default",
-    "roboto-regular": "http://192.168.0.7:8000/fonts/roboto-regular",
-    "roboto-medium": "http://192.168.0.7:8000/fonts/roboto-medium"
+    "default": "http://localhost:8000/fonts/default",
+    "roboto-regular": "http://localhost:8000/fonts/roboto-regular",
+    "roboto-medium": "http://localhost:8000/fonts/roboto-medium"
   },
   "shade": false,
   "wallpaper": {
@@ -489,7 +489,7 @@
             10,
             18,
             12,
-            36
+            32
           ],
           ["class", "has", ["Hamlet", "Village"]],
           [
