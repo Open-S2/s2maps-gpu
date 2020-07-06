@@ -1,5 +1,5 @@
 #version 300 es
-precision highp float;
+precision mediump float;
 
 layout (location = 1) in float aType;
 layout (location = 2) in vec2 aPrev; //   (INSTANCED)

@@ -1,5 +1,5 @@
 #version 300 es
-precision highp float;
+precision mediump float;
 
 uniform vec2 uOffset;
 uniform vec2 uRadius;
@@ -19,7 +19,7 @@ void main () {
 
 
 // #version 300 es
-// precision highp float;
+// precision mediump float;
 //
 // uniform vec2 uOffset;
 // uniform vec2 uScale;

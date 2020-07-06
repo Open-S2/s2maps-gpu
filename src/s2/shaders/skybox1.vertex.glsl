@@ -1,3 +1,5 @@
+precision mediump float;
+
 attribute vec4 aPos;
 
 uniform mat4 uMatrix;

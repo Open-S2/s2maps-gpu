@@ -1,4 +1,4 @@
-precision highp float;
+precision mediump float;
 
 varying vec4 color;
 varying vec2 vWidth;

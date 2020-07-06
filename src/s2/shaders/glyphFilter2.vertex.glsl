@@ -1,5 +1,5 @@
 #version 300 es
-precision highp float;
+precision mediump float;
 
 layout (location = 0) in vec2 aUV; // float [u, v]
 layout (location = 1) in vec2 aST; // float [s, t]           (INSTANCED)

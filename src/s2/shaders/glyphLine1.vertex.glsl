@@ -1,4 +1,4 @@
-precision highp float;
+precision mediump float;
 
 attribute vec2 aPos;
 attribute vec2 aPar;

@@ -129,7 +129,7 @@ export default class Tile {
     for (const featureGuide of parentTile.featureGuide) {
       const { type, parent, layerID } = featureGuide
       if (type === 'raster') continue
-      if (type === 'glyph') continue
+      // if (type === 'glyph') continue
       if (!parent) foundLayers.add(layerID)
       // build the feature, set the correct parent and tile
       this.featureGuide.push({ ...featureGuide, parent: (parent) ? parent : parentTile, tile: this })

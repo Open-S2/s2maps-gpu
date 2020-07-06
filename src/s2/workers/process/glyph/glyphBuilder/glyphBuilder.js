@@ -23,7 +23,7 @@ export default class GlyphBuilder {
   layerGuide: Array<number> = []
   filterOffset: number = 0
   quadOffset: number = 0
-  charIgnoreList: Set = new Set([8206, 3640, 3633, 2509, 2492, 2497])
+  charIgnoreList: Set = new Set([8206, 3640, 3633, 2509, 2492, 2497, 146, 55300, 56960, 129, 9, 145])
   rtree: RTree = new RTree()
   dneGlyph: Glyph
 
@@ -95,7 +95,6 @@ export default class GlyphBuilder {
         if (this.charIgnoreList.has(unicode)) { // special cases - weird character that should not be there
           glyphData.push(null)
         } else if (this.dneGlyph) {
-          console.log('char', unicode)
           width += this.dneGlyph.advanceWidth
           glyphData.push(['default', String.fromCharCode(9633)])
         } else { glyphData.push(null) }
