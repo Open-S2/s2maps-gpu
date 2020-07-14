@@ -111,7 +111,7 @@ export default class GlyphBuilder {
   // 2) add any missing glyphs to our texturePack
   // 3) reference the texture when building quad glyph data (always put strokes in the front, fills in the back)
   buildText (text: Text) {
-    const { s, t, x, y, family, width, id, padding, offset, strokeWidth, glyphData } = text
+    const { s, t, x, y, width, id, padding, glyphData } = text
     // 1) add to our glyphFilterVertices the text dimesions
     this.glyphFilterVertices.push(s, t, x, y, ...padding, width, id)
     // 2 & 3) build our texture and glyph vertices

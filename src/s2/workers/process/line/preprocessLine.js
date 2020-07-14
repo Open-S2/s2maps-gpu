@@ -17,7 +17,8 @@ export default function preprocessLine (geometry: Array<Array<Point>>,
   // draw
   for (const lineString of geometry) {
     // build the vertex, normal, and index data
-    const { prev, curr, next, lengthSoFar } = drawLine(lineString, dashed, maxDistance)
+    // const { prev, curr, next, lengthSoFar } = drawLine(lineString, dashed, maxDistance)
+    const { prev, curr, next } = drawLine(lineString, dashed, maxDistance)
     let verticesCount = curr.length
     for (let i = 0; i < verticesCount; i += 2) {
       vertices.push(

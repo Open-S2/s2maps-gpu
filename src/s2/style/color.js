@@ -157,8 +157,8 @@ export default class Color {
       this.val = [v, v, v, a]
     } else {
       if (h === 360) h = 0
-      if (h > 360) h -= 360
-      if (h < 0) h += 360
+      else if (h > 360) h -= 360
+      else if (h < 0) h += 360
       h /= 60
 
       const i = Math.floor(h)

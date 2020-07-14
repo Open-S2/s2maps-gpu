@@ -228,15 +228,6 @@ export default class RTree {
   }
 }
 
-function findItem (item, items, equalsFn) {
-  if (!equalsFn) return items.indexOf(item)
-
-  for (let i = 0; i < items.length; i++) {
-    if (equalsFn(item, items[i])) return i
-  }
-  return -1
-}
-
 // calculate node's bbox from bboxes of its children
 function calcBBox (node, toBBox) {
   distBBox(node, 0, node.children.length, toBBox, node)

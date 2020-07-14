@@ -13,7 +13,7 @@ export default function postprocessGlyph (mapID: string, sourceName: string,
   // existant text. Sometimes datapoints can range in the 100s in one tile, so
   // this step reduces cost dramatically.
   for (const text of texts) {
-    const { family, field, padding, offset, height, anchor } = text
+    const { family, field, anchor } = text
     let [width, glyphData] = glyphBuilder.getWidthAndGlyphData(family, field)
     if (!width) continue
     text.width = width

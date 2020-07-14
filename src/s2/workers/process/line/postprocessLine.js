@@ -15,8 +15,6 @@ export default function postprocessLine (mapID: string, source: string, tileID: 
   // 1) don't store VAO set larger than index size (we use an extension for WebGL1, so we will probably never go over 1 << 32)
   // 2) don't store any feature code larger than MAX_FEATURE_BATCH_SIZE
   let vertices: Array<number> = []
-  let indices: Array<number> = []
-  let codeType: Array<number> = []
   let featureGuide: Array<number> = []
   let encodings: Array<number> = features[0].code
   let indexCount: number = 0

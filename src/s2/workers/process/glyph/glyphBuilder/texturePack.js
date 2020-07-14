@@ -1,6 +1,5 @@
 // @flow
 import { GlyphSet } from 'glyph-pbf'
-import { drawLine } from 'line-gl'
 
 import type { Path } from './glyphBuilder'
 

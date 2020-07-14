@@ -38,7 +38,6 @@ export default class SkyboxProgram extends Program {
     const { path, type, size } = skybox
     // request each face and assign to cube map
     for (let i = 0; i < 6; i++) {
-      // createImageBitmap(data)
       requestData(`${path}/${size}/${i}`, type, (data) => {
         createImageBitmap(data)
           .then(image => {

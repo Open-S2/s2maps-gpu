@@ -6,7 +6,7 @@ import { parseLayers } from '../style/conditionals'
 import {
   preprocessFill, postprocessFill,
   preprocessLine, postprocessLine,
-  preprocessText, postprocessGlyph, GlyphBuilder, anchorOffset,
+  preprocessText, postprocessGlyph, GlyphBuilder,
   PNGReader
 } from './process'
 import requestData from '../util/xmlHttpRequest'
@@ -17,8 +17,6 @@ import type { StylePackage } from '../styleSpec'
 import type { Text } from './process'
 
 const IS_CHROME = navigator.userAgent.indexOf('Chrome') !== -1
-
-type Point = [number, number]
 
 export type CancelTileRequest = Array<number> // hashe IDs of tiles e.g. ['204', '1003', '1245', ...]
 
@@ -141,7 +139,8 @@ export default class TileWorker {
     if (!style.sources) style.sources = {}
     if (!style.fonts) style.fonts = {} // eventually have a default that always links to some cdn { default: '' }
     if (!style.billboards) style.billboards = {}
-    const { sources, fonts, billboards } = style
+    // const { sources, fonts, billboards } = style
+    const { sources, fonts } = style
     // build sources
     const promises = []
     for (const sourceName in sources) {

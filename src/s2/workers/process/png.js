@@ -133,6 +133,7 @@ class PNG {
 				]
 			case 4: return [pixels[i], pixels[i], pixels[i], pixels[i + 1]]
 			case 6: return [pixels[i], pixels[i + 1], pixels[i + 2], pixels[i + 3]]
+      default: return [0, 0, 0, 0]
 		}
 	}
 
@@ -227,6 +228,7 @@ export default class PNGReader {
 	    case 'PLTE': this.decodePLTE(chunk); break
 	    case 'IDAT': this.decodeIDAT(chunk); break
 	    case 'tRNS': this.decodeTRNS(chunk); break
+      default: break
 	  }
 
 	  return type

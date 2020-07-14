@@ -8,45 +8,6 @@ type Source = {
 }
 type Sources = { [string]: Source }
 
-/** WORKER PACKAGE **/
-export type StylePackage = {
-  sources: Sources,
-  fonts: Sources,
-  billboards: Sources,
-  layers: Array<Layer>
-}
-
-/** WALLPAPER **/
-export type WallpaperStyle = {
-  skybox: string,
-  type: string,
-  backgroundColor: string,
-  fade1Color: string,
-  fade2Color: string,
-  haloColor: string
-}
-
-/** SPHERE BACKGROUND **/
-export type SphereBackground = {
-  code: Float32Array,
-  lch: boolean
-}
-
-/** Layer **/
-export type Layer = {
-  id: string,
-  source: string,
-  layer: string,
-  minzoom: number,
-  maxzoom: number,
-  type: 'raster' | 'fill' | 'fill3D' | 'line' | 'line3D' | 'billboard' | 'text',
-  filter: Array<any>, // ["any", ["class", "==", "ocean"], ["class", "==", "river"]]
-  layout: LineLayout | TextLayout | BillboardLayout,
-  paint: FillPaint | LinePaint | TextPaint | BillboardPaint,
-  lch: boolean,
-  code?: Float32Array
-}
-
 /** MASK **/
 export type Mask = {
   exaggeration: string | Array<any>
@@ -95,4 +56,43 @@ export type BillboardLayout = {
 export type BillboardPaint = {
   size: number | Array<any>,
   opacity?: number | Array<any>
+}
+
+/** Layer **/
+export type Layer = {
+  id: string,
+  source: string,
+  layer: string,
+  minzoom: number,
+  maxzoom: number,
+  type: 'raster' | 'fill' | 'fill3D' | 'line' | 'line3D' | 'billboard' | 'text',
+  filter: Array<any>, // ["any", ["class", "==", "ocean"], ["class", "==", "river"]]
+  layout: LineLayout | TextLayout | BillboardLayout,
+  paint: FillPaint | LinePaint | TextPaint | BillboardPaint,
+  lch: boolean,
+  code?: Float32Array
+}
+
+/** WORKER PACKAGE **/
+export type StylePackage = {
+  sources: Sources,
+  fonts: Sources,
+  billboards: Sources,
+  layers: Array<Layer>
+}
+
+/** WALLPAPER **/
+export type WallpaperStyle = {
+  skybox: string,
+  type: string,
+  backgroundColor: string,
+  fade1Color: string,
+  fade2Color: string,
+  haloColor: string
+}
+
+/** SPHERE BACKGROUND **/
+export type SphereBackground = {
+  code: Float32Array,
+  lch: boolean
 }
