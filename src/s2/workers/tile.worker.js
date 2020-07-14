@@ -244,7 +244,7 @@ export default class TileWorker {
             const { x, y, leftShift, bottomShift } = piece
             requestData(`${path}/${face}/${tilezoom}/${x}/${y}`, fileType, (data) => {
               if (data && !self.cancelCache.includes(hash)) self._processRasterData(mapID, sourceName, source, tile.hash, data, { leftShift, bottomShift })
-            })
+            }, (typeof createImageBitmap !== 'function') ? true : false)
           }
         }
       } else if (type === 'json') {
@@ -266,15 +266,19 @@ export default class TileWorker {
   }
 
   _processRasterData (mapID: string, sourceName: string, source: Object,
-    tileID: number, data: Object | ArrayBuffer | Blob, params?: Object) {
+    tileID: number, data: ArrayBuffer | Blob, params?: Object) {
       const { leftShift, bottomShift } = params
       // https://bugzilla.mozilla.org/show_bug.cgi?id=1335594
-      const getImage = (IS_CHROME) ? createImageBitmap(data, { imageOrientation: 'flipY', premultiplyAlpha: 'premultiply' }) : createImageBitmap(data)
+      let built = true
+      const getImage = (IS_CHROME)
+        ? createImageBitmap(data, { imageOrientation: 'flipY', premultiplyAlpha: 'premultiply' })
+        : (typeof createImageBitmap === 'function') ? createImageBitmap(data)
+        : new Promise((resolve) => { built = false; resolve(data) })
       getImage
         .then(image => {
-          postMessage({ mapID, type: 'rasterdata', source: sourceName, tileID, image, leftShift, bottomShift }, [image])
+          postMessage({ mapID, type: 'rasterdata', built, source: sourceName, tileID, image, leftShift, bottomShift }, [image])
         })
-        .catch(err => {})
+        .catch(err => { console.log('ERROR', err )})
   }
 
   _processMaskData (mapID: string, sourceName: string, source: Object,

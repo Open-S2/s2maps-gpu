@@ -1,15 +1,18 @@
 // @flow
 export type Extension = 'pbf' | 'json' | 'png' | 'jpeg'
 
-export default function requestData (path: string, extension: Extension, callback: Function) {
-  const oReq = new XMLHttpRequest()
+export default function requestData (path: string, extension: Extension, callback: Function, ab?: boolean = false) {
+  const resType = getResposeType(extension)
 
-  oReq.responseType = getResposeType(extension)
-  oReq.onload = () => { callback(oReq.response) }
-  oReq.onerror = (e) => { console.log('ERROR', e); callback(null) }
-  oReq.open('GET', `${path}.${extension}`)
-  oReq.setRequestHeader('cache-control', `max-age=${2721600}`) // 4.5 * 7 * 24 * 60 * 60 seconds (1 month ish)
-  oReq.send()
+  fetch(`${path}.${extension}`)
+    .then(res => {
+      if (ab) return res.arrayBuffer()
+      else if (resType === 'json') return res.json()
+      else if (resType === 'blob') return res.blob()
+      else return res.arrayBuffer()
+    })
+    .then(data => callback(data))
+    .catch(err => { console.log('ERROR', err)})
 }
 
 function getResposeType (extension: Extension) {

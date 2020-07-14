@@ -99,7 +99,7 @@ export default class Camera {
     const { type } = data
     if (type === 'filldata' || type === 'linedata') this._injectVectorSourceData(data.source, data.tileID, data.vertexBuffer, data.indexBuffer, data.codeTypeBuffer, data.featureGuideBuffer)
     else if (type === 'maskdata') this._injectMaskGeometry(data.tileID, data.vertexBuffer, data.indexBuffer, data.radiiBuffer)
-    else if (type === 'rasterdata') this._injectRasterData(data.source, data.tileID, data.image, data.leftShift, data.bottomShift)
+    else if (type === 'rasterdata') this._injectRasterData(data.source, data.tileID, data.built, data.image, data.leftShift, data.bottomShift)
     else if (type === 'glyphdata') this._injectGlyphSourceData(data.source, data.tileID, data.glyphFilterBuffer, data.glyphFillVertexBuffer, data.glyphFillIndexBuffer, data.glyphLineVertexBuffer, data.glyphQuadBuffer, data.layerGuideBuffer)
     else if (type === 'parentlayers') this._injectParentLayers(data.tileID, data.parentLayers)
   }
@@ -126,7 +126,7 @@ export default class Camera {
     }
   }
 
-  _injectRasterData (source: string, tileID: string, image: ImageBitmap,
+  _injectRasterData (source: string, tileID: string, built: boolean, image: ImageBitmap,
     leftShift: number, bottomShift: number) {
     if (this.tileCache.has(tileID)) {
       // get tile
@@ -134,7 +134,13 @@ export default class Camera {
       // find all layers that utilize the raster data
       const layerIDs = this.style.layers.filter(layer => layer.source === source).map((layer, i) => i)
       // inject into tile
-      tile.injectRasterData(source, layerIDs, image, leftShift, bottomShift)
+      if (!built) {
+        createImageBitmap(new Blob([image]))
+          .then(image => tile.injectRasterData(source, layerIDs, image, leftShift, bottomShift))
+          .catch(err => console.log('ERROR', err))
+      } else {
+        tile.injectRasterData(source, layerIDs, image, leftShift, bottomShift)
+      }
       // new 'paint', so painter is dirty
       this.painter.dirty = true
     }

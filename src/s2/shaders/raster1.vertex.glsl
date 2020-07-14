@@ -12,9 +12,10 @@ varying vec2 vTexcoord;
 
 void main () {
   // set where we are on the texture
-  vTexcoord = aPos;
+  vec2 pos = aPos / 4096.;
+  vTexcoord = pos;
   // prep xyz
-  vec4 xyz = STtoXYZ(aPos);
+  vec4 xyz = STtoXYZ(pos);
   // if 3D, add radius
   if (u3D) {
     float radius = 1. + (aRadius * 200.);
