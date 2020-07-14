@@ -32,7 +32,7 @@ function linear (input: number, start: number, end: number) {
 }
 
 // y = e^x OR y = Math.pow(2, 10 * x)
-function exponential (input: number, start: number, end: number, base: number = 1.5) {
+function exponential (input: number, start: number, end: number, base: number) {
   // grab change
   const diff = end - start
   if (diff === 0) return 0

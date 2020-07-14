@@ -49,7 +49,7 @@
       "layer": "landuse",
       "type": "fill",
       "filter": ["class", "has", ["park", "national_park", "protected_area",
-        "aboriginal_lands", "grass", "grassland", "garden", "meadow",
+        "aboriginal_lands", "grass", "grassland", "garden", "meadow", "farmland",
         "wood", "swamp", "forest", "wetland", "zoo", "cemetery", "indianReservation",
         "sand", "beach", "desert", "aeroway", "military", "hospital",
         "university", "college", "school", "kindergarten", "parking", "glacier",
@@ -75,6 +75,8 @@
           "rgb(241, 243, 244)",
           ["class", "==", "hospital"],
           "rgb(252, 228, 228)",
+          ["class", "==", "farmland"],
+          "rgb(232, 237, 219)",
           ["class", "has", ["park", "national_park", "protected_area"]],
           [
             "input-range",
@@ -445,7 +447,7 @@
         ],
         "field": [
           "data-condition",
-          ["class", "has", ["Indian Reservation", "Hamlet", "Neighbourhood"]],
+          ["class", "has", ["Indian Reservation", "Hamlet", "Village", "Neighbourhood", "Island"]],
           "?!Uname",
           "default",
           "?name"
@@ -463,11 +465,11 @@
             "zoom",
             "lin",
             5,
-            19,
+            15,
             9,
-            26,
+            20,
             12,
-            50
+            45
           ],
           ["class", "==", "Town"],
           [
@@ -475,9 +477,9 @@
             "zoom",
             "lin",
             8,
-            19,
+            15,
             10,
-            22,
+            18,
             12,
             40
           ],
@@ -487,9 +489,9 @@
             "zoom",
             "lin",
             10,
-            18,
-            12,
-            36
+            14,
+            14,
+            24
           ],
           ["class", "has", ["Hamlet", "Village"]],
           [
@@ -497,20 +499,20 @@
             "zoom",
             "lin",
             10.5,
-            18,
+            14,
             12,
-            28
+            24
           ],
           ["class", "==", "Indian Reservation"],
-          20,
+          15,
           "default",
-          24
+          18
         ],
         "fill": [
           "data-condition",
           ["class", "==", "Indian Reservation"],
-          "rgb(181, 177, 155)",
-          ["class", "has", ["Village", "Neighbourhood"]],
+          "rgb(176, 179, 157)",
+          ["class", "has", ["Village", "Neighbourhood", "Island"]],
           "rgb(132, 147, 169)",
           ["class", "==", "Hamlet"],
           "rgb(150, 150, 150)",
@@ -525,8 +527,14 @@
             "rgb(150, 150, 150)"
           ]
         ],
-        "stroke": "rgba(255, 255, 255, 0.7)",
-        "strokeWidth": 0.2
+        "stroke": "rgba(255, 255, 255, 0.85)",
+        "strokeWidth": [
+          "data-condition",
+          ["class", "==", "Indian Reservation"],
+          0.4,
+          "default",
+          0.2
+        ]
       }
     },
     {
@@ -566,9 +574,9 @@
             "expo",
             1.5,
             0,
-            18,
+            16,
             4,
-            40
+            36
           ],
           ["class", "==", "State"],
           [
@@ -577,11 +585,11 @@
             "expo",
             1.5,
             2,
-            16,
+            12,
             4,
-            22,
+            18,
             7,
-            36
+            28
           ],
           "default",
           14
@@ -599,9 +607,18 @@
         "strokeWidth": [
           "data-condition",
           ["class", "==", "State"],
-          0.3,
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            0,
+            0.5,
+            4,
+            0.3
+          ],
           "default",
-          0.1
+          0.2
         ]
       }
     }

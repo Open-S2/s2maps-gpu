@@ -8,6 +8,7 @@ export default function requestData (path: string, extension: Extension, callbac
   oReq.onload = () => { callback(oReq.response) }
   oReq.onerror = (e) => { console.log('ERROR', e); callback(null) }
   oReq.open('GET', `${path}.${extension}`)
+  oReq.setRequestHeader('cache-control', `max-age=${2721600}`) // 4.5 * 7 * 24 * 60 * 60 seconds (1 month ish)
   oReq.send()
 }
 

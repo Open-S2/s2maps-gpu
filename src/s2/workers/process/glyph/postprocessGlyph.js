@@ -35,9 +35,8 @@ export default function postprocessGlyph (mapID: string, sourceName: string,
   // Assuming we pass the quad test, We need to build 3 components:
   // 1) Glyph quads explaining where to draw, and where on the texture to look
   // 2) The GlyphBuilder will build in the background any new glyphs it needs to a "texturePack"
-  // 3) For each text object we need a quad defining it's total shape.
+  // 3) For each text object we need a "filter" quad defining it's total width and size.
   //    This is for the pre-draw step to check overlap. The GlyphBuilder will also be building this.
-  //    Upon eventual request, it needs to first be sorted biggest to smallest.
   let curLayerID = texts[0].layerID
   let encoding: Array<number> = texts[0].code
   let codeStr: string = texts[0].code.toString()
@@ -50,6 +49,7 @@ export default function postprocessGlyph (mapID: string, sourceName: string,
       codeStr = code.toString()
       encoding = code
     }
+
     glyphBuilder.buildText(text)
   }
   // finish the last layer
@@ -59,7 +59,7 @@ export default function postprocessGlyph (mapID: string, sourceName: string,
 
   // pull out the data
   const { texturePack, glyphFilterVertices, glyphQuads, layerGuide } = glyphBuilder
-  const { height, fillVertices, lineVertices, fillIndices } = texturePack
+  const { height, fillVertices, fillIndices, lineVertices } = texturePack
   // add the width and height to the beginning of the layerGuide
   layerGuide.unshift(id, height)
 

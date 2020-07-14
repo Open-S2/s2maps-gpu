@@ -66,7 +66,7 @@ export default class GlyphQuadProgram extends Program {
     glyphFilterProgram.bindResultTexture()
     // pull out the appropriate data from the source
     const { featureCode, offset, count } = featureGuide
-    const { textureID, glyphQuadVAO, glyphQuadBuffer } = source
+    const { textureID, glyphQuadBuffer } = source
     // grab glyph texture
     const { texSize, texture } = this.glyphProgram.getFBO(textureID)
     // set feature code
@@ -74,8 +74,6 @@ export default class GlyphQuadProgram extends Program {
     // turn depth testing off
     context.stencilFunc(0)
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-    // set the correct vao
-    gl.bindVertexArray(glyphQuadVAO)
     // set the texture size uniform
     this.setTexSize(texSize)
     // bind the correct glyph texture

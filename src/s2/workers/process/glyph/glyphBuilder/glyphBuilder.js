@@ -61,12 +61,12 @@ export default class GlyphBuilder {
 
   testQuad (quad: Quad): boolean {
     // build the bbox
-    let s = Math.round(quad.s * 768) // 768 is between 512 and 1080 and is a
-    let t = Math.round(quad.t * 768) // compromise of zooming and reducing too much content
-    quad.minX = s + quad.x
-    quad.minY = t + quad.y
-    quad.maxX = s + quad.x + (quad.width * quad.size)
-    quad.maxY = t + quad.y + quad.height
+    let s = Math.round(quad.s * 512) // 768 is between 512 and 1080 and is a
+    let t = Math.round(quad.t * 512) // compromise of zooming and reducing too much content
+    quad.minX = t + quad.x
+    quad.minY = s + quad.y
+    quad.maxX = quad.minX + (quad.width * quad.size)
+    quad.maxY = quad.minY + quad.height
     return !this.rtree.collides(quad)
   }
 

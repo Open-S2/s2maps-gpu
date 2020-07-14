@@ -98,7 +98,9 @@ function inputRangeFunction (input, attr) {
   // grab function type
   input.shift() // get input type - currently only zoom
   const easeType = input.shift()
-  const easeFunction = getEasingFunction(easeType)
+  let base = 1
+  if (easeType === 'expo') base = input.shift()
+  const easeFunction = getEasingFunction(easeType, base)
 
   // first ensure each result property is parsed:
   let c = 1

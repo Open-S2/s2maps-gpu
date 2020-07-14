@@ -16,7 +16,7 @@ out vec4 fragColor;
 
 void main () {
   if (draw == 0.) discard;
-  float gamma = (1.5 * 1.4142) / (26. * 2.);
+  float gamma = 0.040794231; // (1.5 * 1.4142) / (26. * 2.)
   float dist = texture(uGlyphTex, vTexcoord).r;
   float alpha = smoothstep(buf - gamma, buf + gamma, dist);
   if (alpha < 20. / 256.) discard;

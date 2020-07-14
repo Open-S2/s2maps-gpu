@@ -129,6 +129,8 @@ export default class Painter {
     const matrix = projection.getMatrix(512) // NOTE: For now, we have a default size of 512.
     this.injectFrameUniforms(matrix, view, aspect)
 
+    // prep mask id's
+    this._createTileMasksIDs(tiles)
     // prep tiles features to draw
     const features = tiles.flatMap(tile => tile.featureGuide).sort(featureSort)
     // prep glyph features for drawing box filters
@@ -158,6 +160,15 @@ export default class Painter {
     context.cleanup()
   }
 
+  _createTileMasksIDs (tiles: Array<Tile>) {
+    let maskRef = 1
+    // add all tiles
+    for (const tile of tiles) {
+      tile.tmpMaskID = maskRef
+      maskRef++
+    }
+  }
+
   buildGlyphTexture (glyphSource: GlyphTileSource) {
     // get the glyphProgram
     const glyphProgram: GlyphProgram = this.getProgram('glyphFill')
@@ -166,7 +177,7 @@ export default class Painter {
     glyphProgram.draw(glyphSource)
   }
 
-  paintMasks (tiles: Array<Tile>, fb: boolean = false) {
+  paintMasks (tiles: Array<Tile>) {
     // get context
     const { context } = this
     const { gl } = context
@@ -175,23 +186,20 @@ export default class Painter {
     if (!fillProgram) return new Error('The "fill" program does not exist, can not paint.')
     // prep stencil - don't draw color, only to the stencil
     context.enableMaskTest()
-    // get a starting mask index
-    let maskRef = 1
+    context.lequalDepth()
+    gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE)
+    // create mask for each tile
     for (const tile of tiles) {
-      const { faceST, sourceData } = tile
+      const { tmpMaskID, faceST, sourceData } = tile
       const { mask } = sourceData
       // set uniforms & stencil test
       fillProgram.setFaceST(faceST)
       // set correct tile mask
-      if (!fb) gl.stencilFunc(gl.ALWAYS, maskRef, 0xFF)
+      gl.stencilFunc(gl.ALWAYS, tmpMaskID, 0xFF)
       // use mask vao and fill program
       gl.bindVertexArray(mask.vao)
       // draw mask
       fillProgram.draw(mask, mask)
-      // keep tabs on the mask identifier
-      tile.tmpMaskID = maskRef
-      // update mask index
-      maskRef++
     }
     // lock in the stencil
     context.lockMasks()
@@ -208,8 +216,9 @@ export default class Painter {
     // set layerCode
     fillProgram.setLayerCode(code, lch)
     // for each tile, draw a background
+    context.alwaysDepth()
     for (const tile of tiles) {
-      const { faceST, sourceData, tmpMaskID } = tile
+      const { tmpMaskID, faceST, sourceData } = tile
       const { mask } = sourceData
       // set uniforms & stencil test
       fillProgram.setFaceST(faceST)
@@ -226,14 +235,14 @@ export default class Painter {
     const { context } = this
     const { gl } = context
     // setup variables
-    let drawTile: Tile
     let curLayer: number = -1
     let curProgram: string = 'fill'
     let program: ProgramTypes = this.getProgram('fill')
     if (!program) return new Error('The "fill" program does not exist, can not paint.')
     // run through the features, and upon tile, layer, or program change, adjust accordingly
+    context.alwaysDepth()
     for (const feature of features) {
-      const { parent, tile, layerID, source, type, layerCode, lch } = feature
+      const { tile, faceST, layerID, source, type, layerCode, lch } = feature
       const { tmpMaskID } = tile
       // set program
       if (type !== curProgram) {
@@ -248,15 +257,11 @@ export default class Painter {
         curLayer = layerID
         program.setLayerCode(layerCode, lch)
       }
-      // update tile
-      drawTile = (parent) ? parent : tile
-      const { faceST, sourceData } = drawTile
       program.setFaceST(faceST)
-      gl.bindVertexArray(sourceData[source].vao)
+      gl.bindVertexArray(source.vao)
       // draw
       // if (feature.type !== 'glyph') program.draw(feature, sourceData[source], tmpMaskID)
-      // console.log('DRAW', feature, sourceData[source])
-      program.draw(feature, sourceData[source], tmpMaskID)
+      program.draw(feature, source, tmpMaskID)
     }
   }
 
@@ -268,7 +273,7 @@ export default class Painter {
     // Step 1: draw points
     glyphFilterProgram.bindPointFrameBuffer()
     // setup mask first (uses the "fillProgram" - that's why we have not 'used' the glyphFilterProgram yet)
-    this.paintMasks(tiles, true)
+    this.paintMasks(tiles)
     // use the box program
     glyphFilterProgram.use()
     // paint the glyph "filter" points
@@ -285,34 +290,30 @@ export default class Painter {
 
   _paintGlyphFilter (glyphFilterProgram: GlyphFilter, glyphFeatures: Array<FeatureGuide>, mode: 0 | 1 | 2) {
     const { gl } = this.context
-    let drawTile: Tile, glyphSource: GlyphTileSource
     let curLayer: number = -1
     // set mode
     glyphFilterProgram.setMode(mode)
     // draw each feature
     for (const glyphFeature of glyphFeatures) {
-      const { parent, tile, layerID, source, layerCode } = glyphFeature
+      const { faceST, layerID, source, layerCode } = glyphFeature
       // update layerID
       if (curLayer !== layerID && layerCode) {
         curLayer = layerID
         glyphFilterProgram.setLayerCode(layerCode)
       }
-      // update draw tile
-      drawTile = (parent) ? parent : tile
-      // setup vao and uniforms
-      const { faceST, sourceData } = drawTile
-      glyphSource = sourceData[source]
       glyphFilterProgram.setFaceST(faceST)
-      gl.bindVertexArray(glyphSource.boxVAO)
+      gl.bindVertexArray(source.filterVAO)
       // draw
-      glyphFilterProgram.draw(glyphFeature, glyphSource, mode)
+      glyphFilterProgram.draw(glyphFeature, source, mode)
     }
   }
 }
 
 function featureSort (a: FeatureGuide, b: FeatureGuide): number {
-  // layerID
+  let zoomDiff = a.tile.zoom - b.tile.zoom
+  if (zoomDiff) return zoomDiff
   let diff = a.layerID - b.layerID
+  if (diff) return diff
   let index = 0
   let maxSize = Math.min(a.featureCode.length, b.featureCode.length)
   while (diff === 0 && index < maxSize) {

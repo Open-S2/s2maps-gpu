@@ -88,13 +88,13 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
     context.cleanup()
   } else if (source.type === 'glyph') {
     // Create VAOS
-    source.boxVAO = gl.createVertexArray()
+    source.filterVAO = gl.createVertexArray()
     source.glyphFillVAO = gl.createVertexArray()
     source.glyphLineVAO = gl.createVertexArray()
-    source.glyphQuadVAO = gl.createVertexArray()
+    source.vao = gl.createVertexArray() // quad vao
 
     // STEP 1 - build box VAO
-    gl.bindVertexArray(source.boxVAO)
+    gl.bindVertexArray(source.filterVAO)
     // Create the UV buffer
     source.uvBuffer = gl.createBuffer()
     // Bind the buffer
@@ -168,7 +168,7 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
     gl.vertexAttribPointer(3, 1, gl.FLOAT, false, 28, 24) // aScale
 
     // STEP 4 - Drawing glyphs from texture to screen space
-    gl.bindVertexArray(source.glyphQuadVAO)
+    gl.bindVertexArray(source.vao)
     // add UV again
     gl.bindBuffer(gl.ARRAY_BUFFER, source.uvBuffer)
     gl.enableVertexAttribArray(0) // u-v
@@ -211,5 +211,11 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
     const length = source.size * 2
     gl.bindTexture(gl.TEXTURE_2D, source.texture)
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, length, length, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true)
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
   }
 }

@@ -6,24 +6,6 @@ import { S2Point, bboxST } from 's2projection' // https://github.com/Regia-Corpo
 import type { Face } from 's2projection' // https://github.com/Regia-Corporation/s2projection/blob/master/src/S2Projection.js#L4
 import type { Layer, Mask } from '../styleSpec'
 
-// The layer guide helps identify how to properly draw from the vertexBuffer/vertexIndex stack.
-// All layers are merged into one VAO/indexBuffer/vertexBuffer/codeTypeBuffer set. This reduces complexity and improves draw speed.
-// To ensure we draw in order and know the index ranges exist per layer, we maintain a 'Layer Guide'.
-// the attributes object is for dataConditions and dataRanges.
-export type FeatureGuide = { // eslint-disable-next-line
-  parent?: Tile, // eslint-disable-next-line
-  tile?: Tile,
-  layerID: number,
-  source: string,
-  count: number,
-  offset: number,
-  filterOffset?: number, // glyph
-  filterCount?: number, // glyph
-  type: string,
-  featureCode: Float32Array,
-  layerCode: Float32Array
-}
-
 export type VectorTileSource = {
   type: 'vector',
   subType: 'fill' | 'line',
@@ -52,10 +34,10 @@ export type GlyphTileSource = {
   glyphLineVertices: Float32Array,
   glyphLineTypeArray: Float32Array,
   glyphQuads: Float32Array,
-  boxVAO?: WebGLVertexArrayObject,
+  filterVAO?: WebGLVertexArrayObject,
   glyphFillVAO?: WebGLVertexArrayObject,
   glyphLineVAO?: WebGLVertexArrayObject,
-  glyphQuadVAO?: WebGLVertexArrayObject,
+  vao?: WebGLVertexArrayObject, // quad vao
   uvBuffer?: WebGLBuffer,
   glyphFilterBuffer?: WebGLBuffer,
   glyphFillVertexBuffer?: WebGLBuffer,
@@ -70,6 +52,26 @@ export type RasterTileSource = {
   size: number,
   texture: WebGLTexture,
   mode?: GLenum // TRIANGLES | TRIANGLE_STRIP | TRIANGLE_FAN | etc
+}
+
+// The layer guide helps identify how to properly draw from the vertexBuffer/vertexIndex stack.
+// All layers are merged into one VAO/indexBuffer/vertexBuffer/codeTypeBuffer set. This reduces complexity and improves draw speed.
+// To ensure we draw in order and know the index ranges exist per layer, we maintain a 'Layer Guide'.
+// the attributes object is for dataConditions and dataRanges.
+export type FeatureGuide = { // eslint-disable-next-line
+  tile: Tile,
+  parent: boolean,
+  layerID: number,
+  source: VectorTileSource | GlyphTileSource | RasterTileSource,
+  sourceName: string,
+  faceST: Float32Array,
+  count: number,
+  offset: number,
+  filterOffset?: number, // glyph
+  filterCount?: number, // glyph
+  type: string,
+  featureCode: Float32Array,
+  layerCode: Float32Array
 }
 
 export type ChildRequest = { // eslint-disable-next-line
@@ -90,6 +92,7 @@ export default class Tile {
   x: number
   y: number
   size: number
+  tmpMaskID: number
   bbox: [number, number, number, number]
   faceST: Float32Array
   division: number
@@ -125,44 +128,9 @@ export default class Tile {
   // a parents' parent or deeper, so we need to reflect that int the tile property. The other case
   // is the tile wants to display a layer that exists in a 'lower' zoom than this one.
   injectParentTile (parentTile: Tile, filterLayers?: Array<number>) {
-    const foundLayers = new Set()
-    for (const featureGuide of parentTile.featureGuide) {
-      const { type, parent, layerID } = featureGuide
-      if (type === 'raster') continue
-      // if (type === 'glyph') continue
-      if (!parent) foundLayers.add(layerID)
-      // build the feature, set the correct parent and tile
-      this.featureGuide.push({ ...featureGuide, parent: (parent) ? parent : parentTile, tile: this })
+    for (const feature of parentTile.featureGuide) {
+      this.featureGuide.push({ ...feature, tile: this, parent: true })
     }
-    // if filterLayers, we need to check what layers were missing
-    if (filterLayers) {
-      const missingLayers = filterLayers.filter(layerID => !foundLayers.has(layerID))
-      for (const missingLayer of missingLayers) {
-        if (!parentTile.childrenRequests[missingLayer]) parentTile.childrenRequests[missingLayer] = []
-        parentTile.childrenRequests[missingLayer].push(this)
-      }
-    }
-  }
-
-  _injectSourceIntoChildren (sourceName: string) {
-    // // clean the children's current featureGuide's of said layer
-    // for (let layerID in this.childrenRequests) {
-    //   layerID = +layerID
-    //   for (const tile of this.childrenRequests[layerID]) {
-    //     if (tile) tile.featureGuide = tile.featureGuide.filter(fg => !(fg.parent && fg.layerID === layerID))
-    //   }
-    // }
-    // // run through every layer in the guide and see if any of the tiles need said layer
-    // for (const featureGuide of this.featureGuide) {
-    //   if (featureGuide.source === sourceName && this.childrenRequests[featureGuide.layerID]) {
-    //     for (const tile of this.childrenRequests[featureGuide.layerID]) {
-    //       // first remove all instances of source
-    //       if (tile) tile.featureGuide.push({ ...featureGuide, parent: this, tile })
-    //     }
-    //     // cleanup
-    //     delete this.childrenRequests[featureGuide.layerID]
-    //   }
-    // }
   }
 
   _buildMaskGeometry () {
@@ -228,51 +196,54 @@ export default class Tile {
   // four children (if size is 512 and images are 512, otherwise we may store
   // 16 images of 256). Create a texture of size length x length to house
   // said data (length being this.size * 2).
-  injectRasterData (source: string, layerIDs: Array<number>, image: Image,
+  injectRasterData (sourceName: string, layerIDs: Array<number>, image: Image,
     leftShift: number, bottomShift: number) {
     const { gl } = this.context
     const length = image.width
-    let rasterSource = this.sourceData[source]
+    // prep the source
+    let rasterSource = this.sourceData[sourceName]
     // prep phase (should the source not exist)
     if (!rasterSource) {
-      // Build sourceData
-      rasterSource = this.sourceData[source] = { type: 'raster', size: this.size }
-      // Create a texture.
-      const texture = rasterSource.texture = gl.createTexture()
+      rasterSource = this.sourceData[sourceName] = {
+        type: 'raster',
+        size: this.size,
+        total: Math.pow((this.size * 2) / length, 2),
+        count: 0,
+        texture: gl.createTexture()
+      }
+      buildSource(this.context, rasterSource)
       // store texture information to featureGuide
       for (const layerID of layerIDs) {
         const guide = {
           tile: this,
+          sourceName,
+          faceST: this.faceST,
           layerID: layerID,
-          source: 'mask', // when pulling from the vao, we still use the mask vertices
+          source: this.sourceData.mask,
           subType: 'fill',
           type: 'raster',
           featureCode: [0],
-          texture
+          texture: rasterSource.texture
         }
         this.featureGuide.push(guide)
       }
-      // build out the source
-      buildSource(this.context, rasterSource)
     }
     // pull out the texture
     const { texture } = rasterSource
-    // step 1:
     // store in texture
     gl.bindTexture(gl.TEXTURE_2D, texture)
-    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true)
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
     gl.texSubImage2D(gl.TEXTURE_2D, 0, leftShift * length, bottomShift * length, gl.RGBA, gl.UNSIGNED_BYTE, image)
+    rasterSource.count++
+    // Since a parent may have been injected, we need to remove any instances of the said source data.
+    if (rasterSource.count === rasterSource.total) this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === sourceName && fg.parent))
   }
 
   injectVectorSourceData (source: string, vertexArray: Int16Array, indexArray?: Uint32Array,
     codeTypeArray: Uint8Array, featureGuideArray: Uint32Array, layers: Array<Layer>): VectorTileSource {
+    // Since a parent may have been injected, we need to remove any instances of the said source data.
+    this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === source))
     // store a reference to the source
-    const builtSource = this.sourceData[source] = {
+    const vectorSource = this.sourceData[source] = {
       type: 'vector',
       subType: source.split(':').pop(),
       vertexArray,
@@ -291,8 +262,10 @@ export default class Tile {
       // create and store the featureGuide
       this.featureGuide.push({
         tile: this,
+        faceST: this.faceST,
         layerID,
-        source,
+        source: vectorSource,
+        sourceName: source,
         count,
         offset,
         type,
@@ -302,20 +275,18 @@ export default class Tile {
       })
       i += encodingSize
     }
-    // Since a parent may have been injected, we need to remove any instances of the said source data.
-    this.featureGuide = this.featureGuide.filter(fg => !(fg.parent && fg.source === source))
     // build the VAO
-    buildSource(this.context, builtSource)
-    // if we have children requesting this tiles data, we send the data over
-    if (Object.keys(this.childrenRequests).length) this._injectSourceIntoChildren(source)
+    buildSource(this.context, vectorSource)
     // return the source
-    return builtSource
+    return vectorSource
   }
 
   injectGlyphSourceData (source: string, glyphFilterVertices: Float32Array,
     glyphFillVertices: Float32Array, glyphFillIndices: Float32Array,
     glyphLineVertices: Float32Array, glyphQuads: Float32Array,
     layerGuideBuffer: Uint32Array, layers: Array<Layer>): GlyphTileSource {
+    // Since a parent may have been injected, we need to remove any instances of the said source data.
+    this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === source))
     // setup source data
     const glyphSource = this.sourceData[source] = {
       type: 'glyph',
@@ -343,8 +314,10 @@ export default class Tile {
       // create and store the featureGuide
       this.featureGuide.push({
         tile: this,
+        faceST: this.faceST,
         layerID,
-        source,
+        source: glyphSource,
+        sourceName: source,
         filterOffset,
         filterCount,
         offset,
@@ -357,12 +330,8 @@ export default class Tile {
       i += encodingSize
     }
 
-    // Since a parent may have been injected, we need to remove any instances of the said source data.
-    this.featureGuide = this.featureGuide.filter(fg => !(fg.parent && fg.source === source))
     // build the VAO
     buildSource(this.context, glyphSource)
-    // if we have children requesting this tiles data, we send the data over
-    if (Object.keys(this.childrenRequests).length) this._injectSourceIntoChildren(source)
     // return the source
     return glyphSource
   }

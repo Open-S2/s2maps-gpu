@@ -21,18 +21,17 @@ function orderLine (layer: Layer) {
 // text order: (paint)size->strokeWidth->fill->stroke
 function orderText (layer: Layer) {
   const { layout, paint } = layer
-  const localLayout = JSON.parse(JSON.stringify(layout))
-  const localPaint = JSON.parse(JSON.stringify(paint))
+  const localSize = JSON.parse(JSON.stringify(paint.size))
   // store
   layer.layoutLocal = {
-    family: localLayout.family || 'default',
-    field: localLayout.field || '',
-    anchor: localLayout.anchor || 'center',
-    padding: localLayout.padding || [0, 0],
-    offset: localLayout.offset || [0, 0]
+    family: layout.family || 'default',
+    field: layout.field || '',
+    anchor: layout.anchor || 'center',
+    padding: layout.padding || [0, 0],
+    offset: layout.offset || [0, 0]
   }
   layer.paintLocal = {
-    size: localPaint.size || 16
+    size: localSize || 16
   }
   layer.layout = {}
   layer.paint = {

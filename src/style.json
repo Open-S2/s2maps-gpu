@@ -6,12 +6,12 @@
   "minzoom": 0,
   "maxzoom": 20,
   "sources": {
-    "world": "http://localhost:8000/data/fills"
+    "world": "http://192.168.0.7:8000/data/fills"
   },
   "fonts": {
-    "default": "http://localhost:8000/fonts/default",
-    "roboto-regular": "http://localhost:8000/fonts/roboto-regular",
-    "roboto-medium": "http://localhost:8000/fonts/roboto-medium"
+    "default": "http://192.168.0.7:8000/fonts/default",
+    "roboto-regular": "http://192.168.0.7:8000/fonts/roboto-regular",
+    "roboto-medium": "http://192.168.0.7:8000/fonts/roboto-medium"
   },
   "shade": false,
   "wallpaper": {
@@ -447,7 +447,7 @@
         ],
         "field": [
           "data-condition",
-          ["class", "has", ["Indian Reservation", "Hamlet", "Neighbourhood"]],
+          ["class", "has", ["Indian Reservation", "Hamlet", "Village", "Neighbourhood", "Island"]],
           "?!Uname",
           "default",
           "?name"
@@ -506,13 +506,13 @@
           ["class", "==", "Indian Reservation"],
           15,
           "default",
-          20
+          18
         ],
         "fill": [
           "data-condition",
           ["class", "==", "Indian Reservation"],
           "rgb(176, 179, 157)",
-          ["class", "has", ["Village", "Neighbourhood"]],
+          ["class", "has", ["Village", "Neighbourhood", "Island"]],
           "rgb(132, 147, 169)",
           ["class", "==", "Hamlet"],
           "rgb(150, 150, 150)",
@@ -589,7 +589,7 @@
             4,
             18,
             7,
-            36
+            28
           ],
           "default",
           14
