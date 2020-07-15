@@ -2,7 +2,7 @@
 import Color from './color'
 import Map from '../ui/map'
 import { Shade, Wallpaper, Skybox, Tile } from '../source'
-import requestData from '../util/xmlHttpRequest'
+import requestData from '../util/fetch'
 import { encodeLayerAttribute, orderLayer } from './conditionals'
 
 import type { Sources, Layer, Mask, WallpaperStyle } from './styleSpec'

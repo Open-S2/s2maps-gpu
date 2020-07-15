@@ -210,7 +210,8 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
     // setup texture params
     const length = source.size * 2
     gl.bindTexture(gl.TEXTURE_2D, source.texture)
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, length, length, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
+    if (context.type === 2) gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, length, length)
+    else gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, length, length, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true)
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)

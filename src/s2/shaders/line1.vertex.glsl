@@ -1,4 +1,4 @@
-precision mediump float;
+precision highp float;
 
 attribute float aType;
 attribute vec2 aPrev; //   (INSTANCED)

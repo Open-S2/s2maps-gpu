@@ -1,4 +1,4 @@
-precision mediump float;
+precision highp float;
 
 vec2 fade1SmoothSteps = vec2(0.15, 1.);
 vec2 fade2SmoothSteps = vec2(0.55, 1.);

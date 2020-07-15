@@ -105,6 +105,7 @@ export default class Projector implements Projection {
     mat4.translate(matrix, this.translation)
     // rotate position
     mat4.rotate(matrix, [degToRad(this.lat), degToRad(this.lon), 0])
+    // console.log('matrix', matrix)
 
     return matrix
   }

@@ -1,5 +1,5 @@
 // @flow
-// This is polyfill class for Safari as they do not support EventTarget as a constructor
+// This is polyfill class for Safari as it does not support EventTarget as a constructor
 export default class EventListener {
   listeners = {}
 

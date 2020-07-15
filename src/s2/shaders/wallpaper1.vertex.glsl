@@ -1,4 +1,4 @@
-precision mediump float;
+precision highp float;
 
 attribute vec2 aPos;
 varying vec2 vertPos;

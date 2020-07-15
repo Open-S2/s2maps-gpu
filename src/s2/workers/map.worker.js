@@ -11,7 +11,7 @@ class MapWorker {
 
     if (type === 'canvas') this._prepCanvas(data.options, data.canvas, data.id)
     else if (type === 'resize') this.map.resize(data.width, data.height)
-    else if (type === 'scroll') this.map._onScroll(data.rect, data.clientX, data.clientY, data.deltaY)
+    else if (type === 'scroll') this.map._onZoom(data.deltaY, data.clientX - data.rect.left, data.clientY - data.rect.top)
     else if (type === 'mousedown') this.map.dragPan.onMouseDown()
     else if (type === 'mouseup') this.map.dragPan.onMouseUp()
     else if (type === 'mousemove') this.map.dragPan.onMouseMove(data.movementX, data.movementY)

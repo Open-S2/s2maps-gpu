@@ -1,5 +1,5 @@
 #version 300 es
-precision mediump float;
+precision highp float;
 
 // Passed in from the vertex shader.
 in float draw;

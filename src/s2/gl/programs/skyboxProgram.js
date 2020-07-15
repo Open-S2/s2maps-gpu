@@ -1,7 +1,7 @@
 // @flow
 import Program from './program'
 import Map from '../../ui/map'
-import requestData from '../../util/xmlHttpRequest'
+import requestData from '../../util/fetch'
 
 // WEBGL1
 import vert1 from '../../shaders/skybox1.vertex.glsl'

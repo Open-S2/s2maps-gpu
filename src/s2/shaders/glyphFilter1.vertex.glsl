@@ -1,4 +1,4 @@
-precision mediump float;
+precision highp float;
 
 attribute vec2 aUV; // float [u, v]
 attribute vec2 aST; // float [s, t]           (INSTANCED)

@@ -62,23 +62,27 @@ export default class Map extends Camera {
       self.dragPan = new DragPan()
       if (!self.webworker) {
         // listen to scroll events
-        if (self._scrollZoom) self._canvas.addEventListener('wheel', (e) => {
-          e.preventDefault()
-          const { clientX, clientY, deltaY } = e
-          const rect = this._canvas.getBoundingClientRect()
-          self._onScroll(rect, clientX, clientY, deltaY)
-        })
+        if (self._scrollZoom) {
+          self.dragPan.zoomActive = true
+          self._canvas.addEventListener('wheel', (e) => {
+            e.preventDefault()
+            const { clientX, clientY, deltaY } = e
+            const rect = this._canvas.getBoundingClientRect()
+            self._onZoom(deltaY, clientX - rect.left, clientY - rect.top)
+          })
+        }
         // listen to mouse movement
-        self._canvas.addEventListener('touchstart', self.dragPan.onMouseDown.bind(self.dragPan))
+        self._canvas.addEventListener('touchstart', self.dragPan.onTouchStart.bind(self.dragPan))
+        self._canvas.addEventListener('touchend', self.dragPan.onTouchEnd.bind(self.dragPan))
         self._canvas.addEventListener('mousedown', self.dragPan.onMouseDown.bind(self.dragPan))
         self._canvas.addEventListener('mouseup', self.dragPan.onMouseUp.bind(self.dragPan))
-        self._canvas.addEventListener('touchend', self.dragPan.onMouseUp.bind(self.dragPan))
         self._canvas.addEventListener('mousemove', (e) => { self.dragPan.onMouseMove(e.movementX, e.movementY) })
-        self._canvas.addEventListener('touchmove', (e) => { self.dragPan.onMouseMove(e.movementX, e.movementY) })
+        self._canvas.addEventListener('touchmove', self.dragPan.onTouchMove.bind(self.dragPan))
       }
       // listen to dragPans updates
       self.dragPan.addEventListener('move', self._onMovement.bind(self))
       self.dragPan.addEventListener('swipe', self._onSwipe.bind(self))
+      self.dragPan.addEventListener('zoom', () => { self._onZoom(self.dragPan.zoom) })
       self.dragPan.addEventListener('click', self._onClick.bind(self))
     }
     // setup camera
@@ -96,10 +100,10 @@ export default class Map extends Camera {
     this.render()
   }
 
-  _onScroll (rect, clientX, clientY, deltaY) {
+  _onZoom (deltaZ: number, deltaX?: number = 0, deltaY?: number = 0) {
     this.dragPan.clear()
     // update projection
-    const update = this.projection.onZoom(deltaY, clientX - rect.left, clientY - rect.top)
+    const update = this.projection.onZoom(deltaZ, deltaX, deltaY)
     // if the projection sees a zoom change, we need to render, but don't request new tiles until
     // done zooming if the updateWhileZooming flag is set to false
     if (update) {

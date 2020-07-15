@@ -109,12 +109,13 @@ export default class S2Map {
 
   _resize () {
     // rebuild the proper width and height using the container as a guide
-    if (this._offscreen) this.map.postMessage({
-      type: 'resize',
-      width: this._canvasContainer.clientWidth,
-      height: this._canvasContainer.clientHeight
-    })
-    else this.map.resize()
+    if (this._offscreen) {
+        this.map.postMessage({
+        type: 'resize',
+        width: this._canvasContainer.clientWidth,
+        height: this._canvasContainer.clientHeight
+      })
+    } else if (this.map) { this.map.resize() } // NOTE: some incredibly strange bug in Brave mobile needs to check if this.map is a thing (WTF)
   }
 
   _containerDimensions (): null | [number, number] {

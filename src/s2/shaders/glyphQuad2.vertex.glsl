@@ -1,5 +1,5 @@
 #version 300 es
-precision mediump float;
+precision highp float;
 
 #define MIN_SDF_SIZE 0.03
 

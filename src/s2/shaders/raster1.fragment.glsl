@@ -1,4 +1,4 @@
-precision mediump float;
+precision highp float;
 
 // Passed in from the vertex shader.
 varying vec2 vTexcoord;

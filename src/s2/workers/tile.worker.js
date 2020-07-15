@@ -9,7 +9,7 @@ import {
   preprocessText, postprocessGlyph, GlyphBuilder,
   PNGReader
 } from './process'
-import requestData from '../util/xmlHttpRequest'
+import requestData from '../util/fetch'
 import { tileHash } from 's2projection'
 
 import type { Face } from 's2projection'
@@ -244,7 +244,7 @@ export default class TileWorker {
             const { x, y, leftShift, bottomShift } = piece
             requestData(`${path}/${face}/${tilezoom}/${x}/${y}`, fileType, (data) => {
               if (data && !self.cancelCache.includes(hash)) self._processRasterData(mapID, sourceName, source, tile.hash, data, { leftShift, bottomShift })
-            }, (typeof createImageBitmap !== 'function') ? true : false)
+            }, (!IS_CHROME) ? true : false)
           }
         }
       } else if (type === 'json') {
@@ -272,7 +272,6 @@ export default class TileWorker {
       let built = true
       const getImage = (IS_CHROME)
         ? createImageBitmap(data, { imageOrientation: 'flipY', premultiplyAlpha: 'premultiply' })
-        : (typeof createImageBitmap === 'function') ? createImageBitmap(data)
         : new Promise((resolve) => { built = false; resolve(data) })
       getImage
         .then(image => {
