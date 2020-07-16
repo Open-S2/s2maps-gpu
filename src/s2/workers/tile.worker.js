@@ -79,7 +79,7 @@ export default class TileWorker {
   id: number
   glyphBuilder: GlyphBuilder = new GlyphBuilder()
   maps: { [string]: StylePackage } = {} // mapID: StylePackage
-  status: 'building' | 'busy' | 'ready' = 'ready'
+  status: 'building' | 'ready' = 'ready'
   cache: { [string]: Array<TileRequest> } = {} // mapID: TileRequests
   cancelCache: Array<number> = []
   idGen: IDGen
@@ -115,12 +115,10 @@ export default class TileWorker {
   }
 
   _requestMessage (mapID: string, tiles: Array<TileRequest>) {
-    if (this.status === 'building' || this.status === 'busy') {
+    if (this.status === 'building') {
       if (this.cache[mapID]) this.cache[mapID].push(...tiles)
       else this.cache[mapID] = tiles
     } else {
-      // set status
-      this.status = 'busy'
       // make the requests for each source
       const sources = this.maps[mapID].sources
       for (const sourceName in sources) {
@@ -260,8 +258,6 @@ export default class TileWorker {
         }
       }
     }
-    // worker is ready for future tiles
-    self.status = 'ready'
     self._checkCache()
   }
 

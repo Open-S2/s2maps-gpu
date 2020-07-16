@@ -10,6 +10,7 @@ import type { TileRequest } from '../workers/tile.worker'
 
 export default class Style {
   map: Map
+  glType: number
   webworker: boolean = false
   zoom: number = 0
   minzoom: number = 0
@@ -32,6 +33,10 @@ export default class Style {
     const { style } = options
     if (options.webworker) this.webworker = true
     this.map = map
+    // grap the painter type, so we can tell the webworkers if we are using WEBGL, WEBGL2, or WEBGPU
+    const { type } = map.painter.context
+    this.glType = type
+    // build out the style
     this._buildStyle(style)
     // if style has a clearColor, set it now
     if (this.clearColor) map.painter.setClearColor(this.clearColor)
@@ -102,6 +107,7 @@ export default class Style {
   _sendStyleDataToWorkers (style: Object) {
     // now that we have various source data, package up the style objects we need and send it off:
     let stylePackage = {
+      glType: this.glType,
       sources: style.sources,
       fonts: style.fonts,
       billboards: style.billboards,

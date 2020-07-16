@@ -75,6 +75,7 @@ export type Layer = {
 
 /** WORKER PACKAGE **/
 export type StylePackage = {
+  glType: number,
   sources: Sources,
   fonts: Sources,
   billboards: Sources,

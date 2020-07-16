@@ -46,7 +46,7 @@ export default class Painter {
       return this.context = new WebGL2Context(context, options.canvasMultiplier)
     }
     // webgl
-    context = this._canvas.getContext('webgl', webglOptions)
+    context = this._canvas.getContext('experimental-webgl', webglOptions)
     if (context && typeof context.getParameter === 'function') {
       return this.context = new WebGLContext(context, options.canvasMultiplier)
     }
