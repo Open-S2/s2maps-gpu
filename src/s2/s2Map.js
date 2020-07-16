@@ -55,6 +55,7 @@ export default class S2Map {
   }
 
   _setupCanvas (canvas: HTMLCanvasElement, options: MapOptions) {
+    const self = this
     // if browser supports it, create an instance of the mapWorker
     if (canvas.transferControlToOffscreen) {
       if (options.interactive === undefined || options.interactive === true) {
@@ -71,9 +72,8 @@ export default class S2Map {
       options.canvasHeight = this._container.clientHeight
       this.map.postMessage({ type: 'canvas', options, canvas: offscreen, id: this.id }, [offscreen])
     } else {
-      const self = this
       import('./ui/map').then(map => {
-        self.map = new map.default(options, canvas, this.id)
+        self.map = new map.default(options, canvas, self.id)
       })
     }
   }

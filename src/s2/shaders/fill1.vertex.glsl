@@ -7,10 +7,6 @@ attribute float aIndex;
 uniform mat4 uMatrix;
 uniform bool u3D;
 
-uniform float uInputs[16];
-uniform float uLayerCode[64];
-uniform float uFeatureCode[64];
-
 #include ./ST2XYZ;
 
 varying vec4 color;

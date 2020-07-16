@@ -274,9 +274,7 @@ export default class TileWorker {
         ? createImageBitmap(data, { imageOrientation: 'flipY', premultiplyAlpha: 'premultiply' })
         : new Promise((resolve) => { built = false; resolve(data) })
       getImage
-        .then(image => {
-          postMessage({ mapID, type: 'rasterdata', built, source: sourceName, tileID, image, leftShift, bottomShift }, [image])
-        })
+        .then(image => postMessage({ mapID, type: 'rasterdata', built, source: sourceName, tileID, image, leftShift, bottomShift }, [image]))
         .catch(err => { console.log('ERROR', err )})
   }
 
