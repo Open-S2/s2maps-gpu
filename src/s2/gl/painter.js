@@ -242,8 +242,9 @@ export default class Painter {
     // run through the features, and upon tile, layer, or program change, adjust accordingly
     context.alwaysDepth()
     for (const feature of features) {
-      const { tile, faceST, layerID, source, type, layerCode, lch } = feature
+      const { tile, faceST, layerID, source, sourceName, type, layerCode, lch } = feature
       const { tmpMaskID } = tile
+      const featureSource = source[sourceName]
       // set program
       if (type !== curProgram) {
         curProgram = type
@@ -258,10 +259,10 @@ export default class Painter {
         program.setLayerCode(layerCode, lch)
       }
       program.setFaceST(faceST)
-      gl.bindVertexArray(source.vao)
+      gl.bindVertexArray(featureSource.vao)
       // draw
-      // if (feature.type !== 'glyph') program.draw(feature, sourceData[source], tmpMaskID)
-      program.draw(feature, source, tmpMaskID)
+      // if (feature.type !== 'glyph') program.draw(feature, featureSource, tmpMaskID)
+      program.draw(feature, featureSource, tmpMaskID)
     }
   }
 
@@ -295,16 +296,17 @@ export default class Painter {
     glyphFilterProgram.setMode(mode)
     // draw each feature
     for (const glyphFeature of glyphFeatures) {
-      const { faceST, layerID, source, layerCode } = glyphFeature
+      const { faceST, layerID, source, sourceName, layerCode } = glyphFeature
+      const featureSource = source[sourceName]
       // update layerID
       if (curLayer !== layerID && layerCode) {
         curLayer = layerID
         glyphFilterProgram.setLayerCode(layerCode)
       }
       glyphFilterProgram.setFaceST(faceST)
-      gl.bindVertexArray(source.filterVAO)
+      gl.bindVertexArray(featureSource.filterVAO)
       // draw
-      glyphFilterProgram.draw(glyphFeature, source, mode)
+      glyphFilterProgram.draw(glyphFeature, featureSource, mode)
     }
   }
 }

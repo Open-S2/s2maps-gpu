@@ -216,10 +216,10 @@ export default class Tile {
       for (const layerID of layerIDs) {
         const guide = {
           tile: this,
-          sourceName,
           faceST: this.faceST,
           layerID: layerID,
-          source: this.sourceData.mask,
+          source: this.sourceData,
+          sourceName: 'mask',
           subType: 'fill',
           type: 'raster',
           featureCode: [0],
@@ -238,14 +238,14 @@ export default class Tile {
     if (rasterSource.count === rasterSource.total) this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === sourceName && fg.parent))
   }
 
-  injectVectorSourceData (source: string, vertexArray: Int16Array, indexArray?: Uint32Array,
+  injectVectorSourceData (sourceName: string, vertexArray: Int16Array, indexArray?: Uint32Array,
     codeTypeArray: Uint8Array, featureGuideArray: Uint32Array, layers: Array<Layer>): VectorTileSource {
     // Since a parent may have been injected, we need to remove any instances of the said source data.
-    this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === source))
+    this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === sourceName))
     // store a reference to the source
-    const vectorSource = this.sourceData[source] = {
+    const vectorSource = this.sourceData[sourceName] = {
       type: 'vector',
-      subType: source.split(':').pop(),
+      subType: sourceName.split(':').pop(),
       vertexArray,
       indexArray,
       codeTypeArray
@@ -264,8 +264,8 @@ export default class Tile {
         tile: this,
         faceST: this.faceST,
         layerID,
-        source: vectorSource,
-        sourceName: source,
+        source: this.sourceData,
+        sourceName,
         count,
         offset,
         type,
@@ -281,14 +281,14 @@ export default class Tile {
     return vectorSource
   }
 
-  injectGlyphSourceData (source: string, glyphFilterVertices: Float32Array,
+  injectGlyphSourceData (sourceName: string, glyphFilterVertices: Float32Array,
     glyphFillVertices: Float32Array, glyphFillIndices: Float32Array,
     glyphLineVertices: Float32Array, glyphQuads: Float32Array,
     layerGuideBuffer: Uint32Array, layers: Array<Layer>): GlyphTileSource {
     // Since a parent may have been injected, we need to remove any instances of the said source data.
-    this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === source))
+    this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === sourceName))
     // setup source data
-    const glyphSource = this.sourceData[source] = {
+    const glyphSource = this.sourceData[sourceName] = {
       type: 'glyph',
       uvArray: new Float32Array([0, 0,  1, 0,  1, 1,  0, 1]),
       textureID: layerGuideBuffer[0],
@@ -316,8 +316,8 @@ export default class Tile {
         tile: this,
         faceST: this.faceST,
         layerID,
-        source: glyphSource,
-        sourceName: source,
+        source: this.sourceData,
+        sourceName,
         filterOffset,
         filterCount,
         offset,

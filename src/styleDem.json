@@ -2,9 +2,9 @@
   "version": 1,
   "name": "rasterTest",
   "center": [86.9250, 27.9881],
-  "zoom": 8,
+  "zoom": 7.9,
   "minzoom": 0,
-  "maxzoom": 8,
+  "maxzoom": 7.9,
   "sources": {
     "satellite": {
       "path": "http://192.168.0.19:8000/data/satellite",
@@ -28,7 +28,7 @@
     "exaggeration": 1.5
   },
   "wallpaper": {
-    "skybox": "http://localhost:8000/backgrounds/milkyway",
+    "skybox": "http://192.168.0.19:8000/backgrounds/milkyway",
     "loadingBackground": "rgb(9, 8, 17)",
     "size": 2048,
     "type": "png"

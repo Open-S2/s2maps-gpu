@@ -252,8 +252,9 @@ export default class TileWorker {
         }
       } else if (type === 'mask') {
         if (minzoom <= zoom && maxzoom >= zoom) { // check zoom bounds
-          requestData(`${path}/${face}/${zoom}/${x}/${y}`, fileType, (data) => {
-            if (data && !self.cancelCache.includes(hash)) self._processMaskData(mapID, sourceName, source, tile, data)
+          const newFileType = (typeof OffscreenCanvas !== "undefined") ? fileType : 'ab'
+          requestData(`${path}/${face}/${zoom}/${x}/${y}`, newFileType, (data) => {
+            if (data && !self.cancelCache.includes(hash)) self._processMaskData(mapID, sourceName, source, tile, newFileType, data)
           })
         }
       }
@@ -275,7 +276,7 @@ export default class TileWorker {
   }
 
   _processMaskData (mapID: string, sourceName: string, source: Object,
-    tile: TileRequest, data: Object | ArrayBuffer | Blob) {
+    tile: TileRequest, fileType: string, data: Object | ArrayBuffer | Blob) {
     const { hash, zoom, size } = tile
     // grab the RTIN object
     const { s2rtin } = source
@@ -294,7 +295,7 @@ export default class TileWorker {
       postMessage({ mapID, type: 'maskdata', tileID: hash, vertexBuffer, indexBuffer, radiiBuffer }, [vertexBuffer, indexBuffer, radiiBuffer])
     }
     // create the terrain grid
-    if (typeof OffscreenCanvas !== "undefined") { // GPU solution
+    if (fileType !== 'ab') { // GPU solution
       createImageBitmap(data)
         .then(image => {
           // build the canvas and draw the image
@@ -307,16 +308,13 @@ export default class TileWorker {
         })
         .catch(err => {})
     } else { // assuming PNG, we can use the CPU
-      data.arrayBuffer()
-        .then(ab => {
-          const reader = new PNGReader(ab)
-          reader.parse((err, png) => {
-            if (!err) {
-              const imageData = { width: size, data: png.pixels }
-              buildMesh(imageData)
-            } else { console.log('parse error', err) }
-          })
-        })
+      const reader = new PNGReader(data)
+      reader.parse((err, png) => {
+        if (!err) {
+          const imageData = { width: size, data: png.pixels }
+          buildMesh(imageData)
+        } else { console.log('parse error', err) }
+      })
     }
   }
 
