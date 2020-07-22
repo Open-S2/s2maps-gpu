@@ -9,7 +9,7 @@
     "satellite": {
       "path": "http://192.168.0.19:8000/data/satellite",
       "type": "raster",
-      "fileType": "png",
+      "fileType": "jpg",
       "minzoom": 0,
       "maxzoom": 8,
       "tileSize": 512
@@ -17,7 +17,7 @@
     "rgb-dem": {
       "path": "http://192.168.0.19:8000/data/dem",
       "type": "mask",
-      "fileType": "png",
+      "fileType": "jpg",
       "minzoom": 0,
       "maxzoom": 8,
       "tileSize": 512
@@ -31,7 +31,7 @@
     "skybox": "http://192.168.0.19:8000/backgrounds/milkyway",
     "loadingBackground": "rgb(9, 8, 17)",
     "size": 2048,
-    "type": "png"
+    "type": "jpg"
   },
   "sphere-background": {
     "background-color": "rgb(9, 8, 17)"

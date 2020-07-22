@@ -9,7 +9,7 @@
     "satellite": {
       "path": "https://s3.s2maps.io/satellite-v1",
       "type": "raster",
-      "fileType": "png",
+      "fileType": "jpg",
       "minzoom": 0,
       "maxzoom": 7,
       "tileSize": 512
@@ -23,7 +23,7 @@
     "skybox": "https://s3.s2maps.io/backgrounds/milkyway",
     "loadingBackground": "rgb(9, 8, 17)",
     "size": 1024,
-    "type": "png"
+    "type": "jpg"
   },
   "sphere-background": {
     "background-color": "rgb(9, 8, 17)"

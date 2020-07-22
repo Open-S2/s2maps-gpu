@@ -130,9 +130,9 @@ export default class Tile {
   // a parents' parent or deeper, so we need to reflect that int the tile property. The other case
   // is the tile wants to display a layer that exists in a 'lower' zoom than this one.
   injectParentTile (parentTile: Tile, filterLayers?: Array<number>) {
-    // for (const feature of parentTile.featureGuide) {
-    //   if (!feature.parent) this.featureGuide.push({ ...feature, tile: this, parent: true })
-    // }
+    for (const feature of parentTile.featureGuide) {
+      if (!feature.parent && feature.type === 'raster') this.featureGuide.push({ ...feature, tile: this, parent: true })
+    }
   }
 
   _buildMaskGeometry () {
