@@ -26,6 +26,7 @@ export type VectorTileSource = {
 export type GlyphTileSource = {
   type: 'glyph',
   uvArray: Float32Array,
+  stepArray: Float32Array,
   textureID: number,
   height: number,
   glyphFilterVertices: Float32Array,
@@ -39,6 +40,7 @@ export type GlyphTileSource = {
   glyphLineVAO?: WebGLVertexArrayObject,
   vao?: WebGLVertexArrayObject, // quad vao
   uvBuffer?: WebGLBuffer,
+  stepBuffer?: WebGLBuffer,
   glyphFilterBuffer?: WebGLBuffer,
   glyphFillVertexBuffer?: WebGLBuffer,
   glyphLineVertexBuffer?: WebGLBuffer,
@@ -128,9 +130,9 @@ export default class Tile {
   // a parents' parent or deeper, so we need to reflect that int the tile property. The other case
   // is the tile wants to display a layer that exists in a 'lower' zoom than this one.
   injectParentTile (parentTile: Tile, filterLayers?: Array<number>) {
-    for (const feature of parentTile.featureGuide) {
-      this.featureGuide.push({ ...feature, tile: this, parent: true })
-    }
+    // for (const feature of parentTile.featureGuide) {
+    //   if (!feature.parent) this.featureGuide.push({ ...feature, tile: this, parent: true })
+    // }
   }
 
   _buildMaskGeometry () {
@@ -287,10 +289,12 @@ export default class Tile {
     layerGuideBuffer: Uint32Array, layers: Array<Layer>): GlyphTileSource {
     // Since a parent may have been injected, we need to remove any instances of the said source data.
     this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === sourceName))
+    // if (this.face === 4 && this.zoom === 4 && this.x === 0 && this.y === 6) console.log('POST INJECT', this.featureGuide)
     // setup source data
     const glyphSource = this.sourceData[sourceName] = {
       type: 'glyph',
       uvArray: new Float32Array([0, 0,  1, 0,  1, 1,  0, 1]),
+      stepArray: new Float32Array([0, 1]),
       textureID: layerGuideBuffer[0],
       height: layerGuideBuffer[1],
       glyphFilterVertices,

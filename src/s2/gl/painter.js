@@ -132,7 +132,9 @@ export default class Painter {
     // prep mask id's
     this._createTileMasksIDs(tiles)
     // prep tiles features to draw
+    // console.log('tiles', tiles)
     const features = tiles.flatMap(tile => tile.featureGuide).sort(featureSort)
+    // console.log('features', features)
     // prep glyph features for drawing box filters
     const glyphFeatures = features.filter(feature => feature.type === 'glyph')
     // use text boxes to filter out overlap
@@ -267,10 +269,13 @@ export default class Painter {
   }
 
   paintGlyphFilter (tiles: Array<Tile>, glyphFeatures: Array<FeatureGuide>) {
+    // console.log('glyphFeatures', glyphFeatures)
     const { context } = this
     // const { gl } = context
     const glyphFilterProgram: GlyphFilter = this.getProgram('glyphFilter')
     if (!glyphFilterProgram) return new Error('The "glyphFilter" program does not exist, can not paint.')
+    // disable blending
+    context.disableBlend()
     // Step 1: draw points
     glyphFilterProgram.bindPointFrameBuffer()
     // setup mask first (uses the "fillProgram" - that's why we have not 'used' the glyphFilterProgram yet)
@@ -282,11 +287,23 @@ export default class Painter {
     // Step 2: draw quads
     glyphFilterProgram.bindQuadFrameBuffer()
     this._paintGlyphFilter(glyphFilterProgram, glyphFeatures, 1)
+
+    // const { gl } = context
+    // const res = new Uint8Array(1 * 4096 * 4)
+    // gl.readPixels(0, 0, 4096, 1, gl.RGBA, gl.UNSIGNED_BYTE, res)
+    // const list = []
+    // for (let i = 0; i < 5; i++) {
+    //   list.push([(res[(i * 4)] << 8) + res[(i * 4) + 1], (res[(i * 4) + 2] << 8) + res[(i * 4) + 3], (res[(i + 2048) * 4] << 8) + res[(i + 2048) * 4 + 1], (res[(i + 2048) * 4 + 2] << 8) + res[(i + 2048) * 4 + 3]])
+    // }
+    // console.log('list', list)
+
     // Step 3: draw result points
     glyphFilterProgram.bindResultFramebuffer()
     this._paintGlyphFilter(glyphFilterProgram, glyphFeatures, 2)
     // return to our default framebuffer
     context.bindMainBuffer()
+    // we can use blend again
+    context.enableBlend()
   }
 
   _paintGlyphFilter (glyphFilterProgram: GlyphFilter, glyphFeatures: Array<FeatureGuide>, mode: 0 | 1 | 2) {

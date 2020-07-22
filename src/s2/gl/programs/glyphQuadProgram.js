@@ -81,12 +81,12 @@ export default class GlyphQuadProgram extends Program {
     gl.bindTexture(gl.TEXTURE_2D, texture)
     // apply the appropriate offset in the source vertexBuffer attribute
     gl.bindBuffer(gl.ARRAY_BUFFER, glyphQuadBuffer)
-    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 44, 0 + ((offset | 0) * 44)) // s, t
-    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 44, 8 + ((offset | 0) * 44)) // x, y
-    gl.vertexAttribPointer(3, 2, gl.FLOAT, false, 44, 16 + ((offset | 0) * 44)) // xOffset, yOffset
-    gl.vertexAttribPointer(4, 2, gl.FLOAT, false, 44, 24 + ((offset | 0) * 44)) // texture u, v
-    gl.vertexAttribPointer(5, 2, gl.FLOAT, false, 44, 32 + ((offset | 0) * 44)) // width, height
-    gl.vertexAttribPointer(6, 1, gl.FLOAT, false, 44, 40 + ((offset | 0) * 44)) // id
+    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 44, 0 + (offset * 44)) // s, t
+    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 44, 8 + (offset * 44)) // x, y
+    gl.vertexAttribPointer(3, 2, gl.FLOAT, false, 44, 16 + (offset * 44)) // xOffset, yOffset
+    gl.vertexAttribPointer(4, 2, gl.FLOAT, false, 44, 24 + (offset * 44)) // texture u, v
+    gl.vertexAttribPointer(5, 2, gl.FLOAT, false, 44, 32 + (offset * 44)) // width, height
+    gl.vertexAttribPointer(6, 1, gl.FLOAT, false, 44, 40 + (offset * 44)) // id
     // draw stroke
     this.setFill(false)
     gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count)
