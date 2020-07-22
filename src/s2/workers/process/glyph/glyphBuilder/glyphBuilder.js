@@ -22,6 +22,7 @@ export default class GlyphBuilder {
   glyphQuads: Array<number> = []
   layerGuide: Array<number> = []
   filterOffset: number = 0
+  filterIndex: number = 0
   quadOffset: number = 0
   charIgnoreList: Set = new Set([8206, 3640, 3633, 2509, 2492, 2497, 146, 55300, 56960, 129, 9, 145])
   rtree: RTree = new RTree()
@@ -39,7 +40,7 @@ export default class GlyphBuilder {
 
   finishLayer (layerID: number, code: Array<number> = []) {
     // get offsets
-    const filterOffset = this.glyphFilterVertices.length / 8
+    const filterOffset = this.glyphFilterVertices.length / 9
     const quadOffset = this.glyphQuads.length / 11
     // get counts
     const filterCount = filterOffset - this.filterOffset
@@ -48,8 +49,11 @@ export default class GlyphBuilder {
     if (filterCount > 0 || quadCount > 0) {
       // layerID, filterOffset, filterCount, quadOffset, quadCount, codeLength, code
       this.layerGuide.push(layerID, this.filterOffset, filterCount, this.quadOffset, quadCount, code.length, ...code)
+      // update offsets
       this.filterOffset = filterOffset
       this.quadOffset = quadOffset
+      // reset filterIndex
+      this.filterIndex = 0
     }
   }
 
@@ -113,7 +117,7 @@ export default class GlyphBuilder {
   buildText (text: Text) {
     const { s, t, x, y, width, id, padding, glyphData } = text
     // 1) add to our glyphFilterVertices the text dimesions
-    this.glyphFilterVertices.push(s, t, x, y, ...padding, width, id)
+    this.glyphFilterVertices.push(s, t, x, y, ...padding, width, this.filterIndex++, id)
     // 2 & 3) build our texture and glyph vertices
     let glyph: Glyph
     let xOffset = 0

@@ -562,7 +562,7 @@
         ],
         "anchor": "center",
         "offset": [0, 0],
-        "padding": [3, 3]
+        "padding": [1, 1]
       },
       "paint": {
         "size": [
