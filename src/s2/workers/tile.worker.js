@@ -242,7 +242,7 @@ export default class TileWorker {
             const { x, y, leftShift, bottomShift } = piece
             requestData(`${path}/${face}/${tilezoom}/${x}/${y}`, fileType, (data) => {
               if (data && !self.cancelCache.includes(hash)) self._processRasterData(mapID, sourceName, source, tile.hash, data, { leftShift, bottomShift })
-            }, (!IS_CHROME) ? true : false)
+            }, (typeof createImageBitmap !== 'function'))
           }
         }
       } else if (type === 'json') {
@@ -252,10 +252,9 @@ export default class TileWorker {
         }
       } else if (type === 'mask') {
         if (minzoom <= zoom && maxzoom >= zoom) { // check zoom bounds
-          const newFileType = (typeof OffscreenCanvas !== "undefined") ? fileType : 'ab'
-          requestData(`${path}/${face}/${zoom}/${x}/${y}`, newFileType, (data) => {
-            if (data && !self.cancelCache.includes(hash)) self._processMaskData(mapID, sourceName, source, tile, newFileType, data)
-          })
+          requestData(`${path}/${face}/${zoom}/${x}/${y}`, fileType, (data) => {
+            if (data && !self.cancelCache.includes(hash)) self._processMaskData(mapID, sourceName, source, tile, fileType, data)
+          }, (typeof OffscreenCanvas === "undefined"))
         }
       }
     }
@@ -269,7 +268,9 @@ export default class TileWorker {
       let built = true
       const getImage = (IS_CHROME)
         ? createImageBitmap(data, { imageOrientation: 'flipY', premultiplyAlpha: 'premultiply' })
-        : new Promise((resolve) => { built = false; resolve(data) })
+        : (typeof createImageBitmap === 'function')
+          ? createImageBitmap(data)
+          : new Promise((resolve) => { built = false; resolve(data) })
       getImage
         .then(image => postMessage({ mapID, type: 'rasterdata', built, source: sourceName, tileID, image, leftShift, bottomShift }, [image]))
         .catch(err => { console.log('ERROR', err )})
@@ -295,7 +296,15 @@ export default class TileWorker {
       postMessage({ mapID, type: 'maskdata', tileID: hash, vertexBuffer, indexBuffer, radiiBuffer }, [vertexBuffer, indexBuffer, radiiBuffer])
     }
     // create the terrain grid
-    if (fileType !== 'ab') { // GPU solution
+    if (typeof OffscreenCanvas === "undefined") { // CPU solution
+      const reader = new PNGReader(data)
+      reader.parse((err, png) => {
+        if (!err) {
+          const imageData = { width: size, data: png.pixels }
+          buildMesh(imageData)
+        } else { console.log('parse error', err) }
+      })
+    } else { // GPU solution
       createImageBitmap(data)
         .then(image => {
           // build the canvas and draw the image
@@ -307,14 +316,6 @@ export default class TileWorker {
           buildMesh(imageData)
         })
         .catch(err => {})
-    } else { // assuming PNG, we can use the CPU
-      const reader = new PNGReader(data)
-      reader.parse((err, png) => {
-        if (!err) {
-          const imageData = { width: size, data: png.pixels }
-          buildMesh(imageData)
-        } else { console.log('parse error', err) }
-      })
     }
   }
 

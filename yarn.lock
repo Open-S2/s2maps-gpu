@@ -8813,10 +8813,10 @@ s2projection@^1.7.3:
   resolved "https://registry.yarnpkg.com/s2projection/-/s2projection-1.7.3.tgz#81381320a6b1201efe058096f0fc9a016030230d"
   integrity sha512-Z2kufy4SN+084nzg7nwNV/2GxJ+EfsoHm9nkoiknX1klfIn1dtvHOMAs4eLXPjFPszbU5YZdaJMC80JzagF33A==
 
-s2rtin@^0.3.1:
-  version "0.3.1"
-  resolved "https://registry.yarnpkg.com/s2rtin/-/s2rtin-0.3.1.tgz#6784b1db81cc14a127eb89a5778e8092c6d1d198"
-  integrity sha512-UZfbfUCMiktZDCeMZZfuWFoUZ5bZ4eSodBNXbTX7T/49wd8rqOMugHhfOBetaJcQbpEEYWvpL2POmjTJJlz5nQ==
+s2rtin@^0.3.2:
+  version "0.3.2"
+  resolved "https://registry.yarnpkg.com/s2rtin/-/s2rtin-0.3.2.tgz#bfa5932b801ffbd7587b546da7478844fa62108a"
+  integrity sha512-2FbVNUKBCbKPZAmqidp32SxvpG7HUQ9fSYDSgplu4tTpOYbV/yaTuZx3Fx9CPiifZ+lFbFwFA9iy8PRnO0EsQg==
 
 safe-buffer@5.1.2, safe-buffer@~5.1.0, safe-buffer@~5.1.1:
   version "5.1.2"
