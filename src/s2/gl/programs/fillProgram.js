@@ -13,6 +13,7 @@ import type { Context } from '../contexts'
 import type { FeatureGuide, VectorTileSource } from '../../source/tile'
 
 export default class FillProgram extends Program {
+  uColors: WebGLUniformLocation
   constructor (context: Context) {
     // get gl from context
     const { gl, type } = context
@@ -22,6 +23,8 @@ export default class FillProgram extends Program {
       gl.attributeLocations = { aPos: 0, aRadius: 6, aIndex: 7 }
       // build shaders
       super(context, vertex1, fragment1)
+      // get the color uniform
+      // this.uColors = gl.getUniformLocation(program, 'uColors')
     } else {
       super(context, vertex2, fragment2)
     }
@@ -30,14 +33,17 @@ export default class FillProgram extends Program {
   draw (featureGuide: FeatureGuide, source: VectorTileSource = {}) {
     // grab context
     const { context } = this
-    const { gl } = context
+    const { gl, type } = context
     // get current source data
     let { count, featureCode, offset, mode } = featureGuide
     const { threeD } = source
     // set 3D uniform
     this.set3D(threeD)
-    // set feature code
-    if (featureCode && featureCode.length) gl.uniform1fv(this.uFeatureCode, featureCode)
+    // set feature code (webgl 1 we store the colors, webgl 2 we store layerCode lookups)
+    if (featureCode && featureCode.length) {
+      if (type === 1) gl.uniform4fv(this.uColors, featureCode, 0, featureCode.length)
+      else gl.uniform1fv(this.uFeatureCode, featureCode)
+    }
     // draw elements
     gl.drawElements(mode ? mode : gl.TRIANGLES, count, gl.UNSIGNED_INT, (offset | 0) * 4)
   }

@@ -2,7 +2,7 @@
   "version": 1,
   "name": "rasterTest",
   "center": [11, 46.3],
-  "zoom": 13,
+  "zoom": 10,
   "minzoom": 10,
   "maxzoom": 14.9,
   "sources": {

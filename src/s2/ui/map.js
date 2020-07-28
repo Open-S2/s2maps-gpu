@@ -29,12 +29,14 @@ export default class Map extends Camera {
   renderNextFrame: boolean = false
   injectionQueue: Array<Function> = []
   webworker: boolean = false
+  firefoxScroll: boolean = navigator.platform !== 'MacIntel' && navigator.appCodeName === 'Mozilla'
   dragPan: DragPan
   constructor (options: MapOptions, canvas: HTMLCanvasElement, id: string) {
     // setup default variables
     super(options)
     this.id = id
     this._canvas = canvas
+    // assign webworker if applicable
     if (options.webworker) this.webworker = true
     // check if we can interact with the map
     if (options.interactive) this._interactive = options.interactive
@@ -68,16 +70,16 @@ export default class Map extends Camera {
             e.preventDefault()
             const { clientX, clientY, deltaY } = e
             const rect = this._canvas.getBoundingClientRect()
-            self._onZoom(deltaY, clientX - rect.left, clientY - rect.top)
+            self._onZoom((this.firefoxScroll) ? deltaY * 25 : deltaY, clientX - rect.left, clientY - rect.top)
           })
         }
         // listen to mouse movement
-        self._canvas.addEventListener('touchstart', self.dragPan.onTouchStart.bind(self.dragPan))
-        self._canvas.addEventListener('touchend', self.dragPan.onTouchEnd.bind(self.dragPan))
-        self._canvas.addEventListener('mousedown', self.dragPan.onMouseDown.bind(self.dragPan))
-        self._canvas.addEventListener('mouseup', self.dragPan.onMouseUp.bind(self.dragPan))
+        self._canvas.addEventListener('touchstart', (e) => { e.preventDefault(); self.dragPan.onTouchStart(e) })
+        self._canvas.addEventListener('touchend', (e) => { e.preventDefault(); self.dragPan.onTouchEnd(e) })
+        self._canvas.addEventListener('mousedown', () => self.dragPan.onMouseDown())
+        self._canvas.addEventListener('mouseup', () => self.dragPan.onMouseUp())
         self._canvas.addEventListener('mousemove', (e) => { self.dragPan.onMouseMove(e.movementX, e.movementY) })
-        self._canvas.addEventListener('touchmove', self.dragPan.onTouchMove.bind(self.dragPan))
+        self._canvas.addEventListener('touchmove', (e) => { e.preventDefault(); self.dragPan.onTouchMove(e) })
       }
       // listen to dragPans updates
       self.dragPan.addEventListener('move', self._onMovement.bind(self))
@@ -86,15 +88,17 @@ export default class Map extends Camera {
       self.dragPan.addEventListener('click', self._onClick.bind(self))
     }
     // setup camera
-    if (options.canvasWidth && options.canvasHeight) this.resizeCamera(options.canvasWidth, options.canvasHeight)
-    else this.resizeCamera(this._canvas.clientWidth, this._canvas.clientHeight)
+    if (options.canvasWidth && options.canvasHeight) self.resizeCamera(options.canvasWidth, options.canvasHeight)
+    else self.resizeCamera(self._canvas.clientWidth, this._canvas.clientHeight)
   }
 
   getCanvas (): HTMLCanvasElement {
     return this._canvas
   }
 
-  resize (width?: number, height?: number) {
+  resize (width: number, height: number) {
+    // this._canvas.width = width
+    // this._canvas.height = height
     if (width && height) this.resizeCamera(width, height)
     else this.resizeCamera(this._canvas.clientWidth, this._canvas.clientHeight)
     this.render()

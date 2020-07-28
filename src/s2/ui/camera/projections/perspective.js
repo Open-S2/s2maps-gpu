@@ -2,7 +2,7 @@
 import * as mat4 from '../../../util/mat4'
 import Projector from './projector'
 
-export type ProspectiveConfig = {
+export type PerspectiveConfig = {
   translation?: [number, number, number],
   zTranslateStart?: number,
   zTranslateEnd?: number,
@@ -19,10 +19,10 @@ export type ProspectiveConfig = {
 }
 
 export default class PerspectiveProjection extends Projector {
-  zTranslateStart: number = -10
-  zTranslateEnd: number = -3
+  zTranslateStart: number = -5
+  zTranslateEnd: number = -1.5
   zoomEnd: number = 2
-  constructor (config?: ProspectiveConfig = {}) {
+  constructor (config?: PerspectiveConfig = {}) {
     super(config)
     if (config.translation) this.translation = config.translation
     if (config.zTranslateStart) this.zTranslateStart = config.zTranslateStart
@@ -59,11 +59,8 @@ export default class PerspectiveProjection extends Projector {
   getMatrixAtSize (tileSize?: number = 512): Float32Array {
     if (this.sizeMatrices[tileSize]) return mat4.clone(this.sizeMatrices[tileSize])
     const matrix = mat4.create()
-    // get height and width ratios for each tile
-    const widthRatio = this.aspect[0] / (tileSize * this.scale)
-    const heightRatio = this.aspect[1] / (tileSize * this.scale)
     // create projection
-    mat4.blend(matrix, widthRatio * (-1 / this.translation[2]), heightRatio * (-1 / this.translation[2]), this.zNear, this.zFar)
+    mat4.perspective(matrix, 0.68, this.aspect[0] / this.aspect[1], this.zNear, this.zFar)
     // updated matrix
     this.sizeMatrices[tileSize] = matrix
 

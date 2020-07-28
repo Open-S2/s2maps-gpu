@@ -40,13 +40,17 @@ export default class Painter {
   _createContext (options: MapOptions) {
     // prep options
     const webglOptions = { antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: false, alpha: true, stencil: true }
+    let context
     // first try webgl2
-    let context = this._canvas.getContext('webgl2', webglOptions)
-    if (context && typeof context.getParameter === 'function') {
-      return this.context = new WebGL2Context(context, options.canvasMultiplier)
+    const { platform } = navigator
+    if (platform !== 'Win32' && platform !== 'Win64') {
+      context = this._canvas.getContext('webgl2', webglOptions)
+      if (context && typeof context.getParameter === 'function') {
+        return this.context = new WebGL2Context(context, options.canvasMultiplier)
+      }
     }
     // webgl
-    context = this._canvas.getContext('experimental-webgl', webglOptions)
+    context = this._canvas.getContext('webgl', webglOptions)
     if (context && typeof context.getParameter === 'function') {
       return this.context = new WebGLContext(context, options.canvasMultiplier)
     }
@@ -255,8 +259,8 @@ export default class Painter {
       }
       // set stencil
       gl.stencilFunc(gl.EQUAL, tmpMaskID, 0xFF)
-      // update layerID
-      if (curLayer !== layerID && layerCode) {
+      // update layerCode if the current layer has changed
+      if (layerCode && curLayer !== layerID) {
         curLayer = layerID
         program.setLayerCode(layerCode, lch)
       }

@@ -160,21 +160,24 @@ export default class Style {
       const layer = this.layers[i]
       // TODO: if bad layer, remove
       programs.add(layer.type)
-      const code = []
-      // order layers for GPU
-      orderLayer(layer)
-      // LAYOUTS
-      for (let key in layer.layout) {
-        if (key === 'cap' || key === 'join') continue
-        code.push(...encodeLayerAttribute(layer.layout[key]))
+      // if webgl2 or greater, we build layerCode
+      if (this.glType > 1) {
+        const code = []
+        // order layers for GPU
+        orderLayer(layer)
+        // LAYOUTS
+        for (let key in layer.layout) {
+          if (key === 'cap' || key === 'join') continue
+          code.push(...encodeLayerAttribute(layer.layout[key]))
+        }
+        // PAINTS
+        for (let key in layer.paint) {
+          const encode = encodeLayerAttribute(layer.paint[key], layer.lch)
+          code.push(...encode)
+        }
+        if (layer.type === 'raster') layer.index = i
+        if (code.length) layer.code = new Float32Array(code)
       }
-      // PAINTS
-      for (let key in layer.paint) {
-        const encode = encodeLayerAttribute(layer.paint[key], layer.lch)
-        code.push(...encode)
-      }
-      if (layer.type === 'raster') layer.index = i
-      if (code.length) layer.code = new Float32Array(code)
     }
     // tell the painter what we are using
     this.map.painter.prebuildPrograms(programs)

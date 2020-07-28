@@ -29,7 +29,8 @@ export default class Projector implements Projection {
   maxzoom: number = 20
   lon: number = 0
   lat: number = 0
-  scale: number = 1 // this is always going to be between 1 and 2
+  pitch: number = 0
+  scale: number = 1
   zNear: number = 0.5 // static; just for draw calls
   zFar: number = 100 // static; just for draw calls
   aspect: Float32Array = new Float32Array([400, 300]) // default canvas width x height
@@ -100,14 +101,19 @@ export default class Projector implements Projection {
   }
 
   getMatrix (size: number): Float32Array {
-    const matrix = this.getMatrixAtSize(size)
-    // translate position
-    mat4.translate(matrix, this.translation)
+    const projection = this.getMatrixAtSize(size)
+    // create view
+    // const view = mat4.lookAt(this.translation, [0, 1, 1])
+    // mat4.rotate(projection, [0, -0.001, 0])
+    // translate
+    mat4.translate(projection, this.translation)
     // rotate position
-    mat4.rotate(matrix, [degToRad(this.lat), degToRad(this.lon), 0])
-    // console.log('matrix', matrix)
+    mat4.rotate(projection, [degToRad(this.lat), degToRad(this.lon), 0])
+    // multiply projection by view
+    // mat4.multiply(projection, view)
+    // console.log('projection', projection)
 
-    return matrix
+    return projection
   }
 
   getTilesInView (size?: number = 512): Array<[number, number, number, number, number]> { // [face, zoom, x, y, hash]
@@ -214,3 +220,7 @@ function lineIntersect (x1, y1, x2, y2, x3, y3, x4, y4) {
   const gamma = ((y1 - y2) * (x4 - x1) + (x2 - x1) * (y4 - y1)) / denom
   return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1)
 }
+
+// [4.415133953094482, 0, -2.473909806106526e-16, -2.4492937051703357e-16, 0, 10.566132545471191, 0, 0, -1.081395952331251e-15, 0, -1.0100502967834473, -1, 0, 0, 0.6676181554794312, 1.656000018119812]
+// [-5.715137958526611, 0, 2.473909806106526e-16, 2.4492937051703357e-16, 0, 13.677252769470215, 0, 0, 1.399805166324799e-15, 0, 1.0100502967834473, 1, 0, 0, 3.600804090499878, 4.559999942779541]
+// [5.785978317260742, 0, -2.473909806106526e-16, -2.4492937051703357e-16, 0, 13.846785545349121, 0, 0, -1.417156000974593e-15, 0, -1.0100502967834473, -1, 0, 0, 3.188703775405884, 4.1519999504089355]

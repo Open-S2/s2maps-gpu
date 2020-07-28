@@ -1,6 +1,16 @@
 // @flow
 import EventListener from '../../util/EventListener'
 
+type TouchEvent = {
+  touches: {
+    length: number,
+    [number]: {
+      clientX: number,
+      clientY: number
+    }
+  }
+}
+
 // t: time | b: start value | c: change in value | d: duration
 const easeOutExp = (delta, movement, animationLength) => {
   return -movement * ( -Math.pow( 2, -10 * delta / animationLength ) + 1 ) + movement
@@ -31,15 +41,13 @@ export default class DragPan extends EventListener {
     this.time = -1
   }
 
-  onTouchStart (e: Event) {
-    e.preventDefault()
+  onTouchStart (e: TouchEvent) {
     const { touches } = e
     this._setTouchDelta(touches)
     this.mouseActive = true
   }
 
-  onTouchEnd (e: Event) {
-    e.preventDefault()
+  onTouchEnd (e: TouchEvent) {
     const { touches } = e
     this._setTouchDelta(touches)
   }
@@ -94,8 +102,7 @@ export default class DragPan extends EventListener {
     }
   }
 
-  onTouchMove (e: Event) {
-    e.preventDefault()
+  onTouchMove (e: TouchEvent) {
     const { touches } = e
     const { length } = touches
     let { clientX, clientY } = touches[0]

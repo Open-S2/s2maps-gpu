@@ -1,6 +1,5 @@
 // @flow
 import featureSort from '../featureSort'
-// import { MAX_FEATURE_BATCH_SIZE } from '../../tile.worker'
 
 import type { Feature } from '../../tile.worker'
 

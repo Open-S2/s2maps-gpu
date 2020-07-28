@@ -102,7 +102,7 @@ export default class TileWorker {
     // store the style
     this.maps[mapID] = style
     // prep filter functions
-    parseLayers(this.maps[mapID].layers)
+    parseLayers(this.maps[mapID].layers, style.glType)
     // prep request system
     this.buildSources(mapID)
   }
@@ -330,7 +330,7 @@ export default class TileWorker {
     const lineFeatures: Array<Feature> = []
     const texts: Array<Text> = []
     const parentLayers: ParentLayers = {}
-    const { layers } = this.maps[mapID]
+    const { layers, glType } = this.maps[mapID]
     for (let layerID = 0, ll = layers.length; layerID < ll; layerID++) {
       const layer = layers[layerID]
       if (layer.source === sourceName) { // ensure we are in the right source

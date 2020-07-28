@@ -18,7 +18,7 @@ void main () {
   vec4 xyz = STtoXYZ(pos);
   // if 3D, add radius
   if (u3D) {
-    float radius = 1. + (aRadius * 150.);
+    float radius = 1. + (aRadius * 500.);
     xyz.xyz *= radius;
   }
   // set position

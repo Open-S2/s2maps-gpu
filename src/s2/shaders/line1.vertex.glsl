@@ -17,11 +17,9 @@ attribute vec2 aNext; //   (INSTANCED)
 uniform mat4 uMatrix;
 uniform vec2 uAspect;
 
-uniform float uInputs[16];
-uniform float uLayerCode[256];
-uniform float uFeatureCode[128];
+uniform vec4 uColor;
+uniform float uWidth;
 
-#include ./decodeFeature;
 #include ./ST2XYZ;
 
 varying vec2 vWidth;
@@ -42,17 +40,12 @@ bool isCCW (in vec2 prev, in vec2 curr, in vec2 next) {
 }
 
 void main () {
-  // prep layer index and feature index positions
-  int index = 0;
-  int featureIndex = 0;
-  float width;
+  // create temp variables
   vec4 prev, curr, next, zero;
-  // decode color
-  color = decodeFeature(true, index, featureIndex);
-  // decode line width
-  width = decodeFeature(false, index, featureIndex)[0];
+  // get the color
+  color = uColor;
   // explain width to fragment shader
-  vWidth = vec2(width, 0.);
+  vWidth = vec2(uWidth, 0.);
   // get the position in projected space
   curr = uMatrix * STtoXYZ(aCurr / 4096.);
   next = uMatrix * STtoXYZ(aNext / 4096.);
@@ -78,17 +71,17 @@ void main () {
     } else if (aType == 1.) {
       // current point's perp normal with a flipped vector
       currPerp *= -1.;
-      gl_Position = vec4(currScreen + (currPerp * width / uAspect), curr.z, 1.);
+      gl_Position = vec4(currScreen + (currPerp * uWidth / uAspect), curr.z, 1.);
     } else if (aType == 2.) {
       // current point's perp normal
-      gl_Position = vec4(currScreen + (currPerp * width / uAspect), curr.z, 1.);
+      gl_Position = vec4(currScreen + (currPerp * uWidth / uAspect), curr.z, 1.);
     } else if (aType == 3.) {
       // next point's perp normal with a flipped vector
       currPerp *= -1.;
-      gl_Position = vec4(nextScreen + (currPerp * width / uAspect), next.z, 1.);
+      gl_Position = vec4(nextScreen + (currPerp * uWidth / uAspect), next.z, 1.);
     } else if (aType == 4.) {
       // next point's perp normal
-      gl_Position = vec4(nextScreen + (currPerp * width / uAspect), next.z, 1.);
+      gl_Position = vec4(nextScreen + (currPerp * uWidth / uAspect), next.z, 1.);
     } else if ((aType == 5. || aType == 6.) && aPrev != aCurr) {
       // get previous
       prev = uMatrix * STtoXYZ(aPrev / 4096.);
@@ -101,9 +94,9 @@ void main () {
         prevPerp *= -1.;
       }
       if (aType == 5.) {
-        gl_Position = vec4(currScreen + (currPerp * width / uAspect), curr.z, 1.);
+        gl_Position = vec4(currScreen + (currPerp * uWidth / uAspect), curr.z, 1.);
       } else { // aType == 6.
-        gl_Position = vec4(currScreen + (prevPerp * width / uAspect), curr.z, 1.);
+        gl_Position = vec4(currScreen + (prevPerp * uWidth / uAspect), curr.z, 1.);
         // update the varying that we are using the prevPerp
         currPerp = prevPerp * -1.;
       }
