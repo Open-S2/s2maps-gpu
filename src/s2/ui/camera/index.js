@@ -6,7 +6,7 @@ import { Painter } from '../../gl'
 import type { MapOptions } from '../map'
 /** PROJECTIONS **/
 import { tileHash } from 's2projection' // https://github.com/Regia-Corporation/s2projection
-import { OrthographicProjection, BlendProjection } from './projections'
+import { BlendProjection, OrthographicProjection, PerspectiveProjection } from './projections'
 import type { Projection } from './projections'
 /** SOURCES **/
 import { Tile } from '../../source'
@@ -50,7 +50,7 @@ export default class Camera {
     let { projection } = options
     if (!projection) projection = 'blend'
     if (projection === 'persp' || projection === 'perspective') {
-      this.projection = new OrthographicProjection(options)
+      this.projection = new PerspectiveProjection(options)
     } else if (projection === 'blend' || projection === 'orthographicPerspective') {
       this.projection = new BlendProjection(options)
     } else {

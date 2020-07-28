@@ -59,18 +59,21 @@ export default class S2Map {
     // if browser supports it, create an instance of the mapWorker
     if (canvas.transferControlToOffscreen) {
       if (options.interactive === undefined || options.interactive === true) {
-        if (options.scrollZoom === undefined || options.scrollZoom === true) canvas.addEventListener('wheel', this._onScroll.bind(this))
-        canvas.addEventListener('mousedown', this._onMouseDown.bind(this))
-        canvas.addEventListener('mouseup', this._onMouseUp.bind(this))
-        canvas.addEventListener('mousemove', this._onMouseMove.bind(this))
+        if (options.scrollZoom === undefined || options.scrollZoom === true) canvas.addEventListener('wheel', self._onScroll.bind(self))
+        canvas.addEventListener('mousedown', () => self.map.postMessage({ type: 'mousedown' }))
+        canvas.addEventListener('mouseup', () => self.map.postMessage({ type: 'mouseup' }))
+        canvas.addEventListener('mousemove', self._onMouseMove.bind(self))
+        canvas.addEventListener('touchstart', (e) => self._onTouch(e, 'touchstart'))
+        canvas.addEventListener('touchend', (e) => self._onTouch(e, 'touchend'))
+        canvas.addEventListener('touchmove', (e) => self._onTouch(e, 'touchmove'))
       }
       const offscreen = canvas.transferControlToOffscreen()
-      this._offscreen = true
-      this.map = new Worker('./workers/map.worker.js', { type: 'module' })
-      this.map.onmessage = this._mapMessage.bind(this)
-      options.canvasWidth = this._container.clientWidth
-      options.canvasHeight = this._container.clientHeight
-      this.map.postMessage({ type: 'canvas', options, canvas: offscreen, id: this.id }, [offscreen])
+      self._offscreen = true
+      self.map = new Worker('./workers/map.worker.js', { type: 'module' })
+      self.map.onmessage = self._mapMessage.bind(self)
+      options.canvasWidth = self._container.clientWidth
+      options.canvasHeight = self._container.clientHeight
+      self.map.postMessage({ type: 'canvas', options, canvas: offscreen, id: self.id }, [offscreen])
     } else {
       import('./ui/map').then(map => {
         self.map = new map.default(options, canvas, self.id)
@@ -78,19 +81,25 @@ export default class S2Map {
     }
   }
 
+  _onTouch (e: Event, type: string) {
+    e.preventDefault()
+    const { touches } = e
+    const { length } = touches
+    const touchEvent = { length }
+
+    for (let i = 0; i < length; i++) {
+      const { clientX, clientY } = touches[i]
+      touchEvent[i] = { clientX, clientY }
+    }
+
+    this.map.postMessage({ type, touchEvent })
+  }
+
   _onScroll (e) {
     e.preventDefault()
     const { clientX, clientY, deltaY } = e
     const rect = this._canvas.getBoundingClientRect()
     this.map.postMessage({ type: 'scroll', rect, clientX, clientY, deltaY })
-  }
-
-  _onMouseDown () {
-    this.map.postMessage({ type: 'mousedown' })
-  }
-
-  _onMouseUp () {
-    this.map.postMessage({ type: 'mouseup' })
   }
 
   _onMouseMove (e) {

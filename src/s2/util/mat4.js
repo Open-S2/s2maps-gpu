@@ -18,7 +18,6 @@ export function clone (m: Float32Array): Float32Array {
 }
 
 export function blend (m: Float32Array, width: number, height: number, near: number, far: number): Float32Array {
-  // const f = 1.0 / Math.tan(fovy / 2)
   m[0] = 1 / width
   m[1] = 0
   m[2] = 0
@@ -33,7 +32,7 @@ export function blend (m: Float32Array, width: number, height: number, near: num
   m[12] = 0
   m[13] = 0
   m[15] = 0
-  if (far != null && far !== Infinity) {
+  if (far !== null && far !== Infinity) {
     let nf = 1 / (near - far)
     m[10] = (far + near) * nf
     m[14] = (2 * far * near) * nf
@@ -66,27 +65,6 @@ export function ortho (m: Float32Array, width: number, height: number, far: numb
   return m
 }
 
-// export function ortho (m: Float32Array, width: number, height: number, far: number): Float32Array {
-//   m[0] = 1 / width
-//   m[1] = 0
-//   m[2] = 0
-//   m[3] = 0
-//   m[4] = 0
-//   m[5] = 1 / height
-//   m[6] = 0
-//   m[7] = 0
-//   m[8] = 0
-//   m[9] = 0
-//   m[10] = -1 / far
-//   m[11] = 0
-//   m[12] = 0
-//   m[13] = 0
-//   m[14] = -1
-//   m[15] = 1
-//
-//   return m
-// }
-
 export function perspective (m: Float32Array, fovy: number, aspect: number, near: number, far: number): Float32Array {
   const f = 1.0 / Math.tan(fovy / 2)
   m[0] = f / aspect
@@ -115,6 +93,75 @@ export function perspective (m: Float32Array, fovy: number, aspect: number, near
   return m
 }
 
+export function lookAt (eye: [number, number, number], up: [number, number, number]): Float32Array {
+  const m = new Float32Array(16)
+  let x0, x1, x2, y0, y1, y2, z0, z1, z2, len
+  let eyex = eye[0]
+  let eyey = eye[1]
+  let eyez = eye[2]
+  let upx = up[0]
+  let upy = up[1]
+  let upz = up[2]
+
+  z0 = eyex
+  z1 = eyey
+  z2 = eyez
+  len = 1 / Math.hypot(z0, z1, z2)
+  z0 *= len
+  z1 *= len
+  z2 *= len
+  x0 = upy * z2 - upz * z1
+  x1 = upz * z0 - upx * z2
+  x2 = upx * z1 - upy * z0
+  len = Math.hypot(x0, x1, x2)
+
+  if (!len) {
+    x0 = 0
+    x1 = 0
+    x2 = 0
+  } else {
+    len = 1 / len
+    x0 *= len
+    x1 *= len
+    x2 *= len
+  }
+
+  y0 = z1 * x2 - z2 * x1
+  y1 = z2 * x0 - z0 * x2
+  y2 = z0 * x1 - z1 * x0
+  len = Math.hypot(y0, y1, y2)
+
+  if (!len) {
+    y0 = 0
+    y1 = 0
+    y2 = 0
+  } else {
+    len = 1 / len
+    y0 *= len
+    y1 *= len
+    y2 *= len
+  }
+
+  m[0] = x0
+  m[1] = y0
+  m[2] = z0
+  m[3] = 0
+  m[4] = x1
+  m[5] = y1
+  m[6] = z1
+  m[7] = 0
+  m[8] = x2
+  m[9] = y2
+  m[10] = z2
+  m[11] = 0
+  m[12] = -(x0 * eyex + x1 * eyey + x2 * eyez)
+  m[13] = -(y0 * eyex + y1 * eyey + y2 * eyez)
+  m[14] = -(z0 * eyex + z1 * eyey + z2 * eyez)
+  m[15] = 1
+
+  return m
+}
+
 export function addCenter (m: Float32Array, v: Float32Array | Array<number>): Float32Array {
   m[12] = v[0]
   m[13] = v[1]
@@ -135,7 +182,7 @@ export function translate (m: Float32Array, v: Float32Array | [number, number, n
   return m
 }
 
-export function scale(m: Float32Array, v: Float32Array | [number, number, number]): Float32Array {
+export function scale (m: Float32Array, v: Float32Array | [number, number, number]): Float32Array {
   const x = v[0]
   const y = v[1]
   const z = v[2]
