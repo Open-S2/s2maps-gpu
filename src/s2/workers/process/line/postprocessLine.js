@@ -11,12 +11,25 @@ export default function postprocessLine (mapID: string, source: string, tileID: 
   // Step 1: Sort by layerID, than sort by feature code.
   features.sort(featureSort)
 
+  // Step 1a: If WebGL1 the variable "featureCode" will exist; Swap with code now that it is sorted
+  let tmp
+  let webgl1 = false
+  if (features[0].featureCode) {
+    webgl1 = true
+    for (const feature of features) {
+      tmp = feature.code
+      feature.code = feature.featureCode
+      feature.featureCode = tmp
+    }
+  }
+
   // step 2: Run through all features and bundle into the fewest featureBatches. Caveats:
   // 1) don't store VAO set larger than index size (we use an extension for WebGL1, so we will probably never go over 1 << 32)
   // 2) don't store any feature code larger than MAX_FEATURE_BATCH_SIZE
   let vertices: Array<number> = []
   let featureGuide: Array<number> = []
   let encodings: Array<number> = features[0].code
+  let subEncodings: Array<number> = features[0].featureCode
   let indexCount: number = 0
   let indexOffset: number = 0
   let curFeatureCode = encodings.toString()
@@ -33,12 +46,14 @@ export default function postprocessLine (mapID: string, source: string, tileID: 
     ) {
       // store the current feature
       featureGuide.push(curLayerID, indexCount, indexOffset, encodings.length, ...encodings) // layerID, count, offset, encoding size, encodings
+      if (webgl1) featureGuide.push(subEncodings.length, ...subEncodings)
       // update indexOffset
       indexOffset += indexCount
       // reset indexCount
       indexCount = 0
       // update to new encoding set
       encodings = feature.code
+      subEncodings = feature.featureCode
       // update what the current encoding is
       curFeatureCode = encodings.toString()
     }
@@ -52,11 +67,14 @@ export default function postprocessLine (mapID: string, source: string, tileID: 
     indexCount += fl / 6
   }
   // store the very last featureGuide batch if not yet stored
-  if (indexCount) featureGuide.push(curLayerID, indexCount, indexOffset, encodings.length, ...encodings) // layerID, count, offset, encoding size, encodings
+  if (indexCount) {
+    featureGuide.push(curLayerID, indexCount, indexOffset, encodings.length, ...encodings) // layerID, count, offset, encoding size, encodings
+    if (webgl1) featureGuide.push(subEncodings.length, ...subEncodings)
+  }
 
   // Upon building the batches, convert to buffers and ship.
   const vertexBuffer = new Int16Array(vertices).buffer
-  const featureGuideBuffer = new Uint32Array(featureGuide).buffer
+  const featureGuideBuffer = new Float32Array(featureGuide).buffer
   // ship the vector data.
   postMessage({
     mapID,

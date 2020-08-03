@@ -16,7 +16,7 @@ type FBO = {
   height: number,
   texSize: Float32Array,
   texture: WebGLTexture,
-  depthStencil: WebGLRenderbuffer,
+  stencil: WebGLRenderbuffer,
   glyphFramebuffer: WebGLFramebuffer
 }
 
@@ -59,7 +59,7 @@ export default class GlyphProgram extends Program {
       height,
       texSize: new Float32Array([2048, height]),
       texture: gl.createTexture(),
-      depthStencil: gl.createRenderbuffer(),
+      stencil: gl.createRenderbuffer(),
       glyphFramebuffer: gl.createFramebuffer()
     }
     // TEXTURE BUFFER
@@ -75,16 +75,16 @@ export default class GlyphProgram extends Program {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
     // DEPTH & STENCIL BUFFER
     // bind
-    gl.bindRenderbuffer(gl.RENDERBUFFER, fbo.depthStencil)
+    gl.bindRenderbuffer(gl.RENDERBUFFER, fbo.stencil)
     // allocate size
-    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_STENCIL, 2048, height)
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.STENCIL_INDEX8, 2048, height)
     // FRAMEBUFFER
     // bind
     gl.bindFramebuffer(gl.FRAMEBUFFER, fbo.glyphFramebuffer)
     // attach texture to glyphFramebuffer
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, fbo.texture, 0)
     // attach stencil renderbuffer to framebuffer
-    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, fbo.depthStencil)
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.STENCIL_ATTACHMENT, gl.RENDERBUFFER, fbo.stencil)
     // rebind our default framebuffer
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
 
@@ -117,13 +117,13 @@ export default class GlyphProgram extends Program {
   _deleteFBO (fbo: FBO) {
     const { gl } = this
     gl.deleteTexture(fbo.texture)
-    gl.deleteRenderbuffer(fbo.depthStencil)
+    gl.deleteRenderbuffer(fbo.stencil)
     gl.deleteFramebuffer(fbo.glyphFramebuffer)
     delete fbo.width
     delete fbo.height
     delete fbo.texSize
     delete fbo.texture
-    delete fbo.depthStencil
+    delete fbo.stencil
     delete fbo.glyphFramebuffer
   }
 
@@ -167,8 +167,7 @@ export default class GlyphProgram extends Program {
 
     // LINE
     // set depth test is on
-    context.enableDepthTest()
-    context.lessDepth()
+    context.disableDepthTest()
     // disable stencil
     context.disableStencilTest()
     // set program as current
@@ -178,7 +177,6 @@ export default class GlyphProgram extends Program {
     // draw lines
     glyphLineProgram.draw(source)
     // enable stencil
-    context.enableStencilTest()
 
     // FILL
     const indexLength = glyphFillIndices.length
@@ -189,8 +187,6 @@ export default class GlyphProgram extends Program {
       this.use()
       // set the texture size uniform
       this.setTexSize(texSize)
-      // disable depth test
-      context.disableDepthTest()
       // set the correct vao
       gl.bindVertexArray(glyphFillVAO)
       // draw fill onto the stencil
@@ -200,10 +196,11 @@ export default class GlyphProgram extends Program {
       context.stencilZero()
       context.lockMasks()
       gl.drawElements(gl.TRIANGLES, indexLength, gl.UNSIGNED_INT, 0)
-      // turn depth testing back on
-      context.enableDepthTest()
     }
 
+    // turn depth testing back on
+    context.enableDepthTest()
+    // cleanup
     this.cleanGlyphSource(source)
 
     // rebind default framebuffer

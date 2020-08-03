@@ -28,7 +28,6 @@ uniform float uFeatureCode[128];
 out vec4 color;
 
 bool overlap (vec4 a, vec4 b) { // vec4(left, bottom, right, top)
-  // return !(a.z < b.x || a.x > b.z || a.y < b.w || a.w > b.y);
   if (a.x >= b.z || b.x >= a.z) return false;
   if (a.w <= b.y || b.w <= a.y) return false;
   return true;

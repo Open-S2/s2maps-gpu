@@ -12,6 +12,7 @@ import type { Context } from '../contexts'
 import type { FeatureGuide, GlyphTileSource } from '../../source/tile'
 
 export default class GlyphFilterProgram extends Program {
+  uSize: WebGLUniformLocation
   pointFramebuffer: WebGLFramebuffer
   quadFramebuffer: WebGLFramebuffer
   resultFramebuffer: WebGLFramebuffer
@@ -29,8 +30,10 @@ export default class GlyphFilterProgram extends Program {
     const { gl, type, devicePixelRatio } = context
     // build shaders
     if (type === 1) {
-      gl.attributeLocations = { 'aUV': 0, 'aST': 1, 'aXY': 2, 'aPad': 3, 'aWidth': 4, 'aIndex': 5, 'aID': 6 }
+      gl.attributeLocations = { aStep: 0, aST: 1, aXY: 2, aPad: 3, aWidth: 4, aIndex: 5, aID: 6 }
       super(context, vert1, frag1)
+      // setup size uniform
+      this.uSize = gl.getUniformLocation(this.glProgram, 'uSize')
     } else {
       super(context, vert2, frag2)
     }
@@ -167,15 +170,16 @@ export default class GlyphFilterProgram extends Program {
   }
 
   draw (featureGuide: FeatureGuide, sourceData: GlyphTileSource, mode: 0 | 1 | 2) {
-    const { gl } = this
+    const { gl, context } = this
+    const { type } = context
     // set current indexOffset
     if (mode !== 0) this.setIndexOffset()
-    // console.log('offset', this.indexOffset)
     // grab variables
-    const { featureCode, filterCount, filterOffset } = featureGuide
+    const { size, featureCode, filterCount, filterOffset } = featureGuide
     const { glyphFilterBuffer } = sourceData
     // set feature code
-    if (mode !== 0 && featureCode && featureCode.length) gl.uniform1fv(this.uFeatureCode, featureCode)
+    if (type === 1) gl.uniform1f(this.uSize, size)
+    else if (mode !== 0 && featureCode && featureCode.length) gl.uniform1fv(this.uFeatureCode, featureCode)
     // apply the appropriate offset
     gl.bindBuffer(gl.ARRAY_BUFFER, glyphFilterBuffer)
     gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 36, 0 + (filterOffset * 36)) // s, t

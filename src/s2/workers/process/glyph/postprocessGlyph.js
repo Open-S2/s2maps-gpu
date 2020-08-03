@@ -5,7 +5,8 @@ import { GlyphBuilder, anchorOffset } from './glyphBuilder'
 import type { Text } from '../../tile.worker'
 
 export default function postprocessGlyph (mapID: string, sourceName: string,
-  tileID: string, texts: Array<Text>, glyphBuilder: GlyphBuilder, id: number, postMessage: Function) {
+  tileID: string, texts: Array<Text>, glyphBuilder: GlyphBuilder, id: number,
+  postMessage: Function) {
   // sort by layerID
   texts = texts.sort(featureSort)
 
@@ -39,21 +40,23 @@ export default function postprocessGlyph (mapID: string, sourceName: string,
   //    This is for the pre-draw step to check overlap. The GlyphBuilder will also be building this.
   let curLayerID = texts[0].layerID
   let encoding: Array<number> = texts[0].code
+  let subEncoding: Array<number> = texts[0].featureCode
   let codeStr: string = texts[0].code.toString()
   for (const text of texts) {
-    const { layerID, code } = text
+    const { layerID, code, featureCode } = text
 
     if (curLayerID !== layerID || codeStr !== code.toString()) {
-      glyphBuilder.finishLayer(curLayerID, encoding)
+      glyphBuilder.finishLayer(curLayerID, encoding, subEncoding)
       curLayerID = layerID
       codeStr = code.toString()
       encoding = code
+      subEncoding = featureCode
     }
 
     glyphBuilder.buildText(text)
   }
   // finish the last layer
-  glyphBuilder.finishLayer(curLayerID, encoding)
+  glyphBuilder.finishLayer(curLayerID, encoding, subEncoding)
   // if the layerGuide doesn't grow, we move on
   if (!glyphBuilder.layerGuide.length) return
 
@@ -71,7 +74,7 @@ export default function postprocessGlyph (mapID: string, sourceName: string,
   const glyphLineVertexBuffer = new Float32Array(lineVertices).buffer
   // quad draw data
   const glyphQuadBuffer = new Float32Array(glyphQuads).buffer
-  const layerGuideBuffer = new Uint32Array(layerGuide).buffer
+  const layerGuideBuffer = new Float32Array(layerGuide).buffer
 
   // ship the data
   postMessage({

@@ -26,9 +26,10 @@ export default class Color {
     return this.val
   }
 
-  getRGB (): [number, number, number, number] {
+  getRGB (normalize: boolean = true): [number, number, number, number] {
     this.toRGB()
-    return [this.val[0] / 255, this.val[1] / 255, this.val[2] / 255, this.val[3]]
+    if (normalize) return [this.val[0] / 255, this.val[1] / 255, this.val[2] / 255, this.val[3]]
+    return this.val
   }
 
   getLCH (): [number, number, number, number] {

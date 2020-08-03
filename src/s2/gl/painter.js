@@ -130,7 +130,7 @@ export default class Painter {
 
     // PREPARE PHASE
     // prep frame uniforms
-    const { view, aspect } = projection
+    const { view, aspect, zoom } = projection
     const matrix = projection.getMatrix(512) // NOTE: For now, we have a default size of 512.
     this.injectFrameUniforms(matrix, view, aspect)
 
@@ -157,7 +157,7 @@ export default class Painter {
     // prep masks
     this.paintMasks(tiles)
     // draw the sphere background should it exist
-    if (sphereBackground) this.paintSphereBackground(tiles, sphereBackground)
+    if (sphereBackground) this.paintSphereBackground(tiles, sphereBackground, zoom)
     // paint features
     this.paintFeatures(features)
     // draw shade layer
@@ -212,16 +212,18 @@ export default class Painter {
     context.lockMasks()
   }
 
-  paintSphereBackground (tiles: Array<Tile>, sphereBackground: SphereBackground) {
+  paintSphereBackground (tiles: Array<Tile>, sphereBackground: SphereBackground, zoom: number) {
     // get context
     const { context } = this
-    const { gl } = context
+    const { gl, type } = context
     // grab sphere background properties
     const { code, lch } = sphereBackground
     // grab the fillProgram
     const fillProgram: FillProgram = this.getProgram('fill')
-    // set layerCode
-    fillProgram.setLayerCode(code, lch)
+    // webgl1 -> set color; otherwise set layerCode
+    if (type === 1) {
+      gl.uniform4fv(fillProgram.uColors, (code(null, null, zoom)).getRGB(), 0, 4)
+    } else { fillProgram.setLayerCode(code, lch) }
     // for each tile, draw a background
     context.alwaysDepth()
     for (const tile of tiles) {
@@ -274,9 +276,7 @@ export default class Painter {
   }
 
   paintGlyphFilter (tiles: Array<Tile>, glyphFeatures: Array<FeatureGuide>) {
-    // console.log('glyphFeatures', glyphFeatures)
     const { context } = this
-    // const { gl } = context
     const glyphFilterProgram: GlyphFilter = this.getProgram('glyphFilter')
     if (!glyphFilterProgram) return new Error('The "glyphFilter" program does not exist, can not paint.')
     // disable blending
@@ -292,16 +292,6 @@ export default class Painter {
     // Step 2: draw quads
     glyphFilterProgram.bindQuadFrameBuffer()
     this._paintGlyphFilter(glyphFilterProgram, glyphFeatures, 1)
-
-    // const { gl } = context
-    // const res = new Uint8Array(1 * 4096 * 4)
-    // gl.readPixels(0, 0, 4096, 1, gl.RGBA, gl.UNSIGNED_BYTE, res)
-    // const list = []
-    // for (let i = 0; i < 5; i++) {
-    //   list.push([(res[(i * 4)] << 8) + res[(i * 4) + 1], (res[(i * 4) + 2] << 8) + res[(i * 4) + 3], (res[(i + 2048) * 4] << 8) + res[(i + 2048) * 4 + 1], (res[(i + 2048) * 4 + 2] << 8) + res[(i + 2048) * 4 + 3]])
-    // }
-    // console.log('list', list)
-
     // Step 3: draw result points
     glyphFilterProgram.bindResultFramebuffer()
     this._paintGlyphFilter(glyphFilterProgram, glyphFeatures, 2)

@@ -325,12 +325,13 @@ export default class TileWorker {
     const { face, zoom, x, y, division, hash } = tile
 
     // prep features
-    let featureSet
+    let featureSet, code, featureCode
     const fillFeatures: Array<Feature> = []
     const lineFeatures: Array<Feature> = []
     const texts: Array<Text> = []
     const parentLayers: ParentLayers = {}
     const { layers, glType } = this.maps[mapID]
+    const webgl1 = glType === 1
     for (let layerID = 0, ll = layers.length; layerID < ll; layerID++) {
       const layer = layers[layerID]
       if (layer.source === sourceName) { // ensure we are in the right source
@@ -346,38 +347,43 @@ export default class TileWorker {
           const { extent } = vectorTileLayer
           // prep a mapping of layer and paint properties (feature encodings)
           for (let f = 0; f < vectorTileLayer.length; f++) {
-            let featureCode = []
+            code = []
+            featureCode = null
             const feature = vectorTileLayer.feature(f)
             // get prelude properties
             const { properties, type } = feature
             // lastly we need to filter according to the layer
             if (layer.filter(properties)) {
               // create encodings for the feature, if it is different than the previous feature, we start a new encoding set
-              for (const p in layer.paint) layer.paint[p](properties, featureCode)
-              for (const l in layer.layout) layer.layout[l](properties, featureCode)
+              for (const p in layer.paint) layer.paint[p](code, properties, zoom)
+              for (const l in layer.layout) layer.layout[l](code, properties, zoom)
               // we can now process according to type
               let vertices = []
               let indices = []
               if (layer.type === 'fill' && (type === 3 || type === 4)) {
-                preprocessFill(feature.loadGeometry(), type, vertices, indices, division, extent)
+                preprocessFill(feature.loadGeometry(), type, vertices, indices, division, extent, (webgl1) ? layer.paint.color(null, properties, zoom) : null)
+                if (webgl1) featureCode = (layer.paint.color(null, properties, zoom)).getRGB()
                 featureSet = fillFeatures
               } else if (layer.type === 'fill3D' && (type === 7 || type === 8)) {
                 continue
               } else if (layer.type === 'line' && (type === 2 || type === 3 || type === 4)) {
                 // check that we are not exluding fills
                 if (layer.onlyLines && type !== 2) continue
-                // const attributes = { cap: layer.layout.cap(), join: layer.layout.join(), dashed: true }
                 preprocessLine(feature.loadGeometry(), type, false, vertices, division, extent)
+                if (webgl1) featureCode = [
+                  ...(layer.paint.color(null, properties, zoom)).getRGB(),
+                  layer.paint.width(null, properties, zoom)
+                ]
                 featureSet = lineFeatures
               } else if (layer.type === 'line3D' && type === 9) {
                 continue
               } else if (layer.type === 'text' && type === 1) {
-                preprocessText(feature, featureCode, zoom, layer, layerID, extent, texts, this.idGen)
+                preprocessText(feature, code, zoom, layer, layerID, extent, texts, webgl1, this.idGen)
                 continue
               } else if (layer.type === 'billboard' && type === 1) {
                 continue
               } else { continue }
-              if (vertices.length) featureSet.push({ type: layer.type, vertices, indices, code: featureCode, layerID })
+              if (vertices.length) featureSet.push({ type: layer.type, vertices, indices, code, layerID, featureCode })
             } else { continue }
           } // for (let f = 0; f < vectorTileLayer.length; f++)
         } else if (source.layers && source.layers[layer.layer] && source.layers[layer.layer].maxzoom < zoom) {

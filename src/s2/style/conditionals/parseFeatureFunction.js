@@ -42,20 +42,20 @@ function dataConditionFunction (input, attr) {
     }
   }
   if (!defaultExists) conditions['default'] = () => null // just incase it's missing in the style json
-  return (properties, zoom, code) => {
+  return (code, properties, zoom) => {
     if (properties) {
       let condition
       for (let i = 0, cl = conditions.length; i < cl; i++) { // run through the conditions
         condition = conditions[i]
         if (condition.condition(properties)) {
           if (code) code.push(i + 1)
-          return condition.result(properties, zoom, code)
+          return condition.result(code, properties, zoom)
         }
       }
     }
     // if we made it here, just run default
     if (code) code.push(0)
-    return conditions['default'](properties, zoom)
+    return conditions['default'](code, properties, zoom)
   }
 }
 
@@ -73,21 +73,21 @@ function dataRangeFunction (input, attr) {
     c += 2
   }
 
-  return (properties, zoom, code) => {
+  return (code, properties, zoom) => {
     const dataInput = (properties && properties[key] && !isNaN(properties[key])) ? +properties[key] : 0
     if (dataInput <= input[0]) {
-      return input[1](properties, dataInput, code)
+      return input[1](code, properties, dataInput)
     } else if (dataInput >= input[input.length - 2]) {
-      return input[input.length - 1](properties, dataInput, code)
+      return input[input.length - 1](code, properties, dataInput)
     } else {
       let i = 0
       while (input[i] <= dataInput) i += 2
       // now we know the dataInput is inbetween input[i - 2][0] and input[i - 1][0]
       const startRange = input[i - 2]
-      const startValue = input[i - 1](properties, dataInput, code)
+      const startValue = input[i - 1](code, properties, dataInput)
       if (startRange === dataInput) return startValue
       const endRange = input[i]
-      const endValue = input[i + 1](properties, dataInput, code)
+      const endValue = input[i + 1](code, properties, dataInput)
       // now we interpolate
       return easeFunction(dataInput, startRange, endRange, startValue, endValue)
     }
@@ -110,20 +110,20 @@ function inputRangeFunction (input, attr) {
     c += 2
   }
 
-  return (properties, zoom, code) => {
+  return (code, properties, zoom) => {
     if (zoom <= input[0]) {
-      return input[1](properties, zoom, code)
+      return input[1](code, properties, zoom)
     } else if (zoom >= input[input.length - 2]) {
-      return input[input.length - 1](properties, zoom, code)
+      return input[input.length - 1](code, properties, zoom)
     } else {
       let i = 0
       while (input[i] <= zoom) i += 2
       // now we know the zoom is inbetween input[i - 2][0] and input[i - 1][0]
       const startZoom = input[i - 2]
-      const startValue = input[i - 1](properties, zoom, code)
+      const startValue = input[i - 1](code, properties, zoom)
       if (startZoom === zoom) return startValue
       const endZoom = input[i]
-      const endValue = input[i + 1](properties, zoom, code)
+      const endValue = input[i + 1](code, properties, zoom)
       // now we interpolate
       return easeFunction(zoom, startZoom, endZoom, startValue, endValue)
     }

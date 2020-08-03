@@ -1,22 +1,45 @@
 precision highp float;
 
-attribute vec2 aUV; // float [u, v]
-attribute vec2 aST; // float [s, t]           (INSTANCED)
-attribute vec2 aXY; // float [x, y]           (INSTANCED)
-attribute vec2 aWidth; // float width         (INSTANCED)
-attribute float aID; // float ID              (INSTANCED)
-attribute float aRadius; // float radius      (INSTANCED)
+attribute float aStep; // either 0 or 1
+attribute vec2 aST; // float [s, t]    (INSTANCED)
+attribute vec2 aXY; // float [x, y]    (INSTANCED)
+attribute vec2 aPad; // float [x, y]   (INSTANCED)
+attribute float aWidth; // float width (INSTANCED)
+attribute float aIndex; // float index (INSTANCED)
+attribute float aID; // float ID       (INSTANCED)
 
 uniform mat4 uMatrix;
 uniform vec2 uAspect;
-uniform int uMode; // 0 => points ; 1 => quads ; 2 => textures
-uniform bool u3D;
+uniform int uMode; // 0 => points ; 1 => quads ; 2 => results
+uniform float uDevicePixelRatio;
+uniform float uIndexOffset;
 
-uniform sampler2D uFeatures;
+uniform sampler2D uPoints;
+uniform sampler2D uQuads;
+
+// WebGL1 specific uniforms
+uniform float uSize;
 
 #include ./ST2XYZ;
 
 varying vec4 color;
+
+bool overlap (vec4 a, vec4 b) { // vec4(left, bottom, right, top)
+  if (a.x >= b.z || b.x >= a.z) return false;
+  if (a.w <= b.y || b.w <= a.y) return false;
+  return true;
+}
+
+vec4 getBbox (float index) {
+  vec4 btmLeft = texture2D(uQuads, vec2(index / 4096., 0.));
+  vec4 topRght = texture2D(uQuads, vec2((index + 2048.) / 4096., 0.));
+  return vec4(
+    (btmLeft.r * 255. * pow(2., 8.)) + btmLeft.g * 255.,
+    (btmLeft.b * 255. * pow(2., 8.)) + btmLeft.a * 255.,
+    (topRght.r * 255. * pow(2., 8.)) + topRght.g * 255.,
+    (topRght.b * 255. * pow(2., 8.)) + topRght.a * 255.
+  );
+}
 
 // https://gist.github.com/EliCDavis/f35a9e4afb8e1c9ae94cce8f3c2c9b9a
 int AND (int n1, int n2) {
@@ -49,89 +72,80 @@ int rightShift (int num, float shifts) {
 void main () {
   // prep xyz
   vec4 xyz = STtoXYZ(aST);
-  // if 3D, add radius
-  // if (u3D) xyz.xyz *= aRadius;
-  // for points, extend a little to ensure it doesn't get improperly clipped
-  xyz.xyz *= 1.01;
+  // for points, add a little to ensure it doesn't get clipped
+  xyz.xyz *= 1.001;
   // find the position on screen
   vec4 glPos = uMatrix * xyz;
   glPos.xyz /= glPos.w;
   glPos.w = 1.;
+  // set position
+  gl_Position = glPos;
+  // set point size
+  gl_PointSize = 5.;
   // compute based upon our current step
   if (uMode == 0) {
     // convert aID (really a uint32) to an rgba equivalent (split into 4 pieces of 8 bits)
     int id = int(aID);
     color = vec4(float(AND(id, 255)) / 255., float(AND(rightShift(id, 8.), 255)) / 255., float(rightShift(id, 16.)) / 255., 1.);
-    // set pointSize
-    gl_PointSize = 5.;
   } else if (uMode == 1) {
-    // convert aID (really a uint32) to an rgba equivalent (split into 4 pieces of 8 bits)
+    // only draw to one point
+    gl_PointSize = 1.;
+    // set position
+    if (aStep == 0.) gl_Position = vec4(2. * ((aIndex + uIndexOffset) / 4096.) - 1., 0., 0., 1.);
+    else gl_Position = vec4(2. * ((2048. + aIndex + uIndexOffset) / 4096.) - 1., 0., 0., 1.);
+
+    // check if point exists, that means it passed the depth test
     int id = int(aID);
-    ivec3 colorID = ivec3(AND(id, 255), AND(rightShift(id, 8.), 255), rightShift(id, 16.));
-    // grab the size
-    float size = 26;
-    // create width height
-    vec2 WH = vec2(aWidth * size, size);
-
-    // check if the point exists with the same id in our sampler
-    vec2 texPos = vec2(glPos.x / 2. + 0.5, glPos.y / 2. + 0.5);
-    vec4 pointID = texture2D(uFeatures, texPos);
-
-    // add x-y offset & use the UV to map the quad
-    glPos.xy += aXY / uAspect;
-    glPos.xy += WH / uAspect * aUV;
-    // if colorID matches the existing pixels value, we draw the quad, otherwise we draw nothing
-    if (colorID == ivec3(pointID.rgb * 256.)) {
-      pointID.a = 0.025; // 2 / 255
-      color = pointID;
-    } else {
-      color = vec4(0.);
-    }
-  } else { // uMode == 2 (result buffer)
-    // we check that all 4 corners of the quad are 1/255th opacity AND the same colorID
-    // convert aID (really a uint32) to an rgba equivalent (split into 4 pieces of 8 bits)
-    int id = int(aID);
-    ivec3 colorID = ivec3(AND(id, 255), AND(rightShift(id, 8.), 255), rightShift(id, 16.));
-
-    vec2 tPos = vec2(glPos.xy);
-    // add x-y offset & add half width and height position
-    tPos += aXY / uAspect;
-
-    // get bottom left
-    tPos += vec2(1., 1.) / uAspect;
-    vec4 btmLft = texture2D(uFeatures, vec2(tPos / 2. + 0.5));
-    // get top left
-    tPos.y += (WH.y - 2.) / uAspect.y;
-    vec4 topLft = texture2D(uFeatures, vec2(tPos / 2. + 0.5));
-
-    if (colorID == ivec3(btmLft.rgb * 256.) && btmLft.a <= 0.025 && colorID == ivec3(topLft.rgb * 256.) && topLft.a <= 0.025) {
-      // check top right, if top right, we are done
-      tPos.x += (WH.x - 2.) / uAspect.x;
-      vec4 topRght = texture2D(uFeatures, vec2(tPos / 2. + 0.5));
-      ivec3 topRghtValue = ivec3(topRght.rgb * 256.);
-      if (colorID == topRghtValue && topRght.a <= 0.025) {
-        color = btmLft;
-        color.a = 1.;
+    ivec3 colorID = ivec3(float(AND(id, 255)), float(AND(rightShift(id, 8.), 255)), float(rightShift(id, 16.)));
+    vec2 pPos = vec2(glPos.xy);
+    vec4 point = texture2D(uPoints, vec2(pPos / 2. + 0.5));
+    if (colorID == ivec3(point.rgb * 256.)) {
+      // prep the index and featureIndex
+      int index = 0;
+      int featureIndex = 0;
+      // create size
+      float size = uSize * uDevicePixelRatio;
+      // create width & height, adding padding to the total size
+      vec2 WH = vec2(aWidth, 1.) * size + (aPad * 2.);
+      // place the x1, y1, x2, y2 into the texture
+      // I add the length and width of the canvas to the total just incase a glyph filter
+      // starts slightly below or to the left of the canvas
+      vec2 bottomLeft = (glPos.xy * uAspect) + uAspect + (aXY * size);
+      // convert to uAspect integer value and split horizontal and vertical into two 8 bit pieces
+      if (aStep == 0.) {
+        ivec2 res = ivec2(floor(bottomLeft));
+        color = vec4(float(rightShift(res.x, 8.)) / 255., float(AND(res.x, 255)) / 255., float(rightShift(res.y, 8.)) / 255., float(AND(res.y, 255)) / 255.);
       } else {
-        // check bottom right, bottom right we still pass colorID
-        tPos.y -= (WH.y - 2.) / uAspect.y;
-        vec4 btmRght = texture2D(uFeatures, vec2(tPos / 2. + 0.5));
-        ivec3 btmRghtValue = ivec3(btmRght.rgb * 256.);
-        if (colorID == btmRghtValue && btmRght.a <= 0.025) {
-          color = btmLft;
-          color.a = 1.;
-        } else {
-          color = vec4(0.);
-        }
+        ivec2 res = ivec2(ceil(bottomLeft + WH));
+        color = vec4(float(rightShift(res.x, 8.)) / 255., float(AND(res.x, 255)) / 255., float(rightShift(res.y, 8.)) / 255., float(AND(res.y, 255)) / 255.);
       }
     } else {
       color = vec4(0.);
     }
-
-    // set point size
-    gl_PointSize = 4.;
+  } else { // uMode == 2 (result buffer)
+    // set color to id
+    int id = int(aID);
+    color = vec4(float(AND(id, 255)) / 255., float(AND(rightShift(id, 8.), 255)) / 255., float(rightShift(id, 16.)) / 255., 1.);
+    // grab the current bbox
+    int curIndex = int(aIndex + uIndexOffset);
+    vec4 curBbox = getBbox(float(curIndex));
+    // if the current bbox is 0, 0, 0, 0 -> we don't draw
+    if (curBbox.x == 0. && curBbox.z == 0.) {
+      color = vec4(0.);
+    } else {
+      // otherwise we loop through bbox's prior, if they are also not 0, 0, 0, 0 we check for overlap
+      for (int i = 0; i < 2048; i++) {
+        vec4 bbox = getBbox(float(i));
+        // if any of these bbox's overlap, than we should not render
+        if (i >= curIndex) {
+          break;
+        } else if (bbox.x == 0. && bbox.z == 0.) {
+          continue;
+        } else if (overlap(curBbox, bbox)) {
+          color = vec4(0.);
+          break;
+        }
+      }
+    }
   }
-
-  // set position
-  gl_Position = glPos;
 }

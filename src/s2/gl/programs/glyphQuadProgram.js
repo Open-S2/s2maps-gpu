@@ -12,6 +12,10 @@ import type { Context } from '../contexts'
 import type { FeatureGuide, GlyphTileSource } from '../../source/tile'
 
 export default class GlyphQuadProgram extends Program {
+  uSize: WebGLUniformLocation
+  uFill: WebGLUniformLocation
+  uStroke: WebGLUniformLocation
+  uStrokeWidth: WebGLUniformLocation
   uTexSize: WebGLUniformLocation
   uIsFill: WebGLUniformLocation
   uFeatures: WebGLUniformLocation
@@ -25,6 +29,11 @@ export default class GlyphQuadProgram extends Program {
     if (type === 1) {
       gl.attributeLocations = { aUV: 0, aST: 1, aXY: 2, aOffset: 3, aTexUV: 4, aTexWH: 5, aID: 6 }
       super(context, vert1, frag1)
+      // setup size uniform
+      this.uSize = gl.getUniformLocation(this.glProgram, 'uSize')
+      this.uFill = gl.getUniformLocation(this.glProgram, 'uFill')
+      this.uStroke = gl.getUniformLocation(this.glProgram, 'uStroke')
+      this.uStrokeWidth = gl.getUniformLocation(this.glProgram, 'uStrokeWidth')
     } else {
       super(context, vert2, frag2)
     }
@@ -48,10 +57,6 @@ export default class GlyphQuadProgram extends Program {
     this.setDevicePixelRatio(devicePixelRatio)
   }
 
-  setTexSize (texSize: Float32Array) {
-    this.gl.uniform2fv(this.uTexSize, texSize)
-  }
-
   setFill (state: boolean) {
     if (this.isFill !== state) {
       this.isFill = state
@@ -61,21 +66,27 @@ export default class GlyphQuadProgram extends Program {
 
   draw (featureGuide: FeatureGuide, source: GlyphTileSource) {
     const { gl, context, glyphFilterProgram } = this
+    const { type } = context
     // ensure glyphFilterProgram's result texture is set
     gl.activeTexture(gl.TEXTURE0)
     glyphFilterProgram.bindResultTexture()
     // pull out the appropriate data from the source
-    const { featureCode, offset, count } = featureGuide
+    const { featureCode, offset, count, size, fill, stroke, strokeWidth } = featureGuide
     const { textureID, glyphQuadBuffer } = source
     // grab glyph texture
     const { texSize, texture } = this.glyphProgram.getFBO(textureID)
-    // set feature code
-    if (featureCode && featureCode.length) gl.uniform1fv(this.uFeatureCode, featureCode)
+    // WebGL1 - set paint properties; WebGL2 - set feature code
+    if (type === 1) {
+      gl.uniform1f(this.uSize, size)
+      gl.uniform4fv(this.uFill, fill)
+      gl.uniform4fv(this.uStroke, stroke)
+      gl.uniform1f(this.uStrokeWidth, strokeWidth)
+    } else if (featureCode && featureCode.length) gl.uniform1fv(this.uFeatureCode, featureCode)
     // turn depth testing off
     context.stencilFunc(0)
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     // set the texture size uniform
-    this.setTexSize(texSize)
+    gl.uniform2fv(this.uTexSize, texSize)
     // bind the correct glyph texture
     gl.activeTexture(gl.TEXTURE1)
     gl.bindTexture(gl.TEXTURE_2D, texture)

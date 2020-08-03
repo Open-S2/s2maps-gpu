@@ -27,10 +27,6 @@ export default class glyphLineProgram extends Program {
     this.uLineWidth = gl.getUniformLocation(this.glProgram, 'uLineWidth')
   }
 
-  setLineWidth (lineWidth: number) {
-    this.gl.uniform1f(this.uLineWidth, lineWidth)
-  }
-
   draw (source: GlyphTileSource) {
     // grab context
     const { gl } = this
@@ -39,13 +35,15 @@ export default class glyphLineProgram extends Program {
     const count = glyphLineVertices.length / 7
     if (count) {
       // TODO: set maxDistance if exists (for now, just set to 4)
-      this.setLineWidth(4)
+      gl.uniform1f(this.uLineWidth, 4)
       // this.setLineWidth(maxDistance | 4)
       gl.blendFunc(gl.ONE, gl.ZERO)
+      gl.blendEquation(gl.MAX)
       // set the line vao
       gl.bindVertexArray(glyphLineVAO)
       // draw elements
       gl.drawArrays(gl.TRIANGLES, 0, count) // gl.drawArrays(mode, first, count)
+      gl.blendEquation(gl.FUNC_ADD)
     }
   }
 }

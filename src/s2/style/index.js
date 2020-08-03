@@ -3,7 +3,7 @@ import Color from './color'
 import Map from '../ui/map'
 import { Shade, Wallpaper, Skybox, Tile } from '../source'
 import requestData from '../util/fetch'
-import { encodeLayerAttribute, orderLayer } from './conditionals'
+import { encodeLayerAttribute, parseFeatureFunction, orderLayer } from './conditionals'
 
 import type { Sources, Layer, Mask, WallpaperStyle } from './styleSpec'
 import type { TileRequest } from '../workers/tile.worker'
@@ -140,9 +140,17 @@ export default class Style {
   }
 
   _buildSphereBackground (sphereBackground?: Object) {
-    if (sphereBackground) this.sphereBackground = {
-      code: encodeLayerAttribute(sphereBackground['background-color'], sphereBackground.lch),
-      lch: sphereBackground.lch
+    if (sphereBackground) {
+      if (this.glType === 1) {
+        this.sphereBackground = {
+          code: parseFeatureFunction(sphereBackground['background-color'], 'color')
+        }
+      } else {
+        this.sphereBackground = {
+          code: encodeLayerAttribute(sphereBackground['background-color'], sphereBackground.lch),
+          lch: sphereBackground.lch
+        }
+      }
     }
   }
 

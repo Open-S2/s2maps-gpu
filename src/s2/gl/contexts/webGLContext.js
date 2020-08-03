@@ -5,17 +5,21 @@ export default class WebGLContext extends Context {
   elementIndexUint: 'OES_element_index_uint'
   angledInstancedArrays: 'ANGLE_instanced_arrays'
   vertexArrayObject: 'OES_vertex_array_object'
+  blendMinMax: 'EXT_blend_minmax'
   constructor (context: WebGLRenderingContext, devicePixelRatio: number) {
     super(context, devicePixelRatio)
     // let the painter know it's a WebGLContext
     this.type = 1
+    const { gl } = this
     // grab extensions
-    this.elementIndexUint = this.gl.getExtension('OES_element_index_uint')
+    this.elementIndexUint = gl.getExtension('OES_element_index_uint')
     if (!this.elementIndexUint) console.log('*** Error - "OES_element_index_uint" is not a supported extension')
-    this.angledInstancedArrays = this.gl.getExtension('ANGLE_instanced_arrays')
+    this.angledInstancedArrays = gl.getExtension('ANGLE_instanced_arrays')
     if (!this.angledInstancedArrays) console.log('*** Error - "ANGLE_instanced_arrays" is not a supported extension')
-    this.vertexArrayObject = this.gl.getExtension('OES_vertex_array_object')
+    this.vertexArrayObject = gl.getExtension('OES_vertex_array_object')
     if (!this.vertexArrayObject) console.log('*** Error - "OES_vertex_array_object" is not a supported extension')
+    this.blendMinMax = gl.getExtension('EXT_blend_minmax')
+    if (!this.blendMinMax) console.log('*** Error - "EXT_blend_minmax" is not a supported extension')
     // polyfill
     this._polyfill()
     // create default quad
@@ -23,14 +27,15 @@ export default class WebGLContext extends Context {
   }
 
   _polyfill () {
+    const { gl } = this
     // OES_vertex_array_object
     if (this.vertexArrayObject) {
       // createVertexArray
-      this.gl.createVertexArray = () => this.vertexArrayObject.createVertexArrayOES()
+      gl.createVertexArray = () => this.vertexArrayObject.createVertexArrayOES()
       // bindVertexArray
-      this.gl.bindVertexArray = (vao) => this.vertexArrayObject.bindVertexArrayOES(vao)
+      gl.bindVertexArray = (vao) => this.vertexArrayObject.bindVertexArrayOES(vao)
       // deleteVertexArray
-      this.gl.deleteVertexArray = (vao) => this.vertexArrayObject.deleteVertexArrayOES(vao)
+      gl.deleteVertexArray = (vao) => this.vertexArrayObject.deleteVertexArrayOES(vao)
     }
 
     // ANGLE_instanced_arrays
@@ -42,5 +47,8 @@ export default class WebGLContext extends Context {
       // drawElementsInstanced
       // this.gl.drawElementsInstanced = (mode, count, type, offset, primcount) => this.angledInstancedArrays.drawElementsInstancedANGLE(mode, count, type, offset, primcount)
     }
+
+    // min max blending
+    if (this.blendMinMax) gl.MAX = this.blendMinMax.MAX_EXT
   }
 }

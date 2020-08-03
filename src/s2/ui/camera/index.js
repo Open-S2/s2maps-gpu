@@ -120,7 +120,7 @@ export default class Camera {
       // get tile
       const tile = this.tileCache.get(tileID)
       // inject into tile
-      tile.injectVectorSourceData(source, new Int16Array(vertexBuffer), (indexBuffer) ? new Uint32Array(indexBuffer) : null, codeTypeBuffer ? new Uint8Array(codeTypeBuffer) : null, new Uint32Array(featureGuideBuffer), this.style.layers)
+      tile.injectVectorSourceData(source, new Int16Array(vertexBuffer), (indexBuffer) ? new Uint32Array(indexBuffer) : null, codeTypeBuffer ? new Uint8Array(codeTypeBuffer) : null, new Float32Array(featureGuideBuffer), this.style.layers)
       // new 'paint', so painter is dirty
       this.painter.dirty = true
     }
@@ -155,7 +155,7 @@ export default class Camera {
       const glyphSource = tile.injectGlyphSourceData(
         source, new Float32Array(glyphFilterBuffer), new Float32Array(glyphFillVertexBuffer),
         new Float32Array(glyphFillIndexBuffer), new Float32Array(glyphLineVertexBuffer),
-        new Float32Array(glyphQuadBuffer), new Uint32Array(layerGuideBuffer), this.style.layers
+        new Float32Array(glyphQuadBuffer), new Float32Array(layerGuideBuffer), this.style.layers
       )
       // tell the painter to prep the texture
       this.painter.buildGlyphTexture(glyphSource)

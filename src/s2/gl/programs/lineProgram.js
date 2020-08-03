@@ -12,13 +12,18 @@ import type { Context } from '../contexts'
 import type { VectorTileSource } from '../../source/tile'
 
 export default class LineProgram extends Program {
+  uColor: WebGLUniformLocation
+  uWidth: WebGLUniformLocation
   constructor (context: Context) {
     // get gl from context
     const { gl, type, devicePixelRatio } = context
     // if webgl1, setup attribute locations
     if (type === 1) {
-      gl.attributeLocations = { aType: 1, aPrev: 2, aCurr: 3, aNext: 4 }
+      gl.attributeLocations = { aType: 0, aPrev: 1, aCurr: 2, aNext: 3 }
       super(context, vert1, frag1)
+      // setup color and width uniforms
+      this.uColor = gl.getUniformLocation(this.glProgram, 'uColor')
+      this.uWidth = gl.getUniformLocation(this.glProgram, 'uWidth')
     } else {
       super(context, vert2, frag2)
     }
@@ -30,10 +35,14 @@ export default class LineProgram extends Program {
   draw (featureGuide: FeatureGuide, source: VectorTileSource) {
     // grab context
     const { gl, context } = this
+    const { type } = context
     // get current source data
-    let { count, offset, featureCode, mode } = featureGuide
+    let { count, offset, featureCode, mode, color, width } = featureGuide
     // set feature code
-    if (featureCode && featureCode.length) gl.uniform1fv(this.uFeatureCode, featureCode)
+    if (type === 1) {
+      if (color) gl.uniform4fv(this.uColor, color)
+      if (width) gl.uniform1f(this.uWidth, width)
+    } else { if (featureCode && featureCode.length) gl.uniform1fv(this.uFeatureCode, featureCode) }
     // disable culling
     context.disableCullFace()
     // apply the appropriate offset in the source vertexBuffer attribute

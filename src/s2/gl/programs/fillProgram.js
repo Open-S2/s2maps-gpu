@@ -24,7 +24,7 @@ export default class FillProgram extends Program {
       // build shaders
       super(context, vertex1, fragment1)
       // get the color uniform
-      // this.uColors = gl.getUniformLocation(program, 'uColors')
+      this.uColors = gl.getUniformLocation(this.glProgram, 'uColors')
     } else {
       super(context, vertex2, fragment2)
     }
@@ -35,14 +35,15 @@ export default class FillProgram extends Program {
     const { context } = this
     const { gl, type } = context
     // get current source data
-    let { count, featureCode, offset, mode } = featureGuide
+    let { count, featureCode, subFeatureCode, offset, mode } = featureGuide
     const { threeD } = source
     // set 3D uniform
     this.set3D(threeD)
     // set feature code (webgl 1 we store the colors, webgl 2 we store layerCode lookups)
-    if (featureCode && featureCode.length) {
-      if (type === 1) gl.uniform4fv(this.uColors, featureCode, 0, featureCode.length)
-      else gl.uniform1fv(this.uFeatureCode, featureCode)
+    if (type === 1) {
+      if (subFeatureCode) gl.uniform4fv(this.uColors, subFeatureCode, 0, subFeatureCode.length)
+    } else {
+      if (featureCode && featureCode.length) gl.uniform1fv(this.uFeatureCode, featureCode)
     }
     // draw elements
     gl.drawElements(mode ? mode : gl.TRIANGLES, count, gl.UNSIGNED_INT, (offset | 0) * 4)

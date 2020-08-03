@@ -35,10 +35,10 @@ export default function parseInputRange (input) {
     }
   }
   // now store all possible outcomes for sub conditionals
-  return (properties, encoding) => {
+  return (encoding, properties) => {
     for (let key in preSolutions) {
       // get current state of encoding
-      preSolutions[key](properties, encoding)
+      preSolutions[key](encoding, properties)
     }
   }
 }

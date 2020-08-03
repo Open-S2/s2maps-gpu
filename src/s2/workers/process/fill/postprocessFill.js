@@ -3,7 +3,8 @@ import featureSort from '../featureSort'
 
 import type { Feature } from '../../tile.worker'
 
-const MAX_FEATURE_BATCH_SIZE = 1 << 7
+// const MAX_FEATURE_BATCH_SIZE = 1 << 7 // 128
+const MAX_FEATURE_BATCH_SIZE = 1 << 6 // 64
 
 export default function postprocessFill (mapID: string, source: string, tileID: string,
   features: Array<Feature>, postMessage: Function) {
@@ -13,6 +14,18 @@ export default function postprocessFill (mapID: string, source: string, tileID: 
   // Step 1: Sort by layerID, than sort by feature code.
   features.sort(featureSort)
 
+  // Step 1a: If WebGL1 the variable "featureCode" will exist; Swap the two
+  let tmp
+  let webgl1 = false
+  if (features[0].featureCode) {
+    webgl1 = true
+    for (const feature of features) {
+      tmp = feature.code
+      feature.code = feature.featureCode
+      feature.featureCode = tmp
+    }
+  }
+
   // step 2: Run through all features and bundle into the fewest featureBatches. Caveats:
   // 1) don't store VAO set larger than index size (we use an extension for WebGL1, so we will probably never go over 1 << 32)
   // 2) don't store any feature code larger than MAX_FEATURE_BATCH_SIZE
@@ -21,6 +34,7 @@ export default function postprocessFill (mapID: string, source: string, tileID: 
   let codeType: Array<number> = []
   let featureGuide: Array<number> = []
   let encodings: Array<number> = []
+  let subEncodings: Array<number> = []
   let indicesOffset: number = 0
   let vertexOffset: number = 0
   let encodingIndexes = { '': 0 }
@@ -35,17 +49,20 @@ export default function postprocessFill (mapID: string, source: string, tileID: 
     ) {
       // only store if count is actually greater than 0
       if (indices.length - indicesOffset) featureGuide.push(curLayerID, indices.length - indicesOffset, indicesOffset, encodings.length, ...encodings) // layerID, count, offset, encoding size, encodings
+      if (webgl1) featureGuide.push(subEncodings.length, ...subEncodings)
       // update variables for reset
       indicesOffset = indices.length
       encodings = []
+      subEncodings = []
       encodingIndexes = { '': 0 }
     }
     // setup encodings data. If we didn't have current feature's encodings already, create and set index
     const feKey = feature.code.toString()
     encodingIndex = encodingIndexes[feKey]
     if (encodingIndex === undefined) {
-      encodingIndex = encodingIndexes[feKey] = encodings.length
+      encodingIndex = encodingIndexes[feKey] = webgl1 ? subEncodings.length : encodings.length
       encodings.push(...feature.code)
+      if (webgl1) subEncodings.push(...feature.featureCode)
     }
     // store
     vertexOffset = vertices.length / 2
@@ -63,13 +80,14 @@ export default function postprocessFill (mapID: string, source: string, tileID: 
   // store the very last featureGuide batch
   if (indices.length - indicesOffset) {
     featureGuide.push(curLayerID, indices.length - indicesOffset, indicesOffset, encodings.length, ...encodings) // layerID, count, offset, encoding size, encodings
+    if (webgl1) featureGuide.push(subEncodings.length, ...subEncodings) // subEncoding size, encoding
   }
 
   // Upon building the batches, convert to buffers and ship.
   const vertexBuffer = new Int16Array(vertices).buffer
   const indexBuffer = new Uint32Array(indices).buffer
   const codeTypeBuffer = new Uint8Array(codeType).buffer
-  const featureGuideBuffer = new Uint32Array(featureGuide).buffer
+  const featureGuideBuffer = new Float32Array(featureGuide).buffer
   // ship the vector data.
   postMessage({
     mapID,

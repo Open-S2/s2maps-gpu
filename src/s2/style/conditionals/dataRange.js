@@ -36,13 +36,13 @@ export default function parseDataRange (input) {
     c += 2
   }
 
-  return (properties, encoding) => {
+  return (encoding, properties) => {
     const dataInput = (properties && properties[key] && !isNaN(properties[key])) ? +properties[key] : 0
     // first store the actual value
     encoding.push(dataInput)
     // run the functions just incase they have more encodings to share
     if (dataInput <= input[0]) {
-      return input[1](properties, encoding)
+      return input[1](encoding, properties)
     } else if (dataInput >= input[input.length - 2]) {
       return input[input.length - 1](properties, encoding)
     } else {
@@ -51,10 +51,10 @@ export default function parseDataRange (input) {
       // now we know the dataInput is inbetween input[i - 2][0] and input[i - 1][0]
       const startRange = input[i - 2]
       // we don't need the value returned, but potentially we need to encode sub conditions
-      input[i - 1](properties, encoding)
+      input[i - 1](encoding, properties)
       // if equal to start, then we don't need to store the next encoding, we never reach it
       if (startRange === dataInput) return
-      input[i + 1](properties, encoding)
+      input[i + 1](encoding, properties)
       return
     }
   }

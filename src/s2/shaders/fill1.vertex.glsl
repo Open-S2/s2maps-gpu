@@ -12,7 +12,6 @@ uniform vec4 uColors[16];
 #include ./ST2XYZ;
 
 varying vec4 color;
-varying vec2 uvPos;
 
 void main () {
   // set position

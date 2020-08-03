@@ -241,13 +241,14 @@ export default class Tile {
   }
 
   injectVectorSourceData (sourceName: string, vertexArray: Int16Array, indexArray?: Uint32Array,
-    codeTypeArray: Uint8Array, featureGuideArray: Uint32Array, layers: Array<Layer>): VectorTileSource {
+    codeTypeArray: Uint8Array, featureGuideArray: Float32Array, layers: Array<Layer>): VectorTileSource {
     // Since a parent may have been injected, we need to remove any instances of the said source data.
     this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === sourceName))
     // store a reference to the source
+    const subType = sourceName.split(':').pop()
     const vectorSource = this.sourceData[sourceName] = {
       type: 'vector',
-      subType: sourceName.split(':').pop(),
+      subType,
       vertexArray,
       indexArray,
       codeTypeArray
@@ -255,6 +256,7 @@ export default class Tile {
     // we work off the featureGuideArray, adding to the buffer as we go
     const lgl = featureGuideArray.length
     let i = 0
+    // console.log('featureGuideArray', featureGuideArray)
     while (i < lgl) {
       // grab the size, layerID, count, and offset, and update the index
       const [layerID, count, offset, encodingSize] = featureGuideArray.slice(i, i + 4)
@@ -262,7 +264,7 @@ export default class Tile {
       // grab the layers type and code
       const { type, code, lch } = layers[layerID]
       // create and store the featureGuide
-      this.featureGuide.push({
+      const feature = {
         tile: this,
         faceST: this.faceST,
         layerID,
@@ -274,8 +276,22 @@ export default class Tile {
         featureCode: new Float32Array(encodingSize ? [...featureGuideArray.slice(i, i + encodingSize)] : [0]), // NOTE: The sorting algorithm doesn't work if an array is empty, so we have to have at least one number, just set it to 0
         layerCode: code,
         lch
-      })
+      }
       i += encodingSize
+      // if webgl1, we have color (and width if line) data
+      if (this.context.type === 1) {
+        feature.subFeatureCode = feature.featureCode
+        const subEncodingSize = featureGuideArray[i]
+        i++
+        feature.featureCode = new Float32Array(subEncodingSize ? [...featureGuideArray.slice(i, i + subEncodingSize)] : [0])
+        i += subEncodingSize
+        if (subType === 'line') {
+          feature.color = new Float32Array(feature.subFeatureCode.slice(0, 4))
+          feature.width = feature.subFeatureCode[4]
+        }
+      }
+      // store
+      this.featureGuide.push(feature)
     }
     // build the VAO
     buildSource(this.context, vectorSource)
@@ -286,7 +302,7 @@ export default class Tile {
   injectGlyphSourceData (sourceName: string, glyphFilterVertices: Float32Array,
     glyphFillVertices: Float32Array, glyphFillIndices: Float32Array,
     glyphLineVertices: Float32Array, glyphQuads: Float32Array,
-    layerGuideBuffer: Uint32Array, layers: Array<Layer>): GlyphTileSource {
+    layerGuideBuffer: Float32Array, layers: Array<Layer>): GlyphTileSource {
     // Since a parent may have been injected, we need to remove any instances of the said source data.
     this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === sourceName))
     // if (this.face === 4 && this.zoom === 4 && this.x === 0 && this.y === 6) console.log('POST INJECT', this.featureGuide)
@@ -316,7 +332,7 @@ export default class Tile {
       // grab the layers type and code
       const { code, lch } = layers[layerID]
       // create and store the featureGuide
-      this.featureGuide.push({
+      const feature = {
         tile: this,
         faceST: this.faceST,
         layerID,
@@ -330,8 +346,19 @@ export default class Tile {
         featureCode: new Float32Array(encodingSize ? [...layerGuideBuffer.slice(i, i + encodingSize)] : [0]),
         layerCode: code,
         lch
-      })
+      }
       i += encodingSize
+      // if WebGL1 - we also have to grab the fill, stroke, and strokeWidth
+      if (this.context.type === 1) {
+        // get fill, stroke, and stroke width. Increment
+        feature.size = layerGuideBuffer[i]
+        feature.fill = layerGuideBuffer.slice(i + 1, i + 5)
+        feature.stroke = layerGuideBuffer.slice(i + 5, i + 9)
+        feature.strokeWidth = layerGuideBuffer[i + 9]
+        i += 10
+      }
+      // store feature
+      this.featureGuide.push(feature)
     }
 
     // build the VAO

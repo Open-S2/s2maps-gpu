@@ -10,7 +10,7 @@ out vec4 fragColor;
 // Updated root finding algorithm that copes better with degenerate cases (straight lines)
 // From "The Low-Rank LDL^T Quartic Solver" by Peter Strobach, 2015
 
-float solve_par_dist (in vec2 pcoord, in int iter) {
+float solve_par_dist (in vec2 pcoord) {
   float sigx = pcoord.x > 0. ? 1. : -1.;
   float px = abs(pcoord.x);
   float py = pcoord.y;
@@ -21,7 +21,7 @@ float solve_par_dist (in vec2 pcoord, in int iter) {
              g > xr ? h / abs( g ) :
              xr;
 
-  for (int i = 0; i < iter; ++i) {
+  for (int i = 0; i < 3; ++i) {
     float rcx0 = 1. / x0;
     float pb = h * rcx0 * rcx0;
     float pc = -px * rcx0 + g;
@@ -42,9 +42,8 @@ float solve_par_dist (in vec2 pcoord, in int iter) {
   return dist;
 }
 
-
 void main () {
-  float dist = solve_par_dist(vPar, 3);
+  float dist = solve_par_dist(vPar);
   float pdist = min(dist * vDistScale, 1.);
 
   float color = 0.5 - 0.5 * pdist;
@@ -52,6 +51,4 @@ void main () {
   if (color == 0.) discard;
 
   fragColor = vec4(color);
-  // fragColor = vec4(0., 0., 0., color);
-  gl_FragDepth = pdist;
 }

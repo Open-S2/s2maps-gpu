@@ -49,12 +49,12 @@ export default function parseDataCondition (input) {
     }
   }
   if (!conditions['default']) conditions['default'] = () => null // just incase it's missing in the style json
-  return (properties, encoding) => {
+  return (encoding, properties) => {
     if (properties) {
       for (const condition of conditions) { // run through the conditions
         if (condition.condition(properties)) {
           encoding.push(condition.encodeID)
-          return condition.result(properties, encoding)
+          return condition.result(encoding, properties)
         }
       }
     }

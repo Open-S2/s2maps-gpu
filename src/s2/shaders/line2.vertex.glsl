@@ -1,10 +1,10 @@
 #version 300 es
 precision highp float;
 
-layout (location = 1) in float aType;
-layout (location = 2) in vec2 aPrev; //   (INSTANCED)
-layout (location = 3) in vec2 aCurr; //   (INSTANCED)
-layout (location = 4) in vec2 aNext; //   (INSTANCED)
+layout (location = 0) in float aType;
+layout (location = 1) in vec2 aPrev; //   (INSTANCED)
+layout (location = 2) in vec2 aCurr; //   (INSTANCED)
+layout (location = 3) in vec2 aNext; //   (INSTANCED)
 
 // POSITION TYPES:
 // 0 -> curr

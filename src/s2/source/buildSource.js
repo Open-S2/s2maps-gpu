@@ -23,15 +23,15 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
     gl.enableVertexAttribArray(0)
     gl.vertexAttribPointer(0, 2, gl.SHORT, false, 0, 0)
     // line
-    gl.enableVertexAttribArray(2) // prev
-    gl.enableVertexAttribArray(3) // curr
-    gl.enableVertexAttribArray(4) // next
-    gl.vertexAttribPointer(2, 2, gl.SHORT, false, 12, 0)
-    gl.vertexAttribPointer(3, 2, gl.SHORT, false, 12, 4)
-    gl.vertexAttribPointer(4, 2, gl.SHORT, false, 12, 8)
+    gl.enableVertexAttribArray(1) // prev
+    gl.enableVertexAttribArray(2) // curr
+    gl.enableVertexAttribArray(3) // next
+    gl.vertexAttribPointer(1, 2, gl.SHORT, false, 12, 0)
+    gl.vertexAttribPointer(2, 2, gl.SHORT, false, 12, 4)
+    gl.vertexAttribPointer(3, 2, gl.SHORT, false, 12, 8)
+    gl.vertexAttribDivisor(1, 1)
     gl.vertexAttribDivisor(2, 1)
     gl.vertexAttribDivisor(3, 1)
-    gl.vertexAttribDivisor(4, 1)
     // RADII
     if (source.radiiArray) {
       // Create a vertex buffer
@@ -80,8 +80,8 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
       gl.bindBuffer(gl.ARRAY_BUFFER, source.typeBuffer)
       gl.bufferData(gl.ARRAY_BUFFER, source.typeArray, gl.STATIC_DRAW)
       // link attributes
-      gl.enableVertexAttribArray(1) // position type (how to re-adjust)
-      gl.vertexAttribPointer(1, 1, gl.FLOAT, false, 0, 0)
+      gl.enableVertexAttribArray(0) // position type (how to re-adjust)
+      gl.vertexAttribPointer(0, 1, gl.FLOAT, false, 0, 0)
     }
 
     // cleanup

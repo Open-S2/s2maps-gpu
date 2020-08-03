@@ -73,8 +73,6 @@ void main () {
     glPos.xy += (XY / uAspect) + (glyphSize / uAspect * aUV);
     // set texture position
     vTexcoord = (aTexUV / uTexSize) + (vec2(aTexWH.x * aTexWH.y, aTexWH.y) / uTexSize * aUV);
-    // set color
-    // color = vec4(0.35, 0.35, 0.35, 1.);
   } else {
     draw = 0.;
     vTexcoord = vec2(0., 0.);

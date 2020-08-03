@@ -6,7 +6,7 @@ type Point = [number, number]
 
 export default function preprocessFill (geometry: Array<Array<Point>> | Array<Point>,
   type: 3 | 4, vertices: Array<number>, indices: Array<number>,
-  division: number, extent: number) {
+  division: number, extent: number): null | Array<number> {
   // prep polys
   const polys = []
   // prep for processing
