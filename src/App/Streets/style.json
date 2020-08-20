@@ -6,12 +6,12 @@
   "minzoom": 0,
   "maxzoom": 20,
   "sources": {
-    "world": "http://192.168.0.7:8000/data/fills"
+    "world": "https://s3.s2maps.io/streets-v1"
   },
   "fonts": {
-    "default": "http://192.168.0.7:8000/fonts/default",
-    "roboto-regular": "http://192.168.0.7:8000/fonts/roboto-regular",
-    "roboto-medium": "http://192.168.0.7:8000/fonts/roboto-medium"
+    "default": "https://s3.s2maps.io/fonts-v1/default",
+    "roboto-regular": "https://s3.s2maps.io/fonts-v1/RobotoRegular",
+    "roboto-medium": "https://s3.s2maps.io/fonts-v1/RobotoMedium"
   },
   "shade": false,
   "wallpaper": {

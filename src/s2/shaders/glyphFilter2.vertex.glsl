@@ -59,10 +59,13 @@ void main () {
   gl_PointSize = 5.;
   // compute based upon our current step
   if (uMode == 0) {
+    // MODE 0 - simply draw the texts positional point. Color represents the ID of the text feature
+    // This mode will naturally filter out any points that are behind the sphere
     // convert aID (really a uint32) to an rgba equivalent (split into 4 pieces of 8 bits)
     int id = int(aID);
     color = vec4(float(id & 255) / 255., float((id >> 8) & 255) / 255., float(id >> 16) / 255., 1.);
   } else if (uMode == 1) {
+    // check if the point exists. If so, we draw the text quad as data in a texture.
     // only draw to one point
     gl_PointSize = 1.;
     // set position

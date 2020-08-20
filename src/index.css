@@ -11,3 +11,155 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
 }
+
+.App {
+  position: fixed;
+  text-align: center;
+  color: #efefef;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.Home {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+#map-container {
+  width: 100%;
+  height: 100%;
+}
+
+#control-container {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding-top: 20px;
+  padding-right: 20px;
+}
+
+.s2-canvas-container {
+  height: inherit;
+  width: inherit;
+}
+
+.s2-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  height: inherit;
+  width: inherit;
+}
+
+/* HOME STYLING */
+.banner {
+  width: 100vw;
+  height: 350px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #333333;
+}
+
+.navigation-container {
+  padding: 50px 0px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.link-container {
+  position: relative;
+  margin: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  border-radius: 12.5px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+  transition: box-shadow .6s cubic-bezier(0.165, 0.84, 0.44, 1);
+  overflow: hidden;
+}
+.link-container:hover {
+  box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+}
+/* .link-container::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 12.5px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  opacity: 0;
+  transition: opacity .6s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+.link-container:hover::after {
+  opacity: 1;
+} */
+
+
+a:link {
+  text-decoration: none!important;
+  color: #707070;
+}
+a:hover {
+  text-decoration: none!important;
+  color: #707070;
+}
+a:active {
+  text-decoration: none!important;
+  color: #707070;
+}
+a:visited {
+  text-decoration: none!important;
+  color: #707070;
+}
+
+.link-name {
+  padding: 8px;
+  font-size: 20px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.link-image {
+  width: 640px;
+}
+
+.link-video {
+  width: 640px;
+}
+
+.warning-container {
+  text-align: center;
+  font-size: 18px;
+  padding: 20px 20px;
+  padding-top: 50px;
+}
+
+.warn {
+  padding: 5px 0px;
+}
+
+.warn-img {
+  font-weight: 400;
+  font-family: apple color emoji,segoe ui emoji,noto color emoji,android emoji,emojisymbols,emojione mozilla,twemoji mozilla,segoe ui symbol;
+}
+
+@media only screen and (max-width: 700px) {
+  .banner {
+    height: 250px;
+  }
+
+  #s2-logo {
+    width: 275px;
+  }
+}

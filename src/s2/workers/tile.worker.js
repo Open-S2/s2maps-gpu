@@ -77,7 +77,6 @@ export const MAX_FEATURE_BATCH_SIZE = 1 << 7
 
 export default class TileWorker {
   id: number
-  glyphBuilder: GlyphBuilder = new GlyphBuilder()
   maps: { [string]: StylePackage } = {} // mapID: StylePackage
   status: 'building' | 'ready' = 'ready'
   cache: { [string]: Array<TileRequest> } = {} // mapID: TileRequests
@@ -99,6 +98,8 @@ export default class TileWorker {
     if (!this.idGen) this.idGen = { num: id + 1, startNum: id + 1, incrSize: totalWorkers, maxNum: ID_MAX_SIZE }
     // set status
     this.status = 'building'
+    // create a glyphBuilder for said map
+    style.glyphBuilder = new GlyphBuilder()
     // store the style
     this.maps[mapID] = style
     // prep filter functions
@@ -183,7 +184,7 @@ export default class TileWorker {
       promises.push(new Promise((resolve, _) => {
         requestData(fonts[fontName], 'pbf', font => {
           // build the font
-          if (font) self.glyphBuilder.addFont(fontName, font)
+          if (font) style.glyphBuilder.addFont(fontName, font)
           resolve()
         })
       }))
@@ -330,7 +331,7 @@ export default class TileWorker {
     const lineFeatures: Array<Feature> = []
     const texts: Array<Text> = []
     const parentLayers: ParentLayers = {}
-    const { layers, glType } = this.maps[mapID]
+    const { layers, glType, glyphBuilder } = this.maps[mapID]
     const webgl1 = glType === 1
     for (let layerID = 0, ll = layers.length; layerID < ll; layerID++) {
       const layer = layers[layerID]
@@ -409,7 +410,7 @@ export default class TileWorker {
     // we seperate by type to make it seem like data is loading quicker, and to handle different vertex sizes
     if (fillFeatures.length) postprocessFill(mapID, `${sourceName}:fill`, hash, fillFeatures, postMessage)
     if (lineFeatures.length) postprocessLine(mapID, `${sourceName}:line`, hash, lineFeatures, postMessage)
-    if (texts.length) postprocessGlyph(mapID, `${sourceName}:glyph`, hash, texts, this.glyphBuilder, this.id, postMessage)
+    if (texts.length) postprocessGlyph(mapID, `${sourceName}:glyph`, hash, texts, glyphBuilder, this.id, postMessage)
     if (Object.keys(parentLayers).length) postMessage({ mapID, type: 'parentlayers', tileID: hash, parentLayers })
   }
 }
