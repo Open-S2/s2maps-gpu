@@ -33,14 +33,14 @@ bool overlap (vec4 a, vec4 b) { // vec4(left, bottom, right, top)
   return true;
 }
 
-vec4 getBbox (int index) {
+vec4 getBbox (in int index) {
   vec4 btmLeft = texelFetch(uQuads, ivec2(index, 0), 0);
-  vec4 topRght = texelFetch(uQuads, ivec2(index + 2048, 0), 0);
+  vec4 topRght = texelFetch(uQuads, ivec2(index + 1024, 0), 0);
   return vec4(
-    (int(btmLeft.r * 255.) << 8) + int(btmLeft.g * 255.),
-    (int(btmLeft.b * 255.) << 8) + int(btmLeft.a * 255.),
-    (int(topRght.r * 255.) << 8) + int(topRght.g * 255.),
-    (int(topRght.b * 255.) << 8) + int(topRght.a * 255.)
+    float(int(btmLeft.r * 255.) << 8) + btmLeft.g * 255., // left
+    float(int(btmLeft.b * 255.) << 8) + btmLeft.a * 255., // bottom
+    float(int(topRght.r * 255.) << 8) + topRght.g * 255., // right
+    float(int(topRght.b * 255.) << 8) + topRght.a * 255.  // top
   );
 }
 
@@ -69,8 +69,8 @@ void main () {
     // only draw to one point
     gl_PointSize = 1.;
     // set position
-    if (aStep == 0.) gl_Position = vec4(2. * ((aIndex + uIndexOffset) / 4096.) - 1., 0., 0., 1.);
-    else gl_Position = vec4(2. * ((2048. + aIndex + uIndexOffset) / 4096.) - 1., 0., 0., 1.);
+    if (aStep == 0.) gl_Position = vec4(2. * ((0.5 + aIndex + uIndexOffset) / 2048.) - 1., 0., 0., 1.);
+    else gl_Position = vec4(2. * ((0.5 + 1024. + aIndex + uIndexOffset) / 2048.) - 1., 0., 0., 1.);
 
     // check if point exists, that means it passed the depth test
     int id = int(aID);

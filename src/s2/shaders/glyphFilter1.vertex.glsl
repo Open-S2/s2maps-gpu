@@ -31,8 +31,8 @@ bool overlap (vec4 a, vec4 b) { // vec4(left, bottom, right, top)
 }
 
 vec4 getBbox (float index) {
-  vec4 btmLeft = texture2D(uQuads, vec2(index / 4096., 0.));
-  vec4 topRght = texture2D(uQuads, vec2((index + 2048.) / 4096., 0.));
+  vec4 btmLeft = texture2D(uQuads, vec2(index / 2048., 0.));
+  vec4 topRght = texture2D(uQuads, vec2((index + 1024.) / 2048., 0.));
   return vec4(
     (btmLeft.r * 255. * pow(2., 8.)) + btmLeft.g * 255.,
     (btmLeft.b * 255. * pow(2., 8.)) + btmLeft.a * 255.,
@@ -91,8 +91,8 @@ void main () {
     // only draw to one point
     gl_PointSize = 1.;
     // set position
-    if (aStep == 0.) gl_Position = vec4(2. * ((aIndex + uIndexOffset) / 4096.) - 1., 0., 0., 1.);
-    else gl_Position = vec4(2. * ((2048. + aIndex + uIndexOffset) / 4096.) - 1., 0., 0., 1.);
+    if (aStep == 0.) gl_Position = vec4(2. * ((0.5 + aIndex + uIndexOffset) / 2048.) - 1., 0., 0., 1.);
+    else gl_Position = vec4(2. * ((0.5 + 1024. + aIndex + uIndexOffset) / 2048.) - 1., 0., 0., 1.);
 
     // check if point exists, that means it passed the depth test
     int id = int(aID);

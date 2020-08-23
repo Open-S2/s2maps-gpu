@@ -143,7 +143,7 @@ export default class Style {
     if (sphereBackground) {
       if (this.glType === 1) {
         this.sphereBackground = {
-          code: parseFeatureFunction(sphereBackground['background-color'], 'color')
+          code: parseFeatureFunction(JSON.parse(JSON.stringify(sphereBackground['background-color'])), 'color')
         }
       } else {
         this.sphereBackground = {

@@ -60,6 +60,7 @@ void main () {
     float size = decodeFeature(false, index, featureIndex)[0] * uDevicePixelRatio;
     float strokeWidth = decodeFeature(false, index, featureIndex)[0] * uDevicePixelRatio;
     color = decodeFeature(true, index, featureIndex);
+    // color = vec4(ivec3(inputID.rgb * 256.), 1.);
     buf = 0.49;
     if (!uIsFill) {
       color = decodeFeature(true, index, featureIndex);
