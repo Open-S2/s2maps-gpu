@@ -129,9 +129,9 @@ export default class Tile {
   // inject references to featureGuide from each parentTile. Sometimes if we zoom really fast, we inject
   // a parents' parent or deeper, so we need to reflect that int the tile property. The other case
   // is the tile wants to display a layer that exists in a 'lower' zoom than this one.
-  injectParentTile (parentTile: Tile, filterLayers?: Array<number>) {
+  injectParentTile (parentTile: Tile, permParent: boolean) {
     for (const feature of parentTile.featureGuide) {
-      if (!feature.parent && feature.type === 'raster') this.featureGuide.push({ ...feature, tile: this, parent: true })
+      if (!feature.parent && feature.type !== 'glyph') this.featureGuide.push({ ...feature, tile: this, parent: feature.parent, permParent })
     }
   }
 
@@ -243,7 +243,8 @@ export default class Tile {
   injectVectorSourceData (sourceName: string, vertexArray: Int16Array, indexArray?: Uint32Array,
     codeTypeArray: Uint8Array, featureGuideArray: Float32Array, layers: Array<Layer>): VectorTileSource {
     // Since a parent may have been injected, we need to remove any instances of the said source data.
-    this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === sourceName))
+    // however, ignore data that is pulled from a parent that doesn't exist at this zoom
+    this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === sourceName && !fg.permParent))
     // store a reference to the source
     const subType = sourceName.split(':').pop()
     const vectorSource = this.sourceData[sourceName] = {
@@ -292,6 +293,9 @@ export default class Tile {
       }
       // store
       this.featureGuide.push(feature)
+      // if a lower zoom tile needs this feature, we add
+      const childRequest = this.childrenRequests[layerID]
+      if (childRequest) childRequest.featureGuide.push({ ...feature, tile: childRequest, parent: this, permParent: true })
     }
     // build the VAO
     buildSource(this.context, vectorSource)
