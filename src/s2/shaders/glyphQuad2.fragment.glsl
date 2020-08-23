@@ -16,10 +16,13 @@ uniform sampler2D uGlyphTex;
 out vec4 fragColor;
 
 void main () {
-  if (draw == 0.) discard;
-  float dist = texture(uGlyphTex, vTexcoord).r;
-  float alpha = smoothstep(buf - GAMMA, buf + GAMMA, dist);
-  if (alpha < MIN_ALPHA) discard;
-  // fragColor = vec4(1., 1., 1., alpha);
-  fragColor = vec4(color.rgb, alpha * color.a);
+  if (draw == 0.) {
+    discard;
+  } else {
+    float dist = texture(uGlyphTex, vTexcoord).r;
+    float alpha = smoothstep(buf - GAMMA, buf + GAMMA, dist);
+    if (alpha < MIN_ALPHA) discard;
+    fragColor = vec4(color.rgb, alpha * color.a);
+    // fragColor = vec4(1., 1., 1., alpha);
+  }
 }

@@ -364,6 +364,7 @@ export default class TileWorker {
               if (layer.type === 'fill' && (type === 3 || type === 4)) {
                 preprocessFill(feature.loadGeometry(), type, vertices, indices, division, extent, (webgl1) ? layer.paint.color(null, properties, zoom) : null)
                 if (webgl1) featureCode = (layer.paint.color(null, properties, zoom)).getRGB()
+                if (!indices.length) continue
                 featureSet = fillFeatures
               } else if (layer.type === 'fill3D' && (type === 7 || type === 8)) {
                 continue

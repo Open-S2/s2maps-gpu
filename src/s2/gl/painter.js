@@ -159,6 +159,7 @@ export default class Painter {
     // draw the sphere background should it exist
     if (sphereBackground) this.paintSphereBackground(tiles, sphereBackground, zoom)
     // paint features
+    // features = features.filter(feature => feature.type !== 'glyph')
     this.paintFeatures(features)
     // draw shade layer
     // if (glyphFeatures.length) this.paintGlyphFilter(tiles, glyphFeatures)
@@ -280,7 +281,6 @@ export default class Painter {
     const glyphFilterProgram: GlyphFilter = this.getProgram('glyphFilter')
     if (!glyphFilterProgram) return new Error('The "glyphFilter" program does not exist, can not paint.')
     // disable blending
-    context.disableBlend()
     // Step 1: draw points
     glyphFilterProgram.bindPointFrameBuffer()
     // setup mask first (uses the "fillProgram" - that's why we have not 'used' the glyphFilterProgram yet)
@@ -290,15 +290,15 @@ export default class Painter {
     // paint the glyph "filter" points
     this._paintGlyphFilter(glyphFilterProgram, glyphFeatures, 0)
     // Step 2: draw quads
+    context.disableBlend()
     glyphFilterProgram.bindQuadFrameBuffer()
     this._paintGlyphFilter(glyphFilterProgram, glyphFeatures, 1)
+    context.enableBlend()
     // Step 3: draw result points
     glyphFilterProgram.bindResultFramebuffer()
     this._paintGlyphFilter(glyphFilterProgram, glyphFeatures, 2)
     // return to our default framebuffer
     context.bindMainBuffer()
-    // we can use blend again
-    context.enableBlend()
   }
 
   _paintGlyphFilter (glyphFilterProgram: GlyphFilter, glyphFeatures: Array<FeatureGuide>, mode: 0 | 1 | 2) {

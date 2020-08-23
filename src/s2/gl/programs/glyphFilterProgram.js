@@ -71,7 +71,7 @@ export default class GlyphFilterProgram extends Program {
 
     // quad texture using floats
     gl.bindTexture(gl.TEXTURE_2D, this.quadTexture)
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 4096, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 2048, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
     // set filter system
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
@@ -148,7 +148,7 @@ export default class GlyphFilterProgram extends Program {
   bindQuadFrameBuffer () {
     const { gl } = this
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.quadFramebuffer)
-    gl.viewport(0, 0, 4096, 1)
+    gl.viewport(0, 0, 2048, 1)
     // context.clearColorBuffer()
     gl.activeTexture(gl.TEXTURE0)
     gl.bindTexture(gl.TEXTURE_2D, this.pointTexture)
@@ -164,7 +164,7 @@ export default class GlyphFilterProgram extends Program {
     gl.activeTexture(gl.TEXTURE1)
     gl.bindTexture(gl.TEXTURE_2D, this.quadTexture)
     gl.activeTexture(gl.TEXTURE0)
-    // gl.bindTexture(gl.TEXTURE_2D, this.pointTexture)
+    gl.bindTexture(gl.TEXTURE_2D, this.pointTexture)
     // clear indexOffset
     this.indexOffset = 0
   }
@@ -191,7 +191,6 @@ export default class GlyphFilterProgram extends Program {
     // draw based upon mode
     if (mode === 1) gl.drawArraysInstanced(gl.POINTS, 0, 2, filterCount)
     else gl.drawArraysInstanced(gl.POINTS, 0, 1, filterCount)
-    // console.log('filterCount', filterCount, filterOffset)
     // increment offset
     if (mode !== 0) this.indexOffset += filterCount
   }
