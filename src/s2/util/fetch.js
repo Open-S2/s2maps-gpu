@@ -6,7 +6,8 @@ export default function requestData (path: string, extension: Extension, callbac
 
   fetch(`${path}.${extension}`)
     .then(res => {
-      if (ab) return res.arrayBuffer()
+      if (res.status !== 200 && res.status !== 206) return null
+      else if (ab) return res.arrayBuffer()
       else if (resType === 'json') return res.json()
       else if (resType === 'blob') return res.blob()
       else return res.arrayBuffer()

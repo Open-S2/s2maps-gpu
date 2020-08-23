@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { S2Map } from './s2'
+import { S2Map } from '../../s2'
 import style from './style.json'
 
-import './App.css'
-
-function App () {
+function DEM () {
   const { setMap } = useMapContainer()
   return (
     <div className="App">
@@ -33,4 +31,4 @@ function prepCanvas(container) {
   })
 }
 
-export default App
+export default DEM
