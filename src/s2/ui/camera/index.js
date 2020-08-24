@@ -170,15 +170,16 @@ export default class Camera {
     // for each parentLayer, inject specified layers
     for (let hash in parentLayers) {
       hash = +hash
+      const layers = parentLayers[hash].layers
       if (this.tileCache.has(hash)) {
         const parent = this.tileCache.get(hash)
-        tile.injectParentTile(parent, true)
+        tile.injectParentTile(parent, true, layers)
       } else {
         // if parent tile does not exist: create, set all the child's requests,
         // and tell the styler to request the webworker(s) to process the tile
         const { face, zoom, x, y } = parentLayers[hash]
         const newTile = this._createTile(face, zoom, x, y, hash)
-        for (const layer of parentLayers[hash].layers) newTile.childrenRequests[layer] = tile
+        for (const layer of layers) newTile.childrenRequests[layer] = [tile]
         this.style.requestTiles([newTile])
       }
     }
