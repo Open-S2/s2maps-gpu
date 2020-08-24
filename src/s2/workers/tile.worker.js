@@ -227,6 +227,7 @@ export default class TileWorker {
         ) {
           requestData(`${path}/${face}/${zoom}/${x}/${y}`, extension, (data) => {
             if (data && !self.cancelCache.includes(hash)) self._processVectorData(mapID, sourceName, source, tile, new VectorTile(data))
+            else self._getParentData(mapID, sourceName, source, tile) // incase we need to inject parent data
           })
         }
       } else if (type === 'raster') {
@@ -412,6 +413,38 @@ export default class TileWorker {
     if (fillFeatures.length) postprocessFill(mapID, `${sourceName}:fill`, hash, fillFeatures, postMessage)
     if (lineFeatures.length) postprocessLine(mapID, `${sourceName}:line`, hash, lineFeatures, postMessage)
     if (texts.length) postprocessGlyph(mapID, `${sourceName}:glyph`, hash, texts, glyphBuilder, this.id, postMessage)
+    if (Object.keys(parentLayers).length) postMessage({ mapID, type: 'parentlayers', tileID: hash, parentLayers })
+  }
+
+  _getParentData (mapID: string, sourceName: string, source: Object,
+    tile: TileRequest) {
+    // pull out data
+    const { layers } = this.maps[mapID]
+    const { face, zoom, x, y, hash } = tile
+    // setup parentLayers
+    const parentLayers: ParentLayers = {}
+    // iterate over layers and found any data doesn't exist at current zoom but the style asks for
+    for (let layerID = 0, ll = layers.length; layerID < ll; layerID++) {
+      const layer = layers[layerID].layer
+      if (source.layers && source.layers[layer] && source.layers[layer].maxzoom < zoom) {
+        // we have passed the limit at which this data is stored. Rather than
+        // processing the data more than once, we reference where to look for the layer
+        const layerMaxZoom = source.layers[layer].maxzoom
+        let pZoom = zoom
+        let pX = x
+        let pY = y
+        while (pZoom > layerMaxZoom) {
+          pZoom--
+          pX = Math.floor(pX / 2)
+          pY = Math.floor(pY / 2)
+        }
+        const hash = tileHash(face, pZoom, pX, pY)
+        // store parent reference
+        if (!parentLayers[hash]) parentLayers[hash] = { face, zoom: pZoom, x: pX, y: pY, layers: [] }
+        parentLayers[hash].layers.push(layerID)
+      }
+    }
+    // if we stored any parent layers, ship it out
     if (Object.keys(parentLayers).length) postMessage({ mapID, type: 'parentlayers', tileID: hash, parentLayers })
   }
 }

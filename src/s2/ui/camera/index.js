@@ -74,7 +74,7 @@ export default class Camera {
       // check if parent tile exists, if so inject
       if (this.tileCache.has(parentHash)) {
         const parent = this.tileCache.get(parentHash)
-        tile.injectParentTile(parent)
+        tile.injectParentTile(parent, false)
       }
     }
     // store the tile
@@ -165,37 +165,30 @@ export default class Camera {
   }
 
   _injectParentLayers (tileID: number, parentLayers: ParentLayers = {}) {
-    // // grab the main tile
-    // const tile = this.tileCache.get(tileID)
-    // // for each parentLayer, inject specified layers
-    // for (let hash in parentLayers) {
-    //   hash = +hash
-    //   if (this.tileCache.has(hash)) {
-    //     const parent = this.tileCache.get(hash)
-    //     tile.injectParentTile(parent, parentLayers[hash].layers)
-    //   } else {
-    //     // if parent tile does not exist: create, set all the child's requests,
-    //     // and tell the styler to request the webworker(s) to process the tile
-    //     const { face, zoom, x, y } = parentLayers[hash]
-    //     const newTile = this._createTile(face, zoom, x, y, hash)
-    //     for (const layer of parentLayers[hash].layers) newTile.childrenRequests[layer] = [tile]
-    //     this.style.requestTiles([newTile])
-    //   }
-    // }
-    // // new 'paint', so painter is dirty
-    // this.painter.dirty = true
+    // grab the main tile
+    const tile = this.tileCache.get(tileID)
+    // for each parentLayer, inject specified layers
+    for (let hash in parentLayers) {
+      hash = +hash
+      const layers = parentLayers[hash].layers
+      if (this.tileCache.has(hash)) {
+        const parent = this.tileCache.get(hash)
+        tile.injectParentTile(parent, true, layers)
+      } else {
+        // if parent tile does not exist: create, set all the child's requests,
+        // and tell the styler to request the webworker(s) to process the tile
+        const { face, zoom, x, y } = parentLayers[hash]
+        const newTile = this._createTile(face, zoom, x, y, hash)
+        for (const layer of layers) newTile.childrenRequests[layer] = [tile]
+        this.style.requestTiles([newTile])
+      }
+    }
+    // new 'paint', so painter is dirty
+    this.painter.dirty = true
   }
 
-  // TODO: On zooming start (this.lastTileViewState is empty) we set to tilesInView
-  // during the zooming process, all newTiles need to be injected with whatever tiles
-  // fit within it's view of lastTileViewState. Everytime we get zooming === false,
-  // we set lastTileViewState to null again to ensure we don't inject tiles...
-  // if updateTiles is set to false, we don't requestTiles unless zooming is off.
-  // no matter what, if zooming is false, we check that each tile has made requests
   _getTiles () {
     if (this.projection.dirty) {
-      // grab zoom change
-      // const zoomChange = this.projection.zoomChange()
       // no matter what we need to update what's in view
       const newTiles = []
       // update tiles in view
