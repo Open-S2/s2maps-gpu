@@ -73,7 +73,7 @@ export default class TexturePack {
         // adjust yOffset by size
         yOffset *= size
         // now build the path using offset as a guide
-        const offset = [glyph.bbox[0], glyph.bbox[1] + yOffset]
+        const offset = [glyph.bbox[0], glyph.bbox[1] + yOffset + 1]
         const path = g.getPath(true, offset, size, sdfMaxSize)
         // Build the actual glyph using the path data with the box as a positional adivsor
         this._buildGlyph(glyph, path, offset, size, sdfMaxSize)
