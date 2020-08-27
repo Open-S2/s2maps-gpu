@@ -15,7 +15,6 @@ function Home () {
 
       <div className="warning-container">
         <div className="warn"><span className="warn-img" role="img" aria-label="Warn">⚠️</span> Notice: Android devices are yet to be supported until I get my hands on an android phone. <span className="warn-img" role="img" aria-label="Warn">⚠️</span></div>
-        <div className="warn"><span className="warn-img" role="img" aria-label="Warn">⚠️</span> Notice: Streets vector data is not entirely uploaded to date. Anything past zoom 10 is not guaranteed. This message will be removed when all data has been uploaded. <span className="warn-img" role="img" aria-label="Warn">⚠️</span></div>
       </div>
 
       <div className="navigation-container">
