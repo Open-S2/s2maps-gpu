@@ -24,6 +24,12 @@ function Home () {
             <div className="link-name">Streets</div>
           </div>
         </Link>
+        <Link to="/light">
+          <div className="link-container">
+            <img className="link-image" src={Streets} alt="light" />
+            <div className="link-name">Light</div>
+          </div>
+        </Link>
         <Link to="/raster" className="link-container">
           <img className="link-image" src={Raster} alt="raster" />
           <div className="link-name">Raster</div>

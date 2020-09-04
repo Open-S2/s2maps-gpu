@@ -2,6 +2,6 @@ import React from 'react'
 import Map from '../map'
 import style from './style.json'
 
-function DEM () { return <Map style={style} /> }
+function Light () { return <Map style={style} /> }
 
-export default DEM
+export default Light

@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom'
 import { BrowserRouter, Route } from 'react-router-dom'
 import './index.css'
-import { Home, DEM, Raster, Streets } from './App/index'
+import { Home, DEM, Raster, Streets, Light } from './App/index'
 import * as serviceWorker from './serviceWorker'
 
 ReactDOM.render(
@@ -11,6 +11,7 @@ ReactDOM.render(
     <Route exact path="/dem" component={DEM} />
     <Route exact path="/raster" component={Raster} />
     <Route exact path="/streets" component={Streets} />
+    <Route exact path="/light" component={Light} />
   </BrowserRouter>,
   document.getElementById('root')
 )
