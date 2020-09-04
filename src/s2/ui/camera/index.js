@@ -165,26 +165,30 @@ export default class Camera {
   }
 
   _injectParentLayers (tileID: number, parentLayers: ParentLayers = {}) {
-    // grab the main tile
-    const tile = this.tileCache.get(tileID)
-    // for each parentLayer, inject specified layers
-    for (let hash in parentLayers) {
-      hash = +hash
-      const layers = parentLayers[hash].layers
-      if (this.tileCache.has(hash)) {
-        const parent = this.tileCache.get(hash)
-        tile.injectParentTile(parent, true, layers)
-      } else {
-        // if parent tile does not exist: create, set all the child's requests,
-        // and tell the styler to request the webworker(s) to process the tile
-        const { face, zoom, x, y } = parentLayers[hash]
-        const newTile = this._createTile(face, zoom, x, y, hash)
-        for (const layer of layers) newTile.childrenRequests[layer] = [tile]
-        this.style.requestTiles([newTile])
+    // if tile still exists
+    if (this.tileCache.has(tileID)) {
+      // grab the main tile
+      const tile = this.tileCache.get(tileID)
+      // for each parentLayer, inject specified layers
+      for (let hash in parentLayers) {
+        hash = +hash
+        const layers = parentLayers[hash].layers
+        // check if parent exists in tileCache, if so, inject layers
+        if (this.tileCache.has(hash)) {
+          const parent = this.tileCache.get(hash)
+          tile.injectParentTile(parent, true, layers)
+        } else {
+          // if parent tile does not exist: create, set all the child's requests,
+          // and tell the styler to request the webworker(s) to process the tile
+          const { face, zoom, x, y } = parentLayers[hash]
+          const newTile = this._createTile(face, zoom, x, y, hash)
+          for (const layer of layers) newTile.childrenRequests[layer] = [tile]
+          this.style.requestTiles([newTile])
+        }
+        // new 'paint', so painter is dirty
+        this.painter.dirty = true
       }
     }
-    // new 'paint', so painter is dirty
-    this.painter.dirty = true
   }
 
   _getTiles () {

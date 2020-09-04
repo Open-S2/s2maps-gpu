@@ -2,6 +2,7 @@ import React from 'react'
 import { Link } from 'react-router-dom'
 import Logo from './logo_alpha.jpg'
 import Streets from './streets.jpg'
+import Light from './light.jpg'
 import Raster from './raster.jpg'
 import DEM from './dem.mp4'
 
@@ -26,7 +27,7 @@ function Home () {
         </Link>
         <Link to="/light">
           <div className="link-container">
-            <img className="link-image" src={Streets} alt="light" />
+            <img className="link-image" src={Light} alt="light" />
             <div className="link-name">Light</div>
           </div>
         </Link>

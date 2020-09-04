@@ -15,6 +15,9 @@ class MapWorker {
     else if (type === 'mousedown') this.map.dragPan.onMouseDown()
     else if (type === 'mouseup') this.map.dragPan.onMouseUp()
     else if (type === 'mousemove') this.map.dragPan.onMouseMove(data.movementX, data.movementY)
+    else if (type === 'touchstart') this.map.dragPan.onTouchStart(data.touchEvent)
+    else if (type === 'touchend') this.map.dragPan.onTouchEnd(data.touchEvent)
+    else if (type === 'touchmove') this.map.dragPan.onTouchMove(data.touchEvent)
     else this.map.injectData(data)
   }
 

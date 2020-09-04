@@ -59,13 +59,16 @@ export default class Map extends Camera {
     // setup listeners
     self._canvas.addEventListener('webglcontextlost', self._contextLost, false)
     self._canvas.addEventListener('webglcontextrestored', self._contextRestored, false)
+    // if we allow the user to interact with map, we add events
     if (self._interactive) {
       // create a dragPan
       self.dragPan = new DragPan()
+      // let dragPan know if we can zoom
+      if (self._scrollZoom) self.dragPan.zoomActive = true
+      // if not a webworker we add all events
       if (!self.webworker) {
         // listen to scroll events
         if (self._scrollZoom) {
-          self.dragPan.zoomActive = true
           self._canvas.addEventListener('wheel', (e) => {
             e.preventDefault()
             const { clientX, clientY, deltaY } = e
@@ -74,12 +77,12 @@ export default class Map extends Camera {
           })
         }
         // listen to mouse movement
-        self._canvas.addEventListener('touchstart', (e) => { e.preventDefault(); self.dragPan.onTouchStart(e) })
-        self._canvas.addEventListener('touchend', (e) => { e.preventDefault(); self.dragPan.onTouchEnd(e) })
+        self._canvas.addEventListener('touchstart', (e) => { e.preventDefault(); self.dragPan.onTouchStart(e.touches) })
+        self._canvas.addEventListener('touchend', (e) => { e.preventDefault(); self.dragPan.onTouchEnd(e.touches) })
         self._canvas.addEventListener('mousedown', () => self.dragPan.onMouseDown())
         self._canvas.addEventListener('mouseup', () => self.dragPan.onMouseUp())
         self._canvas.addEventListener('mousemove', (e) => { self.dragPan.onMouseMove(e.movementX, e.movementY) })
-        self._canvas.addEventListener('touchmove', (e) => { e.preventDefault(); self.dragPan.onTouchMove(e) })
+        self._canvas.addEventListener('touchmove', (e) => { e.preventDefault(); self.dragPan.onTouchMove(e.touches) })
       }
       // listen to dragPans updates
       self.dragPan.addEventListener('move', self._onMovement.bind(self))

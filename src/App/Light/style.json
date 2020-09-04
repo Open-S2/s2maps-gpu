@@ -15,7 +15,7 @@
   },
   "shade": false,
   "wallpaper": {
-    "background-color": "#aeaeae",
+    "background-color": "#354b67",
     "fade-1": "#d4e5f1",
     "fade-2": "#efeeed",
     "halo": "#ffffff"
@@ -239,7 +239,7 @@
         "color": [
           "data-condition",
           ["class", "==", "ferry"],
-          "#9fccf9",
+          "#a7c2d6",
           ["class", "==", "path"],
           "#8f8f8f",
           ["class", "==", "railway"],

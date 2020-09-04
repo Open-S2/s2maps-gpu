@@ -2,12 +2,10 @@
 import EventListener from '../../util/EventListener'
 
 type TouchEvent = {
-  touches: {
-    length: number,
-    [number]: {
-      clientX: number,
-      clientY: number
-    }
+  length: number,
+  [number]: {
+    clientX: number,
+    clientY: number
   }
 }
 
@@ -41,18 +39,16 @@ export default class DragPan extends EventListener {
     this.time = -1
   }
 
-  onTouchStart (e: TouchEvent) {
-    const { touches } = e
+  onTouchStart (touches: TouchEvent) {
     this._setTouchDelta(touches)
     this.mouseActive = true
   }
 
-  onTouchEnd (e: TouchEvent) {
-    const { touches } = e
+  onTouchEnd (touches: TouchEvent) {
     this._setTouchDelta(touches)
   }
 
-  _setTouchDelta (touches) {
+  _setTouchDelta (touches: TouchEvent) {
     const { length } = touches
     if (length) {
       let { clientX, clientY } = touches[0]
@@ -102,8 +98,7 @@ export default class DragPan extends EventListener {
     }
   }
 
-  onTouchMove (e: TouchEvent) {
-    const { touches } = e
+  onTouchMove (touches: TouchEvent) {
     const { length } = touches
     let { clientX, clientY } = touches[0]
     if (length > 1 && this.zoomActive) {
