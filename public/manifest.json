@@ -15,9 +15,9 @@
     }
   ],
   "prefer_related_applications": false,
-  "start_url": "/",
-  "background_color": "#555555",
+  "start_url": "/index.html",
+  "background_color": "#333333",
   "display": "standalone",
   "scope": "/",
-  "theme_color": "#d8514e",
+  "theme_color": "#d8514e"
 }
