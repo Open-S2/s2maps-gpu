@@ -57,8 +57,6 @@
           "rgb(206, 208, 211)",
           ["class", "has", ["university", "college", "school", "kindergarten"]],
           "rgb(226, 233, 238)",
-          ["class", "==", "parking"],
-          "rgb(241, 243, 244)",
           ["class", "==", "hospital"],
           "rgb(252, 228, 228)",
           ["class", "==", "farmland"],

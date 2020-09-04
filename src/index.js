@@ -1,19 +1,31 @@
-import React from 'react'
+import React, { Suspense, lazy } from 'react'
 import ReactDOM from 'react-dom'
-import { BrowserRouter, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Route, Switch } from 'react-router-dom'
+
 import './index.css'
-import { Home, DEM, Raster, Streets, Light, Dark } from './App/index'
+
 import * as serviceWorker from './serviceWorker'
 
+const Home = lazy(() => import('./App/Home'))
+const DEM = lazy(() => import('./App/DEM'))
+const Raster = lazy(() => import('./App/Raster'))
+const Streets = lazy(() => import('./App/Streets'))
+const Light = lazy(() => import('./App/Light'))
+const Dark = lazy(() => import('./App/Dark'))
+
 ReactDOM.render(
-  <BrowserRouter>
-    <Route exact path="/" component={Home} />
-    <Route exact path="/dem" component={DEM} />
-    <Route exact path="/raster" component={Raster} />
-    <Route exact path="/streets" component={Streets} />
-    <Route exact path="/light" component={Light} />
-    <Route exact path="/dark" component={Dark} />
-  </BrowserRouter>,
+  <Router>
+    <Suspense fallback={<div></div>}>
+      <Switch>
+        <Route exact path="/" component={Home} />
+        <Route path="/dem" component={DEM} />
+        <Route path="/raster" component={Raster} />
+        <Route path="/streets" component={Streets} />
+        <Route path="/light" component={Light} />
+        <Route path="/dark" component={Dark} />
+      </Switch>
+    </Suspense>
+  </Router>,
   document.getElementById('root')
 )
 

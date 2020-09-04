@@ -1,9 +1,12 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import S2Logo from './S2Logo'
-import Streets from './streets.webp'
-import Light from './light.webp'
-import Raster from './raster.webp'
+import StreetsWEBP from './streets.webp'
+import StreetsJPG from './streets.jpg'
+import LightWEBP from './light.webp'
+import LightJPG from './light.jpg'
+import RasterWEBP from './raster.webp'
+import RasterJPG from './raster.jpg'
 import DEM from './dem.mp4'
 
 function Home () {
@@ -20,28 +23,45 @@ function Home () {
         </div>
 
         <div className="navigation-container">
+
           <Link to="/streets">
             <div className="link-container">
-              <img async className="link-image lazyload" src={Streets} alt="streets" />
+              <picture>
+                <source async loading="lazy" className="link-image" alt="streets" srcSet={StreetsWEBP} type="image/webp" />
+                <source async loading="lazy" className="link-image" alt="streets" srcSet={StreetsJPG} type="image/jpeg" />
+                <img async loading="lazy" className="link-image" alt="streets" src={LightJPG} />
+              </picture>
               <div className="link-name">Streets</div>
             </div>
           </Link>
+
           <Link to="/light">
             <div className="link-container">
-              <img async className="link-image lazyload" src={Light} alt="light" />
+              <picture>
+                <source async loading="lazy" className="link-image" alt="light" srcSet={LightWEBP} type="image/webp" />
+                <source async loading="lazy" className="link-image" alt="light" srcSet={LightJPG} type="image/jpeg" />
+                <img async loading="lazy" className="link-image" alt="light" src={LightJPG} />
+              </picture>
               <div className="link-name">Light</div>
             </div>
           </Link>
+
           <Link to="/raster" className="link-container">
-            <img async className="link-image lazyload" src={Raster} alt="raster" />
+            <picture>
+              <source async loading="lazy" className="link-image" alt="raster" srcSet={RasterWEBP} type="image/webp" />
+              <source async loading="lazy" className="link-image" alt="raster" srcSet={RasterJPG} type="image/jpeg" />
+              <img async loading="lazy" className="link-image" alt="raster" src={RasterJPG} />
+            </picture>
             <div className="link-name">Raster</div>
           </Link>
+
           <Link to="/dem" className="link-container">
-            <video async className="link-video lazyload" autoPlay loop autobuffer="true" muted playsInline>
-              <source src={DEM} type="video/mp4" />
+            <video async className="link-video" autoPlay loop autobuffer="true" muted playsInline>
+              <source loading="lazy" src={DEM} type="video/mp4" />
             </video>
             <div className="link-name">DEM</div>
           </Link>
+
         </div>
 
       </div>
