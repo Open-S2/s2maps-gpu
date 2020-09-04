@@ -1,49 +1,51 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import Logo from './logo_alpha.jpg'
-import Streets from './streets.jpg'
-import Light from './light.jpg'
-import Raster from './raster.jpg'
+import S2Logo from './S2Logo'
+import Streets from './streets.webp'
+import Light from './light.webp'
+import Raster from './raster.webp'
 import DEM from './dem.mp4'
 
 function Home () {
   return (
-    <div className="Home">
+    <main id="maincontent">
+      <div className="Home">
 
-      <div className="banner">
-        <img id="s2-logo" src={Logo} alt="S2 Logo" width="500px" />
+        <div className="banner">
+          <S2Logo async />
+        </div>
+
+        <div className="warning-container">
+          <div className="warn"><span className="warn-img" role="img" aria-label="Warn">⚠️</span> Notice: Vector maps sometimes render poorly on iOS devices. Refreshing the page sometimes fixes rendering errors. <span className="warn-img" role="img" aria-label="Warn">⚠️</span></div>
+        </div>
+
+        <div className="navigation-container">
+          <Link to="/streets">
+            <div className="link-container">
+              <img async className="link-image lazyload" src={Streets} alt="streets" />
+              <div className="link-name">Streets</div>
+            </div>
+          </Link>
+          <Link to="/light">
+            <div className="link-container">
+              <img async className="link-image lazyload" src={Light} alt="light" />
+              <div className="link-name">Light</div>
+            </div>
+          </Link>
+          <Link to="/raster" className="link-container">
+            <img async className="link-image lazyload" src={Raster} alt="raster" />
+            <div className="link-name">Raster</div>
+          </Link>
+          <Link to="/dem" className="link-container">
+            <video async className="link-video lazyload" autoPlay loop autobuffer="true" muted playsInline>
+              <source src={DEM} type="video/mp4" />
+            </video>
+            <div className="link-name">DEM</div>
+          </Link>
+        </div>
+
       </div>
-
-      <div className="warning-container">
-        <div className="warn"><span className="warn-img" role="img" aria-label="Warn">⚠️</span> Notice: Android devices are yet to be supported until I get my hands on an android phone. <span className="warn-img" role="img" aria-label="Warn">⚠️</span></div>
-      </div>
-
-      <div className="navigation-container">
-        <Link to="/streets">
-          <div className="link-container">
-            <img className="link-image" src={Streets} alt="streets" />
-            <div className="link-name">Streets</div>
-          </div>
-        </Link>
-        <Link to="/light">
-          <div className="link-container">
-            <img className="link-image" src={Light} alt="light" />
-            <div className="link-name">Light</div>
-          </div>
-        </Link>
-        <Link to="/raster" className="link-container">
-          <img className="link-image" src={Raster} alt="raster" />
-          <div className="link-name">Raster</div>
-        </Link>
-        <Link to="/dem" className="link-container">
-          <video className="link-video" autoPlay loop autobuffer="true" muted playsInline>
-            <source src={DEM} type="video/mp4" />
-          </video>
-          <div className="link-name">DEM</div>
-        </Link>
-      </div>
-
-    </div>
+    </main>
   )
 }
 

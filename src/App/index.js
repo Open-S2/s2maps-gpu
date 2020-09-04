@@ -1,3 +1,4 @@
+export { default as Dark } from './Dark'
 export { default as DEM } from './DEM'
 export { default as Home } from './Home'
 export { default as Light } from './Light'

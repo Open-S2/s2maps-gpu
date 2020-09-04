@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom'
 import { BrowserRouter, Route } from 'react-router-dom'
 import './index.css'
-import { Home, DEM, Raster, Streets, Light } from './App/index'
+import { Home, DEM, Raster, Streets, Light, Dark } from './App/index'
 import * as serviceWorker from './serviceWorker'
 
 ReactDOM.render(
@@ -12,6 +12,7 @@ ReactDOM.render(
     <Route exact path="/raster" component={Raster} />
     <Route exact path="/streets" component={Streets} />
     <Route exact path="/light" component={Light} />
+    <Route exact path="/dark" component={Dark} />
   </BrowserRouter>,
   document.getElementById('root')
 )
@@ -19,4 +20,4 @@ ReactDOM.render(
 // If you want your app to work offline and load faster, you can change
 // unregister() to register() below. Note this comes with some pitfalls.
 // Learn more about service workers: https://bit.ly/CRA-PWA
-serviceWorker.unregister()
+serviceWorker.register()

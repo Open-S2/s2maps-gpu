@@ -3,8 +3,29 @@
   <head>
     <meta charset="utf-8" />
     <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/icon_192_full.png" />
+    <!--
+      manifest.json provides metadata used when your web app is installed on a
+      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
+    -->
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
+    <meta name="description" content="S2 Maps is an early stage startup designed
+    to help break from what I believe is a severely outdated norm in cartography:
+    flat projections. Unlike the current commonly used projections, the S2
+    projection represents all data on a three-dimensional sphere, making it
+    possible to store and present a planets geographic database with no seems,
+    singularities, or discontinuities. Even though the Earth (and Mars) is not
+    quite a sphere either, it is possible to properly approximate the entire
+    Earth’s surface with a maximum distortion of ~0.56%. This is achieved by
+    storing points as unit vectors instead of latitude/longitude pairs. This
+    decision also allows S2 to respect both geocentric and geodetic coordinate
+    systems while increasing the robustness by, for example, avoiding potential
+    topological errors. The S2 projection comes at no higher cost
+    in efficiency or data storage than say the Mercator projection, due to how
+    the data is encoded. S2 Maps stores the unit vector onto a quad-tree schemed
+    cube map with a non-linear transformation to reduce distortion.">
     <!--
       Notice the use of %PUBLIC_URL% in the tags above.
       It will be replaced with the URL of the `public` folder during the build.
