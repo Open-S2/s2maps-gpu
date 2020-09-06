@@ -1,7 +1,7 @@
 #version 300 es
 precision highp float;
 
-#define MIN_SDF_SIZE 0.03
+#define MIN_SDF_SIZE 0.08
 
 layout (location = 0) in vec2 aUV; // float [u, v]
 layout (location = 1) in vec2 aST; // float [s, t]                   (INSTANCED)

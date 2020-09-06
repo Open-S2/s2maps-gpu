@@ -1,6 +1,6 @@
 precision highp float;
 
-#define MIN_SDF_SIZE 0.03
+#define MIN_SDF_SIZE 0.08
 
 attribute vec2 aUV; // float [u, v]
 attribute vec2 aST; // float [s, t]                   (INSTANCED)

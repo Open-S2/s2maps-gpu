@@ -22,6 +22,7 @@ type FBO = {
 
 export default class GlyphProgram extends Program {
   uTexSize: WebGLUniformLocation
+  uOffset: WebGLUniformLocation
   glyphLineProgram: Program
   fbos: Array<FBO> = []
   constructor (context: Context, glyphLineProgram: Program) {
@@ -38,6 +39,7 @@ export default class GlyphProgram extends Program {
     this.glyphLineProgram = glyphLineProgram
     // get uniform locations
     this.uTexSize = gl.getUniformLocation(this.glProgram, 'uTexSize')
+    this.uOffset = gl.getUniformLocation(this.glProgram, 'uOffset')
   }
 
   injectFrameUniforms () {}
@@ -151,7 +153,7 @@ export default class GlyphProgram extends Program {
   }
 
   draw (source: GlyphTileSource) {
-    const { context, gl, glyphLineProgram } = this
+    const { context, gl, glyphLineProgram, uOffset } = this
     // pull out the appropriate data from the source
     const { textureID, glyphFillVAO, glyphFillIndices } = source
 
@@ -176,7 +178,6 @@ export default class GlyphProgram extends Program {
     glyphLineProgram.setAspect(texSize)
     // draw lines
     glyphLineProgram.draw(source)
-    // enable stencil
 
     // FILL
     const indexLength = glyphFillIndices.length
@@ -189,13 +190,16 @@ export default class GlyphProgram extends Program {
       this.setTexSize(texSize)
       // set the correct vao
       gl.bindVertexArray(glyphFillVAO)
-      // draw fill onto the stencil
-      context.stencilInvert()
-      gl.drawElements(gl.TRIANGLES, indexLength, gl.UNSIGNED_INT, 0)
-      // draw fill using the stencil as a guide
-      context.stencilZero()
-      context.lockMasks()
-      gl.drawElements(gl.TRIANGLES, indexLength, gl.UNSIGNED_INT, 0)
+      for (let i = 0; i < 4; i++) {
+        // set the offset
+        gl.uniform1i(uOffset, i)
+        // draw fill onto the stencil
+        context.stencilInvert()
+        gl.drawElements(gl.TRIANGLES, indexLength, gl.UNSIGNED_INT, 0)
+        // draw fill onto texture using the stencil as a guide
+        context.stencilZero()
+        gl.drawElements(gl.TRIANGLES, indexLength, gl.UNSIGNED_INT, 0)
+      }
     }
 
     // turn depth testing back on

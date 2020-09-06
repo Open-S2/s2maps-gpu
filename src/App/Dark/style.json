@@ -1,8 +1,8 @@
 {
   "version": 1,
   "name": "s2test",
-  "center": [-111.88, 40.75],
-  "zoom": 0,
+  "center": [-122.444700, 37.780739],
+  "zoom": 9.2,
   "minzoom": 0,
   "maxzoom": 20,
   "sources": {
@@ -42,39 +42,32 @@
         "aboriginal_lands", "grass", "grassland", "garden", "meadow", "farmland",
         "wood", "swamp", "forest", "wetland", "zoo", "cemetery", "indianReservation",
         "sand", "beach", "desert", "aeroway", "military", "hospital",
-        "university", "college", "school", "kindergarten", "parking", "glacier",
-        "quarry", "industrial", "retail"]],
+        "university", "college", "school", "kindergarten", "glacier"]],
       "minzoom": 0,
       "layout": {},
       "paint": {
         "color": [
           "data-condition",
+          ["class", "has", ["desert", "sand", "beach"]],
+          "#454236",
           ["class", "==", "aeroway"],
-          "rgb(219, 222, 235)",
+          "#2f3948",
           ["class", "==", "military"],
-          "rgb(226, 226, 224)",
-          ["class", "==", "quarry"],
-          "rgb(206, 208, 211)",
+          "#353535",
           ["class", "has", ["university", "college", "school", "kindergarten"]],
-          "rgb(226, 233, 238)",
+          "#2f3948",
           ["class", "==", "hospital"],
-          "rgb(252, 228, 228)",
-          ["class", "==", "farmland"],
-          "rgb(232, 237, 219)",
-          ["class", "has", ["park", "national_park", "protected_area"]],
+          "#a28b8b",
+          ["class", "has", ["farmland", "cemetery"]],
+          "#2e4642",
+          ["class", "has", ["park", "national_park", "protected_area", "grass", "grassland", "garden", "meadow", "wood", "swamp", "forest", "zoo"]],
           "#273b3e",
-          ["class", "has", ["grass", "grassland", "garden", "meadow", "wood", "swamp", "forest", "zoo"]],
-          "#273b3e",
-          ["class", "==", "cemetery"],
-          "#d9efd9",
-          ["class", "==", "beach"],
-          "#faeeca",
           ["class", "==", "glacier"],
           "#757575",
           ["class", "==", "aboriginal_lands"],
-          "#efedeb",
+          "#393939",
           ["class", "==", "wetland"],
-          "#dee5e6",
+          "#17333b",
           "default",
           "rgba(0, 0, 0, 0)"
         ]
@@ -85,23 +78,11 @@
       "source": "world",
       "layer": "landuse",
       "type": "fill",
-      "filter": ["class", "==", "golf"],
+      "filter": ["and", ["class", "==", "golf"], ["type", "has", ["course", "rough"]]],
       "minzoom": 0,
       "layout": {},
       "paint": {
-        "color": [
-          "data-condition",
-          ["type", "has", ["course", "rough"]],
-          "#d3eace",
-          ["type", "==", "fairway"],
-          "#e1f1df",
-          ["type", "==", "green"],
-          "#eff5ef",
-          ["type", "==", "bunker"],
-          "#faeeca",
-          "default",
-          "rgba(0, 0, 0, 0)"
-        ]
+        "color": "#3b5955"
       }
     },
     {
@@ -125,7 +106,7 @@
       "minzoom": 0,
       "layout": {},
       "paint": {
-        "color": "#dee5e6"
+        "color": "#213855"
       }
     },
     {
@@ -235,11 +216,11 @@
         "color": [
           "data-condition",
           ["class", "==", "ferry"],
-          "#a7c2d6",
+          "#384352",
           ["class", "==", "path"],
           "#8f8f8f",
           ["class", "==", "railway"],
-          "rgb(214, 217, 220)",
+          "#25292d",
           ["class", "has", ["secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian"]],
           "#38424e",
           ["class", "has", ["primary", "primary_link"]],
@@ -384,7 +365,7 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "rgba(125, 102, 97, 0.8)",
+        "color": "#908169",
         "width": [
           "input-range",
           "zoom",
@@ -467,7 +448,7 @@
             10,
             14,
             14,
-            24
+            30
           ],
           ["class", "has", ["Hamlet", "Village"]],
           [
@@ -477,39 +458,31 @@
             10.5,
             14,
             12,
-            24
+            30
           ],
           ["class", "==", "Indian Reservation"],
-          15,
+          16,
           "default",
           18
         ],
         "fill": [
           "data-condition",
           ["class", "==", "Indian Reservation"],
-          "rgb(176, 179, 157)",
+          "#9f8f7e",
           ["class", "has", ["Village", "Neighbourhood", "Island"]],
-          "rgb(132, 147, 169)",
+          "#908169",
           ["class", "==", "Hamlet"],
           "rgb(150, 150, 150)",
           "default",
-          [
-            "input-range",
-            "zoom",
-            "lin",
-            9,
-            "rgb(85, 85, 85)",
-            12,
-            "rgb(150, 150, 150)"
-          ]
+          "#bb865b"
         ],
-        "stroke": "rgba(255, 255, 255, 0.85)",
+        "stroke": "#242f3e",
         "strokeWidth": [
           "data-condition",
           ["class", "==", "Indian Reservation"],
-          0.4,
+          0,
           "default",
-          0.2
+          0.4
         ]
       }
     },
@@ -552,7 +525,7 @@
             0,
             19,
             4,
-            36
+            40
           ],
           ["class", "==", "State"],
           [
@@ -560,25 +533,17 @@
             "zoom",
             "expo",
             1.5,
-            2,
+            0,
             12,
             4,
-            18,
+            22,
             7,
-            28
+            40
           ],
           "default",
           14
         ],
-        "fill": [
-          "data-condition",
-          ["class", "==", "Country"],
-          "#908169",
-          ["class", "==", "State"],
-          "#d29463",
-          "default",
-          "rgba(0, 0, 0, 0)"
-        ],
+        "fill": "#908169",
         "stroke": "#383e43",
         "strokeWidth": [
           "data-condition",
@@ -594,7 +559,7 @@
             0.3
           ],
           "default",
-          0.2
+          0
         ]
       }
     }

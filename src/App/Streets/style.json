@@ -1,7 +1,7 @@
 {
   "version": 1,
   "name": "s2test",
-  "center": [-111.88, 40.75],
+  "center": [-122.444700, 37.780739],
   "zoom": 0,
   "minzoom": 0,
   "maxzoom": 20,
@@ -29,13 +29,11 @@
       2.75,
       "rgb(244, 239, 226)",
       3,
-      "rgb(245, 245, 245)",
-      7.5,
-      "rgb(236, 234, 231)",
+      "rgb(245, 242, 235)",
       9.5,
-      "rgb(229, 229, 229)",
+      "rgb(225, 225, 229)",
       11.5,
-      "rgb(232,232,232)",
+      "rgb(229, 231, 236)",
       13,
       "rgb(232,232,232)",
       14,
@@ -60,7 +58,7 @@
         "color": [
           "data-condition",
           ["class", "has", ["desert", "sand"]],
-          "rgb(242, 236, 207)",
+          "rgb(241, 233, 195)",
           ["class", "==", "aeroway"],
           "rgb(219, 222, 235)",
           ["class", "==", "military"],
@@ -76,19 +74,19 @@
           ["class", "==", "hospital"],
           "rgb(252, 228, 228)",
           ["class", "==", "farmland"],
-          "rgb(232, 237, 219)",
+          "rgb(228, 234, 210)",
           ["class", "has", ["park", "national_park", "protected_area"]],
           [
             "input-range",
             "zoom",
             "lin",
-            3,
-            "rgb(205, 236, 205)",
-            4,
+            10,
+            "#aee0bc",
+            12,
             "rgb(197, 232, 197)"
           ],
           ["class", "has", ["grass", "grassland", "garden", "meadow", "wood", "swamp", "forest", "zoo"]],
-          "rgb(201, 238, 201)",
+          "#bbe2c6",
           ["class", "==", "cemetery"],
           "rgb(208, 236, 208)",
           ["class", "==", "beach"],
@@ -137,7 +135,7 @@
       "minzoom": 0,
       "layout": {},
       "paint": {
-        "color": "rgb(170, 218, 255)"
+        "color": "rgb(159, 209, 249)"
       }
     },
     {
@@ -149,7 +147,7 @@
       "minzoom": 0,
       "layout": {},
       "paint": {
-        "color": "rgb(210, 233, 255)"
+        "color": "rgb(185, 225, 255)"
       }
     },
     {
@@ -163,7 +161,7 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "rgb(170, 218, 255)",
+        "color": "rgb(154, 204, 243)",
         "width": [
           "input-range",
           "zoom",
@@ -259,11 +257,11 @@
         "color": [
           "data-condition",
           ["class", "==", "ferry"],
-          "#9fccf9",
+          "rgb(130, 179, 230)",
           ["class", "==", "path"],
           "rgb(91, 185, 116)",
-          ["class", "==", "railway"],
-          "rgb(214, 217, 220)",
+          ["class", "has", ["railway", "rail"]],
+          "rgb(199, 202, 205)",
           ["class", "has", ["secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian"]],
           "rgb(255, 255, 255)",
           ["class", "has", ["primary", "primary_link"]],
@@ -316,7 +314,7 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "rgb(246, 207, 101)",
+        "color": "rgb(249, 202, 74)",
         "width": [
           "input-range",
           "zoom",
@@ -324,9 +322,9 @@
           2,
           2,
           7,
-          4,
+          2.5,
           10,
-          4.5,
+          3,
           15,
           20
         ]
@@ -344,7 +342,7 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "rgb(255, 235, 161)",
+        "color": "#ffe58b",
         "width": [
           "input-range",
           "zoom",
@@ -352,7 +350,7 @@
           2,
           1,
           7,
-          2,
+          1.5,
           10,
           2.5,
           15,
@@ -574,9 +572,9 @@
             "expo",
             1.5,
             0,
-            16,
+            17,
             4,
-            36
+            40
           ],
           ["class", "==", "State"],
           [
@@ -584,12 +582,12 @@
             "zoom",
             "expo",
             1.5,
-            2,
+            0,
             12,
             4,
-            18,
+            22,
             7,
-            28
+            40
           ],
           "default",
           14
@@ -603,7 +601,7 @@
           "default",
           "rgba(0, 0, 0, 0)"
         ],
-        "stroke": "rgba(255, 255, 255, 0.7)",
+        "stroke": "rgba(255, 255, 255, 0.5)",
         "strokeWidth": [
           "data-condition",
           ["class", "==", "State"],
@@ -618,7 +616,7 @@
             0.3
           ],
           "default",
-          0.2
+          0
         ]
       }
     }

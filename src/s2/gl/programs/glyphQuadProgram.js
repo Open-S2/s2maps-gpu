@@ -19,6 +19,7 @@ export default class GlyphQuadProgram extends Program {
   uTexSize: WebGLUniformLocation
   uIsFill: WebGLUniformLocation
   uFeatures: WebGLUniformLocation
+  uColor: WebGLUniformLocation
   uGlyphTex: WebGLUniformLocation
   glyphFilterProgram: Program
   glyphProgram: Program
@@ -46,6 +47,7 @@ export default class GlyphQuadProgram extends Program {
     gl.useProgram(glProgram)
     // get uniform locations
     this.uTexSize = gl.getUniformLocation(glProgram, 'uTexSize')
+    this.uColor = gl.getUniformLocation(glProgram, 'uColor')
     this.uIsFill = gl.getUniformLocation(glProgram, 'uIsFill')
     // get the samplers
     this.uFeatures = gl.getUniformLocation(glProgram, 'uFeatures')
@@ -55,6 +57,10 @@ export default class GlyphQuadProgram extends Program {
     gl.uniform1i(this.uGlyphTex, 1) // uGlyphTex texture unit 1
     // setup the devicePixelRatio
     this.setDevicePixelRatio(devicePixelRatio)
+  }
+
+  setColor (set?: boolean) {
+    this.gl.uniform1i(this.uColor, set)
   }
 
   setFill (state: boolean) {
@@ -84,7 +90,6 @@ export default class GlyphQuadProgram extends Program {
     } else if (featureCode && featureCode.length) gl.uniform1fv(this.uFeatureCode, featureCode)
     // turn depth testing off
     context.stencilFunc(0)
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     // set the texture size uniform
     gl.uniform2fv(this.uTexSize, texSize)
     // bind the correct glyph texture
@@ -98,12 +103,28 @@ export default class GlyphQuadProgram extends Program {
     gl.vertexAttribPointer(4, 2, gl.FLOAT, false, 44, 24 + (offset * 44)) // texture u, v
     gl.vertexAttribPointer(5, 2, gl.FLOAT, false, 44, 32 + (offset * 44)) // width, height
     gl.vertexAttribPointer(6, 1, gl.FLOAT, false, 44, 40 + (offset * 44)) // id
-    // draw stroke
+    /** DRAW STROKE **/
     this.setFill(false)
+    this.setColor(false)
+    context.zeroBlend()
+    // gl.stencilOp(gl.KEEP, gl.INVERT, gl.INVERT)
+    // gl.stencilFunc(gl.ALWAYS, tmpMaskID, 0xFF)
     gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count)
-    // draw fill
+    this.setColor(true)
+    context.oneBlend()
+    // gl.stencilOp(gl.KEEP, gl.REPLACE, gl.REPLACE)
+    // gl.stencilFunc(gl.NOTEQUAL, tmpMaskID, 0xFF)
+    gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count)
+    /** DRAW STROKE **/
+    /** DRAW FILL **/
     this.setFill(true)
+    this.setColor(false)
+    context.zeroBlend()
     gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count)
+    this.setColor(true)
+    context.oneBlend()
+    gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count)
+    /** DRAW FILL **/
     // reset to active texture 0
     gl.activeTexture(gl.TEXTURE0)
     // set default blend

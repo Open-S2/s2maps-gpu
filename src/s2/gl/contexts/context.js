@@ -138,7 +138,17 @@ export default class Context {
 
   inversionBlending () {
     const { gl } = this
-    gl.blendFunc(gl.ONE_MINUS_DST_COLOR, gl.ZERO)
+    gl.blendFunc(gl.ONE_MINUS_DST_COLOR, gl.ONE_MINUS_SRC_COLOR)
+  }
+
+  zeroBlend () {
+    const { gl } = this
+    gl.blendFunc(gl.ZERO, gl.SRC_COLOR)
+  }
+
+  oneBlend () {
+    const { gl } = this
+    gl.blendFunc(gl.ONE, gl.ONE)
   }
 
   disableBlend () {
@@ -167,12 +177,13 @@ export default class Context {
   stencilInvert () {
     const { gl } = this
     gl.colorMask(false, false, false, false)
-    gl.stencilOp(gl.KEEP, gl.KEEP, gl.INVERT)
+    gl.stencilOp(gl.KEEP, gl.INVERT, gl.INVERT)
     gl.stencilFunc(gl.ALWAYS, 0, 0xFF)
   }
 
   stencilZero () {
     const { gl } = this
+    gl.colorMask(true, true, true, true)
     gl.stencilOp(gl.KEEP, gl.REPLACE, gl.REPLACE)
     gl.stencilFunc(gl.NOTEQUAL, 0, 0xFF)
   }

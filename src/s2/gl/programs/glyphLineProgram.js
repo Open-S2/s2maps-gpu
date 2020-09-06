@@ -13,6 +13,7 @@ import type { GlyphTileSource } from '../../source/tile'
 
 export default class glyphLineProgram extends Program {
   uLineWidth: WebGLUniformLocation
+  uOffset: WebGLUniformLocation
   constructor (context: Context) {
     // get gl from context
     const { gl, type } = context
@@ -25,11 +26,12 @@ export default class glyphLineProgram extends Program {
     }
     // get uniform locations
     this.uLineWidth = gl.getUniformLocation(this.glProgram, 'uLineWidth')
+    this.uOffset = gl.getUniformLocation(this.glProgram, 'uOffset')
   }
 
   draw (source: GlyphTileSource) {
     // grab context
-    const { gl } = this
+    const { gl, uOffset } = this
     // grab necessary source data
     const { glyphLineVAO, glyphLineVertices } = source
     const count = glyphLineVertices.length / 7
@@ -41,8 +43,11 @@ export default class glyphLineProgram extends Program {
       gl.blendEquation(gl.MAX)
       // set the line vao
       gl.bindVertexArray(glyphLineVAO)
-      // draw elements
-      gl.drawArrays(gl.TRIANGLES, 0, count) // gl.drawArrays(mode, first, count)
+      // draw elements at each offset
+      for (let i = 0; i < 4; i++) {
+        gl.uniform1i(uOffset, i)
+        gl.drawArrays(gl.TRIANGLES, 0, count) // gl.drawArrays(mode, first, count)
+      }
       gl.blendEquation(gl.FUNC_ADD)
     }
   }

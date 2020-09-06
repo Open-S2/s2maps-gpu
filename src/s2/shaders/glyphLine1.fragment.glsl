@@ -3,6 +3,7 @@ precision highp float;
 varying vec2 vPar;
 varying vec2 vLimits;
 varying float vDistScale;
+varying vec4 vColor;
 
 // Updated root finding algorithm that copes better with degenerate cases (straight lines)
 // From "The Low-Rank LDL^T Quartic Solver" by Peter Strobach, 2015
@@ -42,11 +43,10 @@ float solve_par_dist (in vec2 pcoord) {
 
 void main () {
   float dist = solve_par_dist(vPar);
-  float pdist = min(dist * vDistScale, 1.);
+  float pDist = min(dist * vDistScale, 1.);
 
-  float color = 0.5 - 0.5 * pdist;
+  float strength = 0.5 - 0.5 * pDist;
 
-  if (color == 0.) discard;
-
-  gl_FragColor = vec4(color);
+  if (strength == 0.) discard;
+  gl_FragColor = vColor * strength;
 }

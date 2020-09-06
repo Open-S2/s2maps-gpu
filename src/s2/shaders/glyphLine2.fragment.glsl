@@ -4,6 +4,7 @@ precision highp float;
 in vec2 vPar;
 in vec2 vLimits;
 in float vDistScale;
+in vec4 vColor;
 
 out vec4 fragColor;
 
@@ -44,11 +45,10 @@ float solve_par_dist (in vec2 pcoord) {
 
 void main () {
   float dist = solve_par_dist(vPar);
-  float pdist = min(dist * vDistScale, 1.);
+  float pDist = min(dist * vDistScale, 1.);
 
-  float color = 0.5 - 0.5 * pdist;
+  float strength = 0.5 - 0.5 * pDist;
 
-  if (color == 0.) discard;
-
-  fragColor = vec4(color);
+  if (strength == 0.) discard;
+  fragColor = vColor * strength;
 }

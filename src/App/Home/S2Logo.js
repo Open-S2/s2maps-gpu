@@ -10,7 +10,7 @@ function S2Logo () {
   c-2.95-2.95-6.87-4.57-11.04-4.57V0c10.64,0,20.64,4.14,28.16,11.67c7.52,7.52,11.67,17.53,11.67,28.16
   C96.96,50.47,92.82,60.47,85.29,67.99z"/>
 <linearGradient id="SVGID_1_" gradientUnits="userSpaceOnUse" x1="46.1871" y1="110.8765" x2="46.1871" y2="58.2816">
-  <stop  offset="0" style={{ "stopColor": "#000000", "stopOpacity": 0 }} />
+  <stop  offset="0.08" style={{ "stopColor": "#000000", "stopOpacity": 0 }} />
   <stop  offset="0.5455" style={{ "stopColor": "#000000", "stopOpacity": 0.7 }}/>
   <stop  offset="0.6245" style={{ "stopColor": "#000000", "stopOpacity": 0.7 }}/>
 </linearGradient>
