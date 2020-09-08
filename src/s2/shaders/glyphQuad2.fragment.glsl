@@ -1,7 +1,7 @@
 #version 300 es
 precision highp float;
 
-#define GAMMA 0.1
+#define GAMMA 0.105
 #define MIN_ALPHA 0.078125 // 20. / 256.
 
 // Passed in from the vertex shader.

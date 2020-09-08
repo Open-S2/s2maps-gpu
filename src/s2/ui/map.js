@@ -102,7 +102,7 @@ export default class Map extends Camera {
   resize (width: number, height: number, canvasMultiplier: number) {
     const { _canvas } = this
     _canvas.width = width * canvasMultiplier
-    _canvas.height = width * canvasMultiplier
+    _canvas.height = height * canvasMultiplier
     this.resizeCamera(width, height)
     this.render()
   }
