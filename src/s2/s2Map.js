@@ -29,7 +29,8 @@ export default class S2Map {
     // create map via a webworker if possible, otherwise just load it in directly
     this._setupCanvas(canvas, options)
     // now that canvas is setup, support resizing
-    window.addEventListener('resize', this._resize.bind(this))
+    if (ResizeObserver) new ResizeObserver(this._resize.bind(this)).observe(this._container)
+    else window.addEventListener('resize', this._resize.bind(this))
     // lastly let the S2WorkerPool know of this maps existance
     window.S2WorkerPool.addMap(this)
   }
@@ -48,8 +49,8 @@ export default class S2Map {
     canvas.className = 's2-canvas'
     canvas.setAttribute('tabindex', '0')
     canvas.setAttribute('aria-label', 'S2Map')
-    canvas.width = container.clientWidth * this._canvasMultiplier | 0
-    canvas.height = container.clientHeight * this._canvasMultiplier | 0
+    canvas.width = container.clientWidth * this._canvasMultiplier
+    canvas.height = container.clientHeight * this._canvasMultiplier
     canvasContainer.appendChild(canvas)
     return canvas
   }
@@ -117,14 +118,16 @@ export default class S2Map {
   }
 
   _resize () {
+    const { _container, _canvasMultiplier } = this
     // rebuild the proper width and height using the container as a guide
     if (this._offscreen) {
         this.map.postMessage({
         type: 'resize',
-        width: this._canvasContainer.clientWidth,
-        height: this._canvasContainer.clientHeight
+        width: _container.clientWidth,
+        height: _container.clientHeight,
+        canvasMultiplier: _canvasMultiplier
       })
-    } else if (this.map) { this.map.resize() } // NOTE: some incredibly strange bug in Brave mobile needs to check if this.map is a thing (WTF)
+    } else if (this.map) { this.map.resize(_container.clientWidth, _container.clientHeight, _canvasMultiplier) }
   }
 
   _containerDimensions (): null | [number, number] {

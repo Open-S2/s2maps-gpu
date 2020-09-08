@@ -99,11 +99,11 @@ export default class Map extends Camera {
     return this._canvas
   }
 
-  resize (width: number, height: number) {
-    // this._canvas.width = width
-    // this._canvas.height = height
-    if (width && height) this.resizeCamera(width, height)
-    else this.resizeCamera(this._canvas.clientWidth, this._canvas.clientHeight)
+  resize (width: number, height: number, canvasMultiplier: number) {
+    const { _canvas } = this
+    _canvas.width = width * canvasMultiplier
+    _canvas.height = width * canvasMultiplier
+    this.resizeCamera(width, height)
     this.render()
   }
 

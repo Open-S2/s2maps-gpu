@@ -10,7 +10,7 @@ class MapWorker {
     const { type } = data
 
     if (type === 'canvas') this._prepCanvas(data.options, data.canvas, data.id)
-    else if (type === 'resize') this.map.resize(data.width, data.height)
+    else if (type === 'resize') this.map.resize(data.width, data.height, data.canvasMultiplier)
     else if (type === 'scroll') this.map._onZoom(data.deltaY, data.clientX - data.rect.left, data.clientY - data.rect.top)
     else if (type === 'mousedown') this.map.dragPan.onMouseDown()
     else if (type === 'mouseup') this.map.dragPan.onMouseUp()

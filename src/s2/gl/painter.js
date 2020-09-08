@@ -122,6 +122,8 @@ export default class Painter {
     // If we are using the text program, update the text program's framebuffer component's sizes
     const glyphFilter: GlyphFilterProgram = this.programs.glyphFilter
     if (glyphFilter) glyphFilter.resize()
+    // ensure our default viewport is accurate
+    this.context.resetViewport()
   }
 
   paint (projection: Projection, style: Style, tiles: Array<Tile>) {
