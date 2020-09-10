@@ -324,7 +324,7 @@ export default class Tile {
     // setup source data
     const glyphSource = this.sourceData[sourceName] = {
       type: 'glyph',
-      uvArray: new Float32Array([0, 0,  1, 0,  1, 1,  0, 1]),
+      uvArray: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
       stepArray: new Float32Array([0, 1]),
       textureID: layerGuideBuffer[0],
       height: layerGuideBuffer[1],

@@ -260,7 +260,7 @@ export default class TileWorker {
         if (minzoom <= zoom && maxzoom >= zoom) { // check zoom bounds
           requestData(`${path}/${face}/${zoom}/${x}/${y}`, fileType, (data) => {
             if (data && !self.cancelCache.includes(hash)) self._processMaskData(mapID, sourceName, source, tile, fileType, data)
-          }, (typeof OffscreenCanvas === "undefined"))
+          }, (typeof OffscreenCanvas === 'undefined'))
         }
       }
     }
@@ -269,17 +269,17 @@ export default class TileWorker {
 
   _processRasterData (mapID: string, sourceName: string, source: Object,
     tileID: number, data: ArrayBuffer | Blob, params?: Object) {
-      const { leftShift, bottomShift } = params
-      // https://bugzilla.mozilla.org/show_bug.cgi?id=1335594
-      let built = true
-      const getImage = (IS_CHROME)
-        ? createImageBitmap(data, { imageOrientation: 'flipY', premultiplyAlpha: 'premultiply' })
-        : (typeof createImageBitmap === 'function')
-          ? createImageBitmap(data)
-          : new Promise((resolve) => { built = false; resolve(data) })
-      getImage
-        .then(image => postMessage({ mapID, type: 'rasterdata', built, source: sourceName, tileID, image, leftShift, bottomShift }, [image]))
-        .catch(err => { console.log('ERROR', err )})
+    const { leftShift, bottomShift } = params
+    // https://bugzilla.mozilla.org/show_bug.cgi?id=1335594
+    let built = true
+    const getImage = (IS_CHROME)
+      ? createImageBitmap(data, { imageOrientation: 'flipY', premultiplyAlpha: 'premultiply' })
+      : (typeof createImageBitmap === 'function')
+        ? createImageBitmap(data)
+        : new Promise((resolve) => { built = false; resolve(data) })
+    getImage
+      .then(image => postMessage({ mapID, type: 'rasterdata', built, source: sourceName, tileID, image, leftShift, bottomShift }, [image]))
+      .catch(err => { console.log('ERROR', err) })
   }
 
   _processMaskData (mapID: string, sourceName: string, source: Object,
@@ -302,7 +302,7 @@ export default class TileWorker {
       postMessage({ mapID, type: 'maskdata', tileID: hash, vertexBuffer, indexBuffer, radiiBuffer }, [vertexBuffer, indexBuffer, radiiBuffer])
     }
     // create the terrain grid
-    if (typeof OffscreenCanvas === "undefined") { // CPU solution
+    if (typeof OffscreenCanvas === 'undefined') { // CPU solution
       const reader = new PNGReader(data)
       reader.parse((err, png) => {
         if (!err) {
@@ -377,10 +377,12 @@ export default class TileWorker {
                 // check that we are not exluding fills
                 if (layer.onlyLines && type !== 2) continue
                 preprocessLine(feature.loadGeometry(), type, false, vertices, division, extent)
-                if (webgl1) featureCode = [
-                  ...(layer.paint.color(null, properties, zoom)).getRGB(),
-                  layer.paint.width(null, properties, zoom)
-                ]
+                if (webgl1) {
+                  featureCode = [
+                    ...(layer.paint.color(null, properties, zoom)).getRGB(),
+                    layer.paint.width(null, properties, zoom)
+                  ]
+                }
                 featureSet = lineFeatures
               } else if (layer.type === 'line3D' && type === 9) {
                 continue

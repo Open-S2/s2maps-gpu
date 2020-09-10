@@ -82,8 +82,7 @@ export default class Projector implements Projection {
     this.lon += movementX / (multiplierX * (2 * Math.pow(2, Math.max(this.zoom, 0))))
     this.lat += movementY / (multiplierY * (2 * Math.pow(2, Math.max(this.zoom, 0))))
     // check that we don't over move on the x axis
-    if (this.lat > this.maxLatRotation) { this.lat = this.maxLatRotation }
-    else if (this.lat < -this.maxLatRotation) { this.lat = -this.maxLatRotation }
+    if (this.lat > this.maxLatRotation) { this.lat = this.maxLatRotation } else if (this.lat < -this.maxLatRotation) { this.lat = -this.maxLatRotation }
     // update view
     this.view[1] = this.lon
     this.view[2] = this.lat
@@ -130,7 +129,7 @@ export default class Projector implements Projection {
     // grab the first tile while we prep
     let point = S2Point.fromLonLat(-this.lon, this.lat)
     let [face, s, t] = point.toST()
-    if (s < 0 || s === 1 || t < 0 || t === 1) [face, s, t] = updateFace(face, s, t);
+    if (s < 0 || s === 1 || t < 0 || t === 1) [face, s, t] = updateFace(face, s, t)
     let [x, y] = tileXYFromSTZoom(s, t, zoomLevel)
     let stBbox = bboxST(x, y, zoomLevel)
     let hash = tileHash(face, zoomLevel, x, y)
@@ -141,7 +140,7 @@ export default class Projector implements Projection {
 
     do {
       // from current face, zoomLevel, x, y: grab the surrounding 8 tiles, refine to actual face boundaries, than adding to checked as we go
-      [face, x, y, hash] = checkList.pop();
+      [face, x, y, hash] = checkList.pop()
       // grab the bbox from the tile
       stBbox = bboxST(x, y, zoomLevel)
       // grab the four points from the bbox and project them
@@ -219,7 +218,7 @@ function lineIntersect (x1, y1, x2, y2, x3, y3, x4, y4) {
   if (!denom) return false
   const lambda = ((y4 - y3) * (x4 - x1) + (x3 - x4) * (y4 - y1)) / denom
   const gamma = ((y1 - y2) * (x4 - x1) + (x2 - x1) * (y4 - y1)) / denom
-  return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1)
+  return (lambda > 0 && lambda < 1) && (gamma > 0 && gamma < 1)
 }
 
 // [4.415133953094482, 0, -2.473909806106526e-16, -2.4492937051703357e-16, 0, 10.566132545471191, 0, 0, -1.081395952331251e-15, 0, -1.0100502967834473, -1, 0, 0, 0.6676181554794312, 1.656000018119812]

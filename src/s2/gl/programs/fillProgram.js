@@ -46,6 +46,6 @@ export default class FillProgram extends Program {
       if (featureCode && featureCode.length) gl.uniform1fv(this.uFeatureCode, featureCode)
     }
     // draw elements
-    gl.drawElements(mode ? mode : gl.TRIANGLES, count, gl.UNSIGNED_INT, (offset | 0) * 4)
+    gl.drawElements(mode || gl.TRIANGLES, count, gl.UNSIGNED_INT, (offset | 0) * 4)
   }
 }

@@ -27,8 +27,7 @@ export default class OrthographicProjection extends Projector {
     if (this.zoom > this.maxzoom) {
       this.zoom = this.maxzoom // if it overzooms but the previous zoom was not at maxzoom, we need to render one more time
       if (this.prevZoom === this.maxzoom) return false
-    }
-    else if (this.zoom < this.minzoom) {
+    } else if (this.zoom < this.minzoom) {
       this.zoom = this.minzoom // if it underzooms but the previous zoom was not at minzoom, we need to render one more time
       if (this.prevZoom === this.minzoom) return false
     }

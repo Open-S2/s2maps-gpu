@@ -121,7 +121,7 @@ export default class S2Map {
     const { _container, _canvasMultiplier } = this
     // rebuild the proper width and height using the container as a guide
     if (this._offscreen) {
-        this.map.postMessage({
+      this.map.postMessage({
         type: 'resize',
         width: _container.clientWidth,
         height: _container.clientHeight,

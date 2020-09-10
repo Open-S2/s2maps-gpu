@@ -51,13 +51,13 @@ export default function parseFilter (filter: undefined | Array<string | Array<an
 
 function parseFilterCondition (condition: string, value: string | number | Array<string | number>): Function {
   // manage multiple conditions
-  if (condition === "==") return (input) => input === value // ["class", "==", "ocean"] OR ["elev", "==", 50]
-  else if (condition === "!=") return (input) => input !== value // ["class", "!=", "ocean"] OR ["elev", "!=", 50]
-  else if (condition === ">") return (input) => input > value // ["elev", ">", 50]
-  else if (condition === ">=") return (input) => input >= value // ["elev", ">=", 50]
-  else if (condition === "<") return (input) => input < value // ["elev", "<", 50]
-  else if (condition === "<=") return (input) => input <= value // ["elev", "<=", 50]
-  else if (condition === "has") return (input) => value.includes(input) // ["class", "has", ["ocean", "river"]] OR ["elev", "in", [2, 3, 4, 5]]
-  else if (condition === "!has") return (input) => !value.includes(input) // ["class", "!has", ["ocean", "river"]] OR ["elev", "!in", [2, 3, 4, 5]]
+  if (condition === '==') return (input) => input === value // ["class", "==", "ocean"] OR ["elev", "==", 50]
+  else if (condition === '!=') return (input) => input !== value // ["class", "!=", "ocean"] OR ["elev", "!=", 50]
+  else if (condition === '>') return (input) => input > value // ["elev", ">", 50]
+  else if (condition === '>=') return (input) => input >= value // ["elev", ">=", 50]
+  else if (condition === '<') return (input) => input < value // ["elev", "<", 50]
+  else if (condition === '<=') return (input) => input <= value // ["elev", "<=", 50]
+  else if (condition === 'has') return (input) => value.includes(input) // ["class", "has", ["ocean", "river"]] OR ["elev", "in", [2, 3, 4, 5]]
+  else if (condition === '!has') return (input) => !value.includes(input) // ["class", "!has", ["ocean", "river"]] OR ["elev", "!in", [2, 3, 4, 5]]
   else return () => false
 }

@@ -69,11 +69,18 @@ export default function processText (feature: VectorFeature, code: Array<number>
   for (const point of geometry) {
     const text = {
       // organization parameters
-      id: idGen.num, layerID, code,
+      id: idGen.num,
+      layerID,
+      code,
       // layout
-      family, field, padding, offset, anchor,
+      family,
+      field,
+      padding,
+      offset,
+      anchor,
       // paint
-      size, featureCode,
+      size,
+      featureCode,
       // tile position
       s: point[0] / extent,
       t: point[1] / extent,

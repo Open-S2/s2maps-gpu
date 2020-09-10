@@ -12,7 +12,7 @@ export default class EventListener {
 
   removeEventListener (type, callback) {
     if (!(type in this.listeners)) return
-    let stack = this.listeners[type];
+    let stack = this.listeners[type]
     for (let i = 0, l = stack.length; i < l; i++) {
       if (stack[i] === callback) {
         stack.splice(i, 1)

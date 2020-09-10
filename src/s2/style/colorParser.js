@@ -14,7 +14,7 @@ export default function colorParser (input: string): [string, [number, number, n
   }
 }
 
-function parseHex (input: string): [string, [number, number, number, number]]  {
+function parseHex (input: string): [string, [number, number, number, number]] {
   input = input.substr(1)
   // shorthand notation
   if (input.length % 3 === 0) {
@@ -41,7 +41,7 @@ function parseHex (input: string): [string, [number, number, number, number]]  {
   }
 }
 
-function parseString (input): [string, [number, number, number, number]]  {
+function parseString (input): [string, [number, number, number, number]] {
   // seperate type and values
   let [type, values] = input.split('(')
   // cleanup values

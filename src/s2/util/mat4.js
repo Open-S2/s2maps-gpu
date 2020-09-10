@@ -172,7 +172,7 @@ export function addCenter (m: Float32Array, v: Float32Array | Array<number>): Fl
 }
 
 export function translate (m: Float32Array, v: Float32Array | [number, number, number]): Float32Array {
-  const x = v[0], y = v[1], z = v[2]
+  const x = v[0]; const y = v[1]; const z = v[2]
 
   m[12] = m[0] * x + m[4] * y + m[8] * z + m[12]
   m[13] = m[1] * x + m[5] * y + m[9] * z + m[13]
@@ -316,42 +316,44 @@ export function multiply (a: Float32Array | Array<number>, b: Float32Array | Arr
   let b1 = b[1]
   let b2 = b[2]
   let b3 = b[3]
-  a[0] = b0*a00 + b1*a10 + b2*a20 + b3*a30
-  a[1] = b0*a01 + b1*a11 + b2*a21 + b3*a31
-  a[2] = b0*a02 + b1*a12 + b2*a22 + b3*a32
-  a[3] = b0*a03 + b1*a13 + b2*a23 + b3*a33
+  a[0] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30
+  a[1] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31
+  a[2] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32
+  a[3] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33
   b0 = b[4]
   b1 = b[5]
   b2 = b[6]
   b3 = b[7]
-  a[4] = b0*a00 + b1*a10 + b2*a20 + b3*a30
-  a[5] = b0*a01 + b1*a11 + b2*a21 + b3*a31
-  a[6] = b0*a02 + b1*a12 + b2*a22 + b3*a32
-  a[7] = b0*a03 + b1*a13 + b2*a23 + b3*a33
+  a[4] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30
+  a[5] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31
+  a[6] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32
+  a[7] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33
   b0 = b[8]
   b1 = b[9]
   b2 = b[10]
   b3 = b[11]
-  a[8] = b0*a00 + b1*a10 + b2*a20 + b3*a30
-  a[9] = b0*a01 + b1*a11 + b2*a21 + b3*a31
-  a[10] = b0*a02 + b1*a12 + b2*a22 + b3*a32
-  a[11] = b0*a03 + b1*a13 + b2*a23 + b3*a33
+  a[8] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30
+  a[9] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31
+  a[10] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32
+  a[11] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33
   b0 = b[12]
   b1 = b[13]
   b2 = b[14]
   b3 = b[15]
-  a[12] = b0*a00 + b1*a10 + b2*a20 + b3*a30
-  a[13] = b0*a01 + b1*a11 + b2*a21 + b3*a31
-  a[14] = b0*a02 + b1*a12 + b2*a22 + b3*a32
-  a[15] = b0*a03 + b1*a13 + b2*a23 + b3*a33
+  a[12] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30
+  a[13] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31
+  a[14] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32
+  a[15] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33
 
   return a
 }
 
 export function invert (matrix: Float32Array | Array<number>, input: Float32Array | Array<number>) {
-  let a00 = input[0], a01 = input[1], a02 = input[2], a03 = input[3], a10 = input[4], a11 = input[5],
-    a12 = input[6], a13 = input[7], a20 = input[8], a21 = input[9], a22 = input[10], a23 = input[11],
-    a30 = input[12], a31 = input[13], a32 = input[14], a33 = input[15]
+  let a00 = input[0]; let a01 = input[1]; let a02 = input[2]; let a03 = input[3]; let a10 = input[4]; let a11 = input[5]
+
+  let a12 = input[6]; let a13 = input[7]; let a20 = input[8]; let a21 = input[9]; let a22 = input[10]; let a23 = input[11]
+
+  let a30 = input[12]; let a31 = input[13]; let a32 = input[14]; let a33 = input[15]
   let b00 = a00 * a11 - a01 * a10
   let b01 = a00 * a12 - a02 * a10
   let b02 = a00 * a13 - a03 * a10

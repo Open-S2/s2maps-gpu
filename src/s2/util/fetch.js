@@ -13,7 +13,7 @@ export default function requestData (path: string, extension: Extension, callbac
       else return res.arrayBuffer()
     })
     .then(data => callback(data))
-    .catch(err => { console.log('ERROR', err)})
+    .catch(err => { console.log('ERROR', err) })
 }
 
 function getResposeType (extension: Extension) {

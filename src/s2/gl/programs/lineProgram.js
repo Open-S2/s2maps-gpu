@@ -52,7 +52,7 @@ export default class LineProgram extends Program {
     gl.vertexAttribPointer(4, 2, gl.SHORT, false, 12, 8 + ((offset | 0) * 12))
 
     // draw elements
-    gl.drawArraysInstanced(mode ? mode : gl.TRIANGLES, 0, 9, count) // gl.drawArraysInstancedANGLE(mode, first, count, primcount)
+    gl.drawArraysInstanced(mode || gl.TRIANGLES, 0, 9, count) // gl.drawArraysInstancedANGLE(mode, first, count, primcount)
     // re-enable culling
     context.enableCullFace()
   }

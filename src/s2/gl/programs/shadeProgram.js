@@ -31,7 +31,7 @@ export default class ShadeProgram extends Program {
     // Bind it to ARRAY_BUFFER (think of it as ARRAY_BUFFER = vertexBuffer)
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
     // Buffer the data
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1,  1, -1,  1, 1,  -1, 1]), gl.STATIC_DRAW)
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, 1, 1, -1, 1]), gl.STATIC_DRAW)
     // Turn on the attribute
     gl.enableVertexAttribArray(this.aPos)
     // tell attribute how to get data out of vertexBuffer

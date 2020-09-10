@@ -38,6 +38,6 @@ export default class RasterProgram extends Program {
     // setup the texture
     gl.bindTexture(gl.TEXTURE_2D, texture)
     // draw elements
-    gl.drawElements(mode ? mode : gl.TRIANGLES, count, gl.UNSIGNED_INT, 0)
+    gl.drawElements(mode || gl.TRIANGLES, count, gl.UNSIGNED_INT, 0)
   }
 }

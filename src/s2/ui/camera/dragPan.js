@@ -11,7 +11,7 @@ type TouchEvent = {
 
 // t: time | b: start value | c: change in value | d: duration
 const easeOutExp = (delta, movement, animationLength) => {
-  return -movement * ( -Math.pow( 2, -10 * delta / animationLength ) + 1 ) + movement
+  return -movement * (-Math.pow(2, -10 * delta / animationLength) + 1) + movement
 }
 
 export default class DragPan extends EventListener {

@@ -233,7 +233,7 @@ const lab_xyz = (t) => {
   return t > 0.206896552 ? t * t * t : 0.12841855 * (t - 0.137931034)
 }
 
-const rgb2xyz = (r,g,b) => {
+const rgb2xyz = (r, g, b) => {
   r = rgb_xyz(r)
   g = rgb_xyz(g)
   b = rgb_xyz(b)

@@ -22,22 +22,22 @@ class PNG {
   pixels = null
   trns = null
 
-	setWidth (width) {
+  setWidth (width) {
 	  this.width = width
-	}
+  }
 
-	setHeight (height) {
+  setHeight (height) {
 	  this.height = height
-	}
+  }
 
-	setBitDepth (bitDepth) {
+  setBitDepth (bitDepth) {
 	  if ([2, 4, 8, 16].indexOf(bitDepth) === -1) {
 	    throw new Error('invalid bith depth ' + bitDepth)
 	  }
 	  this.bitDepth = bitDepth
-	}
+  }
 
-	setColorType (colorType) {
+  setColorType (colorType) {
 	  //   Color    Allowed    Interpretation
 	  //   Type    Bit Depths
 	  //
@@ -68,34 +68,34 @@ class PNG {
 	  this.colors = colors
 	  this.alpha = alpha
 	  this.colorType = colorType
-	}
+  }
 
-	setCompressionMethod (compressionMethod) {
+  setCompressionMethod (compressionMethod) {
 	  if (compressionMethod !== 0) {
 	    throw new Error('invalid compression method ' + compressionMethod)
 	  }
 	  this.compressionMethod = compressionMethod
-	}
+  }
 
-	setFilterMethod (filterMethod) {
+  setFilterMethod (filterMethod) {
 	  if (filterMethod !== 0) {
 	    throw new Error('invalid filter method ' + filterMethod)
 	  }
 	  this.filterMethod = filterMethod
-	}
+  }
 
-	setInterlaceMethod (interlaceMethod) {
+  setInterlaceMethod (interlaceMethod) {
 	  if (interlaceMethod !== 0 && interlaceMethod !== 1) {
 	    throw new Error('invalid interlace method ' + interlaceMethod)
 	  }
 	  this.interlaceMethod = interlaceMethod
-	}
+  }
 
-	setTRNS (trns) {
+  setTRNS (trns) {
 	  this.trns = trns
-	}
+  }
 
-	setPalette (palette) {
+  setPalette (palette) {
 	  if (palette.length % 3 !== 0) {
 	    throw new Error('incorrect PLTE chunk length')
 	  }
@@ -103,45 +103,45 @@ class PNG {
 	    throw new Error('palette has more colors than 2^bitdepth')
 	  }
 	  this.palette = palette
-	}
+  }
 
-	/**
+  /**
 	 * get the pixel color on a certain location in a normalized way
 	 * result is an array: [red, green, blue, alpha]
 	 */
-	getPixel (x, y) {
-		if (!this.pixels) throw new Error('pixel data is empty')
-		if (x >= this.width || y >= this.height) {
-			throw new Error('x,y position out of bound')
-		}
-		let i = this.colors * this.bitDepth / 8 * (y * this.width + x)
-		let pixels = this.pixels
+  getPixel (x, y) {
+    if (!this.pixels) throw new Error('pixel data is empty')
+    if (x >= this.width || y >= this.height) {
+      throw new Error('x,y position out of bound')
+    }
+    let i = this.colors * this.bitDepth / 8 * (y * this.width + x)
+    let pixels = this.pixels
 
-		switch (this.colorType) {
-			case 0: return [pixels[i], pixels[i], pixels[i], 255]
-			case 2: return [pixels[i], pixels[i + 1], pixels[i + 2], 255]
-			case 3:
-				let alpha = 255
-				if (this.trns != null && this.trns[pixels[i]] != null) {
-					alpha = this.trns[pixels[i]]
-				}
-				return [
-					this.palette[pixels[i] * 3 + 0],
-					this.palette[pixels[i] * 3 + 1],
-					this.palette[pixels[i] * 3 + 2],
-					alpha
-				]
-			case 4: return [pixels[i], pixels[i], pixels[i], pixels[i + 1]]
-			case 6: return [pixels[i], pixels[i + 1], pixels[i + 2], pixels[i + 3]]
+    switch (this.colorType) {
+      case 0: return [pixels[i], pixels[i], pixels[i], 255]
+      case 2: return [pixels[i], pixels[i + 1], pixels[i + 2], 255]
+      case 3:
+        let alpha = 255
+        if (this.trns != null && this.trns[pixels[i]] != null) {
+          alpha = this.trns[pixels[i]]
+        }
+        return [
+          this.palette[pixels[i] * 3 + 0],
+          this.palette[pixels[i] * 3 + 1],
+          this.palette[pixels[i] * 3 + 2],
+          alpha
+        ]
+      case 4: return [pixels[i], pixels[i], pixels[i], pixels[i + 1]]
+      case 6: return [pixels[i], pixels[i + 1], pixels[i + 2], pixels[i + 3]]
       default: return [0, 0, 0, 0]
-		}
-	}
+    }
+  }
 
-	/**
+  /**
 	 * get the pixels of the image as a RGBA array of the form [r1, g1, b1, a1, r2, b2, g2, a2, ...]
 	 * Matches the api of canvas.getImageData
 	 */
-	getRGBA8Array () {
+  getRGBA8Array () {
 	  let data = new Array(this.width * this.height * 4)
 	  for (let y = 0; y < this.height; y++) {
 	  // for (let y = this.height - 1; y >= 0; y--) {
@@ -155,7 +155,7 @@ class PNG {
 	    }
 	  }
 	  return data
-	}
+  }
 }
 
 export default class PNGReader {
@@ -164,7 +164,7 @@ export default class PNGReader {
 	png = new PNG()
 	dataChunks = []
 	constructor (bytes) {
-		if (typeof bytes === 'string') {
+	  if (typeof bytes === 'string') {
 	    let bts = bytes
 	    bytes = new Array(bts.length)
 	    for (let i = 0, l = bts.length; i < l; i++) {
@@ -174,7 +174,7 @@ export default class PNGReader {
 	    let type = toString.call(bytes).slice(8, -1)
 	    if (type === 'ArrayBuffer') bytes = new Uint8Array(bytes)
 	  }
-		this.bytes = bytes
+	  this.bytes = bytes
 	}
 
 	readBytes (length) {
@@ -228,7 +228,7 @@ export default class PNGReader {
 	    case 'PLTE': this.decodePLTE(chunk); break
 	    case 'IDAT': this.decodeIDAT(chunk); break
 	    case 'tRNS': this.decodeTRNS(chunk); break
-      default: break
+	    default: break
 	  }
 
 	  return type
@@ -285,7 +285,7 @@ export default class PNGReader {
 	 * Uncompress IDAT chunks
 	 */
 	decodePixels (callback) {
-		const self = this
+	  const self = this
 	  const { png } = self
 	  let length = 0
 	  let i, j, k, l

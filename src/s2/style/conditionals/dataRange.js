@@ -55,7 +55,6 @@ export default function parseDataRange (input) {
       // if equal to start, then we don't need to store the next encoding, we never reach it
       if (startRange === dataInput) return
       input[i + 1](encoding, properties)
-      return
     }
   }
 }
