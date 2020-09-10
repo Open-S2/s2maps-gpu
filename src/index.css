@@ -53,6 +53,7 @@ code {
   right: 0;
   height: inherit;
   width: inherit;
+  outline: none;
 }
 
 /* HOME STYLING */

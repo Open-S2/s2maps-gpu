@@ -176,7 +176,8 @@ export default class Projector implements Projection {
 
     // console.log('tiles', tiles)
     // console.log('zoom', zoomLevel)
-    return tiles
+    // we sort by id to avoid text filtering to awkwardly swap back and forth
+    return tiles.sort((a, b) => { return a[4] - b[4] })
   }
 }
 

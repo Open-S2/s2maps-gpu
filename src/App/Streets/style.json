@@ -9,9 +9,9 @@
     "world": "https://s3.s2maps.io/streets-v1"
   },
   "fonts": {
-    "default": "https://s3.s2maps.io/fonts-v1/default",
-    "roboto-regular": "https://s3.s2maps.io/fonts-v1/RobotoRegular",
-    "roboto-medium": "https://s3.s2maps.io/fonts-v1/RobotoMedium"
+    "default": "https://s3.s2maps.io/fonts-v2/default",
+    "roboto-regular": "https://s3.s2maps.io/fonts-v2/RobotoRegular",
+    "roboto-medium": "https://s3.s2maps.io/fonts-v2/RobotoMedium"
   },
   "shade": false,
   "wallpaper": {

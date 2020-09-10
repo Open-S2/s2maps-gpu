@@ -15,16 +15,16 @@ float solve_par_dist (in vec2 pcoord) {
   float h = 0.5 * px;
   float g = 0.5 - py;
   float xr = sqrt(0.5 * px);
-  float x0 = g < -h ? sqrt( abs( g ) ) :
-             g > xr ? h / abs( g ) :
+  float x0 = g < -h ? sqrt(abs(g)) :
+             g > xr ? h / abs(g) :
              xr;
 
-   for (int i = 0; i < 3; ++i) {
-     float rcx0 = 1. / x0;
-     float pb = h * rcx0 * rcx0;
-     float pc = -px * rcx0 + g;
-     x0 = 2. * pc / (-pb - sqrt(abs(pb * pb - 4. * pc)));
-   }
+  for (int i = 0; i < 3; ++i) {
+    float rcx0 = 1. / x0;
+    float pb = h * rcx0 * rcx0;
+    float pc = -px * rcx0 + g;
+    x0 = 2. * pc / (-pb - sqrt(abs(pb * pb - 4. * pc)));
+  }
 
   x0 = sigx * x0;
   float dx = sigx * sqrt(-0.75 * x0 * x0 - g);

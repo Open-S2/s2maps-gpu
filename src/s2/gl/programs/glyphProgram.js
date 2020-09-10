@@ -30,7 +30,7 @@ export default class GlyphProgram extends Program {
     const { gl, type } = context
     // build shaders
     if (type === 1) {
-      gl.attributeLocations = { aPos: 0, type: 7 }
+      gl.attributeLocations = { aPos: 0, aType: 7 }
       super(context, vert1, frag1, false)
     } else {
       super(context, vert2, frag2, false)

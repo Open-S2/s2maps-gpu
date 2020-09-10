@@ -18,8 +18,8 @@ float solve_par_dist (in vec2 pcoord) {
   float h = 0.5 * px;
   float g = 0.5 - py;
   float xr = sqrt(0.5 * px);
-  float x0 = g < -h ? sqrt( abs( g ) ) :
-             g > xr ? h / abs( g ) :
+  float x0 = g < -h ? sqrt(abs(g)) :
+             g > xr ? h / abs(g) :
              xr;
 
   for (int i = 0; i < 3; ++i) {

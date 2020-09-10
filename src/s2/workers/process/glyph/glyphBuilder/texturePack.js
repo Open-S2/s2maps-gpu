@@ -66,52 +66,32 @@ export default class TexturePack {
       const { glyphSet, size, sdfMaxSize } = this.font.get(family)
       // look for the char, build
       if (glyphSet.has(char)) {
-        const g = glyphSet.get(char)
-        let { yOffset, advanceWidth } = g
+        const gData = glyphSet.get(char)
+        let { yOffset, advanceWidth } = gData
         // store the glyph to the texture
         const glyph = this._addGlyphToTexture(key, advanceWidth, yOffset, size, sdfMaxSize)
-        // adjust yOffset by size
-        yOffset *= size
+        const { bbox } = glyph
         // now build the path using offset as a guide
-        const offset = [glyph.bbox[0], glyph.bbox[1] + yOffset + 1]
-        const path = g.getPath(true, offset, size, sdfMaxSize)
+        const offset = [bbox[0], bbox[1] + (yOffset * size)]
+        const path = gData.getPath(true, offset, size, sdfMaxSize)
         // Build the actual glyph using the path data with the box as a positional adivsor
-        this._buildGlyph(glyph, path, offset, size, sdfMaxSize)
+        this._buildPath(path)
 
         return glyph
       }
     }
   }
 
-  _buildGlyph (glyph: Glyph, path: Path, glyphOffset: [number, number],
-    size: number, sdfMaxSize: number) {
-    const self = this
-    // grab the box
-    const glyphXOffset = glyphOffset[0]
-    const glyphYOffset = glyphOffset[1]
+  _buildPath (path: Path) {
+    const { fillVertices, fillIndices, lineVertices } = this
+    const { vertices, indices, quads, strokes } = path
     // fill data
-    const offset = self.fillVertices.length / 3
-    for (let v = 0, vl = path.vertices.length; v < vl; v += 3) {
-      self.fillVertices.push(
-        path.vertices[v] * size + glyphXOffset + sdfMaxSize, // (4 for the offset for SDF max distance)
-        path.vertices[v + 1] * size + glyphYOffset + sdfMaxSize,
-        path.vertices[v + 2] // type
-      )
-    }
-    self.fillIndices.push(...path.indices.map(i => i + offset))
-    self.fillIndices.push(...path.quads.map(i => i + offset))
+    const offset = fillVertices.length / 3
+    fillVertices.push(...vertices)
+    fillIndices.push(...indices.map(i => i + offset))
+    fillIndices.push(...quads.map(i => i + offset))
     // line data
-    path.strokes.forEach(stroke => {
-      for (const vertex of stroke) {
-        const { pos, par, limits, scale } = vertex
-        self.lineVertices.push(
-          ...pos,
-          ...par,
-          ...limits,
-          scale
-        )
-      }
-    })
+    lineVertices.push(...strokes)
   }
 
   _addGlyphToTexture (key: string, advanceWidth: number, yOffset: number,

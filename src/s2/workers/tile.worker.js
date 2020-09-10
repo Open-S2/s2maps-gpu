@@ -16,7 +16,11 @@ import type { Face } from 's2projection'
 import type { StylePackage } from '../styleSpec'
 import type { Text } from './process'
 
-const IS_CHROME = navigator.userAgent.indexOf('Chrome') !== -1
+const { userAgent } = navigator
+const IS_CHROME = userAgent.indexOf('Chrome') > -1
+const IS_FIREFOX = userAgent.indexOf('Firefox') > -1
+const IS_OPERA = userAgent.indexOf('OP') > -1
+const BROTLI_COMPATIBLE = IS_CHROME || IS_FIREFOX || IS_OPERA
 
 export type CancelTileRequest = Array<number> // hashe IDs of tiles e.g. ['204', '1003', '1245', ...]
 
@@ -182,7 +186,7 @@ export default class TileWorker {
     // build fonts
     for (const fontName in fonts) {
       promises.push(new Promise((resolve, _) => {
-        requestData(fonts[fontName], 'pbf', font => {
+        requestData(fonts[fontName], (BROTLI_COMPATIBLE) ? 'pbf.br' : 'pbf', font => {
           // build the font
           if (font) style.glyphBuilder.addFont(fontName, font)
           resolve()
