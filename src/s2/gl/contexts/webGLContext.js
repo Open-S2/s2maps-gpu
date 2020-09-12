@@ -1,4 +1,5 @@
 // @flow
+/* global WebGLRenderingContext */
 import Context from './context'
 
 export default class WebGLContext extends Context {

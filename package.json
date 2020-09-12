@@ -1,6 +1,7 @@
 {
-  "name": "regia-gl",
+  "name": "s2maps-gl",
   "version": "0.1.0",
+  "main": "buildS2/main.js",
   "private": true,
   "dependencies": {
     "@babel/core": "7.4.3",
@@ -84,7 +85,6 @@
     "start": "node scripts/start.js",
     "build": "node scripts/build.js",
     "buildS2": "node scripts/buildS2.js",
-    "buildS22": "node scripts/buildS22.js",
     "test": "node scripts/test.js"
   },
   "eslintConfig": {

@@ -2,48 +2,48 @@
 import featureSort from '../featureSort'
 import { GlyphBuilder, anchorOffset } from './glyphBuilder'
 
-import type { Text } from '../../tile.worker'
+import type { GlyphObject } from './glyph'
 
 export default function postprocessGlyph (mapID: string, sourceName: string,
-  tileID: string, texts: Array<Text>, glyphBuilder: GlyphBuilder, id: number,
+  tileID: string, glyphs: Array<GlyphObject>, glyphBuilder: GlyphBuilder, id: number,
   postMessage: Function) {
   // sort by layerID
-  texts = texts.sort(featureSort)
+  glyphs = glyphs.sort(featureSort)
 
-  // Get the width of the feature, and filter out any texts that overlap already
+  // Get the width of the feature, and filter out any glyphs that overlap already
   // existant text. Sometimes datapoints can range in the 100s in one tile, so
   // this step reduces cost dramatically.
-  for (const text of texts) {
-    const { family, field, anchor } = text
+  for (const glyph of glyphs) {
+    const { family, field, anchor } = glyph
     let [width, glyphData] = glyphBuilder.getWidthAndGlyphData(family, field)
     if (!width) continue
-    text.width = width
-    text.glyphData = glyphData
+    glyph.width = width
+    glyph.glyphData = glyphData
     // get anchor offset positions
     let [x, y] = anchorOffset(anchor, width)
     // add actual offset
-    text.x = x
-    text.y = y
+    glyph.x = x
+    glyph.y = y
   }
 
   // filter
-  texts = texts.filter(text => {
+  glyphs = glyphs.filter(text => {
     if (!text.width) return false
     return glyphBuilder.testQuad(text)
   })
-  if (!texts.length) return
+  if (!glyphs.length) return
 
   // Assuming we pass the quad test, We need to build 3 components:
   // 1) Glyph quads explaining where to draw, and where on the texture to look
   // 2) The GlyphBuilder will build in the background any new glyphs it needs to a "texturePack"
   // 3) For each text object we need a "filter" quad defining it's total width and size.
   //    This is for the pre-draw step to check overlap. The GlyphBuilder will also be building this.
-  let curLayerID = texts[0].layerID
-  let encoding: Array<number> = texts[0].code
-  let subEncoding: Array<number> = texts[0].featureCode
-  let codeStr: string = texts[0].code.toString()
-  for (const text of texts) {
-    const { layerID, code, featureCode } = text
+  let curLayerID = glyphs[0].layerID
+  let encoding: Array<number> = glyphs[0].code
+  let subEncoding: Array<number> = glyphs[0].featureCode
+  let codeStr: string = glyphs[0].code.toString()
+  for (const glyph of glyphs) {
+    const { layerID, code, featureCode } = glyph
 
     if (curLayerID !== layerID || codeStr !== code.toString()) {
       glyphBuilder.finishLayer(curLayerID, encoding, subEncoding)
@@ -53,7 +53,7 @@ export default function postprocessGlyph (mapID: string, sourceName: string,
       subEncoding = featureCode
     }
 
-    glyphBuilder.buildText(text)
+    glyphBuilder.buildText(glyph)
   }
   // finish the last layer
   glyphBuilder.finishLayer(curLayerID, encoding, subEncoding)

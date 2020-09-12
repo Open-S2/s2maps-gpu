@@ -1,5 +1,7 @@
 // @flow
-import type { MapOptions } from './ui/map'
+/* global HTMLElement HTMLCanvasElement Worker ResizeObserver TouchEvent WheelEvent MouseEvent */
+import type Map, { MapOptions } from './ui/map'
+import type MapWorker from './workers/map.worker.js'
 
 // This is a builder / api instance for the end user.
 // We want individual map instances in their own web worker thread. However,
@@ -10,7 +12,7 @@ export default class S2Map {
   _canvasMultiplier: number = window.devicePixelRatio || 1
   _offscreen: boolean = false
   _canvas: HTMLCanvasElement
-  map: Map | Worker
+  map: Map | MapWorker
   id: string = Math.random().toString(36).replace('0.', '')
   constructor (options: MapOptions) {
     if (options.canvasMultiplier) this._canvasMultiplier = options.canvasMultiplier
@@ -35,7 +37,7 @@ export default class S2Map {
     window.S2WorkerPool.addMap(this)
   }
 
-  _setupContainer () {
+  _setupContainer (): HTMLCanvasElement {
     // prep container
     const container = this._container
     container.classList.add('s2-map')
@@ -64,12 +66,12 @@ export default class S2Map {
         canvas.addEventListener('mousedown', () => self.map.postMessage({ type: 'mousedown' }))
         canvas.addEventListener('mouseup', () => self.map.postMessage({ type: 'mouseup' }))
         canvas.addEventListener('mousemove', self._onMouseMove.bind(self))
-        canvas.addEventListener('touchstart', (e) => self._onTouch(e, 'touchstart'))
-        canvas.addEventListener('touchend', (e) => self._onTouch(e, 'touchend'))
-        canvas.addEventListener('touchmove', (e) => self._onTouch(e, 'touchmove'))
+        canvas.addEventListener('touchstart', (e: TouchEvent) => self._onTouch(e, 'touchstart'))
+        canvas.addEventListener('touchend', (e: TouchEvent) => self._onTouch(e, 'touchend'))
+        canvas.addEventListener('touchmove', (e: TouchEvent) => self._onTouch(e, 'touchmove'))
       }
       const offscreen = canvas.transferControlToOffscreen()
-      self._offscreen = true
+      self._offscreen = true // $FlowIgnore - special Plugin params
       self.map = new Worker('./workers/map.worker.js', { type: 'module' })
       self.map.onmessage = self._mapMessage.bind(self)
       options.canvasWidth = self._container.clientWidth
@@ -77,12 +79,13 @@ export default class S2Map {
       self.map.postMessage({ type: 'canvas', options, canvas: offscreen, id: self.id }, [offscreen])
     } else {
       import('./ui/map').then(map => {
-        self.map = new map.default(options, canvas, self.id)
+        const Map = map.default
+        self.map = new Map(options, canvas, self.id)
       })
     }
   }
 
-  _onTouch (e: Event, type: string) {
+  _onTouch (e: TouchEvent, type: string) {
     e.preventDefault()
     const { touches } = e
     const { length } = touches
@@ -96,14 +99,14 @@ export default class S2Map {
     this.map.postMessage({ type, touchEvent })
   }
 
-  _onScroll (e) {
+  _onScroll (e: WheelEvent) {
     e.preventDefault()
     const { clientX, clientY, deltaY } = e
     const rect = this._canvas.getBoundingClientRect()
     this.map.postMessage({ type: 'scroll', rect, clientX, clientY, deltaY })
   }
 
-  _onMouseMove (e) {
+  _onMouseMove (e: MouseEvent) {
     const { movementX, movementY } = e
     this.map.postMessage({ type: 'mousemove', movementX, movementY })
   }
@@ -158,3 +161,5 @@ export default class S2Map {
     }
   }
 }
+
+if (window) window.S2Map = S2Map

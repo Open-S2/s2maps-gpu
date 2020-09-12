@@ -105,13 +105,13 @@ export default class Color {
     x = isNaN(a) ? y : y + a / 500
     z = isNaN(b) ? y : y - b / 200
     // solve x, y, z
-    y = 1 * lab_xyz(y)
-    x = 0.950470 * lab_xyz(x)
-    z = 1.088830 * lab_xyz(z)
+    y = 1 * labXyz(y)
+    x = 0.950470 * labXyz(x)
+    z = 1.088830 * labXyz(z)
     // xyz to rgb
-    r = xyz_rgb(3.2404542 * x - 1.5371385 * y - 0.4985314 * z)
-    g = xyz_rgb(-0.9692660 * x + 1.8760108 * y + 0.0415560 * z)
-    b_ = xyz_rgb(0.0556434 * x - 0.2040259 * y + 1.0572252 * z)
+    r = xyzRgb(3.2404542 * x - 1.5371385 * y - 0.4985314 * z)
+    g = xyzRgb(-0.9692660 * x + 1.8760108 * y + 0.0415560 * z)
+    b_ = xyzRgb(0.0556434 * x - 0.2040259 * y + 1.0572252 * z)
     // clip space from 0 to 255
     if (r < 0) r = 0
     else if (r > 255) r = 255
@@ -215,30 +215,30 @@ export default class Color {
 }
 
 // everything below this was taken from chroma.js
-const rgb_xyz = (r) => {
+const rgbXyz = (r) => {
   if ((r /= 255) <= 0.04045) return r / 12.92
   return Math.pow((r + 0.055) / 1.055, 2.4)
 }
 
-const xyz_lab = (t) => {
+const xyzLab = (t) => {
   if (t > 0.008856452) return Math.pow(t, 1 / 3)
   return t / 0.12841855 + 0.137931034
 }
 
-const xyz_rgb = (r) => {
+const xyzRgb = (r) => {
   return 255 * (r <= 0.00304 ? 12.92 * r : 1.055 * Math.pow(r, 1 / 2.4) - 0.055)
 }
 
-const lab_xyz = (t) => {
+const labXyz = (t) => {
   return t > 0.206896552 ? t * t * t : 0.12841855 * (t - 0.137931034)
 }
 
 const rgb2xyz = (r, g, b) => {
-  r = rgb_xyz(r)
-  g = rgb_xyz(g)
-  b = rgb_xyz(b)
-  const x = xyz_lab((0.4124564 * r + 0.3575761 * g + 0.1804375 * b) / 0.950470)
-  const y = xyz_lab((0.2126729 * r + 0.7151522 * g + 0.0721750 * b) / 1)
-  const z = xyz_lab((0.0193339 * r + 0.1191920 * g + 0.9503041 * b) / 1.088830)
+  r = rgbXyz(r)
+  g = rgbXyz(g)
+  b = rgbXyz(b)
+  const x = xyzLab((0.4124564 * r + 0.3575761 * g + 0.1804375 * b) / 0.950470)
+  const y = xyzLab((0.2126729 * r + 0.7151522 * g + 0.0721750 * b) / 1)
+  const z = xyzLab((0.0193339 * r + 0.1191920 * g + 0.9503041 * b) / 1.088830)
   return [x, y, z]
 }

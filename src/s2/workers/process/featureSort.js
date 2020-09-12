@@ -1,7 +1,8 @@
 // @flow
 import type { Feature } from '../tile.worker.js'
+import type { GlyphObject } from './glyph/glyph'
 
-export default function featureSort (a: Feature, b: Feature): number {
+export default function featureSort (a: Feature | GlyphObject, b: Feature | GlyphObject): number {
   // layerID
   let diff = a.layerID - b.layerID
   let index = 0

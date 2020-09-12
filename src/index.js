@@ -15,14 +15,14 @@ const Dark = lazy(() => import('./App/Dark'))
 
 ReactDOM.render(
   <Router>
-    <Suspense fallback={<div></div>}>
+    <Suspense fallback={<div />}>
       <Switch>
-        <Route exact path="/" component={Home} />
-        <Route path="/dem" component={DEM} />
-        <Route path="/raster" component={Raster} />
-        <Route path="/streets" component={Streets} />
-        <Route path="/light" component={Light} />
-        <Route path="/dark" component={Dark} />
+        <Route exact path='/' component={Home} />
+        <Route path='/dem' component={DEM} />
+        <Route path='/raster' component={Raster} />
+        <Route path='/streets' component={Streets} />
+        <Route path='/light' component={Light} />
+        <Route path='/dark' component={Dark} />
       </Switch>
     </Suspense>
   </Router>,

@@ -1,15 +1,13 @@
 // @flow
 import { RTree, TexturePack } from './'
 
-import type { Text } from '../../tile.worker'
 import type { Glyph } from './texturePack'
-import type { Quad } from './rtree'
 
 export type Path = {
   vertices: Array<number>,
   indices: Array<number>,
   quads: Array<number>,
-  strokes: Array<Array<number>>
+  strokes: Array<number>
 }
 
 export type FontOptions = {
@@ -24,7 +22,7 @@ export default class GlyphBuilder {
   filterOffset: number = 0
   filterIndex: number = 0
   quadOffset: number = 0
-  charIgnoreList: Set = new Set([8206, 3640, 3633, 2509, 2492, 2497, 146, 55300, 56960, 129, 9, 145])
+  charIgnoreList: Set<number> = new Set([8206, 3640, 3633, 2509, 2492, 2497, 146, 55300, 56960, 129, 9, 145])
   rtree: RTree = new RTree()
   dneGlyph: Glyph
 
@@ -65,15 +63,15 @@ export default class GlyphBuilder {
     if (familyName === 'default') this.dneGlyph = this.texturePack.getGlyph('default', String.fromCharCode(9633))
   }
 
-  testQuad (quad: Quad): boolean {
+  testQuad (text: Text): boolean {
     // build the bbox
-    let s = Math.round(quad.s * 512) // 768 is between 512 and 1080 and is a
-    let t = Math.round(quad.t * 512) // compromise of zooming and reducing too much content
-    quad.minX = t + quad.x
-    quad.minY = s + quad.y
-    quad.maxX = quad.minX + (quad.width * quad.size)
-    quad.maxY = quad.minY + quad.height
-    return !this.rtree.collides(quad)
+    let s = Math.round(text.s * 512) // 768 is between 512 and 1080 and is a
+    let t = Math.round(text.t * 512) // compromise of zooming and reducing too much content
+    text.minX = t + text.x
+    text.minY = s + text.y
+    text.maxX = text.minX + (text.width * text.size)
+    text.maxY = text.minY + text.height
+    return !this.rtree.collides(text)
   }
 
   getWidthAndGlyphData (family: string, field: string) {

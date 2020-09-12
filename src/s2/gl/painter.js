@@ -1,4 +1,5 @@
 // @flow
+/* global HTMLCanvasElement */
 import Style from '../style'
 /** CONTEXTS **/
 import { WebGL2Context, WebGLContext } from './contexts'
@@ -22,8 +23,8 @@ import { Tile } from '../source'
 import type { MapOptions } from '../ui/map'
 import type { Projection } from '../ui/camera/projections'
 import type { FeatureGuide, GlyphTileSource } from '../source/tile'
-import type { ProgramTypes } from './programs/program'
-import type { SphereBackground } from '../styleSpec'
+import type { SphereBackground } from '../style/styleSpec'
+import type { ProgramType } from './programs/program'
 
 export default class Painter {
   _canvas: HTMLCanvasElement
@@ -47,13 +48,14 @@ export default class Painter {
     if (platform !== 'Win32' && platform !== 'Win64' && !(/Mobi|Android/i.test(userAgent))) {
       context = this._canvas.getContext('webgl2', webglOptions)
       if (context && typeof context.getParameter === 'function') {
-        return this.context = new WebGL2Context(context, options.canvasMultiplier)
+        this.context = new WebGL2Context(context, options.canvasMultiplier)
+        return
       }
     }
     // webgl
     context = this._canvas.getContext('webgl', webglOptions)
     if (context && typeof context.getParameter === 'function') {
-      return this.context = new WebGLContext(context, options.canvasMultiplier)
+      this.context = new WebGLContext(context, options.canvasMultiplier)
     }
   }
 
@@ -62,7 +64,7 @@ export default class Painter {
   }
 
   // speedup so our first draw is quicker
-  prebuildPrograms (programs: Set) {
+  prebuildPrograms (programs: Set<ProgramType>) {
     const self = this
     programs.forEach(program => { self.getProgram(program) })
   }
@@ -74,7 +76,7 @@ export default class Painter {
     }
   }
 
-  getProgram (programName: string): null | ProgramTypes {
+  getProgram (programName: ProgramType): null | Program {
     const { programs } = this
     if (programs[programName]) return programs[programName]
     // if program not created yet, let's make it
@@ -112,9 +114,9 @@ export default class Painter {
     return null
   }
 
-  useProgram (programName: string): Program {
+  useProgram (programName: ProgramType): void | Program {
     const program = this.getProgram(programName)
-    program.use()
+    if (program) program.use()
     return program
   }
 
@@ -140,6 +142,7 @@ export default class Painter {
     this._createTileMasksIDs(tiles)
     // prep tiles features to draw
     // console.log('tiles', tiles)
+    // $FlowIgnore
     const features = tiles.flatMap(tile => tile.featureGuide).sort(featureSort)
     // console.log('features', features)
     // prep glyph features for drawing box filters
@@ -179,12 +182,11 @@ export default class Painter {
     }
   }
 
-  buildGlyphTexture (glyphSource: GlyphTileSource) {
-    // get the glyphProgram
+  buildGlyphTexture (glyphSource: GlyphTileSource): void | Error {
+    // get the glyphProgram & draw the glyphs to a texture
     const glyphProgram: GlyphProgram = this.getProgram('glyphFill')
-    if (!glyphProgram) return new Error('The "glyphFill" program does not exist, can not paint.')
-    // build any glyph texture
-    glyphProgram.draw(glyphSource)
+    if (glyphProgram) glyphProgram.draw(glyphSource)
+    else return new Error('The "glyphFill" program does not exist, can not paint.')
   }
 
   paintMasks (tiles: Array<Tile>) {
@@ -224,7 +226,7 @@ export default class Painter {
     // grab the fillProgram
     const fillProgram: FillProgram = this.getProgram('fill')
     // webgl1 -> set color; otherwise set layerCode
-    if (type === 1) {
+    if (type === 1 && typeof code === 'function') {
       gl.uniform4fv(fillProgram.uColors, (code(null, null, zoom)).getRGB(), 0, 4)
     } else { fillProgram.setLayerCode(code, lch) }
     // for each tile, draw a background
@@ -248,8 +250,8 @@ export default class Painter {
     const { gl } = context
     // setup variables
     let curLayer: number = -1
-    let curProgram: string = 'fill'
-    let program: ProgramTypes = this.getProgram('fill')
+    let curProgram: ProgramType = 'fill'
+    let program: Program = this.getProgram('fill')
     if (!program) return new Error('The "fill" program does not exist, can not paint.')
     // run through the features, and upon tile, layer, or program change, adjust accordingly
     context.alwaysDepth()
@@ -280,7 +282,7 @@ export default class Painter {
 
   paintGlyphFilter (tiles: Array<Tile>, glyphFeatures: Array<FeatureGuide>) {
     const { context } = this
-    const glyphFilterProgram: GlyphFilter = this.getProgram('glyphFilter')
+    const glyphFilterProgram: GlyphFilterProgram = this.getProgram('glyphFilter')
     if (!glyphFilterProgram) return new Error('The "glyphFilter" program does not exist, can not paint.')
     // disable blending
     // Step 1: draw points
@@ -303,7 +305,7 @@ export default class Painter {
     context.bindMainBuffer()
   }
 
-  _paintGlyphFilter (glyphFilterProgram: GlyphFilter, glyphFeatures: Array<FeatureGuide>, mode: 0 | 1 | 2) {
+  _paintGlyphFilter (glyphFilterProgram: GlyphFilterProgram, glyphFeatures: Array<FeatureGuide>, mode: 0 | 1 | 2) {
     const { gl } = this.context
     let curLayer: number = -1
     // set mode

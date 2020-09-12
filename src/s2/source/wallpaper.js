@@ -4,7 +4,7 @@ import Projection from '../ui/camera/projections'
 import { degToRad } from 's2projection'
 import * as mat4 from '../util/mat4'
 
-import type { WallpaperStyle } from '../styleSpec'
+import type { WallpaperImageType, WallpaperStyle } from '../style/styleSpec'
 
 export type WallpaperUniforms = {
   uScale: Float32Array,
@@ -30,7 +30,7 @@ export class Wallpaper {
     this.projection = projection
   }
 
-  getUniforms (): null | WallpaperUniforms {
+  getUniforms (): void | WallpaperUniforms {
     let dirty = false
     if (this.projection.dirty) {
       this._updateScale()
@@ -41,9 +41,7 @@ export class Wallpaper {
       dirty = true
     }
 
-    if (!dirty) return null
-    this.dirty = true
-    return this.uniforms
+    if (dirty) return this.uniforms
   }
 
   _updateScale () {
@@ -65,7 +63,7 @@ export class Wallpaper {
 export class Skybox {
   projection: Projection
   path: string
-  type: 'png' | 'jpg'
+  type: WallpaperImageType
   size: number = 1024
   fov: number = degToRad(80)
   angle: number = degToRad(40)

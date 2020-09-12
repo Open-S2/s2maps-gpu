@@ -5,8 +5,8 @@ function Map (props) {
   const { style } = props
   const { setMap } = useMapContainer(style)
   return (
-    <div className="App">
-      <div id="map-container" ref={c => setMap(c)}></div>
+    <div className='App'>
+      <div id='map-container' ref={c => setMap(c)} />
     </div>
   )
 }
@@ -22,8 +22,8 @@ function useMapContainer (style) {
   return { mapContainer, setMap }
 }
 
-function prepCanvas(container, style) {
-  new S2Map({
+function prepCanvas (container, style) {
+  return new S2Map({
     canvasMultiplier: 2,
     style,
     container,

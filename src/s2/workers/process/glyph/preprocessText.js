@@ -2,37 +2,14 @@
 import { VectorFeature } from 's2-vector-tile'
 import { coalesceField, coalesceAnchor } from './'
 
-import type { IDGen } from '../tile.worker'
-import type { Layer } from '../../style/styleSpec'
+import type { GlyphObject } from './glyph'
+import type { IDGen } from '../../tile.worker'
+import type { Layer } from '../../../style/styleSpec'
 
 type Point = [number, number]
 
-export type Text = {
-  // organization parameters
-  id: number,
-  layerID: number,
-  code: Array<number>,
-  // layout
-  family: string,
-  field: string | Array<string>,
-  anchor: number, // 0 => center ; 1 => top; 2 => topRight ; 3 => right ; 4 => bottomRight ; 5 => bottom ; 6 => bottomLeft ; 7 => left ; 8 => topLeft
-  offset: [number, number],
-  padding: [number, number],
-  // paint
-  size: number,
-  featureCode: undefined | Array<number>, // [fill, stroke, strokeWidth, ...]
-  // tile's position
-  s: number,
-  t: number,
-  // texture & box mapping properties
-  width?: number,
-  height?: number,
-  x?: number,
-  y?: number
-}
-
 export default function processText (feature: VectorFeature, code: Array<number>,
-  zoom: number, layer: Layer, layerID: number, extent: number, texts: Array<Text>,
+  zoom: number, layer: Layer, layerID: number, extent: number, texts: Array<GlyphObject>,
   webgl1: boolean, idGen: IDGen) {
   const geometry: Array<Point> = feature.loadGeometry()
   const { properties } = feature
@@ -84,11 +61,13 @@ export default function processText (feature: VectorFeature, code: Array<number>
       // tile position
       s: point[0] / extent,
       t: point[1] / extent,
-      height: size
+      height: size,
+      // precreate children array for rtree
+      children: []
     }
     // update and ensure ID wraps
     idGen.num += idGen.incrSize
-    if (idGen.number >= idGen.maxNum) idGen.number = idGen.startNum
+    if (idGen.num >= idGen.maxNum) idGen.num = idGen.startNum
     // store
     texts.push(text)
   }

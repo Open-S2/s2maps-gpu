@@ -1,5 +1,5 @@
 // @flow
-// import Painter from '../painter'
+/* global WebGLUniformLocation */
 import Program from './program'
 
 // WEBGL1
@@ -30,7 +30,7 @@ export default class FillProgram extends Program {
     }
   }
 
-  draw (featureGuide: FeatureGuide, source: VectorTileSource = {}) {
+  draw (featureGuide: FeatureGuide, source: VectorTileSource) {
     // grab context
     const { context } = this
     const { gl, type } = context

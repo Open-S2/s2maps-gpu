@@ -28,8 +28,10 @@
       1.7,
       2.75,
       "rgb(244, 239, 226)",
-      3,
-      "rgb(245, 242, 235)",
+      4,
+      "rgb(245, 241, 230)",
+      8,
+      "rgb(245, 241, 230)",
       9.5,
       "rgb(225, 225, 229)",
       11.5,
@@ -342,7 +344,15 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "#ffe58b",
+        "color": [
+          "input-range",
+          "zoom",
+          "lin",
+          2,
+          "rgb(249, 202, 74)",
+          7,
+          "#ffe58b"
+        ],
         "width": [
           "input-range",
           "zoom",
@@ -509,11 +519,11 @@
         "fill": [
           "data-condition",
           ["class", "==", "Indian Reservation"],
-          "rgb(176, 179, 157)",
+          "rgb(143, 147, 125)",
           ["class", "has", ["Village", "Neighbourhood", "Island"]],
-          "rgb(132, 147, 169)",
+          "rgb(98, 114, 138)",
           ["class", "==", "Hamlet"],
-          "rgb(150, 150, 150)",
+          "rgb(120, 120, 120)",
           "default",
           [
             "input-range",
@@ -522,17 +532,11 @@
             9,
             "rgb(85, 85, 85)",
             12,
-            "rgb(150, 150, 150)"
+            "rgb(120, 120, 120)"
           ]
         ],
         "stroke": "rgba(255, 255, 255, 0.85)",
-        "strokeWidth": [
-          "data-condition",
-          ["class", "==", "Indian Reservation"],
-          0.4,
-          "default",
-          0.2
-        ]
+        "strokeWidth": 0.4
       }
     },
     {
@@ -597,7 +601,7 @@
           ["class", "==", "Country"],
           "rgb(42, 42, 42)",
           ["class", "==", "State"],
-          "rgb(135, 135, 135)",
+          "rgb(100, 100, 100)",
           "default",
           "rgba(0, 0, 0, 0)"
         ],

@@ -19,6 +19,9 @@ export type ProjectionConfig = {
   height?: number
 }
 
+export type TileDefinition = [number, number, number, number, number]
+export type TileDefinitions = Array<TileDefinition>
+
 export default class Projector implements Projection {
   view: Float32Array = new Float32Array(16) // [zoom, lon, lat, angle, pitch, ...extensions]
   translation: [number, number, number] = [0, 0, -10] // only z should change for visual effects
@@ -115,7 +118,7 @@ export default class Projector implements Projection {
     return projection
   }
 
-  getTilesInView (size?: number = 512): Array<[number, number, number, number, number]> { // [face, zoom, x, y, hash]
+  getTilesInView (size?: number = 512): TileDefinitions { // [face, zoom, x, y, hash]
     if (this.zoom < 1) return [[0, 0, 0, 0, 2], [1, 0, 0, 0, 3], [2, 0, 0, 0, 4], [3, 0, 0, 0, 5], [4, 0, 0, 0, 6], [5, 0, 0, 0, 7]]
     // if (true) return [[4, 0, 0, 0, 6]]
     // if (true) return [[0, 0, 0, 0, 2], [1, 0, 0, 0, 3], [2, 0, 0, 0, 4], [3, 0, 0, 0, 5], [4, 0, 0, 0, 6], [5, 0, 0, 0, 7]]

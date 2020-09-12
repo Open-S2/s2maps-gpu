@@ -3,11 +3,17 @@ import { GlyphSet } from 'glyph-pbf'
 
 import type { Path } from './glyphBuilder'
 
+export type GlyphSetOptions = {
+  size: number,
+  sdfMaxSize: number
+}
+
 export type BBox = [number, number, number, number] // u, v, width, height
 
 export type GlyphStore = {
   glyphSet: GlyphSet,
-  size: number
+  size: number,
+  sdfMaxSize: number
 }
 
 export type Glyph = {
@@ -49,7 +55,7 @@ export default class TexturePack {
     this.fillIndices = []
   }
 
-  addFont (familyName: string, pbf: ArrayBuffer, opts) {
+  addFont (familyName: string, pbf: ArrayBuffer, opts: GlyphSetOptions) {
     this.font.set(familyName, {
       glyphSet: new GlyphSet(pbf),
       size: (opts.size) ? opts.size : 34,
@@ -57,12 +63,12 @@ export default class TexturePack {
     })
   }
 
-  getGlyph (family: string, char: string): undefined | Glyph {
+  getGlyph (family: string, char: string): typeof undefined | Glyph {
     const key = `${family}:${char}`
     // check if we've already built the glyph, otherwise build and replace
     if (this.glyphs.has(key)) {
       return this.glyphs.get(key)
-    } else if (this.font.has(family)) {
+    } else if (this.font.has(family)) { // $FlowIgnore - flow just being ignorant
       const { glyphSet, size, sdfMaxSize } = this.font.get(family)
       // look for the char, build
       if (glyphSet.has(char)) {

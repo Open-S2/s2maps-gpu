@@ -1,4 +1,5 @@
 // @flow
+/* global WebGLRenderingContext */
 export default function loadShader (gl: WebGLRenderingContext, shaderSource: string, shaderType: number) {
   // Create the shader object
   const shader = gl.createShader(shaderType)

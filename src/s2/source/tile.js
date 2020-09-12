@@ -1,10 +1,12 @@
 // @flow
+/* global WebGLBuffer WebGLTexture WebGLVertexArrayObject GLenum Image */
 import { WebGL2Context, WebGLContext } from '../gl/contexts'
 import buildSource from './buildSource'
 import { S2Point, bboxST } from 's2projection' // https://github.com/Regia-Corporation/s2projection
 
 import type { Face } from 's2projection' // https://github.com/Regia-Corporation/s2projection/blob/master/src/S2Projection.js#L4
-import type { Layer, Mask } from '../styleSpec'
+import type { Layer, Mask } from '../style/styleSpec'
+import type { ProgramType } from '../gl/programs/program'
 
 export type VectorTileSource = {
   type: 'vector',
@@ -19,6 +21,7 @@ export type VectorTileSource = {
   radiiBuffer?: WebGLBuffer,
   indexBuffer?: WebGLBuffer,
   codeTypeBuffer?: WebGLBuffer,
+  threeD?: boolean,
   vao?: WebGLVertexArrayObject,
   mode?: GLenum // TRIANGLES | TRIANGLE_STRIP | TRIANGLE_FAN | etc
 }
@@ -43,6 +46,7 @@ export type GlyphTileSource = {
   stepBuffer?: WebGLBuffer,
   glyphFilterBuffer?: WebGLBuffer,
   glyphFillVertexBuffer?: WebGLBuffer,
+  glyphFillIndexBuffer?: WebGLBuffer,
   glyphLineVertexBuffer?: WebGLBuffer,
   glyphLineTypeBuffer?: WebGLBuffer,
   glyphIndexBuffer?: WebGLBuffer,
@@ -71,9 +75,12 @@ export type FeatureGuide = { // eslint-disable-next-line
   offset: number,
   filterOffset?: number, // glyph
   filterCount?: number, // glyph
-  type: string,
+  type: ProgramType,
   featureCode: Float32Array,
-  layerCode: Float32Array
+  subFeatureCode?: Float32Array,
+  layerCode: Float32Array,
+  mode?: GLenum, // TRIANGLES | TRIANGLE_STRIP | TRIANGLE_FAN | etc
+  lch?: boolean
 }
 
 export type ChildRequest = { // eslint-disable-next-line

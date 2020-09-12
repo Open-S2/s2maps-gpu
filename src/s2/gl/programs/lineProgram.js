@@ -1,4 +1,5 @@
 // @flow
+/* global WebGLUniformLocation */
 import Program from './program'
 
 // WEBGL1
@@ -9,7 +10,7 @@ import vert2 from '../../shaders/line2.vertex.glsl'
 import frag2 from '../../shaders/line2.fragment.glsl'
 
 import type { Context } from '../contexts'
-import type { VectorTileSource } from '../../source/tile'
+import type { FeatureGuide, VectorTileSource } from '../../source/tile'
 
 export default class LineProgram extends Program {
   uColor: WebGLUniformLocation

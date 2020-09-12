@@ -1,9 +1,10 @@
 // @flow
+/* global WebGLRenderingContext WebGLProgram WebGLUniformLocation */
 import loadShader from './loadShader'
 
 import type { Context } from '../contexts'
 import type { FeatureGuide } from '../../source/tile'
-export type ProgramTypes = 'mask' | 'fill' | 'line' | 'fill3D' | 'line3D'
+export type ProgramType = 'mask' | 'fill' | 'line' | 'raster' | 'shade' | 'text' | 'billboard' | 'glyph' | 'glyphFill' | 'glyphFilter' | 'wallpaper' | 'skybox' | 'fill3D' | 'line3D'
 
 export default class Program {
   radii: boolean = false
@@ -12,6 +13,7 @@ export default class Program {
   gl: WebGLRenderingContext
   glProgram: WebGLProgram
   uMatrix: WebGLUniformLocation
+  uAspect: WebGLUniformLocation
   uMode: WebGLUniformLocation
   u3D: WebGLUniformLocation
   uLCH: WebGLUniformLocation

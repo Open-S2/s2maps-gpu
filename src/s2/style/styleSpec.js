@@ -1,12 +1,12 @@
 // @flow
 /** SOURCES **/
-type Source = {
+export type Source = {
   path: string,
   type: 'vector' | 'json' | 'raster' | 'mask' | 'font' | 'billboard',
   fileType: 'json' | 's2json' | 'pbf' | 'png' | 'jpg',
   sourceName?: string // if you want to make requests without getting metadata, you need this
 }
-type Sources = { [string]: Source }
+export type Sources = { [string]: Source }
 
 /** MASK **/
 export type Mask = {
@@ -74,8 +74,9 @@ export type Layer = {
 }
 
 /** WORKER PACKAGE **/
+export type GLType = 1 | 2 | 3
 export type StylePackage = {
-  glType: number,
+  glType: GLType,
   sources: Sources,
   fonts: Sources,
   billboards: Sources,
@@ -83,9 +84,11 @@ export type StylePackage = {
 }
 
 /** WALLPAPER **/
+export type WallpaperImageType = 'png' | 'jpg' | 'jpeg'
 export type WallpaperStyle = {
   skybox: string,
-  type: string,
+  type: WallpaperImageType,
+  size: number,
   backgroundColor: string,
   fade1Color: string,
   fade2Color: string,
@@ -94,6 +97,6 @@ export type WallpaperStyle = {
 
 /** SPHERE BACKGROUND **/
 export type SphereBackground = {
-  code: Float32Array,
+  code: Float32Array | Function,
   lch: boolean
 }

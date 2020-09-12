@@ -1,4 +1,5 @@
 // @flow
+/* global GLint WebGLUniformLocation VertexArrayObject WebGLVertexArrayObject */
 import Program from './program'
 
 // WEBGL1
@@ -9,6 +10,7 @@ import vert2 from '../../shaders/wallpaper2.vertex.glsl'
 import frag2 from '../../shaders/wallpaper2.fragment.glsl'
 
 import type { Context } from '../contexts'
+import type { Wallpaper, WallpaperUniforms } from '../../source/wallpaper'
 
 export default class WallpaperProgram extends Program {
   vao: VertexArrayObject

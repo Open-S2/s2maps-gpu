@@ -9,7 +9,7 @@ import vert2 from '../../shaders/raster2.vertex.glsl'
 import frag2 from '../../shaders/raster2.fragment.glsl'
 
 import type { Context } from '../contexts'
-import type { RasterTileSource } from '../../source/tile'
+import type { FeatureGuide, RasterTileSource } from '../../source/tile'
 
 export default class RasterProgram extends Program {
   constructor (context: Context) {

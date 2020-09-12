@@ -1,4 +1,5 @@
 // @flow
+/* global createImageBitmap GLint WebGLTexture VertexArrayObject WebGLVertexArrayObject */
 import Program from './program'
 import Map from '../../ui/map'
 import requestData from '../../util/fetch'
@@ -11,6 +12,7 @@ import vert2 from '../../shaders/skybox2.vertex.glsl'
 import frag2 from '../../shaders/skybox2.fragment.glsl'
 
 import type { Context } from '../contexts'
+import type { Wallpaper, Skybox } from '../../source/wallpaper'
 
 export default class SkyboxProgram extends Program {
   vao: VertexArrayObject

@@ -12,7 +12,7 @@ export function create (): Float32Array {
 export function clone (m: Float32Array): Float32Array {
   const out = new Float32Array(m.length)
 
-  m.forEach((v, i) => out[i] = v)
+  m.forEach((v, i) => { out[i] = v })
 
   return out
 }

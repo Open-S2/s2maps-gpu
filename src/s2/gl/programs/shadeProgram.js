@@ -1,4 +1,5 @@
 // @flow
+/* global VertexArrayObject WebGLVertexArrayObject GLint WebGLUniformLocation */
 import Program from './program'
 
 import shadeVertex from '../../shaders/shade.vertex.glsl'

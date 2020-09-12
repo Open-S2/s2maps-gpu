@@ -18,6 +18,6 @@ export interface Projection {
   setLonLat(lon: number, lat: number): null;
   onMove(rotation: [number, number, number]): null;
   getMatrixAtSize(size: number): Float32Array;
-  getMatrix(tile: Tile): Float32Array;
+  getMatrix(size: number): Float32Array;
   getTilesInView(): Array<[number, number, number, number, number]>;
 }

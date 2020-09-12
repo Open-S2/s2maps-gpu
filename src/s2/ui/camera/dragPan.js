@@ -1,4 +1,5 @@
 // @flow
+/* global Event */
 import EventListener from '../../util/EventListener'
 
 type TouchEvent = {
@@ -18,6 +19,7 @@ export default class DragPan extends EventListener {
   zoomActive: boolean = false // allow two finger zooming
   mouseActive: boolean = false // when a user presses left click and moves during the press
   wasActive: boolean = false // if a onMouseDown event comes up, we want to check if the map was previously active to avoid unecessary click events
+  swipeActive: boolean = false
   animationLength: number = 1.75
   minMovementX: number = 1
   minMovementY: number = 0.5
@@ -111,7 +113,7 @@ export default class DragPan extends EventListener {
       clientY = touches[length - 1].clientY
       // set change in finger distance
       const deltaZ = Math.hypot(this.touchDeltaX - clientX, this.touchDeltaY - clientY)
-      this.zoom = (this.touchDeltaZ - deltaZ) * 1.35
+      this.zoom = (this.touchDeltaZ - deltaZ) * 2
       this.dispatchEvent(new Event('zoom'))
       this.touchDeltaZ = deltaZ
     } else if (this.mouseActive) {

@@ -1,4 +1,5 @@
 // @flow
+/* global WebGLUniformLocation */
 import Program from './program'
 
 // WEBGL1

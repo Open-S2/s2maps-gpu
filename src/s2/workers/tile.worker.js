@@ -1,4 +1,6 @@
 // @flow
+/* eslint-env worker */
+/* global createImageBitmap postMessage Blob OffscreenCanvas onmessage */
 import S2JsonVT from 's2json-vt'
 import { S2Rtin, terrainToGrid } from 's2rtin'
 import { VectorTile } from 's2-vector-tile'
@@ -6,14 +8,13 @@ import { parseLayers } from '../style/conditionals'
 import {
   preprocessFill, postprocessFill,
   preprocessLine, postprocessLine,
-  preprocessText, postprocessGlyph, GlyphBuilder,
-  // PNGReader
+  preprocessText, postprocessGlyph, GlyphBuilder
 } from './process'
 import requestData from '../util/fetch'
 import { tileHash } from 's2projection'
 
 import type { Face } from 's2projection'
-import type { StylePackage } from '../styleSpec'
+import type { StylePackage } from '../style/styleSpec'
 import type { Text } from './process'
 
 const { userAgent } = navigator
@@ -50,6 +51,7 @@ export type Feature = {
   vertices: Array<number>,
   indices: Array<number>,
   geometry?: Array<Array<number>>,
+  featureCode: Array<number>,
   code: Array<number>,
   size: number,
   divisor: number,
@@ -57,6 +59,8 @@ export type Feature = {
 }
 
 export type IDGen = { num: number, incrSize: number, maxNum: number, startNum: number }
+
+type DEM = { width: number, height: number, data: Uint8ClampedArray }
 
 // 32bit: 4,294,967,295 --- 24bit: 16,777,216 --- 22bit: 4,194,304 --- 16bit: 65,535 --- 7bit: 128
 export const ID_MAX_SIZE = 1 << 22
@@ -185,8 +189,8 @@ export default class TileWorker {
     }
     // build fonts
     for (const fontName in fonts) {
-      promises.push(new Promise((resolve, _) => {
-        requestData(fonts[fontName], (BROTLI_COMPATIBLE) ? 'pbf.br' : 'pbf', font => {
+      promises.push(new Promise((resolve, reject) => {
+        requestData(fonts[fontName], BROTLI_COMPATIBLE ? 'pbf.br' : 'pbf', font => {
           // build the font
           if (font) style.glyphBuilder.addFont(fontName, font)
           resolve()
@@ -288,7 +292,7 @@ export default class TileWorker {
       .catch(err => { console.log('ERROR', err) })
   }
 
-  _buildMesh (mapID: string, zoom: number, tileID: number, s2rtin: S2Rtin, dem: Uint8ClampedArray) {
+  _buildMesh (mapID: string, zoom: number, tileID: number, s2rtin: S2Rtin, dem: DEM) {
     // console.log('_buildMesh', mapID, this.id, tileID, zoom)
     // console.log('dem', dem)
     const terrain = terrainToGrid(dem)
@@ -322,7 +326,7 @@ export default class TileWorker {
         const imageData = context.getImageData(0, 0, size, size)
         self._buildMesh(mapID, zoom, hash, s2rtin, imageData)
       })
-      .catch(err => {})
+      .catch(_ => {})
   }
 
   _processVectorData (mapID: string, sourceName: string, source: Object,
@@ -458,4 +462,4 @@ export default class TileWorker {
 // create the tileworker
 const tileWorker = new TileWorker()
 // bind the onmessage function
-onmessage = tileWorker.onMessage.bind(tileWorker)
+onmessage = tileWorker.onMessage.bind(tileWorker) // eslint-disable-line

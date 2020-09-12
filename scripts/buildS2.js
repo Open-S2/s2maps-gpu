@@ -38,7 +38,7 @@ const WARN_AFTER_CHUNK_GZIP_SIZE = 1024 * 1024
 const isInteractive = process.stdout.isTTY
 
 // Warn and crash if required files are missing
-if (!checkRequiredFiles([paths.appHtml, paths.appIndexJs])) {
+if (!checkRequiredFiles([paths.appIndexJs])) {
   process.exit(1)
 }
 
@@ -89,18 +89,6 @@ checkBrowsers(paths.appPath, isInteractive)
         WARN_AFTER_CHUNK_GZIP_SIZE
       )
       console.log()
-
-      const appPackage = require(paths.appPackageJson)
-      const publicUrl = paths.publicUrl
-      const publicPath = config.output.publicPath
-      const buildFolder = path.relative(process.cwd(), paths.appBuildS2)
-      printHostingInstructions(
-        appPackage,
-        publicUrl,
-        publicPath,
-        buildFolder,
-        useYarn
-      )
     },
     err => {
       console.log(chalk.red('Failed to compile.\n'))

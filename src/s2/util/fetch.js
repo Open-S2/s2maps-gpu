@@ -1,4 +1,5 @@
 // @flow
+/* global fetch */
 export type Extension = 'pbf' | 'json' | 'png' | 'jpeg'
 
 export default function requestData (path: string, extension: Extension, callback: Function, ab?: boolean = false) {

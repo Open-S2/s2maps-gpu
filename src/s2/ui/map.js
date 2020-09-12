@@ -1,4 +1,5 @@
 // @flow
+/* global requestAnimationFrame Event HTMLElement HTMLCanvasElement WheelEvent TouchEvent MouseEvent */
 import Camera from './camera'
 import DragPan from './camera/dragPan'
 import Style from '../style'
@@ -69,7 +70,7 @@ export default class Map extends Camera {
       if (!self.webworker) {
         // listen to scroll events
         if (self._scrollZoom) {
-          self._canvas.addEventListener('wheel', (e) => {
+          self._canvas.addEventListener('wheel', (e: WheelEvent) => {
             e.preventDefault()
             const { clientX, clientY, deltaY } = e
             const rect = this._canvas.getBoundingClientRect()
@@ -77,12 +78,12 @@ export default class Map extends Camera {
           })
         }
         // listen to mouse movement
-        self._canvas.addEventListener('touchstart', (e) => { e.preventDefault(); self.dragPan.onTouchStart(e.touches) })
-        self._canvas.addEventListener('touchend', (e) => { e.preventDefault(); self.dragPan.onTouchEnd(e.touches) })
+        self._canvas.addEventListener('touchstart', (e: TouchEvent) => { e.preventDefault(); self.dragPan.onTouchStart(e.touches) })
+        self._canvas.addEventListener('touchend', (e: TouchEvent) => { e.preventDefault(); self.dragPan.onTouchEnd(e.touches) })
         self._canvas.addEventListener('mousedown', () => self.dragPan.onMouseDown())
         self._canvas.addEventListener('mouseup', () => self.dragPan.onMouseUp())
-        self._canvas.addEventListener('mousemove', (e) => { self.dragPan.onMouseMove(e.movementX, e.movementY) })
-        self._canvas.addEventListener('touchmove', (e) => { e.preventDefault(); self.dragPan.onTouchMove(e.touches) })
+        self._canvas.addEventListener('mousemove', (e: MouseEvent) => { self.dragPan.onMouseMove(e.movementX, e.movementY) })
+        self._canvas.addEventListener('touchmove', (e: MouseEvent) => { e.preventDefault(); self.dragPan.onTouchMove(e.touches) })
       }
       // listen to dragPans updates
       self.dragPan.addEventListener('move', self._onMovement.bind(self))

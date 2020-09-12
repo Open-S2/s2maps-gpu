@@ -1,4 +1,6 @@
 // @flow
+/* eslint-env worker */
+/* global HTMLCanvasElement onmessage */
 // https://github.com/GoogleChromeLabs/worker-plugin
 import Map from '../ui/map'
 
@@ -27,6 +29,7 @@ class MapWorker {
   }
 }
 
+// create the map worker
 const mapWorker = new MapWorker()
-
-onmessage = mapWorker.onMessage.bind(mapWorker)
+// bind the onmessage function
+onmessage = mapWorker.onMessage.bind(mapWorker) // eslint-disable-line

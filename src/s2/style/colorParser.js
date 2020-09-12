@@ -38,16 +38,16 @@ function parseHex (input: string): [string, [number, number, number, number]] {
     const b = (u >> 8) & 0xFF
     const a = Math.round((u & 0xFF) / 0xFF * 100) / 100
     return ['rgb', [r, g, b, a]]
+  } else {
+    return ['rgb', [0, 0, 0, 0]]
   }
 }
 
 function parseString (input): [string, [number, number, number, number]] {
   // seperate type and values
   let [type, values] = input.split('(')
-  // cleanup values
-  values = values.split(')')[0]
-  // parse numbers
-  values = values.split(',').map(Number)
+  // cleanup values & parse numbers
+  values = values.split(')')[0].split(',').map(Number)
   // if no alpha type present, add alpha number
   if (type.length === 3) {
     values.push(1)
@@ -57,5 +57,5 @@ function parseString (input): [string, [number, number, number, number]] {
     // ensure the alpha value is between 0 and 1
     if (values[3] > 1) values[3] /= 255
   }
-  return [type, values]
+  return [type, [values[0] || 0, values[1] || 0, values[2] || 0, values[3] || 0]]
 }

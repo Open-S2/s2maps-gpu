@@ -1,11 +1,13 @@
 // @flow
+/* global postMessage */
 import Color from './color'
 import Map from '../ui/map'
 import { Shade, Wallpaper, Skybox, Tile } from '../source'
 import requestData from '../util/fetch'
 import { encodeLayerAttribute, parseFeatureFunction, orderLayer } from './conditionals'
 
-import type { Sources, Layer, Mask, WallpaperStyle } from './styleSpec'
+import type { MapOptions } from '../ui/map'
+import type { Sources, Layer, Mask, WallpaperStyle, SphereBackground } from './styleSpec'
 import type { TileRequest } from '../workers/tile.worker'
 
 export default class Style {
@@ -23,11 +25,11 @@ export default class Style {
   layers: Array<Layer> = []
   mask: Mask
   rasterLayers: { [string]: Layer } = {} // rasterLayers[sourceName]: Layer
-  wallpaper: undefined | Wallpaper | Skybox
-  wallpaperStyle: undefined | WallpaperStyle
-  clearColor: undefined | [number, number, number, number]
-  sphereBackground: void | Float32Array // Attribute Code - limited to input-range or input-condition
-  shade: undefined | Shade
+  wallpaper: typeof undefined | Wallpaper | Skybox
+  wallpaperStyle: typeof undefined | WallpaperStyle
+  clearColor: typeof undefined | [number, number, number, number]
+  sphereBackground: typeof undefined | SphereBackground // Attribute Code - limited to input-range or input-condition
+  shade: typeof undefined | Shade
   dirty: boolean = true
   constructor (options: MapOptions, map: Map) {
     const { style } = options
@@ -166,7 +168,7 @@ export default class Style {
     // now we build our program set simultaneous to encoding our layers
     const programs = new Set()
     for (let i = 0, ll = this.layers.length; i < ll; i++) {
-      const layer = this.layers[i]
+      const layer: Layer = this.layers[i]
       // TODO: if bad layer, remove
       programs.add(layer.type)
       // if webgl2 or greater, we build layerCode
@@ -184,7 +186,6 @@ export default class Style {
           const encode = encodeLayerAttribute(layer.paint[key], layer.lch)
           code.push(...encode)
         }
-        if (layer.type === 'raster') layer.index = i
         if (code.length) layer.code = new Float32Array(code)
       }
     }
@@ -208,7 +209,7 @@ export default class Style {
       tileRequests.push({ hash: id, face, zoom, x, y, division, size })
     })
     // send the tiles over to the worker pool manager to split the workload
-    if (this.webworker) {
+    if (this.webworker) { // $FlowIgnore
       postMessage({ mapID: this.map.id, type: 'request', tiles: tileRequests })
     } else {
       window.S2WorkerPool.tileRequest(this.map.id, tileRequests)

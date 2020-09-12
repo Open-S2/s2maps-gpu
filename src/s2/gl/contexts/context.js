@@ -1,4 +1,5 @@
 // @flow
+/* global WebGLVertexArrayObject WebGLBuffer */
 import type { WebGLRenderingContext, WebGL2RenderingContext } from './'
 
 export default class Context {
@@ -168,7 +169,7 @@ export default class Context {
   enableMaskTest () {
     const { gl } = this
     gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE)
-  	gl.colorMask(false, false, false, false)
+    gl.colorMask(false, false, false, false)
   }
 
   stencilFunc (ref: number) {

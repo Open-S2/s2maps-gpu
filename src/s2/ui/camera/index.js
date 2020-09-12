@@ -1,4 +1,5 @@
 // @flow
+/* global ImageBitmap createImageBitmap Blob */
 /** STYLE **/
 import Style from '../../style'
 /** PAINT **/
@@ -13,8 +14,15 @@ import { Tile } from '../../source'
 import MapCache from '../../util/mapCache'
 
 import type { Face } from 's2projection'
+import type { TileDefinitions } from './projections/projector'
 
 export type ProjectionType = 'perspective' | 'persp' | 'orthographic' | 'ortho' | 'orthographicPerspective' | 'blend'
+
+declare class Timeout extends Number {
+  +ref?: () => this;
+  +unref?: () => this;
+}
+declare function SetTimeout (fn: Function, ms?: number): Timeout;
 
 type ParentLayers = {
   [string | number]: { // tileHash:
@@ -31,11 +39,11 @@ export default class Camera {
   painter: Painter
   projection: Projection
   tileCache: MapCache
-  tilesInView: Array<number> = [] // hash id's of the tiles
+  tilesInView: TileDefinitions = [] // hash id's of the tiles
   lastTileViewState: Array<number> = []
   requestQueue: Array<Tile> = []
-  zooming: null | SetTimeout = null
-  request: null | SetTimeout = null
+  zooming: void | SetTimeout
+  request: void | SetTimeout
   _updateWhileZooming: boolean // this is a more cpu/gpu intensive redraw technique that will update tiles while the user is still zooming. This can cause overdrawing if the user is going to zoom from say 0 to 10 quickly.
   constructor (options: MapOptions) {
     this._updateWhileZooming = options.updateWhileZooming || true
@@ -95,7 +103,6 @@ export default class Camera {
   }
 
   _injectData (data) {
-    // console.log('INJECT!', data)
     const { type } = data
     if (type === 'filldata' || type === 'linedata') this._injectVectorSourceData(data.source, data.tileID, data.vertexBuffer, data.indexBuffer, data.codeTypeBuffer, data.featureGuideBuffer)
     else if (type === 'maskdata') this._injectMaskGeometry(data.tileID, data.vertexBuffer, data.indexBuffer, data.radiiBuffer)
@@ -126,7 +133,7 @@ export default class Camera {
     }
   }
 
-  _injectRasterData (source: string, tileID: string, built: boolean, image: ImageBitmap,
+  _injectRasterData (source: string, tileID: number, built: boolean, image: ImageBitmap,
     leftShift: number, bottomShift: number) {
     if (this.tileCache.has(tileID)) {
       // get tile
@@ -146,7 +153,7 @@ export default class Camera {
     }
   }
 
-  _injectGlyphSourceData (source: string, tileID: string, glyphFilterBuffer: ArrayBuffer,
+  _injectGlyphSourceData (source: string, tileID: number, glyphFilterBuffer: ArrayBuffer,
     glyphFillVertexBuffer: ArrayBuffer, glyphFillIndexBuffer: ArrayBuffer,
     glyphLineVertexBuffer: ArrayBuffer, glyphQuadBuffer: ArrayBuffer, layerGuideBuffer: ArrayBuffer) {
     // store the vertexBuffer and texture in the gpu.

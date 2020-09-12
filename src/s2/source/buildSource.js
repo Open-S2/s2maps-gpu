@@ -1,9 +1,9 @@
 // @flow
 import { WebGL2Context, WebGLContext } from '../gl/contexts'
-import type { RasterTileSource, VectorTileSource, TextureMapTileSource } from './tile'
+import type { RasterTileSource, VectorTileSource, GlyphTileSource } from './tile'
 
 // given
-export default function buildSource (context: WebGL2Context | WebGLContext, source: RasterTileSource | VectorTileSource | TextureMapTileSource) {
+export default function buildSource (context: WebGL2Context | WebGLContext, source: RasterTileSource | VectorTileSource | GlyphTileSource) {
   const { gl } = context
   // type vector
   if (source.type === 'vector') {
