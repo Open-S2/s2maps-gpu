@@ -190,10 +190,6 @@ export default class Context {
     gl.stencilFunc(gl.NOTEQUAL, 0, 0xFF)
   }
 
-  lockMasks () {
-  	this.gl.colorMask(true, true, true, true)
-  }
-
   cleanup () {
     const { gl } = this
     gl.bindVertexArray(null)

@@ -4,6 +4,11 @@
   "description": "View planets using three dimensional space cartography.",
   "icons": [
     {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
       "src": "/images/icon_192.png",
       "type": "image/png",
       "sizes": "192x192"
@@ -15,7 +20,7 @@
     }
   ],
   "prefer_related_applications": false,
-  "start_url": "/index.html",
+  "start_url": "/",
   "background_color": "#333333",
   "display": "standalone",
   "scope": "/",

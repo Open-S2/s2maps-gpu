@@ -7,7 +7,7 @@ import {
   preprocessFill, postprocessFill,
   preprocessLine, postprocessLine,
   preprocessText, postprocessGlyph, GlyphBuilder,
-  PNGReader
+  // PNGReader
 } from './process'
 import requestData from '../util/fetch'
 import { tileHash } from 's2projection'
@@ -92,6 +92,7 @@ export default class TileWorker {
     if (type === 'style') this._styleMessage(mapID, data.style, data.id, data.totalWorkers)
     else if (type === 'request') this._requestMessage(mapID, data.tiles)
     else if (type === 'status') postMessage({ type: 'status', status: this.status })
+    else if (type === 'buildMesh') this._buildMesh(mapID, data.zoom, data.tileID, this.maps[mapID].sources[data.sourceName].s2rtin, { width: data.tileSize, height: data.tileSize, data: new Uint8ClampedArray(data.dem) })
     else if (type === 'cancel') this._cancelTiles(mapID, data.tiles)
   }
 
@@ -136,7 +137,6 @@ export default class TileWorker {
   // grab the metadata from each source, grab necessary fonts / billboards
   // this may seem wasteful that each worker has to do this, but these assets are cached, so it will be fast.
   async buildSources (mapID: string) {
-    const self = this
     const style = this.maps[mapID]
     // check all values are non-null
     if (!style.sources) style.sources = {}
@@ -258,9 +258,15 @@ export default class TileWorker {
         }
       } else if (type === 'mask') {
         if (minzoom <= zoom && maxzoom >= zoom) { // check zoom bounds
-          requestData(`${path}/${face}/${zoom}/${x}/${y}`, fileType, (data) => {
-            if (data && !self.cancelCache.includes(hash)) self._processMaskData(mapID, sourceName, source, tile, fileType, data)
-          }, (typeof OffscreenCanvas === 'undefined'))
+          const requestPath = `${path}/${face}/${zoom}/${x}/${y}`
+          if (typeof OffscreenCanvas !== 'undefined') {
+            requestData(requestPath, fileType, (data) => {
+              if (data && !self.cancelCache.includes(hash)) self._processMaskData(mapID, source, tile, data)
+            })
+          } else {
+            // console.log('POST', mapID, self.id, hash, zoom, sourceName)
+            postMessage({ mapID, id: self.id, type: 'imageBitmap', tileID: hash, sourceName, zoom, path: requestPath, fileType, tileSize: source.tileSize })
+          }
         }
       }
     }
@@ -282,47 +288,41 @@ export default class TileWorker {
       .catch(err => { console.log('ERROR', err) })
   }
 
-  _processMaskData (mapID: string, sourceName: string, source: Object,
-    tile: TileRequest, fileType: string, data: Object | ArrayBuffer | Blob) {
+  _buildMesh (mapID: string, zoom: number, tileID: number, s2rtin: S2Rtin, dem: Uint8ClampedArray) {
+    // console.log('_buildMesh', mapID, this.id, tileID, zoom)
+    // console.log('dem', dem)
+    const terrain = terrainToGrid(dem)
+    // create a tile object
+    const tile = s2rtin.createTile(terrain)
+    // find the appropriate margin of error
+    const approxBestError = s2rtin.approximateBestError(zoom)
+    // build the mesh
+    const mesh = tile.getMesh(approxBestError)
+    const vertexBuffer = mesh.vertices.buffer
+    const indexBuffer = mesh.triangles.buffer
+    const radiiBuffer = mesh.radii.buffer
+    // ship it
+    postMessage({ mapID, type: 'maskdata', tileID, vertexBuffer, indexBuffer, radiiBuffer }, [vertexBuffer, indexBuffer, radiiBuffer])
+  }
+
+  _processMaskData (mapID: string, source: Object, tile: TileRequest, data: ArrayBuffer) {
+    const self = this
+    // get tile values
     const { hash, zoom, size } = tile
     // grab the RTIN object
     const { s2rtin } = source
-    let buildMesh = function (dem) {
-      const terrain = terrainToGrid(dem)
-      // create a tile object
-      const tile = s2rtin.createTile(terrain)
-      // find the appropriate margin of error
-      const approxBestError = s2rtin.approximateBestError(zoom)
-      // build the mesh
-      const mesh = tile.getMesh(approxBestError)
-      const vertexBuffer = mesh.vertices.buffer
-      const indexBuffer = mesh.triangles.buffer
-      const radiiBuffer = mesh.radii.buffer
-      // ship it
-      postMessage({ mapID, type: 'maskdata', tileID: hash, vertexBuffer, indexBuffer, radiiBuffer }, [vertexBuffer, indexBuffer, radiiBuffer])
-    }
     // create the terrain grid
-    if (typeof OffscreenCanvas === 'undefined') { // CPU solution
-      const reader = new PNGReader(data)
-      reader.parse((err, png) => {
-        if (!err) {
-          const imageData = { width: size, data: png.pixels }
-          buildMesh(imageData)
-        } else { console.log('parse error', err) }
+    createImageBitmap(data)
+      .then(image => {
+        // build the canvas and draw the image
+        const canvas = new OffscreenCanvas(size, size)
+        const context = canvas.getContext('2d')
+        context.drawImage(image, 0, 0)
+        // grab the data and send to mesh builder
+        const imageData = context.getImageData(0, 0, size, size)
+        self._buildMesh(mapID, zoom, hash, s2rtin, imageData)
       })
-    } else { // GPU solution
-      createImageBitmap(data)
-        .then(image => {
-          // build the canvas and draw the image
-          const canvas = new OffscreenCanvas(size, size)
-          const context = canvas.getContext('2d')
-          context.drawImage(image, 0, 0)
-          // grab the data and send to mesh builder
-          const imageData = context.getImageData(0, 0, size, size)
-          buildMesh(imageData)
-        })
-        .catch(err => {})
-    }
+      .catch(err => {})
   }
 
   _processVectorData (mapID: string, sourceName: string, source: Object,

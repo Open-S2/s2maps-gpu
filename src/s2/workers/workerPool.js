@@ -1,5 +1,6 @@
 // @flow
-import S2Map from '../s2Map'
+import type S2Map from '../s2Map'
+import requestData from '../util/fetch'
 
 import type { StylePackage } from '../style'
 import type { TileRequest } from './tile.worker'
@@ -21,7 +22,43 @@ class WorkerPool {
 
   _onMessage ({ data }) {
     // a worker has processed tiles, so we are going to send it back to the appropriate mapID
-    this.maps[data.mapID].injectData(data)
+    if (data.type === 'imageBitmap') {
+      const { mapID, id, tileID, sourceName, zoom, tileSize, path, fileType } = data
+      // build the canvas and draw the image
+      requestData(path, fileType, (data) => {
+        if (data) {
+          // const canvas = document.createElement('canvas')
+          // canvas.width = canvas.height = tileSize
+          // const context = canvas.getContext('2d')
+          // const image = new Image()
+          // image.src = path
+          // context.drawImage(image, tileSize, tileSize)
+          // // grab the data and send to mesh builder
+          // const imageData = context.getImageData(0, 0, tileSize, tileSize)
+          createImageBitmap(data)
+            .then(image => {
+              const canvas = document.createElement('canvas')
+              canvas.width = canvas.height = tileSize
+              const context = canvas.getContext('2d')
+              context.drawImage(image, 0, 0)
+              const imageData = context.getImageData(0, 0, tileSize, tileSize)
+              const dem = imageData.data.buffer
+              this.workers[id].postMessage({ mapID, type: 'buildMesh', tileID, sourceName, zoom, dem, tileSize }, [dem])
+            })
+          // const image = new Image(512, 512)
+          // image.src = URL.createObjectURL(data)
+          // image.onload = function () {
+          //   const canvas = document.createElement('canvas')
+          //   canvas.width = canvas.height = tileSize
+          //   const context = canvas.getContext('2d')
+          //   context.drawImage(image, tileSize, tileSize)
+          //   const imageData = context.getImageData(0, 0, tileSize, tileSize)
+          //   console.log('imageData', imageData)
+          // }
+          // console.log('image', image)
+        }
+      })
+    } else { this.maps[data.mapID].injectData(data) }
   }
 
   addMap (map: S2Map) {

@@ -37,7 +37,7 @@ export default class Style {
     const { type } = map.painter.context
     this.glType = type
     // build out the style
-    this._buildStyle(style)
+    this._buildStyle(JSON.parse(JSON.stringify(style)))
     // if style has a clearColor, set it now
     if (this.clearColor) map.painter.setClearColor(this.clearColor)
   }
@@ -141,13 +141,14 @@ export default class Style {
 
   _buildSphereBackground (sphereBackground?: Object) {
     if (sphereBackground) {
+      const backgroundColor = sphereBackground['background-color']
       if (this.glType === 1) {
         this.sphereBackground = {
-          code: parseFeatureFunction(JSON.parse(JSON.stringify(sphereBackground['background-color'])), 'color')
+          code: parseFeatureFunction(backgroundColor, 'color')
         }
       } else {
         this.sphereBackground = {
-          code: encodeLayerAttribute(sphereBackground['background-color'], sphereBackground.lch),
+          code: encodeLayerAttribute(backgroundColor, sphereBackground.lch),
           lch: sphereBackground.lch
         }
       }

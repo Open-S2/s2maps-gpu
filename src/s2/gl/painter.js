@@ -61,7 +61,7 @@ export default class Painter {
     this.context.setClearColor(clearColor)
   }
 
-  // programs are pre-set for tiles to create their VAO vertexAttribPointers
+  // speedup so our first draw is quicker
   prebuildPrograms (programs: Set) {
     const self = this
     programs.forEach(program => { self.getProgram(program) })
@@ -211,8 +211,8 @@ export default class Painter {
       // draw mask
       fillProgram.draw(mask, mask)
     }
-    // lock in the stencil
-    context.lockMasks()
+    // lock in the stencil, draw colors again
+    gl.colorMask(true, true, true, true)
   }
 
   paintSphereBackground (tiles: Array<Tile>, sphereBackground: SphereBackground, zoom: number) {

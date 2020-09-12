@@ -27,8 +27,6 @@ const ForkTsCheckerWebpackPlugin = require('react-dev-utils/ForkTsCheckerWebpack
 const typescriptFormatter = require('react-dev-utils/typescriptFormatter')
 const WorkerPlugin = require('worker-plugin')
 const CompressionPlugin = require('compression-webpack-plugin')
-const BrotliPlugin = require('brotli-webpack-plugin')
-const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin
 
 const postcssNormalize = require('postcss-normalize')
 
@@ -491,19 +489,23 @@ module.exports = function (webpackEnv) {
       ]
     },
     plugins: [
-      // new CompressionPlugin({
-      // filename: '[path].gz[query]',
-      // algorithm: 'gzip',
-      // test: /\.(js|css|html|svg)$/,
-      // threshold: 8192,
-      // minRatio: 0.5
-      // }),
-      // new BrotliPlugin({ // brotli plugin
-      //   asset: '[path].br[query]',
-      //   test: /\.(js|css|html|svg)$/,
-      //   threshold: 0,
-      //   minRatio: 0
-      // }),
+      new CompressionPlugin({
+        filename: '[path].gz',
+        algorithm: 'gzip',
+        test: /\.js$|\.css$|\.html$/,
+        threshold: 0,
+        minRatio: 1
+      }),
+      new CompressionPlugin({
+        filename: '[path].br',
+        algorithm: 'brotliCompress',
+        test: /\.(js|css|html|svg)$/,
+        compressionOptions: {
+          level: 11,
+        },
+        threshold: 0,
+        minRatio: 1
+      }),
       new WorkerPlugin(),
       // Generates an `index.html` file with the <script> injected.
       new HtmlWebpackPlugin(
@@ -638,7 +640,6 @@ module.exports = function (webpackEnv) {
           // The formatter is invoked directly in WebpackDevServerUtils during development
           formatter: isEnvProduction ? typescriptFormatter : undefined
         })
-      // new BundleAnalyzerPlugin(),
     ].filter(Boolean),
     // Some libraries import Node modules but don't use them in the browser.
     // Tell Webpack to provide empty mocks for them so importing them works.
