@@ -1,4 +1,8 @@
+#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
+#else
+precision mediump float;
+#endif
 
 attribute float aStep; // either 0 or 1
 attribute vec2 aST; // float [s, t]    (INSTANCED)

@@ -49,10 +49,8 @@ export default class Program {
       gl.linkProgram(program)
       gl.validateProgram(program)
 
-      // if (!gl.getProgramParameter(program, gl.LINK_STATUS) || !gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
-      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        const lastError = gl.getProgramInfoLog(program)
-        throw Error(lastError)
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS) || !gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
+        throw Error(gl.getProgramInfoLog(program))
       }
       // if we made it here, link gl
       this.gl = gl

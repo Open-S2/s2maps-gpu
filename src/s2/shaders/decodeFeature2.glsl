@@ -139,13 +139,15 @@ vec4 decodeFeature (bool color, inout int index, inout int featureIndex) {
       // if start and end are the same, we only need to process the first piece
       if (startIndex == endIndex) {
         conditionStack[stackIndex] = startIndex;
+        tStack[stackIndex] = 1.;
         if (stackIndex > 0) tStack[stackIndex] = tStack[stackIndex - 1];
-        else tStack[stackIndex] = 1.;
+        // else tStack[stackIndex] = 1.;
         stackIndex++;
       } else if (end == inputVal) {
         conditionStack[stackIndex] = endIndex;
+        tStack[stackIndex] = 1.;
         if (stackIndex > 0) tStack[stackIndex] = tStack[stackIndex - 1];
-        else tStack[stackIndex] = 1.;
+        // else tStack[stackIndex] = 1.;
         stackIndex++;
       } else { // otherwise we process startIndex and endIndex
         float t = exponentialInterpolation(inputVal, start, end, base);

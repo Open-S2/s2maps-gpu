@@ -47,11 +47,9 @@ export default class Painter {
     // prep options
     const webglOptions = { antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: false, alpha: true, stencil: true }
     let context
-    // first try webgl2, currently windows is weird with webgl, so we will only
-    // use webgl for windows and mobile phones as WebGL2 might be too much for phones
-    // if (!(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))) {
-    const { platform, userAgent } = navigator
-    if (platform !== 'Win32' && platform !== 'Win64' && !(/Mobi|Android/i.test(userAgent))) {
+    // first try webgl2
+    // use webgl for mobile phones as WebGL2 might be too much for phones? Untested.
+    if (!(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))) {
       context = this._canvas.getContext('webgl2', webglOptions)
       if (context && typeof context.getParameter === 'function') {
         this.context = new WebGL2Context(context, options.canvasMultiplier)
