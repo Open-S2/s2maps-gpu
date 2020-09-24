@@ -11,7 +11,7 @@ type TouchEvent = {
 }
 
 // t: time | b: start value | c: change in value | d: duration
-const easeOutExp = (delta, movement, animationLength) => {
+function easeOutExp (delta: number, movement: number, animationLength: number): number {
   return -movement * (-Math.pow(2, -10 * delta / animationLength) + 1) + movement
 }
 
@@ -19,8 +19,7 @@ export default class DragPan extends EventListener {
   zoomActive: boolean = false // allow two finger zooming
   mouseActive: boolean = false // when a user presses left click and moves during the press
   wasActive: boolean = false // if a onMouseDown event comes up, we want to check if the map was previously active to avoid unecessary click events
-  swipeActive: boolean = false
-  animationLength: number = 1.75
+  animSeed: number = 0
   minMovementX: number = 1
   minMovementY: number = 0.5
   movementX: number = 0
@@ -39,6 +38,13 @@ export default class DragPan extends EventListener {
     this.totalMovementY = 0
     this.zoom = 0
     this.time = -1
+    this.newSeed()
+  }
+
+  newSeed () {
+    this.animSeed++
+    if (this.animSeed > 1000) this.animSeed = 0
+    return this.animSeed
   }
 
   onTouchStart (touches: TouchEvent) {
@@ -131,19 +137,30 @@ export default class DragPan extends EventListener {
     }
   }
 
-  getNextFrame (now: number) {
-    now *= 0.001 // Convert to seconds
-    if (this.time === -1) return [0, 0, 0]
+  getNextZoomFrame (now: number) {
+    const delta = now - this.time
+    if (delta > 1) {
+      this.clear()
+      return 1
+    }
+    return 1 - easeOutExp(delta, 1, 1)
+  }
+
+  getNextSwipeFrame (now: number) {
+    if (this.time === -1) {
+      this.newSeed()
+      return [0, 0, 0]
+    }
     if (this.time === 0) this.time = now
     const delta = now - this.time
-    if (delta > this.animationLength) {
+    if (delta > 1.75) {
       this.time = 0
       this.clear()
     }
     // find the velocity
     return [
-      easeOutExp(delta, this.movementX, this.animationLength),
-      easeOutExp(delta, this.movementY, this.animationLength),
+      easeOutExp(delta, this.movementX, 1.75),
+      easeOutExp(delta, this.movementY, 1.75),
       this.time
     ]
   }

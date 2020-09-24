@@ -1,7 +1,7 @@
 // @flow
 /* global HTMLElement HTMLCanvasElement Worker ResizeObserver TouchEvent WheelEvent MouseEvent */
 import type Map, { MapOptions } from './ui/map'
-import type MapWorker from './workers/map.worker.js'
+// import type MapWorker from './workers/map.worker.js'
 
 // This is a builder / api instance for the end user.
 // We want individual map instances in their own web worker thread. However,
@@ -9,30 +9,33 @@ import type MapWorker from './workers/map.worker.js'
 export default class S2Map {
   _container: HTMLElement
   _canvasContainer: HTMLElement
-  _canvasMultiplier: number = window.devicePixelRatio || 1
+  _navigationContainer: HTMLElement
+  _jollyRoger: HTMLElement
+  _canvasMultiplier: number = window.devicePixelRatio || 2
   _offscreen: boolean = false
   _canvas: HTMLCanvasElement
-  map: Map | MapWorker
+  map: Map | Worker
   id: string = Math.random().toString(36).replace('0.', '')
   constructor (options: MapOptions) {
-    if (options.canvasMultiplier) this._canvasMultiplier = options.canvasMultiplier
-    else options.canvasMultiplier = this._canvasMultiplier
+    this._canvasMultiplier = options.canvasMultiplier = Math.max(2, options.canvasMultiplier || this._canvasMultiplier)
     // get the container
     if (typeof options.container === 'string') {
       this._container = window.document.getElementById(options.container)
-      if (!this._container) throw new Error(`Container '${options.container}' not found.`)
+      if (!this._container) throw new Error(`Container not found.`)
     } else if (options.container instanceof HTMLElement) {
       this._container = options.container
     } else { throw new Error(`Invalid type: 'container' must be a String or HTMLElement.`) }
     // we now remove container from options for potential webworker
     delete options.container
     // prep container, creating the canvas
-    const canvas = this._canvas = this._setupContainer()
+    const canvas = this._canvas = this._setupContainer(options)
     // create map via a webworker if possible, otherwise just load it in directly
     this._setupCanvas(canvas, options)
-    // now that canvas is setup, support resizing
-    if (ResizeObserver) new ResizeObserver(this._resize.bind(this)).observe(this._container)
+    // now that canvas is setup, support resizing // $FlowIgnore
+    if ('ResizeObserver' in window) new ResizeObserver(this._resize.bind(this)).observe(this._container)
     else window.addEventListener('resize', this._resize.bind(this))
+    // now that canvas is setup, add control containers as necessary
+    this._setupControlContainer(options)
     // lastly let the S2WorkerPool know of this maps existance
     window.S2WorkerPool.addMap(this)
   }
@@ -57,26 +60,70 @@ export default class S2Map {
     return canvas
   }
 
+  _setupControlContainer (options: MapOptions) {
+    const { _canvasContainer } = this
+    const { jollyRoger, zoomController, darkMode } = options
+    // if jollyRoger is not false, add the logo
+    if (jollyRoger !== false) {
+      const jR = this._jollyRoger = window.document.createElement('div')
+      jR.className = 's2-jolly-roger' + (darkMode ? '-dark' : '')
+      _canvasContainer.appendChild(jR)
+    }
+    // if zoom or compass controllers, add
+    if (zoomController) {
+      // first create the container
+      const navigationContainer = this._navigationContainer = window.document.createElement('div')
+      navigationContainer.className = 's2-nav-container'
+      if (darkMode) navigationContainer.classList.add('s2-nav-dark')
+      _canvasContainer.appendChild(navigationContainer)
+      if (zoomController) {
+        // plus
+        const zoomPlus = window.document.createElement('button')
+        zoomPlus.className = 's2-zoom-button s2-zoom-plus'
+        zoomPlus.setAttribute('aria-hidden', true)
+        zoomPlus.tabIndex = -1
+        navigationContainer.appendChild(zoomPlus)
+        zoomPlus.addEventListener('click', () => this._navEvent('zoomIn'))
+        // seperator
+        const navSep = window.document.createElement('div')
+        navSep.className = 's2-nav-sep' + (darkMode ? '-dark' : '')
+        navigationContainer.appendChild(navSep)
+        // minus
+        const zoomMinus = window.document.createElement('button')
+        zoomMinus.className = 's2-zoom-button s2-zoom-minus'
+        zoomMinus.setAttribute('aria-hidden', true)
+        zoomMinus.tabIndex = -1
+        navigationContainer.appendChild(zoomMinus)
+        zoomMinus.addEventListener('click', () => this._navEvent('zoomOut'))
+      }
+    }
+  }
+
   _setupCanvas (canvas: HTMLCanvasElement, options: MapOptions) {
     const self = this
     // if browser supports it, create an instance of the mapWorker
-    if (canvas.transferControlToOffscreen) {
+    if (canvas.transferControlToOffscreen) { // $FlowIgnore
+      const offscreen = canvas.transferControlToOffscreen()
+      self._offscreen = true // $FlowIgnore - special Plugin params
+      const mapWorker = self.map = new Worker('./workers/map.worker.js', { type: 'module' })
+      mapWorker.onmessage = self._mapMessage.bind(self)
+      mapWorker.postMessage({ type: 'canvas', options, canvas: offscreen, id: self.id }, [offscreen])
       if (options.interactive === undefined || options.interactive === true) {
         if (options.scrollZoom === undefined || options.scrollZoom === true) canvas.addEventListener('wheel', self._onScroll.bind(self))
-        canvas.addEventListener('mousedown', () => self.map.postMessage({ type: 'mousedown' }))
-        canvas.addEventListener('mouseup', () => self.map.postMessage({ type: 'mouseup' }))
-        canvas.addEventListener('mousemove', self._onMouseMove.bind(self))
+        canvas.addEventListener('mousedown', () => {
+          mapWorker.postMessage({ type: 'mousedown' })
+          // build mousemove
+          const mouseMoveFunc = (e: MouseEvent) => { self._onMouseMove(e) }
+          window.addEventListener('mousemove', mouseMoveFunc)
+          window.addEventListener('mouseup', () => {
+            window.removeEventListener('mousemove', mouseMoveFunc)
+            mapWorker.postMessage({ type: 'mouseup' })
+          }, { once: true })
+        })
         canvas.addEventListener('touchstart', (e: TouchEvent) => self._onTouch(e, 'touchstart'))
         canvas.addEventListener('touchend', (e: TouchEvent) => self._onTouch(e, 'touchend'))
         canvas.addEventListener('touchmove', (e: TouchEvent) => self._onTouch(e, 'touchmove'))
       }
-      const offscreen = canvas.transferControlToOffscreen()
-      self._offscreen = true // $FlowIgnore - special Plugin params
-      self.map = new Worker('./workers/map.worker.js', { type: 'module' })
-      self.map.onmessage = self._mapMessage.bind(self)
-      options.canvasWidth = self._container.clientWidth
-      options.canvasHeight = self._container.clientHeight
-      self.map.postMessage({ type: 'canvas', options, canvas: offscreen, id: self.id }, [offscreen])
     } else {
       import('./ui/map').then(map => {
         const Map = map.default
@@ -95,19 +142,19 @@ export default class S2Map {
       const { clientX, clientY } = touches[i]
       touchEvent[i] = { clientX, clientY }
     }
-
+    // $FlowIgnore
     this.map.postMessage({ type, touchEvent })
   }
 
   _onScroll (e: WheelEvent) {
     e.preventDefault()
     const { clientX, clientY, deltaY } = e
-    const rect = this._canvas.getBoundingClientRect()
+    const rect = this._canvas.getBoundingClientRect() // $FlowIgnore
     this.map.postMessage({ type: 'scroll', rect, clientX, clientY, deltaY })
   }
 
   _onMouseMove (e: MouseEvent) {
-    const { movementX, movementY } = e
+    const { movementX, movementY } = e // $FlowIgnore
     this.map.postMessage({ type: 'mousemove', movementX, movementY })
   }
 
@@ -121,16 +168,21 @@ export default class S2Map {
   }
 
   _resize () {
-    const { _container, _canvasMultiplier } = this
+    const { map, _offscreen, _container, _canvasMultiplier } = this
     // rebuild the proper width and height using the container as a guide
-    if (this._offscreen) {
-      this.map.postMessage({
+    if (_offscreen) { // $FlowIgnore
+      map.postMessage({
         type: 'resize',
-        width: _container.clientWidth,
-        height: _container.clientHeight,
-        canvasMultiplier: _canvasMultiplier
-      })
-    } else if (this.map) { this.map.resize(_container.clientWidth, _container.clientHeight, _canvasMultiplier) }
+        width: _container.clientWidth * _canvasMultiplier,
+        height: _container.clientHeight * _canvasMultiplier
+      }) // $FlowIgnore
+    } else if (map) { map.resize(_container.clientWidth * _canvasMultiplier, _container.clientHeight * _canvasMultiplier) }
+  }
+
+  _navEvent (ctrl: 'zoomIn' | 'zoomOut') {
+    const { map, _offscreen } = this
+    if (_offscreen) map.postMessage({ type: 'nav', ctrl })
+    else if (map) map.navEvent(ctrl)
   }
 
   _containerDimensions (): null | [number, number] {
@@ -149,16 +201,41 @@ export default class S2Map {
   injectData (data) {
     if (this._offscreen) {
       // prep ArrayBuffer 0 copy transfer
-      const { type } = data
-      if (type === 'filldata') this.map.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.codeTypeBuffer, data.featureGuideBuffer])
-      else if (type === 'linedata') this.map.postMessage(data, [data.vertexBuffer, data.featureGuideBuffer])
-      else if (type === 'glyphdata') this.map.postMessage(data, [data.glyphFilterBuffer, data.glyphFillVertexBuffer, data.glyphFillIndexBuffer, data.glyphLineVertexBuffer, data.glyphQuadBuffer, data.layerGuideBuffer])
-      else if (type === 'rasterdata') this.map.postMessage(data, [data.image])
-      else if (type === 'maskdata') this.map.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.radiiBuffer])
+      const { type } = data // $FlowIgnore
+      if (type === 'filldata') this.map.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.codeTypeBuffer, data.featureGuideBuffer]) // $FlowIgnore
+      else if (type === 'linedata') this.map.postMessage(data, [data.vertexBuffer, data.featureGuideBuffer]) // $FlowIgnore
+      else if (type === 'glyphdata') this.map.postMessage(data, [data.glyphFilterBuffer, data.glyphFillVertexBuffer, data.glyphFillIndexBuffer, data.glyphLineVertexBuffer, data.glyphQuadBuffer, data.layerGuideBuffer]) // $FlowIgnore
+      else if (type === 'rasterdata') this.map.postMessage(data, [data.image]) // $FlowIgnore
+      else if (type === 'maskdata') this.map.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.radiiBuffer]) // $FlowIgnore
       else this.map.postMessage(data)
-    } else {
+    } else { // $FlowIgnore
       this.map.injectData(data)
     }
+  }
+
+  /** API **/
+  setStyle (style: Object) { // $FlowIgnore
+    if (this._offscreen) this.map.postMessage({ type: 'setStyle', style }) // $FlowIgnore
+    else if (this.map) this.map.setStyle(style)
+  }
+
+  setMoveState (state: boolean) { // $FlowIgnore
+    if (this._offscreen) this.map.postMessage({ type: 'moveState', state }) // $FlowIgnore
+    else if (this.map) this.map.setMoveState(state)
+  }
+
+  setZoomState (state: boolean) { // $FlowIgnore
+    if (this._offscreen) this.map.postMessage({ type: 'zoomState', state }) // $FlowIgnore
+    else if (this.map) this.map.setZoomState(state)
+  }
+
+  jumpTo (lon: number, lat: number, zoom: number) {
+    if (this._offscreen) this.map.postMessage({ type: 'jumpTo', lon, lat, zoom }) // $FlowIgnore
+    else if (this.map) this.map.jumpTo(lon, lat, zoom)
+  }
+
+  flyTo (lon: number, lat: number, zoom: number) {
+
   }
 }
 

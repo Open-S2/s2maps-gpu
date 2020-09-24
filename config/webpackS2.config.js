@@ -31,7 +31,7 @@ module.exports = function (webpackEnv) {
     stats: 'detailed',
     // Stop compilation early in production
     bail: true,
-    devtool: 'source-map',
+    devtool: '',
     // These are the "entry points" to our application.
     // This means they will be the "root" imports that are included in JS bundle.
     entry: [
@@ -118,10 +118,17 @@ module.exports = function (webpackEnv) {
       // Automatically split vendor and commons
       // https://twitter.com/wSokra/status/969633336732905474
       // https://medium.com/webpack/webpack-4-code-splitting-chunk-graph-and-the-splitchunks-optimization-be739a861366
-      splitChunks: {
-        chunks: 'all',
-        name: false
-      },
+      // splitChunks: {
+      //   chunks: 'all',
+      //   name: false,
+      //   cacheGroups: {
+  		// 		commons: {
+  		// 			test: /[\\/]node_modules[\\/]/,
+  		// 			name: 'vendors',
+  		// 			chunks: 'all'
+  		// 		}
+  		// 	}
+      // },
       // Keep the runtime chunk separated to enable long term caching
       // https://twitter.com/wSokra/status/969679223278505985
       runtimeChunk: false
@@ -143,11 +150,6 @@ module.exports = function (webpackEnv) {
       extensions: paths.moduleFileExtensions
         .map(ext => `.${ext}`)
         .filter(ext => false || !ext.includes('ts')),
-      alias: {
-        // Support React Native Web
-        // https://www.smashingmagazine.com/2016/08/a-glimpse-into-the-future-with-react-native-for-web/
-        'react-native': 'react-native-web'
-      },
       plugins: [
         // Adds support for installing with Plug'n'Play, leading to faster installs and adding
         // guards against forgotten dependencies and such.
@@ -277,14 +279,15 @@ module.exports = function (webpackEnv) {
         algorithm: 'gzip',
         test: /\.(js|css|html|svg)$/,
         threshold: 8192,
-        minRatio: 0.5
+        minRatio: 0.5,
+        deleteOriginalAssets: false
       }),
-      new BrotliPlugin({ // brotli plugin
-        asset: '[path].br[query]',
-        test: /\.(js|css|html|svg)$/,
-        threshold: 0,
-        minRatio: 0
-      }),
+      // new BrotliPlugin({ // brotli plugin
+      //   asset: '[path].br[query]',
+      //   test: /\.(js|css|html|svg)$/,
+      //   threshold: 0,
+      //   minRatio: 0
+      // }),
       new WorkerPlugin(),
       new Visualizer({ filename: './visualizer.html' }),
       new BundleAnalyzerPlugin({ analyzerMode: 'static', generateStatsFile: true, statsFilename: 'bundle-stat.json' })

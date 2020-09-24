@@ -38,12 +38,18 @@ export default class Painter {
     this._createContext(options)
   }
 
+  clearCache () {
+    const glyphProgram: GlyphProgram = this.programs.glyphFill
+    if (glyphProgram) glyphProgram.clearCache()
+  }
+
   _createContext (options: MapOptions) {
     // prep options
     const webglOptions = { antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: false, alpha: true, stencil: true }
     let context
     // first try webgl2, currently windows is weird with webgl, so we will only
-    // use webgl for windows and ignore mobile phones as WebGL2 might be too much for android phones
+    // use webgl for windows and mobile phones as WebGL2 might be too much for phones
+    // if (!(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))) {
     const { platform, userAgent } = navigator
     if (platform !== 'Win32' && platform !== 'Win64' && !(/Mobi|Android/i.test(userAgent))) {
       context = this._canvas.getContext('webgl2', webglOptions)

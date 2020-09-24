@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { S2Map } from '../s2'
+// import StreetStyle from './Streets/style.json'
+// import DarkStyle from './Dark/style.json'
 
 function Map (props) {
-  const { style } = props
-  const { setMap } = useMapContainer(style)
+  const { style, opts } = props
+  const { setMap } = useMapContainer(style, opts)
   return (
     <div className='App'>
       <div id='map-container' ref={c => setMap(c)} />
@@ -11,24 +13,31 @@ function Map (props) {
   )
 }
 
-function useMapContainer (style) {
+function useMapContainer (style, opts) {
   let [mapContainer, setMap] = useState()
 
   // cause a prep of data
   useEffect(() => {
-    if (mapContainer) { prepCanvas(mapContainer, style) }
-  }, [style, mapContainer])
+    if (mapContainer) { prepCanvas(mapContainer, style, opts) }
+  }, [style, opts, mapContainer])
 
   return { mapContainer, setMap }
 }
 
-function prepCanvas (container, style) {
-  return new S2Map({
-    canvasMultiplier: 2,
+function prepCanvas (container, style, opts = {}) {
+  const map = new S2Map({
+    ...opts,
     style,
     container,
-    projection: 'blend'
+    projection: 'blend',
+    zoomController: true
   })
+
+  // setTimeout(() => {
+  //   map.jumpTo(-18.287283, 64.920456, 4.4)
+  // }, 5000)
+
+  return map
 }
 
 export default Map

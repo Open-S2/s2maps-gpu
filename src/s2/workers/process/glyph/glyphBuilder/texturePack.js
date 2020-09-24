@@ -78,7 +78,7 @@ export default class TexturePack {
         const glyph = this._addGlyphToTexture(key, advanceWidth, yOffset, size, sdfMaxSize)
         const { bbox } = glyph
         // now build the path using offset as a guide
-        const offset = [bbox[0], bbox[1] + (yOffset * size)]
+        const offset = [bbox[0], bbox[1] + (yOffset * size) + 1]
         const path = gData.getPath(true, offset, size, sdfMaxSize)
         // Build the actual glyph using the path data with the box as a positional adivsor
         this._buildPath(path)

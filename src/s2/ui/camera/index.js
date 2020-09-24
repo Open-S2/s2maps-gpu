@@ -48,13 +48,20 @@ export default class Camera {
   constructor (options: MapOptions) {
     this._updateWhileZooming = options.updateWhileZooming || true
     // setup projection
-    this._createProjection(options)
+    this.createProjection(options)
     // prep the tileCache for future tiles
     this.tileCache = new MapCache(75)
   }
 
+  clearCache () {
+    // first clear the tile cache
+    this.tileCache.clear()
+    // clear any cache the painter might have (glyph textures)
+    this.painter.clearCache()
+  }
+
   // TODO: Perspective Projection
-  _createProjection (options: MapOptions) {
+  createProjection (options: MapOptions) {
     let { projection } = options
     if (!projection) projection = 'blend'
     if (projection === 'persp' || projection === 'perspective') {
@@ -68,7 +75,7 @@ export default class Camera {
 
   resizeCamera (width: number, height: number) {
     this.projection.resize(width, height)
-    if (this.painter) this.painter.resize(width, height)
+    if (this.painter) this.painter.resize()
   }
 
   _createTile (face: Face, zoom: number, x: number, y: number, hash: number): Tile {
@@ -214,8 +221,10 @@ export default class Camera {
           newTiles.push(newTile)
         }
       }
-      if (newTiles.length) this.painter.dirty = true
-      this.style.requestTiles(newTiles)
+      if (newTiles.length) {
+        this.painter.dirty = true
+        this.style.requestTiles(newTiles)
+      }
     }
     return this.tileCache.getBatch(this.tilesInView.map(t => t[4]))
   }

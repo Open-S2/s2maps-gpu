@@ -1,6 +1,6 @@
 // @flow
 /* global fetch */
-export type Extension = 'pbf' | 'json' | 'png' | 'jpeg'
+export type Extension = 'pbf' | 'json' | 'png' | 'jpeg' | 'geojson' | 's2json' | 'jpg' | 'webp'
 
 export default function requestData (path: string, extension: Extension, callback: Function, ab?: boolean = false) {
   const resType = getResposeType(extension)

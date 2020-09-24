@@ -24,6 +24,7 @@ export default class Style {
   billboards: Sources = {}
   layers: Array<Layer> = []
   mask: Mask
+  colorBlind: boolean = false
   rasterLayers: { [string]: Layer } = {} // rasterLayers[sourceName]: Layer
   wallpaper: typeof undefined | Wallpaper | Skybox
   wallpaperStyle: typeof undefined | WallpaperStyle
@@ -32,25 +33,23 @@ export default class Style {
   shade: typeof undefined | Shade
   dirty: boolean = true
   constructor (options: MapOptions, map: Map) {
-    const { style } = options
-    if (options.webworker) this.webworker = true
-    this.map = map
+    const { webworker } = options
+    if (webworker) this.webworker = true
+    const { painter } = this.map = map
     // grap the painter type, so we can tell the webworkers if we are using WEBGL, WEBGL2, or WEBGPU
-    const { type } = map.painter.context
+    const { type } = painter.context
     this.glType = type
-    // build out the style
-    this._buildStyle(JSON.parse(JSON.stringify(style)))
-    // if style has a clearColor, set it now
-    if (this.clearColor) map.painter.setClearColor(this.clearColor)
   }
 
-  _buildStyle (style: string | Object) {
+  buildStyle (style: string | Object) {
     const self = this
+    self.dirty = true
     if (typeof style === 'string') {
       requestData(style, 'json', (res) => {
         if (res) { self._buildStyle(res) }
       })
     } else if (typeof style === 'object') {
+      style = JSON.parse(JSON.stringify(style))
       // check style & fill default params
       this._prebuildStyle(style)
       // Before manipulating the style, send it off to the worker pool manager
@@ -70,6 +69,7 @@ export default class Style {
       if (style.sources) self.sources = style.sources
       if (style.fonts) self.fonts = style.fonts
       if (style.billboards) self.billboards = style.billboards
+      if (style.colorBlind) self.colorBlind = style.colorBlind
       // build wallpaper and sphere background if applicable
       if (style.wallpaper) self._buildWallpaper(style.wallpaper)
       self._buildSphereBackground(style['sphere-background'])
@@ -126,7 +126,10 @@ export default class Style {
 
   _buildWallpaper (background: WallpaperStyle) {
     if (background.skybox) {
-      this.clearColor = (new Color(background.loadingBackground)).getRGB()
+      // grab clear color and set inside painter
+      const clearColor = this.clearColor = (new Color(background.loadingBackground)).getRGB()
+      this.map.painter.setClearColor(clearColor)
+      // grab wallpaper data
       this.wallpaper = new Skybox(background, this.map.projection)
     } else if (background['background-color']) {
       // create the wallpaper
@@ -150,7 +153,7 @@ export default class Style {
         }
       } else {
         this.sphereBackground = {
-          code: encodeLayerAttribute(backgroundColor, sphereBackground.lch),
+          code: encodeLayerAttribute(backgroundColor, sphereBackground.lch, this.colorBlind),
           lch: sphereBackground.lch
         }
       }
@@ -165,6 +168,7 @@ export default class Style {
   // 1) ensure "bad" layers are removed (missing important keys or subkeys)
   // 2) ensure the order is correct for when WebGL eventually parses the encodings
   _buildLayers () {
+    const { colorBlind } = this
     // now we build our program set simultaneous to encoding our layers
     const programs = new Set()
     for (let i = 0, ll = this.layers.length; i < ll; i++) {
@@ -183,7 +187,7 @@ export default class Style {
         }
         // PAINTS
         for (let key in layer.paint) {
-          const encode = encodeLayerAttribute(layer.paint[key], layer.lch)
+          const encode = encodeLayerAttribute(layer.paint[key], layer.lch, colorBlind)
           code.push(...encode)
         }
         if (code.length) layer.code = new Float32Array(code)

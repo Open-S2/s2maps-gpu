@@ -47,7 +47,9 @@ export default class Program {
       gl.attachShader(program, vertexShader)
       gl.attachShader(program, fragmentShader)
       gl.linkProgram(program)
+      gl.validateProgram(program)
 
+      // if (!gl.getProgramParameter(program, gl.LINK_STATUS) || !gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
       if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
         const lastError = gl.getProgramInfoLog(program)
         throw Error(lastError)
@@ -113,12 +115,17 @@ export default class Program {
   }
 
   setLayerCode (layerCode: Float32Array, lch?: boolean = false) {
-    this.gl.uniform1fv(this.uLayerCode, layerCode, 0, layerCode.length)
+    const { gl } = this
+    gl.uniform1fv(this.uLayerCode, layerCode, 0, layerCode.length)
     // also set lch if we need to
     if (this.uLCH && this.LCH !== lch) {
       this.LCH = lch
-      this.gl.uniform1i(this.uLCH, lch)
+      gl.uniform1i(this.uLCH, ~~lch)
     }
+  }
+
+  setFeatureCode (featureCode?: Float32Array) {
+    if (featureCode && featureCode.length) this.gl.uniform1fv(this.uFeatureCode, featureCode)
   }
 
   set3D (state?: boolean = false) {

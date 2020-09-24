@@ -56,6 +56,11 @@ export default class GlyphProgram extends Program {
     return fbo
   }
 
+  clearCache () {
+    for (const fbo of this.fbos) this._deleteFBO(fbo)
+    this.fbos = []
+  }
+
   _buildFramebuffer (id: number, height: number): FBO {
     const { gl } = this
     const fbo = {

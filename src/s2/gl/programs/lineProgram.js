@@ -43,7 +43,7 @@ export default class LineProgram extends Program {
     if (type === 1) {
       if (color) gl.uniform4fv(this.uColor, color)
       if (width) gl.uniform1f(this.uWidth, width)
-    } else { if (featureCode && featureCode.length) gl.uniform1fv(this.uFeatureCode, featureCode) }
+    } else { this.setFeatureCode(featureCode) }
     // disable culling
     context.disableCullFace()
     // apply the appropriate offset in the source vertexBuffer attribute

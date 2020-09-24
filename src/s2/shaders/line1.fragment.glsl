@@ -1,8 +1,8 @@
 precision highp float;
 
+varying vec4 color;
 varying vec2 vWidth;
 varying vec2 vNorm;
-varying vec4 color;
 
 void main () {
   // Calculate the distance of the pixel from the line in pixels.

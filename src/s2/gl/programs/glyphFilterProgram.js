@@ -180,7 +180,7 @@ export default class GlyphFilterProgram extends Program {
     const { glyphFilterBuffer } = sourceData
     // set feature code
     if (type === 1) gl.uniform1f(this.uSize, size)
-    else if (mode !== 0 && featureCode && featureCode.length) gl.uniform1fv(this.uFeatureCode, featureCode)
+    else { this.setFeatureCode(featureCode) }
     // apply the appropriate offset
     gl.bindBuffer(gl.ARRAY_BUFFER, glyphFilterBuffer)
     gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 36, 0 + (filterOffset * 36)) // s, t

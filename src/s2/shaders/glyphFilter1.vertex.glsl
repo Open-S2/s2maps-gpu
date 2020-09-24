@@ -104,7 +104,7 @@ void main () {
       int index = 0;
       int featureIndex = 0;
       // create size
-      float size = uSize * uDevicePixelRatio;
+      float size = uSize * uDevicePixelRatio * 2.;
       // create width & height, adding padding to the total size
       vec2 WH = vec2(aWidth, 1.) * size + (aPad * 2.);
       // place the x1, y1, x2, y2 into the texture
@@ -113,10 +113,10 @@ void main () {
       vec2 bottomLeft = (glPos.xy * uAspect) + uAspect + (aXY * size);
       // convert to uAspect integer value and split horizontal and vertical into two 8 bit pieces
       if (aStep == 0.) {
-        ivec2 res = ivec2(floor(bottomLeft));
+        ivec2 res = ivec2(ceil(bottomLeft));
         color = vec4(float(rightShift(res.x, 8.)) / 255., float(AND(res.x, 255)) / 255., float(rightShift(res.y, 8.)) / 255., float(AND(res.y, 255)) / 255.);
       } else {
-        ivec2 res = ivec2(ceil(bottomLeft + WH));
+        ivec2 res = ivec2(floor(bottomLeft + WH));
         color = vec4(float(rightShift(res.x, 8.)) / 255., float(AND(res.x, 255)) / 255., float(rightShift(res.y, 8.)) / 255., float(AND(res.y, 255)) / 255.);
       }
     } else {

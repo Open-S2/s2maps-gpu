@@ -42,15 +42,17 @@ export default class OrthographicProjection extends Projector {
   }
 
   getMatrixAtSize (tileSize?: number = 512): Float32Array {
-    if (this.sizeMatrices[tileSize]) return mat4.clone(this.sizeMatrices[tileSize])
+    const { aspect, scale, multiplier, sizeMatrices, zFar } = this
+    
+    if (sizeMatrices[tileSize]) return mat4.clone(sizeMatrices[tileSize])
     const matrix = mat4.create()
     // get height and width ratios for each tile
-    const widthRatio = this.aspect[0] / (tileSize * this.scale)
-    const heightRatio = this.aspect[1] / (tileSize * this.scale)
+    const widthRatio = aspect[0] / multiplier / (tileSize * scale)
+    const heightRatio = aspect[1] / multiplier / (tileSize * scale)
     // create projection
-    mat4.ortho(matrix, widthRatio, heightRatio, this.zFar)
-    // store the matrix for future use
-    this.sizeMatrices[tileSize] = matrix
+    mat4.ortho(matrix, widthRatio, heightRatio, zFar)
+    // updated matrix
+    sizeMatrices[tileSize] = matrix
 
     return mat4.clone(matrix)
   }

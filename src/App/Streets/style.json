@@ -20,6 +20,7 @@
     "fade-2": "rgb(217, 255, 255)",
     "halo": "rgb(230, 255, 255)"
   },
+  "colorBlind": false,
   "sphere-background": {
     "background-color": [
       "input-range",
@@ -180,9 +181,9 @@
       "name": "transport_borders",
       "source": "world",
       "layer": "transport",
-      "filter": ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian"]],
+      "filter": ["class", "has", ["tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian"]],
       "type": "line",
-      "minzoom": 2,
+      "minzoom": 7,
       "layout": {
         "cap": "round",
         "join": "bevel"
@@ -190,28 +191,14 @@
       "paint": {
         "color": [
           "data-condition",
-          ["class", "has", ["secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian"]],
+          ["class", "has", ["tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian"]],
           "rgb(218, 220, 224)",
-          ["class", "has", ["primary", "primary_link"]],
-          "rgb(246, 207, 101)",
           "default",
           "rgba(0, 0, 0, 0)"
         ],
         "width": [
           "data-condition",
-          ["class", "has", ["primary", "primary_link"]],
-          [
-            "input-range",
-            "zoom",
-            "lin",
-            7,
-            2,
-            12,
-            7,
-            15,
-            19
-          ],
-          ["class", "has", ["secondary", "secondary_link", "tertiary", "tertiary_link"]],
+          ["class", "has", ["tertiary", "tertiary_link"]],
           [
             "input-range",
             "zoom",
@@ -241,16 +228,68 @@
       }
     },
     {
+      "name": "transport_secondary_borders",
+      "source": "world",
+      "layer": "transport",
+      "filter": ["class", "has", ["secondary", "secondary_link"]],
+      "type": "line",
+      "minzoom": 7,
+      "layout": {
+        "cap": "round",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "rgb(218, 220, 224)",
+        "width": [
+          "input-range",
+          "zoom",
+          "lin",
+          7,
+          1,
+          12,
+          7,
+          15,
+          19
+        ]
+      }
+    },
+    {
+      "name": "transport_primary_borders",
+      "source": "world",
+      "layer": "transport",
+      "filter": ["class", "has", ["primary", "primary_link"]],
+      "type": "line",
+      "minzoom": 5,
+      "layout": {
+        "cap": "round",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "rgb(246, 207, 101)",
+        "width": [
+          "input-range",
+          "zoom",
+          "lin",
+          7,
+          2,
+          12,
+          7,
+          15,
+          19
+        ]
+      }
+    },
+    {
       "name": "transport",
       "source": "world",
       "layer": "transport",
       "filter": ["or",
-        ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian", "ferry"]],
+        ["class", "has", ["tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian", "ferry"]],
         ["and", ["class", "==", "railway"], ["type", "==", "rail"]],
         ["and", ["class", "==", "path"], ["type", "==", "path"]]
       ],
       "type": "line",
-      "minzoom": 2,
+      "minzoom": 7,
       "layout": {
         "cap": "round",
         "join": "bevel"
@@ -264,16 +303,14 @@
           "rgb(91, 185, 116)",
           ["class", "has", ["railway", "rail"]],
           "rgb(199, 202, 205)",
-          ["class", "has", ["secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian"]],
+          ["class", "has", ["tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian"]],
           "rgb(255, 255, 255)",
-          ["class", "has", ["primary", "primary_link"]],
-          "rgb(255, 242, 175)",
           "default",
           "rgba(0, 0, 0, 0)"
         ],
         "width": [
           "data-condition",
-          ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link"]],
+          ["class", "has", ["tertiary", "tertiary_link"]],
           [
             "input-range",
             "zoom",
@@ -301,6 +338,58 @@
           1.5,
           "default",
           2
+        ]
+      }
+    },
+    {
+      "name": "transport-secondary",
+      "source": "world",
+      "layer": "transport",
+      "filter": ["class", "has", ["secondary", "secondary_link"]],
+      "type": "line",
+      "minzoom": 7,
+      "layout": {
+        "cap": "round",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "rgb(255, 255, 255)",
+        "width": [
+          "input-range",
+          "zoom",
+          "lin",
+          7,
+          1,
+          12,
+          4,
+          15,
+          15
+        ]
+      }
+    },
+    {
+      "name": "transport-primary",
+      "source": "world",
+      "layer": "transport",
+      "filter": ["class", "has", ["primary", "primary_link"]],
+      "type": "line",
+      "minzoom": 5,
+      "layout": {
+        "cap": "round",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "rgb(255, 242, 175)",
+        "width": [
+          "input-range",
+          "zoom",
+          "lin",
+          7,
+          1,
+          12,
+          4,
+          15,
+          15
         ]
       }
     },
@@ -523,16 +612,16 @@
           ["class", "has", ["Village", "Neighbourhood", "Island"]],
           "rgb(98, 114, 138)",
           ["class", "==", "Hamlet"],
-          "rgb(120, 120, 120)",
+          "rgb(105, 105, 105)",
           "default",
           [
             "input-range",
             "zoom",
             "lin",
             9,
-            "rgb(85, 85, 85)",
+            "rgb(75, 75, 75)",
             12,
-            "rgb(120, 120, 120)"
+            "rgb(100, 100, 100)"
           ]
         ],
         "stroke": "rgba(255, 255, 255, 0.85)",

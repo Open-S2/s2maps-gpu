@@ -83,8 +83,8 @@ void main () {
     int index = 0;
     int featureIndex = 0;
     // decode size
-    float size = uSize * uDevicePixelRatio;
-    float strokeWidth = uStrokeWidth * uDevicePixelRatio;
+    float size = uSize * uDevicePixelRatio * 2.;
+    float strokeWidth = uStrokeWidth * uDevicePixelRatio * 2.;
     color = uFill;
     buf = 0.49;
     if (!uIsFill) {
@@ -95,7 +95,7 @@ void main () {
     }
     vec2 glyphSize = vec2(aTexWH.x * size, size);
     // add x-y offset as well as use the UV to map the quad
-    vec2 XY = vec2((aXY.x + aOffset.x) * size - 4., aXY.y - (aOffset.y * size) - 4.); // subtract the sdfWidth
+    vec2 XY = vec2((aXY.x + aOffset.x) * size, aXY.y - (aOffset.y * size)); // subtract the sdfWidth
     glPos.xy += (XY / uAspect) + (glyphSize / uAspect * aUV);
     // set texture position
     vTexcoord = (aTexUV / uTexSize) + (vec2(aTexWH.x * aTexWH.y, aTexWH.y) / uTexSize * aUV);

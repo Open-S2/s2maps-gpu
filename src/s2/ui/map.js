@@ -15,12 +15,17 @@ export type MapOptions = {
   scrollZoom?: boolean,
   updateWhileZooming?: boolean,
   canvasMultiplier?: number,
-  canvasWidth?: number, // incase the map is a webworker, this value will be added to the options
-  canvasHeight?: number, // incase the map is a webworker, this value will be added to the options
+  jollyRoger?: false | 'default' | 'light' | 'dark', // wether to load the logo or not, defaults to true
+  zoomController?: boolean,
+  canZoom?: boolean,
+  canMove?: boolean,
+  darkMode?: boolean,
   webworker?: boolean
 }
 
 // type ScrollEvent = SyntheticEvent<Object>
+
+type ResizeDimensions = { width: number, height: number }
 
 export default class Map extends Camera {
   id: string
@@ -29,19 +34,26 @@ export default class Map extends Camera {
   _scrollZoom: boolean = true // allow the user to scroll over the canvas and cause a zoom change
   renderNextFrame: boolean = false
   injectionQueue: Array<Function> = []
+  resizeQueued: null | ResizeDimensions = null
   webworker: boolean = false
   firefoxScroll: boolean = navigator.platform !== 'MacIntel' && navigator.appCodeName === 'Mozilla'
   dragPan: DragPan
+  canMove: boolean = true
+  canZoom: boolean = true
   constructor (options: MapOptions, canvas: HTMLCanvasElement, id: string) {
     // setup default variables
     super(options)
     this.id = id
     this._canvas = canvas
+    // setup options
+    const { style, webworker, interactive, scrollZoom, canMove, canZoom } = options
     // assign webworker if applicable
-    if (options.webworker) this.webworker = true
+    this.webworker = !!webworker
     // check if we can interact with the map
-    if (options.interactive) this._interactive = options.interactive
-    if (options.scrollZoom) this._scrollZoom = options.scrollZoom
+    if (interactive) this._interactive = interactive
+    if (scrollZoom) this._scrollZoom = scrollZoom
+    if (canMove !== undefined) this.canMove = canMove
+    if (canZoom !== undefined) this.canZoom = canZoom
     // now we setup canvas
     this._setupCanvas(options)
     // now that we have a canvas, prep the camera's painter
@@ -49,9 +61,25 @@ export default class Map extends Camera {
     // setup the style - this goes AFTER creation of the painter, because the
     // style will tell the painter what programs it will be using
     this.style = new Style(options, this)
+    // build style
+    this.setStyle(style)
+  }
+
+  setStyle (style: string | Object) {
+    // incase style was imported, clear cache
+    this.clearCache()
+    // build style for the map, painter, and webworkers
+    this.style.buildStyle(style)
     // inject minzoom and maxzoom
     this.projection.setStyleParameters(this.style)
     // render our first pass
+    this.render()
+  }
+
+  jumpTo (lon: number, lat: number, zoom: number) {
+    // update the projectors position
+    this.projection.setPosition(lon, lat, zoom)
+    // render it out
     this.render()
   }
 
@@ -80,9 +108,15 @@ export default class Map extends Camera {
         // listen to mouse movement
         self._canvas.addEventListener('touchstart', (e: TouchEvent) => { e.preventDefault(); self.dragPan.onTouchStart(e.touches) })
         self._canvas.addEventListener('touchend', (e: TouchEvent) => { e.preventDefault(); self.dragPan.onTouchEnd(e.touches) })
-        self._canvas.addEventListener('mousedown', () => self.dragPan.onMouseDown())
-        self._canvas.addEventListener('mouseup', () => self.dragPan.onMouseUp())
-        self._canvas.addEventListener('mousemove', (e: MouseEvent) => { self.dragPan.onMouseMove(e.movementX, e.movementY) })
+        self._canvas.addEventListener('mousedown', () => {
+          self.dragPan.onMouseDown()
+          const mouseMoveFunc = (e: MouseEvent) => { self.dragPan.onMouseMove(e.movementX, e.movementY) }
+          window.addEventListener('mousemove', mouseMoveFunc)
+          window.addEventListener('mouseup', () => {
+            window.removeEventListener('mousemove', mouseMoveFunc)
+            self.dragPan.onMouseUp()
+          }, { once: true })
+        })
         self._canvas.addEventListener('touchmove', (e: MouseEvent) => { e.preventDefault(); self.dragPan.onTouchMove(e.touches) })
       }
       // listen to dragPans updates
@@ -92,24 +126,40 @@ export default class Map extends Camera {
       self.dragPan.addEventListener('click', self._onClick.bind(self))
     }
     // setup camera
-    if (options.canvasWidth && options.canvasHeight) self.resizeCamera(options.canvasWidth, options.canvasHeight)
-    else self.resizeCamera(self._canvas.clientWidth, this._canvas.clientHeight)
+    self.resizeCamera(self._canvas.width, this._canvas.height)
+  }
+
+  setMoveState (state: boolean) {
+    this.canMove = !!state
+  }
+
+  setZoomState (state: boolean) {
+    this.canZoom = !!state
   }
 
   getCanvas (): HTMLCanvasElement {
     return this._canvas
   }
 
-  resize (width: number, height: number, canvasMultiplier: number) {
-    const { _canvas } = this
-    _canvas.width = width * canvasMultiplier
-    _canvas.height = height * canvasMultiplier
-    this.resizeCamera(width, height)
+  resize (width: number, height: number) {
+    this.resizeQueued = { width, height }
     this.render()
+  }
+
+  _resize () {
+    const { _canvas, resizeQueued } = this
+    if (resizeQueued) {
+      const { width, height } = resizeQueued
+      _canvas.width = width
+      _canvas.height = height
+      this.resizeCamera(width, height)
+      this.resizeQueued = null
+    }
   }
 
   _onZoom (deltaZ: number, deltaX?: number = 0, deltaY?: number = 0) {
     this.dragPan.clear()
+    if (!this.canZoom) return
     // update projection
     const update = this.projection.onZoom(deltaZ, deltaX, deltaY)
     // if the projection sees a zoom change, we need to render, but don't request new tiles until
@@ -129,6 +179,7 @@ export default class Map extends Camera {
   }
 
   _onMovement (e: Event) {
+    if (!this.canMove) return
     const { movementX, movementY } = this.dragPan
     // update projection
     this.projection.onMove(movementX, movementY)
@@ -136,23 +187,57 @@ export default class Map extends Camera {
   }
 
   _onSwipe (e: Event) {
-    this.dragPan.swipeActive = true
-    requestAnimationFrame(this.swipeAnimation.bind(this))
+    if (!this.canMove) return
+    const seed = this.dragPan.newSeed()
+    requestAnimationFrame(now => this.swipeAnimation(seed, now))
   }
 
-  swipeAnimation (now: number) {
+  // builtin navigation controller inputs
+  navEvent (ctrl: 'zoomIn' | 'zoomOut') {
+    const { projection } = this
+    const { zoom, minzoom, maxzoom } = projection
+    const startZoom = zoom
+    const deltaZoom = Math.max(Math.min((ctrl === 'zoomIn') ? startZoom + 1 : startZoom - 1, maxzoom), minzoom) - startZoom
+    if (deltaZoom) { // assuming we have a new end position we animate
+      // preload end position tiles, reset for next frame
+      projection.setZoom(startZoom + deltaZoom)
+      this._getTiles()
+      projection.setZoom(startZoom)
+      // build animation seed and animate
+      const seed = this.dragPan.newSeed()
+      requestAnimationFrame(now => this.zoomAnimation(seed, startZoom, deltaZoom, now * 0.001))
+    }
+  }
+
+  swipeAnimation (seed: number, curTime: number) {
     const self = this
-    if (!self.dragPan.swipeActive) return
-    const [newMovementX, newMovementY, time] = self.dragPan.getNextFrame(now)
+    const { dragPan, projection } = self
+    if (dragPan.animSeed !== seed) return
+    const [newMovementX, newMovementY, time] = dragPan.getNextSwipeFrame(curTime * 0.001)
     if (time) {
-      self.projection.onMove(newMovementX, newMovementY, 6, 6)
+      projection.onMove(newMovementX, newMovementY, 6, 6)
       self.render()
-      requestAnimationFrame(self.swipeAnimation.bind(self))
+      requestAnimationFrame(now => self.swipeAnimation(seed, now))
+    }
+  }
+
+  zoomAnimation (seed: number, startZoom: number, deltaZoom: number, startTime: number, curTime?: number) {
+    const self = this
+    const { dragPan, projection } = self
+    if (dragPan.animSeed !== seed) return
+    if (!curTime) curTime = dragPan.time = startTime
+    const multiplier = dragPan.getNextZoomFrame(curTime)
+    self.render()
+    if (multiplier >= 1) {
+      projection.setZoom(startZoom + deltaZoom)
+    } else {
+      projection.setZoom(startZoom + (multiplier * deltaZoom))
+      requestAnimationFrame(now => { self.zoomAnimation(seed, startZoom, deltaZoom, startTime, now * 0.001) })
     }
   }
 
   _onClick (e: Event) {
-    console.log('CLICK')
+    // console.log('CLICK')
   }
 
   // tile data is stored in the map, waiting for the render to
@@ -170,6 +255,8 @@ export default class Map extends Camera {
     self.renderNextFrame = true
     requestAnimationFrame(() => {
       self.renderNextFrame = false
+      // if resize has been queued, we do so now
+      if (this.resizeQueued) this._resize()
       // if there is data to 'inject', we make sure to render another frame later
       if (self.injectionQueue.length) {
         // pull out the latest data we received (think about it, the newest data is the most constructive)

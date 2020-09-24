@@ -14,23 +14,15 @@
     "roboto-medium": "https://s3.s2maps.io/fonts-v2/RobotoMedium"
   },
   "shade": false,
+  "colorBlind": false,
   "wallpaper": {
     "background-color": "#1f262d",
-    "fade-1": "#17273b",
+    "fade-1": "#172b3a",
     "fade-2": "#20436d",
     "halo": "#d29463"
   },
   "sphere-background": {
-    "background-color": [
-      "input-range",
-      "zoom",
-      "expo",
-      1.7,
-      2.75,
-      "#24303e",
-      9.5,
-      "#24303e"
-    ]
+    "background-color": "#2b2d2e"
   },
   "layers": [
     {
@@ -57,11 +49,11 @@
           ["class", "has", ["university", "college", "school", "kindergarten"]],
           "#2f3948",
           ["class", "==", "hospital"],
-          "#a28b8b",
+          "#3d3337",
           ["class", "has", ["farmland", "cemetery"]],
           "#2e4642",
           ["class", "has", ["park", "national_park", "protected_area", "grass", "grassland", "garden", "meadow", "wood", "swamp", "forest", "zoo"]],
-          "#273b3e",
+          "#293737",
           ["class", "==", "glacier"],
           "#757575",
           ["class", "==", "aboriginal_lands"],
@@ -82,7 +74,7 @@
       "minzoom": 0,
       "layout": {},
       "paint": {
-        "color": "#3b5955"
+        "color": "#364744"
       }
     },
     {
@@ -94,7 +86,7 @@
       "minzoom": 0,
       "layout": {},
       "paint": {
-        "color": "#17273b"
+        "color": "#172b3a"
       }
     },
     {
@@ -106,7 +98,7 @@
       "minzoom": 0,
       "layout": {},
       "paint": {
-        "color": "#213855"
+        "color": "#1d3849"
       }
     },
     {
@@ -120,7 +112,7 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "#17273b",
+        "color": "#172b3a",
         "width": [
           "input-range",
           "zoom",
@@ -134,80 +126,16 @@
       }
     },
     {
-      "name": "transport_borders",
-      "source": "world",
-      "layer": "transport",
-      "filter": ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian"]],
-      "type": "line",
-      "minzoom": 2,
-      "layout": {
-        "cap": "round",
-        "join": "bevel"
-      },
-      "paint": {
-        "color": [
-          "data-condition",
-          ["class", "has", ["secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian"]],
-          "#1f2935",
-          ["class", "has", ["primary", "primary_link"]],
-          "#1f2935",
-          "default",
-          "rgba(0, 0, 0, 0)"
-        ],
-        "width": [
-          "data-condition",
-          ["class", "has", ["primary", "primary_link"]],
-          [
-            "input-range",
-            "zoom",
-            "lin",
-            7,
-            2,
-            12,
-            7,
-            15,
-            19
-          ],
-          ["class", "has", ["secondary", "secondary_link", "tertiary", "tertiary_link"]],
-          [
-            "input-range",
-            "zoom",
-            "lin",
-            7,
-            1,
-            12,
-            7,
-            15,
-            19
-          ],
-          ["or", ["class", "==", "street"], ["class", "==", "street_limited"], ["class", "==", "residential"]],
-          [
-            "input-range",
-            "zoom",
-            "lin",
-            10,
-            1,
-            13,
-            5.5,
-            15,
-            14
-          ],
-          "default",
-          3.5
-        ]
-      }
-    },
-    {
-      "name": "transport",
+      "name": "transportLower",
+      "minzoom": 7,
       "source": "world",
       "layer": "transport",
       "filter": ["or",
-        ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian", "ferry"]],
+        ["class", "has", ["tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian", "ferry"]],
         ["and", ["class", "==", "railway"], ["type", "==", "rail"]],
         ["and", ["class", "==", "path"], ["type", "==", "path"]]
       ],
       "type": "line",
-      "minzoom": 2,
       "layout": {
         "cap": "round",
         "join": "bevel"
@@ -216,21 +144,21 @@
         "color": [
           "data-condition",
           ["class", "==", "ferry"],
-          "#384352",
+          "#204151",
           ["class", "==", "path"],
           "#8f8f8f",
           ["class", "==", "railway"],
           "#25292d",
-          ["class", "has", ["secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian"]],
-          "#38424e",
-          ["class", "has", ["primary", "primary_link"]],
-          "#736754",
+          ["class", "has", ["tertiary", "tertiary_link"]],
+          "#4e5154",
+          ["class", "has", ["street", "street_limited", "residential", "pedestrian"]],
+          "#3a3d3f",
           "default",
           "rgba(0, 0, 0, 0)"
         ],
         "width": [
           "data-condition",
-          ["class", "has", ["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link"]],
+          ["class", "has", ["tertiary", "tertiary_link"]],
           [
             "input-range",
             "zoom",
@@ -238,7 +166,7 @@
             7,
             1,
             12,
-            4,
+            3,
             15,
             15
           ],
@@ -250,7 +178,7 @@
             10,
             1.5,
             13,
-            4,
+            2.5,
             15,
             10
           ],
@@ -258,6 +186,58 @@
           1.5,
           "default",
           2
+        ]
+      }
+    },
+    {
+      "name": "transportSecondary",
+      "minzoom": 7,
+      "source": "world",
+      "layer": "transport",
+      "filter": ["class", "has", ["secondary", "secondary_link"]],
+      "type": "line",
+      "layout": {
+        "cap": "round",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "#4e5154",
+        "width": [
+          "input-range",
+          "zoom",
+          "lin",
+          7,
+          1,
+          12,
+          3,
+          15,
+          15
+        ]
+      }
+    },
+    {
+      "name": "transportPrimary",
+      "minzoom": 5,
+      "source": "world",
+      "layer": "transport",
+      "filter": ["class", "has", ["primary", "primary_link"]],
+      "type": "line",
+      "layout": {
+        "cap": "round",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "#4e5154",
+        "width": [
+          "input-range",
+          "zoom",
+          "lin",
+          7,
+          1,
+          12,
+          3,
+          15,
+          15
         ]
       }
     },
@@ -273,7 +253,7 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "#1f2935",
+        "color": "#2b2d2e",
         "width": [
           "input-range",
           "zoom",
@@ -301,7 +281,7 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "#736754",
+        "color": "#875d38",
         "width": [
           "input-range",
           "zoom",
@@ -318,10 +298,34 @@
       }
     },
     {
-      "id": "boundaries",
+      "id": "boundariesState",
       "source": "world",
       "layer": "boundary",
-      "filter": ["and", ["class", "has", ["Country", "State"]], ["maritime", "==", false]],
+      "filter": ["and", ["class", "==", "State"], ["maritime", "==", false]],
+      "type": "line",
+      "minzoom": 3,
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "#b2482d",
+        "width": [
+          "input-range",
+          "zoom",
+          "lin",
+          3,
+          0.85,
+          4,
+          1.25
+        ]
+      }
+    },
+    {
+      "id": "boundariesCountry",
+      "source": "world",
+      "layer": "boundary",
+      "filter": ["and", ["class", "==", "Country"], ["maritime", "==", false]],
       "type": "line",
       "minzoom": 0,
       "layout": {
@@ -329,27 +333,15 @@
         "join": "bevel"
       },
       "paint": {
-        "color": [
-          "data-condition",
-          ["class", "==", "Country"],
-          "#908169",
-          "default",
-          "#66564c"
-        ],
+        "color": "#908169",
         "width": [
-          "data-condition",
-          ["class", "==", "State"],
-          1.25,
-          "default",
-          [
-            "input-range",
-            "zoom",
-            "lin",
-            1,
-            0.85,
-            2,
-            1.25
-          ]
+          "input-range",
+          "zoom",
+          "lin",
+          1,
+          0.85,
+          2,
+          1.75
         ]
       }
     },
@@ -359,13 +351,13 @@
       "layer": "equator",
       "type": "line",
       "minzoom": 0,
-      "maxzoom": 10,
+      "maxzoom": 2,
       "layout": {
         "cap": "butt",
         "join": "bevel"
       },
       "paint": {
-        "color": "#908169",
+        "color": "#924331",
         "width": [
           "input-range",
           "zoom",
@@ -384,7 +376,7 @@
       "type": "fill",
       "layout": {},
       "paint": {
-        "color": "#3b3f44"
+        "color": "#343638"
       }
     },
     {
@@ -424,7 +416,7 @@
             5,
             15,
             9,
-            20,
+            25,
             12,
             45
           ],
@@ -470,20 +462,14 @@
           ["class", "==", "Indian Reservation"],
           "#9f8f7e",
           ["class", "has", ["Village", "Neighbourhood", "Island"]],
-          "#908169",
+          "#bab3aa",
           ["class", "==", "Hamlet"],
           "rgb(150, 150, 150)",
           "default",
-          "#bb865b"
+          "#b7babe"
         ],
-        "stroke": "#242f3e",
-        "strokeWidth": [
-          "data-condition",
-          ["class", "==", "Indian Reservation"],
-          0,
-          "default",
-          0.4
-        ]
+        "stroke": "#2b2d2e",
+        "strokeWidth": 0
       }
     },
     {
@@ -543,24 +529,15 @@
           "default",
           14
         ],
-        "fill": "#908169",
-        "stroke": "#383e43",
-        "strokeWidth": [
+        "fill": [
           "data-condition",
-          ["class", "==", "State"],
-          [
-            "input-range",
-            "zoom",
-            "expo",
-            1.5,
-            0,
-            0.5,
-            4,
-            0.3
-          ],
+          ["class", "==", "Country"],
+          "#a0917c",
           "default",
-          0
-        ]
+          "#c6b69e"
+        ],
+        "stroke": "#383e43",
+        "strokeWidth": 0
       }
     }
   ]

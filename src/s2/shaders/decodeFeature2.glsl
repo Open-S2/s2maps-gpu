@@ -1,3 +1,6 @@
+uniform float uInputs[16];
+uniform float uLayerCode[128];
+uniform float uFeatureCode[64];
 uniform bool uLCH;
 
 #include ./color;

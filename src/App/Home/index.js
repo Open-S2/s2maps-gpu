@@ -1,10 +1,12 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import S2Logo from './S2Logo.svg'
-import StreetsWEBP from './streets2.webp'
-import StreetsJPG from './streets2.jpg'
-import LightWEBP from './light2.webp'
-import LightJPG from './light2.jpg'
+import StreetsWEBP from './streets.webp'
+import StreetsJPG from './streets.jpg'
+import DarkWEBP from './dark.webp'
+import DarkJPG from './dark.jpg'
+import LightWEBP from './light.webp'
+import LightJPG from './light.jpg'
 import RasterWEBP from './raster.webp'
 import RasterJPG from './raster.jpg'
 import DEM from './dem.mp4'
@@ -25,9 +27,20 @@ function Home () {
               <picture>
                 <source async loading='lazy' width='640px' height='363px' alt='streets' srcSet={StreetsWEBP} type='image/webp' />
                 <source async loading='lazy' width='640px' height='363px' alt='streets' srcSet={StreetsJPG} type='image/jpeg' />
-                <img async loading='lazy' width='640px' height='363px' alt='streets' src={LightJPG} />
+                <img async loading='lazy' width='640px' height='363px' alt='streets' src={StreetsJPG} />
               </picture>
               <div className='link-name'>Streets</div>
+            </div>
+          </Link>
+
+          <Link to='/dark'>
+            <div className='link-container'>
+              <picture>
+                <source async loading='lazy' width='640px' height='363px' alt='dark' srcSet={DarkWEBP} type='image/webp' />
+                <source async loading='lazy' width='640px' height='363px' alt='dark' srcSet={DarkJPG} type='image/jpeg' />
+                <img async loading='lazy' width='640px' height='363px' alt='dark' src={DarkJPG} />
+              </picture>
+              <div className='link-name'>Dark</div>
             </div>
           </Link>
 

@@ -1,6 +1,7 @@
 // @flow
 
-export interface Projection {
+declare class Projection {
+  view: Float32Array; // [zoom, lon, lat, angle, pitch, ...extensions]
   translation: Float32Array; // [x, y, z]
   zTranslateStart?: number;
   zTranslateEnd?: number;
@@ -11,6 +12,7 @@ export interface Projection {
   zNear: number;
   zFar: number;
   aspect: Float32Array; // [width, height]
+  dirty: boolean;
 
   resize(width: number, height: number): null;
   setZoom(zoom: number): null;

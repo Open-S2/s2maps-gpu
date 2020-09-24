@@ -88,7 +88,7 @@ export default class GlyphQuadProgram extends Program {
       gl.uniform4fv(this.uFill, fill)
       gl.uniform4fv(this.uStroke, stroke)
       gl.uniform1f(this.uStrokeWidth, strokeWidth)
-    } else if (featureCode && featureCode.length) gl.uniform1fv(this.uFeatureCode, featureCode)
+    } else { this.setFeatureCode(featureCode) }
     // turn depth testing off
     context.stencilFunc(0)
     // set the texture size uniform

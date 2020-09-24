@@ -12,7 +12,7 @@ class MapWorker {
     const { type } = data
 
     if (type === 'canvas') this._prepCanvas(data.options, data.canvas, data.id)
-    else if (type === 'resize') this.map.resize(data.width, data.height, data.canvasMultiplier)
+    else if (type === 'resize') this.map.resize(data.width, data.height)
     else if (type === 'scroll') this.map._onZoom(data.deltaY, data.clientX - data.rect.left, data.clientY - data.rect.top)
     else if (type === 'mousedown') this.map.dragPan.onMouseDown()
     else if (type === 'mouseup') this.map.dragPan.onMouseUp()
@@ -20,6 +20,11 @@ class MapWorker {
     else if (type === 'touchstart') this.map.dragPan.onTouchStart(data.touchEvent)
     else if (type === 'touchend') this.map.dragPan.onTouchEnd(data.touchEvent)
     else if (type === 'touchmove') this.map.dragPan.onTouchMove(data.touchEvent)
+    else if (type === 'nav') this.map.navEvent(data.ctrl)
+    else if (type === 'setStyle') this.map.setStyle(data.style)
+    else if (type === 'jumpTo') this.map.jumpTo(data.lon, data.lat, data.zoom)
+    else if (type === 'moveState') this.map.canMove = !!data.state
+    else if (type === 'zoomState') this.map.canZoom = !!data.state
     else this.map.injectData(data)
   }
 

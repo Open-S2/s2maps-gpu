@@ -8,10 +8,6 @@ layout (location = 7) in float aIndex;
 uniform mat4 uMatrix;
 uniform bool u3D;
 
-uniform float uInputs[16];
-uniform float uLayerCode[256];
-uniform float uFeatureCode[128];
-
 #include ./decodeFeature2;
 #include ./ST2XYZ;
 

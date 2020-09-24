@@ -18,10 +18,6 @@ uniform float uIndexOffset;
 uniform sampler2D uPoints;
 uniform sampler2D uQuads;
 
-uniform float uInputs[16];
-uniform float uLayerCode[256];
-uniform float uFeatureCode[128];
-
 #include ./decodeFeature2;
 #include ./ST2XYZ;
 
@@ -84,17 +80,17 @@ void main () {
       // grab the size
       float size = decodeFeature(false, index, featureIndex)[0];
       // create width & height, adding padding to the total size
-      vec2 WH = vec2(aWidth, 1.) * size * uDevicePixelRatio + (aPad * 2.);
+      vec2 WH = vec2(aWidth, 1.) * size * (uDevicePixelRatio * 2.) + (aPad * 2.);
       // place the x1, y1, x2, y2 into the texture
       // I add the length and width of the canvas to the total just incase a glyph filter
       // starts slightly below or to the left of the canvas
-      vec2 bottomLeft = (glPos.xy * uAspect) + uAspect + (aXY * size * uDevicePixelRatio);
+      vec2 bottomLeft = (glPos.xy * uAspect) + uAspect + (aXY * size * (uDevicePixelRatio * 2.));
       // convert to uAspect integer value and split horizontal and vertical into two 8 bit pieces
       if (aStep == 0.) {
-        ivec2 res = ivec2(floor(bottomLeft));
+        ivec2 res = ivec2(ceil(bottomLeft));
         color = vec4(float(res.x >> 8) / 255., float(res.x & 255) / 255., float(res.y >> 8) / 255., float(res.y & 255) / 255.);
       } else {
-        ivec2 res = ivec2(ceil(bottomLeft + WH));
+        ivec2 res = ivec2(floor(bottomLeft + WH));
         color = vec4(float(res.x >> 8) / 255., float(res.x & 255) / 255., float(res.y >> 8) / 255., float(res.y & 255) / 255.);
       }
     } else {

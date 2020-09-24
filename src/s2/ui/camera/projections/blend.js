@@ -49,11 +49,6 @@ export default class BlendProjection extends Projector {
       (((this.zTranslateEnd - this.zTranslateStart) / this.zoomEnd) * this.zoom) + this.zTranslateStart,
       this.zTranslateEnd
     )
-    // update movement
-    // let moveX = ((this.aspect[0] / 2) - canvasX) / (this.aspect[0] / 2)
-    // let moveY = ((this.aspect[1] / 2) - canvasX) / (this.aspect[1] / 2)
-    // if (zoom < 0) this.onMove(moveX, -moveY, 1, 6)
-    // else this.onMove(-moveX, moveY, 1, 6)
     // cleanup
     this.sizeMatrices = {}
     this.dirty = true
@@ -61,15 +56,17 @@ export default class BlendProjection extends Projector {
   }
 
   getMatrixAtSize (tileSize?: number = 512): Float32Array {
-    if (this.sizeMatrices[tileSize]) return mat4.clone(this.sizeMatrices[tileSize])
+    const { aspect, scale, multiplier, sizeMatrices, zNear, zFar, translation } = this
+
+    if (sizeMatrices[tileSize]) return mat4.clone(sizeMatrices[tileSize])
     const matrix = mat4.create()
     // get height and width ratios for each tile
-    const widthRatio = this.aspect[0] / (tileSize * this.scale)
-    const heightRatio = this.aspect[1] / (tileSize * this.scale)
+    const widthRatio = aspect[0] / multiplier / (tileSize * scale)
+    const heightRatio = aspect[1] / multiplier / (tileSize * scale)
     // create projection
-    mat4.blend(matrix, widthRatio * (-1 / this.translation[2]), heightRatio * (-1 / this.translation[2]), this.zNear, this.zFar)
+    mat4.blend(matrix, widthRatio * (-1 / translation[2]), heightRatio * (-1 / translation[2]), zNear, zFar)
     // updated matrix
-    this.sizeMatrices[tileSize] = matrix
+    sizeMatrices[tileSize] = matrix
 
     return mat4.clone(matrix)
   }

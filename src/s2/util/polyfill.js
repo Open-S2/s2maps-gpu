@@ -1,3 +1,4 @@
+// @flow
 /* Safari and Edge polyfill for createImageBitmap
  * https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/createImageBitmap
  */
@@ -10,3 +11,17 @@ if (!('createImageBitmap' in window)) {
     })
   }
 }
+
+/** Opera Mini polyfill
+  * https://caniuse.com/?search=requestAnimationFrame
+  */
+if (!('requestAnimationFrame' in window)) {
+  window.requestAnimationFrame = cb => setTimeout(() => cb(Date.now()), 1000 / 60)
+}
+
+/** polyfill for quite a few browsers
+  * https://caniuse.com/?search=requestAnimationFrame
+  */
+// if (!('ResizeObserver' in window)) {
+//   window.ResizeObserver = ResizeObserver
+// }

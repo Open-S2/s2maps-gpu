@@ -1,5 +1,6 @@
 // @flow
 import colorParser from './colorParser'
+import colorBlindAdjust from './colorBlindAdjust'
 
 // for color interpolation, we should use the LCH color space
 // https://www.alanzucconi.com/2016/01/06/colour-interpolation/4/
@@ -8,8 +9,8 @@ import colorParser from './colorParser'
 
 // color is designed to parse varying inputs
 export default class Color {
-  val = [0, 0, 0, 0]
-  type = 'rgb'
+  val: [number, number, number, number] = [0, 0, 0, 0]
+  type: string = 'rgb'
   constructor (x: number, y: number, z: number, a: number, type: string) {
     if (typeof x === 'string') {
       const [type, val] = colorParser(x)
@@ -21,18 +22,17 @@ export default class Color {
     }
   }
 
-  getValue (normalize: boolean = true): [number, number, number, number] {
-    if (this.type === 'rgb' && normalize) return [this.val[0] / 255, this.val[1] / 255, this.val[2] / 255, this.val[3]]
-    return this.val
-  }
-
-  getRGB (normalize: boolean = true): [number, number, number, number] {
-    this.toRGB()
+  getRGB (colorBlind: boolean = false, normalize: boolean = true): [number, number, number, number] {
+    if (colorBlind) colorBlindAdjust(this)
+    else this.toRGB()
     if (normalize) return [this.val[0] / 255, this.val[1] / 255, this.val[2] / 255, this.val[3]]
     return this.val
   }
 
-  getLCH (): [number, number, number, number] {
+  getLCH (colorBlind: boolean = false): [number, number, number, number] {
+    // must be RGB to convert
+    if (colorBlind) colorBlindAdjust(this)
+    // now convert to lch
     this.toLCH()
 
     return this.val

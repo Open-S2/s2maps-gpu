@@ -2,6 +2,7 @@
   "name": "s2maps-gl",
   "version": "0.1.0",
   "main": "buildS2/main.js",
+  "cdn": "https://s3.s2maps.io/s2maps-gl",
   "private": true,
   "dependencies": {
     "@babel/core": "7.4.3",
@@ -156,6 +157,8 @@
     "@babel/preset-flow": "^7.0.0",
     "brotli-webpack-plugin": "^1.1.0",
     "compression-webpack-plugin": "^5.0.2",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
     "lazyload-webpack-plugin": "^0.1.1",
     "raw-loader": "^3.1.0",
     "sqlite3": "^5.0.0",

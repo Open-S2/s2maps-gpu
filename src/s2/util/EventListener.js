@@ -3,14 +3,14 @@
 export default class EventListener {
   listeners = {}
 
-  addEventListener (type, callback) {
+  addEventListener (type: string, callback: Function) {
     if (!(type in this.listeners)) {
       this.listeners[type] = []
     }
     this.listeners[type].push(callback)
   }
 
-  removeEventListener (type, callback) {
+  removeEventListener (type: string, callback: Function) {
     if (!(type in this.listeners)) return
     let stack = this.listeners[type]
     for (let i = 0, l = stack.length; i < l; i++) {
@@ -21,7 +21,7 @@ export default class EventListener {
     }
   }
 
-  dispatchEvent (event) {
+  dispatchEvent (event: Event) {
     if (!(event.type in this.listeners)) return true
     let stack = this.listeners[event.type].slice()
     for (let i = 0, l = stack.length; i < l; i++) stack[i].call(this, event)

@@ -42,9 +42,7 @@ export default class FillProgram extends Program {
     // set feature code (webgl 1 we store the colors, webgl 2 we store layerCode lookups)
     if (type === 1) {
       if (subFeatureCode) gl.uniform4fv(this.uColors, subFeatureCode, 0, subFeatureCode.length)
-    } else {
-      if (featureCode && featureCode.length) gl.uniform1fv(this.uFeatureCode, featureCode)
-    }
+    } else { this.setFeatureCode(featureCode) }
     // draw elements
     gl.drawElements(mode || gl.TRIANGLES, count, gl.UNSIGNED_INT, (offset | 0) * 4)
   }
