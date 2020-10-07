@@ -79,8 +79,11 @@ export default class Camera {
   }
 
   _createTile (face: Face, zoom: number, x: number, y: number, hash: number): Tile {
+    const { style } = this
     // create tile
     const tile = new Tile(this.painter.context, face, zoom, x, y, hash)
+    // should our style have default layers, let's add them
+    if (style.maskLayers.length) tile.injectMaskLayers(style.maskLayers)
     // inject parent should one exist
     if (tile.zoom !== 0) {
       // get closest parent hash. If actively zooming, the parent tile will pass along
@@ -96,17 +99,6 @@ export default class Camera {
     this.tileCache.set(hash, tile)
 
     return tile
-  }
-
-  // avoid over-asking for tiles if we are zooming quickly
-  _setRequestQueue (tiles: Array<Tile>) {
-    const self = this
-    // first clear timer
-    if (self.request) clearTimeout(self.request)
-    // set a new timer that eventually makes the requests
-    self.request = setTimeout(() => {
-      self.style.requestTiles(self.requestQueue)
-    }, 150)
   }
 
   _injectData (data) {
@@ -146,14 +138,14 @@ export default class Camera {
       // get tile
       const tile = this.tileCache.get(tileID)
       // find all layers that utilize the raster data
-      const layerIDs = this.style.layers.filter(layer => layer.source === source).map((layer, i) => i)
+      const layerIndexs = this.style.layers.filter(layer => layer.source === source).map((layer, i) => i)
       // inject into tile
       if (!built) {
         createImageBitmap(new Blob([image]))
-          .then(image => tile.injectRasterData(source, layerIDs, image, leftShift, bottomShift))
+          .then(image => tile.injectRasterData(source, layerIndexs, image, leftShift, bottomShift))
           .catch(err => console.log('ERROR', err))
       } else {
-        tile.injectRasterData(source, layerIDs, image, leftShift, bottomShift)
+        tile.injectRasterData(source, layerIndexs, image, leftShift, bottomShift)
       }
       // new 'paint', so painter is dirty
       this.painter.dirty = true

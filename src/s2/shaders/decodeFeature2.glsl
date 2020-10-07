@@ -1,4 +1,5 @@
-uniform float uInputs[16];
+uniform int uFeatureState;
+uniform float uInputs[16]; // [zoom, lon, lat, angle, pitch, time, ...extensions]
 uniform float uLayerCode[128];
 uniform float uFeatureCode[64];
 uniform bool uLCH;
@@ -27,18 +28,17 @@ vec4 interpolateColor (vec4 color1, vec4 color2, float t) {
   else if (t == 1.) return color2;
   float sat, hue, lbv, dh, alpha;
   // LCH interpolation
-  if (uLCH) {
-    // create proper hue translation
+  if (uLCH) { // create proper hue translation
     if (color2[0] > color1[0] && color2[0] - color1[0] > 180.) dh = color2[0] - color1[0] + 360.;
     else if (color2[0] < color1[0] && color1[0] - color2[0] > 180.) dh = color2[0] + 360. - color1[0];
     else dh = color2[0] - color1[0];
     hue = color1[0] + t * dh;
-  } else {
+  } else { // otherwise red
     hue = color1[0] + t * (color2[0] - color1[0]);
   }
-  // saturation
+  // saturation or green
   sat = color1[1] + t * (color2[1] - color1[1]);
-  // luminosity
+  // luminosity or blue
   lbv = color1[2] + t * (color2[2] - color1[2]);
   // alpha
   alpha = color1[3] + t * (color2[3] - color1[3]);
@@ -141,13 +141,13 @@ vec4 decodeFeature (bool color, inout int index, inout int featureIndex) {
         conditionStack[stackIndex] = startIndex;
         tStack[stackIndex] = 1.;
         if (stackIndex > 0) tStack[stackIndex] = tStack[stackIndex - 1];
-        // else tStack[stackIndex] = 1.;
+        // else tStack[stackIndex] = 1.; UNKOWN WHY - THIS CAUSES AN ERROR FOR NVIDIA GPUS
         stackIndex++;
       } else if (end == inputVal) {
         conditionStack[stackIndex] = endIndex;
         tStack[stackIndex] = 1.;
         if (stackIndex > 0) tStack[stackIndex] = tStack[stackIndex - 1];
-        // else tStack[stackIndex] = 1.;
+        // else tStack[stackIndex] = 1.; UNKOWN WHY - THIS CAUSES AN ERROR FOR NVIDIA GPUS
         stackIndex++;
       } else { // otherwise we process startIndex and endIndex
         float t = exponentialInterpolation(inputVal, start, end, base);
@@ -170,9 +170,10 @@ vec4 decodeFeature (bool color, inout int index, inout int featureIndex) {
         index += int(uLayerCode[index]) >> 10;
         endIndex = index + 1;
       }
-    } else if (condition == 6) { // animation-state
-
-    } else if (condition >= 7) { // feature-state
+    } else if (condition == 6) { // feature-state
+      // iterate through subConditions until it matches "uFeatureState"
+      // once found, inject
+    } else if (condition == 7) { // animation-state
 
     }
     // safety precaution

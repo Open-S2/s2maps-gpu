@@ -25,9 +25,9 @@ export type TileDefinition = [number, number, number, number, number]
 export type TileDefinitions = Array<TileDefinition>
 
 export default class Projector implements Projection {
-  view: Float32Array = new Float32Array(16) // [zoom, lon, lat, angle, pitch, ...extensions]
-  translation: [number, number, number] = [0, 0, -10] // only z should change for visual effects
-  maxLatRotation: number = 80 // 80 deg
+  view: Float32Array = new Float32Array(16) // [zoom, lon, lat, angle, pitch, time, ...extensions]
+  translation: [number, number, number] = [0, 0, -10] // [x, y, z] only z should change for visual effects
+  maxLatRotation: number = 85 // deg
   prevZoom: number = 0
   zoom: number = 0
   minzoom: number = 0
@@ -93,10 +93,14 @@ export default class Projector implements Projection {
   }
 
   onMove (movementX?: number = 0, movementY?: number = 0, multiplierX?: number = 3, multiplierY?: number = 3) {
-    if (movementX) this.lon += movementX / (multiplierX * (2 * Math.pow(2, Math.max(this.zoom, 0))))
-    if (movementY) this.lat += movementY / (multiplierY * (2 * Math.pow(2, Math.max(this.zoom, 0))))
+    const { lat, zoom, maxLatRotation } = this
+    const zoomMultiplier = 2 * Math.pow(2, Math.max(zoom, 0))
+    const latMultiplier = 1.25 / maxLatRotation * Math.abs(lat) + 1 // if we are near the poles, we don't want to *feel* slowed down
+    if (movementX) this.lon += movementX / (multiplierX * zoomMultiplier) * latMultiplier
+    if (movementY) this.lat += movementY / (multiplierY * zoomMultiplier)
     // check that we don't over move on the x axis
-    if (this.lat > this.maxLatRotation) { this.lat = this.maxLatRotation } else if (this.lat < -this.maxLatRotation) { this.lat = -this.maxLatRotation }
+    if (this.lat > maxLatRotation) this.lat = maxLatRotation
+    else if (this.lat < -maxLatRotation) this.lat = -maxLatRotation
     // update view
     this.view[1] = this.lon
     this.view[2] = this.lat

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Create a hover effect</title>
+<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+<script src="https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.js"></script>
+<link href="https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.css" rel="stylesheet" />
+<style>
+	body { margin: 0; padding: 0; }
+	#map { position: absolute; top: 0; bottom: 0; width: 100%; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+	mapboxgl.accessToken = 'pk.eyJ1IjoicmVnaWFjb3JwIiwiYSI6ImNqbjdhaDV2aDBmdjkzdm1sYnF6Zms2bWUifQ.PvEW1ZgrCTZucQI1j23LhA';
+    var map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/streets-v11',
+        center: [-100.486052, 37.830348],
+        zoom: 2
+    });
+    var hoveredStateId = null;
+
+    map.on('load', function () {
+        map.addSource('states', {
+            'type': 'geojson',
+            'data':
+                'https://docs.mapbox.com/mapbox-gl-js/assets/us_states.geojson'
+        });
+
+        // The feature-state dependent fill-opacity expression will render the hover effect
+        // when a feature's hover state is set to true.
+        map.addLayer({
+            'id': 'state-fills',
+            'type': 'fill',
+            'source': 'states',
+            'layout': {},
+            'paint': {
+                'fill-color': '#627BC1',
+                'fill-opacity': [
+                    'case',
+                    ['boolean', ['feature-state', 'hover'], false],
+                    1,
+                    0.5
+                ]
+            }
+        });
+
+        map.addLayer({
+            'id': 'state-borders',
+            'type': 'line',
+            'source': 'states',
+            'layout': {},
+            'paint': {
+                'line-color': '#627BC1',
+                'line-width': 2
+            }
+        });
+
+        // When the user moves their mouse over the state-fill layer, we'll update the
+        // feature state for the feature under the mouse.
+        map.on('mousemove', 'state-fills', function (e) {
+            if (e.features.length > 0) {
+                if (hoveredStateId) {
+                    map.setFeatureState(
+                        { source: 'states', id: hoveredStateId },
+                        { hover: false }
+                    );
+                }
+                hoveredStateId = e.features[0].id;
+                map.setFeatureState(
+                    { source: 'states', id: hoveredStateId },
+                    { hover: true }
+                );
+            }
+        });
+
+        // When the mouse leaves the state-fill layer, update the feature state of the
+        // previously hovered feature.
+        map.on('mouseleave', 'state-fills', function () {
+            if (hoveredStateId) {
+                map.setFeatureState(
+                    { source: 'states', id: hoveredStateId },
+                    { hover: false }
+                );
+            }
+            hoveredStateId = null;
+        });
+    });
+		// MacBook Pro (15-inch, 2017)
+		// Processor: 2.9 GHz Quad-Core Intel Core i7
+		// Memory: 16 GB 2133 MHz LPDDR3
+		// Graphics: Radeon Pro 560 4GB
+		// Chrome - WEBGL2
+		// 1680 x 770
+
+		// Mapbox:
+		// https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.js
+		// main thread zip size: 196kB
+		// worst case: 27.77ms
+		// average CPU: 5.45ms
+		// average GPU: 8.5ms
+		// web worker worst case build time: 150.65ms
+
+		// Mapbox 2:
+		// https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.js
+		// main thread zip size: 196kB
+		// worst case: 44.93ms
+		// average CPU: 6.3
+		// average GPU: 9ms
+		// web worker worst case build time: 232.87
+
+
+		// Google:
+		// https://maps.googleapis.com/maps/api/js
+		// main thrad zip size: 41kB
+		// worst case: 31.67ms
+		// average CPU: 5.873ms
+		// average GPU: 1.25ms
+		// web worker worst case build time: 4.52ms
+
+
+		// Apple Maps
+		// https://duckduckgo.com/js/mapkit/mapkit.5.45.0.js
+		// main thread zip size: 138kB
+		// worst case: 44.07ms
+		// average CPU: 10ms
+		// average GPU: 3.5ms
+		// web worker worst case build time: 11.56ms
+
+
+		// S2:
+		// https://demo.s2maps.io/static/js/0.49609fb5.chunk.js
+		// main thread zip size: 6.1kB
+		// worst case: 4.15ms
+		// average CPU: 60µs main thread; 0.81ms worker thread
+		// average GPU: 2.5ms
+		// web worker worst case build time: 18.65ms
+
+		// 6.94444444 ms per frame for 144FPS
+		// 16.6666666 ms per frame for 60FPS
+
+		// 17
+
+</script>
+
+</body>
+</html>

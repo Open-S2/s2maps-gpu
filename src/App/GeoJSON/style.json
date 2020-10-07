@@ -1,0 +1,335 @@
+{
+  "version": 1,
+  "name": "s2test",
+  "center": [-122.444700, 37.780739],
+  "zoom": 0,
+  "minzoom": 0,
+  "maxzoom": 20,
+  "sources": {
+    "world": "https://s3.s2maps.io/streets-v1",
+    "covid": "https://s3.s2maps.io/s2json/covid2019.s2json"
+  },
+  "fonts": {
+    "default": "https://s3.s2maps.io/fonts-v2/default",
+    "roboto-regular": "https://s3.s2maps.io/fonts-v2/RobotoRegular",
+    "roboto-medium": "https://s3.s2maps.io/fonts-v2/RobotoMedium"
+  },
+  "wallpaper": {
+    "background-color": "rgb(25, 28, 80)",
+    "fade-1": "rgb(138, 204, 255)",
+    "fade-2": "rgb(217, 255, 255)",
+    "halo": "rgb(230, 255, 255)"
+  },
+  "colorBlind": false,
+  "layers": [
+    {
+      "name": "background",
+      "type": "fill",
+      "source": "mask",
+      "layout": {},
+      "paint": {
+        "color": [
+          "input-range",
+          "zoom",
+          "expo",
+          1.7,
+          2.75,
+          "rgb(244, 239, 226)",
+          4,
+          "rgb(245, 241, 230)",
+          8,
+          "rgb(245, 241, 230)",
+          9.5,
+          "rgb(225, 225, 229)",
+          11.5,
+          "rgb(229, 231, 236)",
+          13,
+          "rgb(232,232,232)",
+          14,
+          "rgb(248, 249, 250)"
+        ]
+      }
+    },
+    {
+      "name": "landuse",
+      "source": "world",
+      "layer": "landuse",
+      "type": "fill",
+      "filter": ["class", "has", ["park", "national_park", "protected_area",
+        "aboriginal_lands", "grass", "grassland", "garden", "meadow", "farmland",
+        "wood", "swamp", "forest", "wetland", "zoo", "cemetery", "indianReservation",
+        "sand", "beach", "desert", "aeroway", "military", "hospital",
+        "university", "college", "school", "kindergarten", "parking", "glacier",
+        "quarry", "industrial", "retail"]],
+      "minzoom": 0,
+      "layout": {},
+      "paint": {
+        "color": [
+          "data-condition",
+          ["class", "has", ["desert", "sand"]],
+          "rgb(241, 233, 195)",
+          ["class", "==", "aeroway"],
+          "rgb(219, 222, 235)",
+          ["class", "==", "military"],
+          "rgb(226, 226, 224)",
+          ["class", "==", "quarry"],
+          "rgb(206, 208, 211)",
+          ["class", "==", "retail"],
+          "rgb(254, 245, 220)",
+          ["class", "has", ["university", "college", "school", "kindergarten"]],
+          "rgb(226, 233, 238)",
+          ["class", "==", "parking"],
+          "rgb(241, 243, 244)",
+          ["class", "==", "hospital"],
+          "rgb(252, 228, 228)",
+          ["class", "==", "farmland"],
+          "rgb(228, 234, 210)",
+          ["class", "has", ["park", "national_park", "protected_area"]],
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            10,
+            "#aee0bc",
+            12,
+            "rgb(197, 232, 197)"
+          ],
+          ["class", "has", ["grass", "grassland", "garden", "meadow", "wood", "swamp", "forest", "zoo"]],
+          "#bbe2c6",
+          ["class", "==", "cemetery"],
+          "rgb(208, 236, 208)",
+          ["class", "==", "beach"],
+          "rgb(255, 239, 195)",
+          ["class", "==", "glacier"],
+          "rgb(249, 249, 249)",
+          ["class", "==", "aboriginal_lands"],
+          "rgb(240, 237, 235)",
+          ["class", "==", "wetland"],
+          "rgb(210, 233, 255)",
+          "default",
+          "rgba(0, 0, 0, 0)"
+        ]
+      }
+    },
+    {
+      "name": "water",
+      "source": "world",
+      "filter": ["class", "!has", ["reef", "shoal"]],
+      "layer": "water",
+      "type": "fill",
+      "minzoom": 0,
+      "layout": {},
+      "paint": {
+        "color": "rgb(159, 209, 249)"
+      }
+    },
+    {
+      "name": "reef",
+      "source": "world",
+      "filter": ["class", "has", ["reef", "shoal"]],
+      "layer": "water",
+      "type": "fill",
+      "minzoom": 0,
+      "layout": {},
+      "paint": {
+        "color": "rgb(185, 225, 255)"
+      }
+    },
+    {
+      "name": "rivers",
+      "source": "world",
+      "layer": "water",
+      "onlyLines": true,
+      "type": "line",
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "rgb(154, 204, 243)",
+        "width": [
+          "input-range",
+          "zoom",
+          "expo",
+          1.5,
+          9,
+          1,
+          12,
+          2.5
+        ]
+      }
+    },
+    {
+      "name": "covid",
+      "source": "covid",
+      "type": "fill",
+      "minzoom": 0,
+      "paint": {
+        "color": [
+          "data-condition",
+          ["density", "<=", 341],
+          "rgba(5, 25, 55, 0.85)",
+          ["density", "<=", 1015],
+          "rgba(0, 64, 95, 0.85)",
+          ["density", "<=", 2000],
+          "rgba(0, 106, 130, 0.85)",
+          ["density", "<=", 3174],
+          "rgba(0, 145, 151, 0.85)",
+          ["density", "<=", 5911],
+          "rgba(0, 186, 146, 0.85)",
+          ["density", "<=", 13319],
+          "rgba(40, 206, 123, 0.85)",
+          ["density", "<=", 28804],
+          "rgba(105, 222, 86, 0.85)",
+          "default",
+          "rgba(168, 235, 18, 0.85)"
+        ]
+      }
+    },
+    {
+      "id": "boundaries",
+      "source": "world",
+      "layer": "boundary",
+      "filter": ["and", ["class", "has", ["Country", "State"]], ["maritime", "==", false]],
+      "type": "line",
+      "minzoom": 0,
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": [
+          "data-condition",
+          ["class", "==", "Country"],
+          "rgb(115, 115, 115)",
+          "default",
+          "rgba(90, 90, 90, 0.9)"
+        ],
+        "width": [
+          "data-condition",
+          ["class", "==", "State"],
+          1.75,
+          "default",
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            1,
+            0.85,
+            2,
+            1.25
+          ]
+        ]
+      }
+    },
+    {
+      "name": "equator",
+      "source": "world",
+      "layer": "equator",
+      "type": "line",
+      "minzoom": 0,
+      "maxzoom": 10,
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "rgba(125, 102, 97, 0.8)",
+        "width": [
+          "input-range",
+          "zoom",
+          "step",
+          0.99,
+          1.5,
+          1,
+          3
+        ]
+      }
+    },
+    {
+      "name": "country_state",
+      "source": "world",
+      "filter": ["class", "has", ["Country", "State"]],
+      "layer": "place",
+      "type": "text",
+      "layout": {
+        "family": "roboto-medium",
+        "field": [
+          "data-condition",
+          ["class", "==", "State"],
+          [
+            "input-range",
+            "zoom",
+            "step",
+            0,
+            "?abbr,?name",
+            2,
+            "?!Uname"
+          ],
+          "default",
+          "?name"
+        ],
+        "anchor": "center",
+        "offset": [0, 0],
+        "padding": [1, 1]
+      },
+      "paint": {
+        "size": [
+          "data-condition",
+          ["class", "==", "Country"],
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            0,
+            17,
+            4,
+            40
+          ],
+          ["class", "==", "State"],
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            0,
+            12,
+            4,
+            20,
+            7,
+            36
+          ],
+          "default",
+          14
+        ],
+        "fill": [
+          "data-condition",
+          ["class", "==", "Country"],
+          "rgb(42, 42, 42)",
+          ["class", "==", "State"],
+          "rgb(80, 80, 80)",
+          "default",
+          "rgba(0, 0, 0, 0)"
+        ],
+        "stroke": "rgba(255, 255, 255, 0.5)",
+        "strokeWidth": [
+          "data-condition",
+          ["class", "==", "State"],
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            0,
+            0.5,
+            4,
+            0.3
+          ],
+          "default",
+          0.2
+        ]
+      }
+    }
+  ]
+}

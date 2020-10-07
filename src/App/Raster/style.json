@@ -25,10 +25,16 @@
     "size": 1024,
     "type": "jpg"
   },
-  "sphere-background": {
-    "background-color": "rgb(9, 8, 17)"
-  },
   "layers": [
+    {
+      "name": "background",
+      "type": "fill",
+      "source": "mask",
+      "layout": {},
+      "paint": {
+        "color": "rgb(9, 8, 17)"
+      }
+    },
     {
       "id": "sat",
       "source": "satellite",

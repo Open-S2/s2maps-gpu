@@ -1,8 +1,8 @@
 // @flow
 /* global WebGLBuffer WebGLTexture WebGLVertexArrayObject GLenum Image */
-import { WebGL2Context, WebGLContext } from '../gl/contexts'
+import Context from '../gl/contexts'
 import buildSource from './buildSource'
-import { S2Point, bboxST } from 's2projection' // https://github.com/Regia-Corporation/s2projection
+import { bboxST } from 's2projection' // https://github.com/Regia-Corporation/s2projection
 
 import type { Face } from 's2projection' // https://github.com/Regia-Corporation/s2projection/blob/master/src/S2Projection.js#L4
 import type { Layer, Mask } from '../style/styleSpec'
@@ -66,8 +66,9 @@ export type RasterTileSource = {
 // the attributes object is for dataConditions and dataRanges.
 export type FeatureGuide = { // eslint-disable-next-line
   tile: Tile,
+  maskLayer: boolean, // if maskLayer we won't be sharing the layer as it is added during tile build
   parent: boolean,
-  layerID: number,
+  layerIndex: number,
   source: VectorTileSource | GlyphTileSource | RasterTileSource,
   sourceName: string,
   faceST: Float32Array,
@@ -84,7 +85,7 @@ export type FeatureGuide = { // eslint-disable-next-line
 }
 
 export type ChildRequest = { // eslint-disable-next-line
-  [string | number]: Array<Tile> // layerID (hash):
+  [string | number]: Array<Tile> // layerIndex (hash):
 }
 
 // eslint-disable-next-line
@@ -107,9 +108,9 @@ export default class Tile {
   division: number
   sourceData: SourceData = {}
   featureGuide: Array<FeatureGuide> = []
-  context: WebGL2Context | WebGLContext
+  context: Context
   childrenRequests: ChildRequest = {}
-  constructor (context: WebGL2Context | WebGLContext, face: number, zoom: number,
+  constructor (context: Context, face: number, zoom: number,
     x: number, y: number, hash: number, size?: number = 512) {
     this.context = context
     this.face = face
@@ -120,17 +121,7 @@ export default class Tile {
     this.size = size
     const bbox = this.bbox = bboxST(x, y, zoom)
     this.faceST = new Float32Array([face, zoom, bbox[2] - bbox[0], bbox[0], bbox[3] - bbox[1], bbox[1]])
-    this._createDivision()
-    this._buildMaskGeometry()
-  }
-
-  // the zoom determines the number of divisions necessary to maintain a visually
-  // asthetic spherical shape. As we zoom in, the tiles are practically flat,
-  // so division is less useful.
-  // 0, 1 => 16  ;  2, 3 => 8  ;  4, 5 => 4  ;  6, 7 => 2  ;  8+ => 1
-  _createDivision () {
-    const level = 1 << Math.max(Math.min(Math.floor(this.zoom / 2), 4), 0) // max 5 as its binary position is 32
-    this.division = 16 / level
+    this._getMaskSource()
   }
 
   // inject references to featureGuide from each parentTile. Sometimes if we zoom really fast, we inject
@@ -139,13 +130,14 @@ export default class Tile {
   injectParentTile (parentTile: Tile, permParent: boolean, filterLayers?: Array<number>) {
     const foundLayers = new Set()
     for (const feature of parentTile.featureGuide) {
-      const { type, parent, layerID } = feature
-      if (!parent) foundLayers.add(layerID)
+      const { maskLayer, type, parent, layerIndex } = feature
+      if (maskLayer) continue // ignore mask features
+      if (!parent) foundLayers.add(layerIndex)
       if (type !== 'glyph') this.featureGuide.push({ ...feature, tile: this, permParent })
     }
     // if filterLayers, we need to check what layers were missing
     if (filterLayers) {
-      const missingLayers = filterLayers.filter(layerID => !foundLayers.has(layerID))
+      const missingLayers = filterLayers.filter(layerIndex => !foundLayers.has(layerIndex))
       for (const missingLayer of missingLayers) {
         if (!parentTile.childrenRequests[missingLayer]) parentTile.childrenRequests[missingLayer] = []
         parentTile.childrenRequests[missingLayer].push(this)
@@ -153,50 +145,46 @@ export default class Tile {
     }
   }
 
-  _buildMaskGeometry () {
-    const vertices = []
-    const indices = []
-    // grab the appropriate tile constants, and prep variables
-    const { division, face } = this
-    const indexLength = division + 1
-    let t: number, s: number, point: S2Point, index: number, indexAbove: number
-    // now we can build out the vertices and indices
-    // vertices
-    for (let j = 0; j <= division; j++) {
-      t = 4096 / division * j
-      for (let i = 0; i <= division; i++) {
-        s = 4096 / division * i
-        // create s2Point using WebGL's projection scheme, normalize, and than store
-        point = S2Point.fromSTGL(face, s, t)
-        point.normalize()
-        vertices.push(s, t) // push 3d point data high and low (6 floats)
+  injectMaskLayers (layers: Array<Layer>) {
+    const { zoom } = this
+    for (const layer of layers) {
+      const { minzoom, maxzoom, layerIndex, type, code, lch, paint } = layer
+      if (zoom < minzoom) continue
+      if (zoom > maxzoom) continue
+      const feature: FeatureGuide = {
+        maskLayer: true,
+        tile: this,
+        faceST: this.faceST,
+        layerIndex,
+        source: this.sourceData,
+        sourceName: 'mask',
+        subType: 'fill',
+        count: this.sourceData.mask.count,
+        type,
+        featureCode: new Float32Array([0]), // NOTE: The sorting algorithm doesn't work if an array is empty, so we have to have at least one number, just set it to 0
+        layerCode: code,
+        lch,
+        mode: this.sourceData.mask.mode
       }
+      if (this.context.type === 1 && paint) feature.color = (paint.color(null, null, this.zoom)).getRGB()
+      this.featureGuide.push(feature)
     }
-    // indices
-    for (let j = 0; j < division; j++) {
-      // add degenerate if j is not 0
-      if (j !== 0) indices.push((j + 1) * indexLength)
-      for (let i = 0; i <= division; i++) {
-        index = j * indexLength + i
-        indexAbove = (j + 1) * indexLength + i
-        indices.push(indexAbove, index)
-      }
-      // upon finishing a row, add a degenerate
-      indices.push(index)
-    }
-    // create our initial vertices and indices:
-    const mask = this.sourceData.mask = {
-      type: 'vector',
-      subType: 'fill',
-      vertexArray: new Int16Array(vertices),
-      indexArray: new Uint32Array(indices),
-      count: indices.length,
-      mode: this.context.gl.TRIANGLE_STRIP
-    }
-    buildSource(this.context, mask)
   }
 
-  // For future 3D terrain geometry, we create a new mask
+  // the zoom determines the number of divisions necessary to maintain a visually
+  // asthetic spherical shape. As we zoom in, the tiles are practically flat,
+  // so division is less useful.
+  // 0, 1 => 16  ;  2, 3 => 8  ;  4, 5 => 4  ;  6, 7 => 2  ;  8+ => 1
+  // context.getMask will have the division set to 16 / level
+  // context stores masks so we don't keep recreating them and put excess stress and memory on the GPU
+  _getMaskSource () {
+    const { context, zoom } = this
+    const level = 1 << Math.max(Math.min(Math.floor(zoom / 2), 4), 0) // max 5 as its binary position is 32
+    const division = this.division = 16 / level
+    this.sourceData.mask = context.getMask(level, division)
+  }
+
+  // For default mask geometry OR for future 3D terrain geometry
   injectMaskGeometry (vertexArray: Int16Array, indexArray: Uint32Array,
     radiiArray: Float32Array, styleMask: Mask) {
     const mask = this.sourceData.mask = {
@@ -216,7 +204,7 @@ export default class Tile {
   // four children (if size is 512 and images are 512, otherwise we may store
   // 16 images of 256). Create a texture of size length x length to house
   // said data (length being this.size * 2).
-  injectRasterData (sourceName: string, layerIDs: Array<number>, image: Image,
+  injectRasterData (sourceName: string, layerIndexs: Array<number>, image: Image,
     leftShift: number, bottomShift: number) {
     const { gl } = this.context
     const length = image.width
@@ -233,11 +221,11 @@ export default class Tile {
       }
       buildSource(this.context, rasterSource)
       // store texture information to featureGuide
-      for (const layerID of layerIDs) {
+      for (const layerIndex of layerIndexs) {
         const guide = {
           tile: this,
           faceST: this.faceST,
-          layerID: layerID,
+          layerIndex: layerIndex,
           source: this.sourceData,
           sourceName: 'mask',
           subType: 'fill',
@@ -277,16 +265,16 @@ export default class Tile {
     let i = 0
     // console.log('featureGuideArray', featureGuideArray)
     while (i < lgl) {
-      // grab the size, layerID, count, and offset, and update the index
-      const [layerID, count, offset, encodingSize] = featureGuideArray.slice(i, i + 4)
+      // grab the size, layerIndex, count, and offset, and update the index
+      const [layerIndex, count, offset, encodingSize] = featureGuideArray.slice(i, i + 4)
       i += 4
       // grab the layers type and code
-      const { type, code, lch } = layers[layerID]
+      const { type, code, lch } = layers[layerIndex]
       // create and store the featureGuide
       const feature = {
         tile: this,
         faceST: this.faceST,
-        layerID,
+        layerIndex,
         source: this.sourceData,
         sourceName,
         count,
@@ -299,20 +287,20 @@ export default class Tile {
       i += encodingSize
       // if webgl1, we have color (and width if line) data
       if (this.context.type === 1) {
-        feature.subFeatureCode = feature.featureCode
+        feature.color = feature.subFeatureCode = feature.featureCode // default subFeatureCode is for fill which is only color
         const subEncodingSize = featureGuideArray[i]
         i++
         feature.featureCode = new Float32Array(subEncodingSize ? [...featureGuideArray.slice(i, i + subEncodingSize)] : [0])
         i += subEncodingSize
         if (subType === 'line') {
-          feature.color = new Float32Array(feature.subFeatureCode.slice(0, 4))
+          feature.color = feature.subFeatureCode.slice(0, 4)
           feature.width = feature.subFeatureCode[4]
         }
       }
       // store
       this.featureGuide.push(feature)
       // if a lower zoom tile needs this feature, we add
-      const childRequest = this.childrenRequests[layerID]
+      const childRequest = this.childrenRequests[layerIndex]
       if (childRequest && childRequest.length) for (const tile of childRequest) tile.featureGuide.push({ ...feature, tile, parent: this, permParent: true })
     }
     // build the VAO
@@ -342,22 +330,22 @@ export default class Tile {
       glyphQuads
     }
 
-    // LayerCode: layerID, offset, count, codeLength, code
+    // LayerCode: layerIndex, offset, count, codeLength, code
     // we work off the layerGuideBuffer, adding to the buffer as we go
     const lgl = layerGuideBuffer.length
     let i = 2
     while (i < lgl) {
-      // grab the size, layerID, count, and offset, and update the index
-      // layerID, filterOffset, filterCount, quadOffset, quadCount, codeLength, code
-      const [layerID, filterOffset, filterCount, offset, count, encodingSize] = layerGuideBuffer.slice(i, i + 6)
+      // grab the size, layerIndex, count, and offset, and update the index
+      // layerIndex, filterOffset, filterCount, quadOffset, quadCount, codeLength, code
+      const [layerIndex, filterOffset, filterCount, offset, count, encodingSize] = layerGuideBuffer.slice(i, i + 6)
       i += 6
       // grab the layers type and code
-      const { code, lch } = layers[layerID]
+      const { code, lch } = layers[layerIndex]
       // create and store the featureGuide
       const feature = {
         tile: this,
         faceST: this.faceST,
-        layerID,
+        layerIndex,
         source: this.sourceData,
         sourceName,
         filterOffset,

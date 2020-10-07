@@ -1,42 +1,46 @@
 // @flow
-/* global VertexArrayObject WebGLVertexArrayObject GLint WebGLUniformLocation */
+/* global VertexArrayObject WebGLVertexArrayObject GLint */
 import Program from './program'
 
-import shadeVertex from '../../shaders/shade.vertex.glsl'
-import shadeFragment from '../../shaders/shade.fragment.glsl'
+import vertex1 from '../../shaders/shade1.vertex.glsl'
+import fragment1 from '../../shaders/shade1.fragment.glsl'
+
+import vertex2 from '../../shaders/shade2.vertex.glsl'
+import fragment2 from '../../shaders/shade2.fragment.glsl'
 
 import type { Context } from '../contexts'
+import type { FeatureGuide, VectorTileSource } from '../../source/tile'
 
 export default class ShadeProgram extends Program {
   vao: VertexArrayObject
   vertexBuffer: WebGLVertexArrayObject
   aPos: GLint // 'a_pos' vec4 attribute
-  offset: WebGLUniformLocation
-  radius: WebGLUniformLocation
   update: boolean = true
   constructor (context: Context) {
     // get gl from context
+    const { gl, type } = context
+    // if webgl1, setup attribute locations
+    if (type === 1) {
+      // prep attribute pointers
+      gl.attributeLocations = { aPos: 0 }
+      // build shaders
+      super(context, vertex1, fragment1)
+    } else {
+      super(context, vertex2, fragment2)
+    }
+  }
+
+  draw (featureGuide: FeatureGuide, source: VectorTileSource) {
+    // grab context
+    const { context } = this
     const { gl } = context
-    // upgrade
-    super(context, shadeVertex, shadeFragment, false)
-    // acquire the attributes & uniforms
-    this.aPos = gl.getAttribLocation(this.glProgram, 'aPos')
-    this.offset = gl.getUniformLocation(this.glProgram, 'uOffset')
-    this.radius = gl.getUniformLocation(this.glProgram, 'uRadius')
-    // create a vertex array object
-    this.vao = gl.createVertexArray()
-    // bind the vao so we can work on it
-    gl.bindVertexArray(this.vao)
-    // Create a vertex buffer
-    this.vertexBuffer = gl.createBuffer()
-    // Bind it to ARRAY_BUFFER (think of it as ARRAY_BUFFER = vertexBuffer)
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
-    // Buffer the data
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, 1, 1, -1, 1]), gl.STATIC_DRAW)
-    // Turn on the attribute
-    gl.enableVertexAttribArray(this.aPos)
-    // tell attribute how to get data out of vertexBuffer
-    // (attribute pointer, compenents per iteration (size), data size (type), normalize, stride, offset)
-    gl.vertexAttribPointer(this.aPos, 2, gl.FLOAT, false, 0, 0)
+    // get current source data
+    let { count, offset, mode } = featureGuide
+    // set blend type
+    context.setBlendShade()
+    // draw elements
+    gl.drawElements(mode || gl.TRIANGLES, count, gl.UNSIGNED_INT, (offset | 0) * 4)
+    // revert back to current blend type
+    context.setBlendDefault()
   }
 }

@@ -6,7 +6,7 @@ export type GlyphData = [string, string] // [family, char]
 export type GlyphObject = {
   // organization parameters
   id: number,
-  layerID: number,
+  layerIndex: number,
   code: Array<number>,
   // layout
   family: string,

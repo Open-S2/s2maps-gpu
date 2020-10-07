@@ -1,5 +1,8 @@
 // @flow
 /* global WebGLVertexArrayObject WebGLBuffer */
+import buildMask from '../../source/buildMask'
+import type { VectorTileSource } from '../../source/tile'
+
 import type { WebGLRenderingContext, WebGL2RenderingContext } from './'
 
 export default class Context {
@@ -7,6 +10,7 @@ export default class Context {
   devicePixelRatio: number
   type: 1 | 2
   clearColorRGBA: [number, number, number, number] = [0, 0, 0, 0]
+  masks: Map<number, VectorTileSource> = new Map()
   vao: WebGLVertexArrayObject
   vertexBuffer: WebGLBuffer
   constructor (context: WebGLRenderingContext | WebGL2RenderingContext, devicePixelRatio: number) {
@@ -22,6 +26,14 @@ export default class Context {
   bindMainBuffer () {
     const { gl } = this
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+  }
+
+  getMask (level: number, division: number) {
+    const { masks } = this
+    if (masks.has(level)) return masks.get(level)
+    const mask = buildMask(division, this)
+    masks.set(level, mask)
+    return mask
   }
 
   _createDefaultQuad () {
@@ -137,6 +149,11 @@ export default class Context {
   setBlendDefault () {
     const { gl } = this
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
+  }
+
+  setBlendShade () {
+    const { gl } = this
+    gl.blendFunc(gl.DST_COLOR, gl.ZERO)
   }
 
   inversionBlending () {

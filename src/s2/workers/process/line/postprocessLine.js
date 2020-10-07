@@ -8,7 +8,7 @@ export default function postprocessLine (mapID: string, source: string, tileID: 
   // now that we have created all triangles, let's merge into bundled buffer sets
   // for the main thread to build VAOs.
 
-  // Step 1: Sort by layerID, than sort by feature code.
+  // Step 1: Sort by layerIndex, than sort by feature code.
   features.sort(featureSort)
 
   // Step 1a: If WebGL1 the variable "featureCode" will exist; Swap with code now that it is sorted
@@ -33,19 +33,19 @@ export default function postprocessLine (mapID: string, source: string, tileID: 
   let indexCount: number = 0
   let indexOffset: number = 0
   let curFeatureCode = encodings.toString()
-  let curLayerID = features[0].layerID
+  let curlayerIndex = features[0].layerIndex
 
   for (const feature of features) {
     // on layer change or max feature code change, we have to setup a new featureGuide
     if (
       indexCount &&
       (
-        curLayerID !== feature.layerID ||
+        curlayerIndex !== feature.layerIndex ||
         curFeatureCode !== feature.code.toString()
       )
     ) {
       // store the current feature
-      featureGuide.push(curLayerID, indexCount, indexOffset, encodings.length, ...encodings) // layerID, count, offset, encoding size, encodings
+      featureGuide.push(curlayerIndex, indexCount, indexOffset, encodings.length, ...encodings) // layerIndex, count, offset, encoding size, encodings
       if (webgl1) featureGuide.push(subEncodings.length, ...subEncodings)
       // update indexOffset
       indexOffset += indexCount
@@ -61,14 +61,14 @@ export default function postprocessLine (mapID: string, source: string, tileID: 
     // so we just do a for loop. Store vertices and feature code for each vertex set
     const fl: number = feature.vertices.length
     for (let f = 0; f < fl; f++) vertices.push(feature.vertices[f])
-    // update previous layerID
-    curLayerID = feature.layerID
+    // update previous layerIndex
+    curlayerIndex = feature.layerIndex
     // increment indexCount
     indexCount += fl / 6
   }
   // store the very last featureGuide batch if not yet stored
   if (indexCount) {
-    featureGuide.push(curLayerID, indexCount, indexOffset, encodings.length, ...encodings) // layerID, count, offset, encoding size, encodings
+    featureGuide.push(curlayerIndex, indexCount, indexOffset, encodings.length, ...encodings) // layerIndex, count, offset, encoding size, encodings
     if (webgl1) featureGuide.push(subEncodings.length, ...subEncodings)
   }
 

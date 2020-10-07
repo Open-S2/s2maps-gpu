@@ -9,7 +9,7 @@ import type { Layer } from '../../../style/styleSpec'
 type Point = [number, number]
 
 export default function processText (feature: VectorFeature, code: Array<number>,
-  zoom: number, layer: Layer, layerID: number, extent: number, texts: Array<GlyphObject>,
+  zoom: number, layer: Layer, layerIndex: number, extent: number, texts: Array<GlyphObject>,
   webgl1: boolean, idGen: IDGen) {
   const geometry: Array<Point> = feature.loadGeometry()
   const { properties } = feature
@@ -47,7 +47,7 @@ export default function processText (feature: VectorFeature, code: Array<number>
     const text = {
       // organization parameters
       id: idGen.num,
-      layerID,
+      layerIndex,
       code,
       // layout
       family,

@@ -11,7 +11,7 @@ export default function postprocessFill (mapID: string, source: string, tileID: 
   // now that we have created all triangles, let's merge into bundled buffer sets
   // for the main thread to build VAOs.
 
-  // Step 1: Sort by layerID, than sort by feature code.
+  // Step 1: Sort by layerIndex, than sort by feature code.
   features.sort(featureSort)
 
   // Step 1a: If WebGL1 the variable "featureCode" will exist; Swap the two
@@ -39,16 +39,16 @@ export default function postprocessFill (mapID: string, source: string, tileID: 
   let vertexOffset: number = 0
   let encodingIndexes = { '': 0 }
   let encodingIndex
-  let curLayerID = features[0].layerID
+  let curlayerIndex = features[0].layerIndex
 
   for (const feature of features) {
     // on layer change or max encoding size, we have to setup a new featureGuide, encodings, and encodingIndexes
     if (
-      curLayerID !== feature.layerID ||
+      curlayerIndex !== feature.layerIndex ||
       (encodings.length + feature.code.length > MAX_FEATURE_BATCH_SIZE)
     ) {
       // only store if count is actually greater than 0
-      if (indices.length - indicesOffset) featureGuide.push(curLayerID, indices.length - indicesOffset, indicesOffset, encodings.length, ...encodings) // layerID, count, offset, encoding size, encodings
+      if (indices.length - indicesOffset) featureGuide.push(curlayerIndex, indices.length - indicesOffset, indicesOffset, encodings.length, ...encodings) // layerIndex, count, offset, encoding size, encodings
       if (webgl1) featureGuide.push(subEncodings.length, ...subEncodings)
       // update variables for reset
       indicesOffset = indices.length
@@ -74,12 +74,12 @@ export default function postprocessFill (mapID: string, source: string, tileID: 
       indices.push(index)
       codeType[index] = encodingIndex
     }
-    // update previous layerID
-    curLayerID = feature.layerID
+    // update previous layerIndex
+    curlayerIndex = feature.layerIndex
   }
   // store the very last featureGuide batch
   if (indices.length - indicesOffset) {
-    featureGuide.push(curLayerID, indices.length - indicesOffset, indicesOffset, encodings.length, ...encodings) // layerID, count, offset, encoding size, encodings
+    featureGuide.push(curlayerIndex, indices.length - indicesOffset, indicesOffset, encodings.length, ...encodings) // layerIndex, count, offset, encoding size, encodings
     if (webgl1) featureGuide.push(subEncodings.length, ...subEncodings) // subEncoding size, encoding
   }
 

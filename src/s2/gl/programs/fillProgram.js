@@ -35,13 +35,13 @@ export default class FillProgram extends Program {
     const { context } = this
     const { gl, type } = context
     // get current source data
-    let { count, featureCode, subFeatureCode, offset, mode } = featureGuide
+    let { count, featureCode, color, offset, mode } = featureGuide
     const { threeD } = source
     // set 3D uniform
     this.set3D(threeD)
     // set feature code (webgl 1 we store the colors, webgl 2 we store layerCode lookups)
     if (type === 1) {
-      if (subFeatureCode) gl.uniform4fv(this.uColors, subFeatureCode, 0, subFeatureCode.length)
+      if (color) gl.uniform4fv(this.uColors, color, 0, color.length)
     } else { this.setFeatureCode(featureCode) }
     // draw elements
     gl.drawElements(mode || gl.TRIANGLES, count, gl.UNSIGNED_INT, (offset | 0) * 4)

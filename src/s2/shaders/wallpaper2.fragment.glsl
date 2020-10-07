@@ -16,8 +16,7 @@ out vec4 fragColor;
 
 void main () {
   vec2 pos = vertPos;
-  pos.x *= 0.1 / uScale.x;
-  pos.y *= 0.1 / uScale.y;
+  pos *= 0.1 / uScale;
 
 
   float fade1 = length(pos);

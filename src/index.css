@@ -75,13 +75,13 @@ code {
 .s2-zoom-plus {
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
-  background-image: url('s2/svg/zoom-plus.svg');
+  background-image: url('./s2/svg/zoom-plus.svg');
 }
 
 .s2-zoom-minus {
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
-  background-image: url('s2/svg/zoom-minus.svg');
+  background-image: url('./s2/svg/zoom-minus.svg');
 }
 
 .s2-nav-sep {
@@ -103,7 +103,7 @@ code {
   background-repeat: no-repeat;
   margin: 0 0 0 12.5px;
   pointer-events: none;
-  background-image: url('s2/svg/s2-jolly-roger.svg');
+  background-image: url('./s2/svg/s2-jolly-roger.svg');
 }
 
 .s2-jolly-roger-dark {
@@ -115,7 +115,7 @@ code {
   background-repeat: no-repeat;
   margin: 0 0 0 12.5px;
   pointer-events: none;
-  background-image: url('s2/svg/s2-jolly-roger-dark.svg');
+  background-image: url('./s2/svg/s2-jolly-roger-dark.svg');
 }
 
 .s2-canvas {

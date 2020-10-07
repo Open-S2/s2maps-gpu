@@ -13,26 +13,31 @@
     "roboto-regular": "https://s3.s2maps.io/fonts-v2/RobotoRegular",
     "roboto-medium": "https://s3.s2maps.io/fonts-v2/RobotoMedium"
   },
-  "shade": false,
   "wallpaper": {
     "background-color": "#354b67",
     "fade-1": "#d4e5f1",
     "fade-2": "#efeeed",
     "halo": "#ffffff"
   },
-  "sphere-background": {
-    "background-color": [
-      "input-range",
-      "zoom",
-      "expo",
-      1.7,
-      2.75,
-      "#f5f5f5",
-      9.5,
-      "#efeeed"
-    ]
-  },
   "layers": [
+    {
+      "name": "background",
+      "type": "fill",
+      "source": "mask",
+      "layout": {},
+      "paint": {
+        "color": [
+          "input-range",
+          "zoom",
+          "expo",
+          1.7,
+          2.75,
+          "#f5f5f5",
+          9.5,
+          "#efeeed"
+        ]
+      }
+    },
     {
       "name": "landuse",
       "source": "world",

@@ -19,9 +19,9 @@ const getClientEnvironment = require('./env')
 const ModuleNotFoundPlugin = require('react-dev-utils/ModuleNotFoundPlugin')
 const ForkTsCheckerWebpackPlugin = require('react-dev-utils/ForkTsCheckerWebpackPlugin')
 const typescriptFormatter = require('react-dev-utils/typescriptFormatter')
-const WorkerPlugin = require('worker-plugin')
+// const WorkerPlugin = require('worker-plugin')
 const CompressionPlugin = require('compression-webpack-plugin')
-const BrotliPlugin = require('brotli-webpack-plugin')
+// const BrotliPlugin = require('brotli-webpack-plugin')
 const Visualizer = require('webpack-visualizer-plugin')
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin
 
@@ -212,62 +212,32 @@ module.exports = function (webpackEnv) {
               //   cacheDirectory: true,
               // }
             },
+            {
+              test: /\.worker\.js$/,
+              include: paths.appSrc,
+              use: [
+                {
+                  loader: require.resolve('worker-loader'),
+                  options: { inline: 'no-fallback' },
+                },
+                {
+                  loader: require.resolve('babel-loader')
+                }
+              ]
+            },
             // Process application JS with Babel.
             // The preset includes JSX, Flow, TypeScript, and some ESnext features.
             {
               test: /\.(js|mjs|jsx|ts|tsx)$/,
               include: paths.appSrc,
-              loader: require.resolve('babel-loader'),
-              options: {
-                customize: require.resolve(
-                  'babel-preset-react-app/webpack-overrides'
-                ),
-
-                plugins: [
-                  [
-                    require.resolve('babel-plugin-named-asset-import'),
-                    {
-                      loaderMap: {
-                        svg: {
-                          ReactComponent: '@svgr/webpack?-svgo,+ref![path]'
-                        }
-                      }
-                    }
-                  ]
-                ],
-                // This is a feature of `babel-loader` for webpack (not Babel itself).
-                // It enables caching results in ./node_modules/.cache/babel-loader/
-                // directory for faster rebuilds.
-                cacheDirectory: true,
-                cacheCompression: true,
-                compact: true
-              }
+              loader: require.resolve('babel-loader')
             },
             // Process any JS outside of the app with Babel.
             // Unlike the application JS, we only compile the standard ES features.
             {
               test: /\.(js|mjs)$/,
               exclude: /@babel(?:\/|\\{1,2})runtime/,
-              loader: require.resolve('babel-loader'),
-              options: {
-                babelrc: false,
-                configFile: false,
-                compact: false,
-                presets: [
-                  [
-                    require.resolve('babel-preset-react-app/dependencies'),
-                    { helpers: true }
-                  ]
-                ],
-                cacheDirectory: true,
-                cacheCompression: true,
-
-                // If an error happens in a package, it's possible to be
-                // because it was compiled. Thus, we don't want the browser
-                // debugger to show the original code. Instead, the code
-                // being evaluated would be much more helpful.
-                sourceMaps: false
-              }
+              loader: require.resolve('babel-loader')
             }
           ]
         }
@@ -275,12 +245,21 @@ module.exports = function (webpackEnv) {
     },
     plugins: [
       new CompressionPlugin({
-        filename: '[path].gz[query]',
+        filename: '[path].gz',
         algorithm: 'gzip',
+        test: /\.js$|\.css$|\.html$/,
+        threshold: 0,
+        minRatio: 1
+      }),
+      new CompressionPlugin({
+        filename: '[path].br',
+        algorithm: 'brotliCompress',
         test: /\.(js|css|html|svg)$/,
-        threshold: 8192,
-        minRatio: 0.5,
-        deleteOriginalAssets: false
+        compressionOptions: {
+          level: 11,
+        },
+        threshold: 0,
+        minRatio: 1
       }),
       // new BrotliPlugin({ // brotli plugin
       //   asset: '[path].br[query]',
@@ -288,7 +267,7 @@ module.exports = function (webpackEnv) {
       //   threshold: 0,
       //   minRatio: 0
       // }),
-      new WorkerPlugin(),
+      // new WorkerPlugin(),
       new Visualizer({ filename: './visualizer.html' }),
       new BundleAnalyzerPlugin({ analyzerMode: 'static', generateStatsFile: true, statsFilename: 'bundle-stat.json' })
     ].filter(Boolean),

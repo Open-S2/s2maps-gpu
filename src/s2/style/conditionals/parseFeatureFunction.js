@@ -2,7 +2,7 @@
 import Color from '../color'
 import { parseFilter, getEasingFunction } from './'
 
-// This functionality is built for the draw thread
+// This functionality is built for the tile worker.
 export default function parseFeatureFunction (input: any, attr: string) {
   if (!input) {
     return () => null
@@ -14,6 +14,8 @@ export default function parseFeatureFunction (input: any, attr: string) {
       return dataRangeFunction(input, attr)
     } else if (conditionType === 'input-range') {
       return inputRangeFunction(input, attr)
+    } else if (conditionType === 'feature-state') {
+      return featureStateFunction(input, attr)
     } else {
       const data = [conditionType, ...input]
       return () => data
@@ -26,7 +28,6 @@ export default function parseFeatureFunction (input: any, attr: string) {
 
 function dataConditionFunction (input, attr) {
   const conditions = []
-  let defaultExists = false
   while (input.length) {
     if (Array.isArray(input[0])) {
       const filter = input.shift()
@@ -37,11 +38,10 @@ function dataConditionFunction (input, attr) {
       })
     } else if (input[0] === 'default') {
       input.shift()
-      conditions['default'] = parseFeatureFunction(input.shift(), attr)
-      defaultExists = true
+      conditions.default = parseFeatureFunction(input.shift(), attr)
     }
   }
-  if (!defaultExists) conditions['default'] = () => null // just incase it's missing in the style json
+  if (!conditions.default) conditions.default = () => null // just incase it's missing in the style json
   return (code, properties, zoom) => {
     if (properties) {
       let condition
@@ -55,7 +55,7 @@ function dataConditionFunction (input, attr) {
     }
     // if we made it here, just run default
     if (code) code.push(0)
-    return conditions['default'](code, properties, zoom)
+    return conditions.default(code, properties, zoom)
   }
 }
 
@@ -127,5 +127,18 @@ function inputRangeFunction (input, attr) {
       // now we interpolate
       return easeFunction(zoom, startZoom, endZoom, startValue, endValue)
     }
+  }
+}
+
+// the CPU will never interact with featureStates
+// so we just run 'default' case here, if no default return null
+function featureStateFunction (input, attr) {
+  // while not default, increment input
+  while (input.length && input[0] !== 'default') input.shift()
+  input = (input[0] === 'default') ? input[1] : null
+  const result = parseFeatureFunction(input, attr)
+
+  return (code, properties, zoom) => {
+    return result(code, properties, zoom)
   }
 }

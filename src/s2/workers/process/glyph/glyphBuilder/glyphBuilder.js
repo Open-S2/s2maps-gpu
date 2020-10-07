@@ -36,7 +36,7 @@ export default class GlyphBuilder {
     this.quadOffset = 0
   }
 
-  finishLayer (layerID: number, code: Array<number> = [], subCode?: Array<number>) {
+  finishLayer (layerIndex: number, code: Array<number> = [], subCode?: Array<number>) {
     // get offsets
     const filterOffset = this.glyphFilterVertices.length / 9
     const quadOffset = this.glyphQuads.length / 11
@@ -45,8 +45,8 @@ export default class GlyphBuilder {
     const quadCount = quadOffset - this.quadOffset
     // if any non-zero, draw
     if (filterCount > 0 || quadCount > 0) {
-      // layerID, filterOffset, filterCount, quadOffset, quadCount, codeLength, code
-      this.layerGuide.push(layerID, this.filterOffset, filterCount, this.quadOffset, quadCount, code.length, ...code)
+      // layerIndex, filterOffset, filterCount, quadOffset, quadCount, codeLength, code
+      this.layerGuide.push(layerIndex, this.filterOffset, filterCount, this.quadOffset, quadCount, code.length, ...code)
       // if webgl1, subCode will exist
       if (subCode) this.layerGuide.push(...subCode)
       // update offsets

@@ -23,7 +23,6 @@ import { Tile } from '../source'
 import type { MapOptions } from '../ui/map'
 import type { Projection } from '../ui/camera/projections'
 import type { FeatureGuide, GlyphTileSource } from '../source/tile'
-import type { SphereBackground } from '../style/styleSpec'
 import type { ProgramType } from './programs/program'
 
 export default class Painter {
@@ -134,26 +133,20 @@ export default class Painter {
 
   paint (projection: Projection, style: Style, tiles: Array<Tile>) {
     const { context } = this
-    const { sphereBackground } = style
-
     // PREPARE PHASE
     // prep frame uniforms
-    const { view, aspect, zoom } = projection
+    const { view, aspect } = projection
     const matrix = projection.getMatrix(512) // NOTE: For now, we have a default size of 512.
     this.injectFrameUniforms(matrix, view, aspect)
-
     // prep mask id's
     this._createTileMasksIDs(tiles)
     // prep tiles features to draw
-    // console.log('tiles', tiles)
     // $FlowIgnore
     const features = tiles.flatMap(tile => tile.featureGuide).sort(featureSort)
-    // console.log('features', features)
     // prep glyph features for drawing box filters
     const glyphFeatures = features.filter(feature => feature.type === 'glyph')
     // use text boxes to filter out overlap
     if (glyphFeatures.length) this.paintGlyphFilter(tiles, glyphFeatures)
-
     // clear main buffer
     context.newScene()
 
@@ -165,14 +158,8 @@ export default class Painter {
     }
     // prep masks
     this.paintMasks(tiles)
-    // draw the sphere background should it exist
-    if (sphereBackground) this.paintSphereBackground(tiles, sphereBackground, zoom)
     // paint features
-    // features = features.filter(feature => feature.type !== 'glyph')
     this.paintFeatures(features)
-    // draw shade layer
-    // if (glyphFeatures.length) this.paintGlyphFilter(tiles, glyphFeatures)
-    // if (style.shade) drawShade(this, style.shade)
     // cleanup
     context.cleanup()
   }
@@ -221,33 +208,6 @@ export default class Painter {
     gl.colorMask(true, true, true, true)
   }
 
-  paintSphereBackground (tiles: Array<Tile>, sphereBackground: SphereBackground, zoom: number) {
-    // get context
-    const { context } = this
-    const { gl, type } = context
-    // grab sphere background properties
-    const { code, lch } = sphereBackground
-    // grab the fillProgram
-    const fillProgram: FillProgram = this.getProgram('fill')
-    // webgl1 -> set color; otherwise set layerCode
-    if (type === 1 && typeof code === 'function') {
-      gl.uniform4fv(fillProgram.uColors, (code(null, null, zoom)).getRGB(), 0, 4)
-    } else { fillProgram.setLayerCode(code, lch) }
-    // for each tile, draw a background
-    context.alwaysDepth()
-    for (const tile of tiles) {
-      const { tmpMaskID, faceST, sourceData } = tile
-      const { mask } = sourceData
-      // set uniforms & stencil test
-      fillProgram.setFaceST(faceST)
-      gl.stencilFunc(gl.EQUAL, tmpMaskID, 0xFF)
-      // bind vao
-      gl.bindVertexArray(mask.vao)
-      // draw background
-      fillProgram.draw(mask, mask)
-    }
-  }
-
   paintFeatures (features: Array<FeatureGuide>) {
     // setup context
     const { context } = this
@@ -260,7 +220,7 @@ export default class Painter {
     // run through the features, and upon tile, layer, or program change, adjust accordingly
     context.alwaysDepth()
     for (const feature of features) {
-      const { tile, faceST, layerID, source, sourceName, type, layerCode, lch } = feature
+      const { tile, faceST, layerIndex, source, sourceName, type, layerCode, lch } = feature
       const { tmpMaskID } = tile
       const featureSource = source[sourceName]
       // set program
@@ -272,8 +232,8 @@ export default class Painter {
       // set stencil
       gl.stencilFunc(gl.EQUAL, tmpMaskID, 0xFF)
       // update layerCode if the current layer has changed
-      if (layerCode && curLayer !== layerID) {
-        curLayer = layerID
+      if (layerCode && curLayer !== layerIndex) {
+        curLayer = layerIndex
         program.setLayerCode(layerCode, lch)
       }
       program.setFaceST(faceST)
@@ -316,11 +276,11 @@ export default class Painter {
     glyphFilterProgram.setMode(mode)
     // draw each feature
     for (const glyphFeature of glyphFeatures) {
-      const { faceST, layerID, source, sourceName, layerCode } = glyphFeature
+      const { faceST, layerIndex, source, sourceName, layerCode } = glyphFeature
       const featureSource = source[sourceName]
-      // update layerID
-      if (curLayer !== layerID && layerCode) {
-        curLayer = layerID
+      // update layerIndex
+      if (curLayer !== layerIndex && layerCode) {
+        curLayer = layerIndex
         glyphFilterProgram.setLayerCode(layerCode)
       }
       glyphFilterProgram.setFaceST(faceST)
@@ -334,7 +294,7 @@ export default class Painter {
 function featureSort (a: FeatureGuide, b: FeatureGuide): number {
   let zoomDiff = a.tile.zoom - b.tile.zoom
   if (zoomDiff) return zoomDiff
-  let diff = a.layerID - b.layerID
+  let diff = a.layerIndex - b.layerIndex
   if (diff) return diff
   let index = 0
   let maxSize = Math.min(a.featureCode.length, b.featureCode.length)

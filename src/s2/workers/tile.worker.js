@@ -18,10 +18,17 @@ import type { StylePackage } from '../style/styleSpec'
 import type { Text } from './process'
 
 const { userAgent } = navigator
-const IS_CHROME = userAgent.indexOf('Chrome') > -1
-const IS_FIREFOX = userAgent.indexOf('Firefox') > -1
-const IS_OPERA = userAgent.indexOf('OP') > -1
-const BROTLI_COMPATIBLE = IS_CHROME || IS_FIREFOX || IS_OPERA
+const IS_CHROME: boolean = userAgent.indexOf('Chrome') > -1
+const IS_FIREFOX: boolean = userAgent.indexOf('Firefox') > -1
+const IS_SAFARI: boolean = userAgent.indexOf('Safari') > -1
+let IS_MAC_BIG_SUR_PLUS: boolean = false
+if (IS_SAFARI) {
+  let macosx = navigator.userAgent.split('Mac OS X')
+  if (macosx[1]) IS_MAC_BIG_SUR_PLUS = (+navigator.userAgent.split('Mac OS X')[1].split('_')[0]) >= 11
+}
+const IS_OPERA: boolean = userAgent.indexOf('OP') > -1
+const WEBP_COMPATIBLE: boolean = IS_CHROME || IS_FIREFOX || IS_OPERA || IS_MAC_BIG_SUR_PLUS
+const BROTLI_COMPATIBLE: boolean = WEBP_COMPATIBLE || IS_SAFARI
 
 export type CancelTileRequest = Array<number> // hashe IDs of tiles e.g. ['204', '1003', '1245', ...]
 
@@ -55,7 +62,7 @@ export type Feature = {
   code: Array<number>,
   size: number,
   divisor: number,
-  layerID: number
+  layerIndex: number
 }
 
 export type IDGen = { num: number, incrSize: number, maxNum: number, startNum: number }
@@ -78,9 +85,9 @@ export const MAX_FEATURE_BATCH_SIZE = 1 << 7
 //    for each vertices/indices pair, encode all in the same buffer. Howevever, we need to track the layer index
 //    of each pair for deserializing. For instance, if the layers looks like: [{ source: 1 }, { source: 2 }, { source: 1} ]
 //    and the source 1 has finished downloading first, we serialize the first part, and add the index sets:
-//    [layerID, count, offset, encoding-size, ..., layerID, count, offset, size, ..., etc.]: [3, 0, 3, 102, 3, 0, 1, 3, 3, 66, 102]. The resultant to send is:
+//    [layerIndex, count, offset, encoding-size, ..., layerIndex, count, offset, size, ..., etc.]: [3, 0, 3, 102, 3, 0, 1, 3, 3, 66, 102]. The resultant to send is:
 //    In a future update, the size parameter will matter when we add dataRangeFunctions and dataConditionFunctions
-//    size does not include layerID, count, or offset. So for instance, if we have no dataFunctions, size is 0
+//    size does not include layerIndex, count, or offset. So for instance, if we have no dataFunctions, size is 0
 //    postMessage({ mapID, featureGuide, vertexBuffer, indexBuffer }, [vertexBuffer, indexBuffer])
 
 export default class TileWorker {
@@ -141,7 +148,8 @@ export default class TileWorker {
   // grab the metadata from each source, grab necessary fonts / billboards
   // this may seem wasteful that each worker has to do this, but these assets are cached, so it will be fast.
   async buildSources (mapID: string) {
-    const style = this.maps[mapID]
+    const self = this
+    const style = self.maps[mapID]
     // check all values are non-null
     if (!style.sources) style.sources = {}
     if (!style.fonts) style.fonts = {} // eventually have a default that always links to some cdn { default: '' }
@@ -154,11 +162,12 @@ export default class TileWorker {
       let source = sources[sourceName]
       if (typeof source === 'string') {
         // if there is a filetype at the end, we parse it differently.
-        const fileName = source
+        let fileName = source
         const fileType = source.split('.').pop()
 
         promises.push(new Promise((resolve, reject) => {
           if (fileType === 's2json' || fileType === 'geojson' || fileType === 'json') { // s2json request
+            fileName = fileName.split('.').slice(0, -1).join('.')
             requestData(fileName, fileType, (json) => {
               if (!json) reject(new Error(`Request failed: "${fileName}.${fileType}"`))
               // create an S2JsonVT object
@@ -177,14 +186,14 @@ export default class TileWorker {
               if (!metadata.path) metadata.path = source
               // update source to said metadata
               sources[sourceName] = source = metadata
-              // if mask type, we create an S2Rtin in prep
-              if (source.type === 'mask') source.s2rtin = new S2Rtin(source.tileSize)
+              // build the metadata as necessary
+              self._buildMetadata(source)
               resolve()
             })
           }
         }))
-      } else if (source.type === 'mask') {
-        source.s2rtin = new S2Rtin(source.tileSize)
+      } else { // is an object, just build the metadata
+        self._buildMetadata(source)
       }
     }
     // build fonts
@@ -205,6 +214,13 @@ export default class TileWorker {
         this.status = 'ready'
         this._checkCache()
       })
+  }
+
+  _buildMetadata (source) {
+    // if mask type, we create an S2Rtin in prep
+    if (source.type === 'mask') source.s2rtin = new S2Rtin(source.tileSize)
+    // if we have a WebP image source, but the browser doesn't support WebP, use the fallback
+    if (source.fileType === 'webp' && !WEBP_COMPATIBLE) source.fileType = source.fallback
   }
 
   _checkCache () {
@@ -296,6 +312,7 @@ export default class TileWorker {
     // console.log('_buildMesh', mapID, this.id, tileID, zoom)
     // console.log('dem', dem)
     const terrain = terrainToGrid(dem)
+    // console.log('terrain', terrain)
     // create a tile object
     const tile = s2rtin.createTile(terrain)
     // find the appropriate margin of error
@@ -342,8 +359,8 @@ export default class TileWorker {
     const parentLayers: ParentLayers = {}
     const { layers, glType, glyphBuilder } = this.maps[mapID]
     const webgl1 = glType === 1
-    for (let layerID = 0, ll = layers.length; layerID < ll; layerID++) {
-      const layer = layers[layerID]
+    for (let layerIndex = 0, ll = layers.length; layerIndex < ll; layerIndex++) {
+      const layer = layers[layerIndex]
       if (layer.source === sourceName) { // ensure we are in the right source
         if (
           vectorTile.layers[layer.layer] && // the vectorTile has said layer in it
@@ -391,12 +408,12 @@ export default class TileWorker {
               } else if (layer.type === 'line3D' && type === 9) {
                 continue
               } else if (layer.type === 'text' && type === 1) {
-                preprocessText(feature, code, zoom, layer, layerID, extent, texts, webgl1, this.idGen)
+                preprocessText(feature, code, zoom, layer, layerIndex, extent, texts, webgl1, this.idGen)
                 continue
               } else if (layer.type === 'billboard' && type === 1) {
                 continue
               } else { continue }
-              if (vertices.length) featureSet.push({ type: layer.type, vertices, indices, code, layerID, featureCode })
+              if (vertices.length) featureSet.push({ type: layer.type, vertices, indices, code, layerIndex, featureCode })
             } else { continue }
           } // for (let f = 0; f < vectorTileLayer.length; f++)
         } else if (source.layers && source.layers[layer.layer] && source.layers[layer.layer].maxzoom < zoom) {
@@ -414,10 +431,10 @@ export default class TileWorker {
           const hash = tileHash(face, pZoom, pX, pY)
           // store parent reference
           if (!parentLayers[hash]) parentLayers[hash] = { face, zoom: pZoom, x: pX, y: pY, layers: [] }
-          parentLayers[hash].layers.push(layerID)
+          parentLayers[hash].layers.push(layerIndex)
         }
       } // if (layer.source === sourceName)
-    } // for (let layerID = 0, ll = layers.length; layerID < ll; layerID++) {
+    } // for (let layerIndex = 0, ll = layers.length; layerIndex < ll; layerIndex++) {
     // now post process data, this groups data for fewer draw calls
     // we seperate by type to make it seem like data is loading quicker, and to handle different vertex sizes
     if (fillFeatures.length) postprocessFill(mapID, `${sourceName}:fill`, hash, fillFeatures, postMessage)
@@ -434,8 +451,8 @@ export default class TileWorker {
     // setup parentLayers
     const parentLayers: ParentLayers = {}
     // iterate over layers and found any data doesn't exist at current zoom but the style asks for
-    for (let layerID = 0, ll = layers.length; layerID < ll; layerID++) {
-      const layer = layers[layerID].layer
+    for (let layerIndex = 0, ll = layers.length; layerIndex < ll; layerIndex++) {
+      const layer = layers[layerIndex].layer
       if (source.layers && source.layers[layer] && source.layers[layer].maxzoom < zoom) {
         // we have passed the limit at which this data is stored. Rather than
         // processing the data more than once, we reference where to look for the layer
@@ -451,7 +468,7 @@ export default class TileWorker {
         const hash = tileHash(face, pZoom, pX, pY)
         // store parent reference
         if (!parentLayers[hash]) parentLayers[hash] = { face, zoom: pZoom, x: pX, y: pY, layers: [] }
-        parentLayers[hash].layers.push(layerID)
+        parentLayers[hash].layers.push(layerIndex)
       }
     }
     // if we stored any parent layers, ship it out

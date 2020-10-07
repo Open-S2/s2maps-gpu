@@ -6,7 +6,7 @@ import Map from '../ui/map'
 
 import type { MapOptions } from '../ui/map'
 
-class MapWorker {
+export default class MapWorker implements Worker {
   map: Map
   onMessage ({ data }) {
     const { type } = data

@@ -17,6 +17,7 @@ export type WallpaperUniforms = {
 export class Wallpaper {
   style: Style // reference to the style objects colors
   projection: Projection
+  tileSize: number
   uniforms: WallpaperUniforms = {
     uScale: new Float32Array(2),
     uBackgroundColor: new Float32Array(4),
@@ -25,9 +26,10 @@ export class Wallpaper {
     uFade2Color: new Float32Array(4)
   }
   skybox: boolean = false
-  constructor (style: Style, projection: Projection) {
+  constructor (style: Style, projection: Projection, tileSize?: number = 512) {
     this.style = style
     this.projection = projection
+    this.tileSize = tileSize
   }
 
   getUniforms (): void | WallpaperUniforms {
@@ -45,8 +47,9 @@ export class Wallpaper {
   }
 
   _updateScale () {
-    const { zoom, aspect, multiplier } = this.projection
-    const radius = 512 * Math.min(Math.pow(2, zoom), 32768)
+    const { projection, tileSize } = this
+    const { zoom, aspect, multiplier } = projection
+    const radius = tileSize * Math.min(Math.pow(2, zoom), 32768)
     this.uniforms.uScale[0] = radius / (aspect[0] / multiplier * 2)
     this.uniforms.uScale[1] = radius / (aspect[1] / multiplier * 2)
   }

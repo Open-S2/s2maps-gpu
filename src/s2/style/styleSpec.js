@@ -61,6 +61,7 @@ export type BillboardPaint = {
 /** Layer **/
 export type Layer = {
   id: string,
+  layerIndex: number,
   source: string,
   layer: string,
   minzoom: number,
@@ -93,10 +94,4 @@ export type WallpaperStyle = {
   fade1Color: string,
   fade2Color: string,
   haloColor: string
-}
-
-/** SPHERE BACKGROUND **/
-export type SphereBackground = {
-  code: Float32Array | Function,
-  lch: boolean
 }

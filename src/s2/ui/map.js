@@ -242,8 +242,10 @@ export default class Map extends Camera {
 
   // tile data is stored in the map, waiting for the render to
   injectData (data) {
-    if (data.type === 'parentlayers') this.injectionQueue.unshift(data)
-    else this.injectionQueue.push(data)
+    this.injectionQueue.push(data)
+    this.injectionQueue = this.injectionQueue.sort(injectionDataSort)
+    // if (data.type === 'parentlayers') this.injectionQueue.unshift(data)
+    // else this.injectionQueue.push(data)
     this.render()
   }
 
@@ -272,4 +274,10 @@ export default class Map extends Camera {
       }
     })
   }
+}
+
+function injectionDataSort (a, b) {
+  const sortMethod = (type) => (type === 'parentLayers') ? 0 : (type === 'glyphdata') ? 1 : 2
+
+  return sortMethod(b.type) - sortMethod(a.type)
 }

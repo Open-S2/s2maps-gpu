@@ -2,12 +2,12 @@
 /* global postMessage */
 import Color from './color'
 import Map from '../ui/map'
-import { Shade, Wallpaper, Skybox, Tile } from '../source'
+import { Wallpaper, Skybox, Tile } from '../source'
 import requestData from '../util/fetch'
 import { encodeLayerAttribute, parseFeatureFunction, orderLayer } from './conditionals'
 
 import type { MapOptions } from '../ui/map'
-import type { Sources, Layer, Mask, WallpaperStyle, SphereBackground } from './styleSpec'
+import type { Sources, Layer, Mask, WallpaperStyle } from './styleSpec'
 import type { TileRequest } from '../workers/tile.worker'
 
 export default class Style {
@@ -29,8 +29,7 @@ export default class Style {
   wallpaper: typeof undefined | Wallpaper | Skybox
   wallpaperStyle: typeof undefined | WallpaperStyle
   clearColor: typeof undefined | [number, number, number, number]
-  sphereBackground: typeof undefined | SphereBackground // Attribute Code - limited to input-range or input-condition
-  shade: typeof undefined | Shade
+  maskLayers: Array<Layer> = []
   dirty: boolean = true
   constructor (options: MapOptions, map: Map) {
     const { webworker } = options
@@ -46,7 +45,7 @@ export default class Style {
     self.dirty = true
     if (typeof style === 'string') {
       requestData(style, 'json', (res) => {
-        if (res) { self._buildStyle(res) }
+        if (res) { self.buildStyle(res) }
       })
     } else if (typeof style === 'object') {
       style = JSON.parse(JSON.stringify(style))
@@ -72,9 +71,6 @@ export default class Style {
       if (style.colorBlind) self.colorBlind = style.colorBlind
       // build wallpaper and sphere background if applicable
       if (style.wallpaper) self._buildWallpaper(style.wallpaper)
-      self._buildSphereBackground(style['sphere-background'])
-      // build shade if applicable
-      if (style.shade) self._buildShade()
       // build the layers
       if (style.layers) self.layers = style.layers
       self._buildLayers()
@@ -83,11 +79,13 @@ export default class Style {
 
   _prebuildStyle (style: Object) {
     // ensure certain default layer values exist. If it is a raster layer: seggregate
-    for (const layer of style.layers) {
-      if (layer.type === 'raster' && layer.source) this.rasterLayers[layer.source] = layer
+    for (let i = 0, sl = style.layers.length; i < sl; i++) {
+      const layer = style.layers[i]
+      layer.layerIndex = i
       if (!layer.minzoom) layer.minzoom = 0
       if (!layer.maxzoom) layer.maxzoom = 30
       if (!layer.layer) layer.layer = 'default'
+      if (layer.source === 'mask') this.maskLayers.push(layer)
     }
     // ensure if wallpaper, we have proper default values
     if (style.background) {
@@ -144,27 +142,6 @@ export default class Style {
     }
   }
 
-  _buildSphereBackground (sphereBackground?: Object) {
-    if (sphereBackground) {
-      const backgroundColor = sphereBackground['background-color']
-      if (this.glType === 1) {
-        this.sphereBackground = {
-          code: parseFeatureFunction(backgroundColor, 'color')
-        }
-      } else {
-        this.sphereBackground = {
-          code: encodeLayerAttribute(backgroundColor, sphereBackground.lch, this.colorBlind),
-          lch: sphereBackground.lch
-        }
-      }
-    }
-  }
-
-  _buildShade () {
-    // create the wallpaper
-    this.shade = new Shade(this, this.map.projection)
-  }
-
   // 1) ensure "bad" layers are removed (missing important keys or subkeys)
   // 2) ensure the order is correct for when WebGL eventually parses the encodings
   _buildLayers () {
@@ -187,10 +164,12 @@ export default class Style {
         }
         // PAINTS
         for (let key in layer.paint) {
-          const encode = encodeLayerAttribute(layer.paint[key], layer.lch, colorBlind)
-          code.push(...encode)
+          code.push(...encodeLayerAttribute(layer.paint[key], layer.lch, colorBlind))
         }
         if (code.length) layer.code = new Float32Array(code)
+      } else if (this.glType === 1 && layer.source === 'mask') {
+        for (const l in layer.layout) layer.layout[l] = parseFeatureFunction(layer.layout[l], l)
+        for (const p in layer.paint) layer.paint[p] = parseFeatureFunction(layer.paint[p], p)
       }
     }
     // tell the painter what we are using

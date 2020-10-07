@@ -2,7 +2,7 @@
   "version": 1,
   "name": "s2test",
   "center": [-122.444700, 37.780739],
-  "zoom": 9.2,
+  "zoom": 0,
   "minzoom": 0,
   "maxzoom": 20,
   "sources": {
@@ -13,14 +13,13 @@
     "roboto-regular": "https://s3.s2maps.io/fonts-v2/RobotoRegular",
     "roboto-medium": "https://s3.s2maps.io/fonts-v2/RobotoMedium"
   },
-  "shade": false,
-  "colorBlind": false,
   "wallpaper": {
-    "background-color": "#1f262d",
-    "fade-1": "#172b3a",
-    "fade-2": "#20436d",
-    "halo": "#d29463"
+    "background-color": "rgb(25, 28, 80)",
+    "fade-1": "rgb(138, 204, 255)",
+    "fade-2": "rgb(217, 255, 255)",
+    "halo": "rgb(230, 255, 255)"
   },
+  "colorBlind": false,
   "layers": [
     {
       "name": "background",
@@ -28,7 +27,26 @@
       "source": "mask",
       "layout": {},
       "paint": {
-        "color": "#2b2d2e"
+        "color": [
+          "input-range",
+          "zoom",
+          "expo",
+          1.7,
+          2.75,
+          "rgb(244, 239, 226)",
+          4,
+          "rgb(245, 241, 230)",
+          8,
+          "rgb(245, 241, 230)",
+          9.5,
+          "rgb(225, 225, 229)",
+          11.5,
+          "rgb(229, 231, 236)",
+          13,
+          "rgb(232,232,232)",
+          14,
+          "rgb(248, 249, 250)"
+        ]
       }
     },
     {
@@ -40,32 +58,53 @@
         "aboriginal_lands", "grass", "grassland", "garden", "meadow", "farmland",
         "wood", "swamp", "forest", "wetland", "zoo", "cemetery", "indianReservation",
         "sand", "beach", "desert", "aeroway", "military", "hospital",
-        "university", "college", "school", "kindergarten", "glacier"]],
+        "university", "college", "school", "kindergarten", "parking", "glacier",
+        "quarry", "industrial", "retail"]],
       "minzoom": 0,
       "layout": {},
       "paint": {
         "color": [
           "data-condition",
-          ["class", "has", ["desert", "sand", "beach"]],
-          "#454236",
+          ["class", "has", ["desert", "sand"]],
+          "rgb(241, 233, 195)",
           ["class", "==", "aeroway"],
-          "#2f3948",
+          "rgb(219, 222, 235)",
           ["class", "==", "military"],
-          "#353535",
+          "rgb(226, 226, 224)",
+          ["class", "==", "quarry"],
+          "rgb(206, 208, 211)",
+          ["class", "==", "retail"],
+          "rgb(254, 245, 220)",
           ["class", "has", ["university", "college", "school", "kindergarten"]],
-          "#2f3948",
+          "rgb(226, 233, 238)",
+          ["class", "==", "parking"],
+          "rgb(241, 243, 244)",
           ["class", "==", "hospital"],
-          "#3d3337",
-          ["class", "has", ["farmland", "cemetery"]],
-          "#2e4642",
-          ["class", "has", ["park", "national_park", "protected_area", "grass", "grassland", "garden", "meadow", "wood", "swamp", "forest", "zoo"]],
-          "#293737",
+          "rgb(252, 228, 228)",
+          ["class", "==", "farmland"],
+          "rgb(228, 234, 210)",
+          ["class", "has", ["park", "national_park", "protected_area"]],
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            10,
+            "#aee0bc",
+            12,
+            "rgb(197, 232, 197)"
+          ],
+          ["class", "has", ["grass", "grassland", "garden", "meadow", "wood", "swamp", "forest", "zoo"]],
+          "#bbe2c6",
+          ["class", "==", "cemetery"],
+          "rgb(208, 236, 208)",
+          ["class", "==", "beach"],
+          "rgb(255, 239, 195)",
           ["class", "==", "glacier"],
-          "#757575",
+          "rgb(249, 249, 249)",
           ["class", "==", "aboriginal_lands"],
-          "#393939",
+          "rgb(240, 237, 235)",
           ["class", "==", "wetland"],
-          "#17333b",
+          "rgb(210, 233, 255)",
           "default",
           "rgba(0, 0, 0, 0)"
         ]
@@ -76,11 +115,23 @@
       "source": "world",
       "layer": "landuse",
       "type": "fill",
-      "filter": ["and", ["class", "==", "golf"], ["type", "has", ["course", "rough"]]],
+      "filter": ["class", "==", "golf"],
       "minzoom": 0,
       "layout": {},
       "paint": {
-        "color": "#364744"
+        "color": [
+          "data-condition",
+          ["type", "has", ["course", "rough"]],
+          "rgb(201, 238, 201)",
+          ["type", "==", "fairway"],
+          "rgb(218, 245, 205)",
+          ["type", "==", "green"],
+          "rgb(233, 251, 217)",
+          ["type", "==", "bunker"],
+          "rgb(255, 239, 195)",
+          "default",
+          "rgba(0, 0, 0, 0)"
+        ]
       }
     },
     {
@@ -92,7 +143,7 @@
       "minzoom": 0,
       "layout": {},
       "paint": {
-        "color": "#172b3a"
+        "color": "rgb(159, 209, 249)"
       }
     },
     {
@@ -104,7 +155,7 @@
       "minzoom": 0,
       "layout": {},
       "paint": {
-        "color": "#1d3849"
+        "color": "rgb(185, 225, 255)"
       }
     },
     {
@@ -118,7 +169,7 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "#172b3a",
+        "color": "rgb(154, 204, 243)",
         "width": [
           "input-range",
           "zoom",
@@ -132,16 +183,12 @@
       }
     },
     {
-      "name": "transportLower",
-      "minzoom": 7,
+      "name": "transport_borders",
       "source": "world",
       "layer": "transport",
-      "filter": ["or",
-        ["class", "has", ["tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian", "ferry"]],
-        ["and", ["class", "==", "railway"], ["type", "==", "rail"]],
-        ["and", ["class", "==", "path"], ["type", "==", "path"]]
-      ],
+      "filter": ["class", "has", ["tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian"]],
       "type": "line",
+      "minzoom": 7,
       "layout": {
         "cap": "round",
         "join": "bevel"
@@ -149,16 +196,8 @@
       "paint": {
         "color": [
           "data-condition",
-          ["class", "==", "ferry"],
-          "#204151",
-          ["class", "==", "path"],
-          "#8f8f8f",
-          ["class", "==", "railway"],
-          "#25292d",
-          ["class", "has", ["tertiary", "tertiary_link"]],
-          "#4e5154",
-          ["class", "has", ["street", "street_limited", "residential", "pedestrian"]],
-          "#3a3d3f",
+          ["class", "has", ["tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian"]],
+          "rgb(218, 220, 224)",
           "default",
           "rgba(0, 0, 0, 0)"
         ],
@@ -172,7 +211,119 @@
             7,
             1,
             12,
-            3,
+            7,
+            15,
+            19
+          ],
+          ["or", ["class", "==", "street"], ["class", "==", "street_limited"], ["class", "==", "residential"]],
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            10,
+            1,
+            13,
+            5.5,
+            15,
+            14
+          ],
+          "default",
+          3.5
+        ]
+      }
+    },
+    {
+      "name": "transport_secondary_borders",
+      "source": "world",
+      "layer": "transport",
+      "filter": ["class", "has", ["secondary", "secondary_link"]],
+      "type": "line",
+      "minzoom": 7,
+      "layout": {
+        "cap": "round",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "rgb(218, 220, 224)",
+        "width": [
+          "input-range",
+          "zoom",
+          "lin",
+          7,
+          1,
+          12,
+          7,
+          15,
+          19
+        ]
+      }
+    },
+    {
+      "name": "transport_primary_borders",
+      "source": "world",
+      "layer": "transport",
+      "filter": ["class", "has", ["primary", "primary_link"]],
+      "type": "line",
+      "minzoom": 5,
+      "layout": {
+        "cap": "round",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "rgb(246, 207, 101)",
+        "width": [
+          "input-range",
+          "zoom",
+          "lin",
+          7,
+          2,
+          12,
+          7,
+          15,
+          19
+        ]
+      }
+    },
+    {
+      "name": "transport",
+      "source": "world",
+      "layer": "transport",
+      "filter": ["or",
+        ["class", "has", ["tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian", "ferry"]],
+        ["and", ["class", "==", "railway"], ["type", "==", "rail"]],
+        ["and", ["class", "==", "path"], ["type", "==", "path"]]
+      ],
+      "type": "line",
+      "minzoom": 7,
+      "layout": {
+        "cap": "round",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": [
+          "data-condition",
+          ["class", "==", "ferry"],
+          "rgb(130, 179, 230)",
+          ["class", "==", "path"],
+          "rgb(91, 185, 116)",
+          ["class", "has", ["railway", "rail"]],
+          "rgb(199, 202, 205)",
+          ["class", "has", ["tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian"]],
+          "rgb(255, 255, 255)",
+          "default",
+          "rgba(0, 0, 0, 0)"
+        ],
+        "width": [
+          "data-condition",
+          ["class", "has", ["tertiary", "tertiary_link"]],
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            7,
+            1,
+            12,
+            4,
             15,
             15
           ],
@@ -184,7 +335,7 @@
             10,
             1.5,
             13,
-            2.5,
+            4,
             15,
             10
           ],
@@ -196,18 +347,18 @@
       }
     },
     {
-      "name": "transportSecondary",
-      "minzoom": 7,
+      "name": "transport-secondary",
       "source": "world",
       "layer": "transport",
       "filter": ["class", "has", ["secondary", "secondary_link"]],
       "type": "line",
+      "minzoom": 7,
       "layout": {
         "cap": "round",
         "join": "bevel"
       },
       "paint": {
-        "color": "#4e5154",
+        "color": "rgb(255, 255, 255)",
         "width": [
           "input-range",
           "zoom",
@@ -215,25 +366,25 @@
           7,
           1,
           12,
-          3,
+          4,
           15,
           15
         ]
       }
     },
     {
-      "name": "transportPrimary",
-      "minzoom": 5,
+      "name": "transport-primary",
       "source": "world",
       "layer": "transport",
       "filter": ["class", "has", ["primary", "primary_link"]],
       "type": "line",
+      "minzoom": 5,
       "layout": {
         "cap": "round",
         "join": "bevel"
       },
       "paint": {
-        "color": "#4e5154",
+        "color": "rgb(255, 242, 175)",
         "width": [
           "input-range",
           "zoom",
@@ -241,7 +392,7 @@
           7,
           1,
           12,
-          3,
+          4,
           15,
           15
         ]
@@ -259,7 +410,7 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "#2b2d2e",
+        "color": "rgb(249, 202, 74)",
         "width": [
           "input-range",
           "zoom",
@@ -287,7 +438,15 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "#875d38",
+        "color": [
+          "input-range",
+          "zoom",
+          "lin",
+          2,
+          "rgb(249, 202, 74)",
+          7,
+          "#ffe58b"
+        ],
         "width": [
           "input-range",
           "zoom",
@@ -304,34 +463,10 @@
       }
     },
     {
-      "id": "boundariesState",
+      "id": "boundaries",
       "source": "world",
       "layer": "boundary",
-      "filter": ["and", ["class", "==", "State"], ["maritime", "==", false]],
-      "type": "line",
-      "minzoom": 3,
-      "layout": {
-        "cap": "butt",
-        "join": "bevel"
-      },
-      "paint": {
-        "color": "#b2482d",
-        "width": [
-          "input-range",
-          "zoom",
-          "lin",
-          3,
-          0.85,
-          4,
-          1.25
-        ]
-      }
-    },
-    {
-      "id": "boundariesCountry",
-      "source": "world",
-      "layer": "boundary",
-      "filter": ["and", ["class", "==", "Country"], ["maritime", "==", false]],
+      "filter": ["and", ["class", "has", ["Country", "State"]], ["maritime", "==", false]],
       "type": "line",
       "minzoom": 0,
       "layout": {
@@ -339,15 +474,27 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "#908169",
+        "color": [
+          "data-condition",
+          ["class", "==", "Country"],
+          "rgb(115, 115, 115)",
+          "default",
+          "rgba(160, 160, 160, 0.9)"
+        ],
         "width": [
-          "input-range",
-          "zoom",
-          "lin",
-          1,
-          0.85,
-          2,
-          1.75
+          "data-condition",
+          ["class", "==", "State"],
+          1.25,
+          "default",
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            1,
+            0.85,
+            2,
+            1.25
+          ]
         ]
       }
     },
@@ -357,13 +504,13 @@
       "layer": "equator",
       "type": "line",
       "minzoom": 0,
-      "maxzoom": 2,
+      "maxzoom": 10,
       "layout": {
         "cap": "butt",
         "join": "bevel"
       },
       "paint": {
-        "color": "#924331",
+        "color": "rgba(125, 102, 97, 0.8)",
         "width": [
           "input-range",
           "zoom",
@@ -382,7 +529,7 @@
       "type": "fill",
       "layout": {},
       "paint": {
-        "color": "#343638"
+        "color": "rgb(235, 235, 235)"
       }
     },
     {
@@ -422,7 +569,7 @@
             5,
             15,
             9,
-            25,
+            20,
             12,
             45
           ],
@@ -446,7 +593,7 @@
             10,
             14,
             14,
-            30
+            24
           ],
           ["class", "has", ["Hamlet", "Village"]],
           [
@@ -456,26 +603,34 @@
             10.5,
             14,
             12,
-            30
+            24
           ],
           ["class", "==", "Indian Reservation"],
-          16,
+          15,
           "default",
           18
         ],
         "fill": [
           "data-condition",
           ["class", "==", "Indian Reservation"],
-          "#9f8f7e",
+          "rgb(143, 147, 125)",
           ["class", "has", ["Village", "Neighbourhood", "Island"]],
-          "#bab3aa",
+          "rgb(98, 114, 138)",
           ["class", "==", "Hamlet"],
-          "rgb(150, 150, 150)",
+          "rgb(105, 105, 105)",
           "default",
-          "#b7babe"
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            9,
+            "rgb(75, 75, 75)",
+            12,
+            "rgb(100, 100, 100)"
+          ]
         ],
-        "stroke": "#2b2d2e",
-        "strokeWidth": 0
+        "stroke": "rgba(255, 255, 255, 0.85)",
+        "strokeWidth": 0.4
       }
     },
     {
@@ -484,6 +639,7 @@
       "filter": ["class", "has", ["Country", "State"]],
       "layer": "place",
       "type": "text",
+      "actionable": true,
       "layout": {
         "family": "roboto-medium",
         "field": [
@@ -515,7 +671,7 @@
             "expo",
             1.5,
             0,
-            19,
+            17,
             4,
             40
           ],
@@ -536,14 +692,37 @@
           14
         ],
         "fill": [
-          "data-condition",
-          ["class", "==", "Country"],
-          "#a0917c",
+          "feature-state",
+          "hover",
+          "rgb(80, 120, 180)",
           "default",
-          "#c6b69e"
+          [
+            "data-condition",
+            ["class", "==", "Country"],
+            "rgb(42, 42, 42)",
+            ["class", "==", "State"],
+            "rgb(100, 100, 100)",
+            "default",
+            "rgba(0, 0, 0, 0)"
+          ]
         ],
-        "stroke": "#383e43",
-        "strokeWidth": 0
+        "stroke": "rgba(255, 255, 255, 0.5)",
+        "strokeWidth": [
+          "data-condition",
+          ["class", "==", "State"],
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            0,
+            0.5,
+            4,
+            0.3
+          ],
+          "default",
+          0
+        ]
       }
     }
   ]

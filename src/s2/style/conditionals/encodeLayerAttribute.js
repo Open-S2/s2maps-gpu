@@ -1,15 +1,22 @@
 // @flow
 import Color from '../color'
 
-// CONDITION ENCODINGS: 128 positions possible, although if you're using more than 2 or 3 feature-states, you may need to rethink your design
+// CONDITION ENCODINGS: 128 positions possible
 // 0 -> null
 // 1 -> value
 // 2 -> data-condition
 // 3 -> input-condition
 // 4 -> data-range
 // 5 -> input-range
-// 6 -> animation-state
-// 7+ -> feature-state
+// 6 -> feature-state (this updates for each draw assuming the feature has a "feature-state")
+// 7 -> animation-state (this updates for each draw assuming the feature has a "animation-state")
+
+// FEATURE-STATE ENCODINGS:
+// 0 -> default (inactive)
+// 1 -> hover
+// 2 -> mouse-down
+// 3 -> mouse-up
+// 4 -> active
 
 // INPUT RANGE/CONDITION ENCODINGS:
 // 0 -> zoom
@@ -17,6 +24,7 @@ import Color from '../color'
 // 2 -> lat
 // 3 -> angle
 // 4 -> pitch
+// 5 -> time
 
 // INTERPOLATION ENCODINGS: data-ranges or input-ranges have either linear or exponential interpolations
 // if exponential the base must also be encoded, after the type
@@ -24,6 +32,8 @@ import Color from '../color'
 // 1 -> exponential
 
 // This functionality is built for webgl to parse for drawing
+// The Style object will parse all layers' attributes like "color", "fill", "width", etc.
+// The code will be placed into "LayerCode" for the GPU shader to parse as necessary.
 export default function encodeLayerAttribute (input: Array<any>,
   lch: boolean = false, colorBlind: boolean = false): Float32Array {
   const encodings = []
@@ -47,7 +57,7 @@ export default function encodeLayerAttribute (input: Array<any>,
       }
       // remove data type
       input.shift()
-      // encode and store
+      // encode range data and store
       encodings.push(...encodeRange(input, lch, colorBlind))
     } else if (conditionType === 'input-range') {
       // set the condition bits as input-range
@@ -67,8 +77,13 @@ export default function encodeLayerAttribute (input: Array<any>,
         // store base seperately as it can be a floating point
         encodings.push(input.shift())
       }
-      // encode and store
+      // encode range data and store
       encodings.push(...encodeRange(input, lch, colorBlind))
+    } else if (conditionType === 'feature-state') {
+      // set the condition bits as feature-state
+      encodings[0] += (6 << 4)
+      // encode the feature-states and store
+      encodings.push(...encodeFeatureStates(input, lch, colorBlind))
     } else throw Error('unknown condition type')
   } else if (input || input === 0) { // assuming data exists, than it's just a value type
     // value
@@ -108,9 +123,29 @@ function encodeRange (input: Array<any>, lch: boolean, colorBlind: boolean): Arr
   const encoding = []
 
   while (input.length) {
-    const condition = input.shift() // convert true and false to 0 and 1 respectively
+    const condition = input.shift()
     const value = input.shift()
     encoding.push(condition, ...encodeLayerAttribute(value, lch, colorBlind))
+  }
+
+  return encoding
+}
+
+function encodeFeatureStates (input: Array<any>, lch: boolean, colorBlind: boolean): Array<number> {
+  const encoding = []
+
+  while (input.length) {
+    // get condition name
+    const condition = input.shift()
+    const conditionCode = (condition === 'default') ? 0 // (inactive)
+      : (condition === 'hover') ? 1
+        : (condition === 'mouse-down') ? 2
+          : (condition === 'mouse-up') ? 3
+            : (condition === 'active') ? 4
+            : 0 // default / inactive
+    // get condition
+    const value = input.shift()
+    encoding.push(conditionCode, ...encodeLayerAttribute(value, lch, colorBlind))
   }
 
   return encoding
