@@ -160,6 +160,42 @@
       }
     },
     {
+      "id": "boundaries",
+      "source": "world",
+      "layer": "boundary",
+      "filter": ["and", ["class", "has", ["Country", "State"]], ["maritime", "==", false]],
+      "type": "line",
+      "minzoom": 0,
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": [
+          "data-condition",
+          ["class", "==", "Country"],
+          "rgb(115, 115, 115)",
+          "default",
+          "rgba(160, 160, 160, 0.9)"
+        ],
+        "width": [
+          "data-condition",
+          ["class", "==", "State"],
+          1.25,
+          "default",
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            1,
+            0.85,
+            2,
+            1.25
+          ]
+        ]
+      }
+    },
+    {
       "name": "covid",
       "source": "covid",
       "type": "fill",
@@ -187,38 +223,20 @@
       }
     },
     {
-      "id": "boundaries",
-      "source": "world",
-      "layer": "boundary",
-      "filter": ["and", ["class", "has", ["Country", "State"]], ["maritime", "==", false]],
+      "name": "covid",
+      "source": "covid",
       "type": "line",
       "minzoom": 0,
-      "layout": {
-        "cap": "butt",
-        "join": "bevel"
-      },
       "paint": {
-        "color": [
-          "data-condition",
-          ["class", "==", "Country"],
-          "rgb(115, 115, 115)",
-          "default",
-          "rgba(90, 90, 90, 0.9)"
-        ],
+        "color": "rgb(250, 250, 250)",
         "width": [
-          "data-condition",
-          ["class", "==", "State"],
-          1.75,
-          "default",
-          [
-            "input-range",
-            "zoom",
-            "lin",
-            1,
-            0.85,
-            2,
-            1.25
-          ]
+          "input-range",
+          "zoom",
+          "lin",
+          0,
+          1.25,
+          3,
+          3
         ]
       }
     },

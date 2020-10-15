@@ -15,6 +15,7 @@ const Dark = lazy(() => import('./App/Dark'))
 const GeoJSON = lazy(() => import('./App/GeoJSON'))
 const ColorBlind = lazy(() => import('./App/ColorBlind'))
 const Hover = lazy(() => import('./App/Hover'))
+const Tiles = lazy(() => import('./App/Tiles'))
 
 ReactDOM.render(
   <Router>
@@ -29,6 +30,7 @@ ReactDOM.render(
         <Route path='/geojson' component={GeoJSON} />
         <Route path='/colorblind' component={ColorBlind} />
         <Route path='/hover' component={Hover} />
+        <Route path='/tiles' component={Tiles} />
       </Switch>
     </Suspense>
   </Router>,

@@ -6,7 +6,8 @@
   "minzoom": 0,
   "maxzoom": 20,
   "sources": {
-    "world": "https://s3.s2maps.io/streets-v1"
+    "world": "https://s3.s2maps.io/streets-v1",
+    "tiles": { "type": "tile" }
   },
   "fonts": {
     "default": "https://s3.s2maps.io/fonts-v2/default",
@@ -463,26 +464,10 @@
       }
     },
     {
-      "id": "boundaries-state",
+      "id": "boundaries",
       "source": "world",
       "layer": "boundary",
-      "filter": ["and", ["class", "==", "State"], ["maritime", "==", false]],
-      "type": "line",
-      "minzoom": 3,
-      "layout": {
-        "cap": "butt",
-        "join": "bevel"
-      },
-      "paint": {
-        "color": "rgba(160, 160, 160, 0.9)",
-        "width": 1.25
-      }
-    },
-    {
-      "id": "boundaries-country",
-      "source": "world",
-      "layer": "boundary",
-      "filter": ["and", ["class", "==", "Country"], ["maritime", "==", false]],
+      "filter": ["and", ["class", "has", ["Country", "State"]], ["maritime", "==", false]],
       "type": "line",
       "minzoom": 0,
       "layout": {
@@ -490,15 +475,27 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "rgb(115, 115, 115)",
+        "color": [
+          "data-condition",
+          ["class", "==", "Country"],
+          "rgb(115, 115, 115)",
+          "default",
+          "rgba(160, 160, 160, 0.9)"
+        ],
         "width": [
-          "input-range",
-          "zoom",
-          "lin",
-          1,
-          0.85,
-          2,
-          1.25
+          "data-condition",
+          ["class", "==", "State"],
+          1.25,
+          "default",
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            1,
+            0.85,
+            2,
+            1.25
+          ]
         ]
       }
     },
@@ -541,6 +538,20 @@
       "source": "mask",
       "type": "shade",
       "maxzoom": 2
+    },
+    {
+      "name": "tiles",
+      "source": "tiles",
+      "layer": "boundary",
+      "type": "line",
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "rgb(213, 57, 55)",
+        "width": 1.5
+      }
     },
     {
       "name": "country_state",

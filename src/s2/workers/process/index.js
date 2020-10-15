@@ -1,3 +1,4 @@
 export * from './fill'
-export * from './line'
 export * from './glyph'
+export * from './line'
+export { default as buildTile } from './buildTile'

@@ -8,7 +8,8 @@ import { parseLayers } from '../style/conditionals'
 import {
   preprocessFill, postprocessFill,
   preprocessLine, postprocessLine,
-  preprocessText, postprocessGlyph, GlyphBuilder
+  preprocessText, postprocessGlyph, GlyphBuilder,
+  buildTile
 } from './process'
 import requestData from '../util/fetch'
 import { tileHash } from 's2projection'
@@ -241,7 +242,9 @@ export default class TileWorker {
     const { type, path, fileType, extension, minzoom, maxzoom, facesbounds, s2json } = source
     for (const tile of tiles) {
       const { hash, face, zoom, x, y } = tile
-      if (type === 'vector') {
+      if (type === 'tile') {
+        self._processVectorData(mapID, sourceName, source, tile, buildTile(tile))
+      } else if (type === 'vector') {
         if (
           minzoom <= zoom && maxzoom >= zoom && // check zoom bounds
           facesbounds[face] && // check face exists
@@ -284,7 +287,6 @@ export default class TileWorker {
               if (data && !self.cancelCache.includes(hash)) self._processMaskData(mapID, source, tile, data)
             })
           } else {
-            // console.log('POST', mapID, self.id, hash, zoom, sourceName)
             postMessage({ mapID, id: self.id, type: 'imageBitmap', tileID: hash, sourceName, zoom, path: requestPath, fileType, tileSize: source.tileSize })
           }
         }
@@ -309,10 +311,7 @@ export default class TileWorker {
   }
 
   _buildMesh (mapID: string, zoom: number, tileID: number, s2rtin: S2Rtin, dem: DEM) {
-    // console.log('_buildMesh', mapID, this.id, tileID, zoom)
-    // console.log('dem', dem)
     const terrain = terrainToGrid(dem)
-    // console.log('terrain', terrain)
     // create a tile object
     const tile = s2rtin.createTile(terrain)
     // find the appropriate margin of error
@@ -347,7 +346,7 @@ export default class TileWorker {
   }
 
   _processVectorData (mapID: string, sourceName: string, source: Object,
-    tile: TileRequest, vectorTile: Object | ArrayBuffer | Blob) {
+    tile: TileRequest, vectorTile: Object) {
     // grab tiles basics
     const { face, zoom, x, y, division, hash } = tile
 

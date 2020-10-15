@@ -18,7 +18,7 @@ export default class ShadeProgram extends Program {
   update: boolean = true
   constructor (context: Context) {
     // get gl from context
-    const { gl, type } = context
+    const { gl, type, devicePixelRatio } = context
     // if webgl1, setup attribute locations
     if (type === 1) {
       // prep attribute pointers
@@ -28,6 +28,9 @@ export default class ShadeProgram extends Program {
     } else {
       super(context, vertex2, fragment2)
     }
+    // setup the devicePixelRatio
+    this.use()
+    this.setDevicePixelRatio(devicePixelRatio)
   }
 
   draw (featureGuide: FeatureGuide, source: VectorTileSource) {

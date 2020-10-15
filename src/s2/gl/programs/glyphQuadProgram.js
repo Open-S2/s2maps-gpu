@@ -45,7 +45,7 @@ export default class GlyphQuadProgram extends Program {
     // get program
     const { glProgram } = this
     // activate so we can setup samplers
-    gl.useProgram(glProgram)
+    this.use()
     // get uniform locations
     this.uTexSize = gl.getUniformLocation(glProgram, 'uTexSize')
     this.uColor = gl.getUniformLocation(glProgram, 'uColor')
