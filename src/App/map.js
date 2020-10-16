@@ -18,7 +18,10 @@ function useMapContainer (style, opts) {
 
   // cause a prep of data
   useEffect(() => {
-    if (mapContainer) { prepCanvas(mapContainer, style, opts) }
+    let map
+    if (mapContainer) { map = prepCanvas(mapContainer, style, opts) }
+    // componentWillUnmount equivalent:
+    return () => { if (map) map.delete() }
   }, [style, opts, mapContainer])
 
   return { mapContainer, setMap }

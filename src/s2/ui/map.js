@@ -65,6 +65,17 @@ export default class Map extends Camera {
     this.setStyle(style)
   }
 
+  delete () {
+    // delete all tiles
+    this.tileCache.deleteAll()
+    // dereference the style object
+    this.style = {}
+    // to ensure no more draws, set the draw method to a noop
+    this._draw = () => {}
+    // tell the painter to cleanup
+    this.painter.delete()
+  }
+
   setStyle (style: string | Object) {
     // incase style was imported, clear cache
     this.clearCache()
@@ -171,11 +182,11 @@ export default class Map extends Camera {
   }
 
   _contextLost () {
-    console.log('context lost')
+    // console.log('context lost')
   }
 
   _contextRestored () {
-    console.log('context restored')
+    // console.log('context restored')
   }
 
   _onMovement (e: Event) {
@@ -265,12 +276,12 @@ export default class Map extends Camera {
         const data = self.injectionQueue.pop()
         // inject
         self._injectData(data)
-        // actually render
-        self._render()
+        // actually draw
+        self._draw()
         // setup another render queue
         self.render()
-      } else {
-        self._render()
+      } else { // only draw, no future renders needed
+        self._draw()
       }
     })
   }

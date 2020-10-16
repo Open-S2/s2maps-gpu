@@ -33,6 +33,14 @@ export default class S2Map {
     this._setupCanvas(canvas, options)
   }
 
+  delete () {
+    const { _offscreen, map, _canvas } = this
+    if (_offscreen && map) map.postMessage({ type: 'delete' }) // $FlowIgnore
+    else if (map) map.delete()
+    // lastly, remove all canvas listeners via cloning
+    _canvas.replaceWith(_canvas.cloneNode(true))
+  }
+
   _setupContainer (): HTMLCanvasElement {
     // prep container
     const container = this._container

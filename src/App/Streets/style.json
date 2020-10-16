@@ -34,10 +34,10 @@
           1.7,
           2.75,
           "rgb(244, 239, 226)",
-          4,
-          "rgb(245, 241, 230)",
+          3,
+          "rgb(243, 237, 223)",
           8,
-          "rgb(245, 241, 230)",
+          "rgb(243, 237, 223)",
           9.5,
           "rgb(225, 225, 229)",
           11.5,
@@ -102,12 +102,28 @@
           ["class", "==", "glacier"],
           "rgb(249, 249, 249)",
           ["class", "==", "aboriginal_lands"],
-          "rgb(240, 237, 235)",
+          "rgba(240, 242, 240, 0.5)",
           ["class", "==", "wetland"],
           "rgb(210, 233, 255)",
           "default",
           "rgba(0, 0, 0, 0)"
         ]
+      }
+    },
+    {
+      "name": "aboriginal_border",
+      "source": "world",
+      "layer": "landuse",
+      "filter": ["class", "==", "aboriginal_lands"],
+      "minzoom": 2,
+      "type": "line",
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "rgb(198, 212, 205)",
+        "width": 1.5
       }
     },
     {
@@ -143,7 +159,7 @@
       "minzoom": 0,
       "layout": {},
       "paint": {
-        "color": "rgb(159, 209, 249)"
+        "color": "rgb(154, 204, 243)"
       }
     },
     {
@@ -468,13 +484,13 @@
       "layer": "boundary",
       "filter": ["and", ["class", "==", "State"], ["maritime", "==", false]],
       "type": "line",
-      "minzoom": 3,
+      "minzoom": 2,
       "layout": {
         "cap": "butt",
         "join": "bevel"
       },
       "paint": {
-        "color": "rgba(160, 160, 160, 0.9)",
+        "color": "rgba(180, 180, 180, 0.7)",
         "width": 1.25
       }
     },

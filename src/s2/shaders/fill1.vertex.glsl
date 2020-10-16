@@ -31,4 +31,5 @@ void main () {
   int index = int(aIndex);
   // decode color
   color = uColors[index];
+  color.rgb *= color.a;
 }

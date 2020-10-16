@@ -416,6 +416,12 @@
       }
     },
     {
+      "name": "shade",
+      "source": "mask",
+      "type": "shade",
+      "maxzoom": 2
+    },
+    {
       "name": "places",
       "source": "world",
       "minzoom": 4,

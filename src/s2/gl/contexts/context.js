@@ -18,6 +18,23 @@ export default class Context {
     this.devicePixelRatio = devicePixelRatio
   }
 
+  delete () {
+    const { gl, vertexBuffer, vao } = this
+    // remove local data
+    gl.deleteBuffer(vertexBuffer)
+    gl.deleteVertexArray(vao)
+    // remove all possible references
+    gl.bindBuffer(gl.ARRAY_BUFFER, null)
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null)
+    gl.bindRenderbuffer(gl.RENDERBUFFER, null)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+    // set canvas to smallest size possible
+    gl.canvas.width = 1
+    gl.canvas.height = 1
+    // attempt to force a context loss
+    gl.getExtension('WEBGL_lose_context').loseContext()
+  }
+
   resetViewport () {
     const { gl } = this
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
@@ -143,20 +160,20 @@ export default class Context {
     const { gl } = this
     gl.enable(gl.BLEND)
     gl.blendColor(0, 0, 0, 0)
-    this.setBlendDefault()
+    this.defaultBlend()
   }
 
-  setBlendDefault () {
+  defaultBlend () {
     const { gl } = this
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
   }
 
-  setBlendShade () {
+  shadeBlend () {
     const { gl } = this
     gl.blendFunc(gl.DST_COLOR, gl.ZERO)
   }
 
-  inversionBlending () {
+  inversionBlend () {
     const { gl } = this
     gl.blendFunc(gl.ONE_MINUS_DST_COLOR, gl.ONE_MINUS_SRC_COLOR)
   }

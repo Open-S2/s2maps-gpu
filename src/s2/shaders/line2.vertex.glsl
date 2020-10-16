@@ -48,6 +48,7 @@ void main () {
   vec4 prev, curr, next, zero;
   // decode color
   color = decodeFeature(true, index, featureIndex);
+  color.rgb *= color.a;
   // decode line width
   width = decodeFeature(false, index, featureIndex)[0] * uDevicePixelRatio;
   // explain width to fragment shader

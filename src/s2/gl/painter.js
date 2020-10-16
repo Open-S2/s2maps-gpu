@@ -37,6 +37,12 @@ export default class Painter {
     this._createContext(options)
   }
 
+  delete () {
+    const { context, programs } = this
+    for (const programName in programs) programs[programName].delete()
+    context.delete()
+  }
+
   clearCache () {
     const glyphProgram: GlyphProgram = this.programs.glyphFill
     if (glyphProgram) glyphProgram.clearCache()

@@ -7,8 +7,9 @@ import type { FeatureGuide } from '../../source/tile'
 export type ProgramType = 'mask' | 'fill' | 'line' | 'raster' | 'shade' | 'text' | 'billboard' | 'glyph' | 'glyphFill' | 'glyphFilter' | 'wallpaper' | 'skybox' | 'fill3D' | 'line3D'
 
 export default class Program {
+  vertexShader: WebGLShader
+  fragmentShader: WebGLShader
   radii: boolean = false
-  compiled: boolean = false
   context: Context
   gl: WebGLRenderingContext
   glProgram: WebGLProgram
@@ -39,11 +40,10 @@ export default class Program {
     const attrLoc = gl.attributeLocations
     if (attrLoc) for (const attr in attrLoc) gl.bindAttribLocation(program, attrLoc[attr], attr)
     // load vertex and fragment shaders
-    const vertexShader = loadShader(gl, vertexShaderSource, gl.VERTEX_SHADER)
-    const fragmentShader = loadShader(gl, fragmentShaderSource, gl.FRAGMENT_SHADER)
+    const vertexShader = this.vertexShader = loadShader(gl, vertexShaderSource, gl.VERTEX_SHADER)
+    const fragmentShader = this.fragmentShader = loadShader(gl, fragmentShaderSource, gl.FRAGMENT_SHADER)
 
     if (vertexShader && fragmentShader) {
-      this.compiled = true
       gl.attachShader(program, vertexShader)
       gl.attachShader(program, fragmentShader)
       gl.linkProgram(program)
@@ -69,6 +69,12 @@ export default class Program {
       this.uFeatureCode = gl.getUniformLocation(program, 'uFeatureCode')
       this.uDevicePixelRatio = gl.getUniformLocation(program, 'uDevicePixelRatio')
     }
+  }
+
+  delete () {
+    const { gl, vertexShader, fragmentShader } = this
+    gl.deleteShader(vertexShader)
+    gl.deleteShader(fragmentShader)
   }
 
   use () {

@@ -31,4 +31,5 @@ void main () {
   int featureIndex = int(aIndex);
   // decode color
   color = decodeFeature(true, index, featureIndex);
+  color.rgb *= color.a;
 }

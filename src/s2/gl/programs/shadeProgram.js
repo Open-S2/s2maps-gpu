@@ -1,5 +1,5 @@
 // @flow
-/* global VertexArrayObject WebGLVertexArrayObject GLint */
+/* global */
 import Program from './program'
 
 import vertex1 from '../../shaders/shade1.vertex.glsl'
@@ -12,10 +12,6 @@ import type { Context } from '../contexts'
 import type { FeatureGuide, VectorTileSource } from '../../source/tile'
 
 export default class ShadeProgram extends Program {
-  vao: VertexArrayObject
-  vertexBuffer: WebGLVertexArrayObject
-  aPos: GLint // 'a_pos' vec4 attribute
-  update: boolean = true
   constructor (context: Context) {
     // get gl from context
     const { gl, type, devicePixelRatio } = context
@@ -40,10 +36,10 @@ export default class ShadeProgram extends Program {
     // get current source data
     let { count, offset, mode } = featureGuide
     // set blend type
-    context.setBlendShade()
+    context.shadeBlend()
     // draw elements
     gl.drawElements(mode || gl.TRIANGLES, count, gl.UNSIGNED_INT, (offset | 0) * 4)
     // revert back to current blend type
-    context.setBlendDefault()
+    context.defaultBlend()
   }
 }

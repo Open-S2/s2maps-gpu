@@ -60,8 +60,8 @@ export default class GlyphQuadProgram extends Program {
     this.setDevicePixelRatio(devicePixelRatio)
   }
 
-  setColor (set?: boolean) {
-    this.gl.uniform1i(this.uColor, set)
+  setColor (color?: boolean) {
+    this.gl.uniform1i(this.uColor, color)
   }
 
   setFill (state: boolean) {
@@ -129,6 +129,6 @@ export default class GlyphQuadProgram extends Program {
     // reset to active texture 0
     gl.activeTexture(gl.TEXTURE0)
     // set default blend
-    context.setBlendDefault()
+    context.defaultBlend()
   }
 }

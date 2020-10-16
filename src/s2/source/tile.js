@@ -124,6 +124,12 @@ export default class Tile {
     this._getMaskSource()
   }
 
+  // cleanup after itself. When a tile is deleted, it's adventageous to cleanup GPU cache.
+  delete () {
+    // remove all features
+    this.featureGuide = []
+  }
+
   // inject references to featureGuide from each parentTile. Sometimes if we zoom really fast, we inject
   // a parents' parent or deeper, so we need to reflect that int the tile property. The other case
   // is the tile wants to display a layer that exists in a 'lower' zoom than this one.
@@ -146,11 +152,11 @@ export default class Tile {
   }
 
   injectMaskLayers (layers: Array<Layer>) {
-    const { zoom } = this
+    const { zoom } = this // $FlowIgnore
     for (const layer of layers) {
       const { minzoom, maxzoom, layerIndex, type, code, lch, paint } = layer
       if (zoom < minzoom) continue
-      if (zoom > maxzoom) continue
+      if (zoom > maxzoom) continue // $FlowIgnore
       const feature: FeatureGuide = {
         maskLayer: true,
         tile: this,

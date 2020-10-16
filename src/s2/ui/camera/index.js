@@ -11,7 +11,7 @@ import { BlendProjection, OrthographicProjection, PerspectiveProjection } from '
 import type { Projection } from './projections'
 /** SOURCES **/
 import { Tile } from '../../source'
-import MapCache from '../../util/mapCache'
+import TileCache from './tileCache'
 
 import type { Face } from 's2projection'
 import type { TileDefinitions } from './projections/projector'
@@ -38,7 +38,7 @@ export default class Camera {
   style: Style
   painter: Painter
   projection: Projection
-  tileCache: MapCache
+  tileCache: TileCache
   tilesInView: TileDefinitions = [] // hash id's of the tiles
   lastTileViewState: Array<number> = []
   requestQueue: Array<Tile> = []
@@ -50,13 +50,13 @@ export default class Camera {
     // setup projection
     this.createProjection(options)
     // prep the tileCache for future tiles
-    this.tileCache = new MapCache(75)
+    this.tileCache = new TileCache(75)
   }
 
   clearCache () {
     // first clear the tile cache
-    this.tileCache.clear()
-    // clear any cache the painter might have (glyph textures)
+    this.tileCache.deleteAll()
+    // clear any cache the painter might have (i.e. glyph textures)
     this.painter.clearCache()
   }
 
@@ -221,7 +221,7 @@ export default class Camera {
     return this.tileCache.getBatch(this.tilesInView.map(t => t[4]))
   }
 
-  _render () {
+  _draw () {
     // dummy check, if nothing has changed, do nothing
     if (!this.painter.dirty && !this.style.dirty && !this.projection.dirty) return
     // console.log('this.projection', this.projection)

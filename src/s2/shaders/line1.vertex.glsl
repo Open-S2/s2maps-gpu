@@ -49,6 +49,7 @@ void main () {
   vec4 prev, curr, next, zero;
   // get the color
   color = uColor;
+  color.rgb *= color.a;
   // explain width to fragment shader
   float width = uWidth * uDevicePixelRatio;
   vWidth = vec2(width, 0.);

@@ -109,6 +109,27 @@ export default class GlyphFilterProgram extends Program {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
   }
 
+  delete () {
+    const {
+      gl,
+      pointTexture, quadTexture, resultTexture,
+      depthBuffer, pointFramebuffer, quadFramebuffer, resultFramebuffer
+    } = this
+    // delete textures
+    gl.deleteTexture(pointTexture)
+    gl.deleteTexture(quadTexture)
+    gl.deleteTexture(resultTexture)
+    this.textures = []
+    // delete renderBuffer
+    gl.deleteRenderbuffer(depthBuffer)
+    // delete framebuffers
+    gl.deleteFramebuffer(pointFramebuffer)
+    gl.deleteFramebuffer(quadFramebuffer)
+    gl.deleteFramebuffer(resultFramebuffer)
+    // cleanup programs
+    super.delete()
+  }
+
   resize () {
     const { gl } = this
     // fix texture sizes

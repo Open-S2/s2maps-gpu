@@ -43,6 +43,13 @@ export default class GlyphProgram extends Program {
     this.uOffset = gl.getUniformLocation(this.glProgram, 'uOffset')
   }
 
+  delete () {
+    // cleanup fbos
+    this.clearCache()
+    // cleanup programs
+    super.delete()
+  }
+
   injectFrameUniforms () {}
   flush () {}
 
@@ -124,15 +131,17 @@ export default class GlyphProgram extends Program {
 
   _deleteFBO (fbo: FBO) {
     const { gl } = this
-    gl.deleteTexture(fbo.texture)
-    gl.deleteRenderbuffer(fbo.stencil)
-    gl.deleteFramebuffer(fbo.glyphFramebuffer)
-    delete fbo.width
-    delete fbo.height
-    delete fbo.texSize
-    delete fbo.texture
-    delete fbo.stencil
-    delete fbo.glyphFramebuffer
+    if (fbo) {
+      gl.deleteTexture(fbo.texture)
+      gl.deleteRenderbuffer(fbo.stencil)
+      gl.deleteFramebuffer(fbo.glyphFramebuffer)
+      delete fbo.width
+      delete fbo.height
+      delete fbo.texSize
+      delete fbo.texture
+      delete fbo.stencil
+      delete fbo.glyphFramebuffer
+    }
   }
 
   setTexSize (texSize: Float32Array) {
@@ -189,7 +198,7 @@ export default class GlyphProgram extends Program {
     const indexLength = glyphFillIndices.length
     if (indexLength) {
       // prep blending type
-      context.inversionBlending()
+      context.inversionBlend()
       // now use current program
       this.use()
       // set the texture size uniform

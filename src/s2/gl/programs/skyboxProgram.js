@@ -1,5 +1,5 @@
 // @flow
-/* global createImageBitmap GLint WebGLTexture VertexArrayObject WebGLVertexArrayObject */
+/* global createImageBitmap GLint WebGLTexture */
 import Program from './program'
 import Map from '../../ui/map'
 import requestData from '../../util/fetch'
@@ -15,8 +15,6 @@ import type { Context } from '../contexts'
 import type { Wallpaper, Skybox } from '../../source/wallpaper'
 
 export default class SkyboxProgram extends Program {
-  vao: VertexArrayObject
-  vertexBuffer: WebGLVertexArrayObject
   aPos: GLint // 'a_pos' vec4 attribute
   cubeMap: WebGLTexture
   facesReady: number = 0
@@ -70,8 +68,6 @@ export default class SkyboxProgram extends Program {
     const { gl } = context
     // now we draw
     gl.useProgram(this.glProgram)
-    // bind the vao
-    gl.bindVertexArray(this.vao)
     // if renderable, time to draw
     if (this.renderable) {
       // ignore z-fighting and only pass where stencil is 0

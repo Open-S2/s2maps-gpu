@@ -25,6 +25,7 @@ export default class MapWorker implements Worker {
     else if (type === 'jumpTo') this.map.jumpTo(data.lon, data.lat, data.zoom)
     else if (type === 'moveState') this.map.canMove = !!data.state
     else if (type === 'zoomState') this.map.canZoom = !!data.state
+    else if (type === 'delete') this.map.delete()
     else this.map.injectData(data)
   }
 

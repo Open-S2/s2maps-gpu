@@ -1,5 +1,5 @@
 // @flow
-/* global GLint WebGLUniformLocation VertexArrayObject WebGLVertexArrayObject */
+/* global GLint WebGLUniformLocation */
 import Program from './program'
 
 // WEBGL1
@@ -13,8 +13,6 @@ import type { Context } from '../contexts'
 import type { Wallpaper, WallpaperUniforms } from '../../source/wallpaper'
 
 export default class WallpaperProgram extends Program {
-  vao: VertexArrayObject
-  vertexBuffer: WebGLVertexArrayObject
   aPos: GLint // 'a_pos' vec4 attribute
   uScale: WebGLUniformLocation // 'u_scale' vec2 uniform
   uBackgroundColor: WebGLUniformLocation
@@ -39,8 +37,6 @@ export default class WallpaperProgram extends Program {
   draw (wallpaper: Wallpaper) {
     // setup variables
     const { context, gl } = this
-    // bind the vao
-    gl.bindVertexArray(this.vao)
     // ignore z-fighting and only pass where stencil is 0
     context.wallpaperState()
     // ensure we are using equal depth test like rasters
