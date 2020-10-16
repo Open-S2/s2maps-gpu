@@ -33,6 +33,7 @@ export default class TileCache extends Map<number, Tile> {
   }
 
   _delete (key: number) {
+    this.order.splice(this.order.indexOf(key), 1)
     const tile = super.get(key)
     if (tile) tile.delete()
     return super.delete(key)
