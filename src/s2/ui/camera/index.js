@@ -50,7 +50,7 @@ export default class Camera {
     // setup projection
     this.createProjection(options)
     // prep the tileCache for future tiles
-    this.tileCache = new TileCache(75)
+    this.tileCache = new TileCache()
   }
 
   clearCache () {

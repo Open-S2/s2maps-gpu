@@ -4,7 +4,7 @@ import { Tile } from '../../source'
 export default class TileCache extends Map<number, Tile> {
   maxCacheSize: number
   order: Array<number>
-  constructor (maxCacheSize?: number = 75) {
+  constructor (maxCacheSize?: number = 85) {
     super()
     this.maxCacheSize = maxCacheSize
     this.order = []
