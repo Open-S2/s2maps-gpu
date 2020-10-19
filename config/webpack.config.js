@@ -371,7 +371,7 @@ module.exports = function(webpackEnv) {
               ]
             },
             {
-              test: [/\.bmp$/, /\.gif$/, /\.jpe?g$/, /\.png$/],
+              test: [/\.bmp$/, /\.gif$/, /\.jpe?g$/, /\.png$/, /\.webp$/],
               loader: require.resolve('url-loader'),
               options: {
                 limit: imageInlineSizeLimit,
@@ -527,23 +527,23 @@ module.exports = function(webpackEnv) {
       ],
     },
     plugins: [
-      new CompressionPlugin({
-        filename: '[path].gz',
-        algorithm: 'gzip',
-        test: /\.js$|\.css$|\.html$/,
-        threshold: 0,
-        minRatio: 1
-      }),
-      new CompressionPlugin({
-        filename: '[path].br',
-        algorithm: 'brotliCompress',
-        test: /\.(js|css|html|svg)$/,
-        compressionOptions: {
-          level: 11,
-        },
-        threshold: 0,
-        minRatio: 1
-      }),
+      // new CompressionPlugin({
+      //   filename: '[path].gz',
+      //   algorithm: 'gzip',
+      //   test: /\.js$|\.css$|\.html$/,
+      //   threshold: 0,
+      //   minRatio: 1
+      // }),
+      // new CompressionPlugin({
+      //   filename: '[path].br',
+      //   algorithm: 'brotliCompress',
+      //   test: /\.(js|css|html|svg)$/,
+      //   compressionOptions: {
+      //     level: 11,
+      //   },
+      //   threshold: 0,
+      //   minRatio: 1
+      // }),
       // new WorkerPlugin(),
       // Generates an `index.html` file with the <script> injected.
       new HtmlWebpackPlugin(
