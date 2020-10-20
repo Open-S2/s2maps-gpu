@@ -1,30 +1,67 @@
 // @flow
 // This is polyfill class for Safari as it does not support EventTarget as a constructor
-export default class EventListener {
-  listeners = {}
-
-  addEventListener (type: string, callback: Function) {
-    if (!(type in this.listeners)) {
-      this.listeners[type] = []
-    }
-    this.listeners[type].push(callback)
-  }
-
-  removeEventListener (type: string, callback: Function) {
-    if (!(type in this.listeners)) return
-    let stack = this.listeners[type]
-    for (let i = 0, l = stack.length; i < l; i++) {
-      if (stack[i] === callback) {
-        stack.splice(i, 1)
-        return
+// pulled from https://github.com/ungap/event-target/blob/master/index.js
+const self = this || {}
+try {
+  self.EventTarget = new EventTarget()
+} catch (EventTarget) {
+  (function (Object, wm) {
+    const create = Object.create
+    const defineProperty = Object.defineProperty
+    const proto = EventTarget.prototype
+    define(proto, 'addEventListener', function (type, listener, options) {
+      const secret = wm.get(this)
+      const listeners = secret[type] || (secret[type] = [])
+      for (let i = 0, length = listeners.length; i < length; i++) {
+        if (listeners[i].listener === listener) return
       }
+      listeners.push({ target: this, listener: listener, options: options })
+    })
+    define(proto, 'dispatchEvent', function (event) {
+      const secret = wm.get(this)
+      const listeners = secret[event.type]
+      if (listeners) {
+        define(event, 'target', this)
+        define(event, 'currentTarget', this)
+        listeners.slice(0).forEach(dispatch, event)
+        delete event.currentTarget
+        delete event.target
+      }
+      return true
+    })
+    define(proto, 'removeEventListener', function (type, listener) {
+      for (let
+        secret = wm.get(this),
+        /* istanbul ignore next */
+        listeners = secret[type] || (secret[type] = []),
+        i = 0, length = listeners.length; i < length; i++
+      ) {
+        if (listeners[i].listener === listener) {
+          listeners.splice(i, 1)
+          return
+        }
+      }
+    })
+    self.EventTarget = EventTarget
+    function EventTarget () {
+      wm.set(this, create(null))
     }
-  }
-
-  dispatchEvent (event: Event) {
-    if (!(event.type in this.listeners)) return true
-    let stack = this.listeners[event.type].slice()
-    for (let i = 0, l = stack.length; i < l; i++) stack[i].call(this, event)
-    return !event.defaultPrevented
-  }
+    function define (target, name, value) {
+      defineProperty(
+        target,
+        name,
+        {
+          configurable: true,
+          writable: true,
+          value: value
+        }
+      )
+    }
+    function dispatch (info) {
+      const options = info.options
+      if (options && options.once) info.target.removeEventListener(this.type, info.listener)
+      if (typeof info.listener === 'function') info.listener.call(info.target, this)
+      else info.listener.handleEvent(this)
+    }
+  }(Object, new WeakMap()))
 }

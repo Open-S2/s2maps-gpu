@@ -1,6 +1,5 @@
 // @flow
 /* global Event */
-import EventListener from '../../util/EventListener'
 
 type TouchEvent = {
   length: number,
@@ -15,7 +14,7 @@ function easeOutExp (delta: number, movement: number, animationLength: number): 
   return -movement * (-Math.pow(2, -10 * delta / animationLength) + 1) + movement
 }
 
-export default class DragPan extends EventListener {
+export default class DragPan extends EventTarget {
   zoomActive: boolean = false // allow two finger zooming
   mouseActive: boolean = false // when a user presses left click and moves during the press
   wasActive: boolean = false // if a onMouseDown event comes up, we want to check if the map was previously active to avoid unecessary click events

@@ -6,7 +6,7 @@ import type MapWorker from './workers/map.worker.js'
 // This is a builder / api instance for the end user.
 // We want individual map instances in their own web worker thread. However,
 // we only want one instance of webWorkerPool to run for all map instances.
-export default class S2Map {
+export default class S2Map extends EventTarget {
   _container: HTMLElement
   _canvasContainer: HTMLElement
   _navigationContainer: HTMLElement
@@ -17,6 +17,7 @@ export default class S2Map {
   map: Map | MapWorker
   id: string = Math.random().toString(36).replace('0.', '')
   constructor (options: MapOptions) {
+    super()
     this._canvasMultiplier = options.canvasMultiplier = Math.max(2, options.canvasMultiplier || this._canvasMultiplier)
     // get the container
     if (typeof options.container === 'string') {
@@ -146,8 +147,10 @@ export default class S2Map {
     else window.addEventListener('resize', this._resize.bind(this))
     // now that canvas is setup, add control containers as necessary
     this._setupControlContainer(options)
-    // lastly let the S2WorkerPool know of this maps existance
+    // let the S2WorkerPool know of this maps existance
     window.S2WorkerPool.addMap(this)
+    // lastly emit that the map is ready for commands
+    this.dispatchEvent(new Event('ready'))
   }
 
   _onTouch (e: TouchEvent, type: string) {
@@ -241,19 +244,19 @@ export default class S2Map {
 
   setMoveState (state: boolean) { // $FlowIgnore
     const { _offscreen, map } = this
-    if (_offscreen) map.postMessage({ type: 'moveState', state }) // $FlowIgnore
+    if (_offscreen && map) map.postMessage({ type: 'moveState', state }) // $FlowIgnore
     else if (map) map.setMoveState(state)
   }
 
   setZoomState (state: boolean) { // $FlowIgnore
     const { _offscreen, map } = this
-    if (_offscreen) map.postMessage({ type: 'zoomState', state }) // $FlowIgnore
+    if (_offscreen && map) map.postMessage({ type: 'zoomState', state }) // $FlowIgnore
     else if (map) map.setZoomState(state)
   }
 
   jumpTo (lon: number, lat: number, zoom: number) {
     const { _offscreen, map } = this
-    if (_offscreen) map.postMessage({ type: 'jumpTo', lon, lat, zoom }) // $FlowIgnore
+    if (_offscreen && map) map.postMessage({ type: 'jumpTo', lon, lat, zoom }) // $FlowIgnore
     else if (map) map.jumpTo(lon, lat, zoom)
   }
 

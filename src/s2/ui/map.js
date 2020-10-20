@@ -68,10 +68,10 @@ export default class Map extends Camera {
   delete () {
     // delete all tiles
     this.tileCache.deleteAll()
-    // dereference the style object
+    // dereference the style object $FlowIgnore
     this.style = {}
     // to ensure no more draws, set the draw method to a noop
-    this._draw = () => {}
+    this._draw = () => {} // eslint-disable-line
     // tell the painter to cleanup
     this.painter.delete()
   }
@@ -274,7 +274,7 @@ export default class Map extends Camera {
       if (self.injectionQueue.length) {
         // pull out the latest data we received (think about it, the newest data is the most constructive)
         const data = self.injectionQueue.pop()
-        // inject
+        // tell the camera to inject data
         self._injectData(data)
         // actually draw
         self._draw()
@@ -288,7 +288,7 @@ export default class Map extends Camera {
 }
 
 function injectionDataSort (a, b) {
-  const sortMethod = (type) => (type === 'parentLayers') ? 0 : (type === 'glyphdata') ? 1 : 2
+  const sortMethod = (type) => (type === 'parentLayers') ? 0 : 1
 
   return sortMethod(b.type) - sortMethod(a.type)
 }
