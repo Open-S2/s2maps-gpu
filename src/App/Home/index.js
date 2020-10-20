@@ -9,6 +9,8 @@ import LightWEBP from './light.webp'
 import LightJPG from './light.jpg'
 import RasterWEBP from './raster.webp'
 import RasterJPG from './raster.jpg'
+import GeoJSONWEBP from './geojson.webp'
+import GeoJSONJPG from './geojson.jpg'
 import DEM from './dem.mp4'
 
 function Home () {
@@ -69,6 +71,15 @@ function Home () {
               <source loading='lazy' src={DEM} type='video/mp4' />
             </video>
             <div className='link-name'>DEM</div>
+          </Link>
+
+          <Link to='/geojson' className='link-container'>
+            <picture>
+              <source async loading='lazy' width='640px' height='329px' alt='geojson' srcSet={GeoJSONWEBP} type='image/webp' />
+              <source async loading='lazy' width='640px' height='329px' alt='geojson' srcSet={GeoJSONJPG} type='image/jpeg' />
+              <img async loading='lazy' width='640px' height='329px' alt='geojson' src={GeoJSONJPG} />
+            </picture>
+            <div className='link-name'>GeoJSON</div>
           </Link>
 
         </div>
