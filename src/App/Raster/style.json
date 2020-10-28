@@ -4,14 +4,14 @@
   "center": [0, 0],
   "zoom": 0,
   "minzoom": 0,
-  "maxzoom": 4.9,
+  "maxzoom": 6.9,
   "sources": {
     "satellite": {
-      "path": "http://localhost:8000/data/sat2",
+      "path": "https://s3.s2maps.io/satellite-v1",
       "type": "raster",
       "fileType": "jpg",
       "minzoom": 0,
-      "maxzoom": 5,
+      "maxzoom": 7,
       "tileSize": 512
     }
   },
