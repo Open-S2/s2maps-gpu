@@ -4,14 +4,14 @@
   "center": [0, 0],
   "zoom": 0,
   "minzoom": 0,
-  "maxzoom": 4.9,
+  "maxzoom": 2.99,
   "sources": {
     "satellite": {
-      "path": "http://localhost:8000/data/sat2",
+      "path": "http://localhost:8000/data/mars",
       "type": "raster",
       "fileType": "jpg",
       "minzoom": 0,
-      "maxzoom": 5,
+      "maxzoom": 3,
       "tileSize": 512
     }
   },
@@ -39,6 +39,12 @@
       "id": "sat",
       "source": "satellite",
       "type": "raster"
+    },
+    {
+      "name": "shade",
+      "source": "mask",
+      "type": "shade",
+      "maxzoom": 2
     }
   ]
 }

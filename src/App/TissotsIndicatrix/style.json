@@ -1,13 +1,13 @@
 {
   "version": 1,
   "name": "s2test",
-  "center": [-122.444700, 37.780739],
+  "center": [0, 0],
   "zoom": 0,
   "minzoom": 0,
   "maxzoom": 20,
   "sources": {
     "world": "https://s3.s2maps.io/streets-v1",
-    "covid": "https://s3.s2maps.io/s2json/covid2019.s2json"
+    "tissots": "https://s3.s2maps.io/s2json/tissotsIndicatrix.s2json"
   },
   "fonts": {
     "default": "https://s3.s2maps.io/fonts-v2/default",
@@ -200,51 +200,6 @@
       }
     },
     {
-      "name": "covid-fill",
-      "source": "covid",
-      "type": "fill",
-      "minzoom": 0,
-      "paint": {
-        "color": [
-          "data-condition",
-          ["density", "<=", 341],
-          "rgba(5, 25, 55, 0.75)",
-          ["density", "<=", 1015],
-          "rgba(0, 64, 95, 0.75)",
-          ["density", "<=", 2000],
-          "rgba(0, 106, 130, 0.75)",
-          ["density", "<=", 3174],
-          "rgba(0, 145, 151, 0.75)",
-          ["density", "<=", 5911],
-          "rgba(0, 186, 146, 0.75)",
-          ["density", "<=", 13319],
-          "rgba(40, 206, 123, 0.75)",
-          ["density", "<=", 28804],
-          "rgba(105, 222, 86, 0.75)",
-          "default",
-          "rgba(168, 235, 18, 0.75)"
-        ]
-      }
-    },
-    {
-      "name": "covid-border",
-      "source": "covid",
-      "type": "line",
-      "minzoom": 0,
-      "paint": {
-        "color": "rgb(250, 250, 250)",
-        "width": [
-          "input-range",
-          "zoom",
-          "lin",
-          0,
-          1.25,
-          3,
-          3
-        ]
-      }
-    },
-    {
       "name": "equator",
       "source": "world",
       "layer": "equator",
@@ -269,95 +224,37 @@
       }
     },
     {
+      "name": "tissots-fill",
+      "source": "tissots",
+      "type": "fill",
+      "minzoom": 0,
+      "paint": {
+        "color": "rgba(220, 83, 83, 0.75)"
+      }
+    },
+    {
+      "name": "tissots-border",
+      "source": "tissots",
+      "type": "line",
+      "minzoom": 0,
+      "paint": {
+        "color": "rgba(220, 83, 83, 0.75)",
+        "width": [
+          "input-range",
+          "zoom",
+          "lin",
+          0,
+          1.25,
+          3,
+          3
+        ]
+      }
+    },
+    {
       "name": "shade",
       "source": "mask",
       "type": "shade",
       "maxzoom": 2
-    },
-    {
-      "name": "country_state",
-      "source": "world",
-      "filter": ["class", "has", ["Country", "State"]],
-      "layer": "place",
-      "type": "text",
-      "layout": {
-        "family": "roboto-medium",
-        "field": [
-          "data-condition",
-          ["class", "==", "State"],
-          [
-            "input-range",
-            "zoom",
-            "step",
-            0,
-            "?abbr,?name",
-            2,
-            "?!Uname"
-          ],
-          "default",
-          "?name"
-        ],
-        "anchor": "center",
-        "offset": [0, 0],
-        "padding": [1, 1]
-      },
-      "paint": {
-        "size": [
-          "data-condition",
-          ["class", "==", "Country"],
-          [
-            "input-range",
-            "zoom",
-            "expo",
-            1.5,
-            0,
-            17,
-            4,
-            40
-          ],
-          ["class", "==", "State"],
-          [
-            "input-range",
-            "zoom",
-            "expo",
-            1.5,
-            0,
-            12,
-            4,
-            20,
-            7,
-            36
-          ],
-          "default",
-          14
-        ],
-        "fill": [
-          "data-condition",
-          ["class", "==", "Country"],
-          "rgb(42, 42, 42)",
-          ["class", "==", "State"],
-          "rgb(80, 80, 80)",
-          "default",
-          "rgba(0, 0, 0, 0)"
-        ],
-        "stroke": "rgba(255, 255, 255, 0.5)",
-        "strokeWidth": [
-          "data-condition",
-          ["class", "==", "State"],
-          [
-            "input-range",
-            "zoom",
-            "expo",
-            1.5,
-            0,
-            0.5,
-            4,
-            0.3
-          ],
-          "default",
-          0.2
-        ]
-      }
     }
   ]
 }

@@ -11,6 +11,8 @@ import RasterWEBP from './raster.webp'
 import RasterJPG from './raster.jpg'
 import GeoJSONWEBP from './geojson.webp'
 import GeoJSONJPG from './geojson.jpg'
+import TissotsWEBP from './tissots.webp'
+import TissotsJPG from './tissots.jpg'
 import DEM from './dem.mp4'
 
 function Home () {
@@ -75,9 +77,18 @@ function Home () {
 
           <Link to='/geojson' className='link-container'>
             <picture>
-              <source async loading='lazy' width='640px' height='329px' alt='geojson' srcSet={GeoJSONWEBP} type='image/webp' />
-              <source async loading='lazy' width='640px' height='329px' alt='geojson' srcSet={GeoJSONJPG} type='image/jpeg' />
-              <img async loading='lazy' width='640px' height='329px' alt='geojson' src={GeoJSONJPG} />
+              <source async loading='lazy' width='640px' height='363px' alt='geojson' srcSet={GeoJSONWEBP} type='image/webp' />
+              <source async loading='lazy' width='640px' height='363px' alt='geojson' srcSet={GeoJSONJPG} type='image/jpeg' />
+              <img async loading='lazy' width='640px' height='363px' alt='geojson' src={GeoJSONJPG} />
+            </picture>
+            <div className='link-name'>GeoJSON</div>
+          </Link>
+
+          <Link to='/tissots' className='link-container'>
+            <picture>
+              <source async loading='lazy' width='640px' height='363px' alt='tissots' srcSet={TissotsWEBP} type='image/webp' />
+              <source async loading='lazy' width='640px' height='363px' alt='tissots' srcSet={TissotsJPG} type='image/jpeg' />
+              <img async loading='lazy' width='640px' height='363px' alt='tissots' src={TissotsJPG} />
             </picture>
             <div className='link-name'>GeoJSON</div>
           </Link>

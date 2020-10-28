@@ -534,12 +534,6 @@
       }
     },
     {
-      "name": "shade",
-      "source": "mask",
-      "type": "shade",
-      "maxzoom": 2
-    },
-    {
       "name": "tiles",
       "source": "tiles",
       "layer": "boundary",
@@ -552,6 +546,12 @@
         "color": "rgb(213, 57, 55)",
         "width": 1.5
       }
+    },
+    {
+      "name": "shade",
+      "source": "mask",
+      "type": "shade",
+      "maxzoom": 2
     },
     {
       "name": "country_state",
