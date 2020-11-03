@@ -61,9 +61,9 @@ function Home () {
 
           <Link to='/raster' className='link-container'>
             <picture>
-              <source async loading='lazy' width='640px' height='329px' alt='raster' srcSet={RasterWEBP} type='image/webp' />
-              <source async loading='lazy' width='640px' height='329px' alt='raster' srcSet={RasterJPG} type='image/jpeg' />
-              <img async loading='lazy' width='640px' height='329px' alt='raster' src={RasterJPG} />
+              <source async loading='lazy' width='640px' height='363px' alt='raster' srcSet={RasterWEBP} type='image/webp' />
+              <source async loading='lazy' width='640px' height='363px' alt='raster' srcSet={RasterJPG} type='image/jpeg' />
+              <img async loading='lazy' width='640px' height='363px' alt='raster' src={RasterJPG} />
             </picture>
             <div className='link-name'>Raster</div>
           </Link>

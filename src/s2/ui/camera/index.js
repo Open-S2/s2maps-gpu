@@ -224,7 +224,6 @@ export default class Camera {
   _draw () {
     // dummy check, if nothing has changed, do nothing
     if (!this.painter.dirty && !this.style.dirty && !this.projection.dirty) return
-    // console.log('this.projection', this.projection)
     // prep tiles
     const tiles = this._getTiles()
     // paint scene

@@ -62,7 +62,7 @@ export default class Map extends Camera {
     // style will tell the painter what programs it will be using
     this.style = new Style(options, this)
     // build style
-    this.setStyle(style)
+    this.setStyle(style, false)
   }
 
   delete () {
@@ -76,13 +76,13 @@ export default class Map extends Camera {
     this.painter.delete()
   }
 
-  setStyle (style: string | Object) {
+  setStyle (style: string | Object, ignorePosition: boolean) {
     // incase style was imported, clear cache
     this.clearCache()
     // build style for the map, painter, and webworkers
     this.style.buildStyle(style)
     // inject minzoom and maxzoom
-    this.projection.setStyleParameters(this.style)
+    this.projection.setStyleParameters(this.style, ignorePosition)
     // render our first pass
     this.render()
   }

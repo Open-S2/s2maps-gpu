@@ -21,7 +21,7 @@ export default class MapWorker implements Worker {
     else if (type === 'touchend') this.map.dragPan.onTouchEnd(data.touchEvent)
     else if (type === 'touchmove') this.map.dragPan.onTouchMove(data.touchEvent)
     else if (type === 'nav') this.map.navEvent(data.ctrl)
-    else if (type === 'setStyle') this.map.setStyle(data.style)
+    else if (type === 'setStyle') this.map.setStyle(data.style, data.ignorePosition)
     else if (type === 'jumpTo') this.map.jumpTo(data.lon, data.lat, data.zoom)
     else if (type === 'moveState') this.map.canMove = !!data.state
     else if (type === 'zoomState') this.map.canZoom = !!data.state

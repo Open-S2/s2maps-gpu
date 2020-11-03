@@ -236,10 +236,10 @@ export default class S2Map extends EventTarget {
   }
 
   /** API **/
-  setStyle (style: Object) { // $FlowIgnore
+  setStyle (style: Object, ignorePosition: boolean = true) { // $FlowIgnore
     const { _offscreen, map } = this
-    if (_offscreen && map) map.postMessage({ type: 'setStyle', style }) // $FlowIgnore
-    else if (map) map.setStyle(style)
+    if (_offscreen && map) map.postMessage({ type: 'setStyle', style, ignorePosition }) // $FlowIgnore
+    else if (map) map.setStyle(style, ignorePosition)
   }
 
   setMoveState (state: boolean) { // $FlowIgnore

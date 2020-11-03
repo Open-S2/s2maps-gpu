@@ -56,13 +56,14 @@ export default class Projector implements Projection {
     if (config.canvasMultiplier) this.multiplier = config.canvasMultiplier
   }
 
-  setStyleParameters (style) {
+  setStyleParameters (style, ignorePosition: boolean) {
     const { minzoom, maxzoom, zoom, lon, lat } = style
     // clamp values and ensure minzoom is less than maxzoom
     this.minzoom = (minzoom < -10) ? -10 : (minzoom > maxzoom) ? maxzoom - 1 : (minzoom > 29) ? 29 : minzoom
     this.maxzoom = (maxzoom > 30) ? 30 : (maxzoom < this.minzoom) ? this.minzoom + 1 : maxzoom
     // set position
-    this.setPosition(lon, lat, zoom)
+    if (!ignorePosition) this.setPosition(lon, lat, zoom)
+    else this.dirty = true // ensure this projector is dirty (incase of ignorePosition === true)
   }
 
   setPosition (lon: number, lat: number, zoom: number) {

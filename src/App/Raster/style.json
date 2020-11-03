@@ -4,14 +4,14 @@
   "center": [0, 0],
   "zoom": 0,
   "minzoom": 0,
-  "maxzoom": 6.9,
+  "maxzoom": 4.9,
   "sources": {
     "satellite": {
-      "path": "https://s3.s2maps.io/satellite-v1",
+      "path": "https://s3.s2maps.io/modis-v1/7",
       "type": "raster",
       "fileType": "jpg",
       "minzoom": 0,
-      "maxzoom": 7,
+      "maxzoom": 5,
       "tileSize": 512
     }
   },
