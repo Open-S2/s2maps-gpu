@@ -8,24 +8,24 @@ export default function buildTile (tile: TileRequest) {
   return {
     layers: {
       'boundary': {
-        extent: 4096,
+        extent: 8192,
         length: 1,
         feature: () => {
           return {
             properties: { hash, face, zoom, x, y },
             type: 3, // Polygon
-            loadGeometry: () => { return [[[0, 0], [4096, 0], [4096, 4096], [0, 4096], [0, 0]]] }
+            loadGeometry: () => { return [[[0, 0], [8192, 0], [8192, 8192], [0, 8192], [0, 0]]] }
           }
         }
       },
       'name': {
-        extent: 4096,
+        extent: 8192,
         length: 1,
         feature: () => {
           return {
             properties: { hash, face, zoom, x, y },
             type: 1, // Point
-            loadGeometry: () => { return [[0, 4096]] }
+            loadGeometry: () => { return [[0, 8192]] }
           }
         }
       }

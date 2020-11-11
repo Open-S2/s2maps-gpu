@@ -90,7 +90,7 @@ function Home () {
               <source async loading='lazy' width='640px' height='363px' alt='tissots' srcSet={TissotsJPG} type='image/jpeg' />
               <img async loading='lazy' width='640px' height='363px' alt='tissots' src={TissotsJPG} />
             </picture>
-            <div className='link-name'>GeoJSON</div>
+            <div className='link-name'>Tissot's Indicatrix</div>
           </Link>
 
         </div>

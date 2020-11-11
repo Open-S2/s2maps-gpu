@@ -54,8 +54,8 @@ void main () {
   // explain width to fragment shader
   vWidth = vec2(width, 0.);
   // get the position in projected space
-  curr = uMatrix * STtoXYZ(aCurr / 4096.);
-  next = uMatrix * STtoXYZ(aNext / 4096.);
+  curr = uMatrix * STtoXYZ(aCurr / 8192.);
+  next = uMatrix * STtoXYZ(aNext / 8192.);
   zero = uMatrix * vec4(0., 0., 0., 1.);
   // adjust by w & get the position in screen space
   curr.xyz /= curr.w;
@@ -91,7 +91,7 @@ void main () {
       gl_Position = vec4(nextScreen + (currPerp * width / uAspect), next.z, 1.);
     } else if ((aType == 5. || aType == 6.) && aPrev != aCurr) {
       // get previous
-      prev = uMatrix * STtoXYZ(aPrev / 4096.);
+      prev = uMatrix * STtoXYZ(aPrev / 8192.);
       prev.xyz /= prev.w;
       vec2 prevScreen = prev.xy;
       vec2 prevPerp = perpNormal(currScreen, prevScreen);

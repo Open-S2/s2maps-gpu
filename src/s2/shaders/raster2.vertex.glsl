@@ -13,7 +13,7 @@ out vec2 vTexcoord;
 
 void main () {
   // set where we are on the texture
-  vec2 pos = aPos / 4096.;
+  vec2 pos = aPos / 8192.;
   vTexcoord = pos;
   // prep xyz
   vec4 xyz = STtoXYZ(pos);

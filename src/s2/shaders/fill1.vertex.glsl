@@ -19,7 +19,7 @@ varying vec4 color;
 
 void main () {
   // set position
-  vec4 xyz = STtoXYZ(aPos / 4096.);
+  vec4 xyz = STtoXYZ(aPos / 8192.);
   // if 3D, add radius
   if (u3D) {
     float radius = 1. + (aRadius * 500.);

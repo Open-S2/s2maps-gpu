@@ -13,9 +13,9 @@ export default function buildMask (division: number, context: WebGL2Context | We
   // now we can build out the vertices and indices
   // vertices
   for (let j = 0; j <= division; j++) {
-    t = 4096 / division * j
+    t = 8192 / division * j
     for (let i = 0; i <= division; i++) {
-      s = 4096 / division * i
+      s = 8192 / division * i
       vertices.push(s, t)
     }
   }

@@ -11,6 +11,7 @@ const DEM = lazy(() => import('./App/DEM'))
 const Raster = lazy(() => import('./App/Raster'))
 const Mars = lazy(() => import('./App/Mars'))
 const Streets = lazy(() => import('./App/Streets'))
+const StreetsTest = lazy(() => import('./App/StreetsTest'))
 const Light = lazy(() => import('./App/Light'))
 const Dark = lazy(() => import('./App/Dark'))
 const GeoJSON = lazy(() => import('./App/GeoJSON'))
@@ -28,6 +29,7 @@ ReactDOM.render(
         <Route path='/raster' component={Raster} />
         <Route path='/mars' component={Mars} />
         <Route path='/streets' component={Streets} />
+        <Route path='/streets-test' component={StreetsTest} />
         <Route path='/light' component={Light} />
         <Route path='/dark' component={Dark} />
         <Route path='/geojson' component={GeoJSON} />

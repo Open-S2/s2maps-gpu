@@ -14,6 +14,8 @@ export default function preprocessLine (geometry: Array<Array<Point>>,
     for (const poly of geometry) geo.push(...poly)
     geometry = geo
   }
+  // create multiplier
+  const multiplier = 8192 / extent
   // draw
   for (const lineString of geometry) {
     // build the vertex, normal, and index data
@@ -22,9 +24,9 @@ export default function preprocessLine (geometry: Array<Array<Point>>,
     let verticesCount = curr.length
     for (let i = 0; i < verticesCount; i += 2) {
       vertices.push(
-        prev[i], prev[i + 1],
-        curr[i], curr[i + 1],
-        next[i], next[i + 1]
+        prev[i] * multiplier, prev[i + 1] * multiplier,
+        curr[i] * multiplier, curr[i + 1] * multiplier,
+        next[i] * multiplier, next[i + 1] * multiplier
       )
     }
   }

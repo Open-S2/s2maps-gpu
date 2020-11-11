@@ -15,14 +15,16 @@ export default function preprocessFill (geometry: Array<Array<Point>> | Array<Po
   if (type === 4) {
     for (const poly of geometry) polys.push(poly)
   } else { polys.push(geometry) }
+  // create multiplier
+  const multiplier = 8192 / extent
   // process
   for (const poly of polys) {
     // create triangle mesh
     let data = earclip(poly, extent / division, vertices.length / 2)
     // let data = zeroClip(poly, vertices.length / 2)
     // store vertices
-    if (extent === 4096) for (let i = 0, vl = data.vertices.length; i < vl; i++) vertices.push(data.vertices[i])
-    else for (let i = 0, vl = data.vertices.length; i < vl; i++) vertices.push(Math.round(data.vertices[i] / extent * 4096))
+    if (extent === 8192) for (let i = 0, vl = data.vertices.length; i < vl; i++) vertices.push(data.vertices[i])
+    else for (let i = 0, vl = data.vertices.length; i < vl; i++) vertices.push(Math.round(data.vertices[i] * multiplier))
     // store indices
     for (let i = 0, il = data.indices.length; i < il; i++) indices.push(data.indices[i])
   }
