@@ -317,7 +317,7 @@ export default class TileWorker {
     // find the appropriate margin of error
     const approxBestError = s2rtin.approximateBestError(zoom)
     // build the mesh
-    const mesh = tile.getMesh(approxBestError)
+    const mesh = tile.getMesh(approxBestError, 8192)
     const vertexBuffer = mesh.vertices.buffer
     const indexBuffer = mesh.triangles.buffer
     const radiiBuffer = mesh.radii.buffer
