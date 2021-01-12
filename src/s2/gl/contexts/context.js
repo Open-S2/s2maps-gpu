@@ -168,6 +168,11 @@ export default class Context {
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
   }
 
+  sourceOnlyBlend () {
+    const { gl } = this
+    gl.blendFunc(gl.ONE, gl.ZERO)
+  }
+
   shadeBlend () {
     const { gl } = this
     gl.blendFunc(gl.DST_COLOR, gl.ZERO)

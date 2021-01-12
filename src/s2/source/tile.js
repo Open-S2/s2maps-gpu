@@ -275,7 +275,7 @@ export default class Tile {
       const [layerIndex, count, offset, encodingSize] = featureGuideArray.slice(i, i + 4)
       i += 4
       // grab the layers type and code
-      const { type, code, lch } = layers[layerIndex]
+      const { type, code, lch, blend } = layers[layerIndex]
       // create and store the featureGuide
       const feature = {
         tile: this,
@@ -288,7 +288,8 @@ export default class Tile {
         type,
         featureCode: new Float32Array(encodingSize ? [...featureGuideArray.slice(i, i + encodingSize)] : [0]), // NOTE: The sorting algorithm doesn't work if an array is empty, so we have to have at least one number, just set it to 0
         layerCode: code,
-        lch
+        lch,
+        blend
       }
       i += encodingSize
       // if webgl1, we have color (and width if line) data

@@ -35,8 +35,9 @@ export default class FillProgram extends Program {
     const { context } = this
     const { gl, type } = context
     // get current source data
-    let { count, featureCode, color, offset, mode } = featureGuide
+    let { count, featureCode, color, offset, mode, blend } = featureGuide
     const { threeD } = source
+    if (blend === 'srcOnly') context.sourceOnlyBlend()
     // set 3D uniform
     this.set3D(threeD)
     // set feature code (webgl 1 we store the colors, webgl 2 we store layerCode lookups)
@@ -45,5 +46,6 @@ export default class FillProgram extends Program {
     } else { this.setFeatureCode(featureCode) }
     // draw elements
     gl.drawElements(mode || gl.TRIANGLES, count, gl.UNSIGNED_INT, (offset | 0) * 4)
+    if (blend === 'srcOnly') context.defaultBlend()
   }
 }

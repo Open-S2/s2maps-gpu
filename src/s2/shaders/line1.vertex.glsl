@@ -51,10 +51,10 @@ void main () {
   float width;
   vec4 prev, curr, next, zero;
   // decode color
-  color = decodeFeature(true, index, featureIndex);
+  color = uColor;
   color.rgb *= color.a;
   // decode line width
-  width = decodeFeature(false, index, featureIndex)[0] * uDevicePixelRatio;
+  width = uWidth * uDevicePixelRatio;
   // explain width to fragment shader
   vWidth = vec2(width, 0.);
   // get the position in projected space
