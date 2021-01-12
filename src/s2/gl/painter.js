@@ -54,13 +54,13 @@ export default class Painter {
     let context
     // first try webgl2
     // use webgl for mobile phones as WebGL2 might be too much for phones? Untested.
-    // if (!(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))) {
-    //   context = this._canvas.getContext('webgl2', webglOptions)
-    //   if (context && typeof context.getParameter === 'function') {
-    //     this.context = new WebGL2Context(context, options.canvasMultiplier)
-    //     return
-    //   }
-    // }
+    if (!(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))) {
+      context = this._canvas.getContext('webgl2', webglOptions)
+      if (context && typeof context.getParameter === 'function') {
+        this.context = new WebGL2Context(context, options.canvasMultiplier)
+        return
+      }
+    }
     // webgl
     context = this._canvas.getContext('webgl', webglOptions)
     if (context && typeof context.getParameter === 'function') {

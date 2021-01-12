@@ -109,6 +109,8 @@ export default class Camera {
     else if (type === 'rasterdata') this._injectRasterData(data.source, data.tileID, data.built, data.image, data.leftShift, data.bottomShift)
     else if (type === 'glyphdata') this._injectGlyphSourceData(data.source, data.tileID, data.glyphFilterBuffer, data.glyphFillVertexBuffer, data.glyphFillIndexBuffer, data.glyphLineVertexBuffer, data.glyphQuadBuffer, data.layerGuideBuffer)
     else if (type === 'parentlayers') this._injectParentLayers(data.tileID, data.parentLayers)
+    // new 'paint', so painter is dirty
+    this.painter.dirty = true
   }
 
   _injectMaskGeometry (tileID: number, vertexBuffer: ArrayBuffer,
@@ -116,8 +118,6 @@ export default class Camera {
     if (this.tileCache.has(tileID)) {
       const tile = this.tileCache.get(tileID)
       tile.injectMaskGeometry(new Int16Array(vertexBuffer), new Uint32Array(indexBuffer), new Float32Array(radiiBuffer), this.style.mask)
-      // new 'paint', so painter is dirty
-      this.painter.dirty = true
     }
   }
 
@@ -128,8 +128,6 @@ export default class Camera {
       const tile = this.tileCache.get(tileID)
       // inject into tile
       tile.injectVectorSourceData(source, new Int16Array(vertexBuffer), (indexBuffer) ? new Uint32Array(indexBuffer) : null, codeTypeBuffer ? new Uint8Array(codeTypeBuffer) : null, new Float32Array(featureGuideBuffer), this.style.layers)
-      // new 'paint', so painter is dirty
-      this.painter.dirty = true
     }
   }
 
@@ -148,8 +146,6 @@ export default class Camera {
       } else {
         tile.injectRasterData(source, layerIndexs, image, leftShift, bottomShift)
       }
-      // new 'paint', so painter is dirty
-      this.painter.dirty = true
     }
   }
 
@@ -166,8 +162,6 @@ export default class Camera {
       )
       // tell the painter to prep the texture
       this.painter.buildGlyphTexture(glyphSource)
-      // new 'paint', so painter is dirty
-      this.painter.dirty = true
     } else { // we still have to render the glyph data
       // build the glyphs
       const glyphSource = buildGlyphSource(this.painter.context, new Float32Array(layerGuideBuffer),
@@ -177,8 +171,6 @@ export default class Camera {
       )
       // tell the painter to prep the texture
       this.painter.buildGlyphTexture(glyphSource)
-      // new 'paint', so painter is dirty
-      this.painter.dirty = true
     }
   }
 
@@ -203,8 +195,6 @@ export default class Camera {
           for (const layer of layers) newTile.childrenRequests[layer] = [tile]
           this.style.requestTiles([newTile])
         }
-        // new 'paint', so painter is dirty
-        this.painter.dirty = true
       }
     }
   }
