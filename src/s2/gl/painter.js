@@ -157,13 +157,13 @@ export default class Painter {
     context.newScene()
 
     // DRAW PHASE
+    // prep masks
+    this.paintMasks(tiles)
     // draw the wallpaper
     if (style.wallpaper) {
       const wallpaperProgram: WallpaperProgram = this.useProgram(style.wallpaper.skybox ? 'skybox' : 'wallpaper')
       if (wallpaperProgram) wallpaperProgram.draw(style.wallpaper)
     }
-    // prep masks
-    this.paintMasks(tiles)
     // paint features
     this.paintFeatures(features)
     // cleanup
@@ -221,7 +221,7 @@ export default class Painter {
     // setup variables
     let curLayer: number = -1
     let curProgram: ProgramType = 'fill'
-    let program: Program = this.getProgram('fill')
+    let program: Program = this.useProgram('fill')
     // if (!program) return new Error('The "fill" program does not exist, can not paint.')
     // run through the features, and upon tile, layer, or program change, adjust accordingly
     context.alwaysDepth()
