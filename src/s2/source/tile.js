@@ -1,7 +1,7 @@
 // @flow
 /* global WebGLBuffer WebGLTexture WebGLVertexArrayObject GLenum Image */
 import Context from '../gl/contexts'
-import buildSource from './buildSource'
+import buildSource, { buildGlyphSource } from './buildSource'
 import { bboxST } from 's2projection' // https://github.com/Regia-Corporation/s2projection
 
 import type { Face } from 's2projection' // https://github.com/Regia-Corporation/s2projection/blob/master/src/S2Projection.js#L4
@@ -134,21 +134,21 @@ export default class Tile {
   // a parents' parent or deeper, so we need to reflect that int the tile property. The other case
   // is the tile wants to display a layer that exists in a 'lower' zoom than this one.
   injectParentTile (parentTile: Tile, permParent: boolean, filterLayers?: Array<number>) {
-    const foundLayers = new Set()
-    for (const feature of parentTile.featureGuide) {
-      const { maskLayer, type, parent, layerIndex } = feature
-      if (maskLayer) continue // ignore mask features
-      if (!parent) foundLayers.add(layerIndex)
-      if (type !== 'glyph') this.featureGuide.push({ ...feature, tile: this, permParent })
-    }
-    // if filterLayers, we need to check what layers were missing
-    if (filterLayers) {
-      const missingLayers = filterLayers.filter(layerIndex => !foundLayers.has(layerIndex))
-      for (const missingLayer of missingLayers) {
-        if (!parentTile.childrenRequests[missingLayer]) parentTile.childrenRequests[missingLayer] = []
-        parentTile.childrenRequests[missingLayer].push(this)
-      }
-    }
+    // const foundLayers = new Set()
+    // for (const feature of parentTile.featureGuide) {
+    //   const { maskLayer, type, parent, layerIndex } = feature
+    //   if (maskLayer) continue // ignore mask features
+    //   if (!parent) foundLayers.add(layerIndex)
+    //   if (type !== 'glyph') this.featureGuide.push({ ...feature, tile: this, permParent })
+    // }
+    // // if filterLayers, we need to check what layers were missing
+    // if (filterLayers) {
+    //   const missingLayers = filterLayers.filter(layerIndex => !foundLayers.has(layerIndex))
+    //   for (const missingLayer of missingLayers) {
+    //     if (!parentTile.childrenRequests[missingLayer]) parentTile.childrenRequests[missingLayer] = []
+    //     parentTile.childrenRequests[missingLayer].push(this)
+    //   }
+    // }
   }
 
   injectMaskLayers (layers: Array<Layer>) {
@@ -321,20 +321,6 @@ export default class Tile {
     layerGuideBuffer: Float32Array, layers: Array<Layer>): GlyphTileSource {
     // Since a parent may have been injected, we need to remove any instances of the said source data.
     this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === sourceName))
-    // if (this.face === 4 && this.zoom === 4 && this.x === 0 && this.y === 6) console.log('POST INJECT', this.featureGuide)
-    // setup source data
-    const glyphSource = this.sourceData[sourceName] = {
-      type: 'glyph',
-      uvArray: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
-      stepArray: new Float32Array([0, 1]),
-      textureID: layerGuideBuffer[0],
-      height: layerGuideBuffer[1],
-      glyphFilterVertices,
-      glyphFillVertices,
-      glyphFillIndices,
-      glyphLineVertices,
-      glyphQuads
-    }
 
     // LayerCode: layerIndex, offset, count, codeLength, code
     // we work off the layerGuideBuffer, adding to the buffer as we go
@@ -377,9 +363,11 @@ export default class Tile {
       this.featureGuide.push(feature)
     }
 
-    // build the VAO
-    buildSource(this.context, glyphSource)
-    // return the source
+    // setup source data
+    const glyphSource = this.sourceData[sourceName] = buildGlyphSource(
+      this.context, layerGuideBuffer, glyphFilterVertices, glyphFillVertices,
+      glyphFillIndices, glyphLineVertices, glyphQuads
+    )
     return glyphSource
   }
 }

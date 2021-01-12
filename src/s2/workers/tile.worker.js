@@ -29,7 +29,7 @@ if (IS_SAFARI) {
 }
 const IS_OPERA: boolean = userAgent.indexOf('OP') > -1
 const WEBP_COMPATIBLE: boolean = IS_CHROME || IS_FIREFOX || IS_OPERA || IS_MAC_BIG_SUR_PLUS
-const BROTLI_COMPATIBLE: boolean = WEBP_COMPATIBLE || IS_SAFARI
+const BROTLI_COMPATIBLE: boolean = true
 
 export type CancelTileRequest = Array<number> // hashe IDs of tiles e.g. ['204', '1003', '1245', ...]
 

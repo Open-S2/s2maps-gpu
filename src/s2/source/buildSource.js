@@ -74,6 +74,7 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
       // 6 -> curr + (previous-normal) [check that prev, curr, and next is CCCW otherwise invert normal]
       // create default triangle set
       source.typeArray = new Float32Array([1, 3, 4, 1, 4, 2, 0, 5, 6])
+      // source.typeArray = new Float32Array([0, 5, 6])
       // create buffer
       source.typeBuffer = gl.createBuffer()
       // bind and buffer
@@ -227,4 +228,25 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
   }
+}
+
+export function buildGlyphSource (context, layerGuideBuffer, glyphFilterVertices, glyphFillVertices,
+  glyphFillIndices, glyphLineVertices, glyphQuads) {
+  const glyphSource = {
+    type: 'glyph',
+    uvArray: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
+    stepArray: new Float32Array([0, 1]),
+    textureID: layerGuideBuffer[0],
+    height: layerGuideBuffer[1],
+    glyphFilterVertices,
+    glyphFillVertices,
+    glyphFillIndices,
+    glyphLineVertices,
+    glyphQuads
+  }
+
+  // build the VAO
+  buildSource(context, glyphSource)
+  // return the source
+  return glyphSource
 }

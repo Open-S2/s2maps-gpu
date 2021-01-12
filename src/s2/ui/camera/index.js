@@ -11,6 +11,7 @@ import { BlendProjection, OrthographicProjection, PerspectiveProjection } from '
 import type { Projection } from './projections'
 /** SOURCES **/
 import { Tile } from '../../source'
+import { buildGlyphSource } from '../../source/buildSource'
 import TileCache from './tileCache'
 
 import type { Face } from 's2projection'
@@ -162,6 +163,17 @@ export default class Camera {
         source, new Float32Array(glyphFilterBuffer), new Float32Array(glyphFillVertexBuffer),
         new Float32Array(glyphFillIndexBuffer), new Float32Array(glyphLineVertexBuffer),
         new Float32Array(glyphQuadBuffer), new Float32Array(layerGuideBuffer), this.style.layers
+      )
+      // tell the painter to prep the texture
+      this.painter.buildGlyphTexture(glyphSource)
+      // new 'paint', so painter is dirty
+      this.painter.dirty = true
+    } else { // we still have to render the glyph data
+      // build the glyphs
+      const glyphSource = buildGlyphSource(this.painter.context, new Float32Array(layerGuideBuffer),
+        new Float32Array(glyphFilterBuffer), new Float32Array(glyphFillVertexBuffer),
+        new Float32Array(glyphFillIndexBuffer), new Float32Array(glyphLineVertexBuffer),
+        new Float32Array(glyphQuadBuffer)
       )
       // tell the painter to prep the texture
       this.painter.buildGlyphTexture(glyphSource)

@@ -13,7 +13,9 @@ const Mars = lazy(() => import('./App/Mars'))
 const Streets = lazy(() => import('./App/Streets'))
 const StreetsTest = lazy(() => import('./App/StreetsTest'))
 const Light = lazy(() => import('./App/Light'))
+const Soft = lazy(() => import('./App/Soft'))
 const Dark = lazy(() => import('./App/Dark'))
+const Outdoor = lazy(() => import('./App/Outdoor'))
 const GeoJSON = lazy(() => import('./App/GeoJSON'))
 const ColorBlind = lazy(() => import('./App/ColorBlind'))
 const Hover = lazy(() => import('./App/Hover'))
@@ -30,8 +32,10 @@ ReactDOM.render(
         <Route path='/mars' component={Mars} />
         <Route path='/streets' component={Streets} />
         <Route path='/streets-test' component={StreetsTest} />
+        <Route path='/soft' component={Soft} />
         <Route path='/light' component={Light} />
         <Route path='/dark' component={Dark} />
+        <Route path='/outdoor' component={Outdoor} />
         <Route path='/geojson' component={GeoJSON} />
         <Route path='/tissots' component={TissotsIndicatrix} />
         <Route path='/colorblind' component={ColorBlind} />

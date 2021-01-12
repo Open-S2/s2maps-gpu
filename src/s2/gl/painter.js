@@ -222,7 +222,7 @@ export default class Painter {
     let curLayer: number = -1
     let curProgram: ProgramType = 'fill'
     let program: Program = this.getProgram('fill')
-    if (!program) return new Error('The "fill" program does not exist, can not paint.')
+    // if (!program) return new Error('The "fill" program does not exist, can not paint.')
     // run through the features, and upon tile, layer, or program change, adjust accordingly
     context.alwaysDepth()
     for (const feature of features) {

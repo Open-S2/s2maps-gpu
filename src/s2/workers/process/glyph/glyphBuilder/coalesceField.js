@@ -37,7 +37,7 @@ function coalesceText (field: string, properties: Object): string {
         else charIndex -= 2
       }
       const key = piece.slice(charIndex)
-      if (properties[key]) return transform(properties[key])
+      if (properties[key]) return transform('' + properties[key])
     }
   } else { return field }
 }

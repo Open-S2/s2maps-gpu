@@ -26,3 +26,5 @@ if (!('requestAnimationFrame' in window)) {
 // if (!('ResizeObserver' in window)) {
 //   window.ResizeObserver = ResizeObserver
 // }
+
+// WEBP SUPPORT: webp = () => document.createElement('canvas').toDataURL('image/webp').indexOf('data:image/webp') == 0

@@ -288,7 +288,7 @@ export default class Map extends Camera {
 }
 
 function injectionDataSort (a, b) {
-  const sortMethod = (type) => (type === 'parentLayers') ? 0 : 1
+  const sortMethod = (type) => (type === 'glyph') ? 0 : 1
 
   return sortMethod(b.type) - sortMethod(a.type)
 }

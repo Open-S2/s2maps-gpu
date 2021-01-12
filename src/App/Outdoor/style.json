@@ -1,12 +1,14 @@
 {
   "version": 1,
   "name": "s2test",
-  "center": [-122.444700, 37.780739],
-  "zoom": 0,
-  "minzoom": 0,
+  "center": [-111.811091, 40.718442],
+  "zoom": 1,
+  "minzoom": 1,
   "maxzoom": 20,
   "sources": {
-    "world": "https://s3.s2maps.io/streets-v1"
+    "world": "https://s3.s2maps.io/streets-v1",
+    "equator": "http://192.168.0.188:8000/data/equator",
+    "landcover": "http://192.168.0.188:8000/data/landcover"
   },
   "fonts": {
     "default": "https://s3.s2maps.io/fonts-v3/default",
@@ -14,10 +16,10 @@
     "roboto-medium": "https://s3.s2maps.io/fonts-v3/RobotoMedium"
   },
   "wallpaper": {
-    "background-color": "rgb(25, 28, 80)",
-    "fade-1": "rgb(138, 204, 255)",
-    "fade-2": "rgb(217, 255, 255)",
-    "halo": "rgb(230, 255, 255)"
+    "background-color": "#18314c",
+    "fade-1": "#799fb1",
+    "fade-2": "#ccdddd",
+    "halo": "#ffffff"
   },
   "colorBlind": false,
   "layers": [
@@ -27,26 +29,7 @@
       "source": "mask",
       "layout": {},
       "paint": {
-        "color": [
-          "input-range",
-          "zoom",
-          "expo",
-          1.7,
-          2.75,
-          "rgb(244, 239, 226)",
-          3,
-          "rgb(243, 237, 223)",
-          8,
-          "rgb(243, 237, 223)",
-          9.5,
-          "rgb(225, 225, 229)",
-          11.5,
-          "rgb(229, 231, 236)",
-          13,
-          "rgb(232,232,232)",
-          14,
-          "rgb(248, 249, 250)"
-        ]
+        "color": "#f4efe2"
       }
     },
     {
@@ -65,46 +48,32 @@
       "paint": {
         "color": [
           "data-condition",
-          ["class", "has", ["desert", "sand"]],
+          ["class", "has", ["desert", "sand", "beach"]],
           "rgb(241, 233, 195)",
           ["class", "==", "aeroway"],
-          "rgb(219, 222, 235)",
+          "rgba(219, 222, 235, 0.65)",
           ["class", "==", "military"],
-          "rgb(226, 226, 224)",
+          "rgba(226, 226, 224, 0.5)",
           ["class", "==", "quarry"],
           "rgb(206, 208, 211)",
-          ["class", "==", "retail"],
-          "rgb(254, 245, 220)",
           ["class", "has", ["university", "college", "school", "kindergarten"]],
-          "rgb(226, 233, 238)",
+          "#f0e6e1",
           ["class", "==", "parking"],
           "rgb(241, 243, 244)",
           ["class", "==", "hospital"],
-          "rgb(252, 228, 228)",
-          ["class", "==", "farmland"],
-          "rgb(228, 234, 210)",
+          "#f3e1d4",
           ["class", "has", ["park", "national_park", "protected_area"]],
-          [
-            "input-range",
-            "zoom",
-            "lin",
-            10,
-            "#aee0bc",
-            12,
-            "rgb(197, 232, 197)"
-          ],
-          ["class", "has", ["grass", "grassland", "garden", "meadow", "wood", "swamp", "forest", "zoo"]],
-          "#bbe2c6",
+          "#d0e1b9",
+          ["class", "has", ["farmland", "grass", "grassland", "garden", "meadow", "wood", "swamp", "forest", "zoo"]],
+          "#e0e8ce",
           ["class", "==", "cemetery"],
-          "rgb(208, 236, 208)",
-          ["class", "==", "beach"],
-          "rgb(255, 239, 195)",
+          "#d8e0bd",
           ["class", "==", "glacier"],
-          "rgb(249, 249, 249)",
+          "#ededed",
           ["class", "==", "aboriginal_lands"],
           "rgba(240, 242, 240, 0.5)",
           ["class", "==", "wetland"],
-          "rgb(210, 233, 255)",
+          "#e7ebe1",
           "default",
           "rgba(0, 0, 0, 0)"
         ]
@@ -127,6 +96,33 @@
       }
     },
     {
+      "name": "landcover",
+      "source": "landcover",
+      "layer": "landcover",
+      "type": "fill",
+      "minzoom": 0,
+      "layout": {},
+      "paint": {
+        "color": [
+          "data-condition",
+          ["class", "==", "shrub"],
+          "#f2eccf",
+          ["class", "==", "wasteland"],
+          "#eeede6",
+          ["class", "==", "crop"],
+          "#e3eccf",
+          ["class", "==", "tree"],
+          "#cbe5bd",
+          ["class", "==", "wood"],
+          "#b8d7b4",
+          ["class", "==", "snow"],
+          "#ffffff",
+          "default",
+          "rgba(0, 0, 0, 0)"
+        ]
+      }
+    },
+    {
       "name": "golf",
       "source": "world",
       "layer": "landuse",
@@ -138,13 +134,13 @@
         "color": [
           "data-condition",
           ["type", "has", ["course", "rough"]],
-          "rgb(201, 238, 201)",
+          "#e0e8d0",
           ["type", "==", "fairway"],
-          "rgb(218, 245, 205)",
+          "#eaecd6",
           ["type", "==", "green"],
-          "rgb(233, 251, 217)",
+          "#f6fde9",
           ["type", "==", "bunker"],
-          "rgb(255, 239, 195)",
+          "#ededcf",
           "default",
           "rgba(0, 0, 0, 0)"
         ]
@@ -159,7 +155,7 @@
       "minzoom": 0,
       "layout": {},
       "paint": {
-        "color": "rgb(154, 204, 243)"
+        "color": "#ccdddd"
       }
     },
     {
@@ -171,7 +167,7 @@
       "minzoom": 0,
       "layout": {},
       "paint": {
-        "color": "rgb(185, 225, 255)"
+        "color": "#daeaea"
       }
     },
     {
@@ -185,7 +181,7 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "rgb(154, 204, 243)",
+        "color": "#ccdddd",
         "width": [
           "input-range",
           "zoom",
@@ -212,8 +208,10 @@
       "paint": {
         "color": [
           "data-condition",
-          ["class", "has", ["tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian"]],
-          "rgb(218, 220, 224)",
+          ["class", "has", ["street", "street_limited", "residential", "pedestrian"]],
+          "#dbd7cd",
+          ["class", "has", ["tertiary", "tertiary_link"]],
+          "#fff",
           "default",
           "rgba(0, 0, 0, 0)"
         ],
@@ -239,9 +237,9 @@
             10,
             1,
             13,
-            5.5,
+            7,
             15,
-            14
+            20
           ],
           "default",
           3.5
@@ -260,7 +258,7 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "rgb(218, 220, 224)",
+        "color": "#ffffff",
         "width": [
           "input-range",
           "zoom",
@@ -286,7 +284,7 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "rgb(246, 207, 101)",
+        "color": "#fff",
         "width": [
           "input-range",
           "zoom",
@@ -319,13 +317,23 @@
         "color": [
           "data-condition",
           ["class", "==", "ferry"],
-          "rgb(130, 179, 230)",
+          "#8db0bb",
           ["class", "==", "path"],
-          "rgb(91, 185, 116)",
+          "#cb997a",
           ["class", "has", ["railway", "rail"]],
           "rgb(199, 202, 205)",
-          ["class", "has", ["tertiary", "tertiary_link", "street", "street_limited", "residential", "pedestrian", "unclassified"]],
-          "rgb(255, 255, 255)",
+          ["class", "has", ["street", "street_limited", "residential", "pedestrian", "unclassified"]],
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            10,
+            "#dbd7cd",
+            11,
+            "#fff"
+          ],
+          ["class", "has", ["tertiary", "tertiary_link"]],
+          "#d7b8b1",
           "default",
           "rgba(0, 0, 0, 0)"
         ],
@@ -355,10 +363,8 @@
             15,
             10
           ],
-          ["class", "==", "path"],
-          1.5,
           "default",
-          2
+          1.5
         ]
       }
     },
@@ -374,7 +380,7 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "rgb(255, 255, 255)",
+        "color": "#d7b8b1",
         "width": [
           "input-range",
           "zoom",
@@ -400,7 +406,7 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "rgb(255, 242, 175)",
+        "color": "#d7b8b1",
         "width": [
           "input-range",
           "zoom",
@@ -426,7 +432,7 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "rgb(249, 202, 74)",
+        "color": "#fff",
         "width": [
           "input-range",
           "zoom",
@@ -454,23 +460,13 @@
         "join": "bevel"
       },
       "paint": {
-        "color": [
-          "input-range",
-          "zoom",
-          "lin",
-          2,
-          "rgb(249, 202, 74)",
-          7,
-          "#ffe58b"
-        ],
+        "color": "#d09fa0",
         "width": [
           "input-range",
           "zoom",
           "lin",
           2,
-          1,
-          7,
-          1.5,
+          1.75,
           10,
           2.5,
           15,
@@ -490,7 +486,7 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "rgba(180, 180, 180, 0.7)",
+        "color": "#9699a6",
         "width": 1.25
       }
     },
@@ -506,7 +502,7 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "rgb(115, 115, 115)",
+        "color": "#787b8c",
         "width": [
           "input-range",
           "zoom",
@@ -520,7 +516,7 @@
     },
     {
       "name": "equator",
-      "source": "world",
+      "source": "equator",
       "layer": "equator",
       "type": "line",
       "minzoom": 0,
@@ -531,15 +527,7 @@
       },
       "paint": {
         "color": "rgba(125, 102, 97, 0.8)",
-        "width": [
-          "input-range",
-          "zoom",
-          "step",
-          0.99,
-          1.5,
-          1,
-          3
-        ]
+        "width": 1.5
       }
     },
     {
@@ -549,7 +537,21 @@
       "type": "fill",
       "layout": {},
       "paint": {
-        "color": "rgb(235, 235, 235)"
+        "color": "#e8e3d7"
+      }
+    },
+    {
+      "name": "buildings_highlight",
+      "source": "world",
+      "layer": "building",
+      "type": "line",
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "#d0c7c3",
+        "width": 1
       }
     },
     {
@@ -618,9 +620,9 @@
         "fill": [
           "data-condition",
           ["class", "==", "Country"],
-          "rgb(42, 42, 42)",
+          "#4f4f4f",
           ["class", "==", "State"],
-          "rgb(90, 90, 90)",
+          "#787b8c",
           "default",
           "rgba(0, 0, 0, 0)"
         ],
