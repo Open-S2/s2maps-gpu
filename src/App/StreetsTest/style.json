@@ -2,7 +2,7 @@
   "version": 1,
   "name": "s2test",
   "center": [-111.811091, 40.718442],
-  "zoom": 10,
+  "zoom": 0,
   "minzoom": 0,
   "maxzoom": 20,
   "sources": {

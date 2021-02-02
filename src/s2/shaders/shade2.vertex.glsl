@@ -14,7 +14,7 @@ out vec2 vPos;
 
 void main () {
   // set position and get it's distance from center
-  vec4 pos = uMatrix * STtoXYZ(aPos / 8192.);
+  vec4 pos = uMatrix * STtoXYZ(aPos);
   // modify aspect to be a ratio of
   vec2 radius = uAspect / (uDevicePixelRatio * 2.) / (512. * ((uInputs[0] / 3.) + 1.));
   // get pixel distance
