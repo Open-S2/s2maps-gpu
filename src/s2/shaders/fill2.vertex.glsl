@@ -16,7 +16,7 @@ out vec4 color;
 void main () {
   // set position
   // prep xyz
-  vec4 xyz = STtoXYZ(aPos / 8192.);
+  vec4 xyz = STtoXYZ(aPos);
   // if 3D, add radius
   if (u3D) {
     float radius = 1. + (aRadius * 500.);

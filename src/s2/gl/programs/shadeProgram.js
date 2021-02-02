@@ -39,7 +39,5 @@ export default class ShadeProgram extends Program {
     context.shadeBlend()
     // draw elements
     gl.drawElements(mode || gl.TRIANGLES, count, gl.UNSIGNED_INT, (offset | 0) * 4)
-    // revert back to current blend type
-    context.defaultBlend()
   }
 }

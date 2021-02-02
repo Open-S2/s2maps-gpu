@@ -21,14 +21,14 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
     // link attributes:
     // fill
     gl.enableVertexAttribArray(0)
-    gl.vertexAttribPointer(0, 2, gl.SHORT, false, 0, 0)
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0)
     // line
     gl.enableVertexAttribArray(1) // prev
     gl.enableVertexAttribArray(2) // curr
     gl.enableVertexAttribArray(3) // next
-    gl.vertexAttribPointer(1, 2, gl.SHORT, false, 12, 0)
-    gl.vertexAttribPointer(2, 2, gl.SHORT, false, 12, 4)
-    gl.vertexAttribPointer(3, 2, gl.SHORT, false, 12, 8)
+    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 24, 0)
+    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 24, 8)
+    gl.vertexAttribPointer(3, 2, gl.FLOAT, false, 24, 16)
     gl.vertexAttribDivisor(1, 1)
     gl.vertexAttribDivisor(2, 1)
     gl.vertexAttribDivisor(3, 1)
@@ -70,11 +70,10 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
       // 2 -> curr + (normal)
       // 3 -> next + (-1 * normal)
       // 4 -> next + (normal)
-      // 5 -> curr + (normal) [check that prev, curr, and next is CCCW otherwise invert normal]
-      // 6 -> curr + (previous-normal) [check that prev, curr, and next is CCCW otherwise invert normal]
+      // 5 -> curr + (normal) [check that prev, curr, and next is CCW otherwise invert normal]
+      // 6 -> curr + (previous-normal) [check that prev, curr, and next is CCW otherwise invert normal]
       // create default triangle set
       source.typeArray = new Float32Array([1, 3, 4, 1, 4, 2, 0, 5, 6])
-      // source.typeArray = new Float32Array([0, 5, 6])
       // create buffer
       source.typeBuffer = gl.createBuffer()
       // bind and buffer

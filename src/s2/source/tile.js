@@ -11,7 +11,7 @@ import type { ProgramType } from '../gl/programs/program'
 export type VectorTileSource = {
   type: 'vector',
   subType: 'fill' | 'line',
-  vertexArray: Float32Array,
+  vertexArray: Int16Array,
   radiiArray?: Float32Array,
   indexArray: Uint32Array,
   codeTypeArray: Uint8Array,
@@ -77,6 +77,7 @@ export type FeatureGuide = { // eslint-disable-next-line
   filterOffset?: number, // glyph
   filterCount?: number, // glyph
   type: ProgramType,
+  depthPos?: number,
   featureCode: Float32Array,
   subFeatureCode?: Float32Array,
   layerCode: Float32Array,
@@ -154,7 +155,7 @@ export default class Tile {
   injectMaskLayers (layers: Array<Layer>) {
     const { zoom } = this // $FlowIgnore
     for (const layer of layers) {
-      const { minzoom, maxzoom, layerIndex, type, code, lch, paint } = layer
+      const { minzoom, maxzoom, depthPos, opaque, layerIndex, type, code, lch, paint } = layer
       if (zoom < minzoom) continue
       if (zoom > maxzoom) continue // $FlowIgnore
       const feature: FeatureGuide = {
@@ -167,6 +168,8 @@ export default class Tile {
         subType: 'fill',
         count: this.sourceData.mask.count,
         type,
+        depthPos,
+        opaque,
         featureCode: new Float32Array([0]), // NOTE: The sorting algorithm doesn't work if an array is empty, so we have to have at least one number, just set it to 0
         layerCode: code,
         lch,
@@ -185,7 +188,7 @@ export default class Tile {
   // context stores masks so we don't keep recreating them and put excess stress and memory on the GPU
   _getMaskSource () {
     const { context, zoom } = this
-    const level = 1 << Math.max(Math.min(Math.floor(zoom / 2), 4), 0) // max 5 as its binary position is 32
+    const level = 1 << Math.max(Math.min(Math.floor(zoom / 2), 4), 0) // max 4 as its level is 16
     const division = this.division = 16 / level
     this.sourceData.mask = context.getMask(level, division)
   }
@@ -252,7 +255,7 @@ export default class Tile {
     if (rasterSource.count === rasterSource.total) this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === sourceName && fg.parent))
   }
 
-  injectVectorSourceData (sourceName: string, vertexArray: Int16Array, indexArray?: Uint32Array,
+  injectVectorSourceData (sourceName: string, vertexArray: Float32Array, indexArray?: Uint32Array,
     codeTypeArray: Uint8Array, featureGuideArray: Float32Array, layers: Array<Layer>): VectorTileSource {
     // Since a parent may have been injected, we need to remove any instances of the said source data.
     // however, ignore data that is pulled from a parent that doesn't exist at this zoom
@@ -271,11 +274,17 @@ export default class Tile {
     let i = 0
     // console.log('featureGuideArray', featureGuideArray)
     while (i < lgl) {
+      let cap
+      // if line, grab the cap type
+      if (subType === 'line') {
+        cap = featureGuideArray[i]
+        i++
+      }
       // grab the size, layerIndex, count, and offset, and update the index
       const [layerIndex, count, offset, encodingSize] = featureGuideArray.slice(i, i + 4)
       i += 4
       // grab the layers type and code
-      const { type, code, lch, blend } = layers[layerIndex]
+      const { type, depthPos, opaque, code, lch } = layers[layerIndex]
       // create and store the featureGuide
       const feature = {
         tile: this,
@@ -286,10 +295,12 @@ export default class Tile {
         count,
         offset,
         type,
+        cap,
+        depthPos,
+        opaque,
         featureCode: new Float32Array(encodingSize ? [...featureGuideArray.slice(i, i + encodingSize)] : [0]), // NOTE: The sorting algorithm doesn't work if an array is empty, so we have to have at least one number, just set it to 0
         layerCode: code,
-        lch,
-        blend
+        lch
       }
       i += encodingSize
       // if webgl1, we have color (and width if line) data
@@ -333,7 +344,7 @@ export default class Tile {
       const [layerIndex, filterOffset, filterCount, offset, count, encodingSize] = layerGuideBuffer.slice(i, i + 6)
       i += 6
       // grab the layers type and code
-      const { code, lch } = layers[layerIndex]
+      const { depthPos, code, lch } = layers[layerIndex]
       // create and store the featureGuide
       const feature = {
         tile: this,
@@ -346,6 +357,7 @@ export default class Tile {
         offset,
         count,
         type: 'glyph',
+        depthPos,
         featureCode: new Float32Array(encodingSize ? [...layerGuideBuffer.slice(i, i + encodingSize)] : [0]),
         layerCode: code,
         lch

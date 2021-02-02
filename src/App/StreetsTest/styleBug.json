@@ -1,0 +1,124 @@
+{
+  "version": 1,
+  "name": "s2test",
+  "center": [-111.811091, 40.718442],
+  "zoom": 12,
+  "minzoom": 0,
+  "maxzoom": 20,
+  "sources": {
+    "world": "https://s3.s2maps.io/streets-v1",
+    "terrain": "http://192.168.0.188:8000/data/terrain",
+    "places": "http://192.168.0.188:8000/data/places",
+    "landuse": "http://192.168.0.188:8000/data/landuse",
+    "landcover": "http://192.168.0.188:8000/data/landcover",
+    "ocean": "http://192.168.0.188:8000/data/ocean",
+    "water": "http://192.168.0.188:8000/data/water",
+    "buildings": "http://192.168.0.188:8000/data/buildings",
+    "boundary": "http://192.168.0.188:8000/data/boundary",
+    "transport": "http://192.168.0.188:8000/data/transport",
+    "poi": "http://192.168.0.188:8000/data/poi",
+    "equator": "http://192.168.0.188:8000/data/equator"
+  },
+  "fonts": {
+    "default": "https://s3.s2maps.io/fonts-v3/default",
+    "roboto-regular": "https://s3.s2maps.io/fonts-v3/RobotoRegular",
+    "roboto-medium": "https://s3.s2maps.io/fonts-v3/RobotoMedium"
+  },
+  "wallpaper": {
+    "background-color": "#030a2d",
+    "fade-1": "rgb(138, 204, 255)",
+    "fade-2": "rgb(217, 255, 255)",
+    "halo": "rgb(230, 255, 255)"
+  },
+  "colorBlind": false,
+  "layers": [
+    {
+      "name": "background",
+      "type": "fill",
+      "opaque": true,
+      "source": "mask",
+      "layout": {},
+      "paint": {
+        "color": [
+          "input-range",
+          "zoom",
+          "expo",
+          1.7,
+          2.75,
+          "#f9f7e7",
+          3,
+          "#f5f5f5",
+          6.5,
+          "#f0e9d7",
+          9,
+          "#f0e9d7",
+          13,
+          "rgb(232,232,232)",
+          14,
+          "#f8f9fa"
+        ]
+      }
+    },
+    {
+      "name": "landuse",
+      "source": "landuse",
+      "layer": "landuse",
+      "type": "fill",
+      "opaque": true,
+      "filter": [
+        "or",
+        ["class", "==", "aeroway"],
+        [
+          "type", "has", ["park", "national_park", "protected_area",
+          "grass", "grassland", "garden", "meadow", "farmland",
+          "swamp", "wetland", "zoo", "cemetery", "sand", "beach", "desert",
+          "hospital", "school", "parking", "glacier",
+          "quarry", "retail", "urban", "pitch"]
+        ]
+      ],
+      "minzoom": 5,
+      "layout": {},
+      "paint": {
+        "color": [
+          "data-condition",
+          ["type", "==", "parking"],
+          "rgb(241, 243, 244)",
+          ["type", "==", "wetland"],
+          "rgb(210, 233, 255)",
+          ["type", "==", "quarry"],
+          "rgb(206, 208, 211)",
+          ["type", "==", "glacier"],
+          "rgb(249, 249, 249)",
+          ["type", "==", "beach"],
+          "rgb(255, 239, 195)",
+          ["type", "==", "cemetery"],
+          "rgb(208, 236, 208)",
+          ["type", "==", "pitch"],
+          "#9dd2ac",
+          ["type", "has", ["grass", "grassland", "garden", "meadow", "swamp", "zoo"]],
+          "#a8dab5",
+          ["type", "has", ["park", "national_park", "protected_area"]],
+          "#aee0bc",
+          ["type", "has", ["apron", "airstrip"]],
+          "#d4d8ea",
+          ["class", "==", "aeroway"],
+          "rgb(219, 222, 235)",
+          ["type", "==", "farmland"],
+          "rgb(228, 234, 210)",
+          ["type", "==", "hospital"],
+          "rgb(252, 228, 228)",
+          ["type", "==", "school"],
+          "rgb(226, 233, 238)",
+          ["type", "==", "retail"],
+          "rgb(254, 245, 220)",
+          ["type", "==", "urban"],
+          "#e9eaed",
+          ["type", "has", ["desert", "sand"]],
+          "rgb(241, 233, 195)",
+          "default",
+          "rgb(0, 0, 0)"
+        ]
+      }
+    }
+  ]
+}

@@ -2,12 +2,13 @@
   "version": 1,
   "name": "s2test",
   "center": [-111.811091, 40.718442],
-  "zoom": 1,
+  "zoom": 9,
   "minzoom": 1,
   "maxzoom": 20,
   "sources": {
     "world": "https://s3.s2maps.io/streets-v1",
     "equator": "http://192.168.0.188:8000/data/equator",
+    "terrain": "http://192.168.0.188:8000/data/terrain",
     "landcover": "http://192.168.0.188:8000/data/landcover"
   },
   "fonts": {
@@ -26,6 +27,7 @@
     {
       "name": "background",
       "type": "fill",
+      "opaque": true,
       "source": "mask",
       "layout": {},
       "paint": {
@@ -37,23 +39,20 @@
       "source": "world",
       "layer": "landuse",
       "type": "fill",
+      "opaque": true,
       "filter": ["class", "has", ["park", "national_park", "protected_area",
-        "aboriginal_lands", "grass", "grassland", "garden", "meadow", "farmland",
-        "wood", "swamp", "forest", "wetland", "zoo", "cemetery", "indianReservation",
-        "sand", "beach", "desert", "aeroway", "military", "hospital",
+        "grass", "grassland", "garden", "meadow", "farmland",
+        "wood", "swamp", "forest", "wetland", "zoo", "cemetery",
+        "sand", "beach", "desert", "hospital",
         "university", "college", "school", "kindergarten", "parking", "glacier",
-        "quarry", "industrial", "retail"]],
-      "minzoom": 0,
+        "quarry"]],
+      "minzoom": 4,
       "layout": {},
       "paint": {
         "color": [
           "data-condition",
           ["class", "has", ["desert", "sand", "beach"]],
           "rgb(241, 233, 195)",
-          ["class", "==", "aeroway"],
-          "rgba(219, 222, 235, 0.65)",
-          ["class", "==", "military"],
-          "rgba(226, 226, 224, 0.5)",
           ["class", "==", "quarry"],
           "rgb(206, 208, 211)",
           ["class", "has", ["university", "college", "school", "kindergarten"]],
@@ -69,11 +68,31 @@
           ["class", "==", "cemetery"],
           "#d8e0bd",
           ["class", "==", "glacier"],
-          "#ededed",
-          ["class", "==", "aboriginal_lands"],
-          "rgba(240, 242, 240, 0.5)",
+          "#e0f3fa",
           ["class", "==", "wetland"],
           "#e7ebe1",
+          "default",
+          "rgb(0, 0, 0)"
+        ]
+      }
+    },
+    {
+      "name": "landuse_transparent",
+      "source": "landuse",
+      "layer": "landuse",
+      "type": "fill",
+      "filter": ["type", "has", ["aboriginal_lands", "military", "aeroway"]],
+      "minzoom": 5,
+      "layout": {},
+      "paint": {
+        "color": [
+          "data-condition",
+          ["class", "==", "aeroway"],
+          "rgba(219, 222, 235, 0.65)",
+          ["type", "==", "aboriginal_lands"],
+          "rgba(240, 242, 240, 0.5)",
+          ["type", "==", "military"],
+          "rgba(226, 226, 224, 0.5)",
           "default",
           "rgba(0, 0, 0, 0)"
         ]
@@ -100,23 +119,24 @@
       "source": "landcover",
       "layer": "landcover",
       "type": "fill",
+      "opaque": true,
       "minzoom": 0,
       "layout": {},
       "paint": {
         "color": [
           "data-condition",
-          ["class", "==", "shrub"],
-          "#f2eccf",
-          ["class", "==", "wasteland"],
-          "#eeede6",
-          ["class", "==", "crop"],
-          "#e3eccf",
-          ["class", "==", "tree"],
-          "#cbe5bd",
-          ["class", "==", "wood"],
-          "#b8d7b4",
           ["class", "==", "snow"],
           "#ffffff",
+          ["class", "==", "wood"],
+          "#b8d7b4",
+          ["class", "==", "tree"],
+          "#cbe5bd",
+          ["class", "==", "crop"],
+          "#e3eccf",
+          ["class", "==", "wasteland"],
+          "#eeede6",
+          ["class", "==", "shrub"],
+          "rgb(238, 235, 215)",
           "default",
           "rgba(0, 0, 0, 0)"
         ]
@@ -124,25 +144,83 @@
     },
     {
       "name": "golf",
-      "source": "world",
+      "source": "landuse",
       "layer": "landuse",
       "type": "fill",
-      "filter": ["class", "==", "golf"],
+      "opaque": true,
+      "filter": [
+        "and",
+        ["class", "==", "golf"],
+        ["type", "has", ["course", "rough", "fairway", "green", "bunker"]]
+      ],
       "minzoom": 0,
       "layout": {},
       "paint": {
         "color": [
           "data-condition",
-          ["type", "has", ["course", "rough"]],
-          "#e0e8d0",
-          ["type", "==", "fairway"],
-          "#eaecd6",
-          ["type", "==", "green"],
-          "#f6fde9",
           ["type", "==", "bunker"],
           "#ededcf",
+          ["type", "==", "green"],
+          "#f6fde9",
+          ["type", "==", "fairway"],
+          "#eaecd6",
+          ["type", "has", ["course", "rough"]],
+          "#e0e8d0",
+          "default",
+          "rgb(0, 0, 0)"
+        ]
+      }
+    },
+    {
+      "name": "hillshade",
+      "source": "terrain",
+      "layer": "hillshade",
+      "type": "fill",
+      "minzoom": 0,
+      "layout": {},
+      "paint": {
+        "color": [
+          "data-condition",
+          ["and", ["class", "==", "shade"], ["level", "==", 3]],
+          "rgba(31, 61, 81, 0.325)",
+          ["and", ["class", "==", "shade"], ["level", "==", 2]],
+          "rgba(31, 61, 81, 0.25)",
+          ["and", ["class", "==", "shade"], ["level", "==", 1]],
+          "rgba(31, 61, 81, 0.175)",
+          ["and", ["class", "==", "shade"], ["level", "==", 0]],
+          "rgba(31, 61, 81, 0.1)",
+          ["and", ["class", "==", "highlight"], ["level", "==", 1]],
+          "rgba(255, 255, 255, 0.45)",
+          ["and", ["class", "==", "highlight"], ["level", "==", 0]],
+          "rgba(255, 255, 255, 0.25)",
           "default",
           "rgba(0, 0, 0, 0)"
+        ]
+      }
+    },
+    {
+      "name": "contours",
+      "source": "terrain",
+      "layer": "contours",
+      "type": "line",
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": [
+          "data-condition",
+          ["index", "has", [0, 5]],
+          "rgba(84, 84, 84, 0.4)",
+          "default",
+          "rgba(84, 84, 84, 0.25)"
+        ],
+        "width": [
+          "data-condition",
+          ["index", "has", [0, 5]],
+          1.5,
+          "default",
+          1
         ]
       }
     },
@@ -152,6 +230,7 @@
       "filter": ["class", "!has", ["reef", "shoal"]],
       "layer": "water",
       "type": "fill",
+      "opaque": true,
       "minzoom": 0,
       "layout": {},
       "paint": {
@@ -164,6 +243,7 @@
       "filter": ["class", "has", ["reef", "shoal"]],
       "layer": "water",
       "type": "fill",
+      "opaque": true,
       "minzoom": 0,
       "layout": {},
       "paint": {
@@ -491,6 +571,30 @@
       }
     },
     {
+      "id": "boundaries-country-background",
+      "source": "world",
+      "layer": "boundary",
+      "filter": ["and", ["class", "==", "Country"], ["maritime", "==", false]],
+      "type": "line",
+      "minzoom": 0,
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "#e6e4e0",
+        "width": [
+          "input-range",
+          "zoom",
+          "lin",
+          1,
+          1.75,
+          2,
+          3
+        ]
+      }
+    },
+    {
       "id": "boundaries-country",
       "source": "world",
       "layer": "boundary",
@@ -508,9 +612,9 @@
           "zoom",
           "lin",
           1,
-          0.85,
+          1,
           2,
-          1.25
+          1.5
         ]
       }
     },

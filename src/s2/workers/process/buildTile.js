@@ -14,7 +14,7 @@ export default function buildTile (tile: TileRequest) {
           return {
             properties: { hash, face, zoom, x, y },
             type: 3, // Polygon
-            loadGeometry: () => { return [[[0, 0], [8192, 0], [8192, 8192], [0, 8192], [0, 0]]] }
+            loadGeometry: () => { return [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]] }
           }
         }
       },
@@ -25,7 +25,7 @@ export default function buildTile (tile: TileRequest) {
           return {
             properties: { hash, face, zoom, x, y },
             type: 1, // Point
-            loadGeometry: () => { return [[0, 8192]] }
+            loadGeometry: () => { return [[0, 1]] }
           }
         }
       }

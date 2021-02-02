@@ -127,7 +127,7 @@ export default class Camera {
       // get tile
       const tile = this.tileCache.get(tileID)
       // inject into tile
-      tile.injectVectorSourceData(source, new Int16Array(vertexBuffer), (indexBuffer) ? new Uint32Array(indexBuffer) : null, codeTypeBuffer ? new Uint8Array(codeTypeBuffer) : null, new Float32Array(featureGuideBuffer), this.style.layers)
+      tile.injectVectorSourceData(source, new Float32Array(vertexBuffer), (indexBuffer) ? new Uint32Array(indexBuffer) : null, codeTypeBuffer ? new Uint8Array(codeTypeBuffer) : null, new Float32Array(featureGuideBuffer), this.style.layers)
     }
   }
 
@@ -175,28 +175,28 @@ export default class Camera {
   }
 
   _injectParentLayers (tileID: number, parentLayers: ParentLayers = {}) {
-    // if tile still exists
-    if (this.tileCache.has(tileID)) {
-      // grab the main tile
-      const tile = this.tileCache.get(tileID)
-      // for each parentLayer, inject specified layers
-      for (let hash in parentLayers) {
-        hash = +hash
-        const layers = parentLayers[hash].layers
-        // check if parent exists in tileCache, if so, inject layers
-        if (this.tileCache.has(hash)) {
-          const parent = this.tileCache.get(hash)
-          tile.injectParentTile(parent, true, layers)
-        } else {
-          // if parent tile does not exist: create, set all the child's requests,
-          // and tell the styler to request the webworker(s) to process the tile
-          const { face, zoom, x, y } = parentLayers[hash]
-          const newTile = this._createTile(face, zoom, x, y, hash)
-          for (const layer of layers) newTile.childrenRequests[layer] = [tile]
-          this.style.requestTiles([newTile])
-        }
-      }
-    }
+    // // if tile still exists
+    // if (this.tileCache.has(tileID)) {
+    //   // grab the main tile
+    //   const tile = this.tileCache.get(tileID)
+    //   // for each parentLayer, inject specified layers
+    //   for (let hash in parentLayers) {
+    //     hash = +hash
+    //     const layers = parentLayers[hash].layers
+    //     // check if parent exists in tileCache, if so, inject layers
+    //     if (this.tileCache.has(hash)) {
+    //       const parent = this.tileCache.get(hash)
+    //       tile.injectParentTile(parent, true, layers)
+    //     } else {
+    //       // if parent tile does not exist: create, set all the child's requests,
+    //       // and tell the styler to request the webworker(s) to process the tile
+    //       const { face, zoom, x, y } = parentLayers[hash]
+    //       const newTile = this._createTile(face, zoom, x, y, hash)
+    //       for (const layer of layers) newTile.childrenRequests[layer] = [tile]
+    //       this.style.requestTiles([newTile])
+    //     }
+    //   }
+    // }
   }
 
   _getTiles () {

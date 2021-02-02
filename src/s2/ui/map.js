@@ -273,6 +273,7 @@ export default class Map extends Camera {
       // if there is data to 'inject', we make sure to render another frame later
       if (self.injectionQueue.length) {
         // pull out the latest data we received (think about it, the newest data is the most constructive)
+        // console.log('this.injectionQueue', this.injectionQueue)
         const data = self.injectionQueue.pop()
         // tell the camera to inject data
         self._injectData(data)

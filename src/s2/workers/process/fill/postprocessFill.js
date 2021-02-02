@@ -6,8 +6,8 @@ import type { Feature } from '../../tile.worker'
 // const MAX_FEATURE_BATCH_SIZE = 1 << 7 // 128
 const MAX_FEATURE_BATCH_SIZE = 1 << 6 // 64
 
-export default function postprocessFill (mapID: string, source: string, tileID: string,
-  features: Array<Feature>, postMessage: Function) {
+export default function postprocessFill (mapID: string, source: string,
+  tileID: string, features: Array<Feature>, postMessage: Function) {
   // now that we have created all triangles, let's merge into bundled buffer sets
   // for the main thread to build VAOs.
 
@@ -84,7 +84,7 @@ export default function postprocessFill (mapID: string, source: string, tileID: 
   }
 
   // Upon building the batches, convert to buffers and ship.
-  const vertexBuffer = new Int16Array(vertices).buffer
+  const vertexBuffer = new Float32Array(vertices).buffer
   const indexBuffer = new Uint32Array(indices).buffer
   const codeTypeBuffer = new Uint8Array(codeType).buffer
   const featureGuideBuffer = new Float32Array(featureGuide).buffer

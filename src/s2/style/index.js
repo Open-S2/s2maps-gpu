@@ -16,7 +16,7 @@ export default class Style {
   webworker: boolean = false
   zoom: number = 0
   minzoom: number = 0
-  maxzoom: number = 14.5
+  maxzoom: number = 20
   lon: number = 0
   lat: number = 0
   sources: Sources = {}
@@ -62,7 +62,7 @@ export default class Style {
       if (!isNaN(style.minzoom) && style.minzoom >= 0) self.minzoom = style.minzoom
       if (!isNaN(style.maxzoom)) {
         if (style.maxzoom <= self.minzoom) self.maxzoom = self.minzoom + 1
-        else if (style.maxzoom <= 14.5) self.maxzoom = style.maxzoom
+        else if (style.maxzoom <= 20) self.maxzoom = style.maxzoom
       }
       // extract sources
       if (style.sources) self.sources = style.sources
@@ -146,12 +146,21 @@ export default class Style {
   // 2) ensure the order is correct for when WebGL eventually parses the encodings
   _buildLayers () {
     const { colorBlind } = this
+    let depthPos = 1
     // now we build our program set simultaneous to encoding our layers
     const programs = new Set()
     for (let i = 0, ll = this.layers.length; i < ll; i++) {
       const layer: Layer = this.layers[i]
       // TODO: if bad layer, remove
       programs.add(layer.type)
+      // add depth position
+      if (layer.type === 'fill' || layer.type === 'line') {
+        layer.depthPos = depthPos
+        depthPos++
+      } else if (layer.type === 'text') {
+        layer.depthPos = depthPos
+        depthPos += 4
+      }
       // if webgl2 or greater, we build layerCode
       if (this.glType > 1) {
         const code = []
@@ -187,9 +196,9 @@ export default class Style {
     const tileRequests: Array<TileRequest> = []
     tiles.forEach(tile => {
       // grab request values
-      const { id, face, zoom, x, y, division, size } = tile
+      const { id, face, zoom, x, y, bbox, division, size } = tile
       // build tileRequests
-      tileRequests.push({ hash: id, face, zoom, x, y, division, size })
+      tileRequests.push({ hash: id, face, zoom, x, y, bbox, division, size })
     })
     // send the tiles over to the worker pool manager to split the workload
     if (this.webworker) { // $FlowIgnore

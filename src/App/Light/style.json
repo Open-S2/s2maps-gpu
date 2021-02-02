@@ -14,7 +14,7 @@
   },
   "wallpaper": {
     "background-color": "rgb(25, 28, 80)",
-    "fade-1": "#a1d6f7",
+    "fade-1": "#a0d2f5",
     "fade-2": "rgb(217, 255, 255)",
     "halo": "#ffffff"
   },
@@ -121,7 +121,7 @@
       "minzoom": 0,
       "layout": {},
       "paint": {
-        "color": "#a1d6f7"
+        "color": "#a0d2f5"
       }
     },
     {
@@ -147,7 +147,7 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "#a1d6f7",
+        "color": "#a0d2f5",
         "width": [
           "input-range",
           "zoom",

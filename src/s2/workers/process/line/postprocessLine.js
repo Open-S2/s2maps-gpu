@@ -3,6 +3,8 @@ import featureSort from '../featureSort'
 
 import type { Feature } from '../../tile.worker'
 
+type Cap = 'butt' | 'round' | 'square'
+
 export default function postprocessLine (mapID: string, source: string, tileID: string,
   features: Array<Feature>, postMessage: Function) {
   // now that we have created all triangles, let's merge into bundled buffer sets
@@ -34,6 +36,7 @@ export default function postprocessLine (mapID: string, source: string, tileID: 
   let indexOffset: number = 0
   let curFeatureCode = encodings.toString()
   let curlayerIndex = features[0].layerIndex
+  let cap: number = 0
 
   for (const feature of features) {
     // on layer change or max feature code change, we have to setup a new featureGuide
@@ -45,7 +48,7 @@ export default function postprocessLine (mapID: string, source: string, tileID: 
       )
     ) {
       // store the current feature
-      featureGuide.push(curlayerIndex, indexCount, indexOffset, encodings.length, ...encodings) // layerIndex, count, offset, encoding size, encodings
+      featureGuide.push(cap, curlayerIndex, indexCount, indexOffset, encodings.length, ...encodings) // layerIndex, count, offset, encoding size, encodings
       if (webgl1) featureGuide.push(subEncodings.length, ...subEncodings)
       // update indexOffset
       indexOffset += indexCount
@@ -63,17 +66,19 @@ export default function postprocessLine (mapID: string, source: string, tileID: 
     for (let f = 0; f < fl; f++) vertices.push(feature.vertices[f])
     // update previous layerIndex
     curlayerIndex = feature.layerIndex
+    // store the cap type
+    cap = encodeCap(feature.cap)
     // increment indexCount
     indexCount += fl / 6
   }
   // store the very last featureGuide batch if not yet stored
   if (indexCount) {
-    featureGuide.push(curlayerIndex, indexCount, indexOffset, encodings.length, ...encodings) // layerIndex, count, offset, encoding size, encodings
+    featureGuide.push(cap, curlayerIndex, indexCount, indexOffset, encodings.length, ...encodings) // layerIndex, count, offset, encoding size, encodings
     if (webgl1) featureGuide.push(subEncodings.length, ...subEncodings)
   }
 
   // Upon building the batches, convert to buffers and ship.
-  const vertexBuffer = new Int16Array(vertices).buffer
+  const vertexBuffer = new Float32Array(vertices).buffer
   const featureGuideBuffer = new Float32Array(featureGuide).buffer
   // ship the vector data.
   postMessage({
@@ -84,4 +89,10 @@ export default function postprocessLine (mapID: string, source: string, tileID: 
     vertexBuffer,
     featureGuideBuffer
   }, [vertexBuffer, featureGuideBuffer])
+}
+
+function encodeCap (cap: Cap): number {
+  if (cap === 'butt') return 0
+  else if (cap === 'square') return 1
+  else return 2 // round
 }

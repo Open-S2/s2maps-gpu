@@ -2,7 +2,7 @@
   "version": 1,
   "name": "s2test",
   "center": [-111.811091, 40.718442],
-  "zoom": 10,
+  "zoom": 12,
   "minzoom": 0,
   "maxzoom": 20,
   "sources": {
@@ -295,15 +295,7 @@
       "minzoom": 5,
       "type": "line",
       "layout": {
-        "cap": [
-          "input-range",
-          "zoom",
-          "step",
-          0,
-          "butt",
-          12,
-          "round"
-        ],
+        "cap": "butt",
         "join": "bevel"
       },
       "paint": {
@@ -323,15 +315,7 @@
       "type": "line",
       "minzoom": 7,
       "layout": {
-        "cap": [
-          "input-range",
-          "zoom",
-          "step",
-          0,
-          "butt",
-          12,
-          "round"
-        ],
+        "cap": "butt",
         "join": "bevel"
       },
       "paint": {
@@ -379,15 +363,7 @@
       "type": "line",
       "minzoom": 7,
       "layout": {
-        "cap": [
-          "input-range",
-          "zoom",
-          "step",
-          0,
-          "butt",
-          12,
-          "round"
-        ],
+        "cap": "butt",
         "join": "bevel"
       },
       "paint": {
@@ -417,15 +393,7 @@
       "type": "line",
       "minzoom": 5,
       "layout": {
-        "cap": [
-          "input-range",
-          "zoom",
-          "step",
-          0,
-          "butt",
-          10,
-          "round"
-        ],
+        "cap": "round",
         "join": "bevel"
       },
       "paint": {
@@ -436,10 +404,10 @@
           "lin",
           7,
           2,
-          10,
-          4,
-          13,
-          15
+          12,
+          7,
+          15,
+          19
         ]
       }
     },
@@ -498,15 +466,7 @@
       "type": "line",
       "minzoom": 9,
       "layout": {
-        "cap": [
-          "input-range",
-          "zoom",
-          "step",
-          0,
-          "butt",
-          12,
-          "round"
-        ],
+        "cap": "butt",
         "join": "bevel"
       },
       "paint": {
@@ -551,15 +511,7 @@
       "type": "line",
       "minzoom": 7,
       "layout": {
-        "cap": [
-          "input-range",
-          "zoom",
-          "step",
-          0,
-          "butt",
-          12,
-          "round"
-        ],
+        "cap": "butt",
         "join": "bevel"
       },
       "paint": {
@@ -631,15 +583,7 @@
       "type": "line",
       "minzoom": 7,
       "layout": {
-        "cap": [
-          "input-range",
-          "zoom",
-          "step",
-          0,
-          "butt",
-          12,
-          "round"
-        ],
+        "cap": "butt",
         "join": "bevel"
       },
       "paint": {
@@ -669,29 +613,21 @@
       "type": "line",
       "minzoom": 5,
       "layout": {
-        "cap": [
-          "input-range",
-          "zoom",
-          "step",
-          0,
-          "butt",
-          10,
-          "round"
-        ],
+        "cap": "butt",
         "join": "bevel"
       },
       "paint": {
-        "color": "#fbefb2",
+        "color": "#fbe8b1",
         "width": [
           "input-range",
           "zoom",
           "lin",
           7,
           1,
-          10,
-          3,
-          13,
-          12.5
+          12,
+          4,
+          15,
+          15
         ]
       }
     },

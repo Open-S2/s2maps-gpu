@@ -2,8 +2,8 @@
   "version": 1,
   "name": "s2test",
   "center": [-111.811091, 40.718442],
-  "zoom": 1,
-  "minzoom": 1,
+  "zoom": 0.5,
+  "minzoom": 0.5,
   "maxzoom": 20,
   "sources": {
     "world": "https://s3.s2maps.io/streets-v1",

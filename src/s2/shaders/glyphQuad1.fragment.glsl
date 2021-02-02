@@ -30,6 +30,8 @@ void main () {
   		0.
   	);
 
+    rgba *= color.a;
+
     gl_FragColor = (!uColor) ? 1. - rgba : color * rgba;
   }
 }

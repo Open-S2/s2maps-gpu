@@ -31,6 +31,8 @@ export default class LineProgram extends Program {
     // setup the devicePixelRatio
     this.use()
     this.setDevicePixelRatio(devicePixelRatio)
+    // ensure cap uniform
+    this.uCap = gl.getUniformLocation(this.glProgram, 'uCap')
   }
 
   draw (featureGuide: FeatureGuide, source: VectorTileSource) {
@@ -38,23 +40,26 @@ export default class LineProgram extends Program {
     const { gl, context } = this
     const { type } = context
     // get current source data
-    let { count, offset, featureCode, mode, color, width } = featureGuide
+    let { cap, count, offset, depthPos, featureCode, mode, color, width } = featureGuide
+    // ensure proper blend state
+    context.defaultBlend()
+    // adjust to current depthPos
+    context.lequalDepth()
+    if (depthPos) context.setDepthRange(depthPos)
+    else context.resetDepthRange()
+    // set cap
+    gl.uniform1f(this.uCap, cap)
     // set feature code
     if (type === 1) {
       if (color) gl.uniform4fv(this.uColor, color)
       if (width) gl.uniform1f(this.uWidth, width)
     } else { this.setFeatureCode(featureCode) }
-    // disable culling
-    context.disableCullFace()
     // apply the appropriate offset in the source vertexBuffer attribute
     gl.bindBuffer(gl.ARRAY_BUFFER, source.vertexBuffer)
-    gl.vertexAttribPointer(1, 2, gl.SHORT, false, 12, 0 + ((offset | 0) * 12))
-    gl.vertexAttribPointer(2, 2, gl.SHORT, false, 12, 4 + ((offset | 0) * 12))
-    gl.vertexAttribPointer(3, 2, gl.SHORT, false, 12, 8 + ((offset | 0) * 12))
-
+    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 24, 0 + ((offset | 0) * 24))
+    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 24, 8 + ((offset | 0) * 24))
+    gl.vertexAttribPointer(3, 2, gl.FLOAT, false, 24, 16 + ((offset | 0) * 24))
     // draw elements
     gl.drawArraysInstanced(mode || gl.TRIANGLES, 0, 9, count) // gl.drawArraysInstancedANGLE(mode, first, count, primcount)
-    // re-enable culling
-    context.enableCullFace()
   }
 }

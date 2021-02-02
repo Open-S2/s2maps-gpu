@@ -8,6 +8,12 @@ import type { WebGLRenderingContext, WebGL2RenderingContext } from './'
 export default class Context {
   gl: WebGLRenderingContext | WebGL2RenderingContext
   devicePixelRatio: number
+  depthEpsilon: number
+  depthTestState: boolean = false
+  blendState: number = -1 // 0 -> default ; 1 ->
+  zTestState: number = -1 // 0 -> always ; 1 -> less ; 2 -> lessThenOrEqual
+  zLow: number = 0
+  zHigh: numbber = 1
   type: 1 | 2
   clearColorRGBA: [number, number, number, number] = [0, 0, 0, 0]
   masks: Map<number, VectorTileSource> = new Map()
@@ -16,6 +22,7 @@ export default class Context {
   constructor (context: WebGLRenderingContext | WebGL2RenderingContext, devicePixelRatio: number) {
     this.gl = context
     this.devicePixelRatio = devicePixelRatio
+    this.depthEpsilon = 1 / Math.pow(2, 16)
   }
 
   delete () {
@@ -35,15 +42,7 @@ export default class Context {
     gl.getExtension('WEBGL_lose_context').loseContext()
   }
 
-  resetViewport () {
-    const { gl } = this
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
-  }
-
-  bindMainBuffer () {
-    const { gl } = this
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
-  }
+  /** CONSTRUCTION **/
 
   getMask (level: number, division: number) {
     const { masks } = this
@@ -82,6 +81,18 @@ export default class Context {
     gl.drawArrays(gl.TRIANGLE_FAN, 0, 4)
   }
 
+  /** PREP PHASE **/
+
+  resetViewport () {
+    const { gl } = this
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
+  }
+
+  bindMainBuffer () {
+    const { gl } = this
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+  }
+
   setClearColor (clearColor: [number, number, number, number]) {
     this.clearColorRGBA = clearColor
   }
@@ -89,8 +100,9 @@ export default class Context {
   newScene () {
     this.enableCullFace()
     this.enableStencilTest()
-    this.enableDepthTest()
+    this.disableDepthTest()
     this.enableBlend()
+    this.resetDepthRange()
     this.clearScene()
   }
 
@@ -105,7 +117,7 @@ export default class Context {
   clearColor () {
     const { gl } = this
     gl.clearColor(...this.clearColorRGBA)
-    // gl.colorMask(true, true, true, true)
+    gl.blendColor(0, 0, 0, 0)
   }
 
   clearColorDepthBuffers () {
@@ -120,95 +132,150 @@ export default class Context {
     gl.clear(gl.COLOR_BUFFER_BIT)
   }
 
+  /** DEPTH **/
+
   enableDepthTest () {
-    this.gl.enable(this.gl.DEPTH_TEST)
-    this.alwaysDepth() // start with an always pass depth function
-  }
-
-  lessDepth () {
-    this.gl.depthFunc(this.gl.LESS)
-  }
-
-  lequalDepth () {
-    const { gl } = this
-    gl.depthFunc(gl.LEQUAL)
-  }
-
-  wallpaperState () {
-    const { gl } = this
-    gl.depthFunc(gl.ALWAYS)
-    gl.stencilFunc(gl.EQUAL, 0, 0xFF)
-  }
-
-  alwaysDepth () {
-    this.gl.depthFunc(this.gl.ALWAYS)
+    const { gl, depthTestState } = this
+    if (!depthTestState) {
+      gl.enable(gl.DEPTH_TEST)
+      this.depthTestState = true
+    }
   }
 
   disableDepthTest () {
-    this.gl.disable(this.gl.DEPTH_TEST)
+    const { gl, depthTestState } = this
+    if (depthTestState) {
+      gl.disable(gl.DEPTH_TEST)
+      this.depthTestState = false
+    }
   }
 
+  alwaysDepth () {
+    const { gl, zTestState } = this
+    if (zTestState !== 0) {
+      this.zTestState = 0
+      gl.depthFunc(gl.ALWAYS)
+    }
+  }
+
+  lessDepth () {
+    const { gl, zTestState } = this
+    if (zTestState !== 1) {
+      this.zTestState = 1
+      gl.depthFunc(gl.LESS)
+    }
+  }
+
+  lequalDepth () {
+    const { gl, zTestState } = this
+    if (zTestState !== 2) {
+      this.zTestState = 2
+      gl.depthFunc(gl.LEQUAL)
+    }
+  }
+
+  setDepthRange (depthPos: number) {
+    const { gl, zLow, zHigh } = this
+    const depth = 1 - depthPos * this.depthEpsilon
+    if (zLow !== depth || zHigh !== depth) {
+      gl.depthRange(depth, depth)
+      this.zLow = depth
+      this.zHigh = depth
+    }
+  }
+
+  resetDepthRange () {
+    const { gl, zLow, zHigh } = this
+    if (zLow !== 0 || zHigh !== 1) {
+      gl.depthRange(0, 1)
+      this.zLow = 0
+      this.zHigh = 1
+    }
+  }
+
+  /** WALLPAPER **/
+
+  wallpaperState () {
+    const { gl } = this
+    this.alwaysDepth()
+    gl.stencilFunc(gl.EQUAL, 0, 0xFF)
+  }
+
+  /** CULLING **/
+
   enableCullFace () {
-    this.gl.enable(this.gl.CULL_FACE)
+    const { gl } = this
+    gl.enable(gl.CULL_FACE)
   }
 
   disableCullFace () {
-    this.gl.disable(this.gl.CULL_FACE)
+    const { gl } = this
+    gl.disable(gl.CULL_FACE)
   }
+
+  /** BLENDING **/
 
   enableBlend () {
     const { gl } = this
     gl.enable(gl.BLEND)
-    gl.blendColor(0, 0, 0, 0)
     this.defaultBlend()
   }
 
-  defaultBlend () {
+  disableBlend () {
     const { gl } = this
-    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
+    gl.disable(gl.BLEND)
   }
 
-  sourceOnlyBlend () {
-    const { gl } = this
-    gl.blendFunc(gl.ONE, gl.ZERO)
+  defaultBlend () {
+    const { gl, blendState } = this
+    if (blendState !== 0) {
+      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
+      this.blendState = 0
+    }
   }
 
   shadeBlend () {
-    const { gl } = this
-    gl.blendFunc(gl.DST_COLOR, gl.ZERO)
+    const { gl, blendState } = this
+    if (blendState !== 1) {
+      gl.blendFunc(gl.DST_COLOR, gl.ZERO)
+      this.blendState = 1
+    }
   }
 
   inversionBlend () {
-    const { gl } = this
-    gl.blendFunc(gl.ONE_MINUS_DST_COLOR, gl.ONE_MINUS_SRC_COLOR)
+    const { gl, blendState } = this
+    if (blendState !== 2) {
+      gl.blendFunc(gl.ONE_MINUS_DST_COLOR, gl.ONE_MINUS_SRC_COLOR)
+      this.blendState = 2
+    }
   }
 
   zeroBlend () {
-    const { gl } = this
-    gl.blendFunc(gl.ZERO, gl.SRC_COLOR)
+    const { gl, blendState } = this
+    if (blendState !== 3) {
+      gl.blendFunc(gl.ZERO, gl.SRC_COLOR)
+      this.blendState = 3
+    }
   }
 
   oneBlend () {
-    const { gl } = this
-    gl.blendFunc(gl.ONE, gl.ONE)
+    const { gl, blendState } = this
+    if (blendState !== 4) {
+      gl.blendFunc(gl.ONE, gl.ONE)
+      this.blendState = 4
+    }
   }
 
-  disableBlend () {
-    this.gl.disable(this.gl.BLEND)
-  }
+  /** STENCILING **/
 
   enableStencilTest () {
-    this.gl.enable(this.gl.STENCIL_TEST)
+    const { gl } = this
+    gl.enable(gl.STENCIL_TEST)
   }
 
   disableStencilTest () {
-    this.gl.disable(this.gl.STENCIL_TEST)
-  }
-
-  enableMaskTest () {
     const { gl } = this
-    gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE)
-    gl.colorMask(false, false, false, false)
+    gl.disable(gl.STENCIL_TEST)
   }
 
   stencilFunc (ref: number) {
@@ -229,6 +296,16 @@ export default class Context {
     gl.stencilOp(gl.KEEP, gl.REPLACE, gl.REPLACE)
     gl.stencilFunc(gl.NOTEQUAL, 0, 0xFF)
   }
+
+  /** MASKING **/
+
+  enableMaskTest () {
+    const { gl } = this
+    gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE)
+    gl.colorMask(false, false, false, false)
+  }
+
+  /** CLEANUP **/
 
   cleanup () {
     const { gl } = this

@@ -33,6 +33,8 @@ void main () {
   		0.
   	);
 
+    rgba *= color.a;
+
     fragColor = (!uColor) ? 1. - rgba : color * rgba;
   }
 }

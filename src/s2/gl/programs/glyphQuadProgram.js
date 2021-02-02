@@ -78,7 +78,7 @@ export default class GlyphQuadProgram extends Program {
     gl.activeTexture(gl.TEXTURE0)
     glyphFilterProgram.bindResultTexture()
     // pull out the appropriate data from the source
-    const { featureCode, offset, count, size, fill, stroke, strokeWidth } = featureGuide
+    const { depthPos, featureCode, offset, count, size, fill, stroke, strokeWidth } = featureGuide
     const { textureID, glyphQuadBuffer } = source
     // grab glyph texture
     const { texSize, texture } = this.glyphProgram.getFBO(textureID)
@@ -89,8 +89,10 @@ export default class GlyphQuadProgram extends Program {
       gl.uniform4fv(this.uStroke, stroke)
       gl.uniform1f(this.uStrokeWidth, strokeWidth)
     } else { this.setFeatureCode(featureCode) }
-    // turn depth testing off
+    // turn stencil testing off
     context.stencilFunc(0)
+    // ensure proper z-testing state
+    context.lequalDepth()
     // set the texture size uniform
     gl.uniform2fv(this.uTexSize, texSize)
     // bind the correct glyph texture
@@ -108,27 +110,25 @@ export default class GlyphQuadProgram extends Program {
     this.setFill(false)
     this.setColor(false)
     context.zeroBlend()
-    // gl.stencilOp(gl.KEEP, gl.INVERT, gl.INVERT)
-    // gl.stencilFunc(gl.ALWAYS, tmpMaskID, 0xFF)
+    context.setDepthRange(depthPos)
     gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count)
     this.setColor(true)
     context.oneBlend()
-    // gl.stencilOp(gl.KEEP, gl.REPLACE, gl.REPLACE)
-    // gl.stencilFunc(gl.NOTEQUAL, tmpMaskID, 0xFF)
+    context.setDepthRange(depthPos + 1)
     gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count)
     /** DRAW STROKE **/
     /** DRAW FILL **/
     this.setFill(true)
     this.setColor(false)
     context.zeroBlend()
+    context.setDepthRange(depthPos + 2)
     gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count)
     this.setColor(true)
     context.oneBlend()
+    context.setDepthRange(depthPos + 3)
     gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count)
     /** DRAW FILL **/
     // reset to active texture 0
     gl.activeTexture(gl.TEXTURE0)
-    // set default blend
-    context.defaultBlend()
   }
 }

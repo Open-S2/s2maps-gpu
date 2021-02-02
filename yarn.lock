@@ -3150,15 +3150,10 @@ caniuse-api@^3.0.0:
     lodash.memoize "^4.1.2"
     lodash.uniq "^4.5.0"
 
-caniuse-lite@^1.0.0, caniuse-lite@^1.0.30001109, caniuse-lite@^1.0.30001111:
-  version "1.0.30001112"
-  resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001112.tgz#0fffc3b934ff56ff0548c37bc9dad7d882bcf672"
-  integrity sha512-J05RTQlqsatidif/38aN3PGULCLrg8OYQOlJUKbeYVzC2mGZkZLIztwRlB3MtrfLmawUmjFlNJvy/uhwniIe1Q==
-
-caniuse-lite@^1.0.30000981, caniuse-lite@^1.0.30001035, caniuse-lite@^1.0.30001135:
-  version "1.0.30001137"
-  resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001137.tgz#6f0127b1d3788742561a25af3607a17fc778b803"
-  integrity sha512-54xKQZTqZrKVHmVz0+UvdZR6kQc7pJDgfhsMYDG19ID1BWoNnDMFm5Q3uSBSU401pBvKYMsHAt9qhEDcxmk8aw==
+caniuse-lite@^1.0.0, caniuse-lite@^1.0.30000981, caniuse-lite@^1.0.30001035, caniuse-lite@^1.0.30001109, caniuse-lite@^1.0.30001111, caniuse-lite@^1.0.30001135:
+  version "1.0.30001181"
+  resolved "https://registry.npmjs.org/caniuse-lite/-/caniuse-lite-1.0.30001181.tgz"
+  integrity sha512-m5ul/ARCX50JB8BSNM+oiPmQrR5UmngaQ3QThTTp5HcIIQGP/nPBs82BYLE+tigzm3VW+F4BJIhUyaVtEweelQ==
 
 capture-exit@^2.0.0:
   version "2.0.0"
@@ -4502,10 +4497,10 @@ earclip@^0.3.8:
   resolved "https://registry.yarnpkg.com/earclip/-/earclip-0.3.18.tgz#ab90019348eb6ca62923f1079d8f7e62f12d090e"
   integrity sha512-L9on2UAcQf1R3nLsOWp6PDhyV1tpQQwV7LhcXzMhZC+StEOuwHlXjztuN6yEhgW1pKOnXY1uLZMxEsj80SQtfA==
 
-earclip@^0.5.0:
-  version "0.5.0"
-  resolved "https://registry.yarnpkg.com/earclip/-/earclip-0.5.0.tgz#dab248486b7eb387a35fb69fae272fa37e2b453f"
-  integrity sha512-2PwthFXbSu6M1GNvYmuZ5NcDTBXAPlY8vJBNerK9RE4/rA9B7IDkX51dn8Q8eO+2i4hOLMVyTGEhT2N0v7rSAA==
+earclip@^0.7.3:
+  version "0.7.3"
+  resolved "https://registry.yarnpkg.com/earclip/-/earclip-0.7.3.tgz#c3b24939a3af2771c72230047d6df0597b3d8441"
+  integrity sha512-1oFUztjgckveX6JtSabv9Fv1shYEWXqSDXcuWIfuXZ1mstfeklAs5AtoClcm/nLuAVLjIwDzN6YOYshpVZXk9A==
 
 ecc-jsbn@~0.1.1:
   version "0.1.2"
@@ -7544,10 +7539,10 @@ levn@^0.3.0, levn@~0.3.0:
     prelude-ls "~1.1.2"
     type-check "~0.3.2"
 
-line-gl@^2.1.2:
-  version "2.1.2"
-  resolved "https://registry.yarnpkg.com/line-gl/-/line-gl-2.1.2.tgz#fcb5b9e7a749e2f5230ef1a1d42e2fc27620b0a7"
-  integrity sha512-u/GdZEkPq350+MAgb8U1VMweJuuVUNQ1oubq7E+cFtdlHmDupxfWiAQJWMuRjoLXlOve3QTcjqUMeSTdMQ4hRQ==
+line-gl@^2.2.2:
+  version "2.2.2"
+  resolved "https://registry.yarnpkg.com/line-gl/-/line-gl-2.2.2.tgz#cef62ed50acf688e3af69fd2c752296134e69502"
+  integrity sha512-oMQH0kNerB25Mp/QWmbE2sdjbwu/9XmDkrBq8orGkO85HLblE8+IG/q/0l6uKzHapW8sRqn+ug5WK2EA7vc5uw==
 
 lines-and-columns@^1.1.6:
   version "1.1.6"
@@ -10616,10 +10611,10 @@ s2json-vt@^0.6.1:
   resolved "https://registry.yarnpkg.com/s2json-vt/-/s2json-vt-0.6.1.tgz#21adab32258963daa34b0e27dcf97f5044bbea4a"
   integrity sha512-y4yMI4EnjAe3U9IM5TkmPTwqoS+FK5HRE+qmpdmh1x0budwv5rPe0CVd+FQSv0Tkf/fnVXCtFr2rNHB5zYMiug==
 
-s2projection@^1.7.6:
-  version "1.7.6"
-  resolved "https://registry.yarnpkg.com/s2projection/-/s2projection-1.7.6.tgz#80f2d27d4ef457b96a6ac575d2dc1e01e3a4504d"
-  integrity sha512-2NAj0DUKT5T1ESGmDngJ2vBYWzPRxGA/+MMoz6Qnr8Vt3rEUZ38tOIE9eMTJ6w7IRAUhccgfYNDLrdxjB+F88Q==
+s2projection@^1.9.0:
+  version "1.9.0"
+  resolved "https://registry.yarnpkg.com/s2projection/-/s2projection-1.9.0.tgz#2907e81336f1290125d1c83cd997fe16f1562a06"
+  integrity sha512-Innm9yBvd45lLoqVm0pk1pEeG7Z9ais42fdxM5fvtLB0ehF4vnMk38XawOpt7VxmC3T36llto+AkuggyvCHlLw==
 
 s2rtin@^0.5.0:
   version "0.5.0"

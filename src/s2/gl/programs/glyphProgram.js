@@ -217,8 +217,6 @@ export default class GlyphProgram extends Program {
       }
     }
 
-    // turn depth testing back on
-    context.enableDepthTest()
     // cleanup
     this.cleanGlyphSource(source)
 

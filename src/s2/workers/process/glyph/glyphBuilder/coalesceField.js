@@ -14,8 +14,10 @@ cooalesceField(field) // 'airplane-16'
 **/
 
 export default function coalesceField (field: string | Array<string>, properties: Object): string {
-  if (Array.isArray(field)) return field.reduce((acc, cur) => acc + coalesceText(cur, properties))
-  else return coalesceText(field, properties)
+  if (Array.isArray(field)) {
+    field.unshift('')
+    return field.reduce((acc, cur) => { return acc + coalesceText(cur, properties) })
+  } else { return coalesceText(field, properties) }
 }
 
 function coalesceText (field: string, properties: Object): string {
@@ -37,7 +39,8 @@ function coalesceText (field: string, properties: Object): string {
         else charIndex -= 2
       }
       const key = piece.slice(charIndex)
-      if (properties[key]) return transform('' + properties[key])
+      if (properties[key] !== undefined) return transform('' + properties[key])
     }
+    return ''
   } else { return field }
 }

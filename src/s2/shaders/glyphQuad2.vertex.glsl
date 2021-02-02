@@ -36,7 +36,8 @@ void main () {
   xyz.xyz *= 1.001;
   // find the position on screen
   vec4 glPos = uMatrix * xyz;
-  glPos.xyz /= glPos.w;
+  glPos.xy /= glPos.w;
+  glPos.z = 0.;
   glPos.w = 1.;
 
   // Check the "glyphFilter" result texture at current glPos to see if the aID matches

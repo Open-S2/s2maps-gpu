@@ -50,7 +50,7 @@ export default class Painter {
 
   _createContext (options: MapOptions) {
     // prep options
-    const webglOptions = { antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: false, alpha: true, stencil: true }
+    const webglOptions = { powerPreference: 'high-performance', antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: false, alpha: true, stencil: true }
     let context
     // first try webgl2
     // use webgl for mobile phones as WebGL2 might be too much for phones? Untested.
@@ -164,8 +164,14 @@ export default class Painter {
       const wallpaperProgram: WallpaperProgram = this.useProgram(style.wallpaper.skybox ? 'skybox' : 'wallpaper')
       if (wallpaperProgram) wallpaperProgram.draw(style.wallpaper)
     }
+    // prep the use of fills in the opaque draws
+    this.useProgram('fill')
+    // paint opaque fills
+    const opaqueFillFeatures = features.filter(feature => feature.opaque).reverse()
+    this.paintFeatures(opaqueFillFeatures)
     // paint features
-    this.paintFeatures(features)
+    const residualFeatures = features.filter(feature => !feature.opaque)
+    this.paintFeatures(residualFeatures)
     // cleanup
     context.cleanup()
   }
@@ -221,16 +227,17 @@ export default class Painter {
     // setup variables
     let curLayer: number = -1
     let curProgram: ProgramType = 'fill'
-    let program: Program = this.useProgram('fill')
-    // if (!program) return new Error('The "fill" program does not exist, can not paint.')
+    let program: Program = this.getProgram('fill')
     // run through the features, and upon tile, layer, or program change, adjust accordingly
-    context.alwaysDepth()
     for (const feature of features) {
-      const { tile, faceST, layerIndex, source, sourceName, type, layerCode, lch } = feature
+      const { tile, faceST, depthPos, layerIndex, source, sourceName, type, layerCode, lch } = feature
       const { tmpMaskID } = tile
       const featureSource = source[sourceName]
       // set program
       if (type !== curProgram) {
+        // always cull unless line
+        if (type === 'line') context.disableCullFace()
+        else context.enableCullFace()
         curProgram = type
         program = this.useProgram(type)
         if (!program) return new Error(`The "${type}" program does not exist, can not paint.`)
@@ -241,11 +248,15 @@ export default class Painter {
       if (layerCode && curLayer !== layerIndex) {
         curLayer = layerIndex
         program.setLayerCode(layerCode, lch)
+        // set depthPos if applicable
+        if (depthPos) context.enableDepthTest()
+        else context.disableDepthTest()
       }
+      // adjust to the faceST
       program.setFaceST(faceST)
+      // bind vao
       gl.bindVertexArray(featureSource.vao)
       // draw
-      // if (feature.type !== 'glyph') program.draw(feature, featureSource, tmpMaskID)
       program.draw(feature, featureSource, tmpMaskID)
     }
   }
@@ -255,6 +266,7 @@ export default class Painter {
     const glyphFilterProgram: GlyphFilterProgram = this.getProgram('glyphFilter')
     if (!glyphFilterProgram) return new Error('The "glyphFilter" program does not exist, can not paint.')
     // disable blending
+    context.enableDepthTest()
     // Step 1: draw points
     glyphFilterProgram.bindPointFrameBuffer()
     // setup mask first (uses the "fillProgram" - that's why we have not 'used' the glyphFilterProgram yet)
