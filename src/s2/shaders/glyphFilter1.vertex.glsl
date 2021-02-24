@@ -24,7 +24,7 @@ uniform sampler2D uQuads;
 // WebGL1 specific uniforms
 uniform float uSize;
 
-#include ./ST2XYZ;
+@include "./ST2XYZ.glsl"
 
 varying vec4 color;
 

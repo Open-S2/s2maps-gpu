@@ -206,7 +206,7 @@ module.exports = function (webpackEnv) {
             },
             {
               test: /\.glsl$/,
-              loader: require.resolve('./glsl-loader.js'),
+              loader: require.resolve('webpack-glsl-minify'),
               // options: {
               //   name: 'static/glsl/[name].[hash:8].glsl',
               //   cacheDirectory: true,

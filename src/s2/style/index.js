@@ -4,6 +4,7 @@ import Color from './color'
 import Map from '../ui/map'
 import { Wallpaper, Skybox, Tile } from '../source'
 import requestData from '../util/fetch'
+import buildColorRamp from './buildColorRamp'
 import { encodeLayerAttribute, parseFeatureFunction, orderLayer } from './conditionals'
 
 import type { MapOptions } from '../ui/map'
@@ -14,6 +15,7 @@ export default class Style {
   map: Map
   glType: number
   webworker: boolean = false
+  interactive: boolean = false // this is seperate from the options. If a layer is interactive then we draw more
   zoom: number = 0
   minzoom: number = 0
   maxzoom: number = 20
@@ -40,7 +42,7 @@ export default class Style {
     this.glType = type
   }
 
-  buildStyle (style: string | Object) {
+  async buildStyle (style: string | Object) {
     const self = this
     self.dirty = true
     if (typeof style === 'string') {
@@ -73,7 +75,7 @@ export default class Style {
       if (style.wallpaper) self._buildWallpaper(style.wallpaper)
       // build the layers
       if (style.layers) self.layers = style.layers
-      self._buildLayers()
+      await self._buildLayers()
     }
   }
 
@@ -86,6 +88,7 @@ export default class Style {
       if (!layer.maxzoom) layer.maxzoom = 30
       if (!layer.layer) layer.layer = 'default'
       if (layer.source === 'mask') this.maskLayers.push(layer)
+      if (layer.interactive) this.interactive = true
     }
     // ensure if wallpaper, we have proper default values
     if (style.background) {
@@ -126,7 +129,7 @@ export default class Style {
     if (background.skybox) {
       // grab clear color and set inside painter
       const clearColor = this.clearColor = (new Color(background.loadingBackground)).getRGB()
-      this.map.painter.setClearColor(clearColor)
+      this.map.painter.context.setClearColor(clearColor)
       // grab wallpaper data
       this.wallpaper = new Skybox(background, this.map.projection)
     } else if (background['background-color']) {
@@ -144,20 +147,21 @@ export default class Style {
 
   // 1) ensure "bad" layers are removed (missing important keys or subkeys)
   // 2) ensure the order is correct for when WebGL eventually parses the encodings
-  _buildLayers () {
+  async _buildLayers () {
     const { colorBlind } = this
     let depthPos = 1
     // now we build our program set simultaneous to encoding our layers
-    const programs = new Set()
+    const programs = new Set([(this.wallpaper && this.wallpaper.skybox) ? 'skybox' : (this.wallpaper) ? 'wallpaper' : null, 'fill'])
     for (let i = 0, ll = this.layers.length; i < ll; i++) {
       const layer: Layer = this.layers[i]
+      const { type } = layer
       // TODO: if bad layer, remove
       programs.add(layer.type)
       // add depth position
-      if (layer.type === 'fill' || layer.type === 'line') {
+      if (type === 'fill' || type === 'line' || type === 'point' || type === 'heatmap') {
         layer.depthPos = depthPos
         depthPos++
-      } else if (layer.type === 'text') {
+      } else if (type === 'glyph') {
         layer.depthPos = depthPos
         depthPos += 4
       }
@@ -180,13 +184,17 @@ export default class Style {
         for (const l in layer.layout) layer.layout[l] = parseFeatureFunction(layer.layout[l], l)
         for (const p in layer.paint) layer.paint[p] = parseFeatureFunction(layer.paint[p], p)
       }
+      // build color ramp image if applicable
+      if (type === 'heatmap' && layer.colorRamp) {
+        layer.colorRamp = this.map.painter.context.buildTexture(buildColorRamp(layer.colorRamp), 256, 1)
+      }
     }
     // tell the painter what we are using
-    this.map.painter.prebuildPrograms(programs)
+    await this.map.painter.buildPrograms(programs)
     // prebuild wallpaper
     if (this.wallpaper) {
       const { skybox } = this.wallpaper
-      const wallpaperProgram = this.map.painter.getProgram(skybox ? 'skybox' : 'wallpaper')
+      const wallpaperProgram = this.map.painter.programs[skybox ? 'skybox' : 'wallpaper']
       if (skybox) wallpaperProgram.injectImages(this.wallpaper, this.map)
     }
   }

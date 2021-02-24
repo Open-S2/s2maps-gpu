@@ -16,13 +16,21 @@ export default class RasterProgram extends Program {
     // get gl from context
     const { gl, type } = context
     // install shaders
-    if (type === 1) {
-      // if webgl1, setup attribute locations
-      gl.attributeLocations = { aPos: 0, aRadius: 6 }
-      super(context, vert1, frag1)
-    } else {
-      super(context, vert2, frag2)
-    }
+    if (type === 1) gl.attributeLocations = { aPos: 0, aRadius: 6 }
+    // inject Program
+    super(context)
+    const self = this
+
+    return Promise.all([
+      (type === 1) ? vert1 : vert2,
+      (type === 1) ? frag1 : frag2
+    ])
+      .then(([vertex, fragment]) => {
+        // build shaders
+        self.buildShaders(vertex, fragment)
+
+        return self
+      })
   }
 
   draw (featureGuide: FeatureGuide, sourceData: RasterTileSource) {

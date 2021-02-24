@@ -231,6 +231,10 @@
       "source": "covid",
       "type": "line",
       "minzoom": 0,
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
       "paint": {
         "color": "rgb(250, 250, 250)",
         "width": [
@@ -279,7 +283,7 @@
       "source": "world",
       "filter": ["class", "has", ["Country", "State"]],
       "layer": "place",
-      "type": "text",
+      "type": "glyph",
       "layout": {
         "family": "roboto-medium",
         "field": [

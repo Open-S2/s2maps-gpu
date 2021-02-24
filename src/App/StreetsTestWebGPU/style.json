@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "name": "s2test",
+  "center": [-111.811091, 40.718442],
+  "zoom": 0,
+  "minzoom": 0,
+  "maxzoom": 20,
+  "sources": {
+    "ocean": "http://192.168.0.188:8000/data/ocean"
+  },
+  "fonts": {
+    "default": "https://s3.s2maps.io/fonts-v3/default",
+    "roboto-regular": "https://s3.s2maps.io/fonts-v3/RobotoRegular",
+    "roboto-medium": "https://s3.s2maps.io/fonts-v3/RobotoMedium"
+  },
+  "wallpaper": {
+    "background-color": "#030a2d",
+    "fade-1": "rgb(138, 204, 255)",
+    "fade-2": "rgb(217, 255, 255)",
+    "halo": "rgb(230, 255, 255)"
+  },
+  "colorBlind": false,
+  "layers": [
+    {
+      "name": "background",
+      "type": "fill",
+      "opaque": true,
+      "source": "mask",
+      "layout": {},
+      "paint": {
+        "color": "#f0e9d7"
+      }
+    },
+    {
+      "name": "water",
+      "source": "ocean",
+      "filter": ["class", "!has", ["reef", "shoal"]],
+      "layer": "water",
+      "type": "fill",
+      "opaque": true,
+      "minzoom": 0,
+      "layout": {},
+      "paint": {
+        "color": "#8fcaf9"
+      }
+    }
+  ]
+}

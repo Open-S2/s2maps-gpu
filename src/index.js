@@ -12,6 +12,7 @@ const Raster = lazy(() => import('./App/Raster'))
 const Mars = lazy(() => import('./App/Mars'))
 const Streets = lazy(() => import('./App/Streets'))
 const StreetsTest = lazy(() => import('./App/StreetsTest'))
+const StreetsTestWebGPU = lazy(() => import('./App/StreetsTestWebGPU'))
 const Light = lazy(() => import('./App/Light'))
 const Soft = lazy(() => import('./App/Soft'))
 const Dark = lazy(() => import('./App/Dark'))
@@ -19,7 +20,10 @@ const Outdoor = lazy(() => import('./App/Outdoor'))
 const GeoJSON = lazy(() => import('./App/GeoJSON'))
 const ColorBlind = lazy(() => import('./App/ColorBlind'))
 const Hover = lazy(() => import('./App/Hover'))
+const Invert = lazy(() => import('./App/Invert'))
 const Tiles = lazy(() => import('./App/Tiles'))
+const Tesla = lazy(() => import('./App/Tesla'))
+const Earthquakes = lazy(() => import('./App/Earthquakes'))
 const TissotsIndicatrix = lazy(() => import('./App/TissotsIndicatrix'))
 
 ReactDOM.render(
@@ -32,6 +36,7 @@ ReactDOM.render(
         <Route path='/mars' component={Mars} />
         <Route path='/streets' component={Streets} />
         <Route path='/streets-test' component={StreetsTest} />
+        <Route path='/streets-test-webgpu' component={StreetsTestWebGPU} />
         <Route path='/soft' component={Soft} />
         <Route path='/light' component={Light} />
         <Route path='/dark' component={Dark} />
@@ -40,7 +45,10 @@ ReactDOM.render(
         <Route path='/tissots' component={TissotsIndicatrix} />
         <Route path='/colorblind' component={ColorBlind} />
         <Route path='/hover' component={Hover} />
+        <Route path='/invert' component={Invert} />
         <Route path='/tiles' component={Tiles} />
+        <Route path='/earthquakes' component={Earthquakes} />
+        <Route path='/tesla' component={Tesla} />
       </Switch>
     </Suspense>
   </Router>,

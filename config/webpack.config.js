@@ -355,7 +355,8 @@ module.exports = function(webpackEnv) {
             // A missing `test` is equivalent to a match.
             {
               test: /\.glsl$/,
-              loader: require.resolve('./glsl-loader.js')
+              // loader: require.resolve('./glsl-loader.js')
+              loader: require.resolve('webpack-glsl-minify')
             },
             {
               test: /\.worker\.js$/,

@@ -5,7 +5,7 @@ import { S2Point, tileXYFromSTZoom, bboxST, updateFace, tileHash } from 's2proje
 import type { TileDefinitions } from './projector'
 
 export default function getTilesInView (zoom: number, matrix: Float32Array,
-  lon: number, lat: number, size: number): TileDefinitions {
+  lon: number, lat: number, radius?: number = 1): TileDefinitions {
   if (zoom < 1) return [[0, 0, 0, 0, 2], [1, 0, 0, 0, 3], [2, 0, 0, 0, 4], [3, 0, 0, 0, 5], [4, 0, 0, 0, 6], [5, 0, 0, 0, 7]]
   // if (true) return [[4, 0, 0, 0, 6]]
   const tiles = []
@@ -34,15 +34,19 @@ export default function getTilesInView (zoom: number, matrix: Float32Array,
     // grab the four points from the bbox and project them
     const topLeft = S2Point.fromSTGL(face, stBbox[0], stBbox[3])
     topLeft.normalize()
+    topLeft.mul(radius)
     const topLeftProjected = mat4.project(matrix, [topLeft.x, topLeft.y, topLeft.z])
     const topRight = S2Point.fromSTGL(face, stBbox[2], stBbox[3])
     topRight.normalize()
+    topRight.mul(radius)
     const topRightProjected = mat4.project(matrix, [topRight.x, topRight.y, topRight.z])
     const bottomLeft = S2Point.fromSTGL(face, stBbox[0], stBbox[1])
     bottomLeft.normalize()
+    bottomLeft.mul(radius)
     const bottomLeftProjected = mat4.project(matrix, [bottomLeft.x, bottomLeft.y, bottomLeft.z])
     const bottomRight = S2Point.fromSTGL(face, stBbox[2], stBbox[1])
     bottomRight.normalize()
+    bottomRight.mul(radius)
     const bottomRightProjected = mat4.project(matrix, [bottomRight.x, bottomRight.y, bottomRight.z])
     // check if any of the 4 edge points or lines interact with a -1 to 1 x and y projection plane
     // if tile is part of the view, we add to tiles and tileSet and add all surounding tiles

@@ -1,15 +1,17 @@
 #version 300 es
 precision highp float;
 
-uniform float uDevicePixelRatio;
+@nomangle vWidth vNorm vCenter vColor vDrawType uDevicePixelRatio
 
-in vec4 vColor;
 in vec2 vWidth;
 in vec2 vNorm;
 in vec2 vCenter;
+in vec4 vColor;
 in float vDrawType;
 // in float lengthSoFar;
 out vec4 fragColor;
+
+uniform float uDevicePixelRatio;
 
 void main () {
   // Calculate the distance of the pixel from the line in pixels.

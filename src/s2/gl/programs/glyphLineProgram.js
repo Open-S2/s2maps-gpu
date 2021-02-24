@@ -19,15 +19,21 @@ export default class glyphLineProgram extends Program {
     // get gl from context
     const { gl, type } = context
     // if webgl1, setup attribute locations
-    if (type === 1) {
-      gl.attributeLocations = { aPos: 0, aPar: 1, aLimits: 2, aScale: 3 }
-      super(context, vert1, frag1)
-    } else {
-      super(context, vert2, frag2)
-    }
-    // get uniform locations
-    this.uLineWidth = gl.getUniformLocation(this.glProgram, 'uLineWidth')
-    this.uOffset = gl.getUniformLocation(this.glProgram, 'uOffset')
+    if (type === 1) gl.attributeLocations = { aPos: 0, aPar: 1, aLimits: 2, aScale: 3 }
+    // inject Program
+    super(context)
+    const self = this
+
+    return Promise.all([
+      (type === 1) ? vert1 : vert2,
+      (type === 1) ? frag1 : frag2
+    ])
+      .then(([vertex, fragment]) => {
+        // build said shaders
+        self.buildShaders(vertex, fragment)
+
+        return self
+      })
   }
 
   draw (source: GlyphTileSource) {

@@ -2,17 +2,16 @@
   "version": 1,
   "name": "s2test",
   "center": [-111.811091, 40.718442],
-  "zoom": 12,
+  "zoom": 0,
   "minzoom": 0,
   "maxzoom": 20,
   "sources": {
-    "world": "https://s3.s2maps.io/streets-v1",
     "terrain": "http://192.168.0.188:8000/data/terrain",
     "places": "http://192.168.0.188:8000/data/places",
-    "landuse": "http://192.168.0.188:8000/data/landuse",
+    "landuse": "http://192.168.0.112:8000/data/landuse",
     "landcover": "http://192.168.0.188:8000/data/landcover",
     "ocean": "http://192.168.0.188:8000/data/ocean",
-    "water": "http://192.168.0.188:8000/data/water",
+    "water": "http://192.168.0.112:8000/data/water",
     "buildings": "http://192.168.0.188:8000/data/buildings",
     "boundary": "http://192.168.0.188:8000/data/boundary",
     "transport": "http://192.168.0.188:8000/data/transport",
@@ -140,10 +139,10 @@
           "rgb(226, 233, 238)",
           ["type", "==", "retail"],
           "rgb(254, 245, 220)",
-          ["type", "==", "urban"],
-          "#e9eaed",
           ["type", "has", ["desert", "sand"]],
           "rgb(241, 233, 195)",
+          ["type", "==", "urban"],
+          "#e9eaed",
           "default",
           "rgb(0, 0, 0)"
         ]
@@ -252,7 +251,7 @@
     },
     {
       "name": "reef_shoal",
-      "source": "world",
+      "source": "water",
       "filter": ["class", "has", ["reef", "shoal"]],
       "layer": "water",
       "type": "fill",
@@ -268,6 +267,8 @@
       "source": "water",
       "layer": "water",
       "onlyLines": true,
+      "minzoom": 10,
+      "filter": ["class", "has", ["river", "riverbank", "stream", "canal", "drain", "ditch"]],
       "type": "line",
       "layout": {
         "cap": "butt",
@@ -295,7 +296,15 @@
       "minzoom": 5,
       "type": "line",
       "layout": {
-        "cap": "butt",
+        "cap": [
+          "input-range",
+          "zoom",
+          "step",
+          0,
+          "butt",
+          12,
+          "round"
+        ],
         "join": "bevel"
       },
       "paint": {
@@ -315,7 +324,15 @@
       "type": "line",
       "minzoom": 7,
       "layout": {
-        "cap": "butt",
+        "cap": [
+          "input-range",
+          "zoom",
+          "step",
+          0,
+          "butt",
+          12,
+          "round"
+        ],
         "join": "bevel"
       },
       "paint": {
@@ -363,7 +380,15 @@
       "type": "line",
       "minzoom": 7,
       "layout": {
-        "cap": "butt",
+        "cap": [
+          "input-range",
+          "zoom",
+          "step",
+          0,
+          "butt",
+          12,
+          "round"
+        ],
         "join": "bevel"
       },
       "paint": {
@@ -393,7 +418,15 @@
       "type": "line",
       "minzoom": 5,
       "layout": {
-        "cap": "round",
+        "cap": [
+          "input-range",
+          "zoom",
+          "step",
+          0,
+          "butt",
+          10,
+          "round"
+        ],
         "join": "bevel"
       },
       "paint": {
@@ -404,10 +437,10 @@
           "lin",
           7,
           2,
-          12,
-          7,
-          15,
-          19
+          10,
+          4,
+          13,
+          15
         ]
       }
     },
@@ -466,7 +499,15 @@
       "type": "line",
       "minzoom": 9,
       "layout": {
-        "cap": "butt",
+        "cap": [
+          "input-range",
+          "zoom",
+          "step",
+          0,
+          "butt",
+          12,
+          "round"
+        ],
         "join": "bevel"
       },
       "paint": {
@@ -511,7 +552,15 @@
       "type": "line",
       "minzoom": 7,
       "layout": {
-        "cap": "butt",
+        "cap": [
+          "input-range",
+          "zoom",
+          "step",
+          0,
+          "butt",
+          12,
+          "round"
+        ],
         "join": "bevel"
       },
       "paint": {
@@ -583,7 +632,15 @@
       "type": "line",
       "minzoom": 7,
       "layout": {
-        "cap": "butt",
+        "cap": [
+          "input-range",
+          "zoom",
+          "step",
+          0,
+          "butt",
+          12,
+          "round"
+        ],
         "join": "bevel"
       },
       "paint": {
@@ -613,21 +670,29 @@
       "type": "line",
       "minzoom": 5,
       "layout": {
-        "cap": "butt",
+        "cap": [
+          "input-range",
+          "zoom",
+          "step",
+          0,
+          "butt",
+          10,
+          "round"
+        ],
         "join": "bevel"
       },
       "paint": {
-        "color": "#fbe8b1",
+        "color": "#fbefb2",
         "width": [
           "input-range",
           "zoom",
           "lin",
           7,
           1,
-          12,
-          4,
-          15,
-          15
+          10,
+          3,
+          13,
+          12.5
         ]
       }
     },
@@ -839,7 +904,9 @@
         ["class", "has", ["country", "state"]]
       ],
       "layer": "place",
-      "type": "text",
+      "type": "glyph",
+      "interactive": true,
+      "cursor": "pointer",
       "layout": {
         "family": "roboto-medium",
         "field": [
@@ -939,7 +1006,7 @@
       "minzoom": 4,
       "filter": ["class", "has", ["city", "town", "village", "hamlet", "neighbourhood", "island", "suburb"]],
       "layer": "place",
-      "type": "text",
+      "type": "glyph",
       "layout": {
         "family": [
           "data-condition",
@@ -1035,7 +1102,7 @@
       "source": "places",
       "filter": ["class", "==", "water"],
       "layer": "poi",
-      "type": "text",
+      "type": "glyph",
       "layout": {
         "family": "roboto-medium",
         "field": "?name",
@@ -1083,7 +1150,7 @@
       "filter": ["class", "!=", "addr"],
       "source": "poi",
       "layer": "poi",
-      "type": "text",
+      "type": "glyph",
       "layout": {
         "family": [
           "data-condition",

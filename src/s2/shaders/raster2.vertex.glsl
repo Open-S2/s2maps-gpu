@@ -1,13 +1,15 @@
 #version 300 es
 precision highp float;
 
+@nomangle layout location vTexcoord
+
 layout (location = 0) in vec2 aPos;
 layout (location = 6) in float aRadius;
 
 uniform mat4 uMatrix;
 uniform bool u3D;
 
-#include ./ST2XYZ;
+@include "./ST2XYZ.glsl"
 
 out vec2 vTexcoord;
 

@@ -11,27 +11,6 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
     source.vao = gl.createVertexArray()
     // and make it the one we're currently working with
     gl.bindVertexArray(source.vao)
-    // VERTEX
-    // Create a vertex buffer
-    source.vertexBuffer = gl.createBuffer()
-    // Bind the buffer
-    gl.bindBuffer(gl.ARRAY_BUFFER, source.vertexBuffer)
-    // Buffer the data
-    gl.bufferData(gl.ARRAY_BUFFER, source.vertexArray, gl.STATIC_DRAW)
-    // link attributes:
-    // fill
-    gl.enableVertexAttribArray(0)
-    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0)
-    // line
-    gl.enableVertexAttribArray(1) // prev
-    gl.enableVertexAttribArray(2) // curr
-    gl.enableVertexAttribArray(3) // next
-    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 24, 0)
-    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 24, 8)
-    gl.vertexAttribPointer(3, 2, gl.FLOAT, false, 24, 16)
-    gl.vertexAttribDivisor(1, 1)
-    gl.vertexAttribDivisor(2, 1)
-    gl.vertexAttribDivisor(3, 1)
     // RADII
     if (source.radiiArray) {
       // Create a vertex buffer
@@ -63,7 +42,58 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
       gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, source.indexArray, gl.STATIC_DRAW)
     }
 
-    if (source.subType === 'line') {
+    // PREP VERTEX DATA
+    // Create a vertex buffer
+    source.vertexBuffer = gl.createBuffer()
+    // bind and buffer
+    gl.bindBuffer(gl.ARRAY_BUFFER, source.vertexBuffer)
+    gl.bufferData(gl.ARRAY_BUFFER, source.vertexArray, gl.STATIC_DRAW)
+
+    // ADDITIONAL CHANGES
+    if (source.subType === 'fill') {
+      // link attributes (fill & point & heatmap & etc.)
+      gl.enableVertexAttribArray(0)
+      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0)
+    } else if (source.subType === 'point' || source.subType === 'heatmap') {
+      // link attributes (fill & point & heatmap & etc.)
+      gl.enableVertexAttribArray(1)
+      gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 8, 0)
+      // make our aPos instanced
+      gl.vertexAttribDivisor(1, 1)
+
+      // if heatmap, we encode the "indexArray"
+      // Create a weight buffer
+      source.weightBuffer = gl.createBuffer()
+      // bind and buffer
+      gl.bindBuffer(gl.ARRAY_BUFFER, source.weightBuffer)
+      gl.bufferData(gl.ARRAY_BUFFER, source.indexArray, gl.STATIC_DRAW)
+      // link weights to attribute position 2
+      gl.enableVertexAttribArray(2)
+      gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 4, 0)
+      // make our aWeight instanced
+      gl.vertexAttribDivisor(2, 1)
+
+      // create default triangle set
+      // [[-1, -1], [1, -1], [-1, 1]]  &  [[1, -1], [1, 1], [-1, 1]]
+      source.typeArray = new Float32Array([-1, -1, 1, -1, -1, 1, 1, -1, 1, 1, -1, 1])
+      // create buffer
+      source.typeBuffer = gl.createBuffer()
+      // bind and buffer
+      gl.bindBuffer(gl.ARRAY_BUFFER, source.typeBuffer)
+      gl.bufferData(gl.ARRAY_BUFFER, source.typeArray, gl.STATIC_DRAW)
+      // link attributes
+      gl.enableVertexAttribArray(0) // position type (how to re-adjust)
+      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0)
+    } else if (source.subType === 'line') {
+      gl.enableVertexAttribArray(1) // prev
+      gl.enableVertexAttribArray(2) // curr
+      gl.enableVertexAttribArray(3) // next
+      gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 24, 0)
+      gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 24, 8)
+      gl.vertexAttribPointer(3, 2, gl.FLOAT, false, 24, 16)
+      gl.vertexAttribDivisor(1, 1)
+      gl.vertexAttribDivisor(2, 1)
+      gl.vertexAttribDivisor(3, 1)
       // we build out the standard build
       // 0 -> curr
       // 1 -> curr + (-1 * normal)

@@ -1,6 +1,8 @@
 #version 300 es
 precision highp float;
 
+@nomangle layout location vST vColor
+
 layout (location = 0) in vec2 aPos;
 layout (location = 7) in float aType;
 

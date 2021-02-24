@@ -1,19 +1,21 @@
 #version 300 es
 precision highp float;
 
+@nomangle layout location vPar vLimits vDistScale vColor
+
 layout (location = 0) in vec2 aPos;
 layout (location = 1) in vec2 aPar;
 layout (location = 2) in vec2 aLimits;
 layout (location = 3) in float aScale;
 
-uniform int uOffset;
-uniform vec2 uAspect;
-uniform float uLineWidth;
-
 out vec2 vPar;
 out vec2 vLimits;
 out float vDistScale;
 out vec4 vColor;
+
+uniform int uOffset;
+uniform vec2 uAspect;
+uniform float uLineWidth;
 
 void main() {
   vPar = aPar;

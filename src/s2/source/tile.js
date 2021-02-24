@@ -10,7 +10,7 @@ import type { ProgramType } from '../gl/programs/program'
 
 export type VectorTileSource = {
   type: 'vector',
-  subType: 'fill' | 'line',
+  subType: 'fill' | 'line' | 'point',
   vertexArray: Int16Array,
   radiiArray?: Float32Array,
   indexArray: Uint32Array,
@@ -108,9 +108,11 @@ export default class Tile {
   faceST: Float32Array
   division: number
   sourceData: SourceData = {}
+  heatmapGuide: Array<FeatureGuide> = []
   featureGuide: Array<FeatureGuide> = []
   context: Context
   childrenRequests: ChildRequest = {}
+  interactiveGuide: Map<number, Object> = new Map()
   constructor (context: Context, face: number, zoom: number,
     x: number, y: number, hash: number, size?: number = 512) {
     this.context = context
@@ -129,6 +131,7 @@ export default class Tile {
   delete () {
     // remove all features
     this.featureGuide = []
+    this.interactiveGuide = new Map()
   }
 
   // inject references to featureGuide from each parentTile. Sometimes if we zoom really fast, we inject
@@ -272,7 +275,6 @@ export default class Tile {
     // we work off the featureGuideArray, adding to the buffer as we go
     const lgl = featureGuideArray.length
     let i = 0
-    // console.log('featureGuideArray', featureGuideArray)
     while (i < lgl) {
       let cap
       // if line, grab the cap type
@@ -283,8 +285,10 @@ export default class Tile {
       // grab the size, layerIndex, count, and offset, and update the index
       const [layerIndex, count, offset, encodingSize] = featureGuideArray.slice(i, i + 4)
       i += 4
+      // build featureCode
+      const featureCode = new Float32Array(encodingSize ? [...featureGuideArray.slice(i, i + encodingSize)] : [0])
       // grab the layers type and code
-      const { type, depthPos, opaque, code, lch } = layers[layerIndex]
+      const { type, invert, depthPos, opaque, code, lch, colorRamp } = layers[layerIndex]
       // create and store the featureGuide
       const feature = {
         tile: this,
@@ -295,13 +299,16 @@ export default class Tile {
         count,
         offset,
         type,
+        invert,
         cap,
         depthPos,
         opaque,
-        featureCode: new Float32Array(encodingSize ? [...featureGuideArray.slice(i, i + encodingSize)] : [0]), // NOTE: The sorting algorithm doesn't work if an array is empty, so we have to have at least one number, just set it to 0
+        featureCode, // NOTE: The sorting algorithm doesn't work if an array is empty, so we have to have at least one number, just set it to 0
         layerCode: code,
-        lch
+        lch,
+        colorRamp
       }
+      // update index
       i += encodingSize
       // if webgl1, we have color (and width if line) data
       if (this.context.type === 1) {
@@ -313,10 +320,20 @@ export default class Tile {
         if (subType === 'line') {
           feature.color = feature.subFeatureCode.slice(0, 4)
           feature.width = feature.subFeatureCode[4]
+        } else if (subType === 'point') {
+          feature.color = feature.subFeatureCode.slice(0, 4)
+          feature.radius = feature.subFeatureCode[4]
+          feature.stroke = feature.subFeatureCode.slice(5, 9)
+          feature.strokeWidth = feature.subFeatureCode[9]
+        } else if (subType === 'heatmap') {
+          feature.radius = feature.subFeatureCode[0]
+          feature.opacity = feature.subFeatureCode[1]
+          feature.intensity = feature.subFeatureCode[2]
         }
       }
       // store
-      this.featureGuide.push(feature)
+      if (subType === 'heatmap') this.heatmapGuide.push(feature)
+      else this.featureGuide.push(feature)
       // if a lower zoom tile needs this feature, we add
       const childRequest = this.childrenRequests[layerIndex]
       if (childRequest && childRequest.length) for (const tile of childRequest) tile.featureGuide.push({ ...feature, tile, parent: this, permParent: true })
@@ -344,7 +361,7 @@ export default class Tile {
       const [layerIndex, filterOffset, filterCount, offset, count, encodingSize] = layerGuideBuffer.slice(i, i + 6)
       i += 6
       // grab the layers type and code
-      const { depthPos, code, lch } = layers[layerIndex]
+      const { depthPos, code, lch, interactive } = layers[layerIndex]
       // create and store the featureGuide
       const feature = {
         tile: this,
@@ -360,6 +377,7 @@ export default class Tile {
         depthPos,
         featureCode: new Float32Array(encodingSize ? [...layerGuideBuffer.slice(i, i + encodingSize)] : [0]),
         layerCode: code,
+        interactive,
         lch
       }
       i += encodingSize
@@ -382,5 +400,25 @@ export default class Tile {
       glyphFillIndices, glyphLineVertices, glyphQuads
     )
     return glyphSource
+  }
+
+  // we don't parse the interactiveData immediately to save time
+  injectInteractiveData (sourceName: string, interactiveGuide: Uint32Array,
+    interactiveData: Uint8Array) {
+    // setup variables
+    let id, start, end
+    const textDecoder = new TextDecoder('utf-8')
+    // build interactive guide
+    for (let i = 0, gl = interactiveGuide.length; i < gl; i += 3) {
+      id = interactiveGuide[i]
+      start = interactiveGuide[i + 1]
+      end = interactiveGuide[i + 2]
+      // parse feature and add properties
+      this.interactiveGuide.set(id, JSON.parse(textDecoder.decode(interactiveData.slice(start, end))))
+    }
+  }
+
+  findInteractiveFeature (id: number) {
+    if (this.interactiveGuide.has(id)) return this.interactiveGuide.get(id)
   }
 }

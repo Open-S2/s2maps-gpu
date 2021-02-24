@@ -36,6 +36,16 @@ function prepCanvas (container, style, opts = {}) {
     zoomController: true
   })
 
+  // map.addEventListener('click', (data) => {
+  //   console.log('click', data.detail)
+  // })
+  // map.addEventListener('mouseenter', (data) => {
+  //   console.log('mouseenter', data.detail)
+  // })
+  // map.addEventListener('mouseleave', (data) => {
+  //   console.log('mouseleave', data.detail)
+  // })
+
   // setTimeout(() => {
   //   map.jumpTo(-18.287283, 64.920456, 4.4)
   // }, 5000)

@@ -26,21 +26,30 @@ export default class GlyphProgram extends Program {
   uOffset: WebGLUniformLocation
   glyphLineProgram: Program
   fbos: Array<FBO> = []
-  constructor (context: Context, glyphLineProgram: Program) {
+  constructor (context: Context) {
     // get gl from context
     const { gl, type } = context
     // build shaders
-    if (type === 1) {
-      gl.attributeLocations = { aPos: 0, aType: 7 }
-      super(context, vert1, frag1, false)
-    } else {
-      super(context, vert2, frag2, false)
-    }
+    if (type === 1) gl.attributeLocations = { aPos: 0, aType: 7 }
+    // inject program
+    super(context)
+    const self = this
+
+    return Promise.all([
+      (type === 1) ? vert1 : vert2,
+      (type === 1) ? frag1 : frag2
+    ])
+      .then(([vertex, fragment]) => {
+        // build said shaders
+        self.buildShaders(vertex, fragment)
+
+        return self
+      })
+  }
+
+  injectGlyphLine (glyphLineProgram: Program) {
     // store line program
     this.glyphLineProgram = glyphLineProgram
-    // get uniform locations
-    this.uTexSize = gl.getUniformLocation(this.glProgram, 'uTexSize')
-    this.uOffset = gl.getUniformLocation(this.glProgram, 'uOffset')
   }
 
   delete () {

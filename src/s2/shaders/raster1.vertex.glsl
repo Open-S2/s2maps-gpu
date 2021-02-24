@@ -10,7 +10,7 @@ attribute float aRadius;
 uniform mat4 uMatrix;
 uniform bool u3D;
 
-#include ./ST2XYZ;
+@include "./ST2XYZ.glsl"
 
 varying vec2 vTexcoord;
 

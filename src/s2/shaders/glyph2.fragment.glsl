@@ -1,6 +1,8 @@
 #version 300 es
 precision highp float;
 
+@nomangle vST vColor
+
 in vec2 vST;
 in vec4 vColor;
 

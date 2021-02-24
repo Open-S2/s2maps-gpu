@@ -23,13 +23,21 @@ export default class SkyboxProgram extends Program {
     // get gl from context
     const { gl, type } = context
     // install shaders
-    if (type === 1) super(context, vert1, frag1, false)
-    else super(context, vert2, frag2, false)
-    // acquire the attributes & uniforms
-    this.aPos = gl.getAttribLocation(this.glProgram, 'aPos')
-    this.uMatrix = gl.getUniformLocation(this.glProgram, 'uMatrix')
-    // prep a cube texture
-    this.cubeMap = gl.createTexture()
+    super(context)
+    const self = this
+
+    return Promise.all([
+      (type === 1) ? vert1 : vert2,
+      (type === 1) ? frag1 : frag2
+    ])
+      .then(([vertex, fragment]) => {
+        // build shaders
+        self.buildShaders(vertex, fragment)
+        // prep a cube texture
+        self.cubeMap = gl.createTexture()
+
+        return self
+      })
   }
 
   injectImages (skybox: Skybox, map: Map) {
@@ -66,8 +74,6 @@ export default class SkyboxProgram extends Program {
     // setup variables
     const { context } = this
     const { gl } = context
-    // now we draw
-    gl.useProgram(this.glProgram)
     // if renderable, time to draw
     if (this.renderable) {
       // ignore z-fighting and only pass where stencil is 0

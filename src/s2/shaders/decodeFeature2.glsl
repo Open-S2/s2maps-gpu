@@ -1,10 +1,9 @@
-uniform int uFeatureState;
-uniform float uInputs[16]; // [zoom, lon, lat, angle, pitch, time, ...extensions]
+uniform float uInputs[16]; // [zoom, lon, lat, angle, pitch, time, featureState, curFeature, ...extensions]
 uniform float uLayerCode[128];
 uniform float uFeatureCode[64];
 uniform bool uLCH;
 
-#include ./color;
+@include "./color.glsl"
 
 // y = e^x OR y = Math.pow(2, 10 * x)
 float exponentialInterpolation (float inputVal, float start, float end, float base) {
@@ -173,6 +172,8 @@ vec4 decodeFeature (bool color, inout int index, inout int featureIndex) {
     } else if (condition == 6) { // feature-state
       // iterate through subConditions until it matches "uFeatureState"
       // once found, inject
+      res = vec4(0., 0., 0., 1.);
+      return res;
     } else if (condition == 7) { // animation-state
 
     }

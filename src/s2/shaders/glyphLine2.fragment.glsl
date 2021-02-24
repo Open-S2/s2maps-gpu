@@ -1,6 +1,8 @@
 #version 300 es
 precision highp float;
 
+@nomangle vPar vLimits vDistScale vColor
+
 in vec2 vPar;
 in vec2 vLimits;
 in float vDistScale;

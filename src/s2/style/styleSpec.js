@@ -1,4 +1,6 @@
 // @flow
+/* global WebGLTexture WebGLFramebuffer */
+
 /** SOURCES **/
 export type Source = {
   path: string,
@@ -16,6 +18,25 @@ export type Mask = {
 /** FILL **/
 export type FillPaint = {
   color: string | Array<any>
+  opacity: number | Array<any>
+}
+
+/** POINT **/
+export type PointPaint = {
+  color: string | Array<any>,
+  radius: number | Array<any>,
+  stroke: string | Array<any>,
+  strokeWidth: number | Array<any>,
+  opacity: number | Array<any>
+}
+
+/** HEATMAP **/
+export type HeatmapLayout = {
+  intensity: number | Array<any>
+}
+export type HeatmapPaint = {
+  radius: number | Array<any>,
+  opacity: number | Array<any>
 }
 
 /** LINE **/
@@ -66,12 +87,29 @@ export type Layer = {
   layer: string,
   minzoom: number,
   maxzoom: number,
-  type: 'raster' | 'fill' | 'fill3D' | 'line' | 'line3D' | 'billboard' | 'text',
+  type: 'raster' | 'fill' | 'fill3D' | 'line' | 'line3D' | 'glyph' | 'point',
   filter: Array<any>, // ["any", ["class", "==", "ocean"], ["class", "==", "river"]]
   layout: LineLayout | TextLayout | BillboardLayout,
-  paint: FillPaint | LinePaint | TextPaint | BillboardPaint,
+  paint: FillPaint | PointPaint | LinePaint | TextPaint | BillboardPaint,
   lch: boolean,
   code?: Float32Array
+}
+
+export type HeatmapLayer = {
+  id: string,
+  layerIndex: number,
+  source: string,
+  layer: string,
+  minzoom: number,
+  maxzoom: number,
+  type: 'heatmap',
+  filter: Array<any>, // ["any", ["class", "==", "ocean"], ["class", "==", "river"]]
+  layout: HeatmapLayout,
+  paint: HeatmapPaint,
+  code?: Float32Array,
+  colorRamp: WebGLTexture,
+  fbo: WebGLFramebuffer,
+  canvasTexture: WebGLTexture
 }
 
 /** WORKER PACKAGE **/

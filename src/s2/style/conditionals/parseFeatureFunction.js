@@ -61,9 +61,11 @@ function dataConditionFunction (input, attr) {
 
 function dataRangeFunction (input, attr) {
   // grab function type
-  const zoomType = input.shift()
   const key = input.shift()
-  const easeFunction = getEasingFunction(zoomType)
+  const easeType = input.shift()
+  let base = 1
+  if (easeType === 'expo') base = input.shift()
+  const easeFunction = getEasingFunction(easeType, base)
 
   // first ensure each result property is parsed:
   let c = 1

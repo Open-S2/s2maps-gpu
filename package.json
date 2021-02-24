@@ -5,14 +5,15 @@
   "cdn": "https://s3.s2maps.io/s2maps-gl",
   "private": true,
   "dependencies": {
-    "earclip": "^0.7.3",
+    "earclip": "0.7.3",
     "font-gl": "^0.2.3",
     "glyph-pbf": "^2.1.2",
     "line-gl": "^2.2.2",
     "s2-vector-tile": "^1.4.5",
-    "s2json-vt": "^0.6.1",
+    "s2json-vt": "^0.6.8",
     "s2projection": "^1.9.0",
-    "s2rtin": "^0.5.0"
+    "s2rtin": "^0.5.0",
+    "webpack-glsl-minify": "^1.4.2"
   },
   "scripts": {
     "start": "node scripts/start.js",
@@ -153,7 +154,7 @@
     "webpack-runtime-analyzer": "^1.5.0",
     "webpack-visualizer-plugin": "^0.1.11",
     "workbox-webpack-plugin": "4.3.1",
-    "worker-loader": "^3.0.3",
+    "worker-loader": "^3.0.8",
     "worker-plugin": "^5.0.0"
   },
   "standard": {

@@ -4,32 +4,94 @@ import buildMask from '../../source/buildMask'
 import type { VectorTileSource } from '../../source/tile'
 
 import type { WebGLRenderingContext, WebGL2RenderingContext } from './'
+import type { MapOptions } from '../../ui/map'
 
 export default class Context {
   gl: WebGLRenderingContext | WebGL2RenderingContext
   devicePixelRatio: number
-  depthEpsilon: number
+  interactive: boolean
+  depthEpsilon: number = 1 / Math.pow(2, 16)
   depthTestState: boolean = false
+  cullState: bool = false
   blendState: number = -1 // 0 -> default ; 1 ->
   zTestState: number = -1 // 0 -> always ; 1 -> less ; 2 -> lessThenOrEqual
   zLow: number = 0
   zHigh: numbber = 1
   type: 1 | 2
   clearColorRGBA: [number, number, number, number] = [0, 0, 0, 0]
+  featurePoint: Uint8Array = new Uint8Array(4)
   masks: Map<number, VectorTileSource> = new Map()
   vao: WebGLVertexArrayObject
   vertexBuffer: WebGLBuffer
-  constructor (context: WebGLRenderingContext | WebGL2RenderingContext, devicePixelRatio: number) {
+  interactTexture: WebGLTexture
+  stencilBuffer: WebGLRenderbuffer
+  interactFramebuffer: WebGLFramebuffer
+  constructor (context: WebGLRenderingContext | WebGL2RenderingContext, options: MapOptions) {
+    const { canvasMultiplier, interactive } = options
     this.gl = context
-    this.devicePixelRatio = devicePixelRatio
-    this.depthEpsilon = 1 / Math.pow(2, 16)
+    this.devicePixelRatio = canvasMultiplier
+    this.interactive = interactive
+    if (interactive) this._buildInteractFramebuffer()
+  }
+
+  // SETUP INTERACTIVE BUFFER
+
+  _buildInteractFramebuffer () {
+    const { gl } = this
+    // TEXTURE & STENCIL
+    const texture = this.interactTexture = gl.createTexture()
+    const stencil = this.stencilBuffer = gl.createRenderbuffer()
+    this.resizeInteract()
+    // FRAMEBUBFFER
+    this.interactFramebuffer = gl.createFramebuffer()
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.interactFramebuffer)
+    // attach texture to feature framebuffer
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0)
+    // attach stencilBuffer renderbuffer to feature framebuffer
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.STENCIL_ATTACHMENT, gl.RENDERBUFFER, stencil)
+    // cleanup
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+  }
+
+  resizeInteract () {
+    const { gl, interactive } = this
+    if (interactive) {
+      // bind the pointTexture
+      gl.bindTexture(gl.TEXTURE_2D, this.interactTexture)
+      // update the texture's aspect
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.canvas.width, gl.canvas.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
+      // set filter system
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+      // update the depthBuffer's aspect
+      gl.bindRenderbuffer(gl.RENDERBUFFER, this.stencilBuffer)
+      gl.renderbufferStorage(gl.RENDERBUFFER, gl.STENCIL_INDEX8, gl.canvas.width, gl.canvas.height)
+    }
+  }
+
+  getFeatureAtMousePosition (x: number, y: number): null | Object {
+    const { gl, interactFramebuffer, featurePoint } = this
+    // bind the feature framebuffer
+    gl.bindFramebuffer(gl.FRAMEBUFFER, interactFramebuffer)
+    // grab the data
+    gl.readPixels(x, gl.canvas.height - y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, featurePoint)
+    // create the actual feature id
+    const featureID = featurePoint[0] + (featurePoint[1] << 8) + (featurePoint[2] << 16)
+    // return if we found something
+    if (featurePoint[3] && featureID > 0) return featureID
+    else return null
   }
 
   delete () {
-    const { gl, vertexBuffer, vao } = this
+    const { gl, vertexBuffer, vao, interactTexture, stencilBuffer, interactFramebuffer } = this
     // remove local data
     gl.deleteBuffer(vertexBuffer)
     gl.deleteVertexArray(vao)
+    gl.deleteTexture(interactTexture)
+    gl.deleteRenderbuffer(stencilBuffer)
+    gl.deleteFramebuffer(interactFramebuffer)
     // remove all possible references
     gl.bindBuffer(gl.ARRAY_BUFFER, null)
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null)
@@ -114,6 +176,14 @@ export default class Context {
     gl.clear(gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT | gl.COLOR_BUFFER_BIT)
   }
 
+  clearInteractBuffer () {
+    const { gl } = this
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.interactFramebuffer)
+    gl.clearColor(0, 0, 0, 0)
+    gl.clearStencil(0x0)
+    gl.clear(gl.STENCIL_BUFFER_BIT | gl.COLOR_BUFFER_BIT)
+  }
+
   clearColor () {
     const { gl } = this
     gl.clearColor(...this.clearColorRGBA)
@@ -130,6 +200,23 @@ export default class Context {
     const { gl } = this
     gl.clearColor(0, 0, 0, 0)
     gl.clear(gl.COLOR_BUFFER_BIT)
+  }
+
+  /** TEXTURE **/
+
+  buildTexture (imageData, width, height) {
+    const { gl } = this
+    const texture = gl.createTexture()
+    gl.bindTexture(gl.TEXTURE_2D, texture)
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, imageData)
+    // gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true)
+    // gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+
+    return texture
   }
 
   /** DEPTH **/
@@ -179,8 +266,7 @@ export default class Context {
     const depth = 1 - depthPos * this.depthEpsilon
     if (zLow !== depth || zHigh !== depth) {
       gl.depthRange(depth, depth)
-      this.zLow = depth
-      this.zHigh = depth
+      this.zLow = this.zHigh = depth
     }
   }
 
@@ -204,13 +290,19 @@ export default class Context {
   /** CULLING **/
 
   enableCullFace () {
-    const { gl } = this
-    gl.enable(gl.CULL_FACE)
+    const { gl, cullState } = this
+    if (!cullState) {
+      gl.enable(gl.CULL_FACE)
+      this.cullState = true
+    }
   }
 
   disableCullFace () {
-    const { gl } = this
-    gl.disable(gl.CULL_FACE)
+    const { gl, cullState } = this
+    if (cullState) {
+      gl.disable(gl.CULL_FACE)
+      this.cullState = false
+    }
   }
 
   /** BLENDING **/

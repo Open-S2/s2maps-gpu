@@ -19,20 +19,25 @@ export default class LineProgram extends Program {
     // get gl from context
     const { gl, type, devicePixelRatio } = context
     // if webgl1, setup attribute locations
-    if (type === 1) {
-      gl.attributeLocations = { aType: 0, aPrev: 1, aCurr: 2, aNext: 3 }
-      super(context, vert1, frag1)
-      // setup color and width uniforms
-      this.uColor = gl.getUniformLocation(this.glProgram, 'uColor')
-      this.uWidth = gl.getUniformLocation(this.glProgram, 'uWidth')
-    } else {
-      super(context, vert2, frag2)
-    }
-    // setup the devicePixelRatio
-    this.use()
-    this.setDevicePixelRatio(devicePixelRatio)
-    // ensure cap uniform
-    this.uCap = gl.getUniformLocation(this.glProgram, 'uCap')
+    if (type === 1) gl.attributeLocations = { aType: 0, aPrev: 1, aCurr: 2, aNext: 3 }
+    // inject Program
+    super(context)
+    const self = this
+
+    return Promise.all([
+      (type === 1) ? vert1 : vert2,
+      (type === 1) ? frag1 : frag2
+    ])
+      .then(([vertex, fragment]) => {
+        // build said shaders
+        self.buildShaders(vertex, fragment)
+        // activate so we can setup samplers
+        self.use()
+        // set device pixel ratio
+        self.setDevicePixelRatio(devicePixelRatio)
+
+        return self
+      })
   }
 
   draw (featureGuide: FeatureGuide, source: VectorTileSource) {
@@ -41,6 +46,8 @@ export default class LineProgram extends Program {
     const { type } = context
     // get current source data
     let { cap, count, offset, depthPos, featureCode, mode, color, width } = featureGuide
+    // ensure no culling
+    context.disableCullFace()
     // ensure proper blend state
     context.defaultBlend()
     // adjust to current depthPos

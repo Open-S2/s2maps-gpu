@@ -3,6 +3,8 @@ precision highp float;
 
 #define MIN_SDF_SIZE 0.08
 
+@nomangle layout location draw buf vTexcoord color texture
+
 layout (location = 0) in vec2 aUV; // float [u, v]
 layout (location = 1) in vec2 aST; // float [s, t]                   (INSTANCED)
 layout (location = 2) in vec2 aXY; // float [x, y]                   (INSTANCED)
@@ -11,22 +13,23 @@ layout (location = 4) in vec2 aTexUV; // float [u, v]                (INSTANCED)
 layout (location = 5) in vec2 aTexWH; // float [width, height]       (INSTANCED)
 layout (location = 6) in float aID; // float ID                      (INSTANCED)
 
+out float draw;
+out float buf;
+out vec2 vTexcoord;
+out vec4 color;
+
 // glyph texture
 uniform vec2 uTexSize;
 uniform mat4 uMatrix;
 uniform vec2 uAspect;
 uniform bool uIsFill;
+uniform bool uInteractive;
 uniform float uDevicePixelRatio;
 // The glyph filter texture.
 uniform sampler2D uFeatures;
 
-#include ./decodeFeature2;
-#include ./ST2XYZ;
-
-out float draw;
-out float buf;
-out vec2 vTexcoord;
-out vec4 color;
+@include "./decodeFeature2.glsl"
+@include "./ST2XYZ.glsl"
 
 // text order: (paint)size->strokeWidth->fill->stroke
 void main () {
@@ -49,14 +52,14 @@ void main () {
   // set color if inputID is same as colorID, otherwise run a "null" color to discard in the frag
   if (colorID == ivec3(inputID.rgb * 256.)) {
     // explain to fragment we are going to draw
-    draw = 1.;
+    draw = (uInteractive) ? 2. : 1.;
     // prep the index and featureIndex
     int index = 0;
     int featureIndex = 0;
     // decode size
     float size = decodeFeature(false, index, featureIndex)[0] * uDevicePixelRatio * 2.;
     float strokeWidth = decodeFeature(false, index, featureIndex)[0] * uDevicePixelRatio * 2.;
-    color = decodeFeature(true, index, featureIndex);
+    color = (uInteractive) ? vec4(inputID.rgb, 1.) : decodeFeature(true, index, featureIndex);
     // color = vec4(ivec3(inputID.rgb * 256.), 1.);
     buf = 0.49;
     if (!uIsFill) {
@@ -69,8 +72,8 @@ void main () {
     // add x-y offset as well as use the UV to map the quad
     vec2 XY = vec2((aXY.x + aOffset.x) * size, aXY.y - (aOffset.y * size)); // subtract the sdfWidth
     glPos.xy += (XY / uAspect) + (glyphSize / uAspect * aUV);
-    // set texture position
-    vTexcoord = (aTexUV / uTexSize) + (vec2(aTexWH.x * aTexWH.y, aTexWH.y) / uTexSize * aUV);
+    // set texture position (don't bother wasting time looking up if drawing "interactive quad")
+    if (!uInteractive) vTexcoord = (aTexUV / uTexSize) + (vec2(aTexWH.x * aTexWH.y, aTexWH.y) / uTexSize * aUV);
   } else {
     draw = 0.;
     vTexcoord = vec2(0., 0.);

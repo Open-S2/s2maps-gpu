@@ -4,7 +4,7 @@ precision highp float;
 precision mediump float;
 #endif
 
-#define MIN_SDF_SIZE 0.08
+@define MIN_SDF_SIZE 0.08
 
 attribute vec2 aUV; // float [u, v]
 attribute vec2 aST; // float [s, t]                   (INSTANCED)
@@ -28,7 +28,7 @@ uniform float uStrokeWidth;
 // The glyph filter texture.
 uniform sampler2D uFeatures;
 
-#include ./ST2XYZ;
+@include "./ST2XYZ.glsl"
 
 varying float draw;
 varying float buf;

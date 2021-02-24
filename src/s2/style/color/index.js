@@ -22,6 +22,10 @@ export default class Color {
     }
   }
 
+  copy (): Color {
+    return new Color(...this.val, this.type)
+  }
+
   getRGB (colorBlind: boolean = false, normalize: boolean = true): [number, number, number, number] {
     if (colorBlind) colorBlindAdjust(this)
     else this.toRGB()
@@ -181,7 +185,7 @@ export default class Color {
     this.type = 'rgb'
   }
 
-  // take two hsv OR  values and return an rgb Color
+  // take two hsv OR values and return an rgb Color
   static interpolate (color1: Color, color2: Color, t: number): Color {
     if (color1.type !== color2.type) return new Color(color1.val[0], color1.val[1], color1.val[2], color1.val[3], color1.type)
     // prep variables

@@ -4,7 +4,10 @@ import loadShader from './loadShader'
 
 import type { Context } from '../contexts'
 import type { FeatureGuide } from '../../source/tile'
-export type ProgramType = 'mask' | 'fill' | 'line' | 'raster' | 'shade' | 'text' | 'billboard' | 'glyph' | 'glyphFill' | 'glyphFilter' | 'wallpaper' | 'skybox' | 'fill3D' | 'line3D'
+export type ProgramType = 'mask' | 'fill' | 'line' | 'raster' | 'shade' | 'glyph' | 'glyphFill' | 'glyphFilter' | 'wallpaper' | 'skybox' | 'fill3D' | 'line3D'
+
+type uniformSource = { variableName: string, variableType: string }
+type shaderSource = { sourceCode: string, uniforms: { [string]: uniformSource } }
 
 export default class Program {
   vertexShader: WebGLShader
@@ -18,6 +21,7 @@ export default class Program {
   uMode: WebGLUniformLocation
   u3D: WebGLUniformLocation
   uLCH: WebGLUniformLocation
+  uInteractive: WebGLUniformLocation
   uFaceST: WebGLUniformLocation
   uInputs: WebGLUniformLocation
   uLayerCode: WebGLUniformLocation
@@ -29,46 +33,47 @@ export default class Program {
   curMode: number = -1
   threeD: boolean
   LCH: boolean
-  constructor (context: Context, vertexShaderSource: string, fragmentShaderSource: string, defaultUniforms?: boolean = true) {
+  interactive: boolean
+  constructor (context: Context) {
     // set context
     this.context = context
     // grab variables we need
     const { gl } = context
+    this.gl = gl
     // create the program
     const program = this.glProgram = gl.createProgram()
     // setup attribute location data if necessary
     const attrLoc = gl.attributeLocations
     if (attrLoc) for (const attr in attrLoc) gl.bindAttribLocation(program, attrLoc[attr], attr)
+  }
+
+  async buildShaders (vertex: shaderSource, fragment: shaderSource) {
+    const { gl, glProgram } = this
+    const vertexShaderSource = vertex.sourceCode
+    const vertexUniforms = vertex.uniforms
+    const fragmentShaderSource = fragment.sourceCode
+    const fragmentUniforms = fragment.uniforms
     // load vertex and fragment shaders
     const vertexShader = this.vertexShader = loadShader(gl, vertexShaderSource, gl.VERTEX_SHADER)
     const fragmentShader = this.fragmentShader = loadShader(gl, fragmentShaderSource, gl.FRAGMENT_SHADER)
-
+    // if shaders worked, attach, link, validate, etc.
     if (vertexShader && fragmentShader) {
-      gl.attachShader(program, vertexShader)
-      gl.attachShader(program, fragmentShader)
-      gl.linkProgram(program)
-      gl.validateProgram(program)
+      gl.attachShader(glProgram, vertexShader)
+      gl.attachShader(glProgram, fragmentShader)
+      gl.linkProgram(glProgram)
 
-      if (!gl.getProgramParameter(program, gl.LINK_STATUS) || !gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
-        throw Error(gl.getProgramInfoLog(program))
+      if (!gl.getProgramParameter(glProgram, gl.LINK_STATUS)) {
+        throw Error(gl.getProgramInfoLog(glProgram))
       }
-      // if we made it here, link gl
-      this.gl = gl
+
+      this.setupUniforms({ ...vertexUniforms, ...fragmentUniforms })
     } else { throw Error('missing shaders') }
-    // now build uniforms
-    if (defaultUniforms) {
-      // get uniform locations
-      this.uMatrix = gl.getUniformLocation(program, 'uMatrix')
-      this.uAspect = gl.getUniformLocation(program, 'uAspect')
-      this.uMode = gl.getUniformLocation(program, 'uMode')
-      this.u3D = gl.getUniformLocation(program, 'u3D')
-      this.uLCH = gl.getUniformLocation(program, 'uLCH')
-      this.uFaceST = gl.getUniformLocation(program, 'uFaceST')
-      this.uInputs = gl.getUniformLocation(program, 'uInputs')
-      this.uLayerCode = gl.getUniformLocation(program, 'uLayerCode')
-      this.uFeatureCode = gl.getUniformLocation(program, 'uFeatureCode')
-      this.uDevicePixelRatio = gl.getUniformLocation(program, 'uDevicePixelRatio')
-    }
+  }
+
+  setupUniforms (uniforms) {
+    const { gl, glProgram } = this
+
+    for (const uniform in uniforms) this[uniform] = gl.getUniformLocation(glProgram, uniforms[uniform].variableName)
   }
 
   delete () {
@@ -120,11 +125,19 @@ export default class Program {
 
   setLayerCode (layerCode: Float32Array, lch?: boolean = false) {
     const { gl } = this
-    gl.uniform1fv(this.uLayerCode, layerCode, 0, layerCode.length)
+    if (layerCode.length) gl.uniform1fv(this.uLayerCode, layerCode, 0, layerCode.length)
     // also set lch if we need to
     if (this.uLCH && this.LCH !== lch) {
       this.LCH = lch
       gl.uniform1i(this.uLCH, ~~lch)
+    }
+  }
+
+  setInteractive (interactive: boolean) {
+    const { gl } = this
+    if (this.interactive !== interactive) {
+      this.interactive = interactive
+      gl.uniform1i(this.uInteractive, interactive)
     }
   }
 

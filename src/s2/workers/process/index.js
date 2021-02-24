@@ -1,4 +1,6 @@
 export * from './fill'
 export * from './glyph'
 export * from './line'
+export * from './point'
 export { default as buildTile } from './buildTile'
+export { default as postInteractiveData } from './postInteractive'

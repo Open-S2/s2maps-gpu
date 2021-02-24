@@ -1,6 +1,8 @@
 #version 300 es
 precision highp float;
 
+@nomangle layout location color
+
 layout (location = 0) in vec2 aPos;
 layout (location = 6) in float aRadius;
 layout (location = 7) in float aIndex;
@@ -8,8 +10,8 @@ layout (location = 7) in float aIndex;
 uniform mat4 uMatrix;
 uniform bool u3D;
 
-#include ./decodeFeature2;
-#include ./ST2XYZ;
+@include "./decodeFeature2.glsl"
+@include "./ST2XYZ.glsl"
 
 out vec4 color;
 
@@ -31,5 +33,6 @@ void main () {
   int featureIndex = int(aIndex);
   // decode color
   color = decodeFeature(true, index, featureIndex);
+  color.a *= decodeFeature(false, index, featureIndex)[0];
   color.rgb *= color.a;
 }

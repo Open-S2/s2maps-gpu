@@ -426,7 +426,7 @@
       "minzoom": 4,
       "filter": ["class", "has", ["City", "Town", "Village", "Hamlet", "Neighbourhood", "Island", "Indian Reservation"]],
       "layer": "place",
-      "type": "text",
+      "type": "glyph",
       "layout": {
         "family": "roboto-medium",
         "field": [
@@ -526,7 +526,7 @@
       "source": "world",
       "filter": ["class", "has", ["Country", "State"]],
       "layer": "place",
-      "type": "text",
+      "type": "glyph",
       "layout": {
         "family": "roboto-medium",
         "field": [

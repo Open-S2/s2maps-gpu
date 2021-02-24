@@ -40,12 +40,13 @@ export default class Camera {
   painter: Painter
   projection: Projection
   tileCache: TileCache
-  tilesInView: TileDefinitions = [] // hash id's of the tiles
+  tilesInView: Array<Tile> = [] // hash id's of the tiles
   lastTileViewState: Array<number> = []
   requestQueue: Array<Tile> = []
   zooming: void | SetTimeout
   request: void | SetTimeout
   _updateWhileZooming: boolean // this is a more cpu/gpu intensive redraw technique that will update tiles while the user is still zooming. This can cause overdrawing if the user is going to zoom from say 0 to 10 quickly.
+  wasDirtyLastFrame: boolean = false
   constructor (options: MapOptions) {
     this._updateWhileZooming = options.updateWhileZooming || true
     // setup projection
@@ -104,10 +105,12 @@ export default class Camera {
 
   _injectData (data) {
     const { type } = data
-    if (type === 'filldata' || type === 'linedata') this._injectVectorSourceData(data.source, data.tileID, data.vertexBuffer, data.indexBuffer, data.codeTypeBuffer, data.featureGuideBuffer)
+    if (type === 'filldata' || type === 'linedata' || type === 'pointdata') this._injectVectorSourceData(data.source, data.tileID, data.vertexBuffer, data.indexBuffer, data.codeTypeBuffer, data.featureGuideBuffer)
+    else if (type === 'heatmapdata') this._injectVectorSourceData(data.source, data.tileID, data.vertexBuffer, data.weightBuffer, data.codeTypeBuffer, data.featureGuideBuffer, true)
     else if (type === 'maskdata') this._injectMaskGeometry(data.tileID, data.vertexBuffer, data.indexBuffer, data.radiiBuffer)
     else if (type === 'rasterdata') this._injectRasterData(data.source, data.tileID, data.built, data.image, data.leftShift, data.bottomShift)
     else if (type === 'glyphdata') this._injectGlyphSourceData(data.source, data.tileID, data.glyphFilterBuffer, data.glyphFillVertexBuffer, data.glyphFillIndexBuffer, data.glyphLineVertexBuffer, data.glyphQuadBuffer, data.layerGuideBuffer)
+    else if (type === 'interactivedata') this._injectInteractiveData(data.source, data.tileID, data.interactiveGuideBuffer, data.interactiveDataBuffer)
     else if (type === 'parentlayers') this._injectParentLayers(data.tileID, data.parentLayers)
     // new 'paint', so painter is dirty
     this.painter.dirty = true
@@ -122,12 +125,13 @@ export default class Camera {
   }
 
   _injectVectorSourceData (source: string, tileID: number, vertexBuffer: ArrayBuffer,
-    indexBuffer: ArrayBuffer, codeTypeBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer) {
+    indexWeightBuffer: ArrayBuffer, codeTypeBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer,
+    weight?: boolean = false) {
     if (this.tileCache.has(tileID)) {
       // get tile
       const tile = this.tileCache.get(tileID)
       // inject into tile
-      tile.injectVectorSourceData(source, new Float32Array(vertexBuffer), (indexBuffer) ? new Uint32Array(indexBuffer) : null, codeTypeBuffer ? new Uint8Array(codeTypeBuffer) : null, new Float32Array(featureGuideBuffer), this.style.layers)
+      tile.injectVectorSourceData(source, new Float32Array(vertexBuffer), (weight) ? new Float32Array(indexWeightBuffer) : new Uint32Array(indexWeightBuffer), codeTypeBuffer ? new Uint8Array(codeTypeBuffer) : null, new Float32Array(featureGuideBuffer), this.style.layers)
     }
   }
 
@@ -174,6 +178,14 @@ export default class Camera {
     }
   }
 
+  _injectInteractiveData (source: string, tileID: number, interactiveGuideBuffer: ArrayBuffer,
+    interactiveDataBuffer: ArrayBuffer) {
+    if (this.tileCache.has(tileID)) {
+      const tile = this.tileCache.get(tileID)
+      tile.injectInteractiveData(source, new Uint32Array(interactiveGuideBuffer), new Uint8Array(interactiveDataBuffer))
+    }
+  }
+
   _injectParentLayers (tileID: number, parentLayers: ParentLayers = {}) {
     // // if tile still exists
     // if (this.tileCache.has(tileID)) {
@@ -201,12 +213,13 @@ export default class Camera {
 
   _getTiles () {
     if (this.projection.dirty) {
+      let tilesInView: TileDefinitions = []
       // no matter what we need to update what's in view
       const newTiles = []
       // update tiles in view
-      this.tilesInView = this.projection.getTilesInView()
+      tilesInView = this.projection.getTilesInView()
       // check if any of the tiles don't exist in the cache. If they don't create a new tile
-      for (const tile of this.tilesInView) {
+      for (const tile of tilesInView) {
         const [face, zoom, x, y, hash] = tile
         if (!this.tileCache.has(hash)) {
           // tile not found, so we create it
@@ -219,20 +232,33 @@ export default class Camera {
         this.painter.dirty = true
         this.style.requestTiles(newTiles)
       }
-    }
-    return this.tileCache.getBatch(this.tilesInView.map(t => t[4]))
+      return this.tilesInView = this.tileCache.getBatch(tilesInView.map(t => t[4]))
+    } else { return this.tilesInView }
   }
 
   _draw () {
-    // dummy check, if nothing has changed, do nothing
-    if (!this.painter.dirty && !this.style.dirty && !this.projection.dirty) return
+    const { style, painter, projection } = this
     // prep tiles
     const tiles = this._getTiles()
-    // paint scene
-    this.painter.paint(this.projection, this.style, tiles)
-    // at the end of a scene render, we know Painter, Projection, and Style are up to date
-    this.painter.dirty = false
-    this.style.dirty = false
-    this.projection.dirty = false
+    // get state of scene
+    const dirty = style.dirty || painter.dirty || projection.dirty
+    // if any changes, we paint new scene
+    if (dirty) {
+      // store for future draw that it was a "dirty" frame
+      this.wasDirtyLastFrame = dirty
+      // paint scene
+      painter.paint(projection, style, tiles)
+    }
+    // draw the interactive elements if there was no movement/zoom change
+    if (style.interactive && !projection.dirty && this.wasDirtyLastFrame) {
+      this.wasDirtyLastFrame = false
+      painter.paintInteractive(tiles)
+    }
+    // cleanup
+    painter.dirty = false
+    style.dirty = false
+    projection.dirty = false
+    // flush incase
+    // this.painter.context.gl.flush()
   }
 }

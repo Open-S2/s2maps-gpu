@@ -1,6 +1,8 @@
 #version 300 es
 precision highp float;
 
+@nomangle vTexcoord texture uTexture
+
 // Passed in from the vertex shader.
 in vec2 vTexcoord;
 // The texture.

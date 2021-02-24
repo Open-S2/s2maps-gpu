@@ -14,9 +14,7 @@ import Color from '../color'
 // FEATURE-STATE ENCODINGS:
 // 0 -> default (inactive)
 // 1 -> hover
-// 2 -> mouse-down
-// 3 -> mouse-up
-// 4 -> active
+// 2 -> active
 
 // INPUT RANGE/CONDITION ENCODINGS:
 // 0 -> zoom
@@ -139,10 +137,8 @@ function encodeFeatureStates (input: Array<any>, lch: boolean, colorBlind: boole
     const condition = input.shift()
     const conditionCode = (condition === 'default') ? 0 // (inactive)
       : (condition === 'hover') ? 1
-        : (condition === 'mouse-down') ? 2
-          : (condition === 'mouse-up') ? 3
-            : (condition === 'active') ? 4
-            : 0 // default / inactive
+      : (condition === 'active') ? 2
+      : 0 // default / inactive
     // get condition
     const value = input.shift()
     encoding.push(conditionCode, ...encodeLayerAttribute(value, lch, colorBlind))

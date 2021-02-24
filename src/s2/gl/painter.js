@@ -3,6 +3,7 @@
 import Style from '../style'
 /** CONTEXTS **/
 import { WebGL2Context, WebGLContext } from './contexts'
+// import { WebGL2Context, WebGLContext, WebGPUContext } from './contexts'
 /** PROGRAMS **/
 import {
   Program,
@@ -11,7 +12,9 @@ import {
   GlyphLineProgram,
   GlyphProgram,
   GlyphQuadProgram,
+  HeatmapProgram,
   LineProgram,
+  PointProgram,
   RasterProgram,
   ShadeProgram,
   SkyboxProgram,
@@ -29,12 +32,14 @@ export default class Painter {
   _canvas: HTMLCanvasElement
   context: WebGL2Context | WebGLContext
   programs: { [string]: Program } = {}
+  currProgram: ProgramType
   dirty: boolean = true
   constructor (canvas: HTMLCanvasElement, options: MapOptions) {
+    const self = this
     // setup canvas
-    this._canvas = canvas
+    self._canvas = canvas
     // create a webgl or webgl2 context
-    this._createContext(options)
+    return self._createContext(options).then(() => { return self })
   }
 
   delete () {
@@ -48,93 +53,111 @@ export default class Painter {
     if (glyphProgram) glyphProgram.clearCache()
   }
 
-  _createContext (options: MapOptions) {
+  async _createContext (options: MapOptions) {
     // prep options
     const webglOptions = { powerPreference: 'high-performance', antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: false, alpha: true, stencil: true }
     let context
-    // first try webgl2
-    // use webgl for mobile phones as WebGL2 might be too much for phones? Untested.
+    // first try webGPU
+    // if (navigator.gpu) {
+    //   context = this._canvas.getContext('gpupresent')
+    //   if (context && typeof context.configureSwapChain === 'function') {
+    //     this.context = new WebGPUContext(context, options)
+    //   }
+    // }
+    // than try webgl2
+    // use webgl for mobile phones as the WebGL2 techniques might be too much for phones? Untested.
     if (!(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))) {
       context = this._canvas.getContext('webgl2', webglOptions)
       if (context && typeof context.getParameter === 'function') {
-        this.context = new WebGL2Context(context, options.canvasMultiplier)
+        this.context = new WebGL2Context(context, options)
         return
       }
     }
     // webgl
     context = this._canvas.getContext('webgl', webglOptions)
     if (context && typeof context.getParameter === 'function') {
-      this.context = new WebGLContext(context, options.canvasMultiplier)
+      this.context = new WebGLContext(context, options)
     }
   }
 
-  setClearColor (clearColor: [number, number, number, number]) {
-    this.context.setClearColor(clearColor)
-  }
-
-  // speedup so our first draw is quicker
-  prebuildPrograms (programs: Set<ProgramType>) {
+  async buildPrograms (buildSet: Set<ProgramType>) {
     const self = this
-    programs.forEach(program => { self.getProgram(program) })
+    const { programs } = self
+    let promises = []
+    for (const program of buildSet) {
+      switch (program) {
+        case 'raster':
+          promises.push((new RasterProgram(self.context)).then(p => programs.raster = p))
+          break
+        case 'fill':
+          promises.push((new FillProgram(self.context)).then(p => programs.fill = p))
+          break
+        case 'line':
+          promises.push((new LineProgram(self.context)).then(p => programs.line = p))
+          break
+        case 'point':
+          promises.push((new PointProgram(self.context)).then(p => programs.point = p))
+          break
+        case 'heatmap':
+          promises.push((new HeatmapProgram(self.context)).then(p => programs.heatmap = p))
+          break
+        case 'shade':
+          promises.push((new ShadeProgram(self.context)).then(p => programs.shade = p))
+          break
+        case 'glyph':
+          promises.push((new GlyphLineProgram(self.context)).then(p => programs.glyphLineProgram = p))
+          promises.push((new GlyphFilterProgram(self.context)).then(p => programs.glyphFilter = p))
+          promises.push((new GlyphProgram(self.context)).then(p => programs.glyphFill = p))
+          promises.push((new GlyphQuadProgram(self.context)).then(p => { programs.glyph = p }))
+          break
+        case 'wallpaper':
+          promises.push((new WallpaperProgram(self.context)).then(p => programs.wallpaper = p))
+          break
+        case 'skybox':
+          promises.push((new SkyboxProgram(self.context)).then(p => programs.skybox = p))
+          break
+        default: break
+      }
+    }
+
+    await Promise.all(promises).then(() => {
+      const { programs } = self
+      // if we build the glyph programs, ensure the programs know of eachother
+      if (programs.glyph) {
+        programs.glyphFill.injectGlyphLine(programs.glyphLineProgram)
+        programs.glyph.injectGlyphPrograms(programs.glyphFilter, programs.glyphFill)
+      }
+    })
   }
 
   injectFrameUniforms (matrix: Float32Array, view: Float32Array, aspect: Float32Array) {
     const { programs } = this
-    for (const programName in programs) {
-      programs[programName].injectFrameUniforms(matrix, view, aspect)
-    }
-  }
-
-  getProgram (programName: ProgramType): null | Program {
-    const { programs } = this
-    if (programs[programName]) return programs[programName]
-    // if program not created yet, let's make it
-    switch (programName) {
-      case 'raster':
-        programs.raster = new RasterProgram(this.context)
-        break
-      case 'fill':
-        programs.fill = new FillProgram(this.context)
-        break
-      case 'line':
-        programs.line = new LineProgram(this.context)
-        break
-      case 'shade':
-        programs.shade = new ShadeProgram(this.context)
-        break
-      case 'text':
-      case 'billboard':
-      case 'glyph':
-        programs.glyphLineProgram = new GlyphLineProgram(this.context)
-        programs.glyphFilter = new GlyphFilterProgram(this.context)
-        programs.glyphFill = new GlyphProgram(this.context, programs.glyphLineProgram)
-        programs.text = programs.billboard = programs.glyph = new GlyphQuadProgram(this.context, programs.glyphFilter, programs.glyphFill)
-        break
-      case 'wallpaper':
-        programs.wallpaper = new WallpaperProgram(this.context)
-        break
-      case 'skybox':
-        programs.skybox = new SkyboxProgram(this.context)
-        break
-      default: break
-    }
-    // check one more time the program exists
-    if (programs[programName]) return programs[programName]
-    return null
+    for (const programName in programs) programs[programName].injectFrameUniforms(matrix, view, aspect)
   }
 
   useProgram (programName: ProgramType): void | Program {
-    const program = this.getProgram(programName)
-    if (program) program.use()
+    const program = this.programs[programName]
+    // if (this.currProgram !== programName) {
+    //   this.currProgram = programName
+    //   program.use()
+    // }
+    program.use()
     return program
   }
 
   resize () {
+    const { context } = this
     // If we are using the text program, update the text program's framebuffer component's sizes
     const glyphFilter: GlyphFilterProgram = this.programs.glyphFilter
+    const heatmap: HeatmapProgram = this.programs.heatmap
     if (glyphFilter) glyphFilter.resize()
+    if (heatmap) heatmap.resize()
+    // ensure interaction buffer is accurate
+    context.resizeInteract()
     // ensure our default viewport is accurate
-    this.context.resetViewport()
+    context.resetViewport()
+    // notify that the painter is dirty
+    this.dirty = true
   }
 
   paint (projection: Projection, style: Style, tiles: Array<Tile>) {
@@ -146,13 +169,20 @@ export default class Painter {
     this.injectFrameUniforms(matrix, view, aspect)
     // prep mask id's
     this._createTileMasksIDs(tiles)
-    // prep tiles features to draw
+    // prep all tile's features to draw
     // $FlowIgnore
-    const features = tiles.flatMap(tile => tile.featureGuide).sort(featureSort)
+    const features = tiles.flatMap(tile => tile.featureGuide)
+    // draw heatmap data if applicable
+    const heatmapFeatures = tiles.flatMap(tile => tile.heatmapGuide)
+    if (heatmapFeatures.length) features.push(this.paintHeatmap(heatmapFeatures))
+    // sort features
+    features.sort(featureSort)
     // prep glyph features for drawing box filters
     const glyphFeatures = features.filter(feature => feature.type === 'glyph')
     // use text boxes to filter out overlap
     if (glyphFeatures.length) this.paintGlyphFilter(tiles, glyphFeatures)
+    // return to our default framebuffer
+    context.bindMainBuffer()
     // clear main buffer
     context.newScene()
 
@@ -164,16 +194,28 @@ export default class Painter {
       const wallpaperProgram: WallpaperProgram = this.useProgram(style.wallpaper.skybox ? 'skybox' : 'wallpaper')
       if (wallpaperProgram) wallpaperProgram.draw(style.wallpaper)
     }
-    // prep the use of fills in the opaque draws
-    this.useProgram('fill')
     // paint opaque fills
     const opaqueFillFeatures = features.filter(feature => feature.opaque).reverse()
-    this.paintFeatures(opaqueFillFeatures)
+    this.paintFeatures(opaqueFillFeatures, false, tiles)
     // paint features
     const residualFeatures = features.filter(feature => !feature.opaque)
-    this.paintFeatures(residualFeatures)
+    this.paintFeatures(residualFeatures, false, tiles)
     // cleanup
     context.cleanup()
+  }
+
+  paintInteractive (tiles: Array<Tile>) {
+    const interactiveFeatures = tiles
+      .flatMap(tile => tile.featureGuide)
+      .sort(featureSort)
+      .filter(feature => feature.interactive)
+      .reverse()
+    if (interactiveFeatures.length) {
+      // prepare
+      this.context.clearInteractBuffer()
+      // draw
+      this.paintFeatures(interactiveFeatures, true, tiles)
+    }
   }
 
   _createTileMasksIDs (tiles: Array<Tile>) {
@@ -187,7 +229,7 @@ export default class Painter {
 
   buildGlyphTexture (glyphSource: GlyphTileSource): void | Error {
     // get the glyphProgram & draw the glyphs to a texture
-    const glyphProgram: GlyphProgram = this.getProgram('glyphFill')
+    const glyphProgram: GlyphProgram = this.useProgram('glyphFill')
     if (glyphProgram) glyphProgram.draw(glyphSource)
     else return new Error('The "glyphFill" program does not exist, can not paint.')
   }
@@ -198,7 +240,6 @@ export default class Painter {
     const { gl } = context
     // prep the fill program
     const fillProgram: FillProgram = this.useProgram('fill')
-    if (!fillProgram) return new Error('The "fill" program does not exist, can not paint.')
     // prep stencil - don't draw color, only to the stencil
     context.enableMaskTest()
     context.lequalDepth()
@@ -220,50 +261,100 @@ export default class Painter {
     gl.colorMask(true, true, true, true)
   }
 
-  paintFeatures (features: Array<FeatureGuide>) {
+  paintFeatures (features: Array<FeatureGuide>, interactive: boolean, tiles: Array<Tile>) {
     // setup context
     const { context } = this
     const { gl } = context
     // setup variables
     let curLayer: number = -1
-    let curProgram: ProgramType = 'fill'
-    let program: Program = this.getProgram('fill')
+    let inversion: number = null
+    let program: Program
     // run through the features, and upon tile, layer, or program change, adjust accordingly
     for (const feature of features) {
-      const { tile, faceST, depthPos, layerIndex, source, sourceName, type, layerCode, lch } = feature
+      const { tile, faceST, layerIndex, invert, depthPos, source, sourceName, type, layerCode, lch } = feature
       const { tmpMaskID } = tile
       const featureSource = source[sourceName]
-      // set program
-      if (type !== curProgram) {
-        // always cull unless line
-        if (type === 'line') context.disableCullFace()
-        else context.enableCullFace()
-        curProgram = type
-        program = this.useProgram(type)
-        if (!program) return new Error(`The "${type}" program does not exist, can not paint.`)
+      // inversion flush if necessary
+      if (inversion && curLayer !== layerIndex) {
+        this.flushInvert(tiles, program, inversion)
+        inversion = null
       }
+      // set program
+      program = this.useProgram(type)
       // set stencil
       gl.stencilFunc(gl.EQUAL, tmpMaskID, 0xFF)
       // update layerCode if the current layer has changed
-      if (layerCode && curLayer !== layerIndex) {
+      if (curLayer !== layerIndex) {
+        // now setup new layercode
         curLayer = layerIndex
-        program.setLayerCode(layerCode, lch)
-        // set depthPos if applicable
-        if (depthPos) context.enableDepthTest()
-        else context.disableDepthTest()
+        if (layerCode) program.setLayerCode(layerCode, lch)
+        // set interactive if applicable
+        program.setInteractive(interactive)
+        // if this new layer is inverting its draw, we set
+        if (invert && !inversion) {
+          gl.colorMask(false, false, false, false)
+          inversion = depthPos
+        }
       }
       // adjust to the faceST
       program.setFaceST(faceST)
       // bind vao
       gl.bindVertexArray(featureSource.vao)
       // draw
-      program.draw(feature, featureSource, tmpMaskID)
+      program.draw(feature, featureSource, interactive)
     }
+  }
+
+  // run through tiles and draw the masks, inject depthPos and
+  flushInvert (tiles: Array<Tile>, program: Program, depthPos: number) {
+    const { gl } = this.context
+    // turn color back on
+    gl.colorMask(true, true, true, true)
+    // draw tile masks
+    for (const tile of tiles) {
+      const { tmpMaskID, faceST, sourceData } = tile
+      const { mask } = sourceData
+      // inject depthPos
+      mask.depthPos = depthPos
+      // set uniforms & stencil test
+      program.setFaceST(faceST)
+      // set correct tile mask
+      gl.stencilFunc(gl.ALWAYS, tmpMaskID, 0xFF)
+      // use mask vao and fill program
+      gl.bindVertexArray(mask.vao)
+      // draw mask
+      program.draw(mask, mask)
+      // remove depthPos
+      mask.depthPos = null
+    }
+  }
+
+  paintHeatmap (features: Array<FeatureGuide>) {
+    const { gl } = this.context
+    // grab heatmap program
+    const program = this.useProgram('heatmap')
+    // setup texture draws
+    program.setupTextureDraw()
+    // draw all features
+    for (const feature of features) {
+      const { source, sourceName, faceST, layerCode } = feature
+      // grab feature source
+      const featureSource = source[sourceName]
+      // set faceST & layercode, bind vao, and draw
+      program.setFaceST(faceST)
+      program.setLayerCode(layerCode)
+      gl.bindVertexArray(featureSource.vao)
+      program.drawTexture(feature, featureSource)
+    }
+    // prep program for canvas draws
+    program.setupCanvasDraw()
+    // return a "featureGuide" to draw to the screen
+    return features[0]
   }
 
   paintGlyphFilter (tiles: Array<Tile>, glyphFeatures: Array<FeatureGuide>) {
     const { context } = this
-    const glyphFilterProgram: GlyphFilterProgram = this.getProgram('glyphFilter')
+    const glyphFilterProgram: GlyphFilterProgram = this.programs.glyphFilter
     if (!glyphFilterProgram) return new Error('The "glyphFilter" program does not exist, can not paint.')
     // disable blending
     context.enableDepthTest()
@@ -283,8 +374,6 @@ export default class Painter {
     // Step 3: draw result points
     glyphFilterProgram.bindResultFramebuffer()
     this._paintGlyphFilter(glyphFilterProgram, glyphFeatures, 2)
-    // return to our default framebuffer
-    context.bindMainBuffer()
   }
 
   _paintGlyphFilter (glyphFilterProgram: GlyphFilterProgram, glyphFeatures: Array<FeatureGuide>, mode: 0 | 1 | 2) {

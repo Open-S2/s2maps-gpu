@@ -23,7 +23,7 @@ vec4 STtoXYZ (in vec2 st) { // x -> s, y -> t
   else if (face == 4) xyz = vec3(-1, -uv.x, uv.y);
   else xyz = vec3(uv.x, -1, uv.y);
   // normalize data
-  xyz = normalize(xyz);
+  xyz = normalize(xyz) * 1000.;
   // return
   return vec4(xyz, 1);
 }

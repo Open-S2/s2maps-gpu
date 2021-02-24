@@ -21,17 +21,21 @@ export default class WallpaperProgram extends Program {
   uFade2Color: WebGLUniformLocation
   constructor (context: Context) {
     // get gl from context
-    const { gl, type } = context
+    const { type } = context
+    // inject Program
+    super(context)
+    const self = this
     // install shaders
-    if (type === 1) super(context, vert1, frag1, false)
-    else super(context, vert2, frag2, false)
-    // acquire the attributes & uniforms
-    this.aPos = gl.getAttribLocation(this.glProgram, 'aPos')
-    this.uScale = gl.getUniformLocation(this.glProgram, 'uScale')
-    this.uBackgroundColor = gl.getUniformLocation(this.glProgram, 'backgroundColor')
-    this.uHaloColor = gl.getUniformLocation(this.glProgram, 'haloColor')
-    this.uFade1Color = gl.getUniformLocation(this.glProgram, 'fade1Color')
-    this.uFade2Color = gl.getUniformLocation(this.glProgram, 'fade2Color')
+    return Promise.all([
+      (type === 1) ? vert1 : vert2,
+      (type === 1) ? frag1 : frag2
+    ])
+      .then(([vertex, fragment]) => {
+        // build shaders
+        self.buildShaders(vertex, fragment)
+
+        return self
+      })
   }
 
   draw (wallpaper: Wallpaper) {

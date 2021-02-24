@@ -1,8 +1,10 @@
 #version 300 es
 precision highp float;
 
-#define GAMMA 0.105
-#define MIN_ALPHA 0.078125 // 20. / 256.
+@define GAMMA 0.105
+@define MIN_ALPHA 0.078125 // 20. / 256.
+
+@nomangle draw buf vTexcoord color texture uGlyphTex
 
 // Passed in from the vertex shader.
 in float draw;
@@ -19,6 +21,8 @@ out vec4 fragColor;
 void main () {
   if (draw == 0.) {
     discard;
+  } else if (draw == 2.) {
+    fragColor = color;
   } else {
     vec4 tex = texture(uGlyphTex, vTexcoord);
     float green = smoothstep(buf - GAMMA, buf + GAMMA, tex.g);

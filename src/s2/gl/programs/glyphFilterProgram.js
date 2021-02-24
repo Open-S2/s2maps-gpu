@@ -29,84 +29,82 @@ export default class GlyphFilterProgram extends Program {
   constructor (context: Context) {
     // get gl from context
     const { gl, type, devicePixelRatio } = context
-    // build shaders
-    if (type === 1) {
-      gl.attributeLocations = { aStep: 0, aST: 1, aXY: 2, aPad: 3, aWidth: 4, aIndex: 5, aID: 6 }
-      super(context, vert1, frag1)
-      // setup size uniform
-      this.uSize = gl.getUniformLocation(this.glProgram, 'uSize')
-    } else {
-      super(context, vert2, frag2)
-    }
-    // use program
-    const { glProgram } = this
-    this.use()
-    // setup the devicePixelRatio
-    this.setDevicePixelRatio(devicePixelRatio)
-    // get uniform(s)
-    this.uIndexOffset = gl.getUniformLocation(glProgram, 'uIndexOffset')
-    // get the samplers
-    this.uPoints = gl.getUniformLocation(glProgram, 'uPoints')
-    this.uQuads = gl.getUniformLocation(glProgram, 'uQuads')
-    // set sampler positions
-    gl.uniform1i(this.uPoints, 0) // uFeatures texture unit 0
-    gl.uniform1i(this.uQuads, 1) // uGlyphTex texture unit 1
+    // inject Program
+    super(context)
+    const self = this
 
-    // TEXTURES
-    this.pointTexture = gl.createTexture()
-    this.quadTexture = gl.createTexture()
-    this.resultTexture = gl.createTexture()
-    this.textures = [this.pointTexture, this.resultTexture]
+    return Promise.all([
+      (type === 1) ? vert1 : vert2,
+      (type === 1) ? frag1 : frag2
+    ])
+      .then(([vertex, fragment]) => {
+        // build said shaders
+        self.buildShaders(vertex, fragment)
+        self.use()
+        // setup the devicePixelRatio
+        self.setDevicePixelRatio(devicePixelRatio)
+        // set sampler positions
+        gl.uniform1i(self.uPoints, 0) // uFeatures texture unit 0
+        gl.uniform1i(self.uQuads, 1) // uGlyphTex texture unit 1
 
-    for (const texture of this.textures) {
-      // bind
-      gl.bindTexture(gl.TEXTURE_2D, texture)
-      // create pointTexture's aspect
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.canvas.width, gl.canvas.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
-      // set filter system
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-    }
+        // TEXTURES
+        self.pointTexture = gl.createTexture()
+        self.quadTexture = gl.createTexture()
+        self.resultTexture = gl.createTexture()
+        self.textures = [self.pointTexture, self.resultTexture]
 
-    // quad texture using floats
-    gl.bindTexture(gl.TEXTURE_2D, this.quadTexture)
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 2048, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
-    // set filter system
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+        for (const texture of self.textures) {
+          // bind
+          gl.bindTexture(gl.TEXTURE_2D, texture)
+          // create pointTexture's aspect
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.canvas.width, gl.canvas.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
+          // set filter system
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+        }
 
-    // DEPTH
-    this.depthBuffer = gl.createRenderbuffer()
-    // bind
-    gl.bindRenderbuffer(gl.RENDERBUFFER, this.depthBuffer)
-    // allocate renderbuffer
-    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, gl.canvas.width, gl.canvas.height)
+        // quad texture using floats
+        gl.bindTexture(gl.TEXTURE_2D, self.quadTexture)
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 2048, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
+        // set filter system
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
 
-    // FRAMEBUFFERS
-    // POINT FRAMEBUFFER
-    this.pointFramebuffer = gl.createFramebuffer()
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.pointFramebuffer)
-    // attach pointTexture to pointFramebuffer
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.pointTexture, 0)
-    // attach depthBuffer renderbuffer to pointFramebuffer
-    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this.depthBuffer)
-    // QUAD FRAMEBUFFER
-    this.quadFramebuffer = gl.createFramebuffer()
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.quadFramebuffer)
-    // attach quadTexture to quadFramebuffer
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.quadTexture, 0)
-    // RESULT FRAMEBUFFER
-    this.resultFramebuffer = gl.createFramebuffer()
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.resultFramebuffer)
-    // attach quadTexture to resultFramebuffer
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.resultTexture, 0)
+        // DEPTH
+        self.depthBuffer = gl.createRenderbuffer()
+        // bind
+        gl.bindRenderbuffer(gl.RENDERBUFFER, self.depthBuffer)
+        // allocate renderbuffer
+        gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, gl.canvas.width, gl.canvas.height)
 
-    // we are finished, so go back to our main buffer
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+        // FRAMEBUFFERS
+        // POINT FRAMEBUFFER
+        self.pointFramebuffer = gl.createFramebuffer()
+        gl.bindFramebuffer(gl.FRAMEBUFFER, self.pointFramebuffer)
+        // attach pointTexture to pointFramebuffer
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, self.pointTexture, 0)
+        // attach depthBuffer renderbuffer to pointFramebuffer
+        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, self.depthBuffer)
+        // QUAD FRAMEBUFFER
+        self.quadFramebuffer = gl.createFramebuffer()
+        gl.bindFramebuffer(gl.FRAMEBUFFER, self.quadFramebuffer)
+        // attach quadTexture to quadFramebuffer
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, self.quadTexture, 0)
+        // RESULT FRAMEBUFFER
+        self.resultFramebuffer = gl.createFramebuffer()
+        gl.bindFramebuffer(gl.FRAMEBUFFER, self.resultFramebuffer)
+        // attach quadTexture to resultFramebuffer
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, self.resultTexture, 0)
+
+        // we are finished, so go back to our main buffer
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+
+        return self
+      })
   }
 
   delete () {
@@ -191,14 +189,14 @@ export default class GlyphFilterProgram extends Program {
     this.indexOffset = 0
   }
 
-  draw (featureGuide: FeatureGuide, sourceData: GlyphTileSource, mode: 0 | 1 | 2) {
+  draw (featureGuide: FeatureGuide, source: GlyphTileSource, mode: 0 | 1 | 2) {
     const { gl, context } = this
     const { type } = context
     // set current indexOffset
     if (mode !== 0) this.setIndexOffset()
     // grab variables
     const { size, featureCode, filterCount, filterOffset } = featureGuide
-    const { glyphFilterBuffer } = sourceData
+    const { glyphFilterBuffer } = source
     // set feature code
     if (type === 1) gl.uniform1f(this.uSize, size)
     else { this.setFeatureCode(featureCode) }

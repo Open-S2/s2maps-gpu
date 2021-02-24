@@ -18,7 +18,6 @@ export default class DragPan extends EventTarget {
   zoomActive: boolean = false // allow two finger zooming
   mouseActive: boolean = false // when a user presses left click and moves during the press
   wasActive: boolean = false // if a onMouseDown event comes up, we want to check if the map was previously active to avoid unecessary click events
-  animSeed: number = 0
   minMovementX: number = 1
   minMovementY: number = 0.5
   movementX: number = 0
@@ -37,13 +36,6 @@ export default class DragPan extends EventTarget {
     this.totalMovementY = 0
     this.zoom = 0
     this.time = -1
-    this.newSeed()
-  }
-
-  newSeed () {
-    this.animSeed++
-    if (this.animSeed > 1000) this.animSeed = 0
-    return this.animSeed
   }
 
   onTouchStart (touches: TouchEvent) {
@@ -147,7 +139,6 @@ export default class DragPan extends EventTarget {
 
   getNextSwipeFrame (now: number) {
     if (this.time === -1) {
-      this.newSeed()
       return [0, 0, 0]
     }
     if (this.time === 0) this.time = now

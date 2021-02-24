@@ -1,0 +1,616 @@
+{
+  "version": 1,
+  "name": "s2test",
+  "center": [-111.811091, 40.718442],
+  "zoom": 10,
+  "minzoom": 0,
+  "maxzoom": 20,
+  "sources": {
+    "world": "https://s3.s2maps.io/streets-v1",
+    "terrain": "http://192.168.0.188:8000/data/terrain",
+    "places": "http://192.168.0.188:8000/data/places",
+    "landuse": "http://192.168.0.188:8000/data/landuse",
+    "landcover": "http://192.168.0.188:8000/data/landcover",
+    "ocean": "http://192.168.0.188:8000/data/ocean",
+    "water": "http://192.168.0.188:8000/data/water",
+    "buildings": "http://192.168.0.188:8000/data/buildings",
+    "boundary": "http://192.168.0.188:8000/data/boundary",
+    "transport": "http://192.168.0.188:8000/data/transport",
+    "poi": "http://192.168.0.188:8000/data/poi",
+    "equator": "http://192.168.0.188:8000/data/equator"
+  },
+  "fonts": {
+    "default": "https://s3.s2maps.io/fonts-v3/default",
+    "roboto-regular": "https://s3.s2maps.io/fonts-v3/RobotoRegular",
+    "roboto-medium": "https://s3.s2maps.io/fonts-v3/RobotoMedium"
+  },
+  "wallpaper": {
+    "background-color": "#030a2d",
+    "fade-1": "rgb(138, 204, 255)",
+    "fade-2": "rgb(217, 255, 255)",
+    "halo": "rgb(230, 255, 255)"
+  },
+  "colorBlind": false,
+  "layers": [
+    {
+      "name": "background",
+      "type": "fill",
+      "opaque": true,
+      "source": "mask",
+      "layout": {},
+      "paint": {
+        "color": [
+          "input-range",
+          "zoom",
+          "expo",
+          1.7,
+          2.75,
+          "#f9f7e7",
+          3,
+          "#f5f5f5",
+          6.5,
+          "#f0e9d7",
+          9,
+          "#f0e9d7",
+          13,
+          "rgb(232,232,232)",
+          14,
+          "#f8f9fa"
+        ]
+      }
+    },
+    {
+      "name": "landcover",
+      "source": "landcover",
+      "layer": "landcover",
+      "type": "fill",
+      "opaque": true,
+      "minzoom": 0,
+      "maxzoom": 4,
+      "layout": {},
+      "paint": {
+        "color": [
+          "data-condition",
+          ["class", "==", "snow"],
+          "#ffffff",
+          ["class", "==", "wood"],
+          "#93d2a5",
+          ["class", "==", "tree"],
+          "#a8dab5",
+          ["class", "==", "crop"],
+          "#bbe2c6",
+          ["class", "==", "shrub"],
+          "rgb(242, 237, 224)",
+          ["class", "==", "wasteland"],
+          "#e8e8e1",
+          "default",
+          "#93d2a5"
+        ]
+      }
+    },
+    {
+      "name": "landuse",
+      "source": "landuse",
+      "layer": "landuse",
+      "type": "fill",
+      "opaque": true,
+      "filter": [
+        "or",
+        ["class", "==", "aeroway"],
+        [
+          "type", "has", ["park", "national_park", "protected_area",
+          "grass", "grassland", "garden", "meadow", "farmland",
+          "swamp", "wetland", "zoo", "cemetery", "sand", "beach", "desert",
+          "hospital", "school", "parking", "glacier",
+          "quarry", "retail", "urban", "pitch"]
+        ]
+      ],
+      "minzoom": 5,
+      "layout": {},
+      "paint": {
+        "color": [
+          "data-condition",
+          ["type", "==", "parking"],
+          "rgb(241, 243, 244)",
+          ["type", "==", "wetland"],
+          "rgb(210, 233, 255)",
+          ["type", "==", "quarry"],
+          "rgb(206, 208, 211)",
+          ["type", "==", "glacier"],
+          "rgb(249, 249, 249)",
+          ["type", "==", "beach"],
+          "rgb(255, 239, 195)",
+          ["type", "==", "cemetery"],
+          "rgb(208, 236, 208)",
+          ["type", "==", "pitch"],
+          "#9dd2ac",
+          ["type", "has", ["grass", "grassland", "garden", "meadow", "swamp", "zoo"]],
+          "#a8dab5",
+          ["type", "has", ["park", "national_park", "protected_area"]],
+          "#aee0bc",
+          ["type", "has", ["apron", "airstrip"]],
+          "#d4d8ea",
+          ["class", "==", "aeroway"],
+          "rgb(219, 222, 235)",
+          ["type", "==", "farmland"],
+          "rgb(228, 234, 210)",
+          ["type", "==", "hospital"],
+          "rgb(252, 228, 228)",
+          ["type", "==", "school"],
+          "rgb(226, 233, 238)",
+          ["type", "==", "retail"],
+          "rgb(254, 245, 220)",
+          ["type", "==", "urban"],
+          "#e9eaed",
+          ["type", "has", ["desert", "sand"]],
+          "rgb(241, 233, 195)",
+          "default",
+          "rgb(0, 0, 0)"
+        ]
+      }
+    },
+    {
+      "name": "landuse_transparent",
+      "source": "landuse",
+      "layer": "landuse",
+      "type": "fill",
+      "filter": ["type", "has", ["aboriginal_lands", "military"]],
+      "layout": {},
+      "paint": {
+        "color": [
+          "data-condition",
+          ["type", "==", "aboriginal_lands"],
+          "rgba(240, 242, 240, 0.5)",
+          ["type", "==", "military"],
+          "rgba(226, 226, 224, 0.5)",
+          "default",
+          "rgba(0, 0, 0, 0)"
+        ]
+      }
+    },
+    {
+      "name": "golf",
+      "source": "landuse",
+      "layer": "landuse",
+      "type": "fill",
+      "opaque": true,
+      "filter": [
+        "and",
+        ["class", "==", "golf"],
+        ["type", "has", ["course", "rough", "fairway", "green", "bunker"]]
+      ],
+      "minzoom": 0,
+      "layout": {},
+      "paint": {
+        "color": [
+          "data-condition",
+          ["type", "==", "bunker"],
+          "rgb(255, 239, 195)",
+          ["type", "==", "green"],
+          "rgb(233, 251, 217)",
+          ["type", "==", "fairway"],
+          "rgb(218, 245, 205)",
+          ["type", "has", ["course", "rough"]],
+          "rgb(201, 238, 201)",
+          "default",
+          "rgba(0, 0, 0, 0)"
+        ]
+      }
+    },
+    {
+      "name": "hillshade",
+      "source": "terrain",
+      "layer": "hillshade",
+      "type": "fill",
+      "minzoom": 0,
+      "layout": {},
+      "paint": {
+        "color": [
+          "data-condition",
+          ["and", ["class", "==", "shade"], ["level", "==", 3]],
+          "rgba(31, 81, 56, 0.25)",
+          ["and", ["class", "==", "shade"], ["level", "==", 2]],
+          "rgba(31, 81, 56, 0.2)",
+          ["and", ["class", "==", "shade"], ["level", "==", 1]],
+          "rgba(31, 81, 56, 0.15)",
+          ["and", ["class", "==", "shade"], ["level", "==", 0]],
+          "rgba(31, 81, 56, 0.1)",
+          ["and", ["class", "==", "highlight"], ["level", "==", 1]],
+          "rgba(255, 254, 250, 0.4)",
+          ["and", ["class", "==", "highlight"], ["level", "==", 0]],
+          "rgba(255, 254, 250, 0.2)",
+          "default",
+          "rgba(0, 0, 0, 0)"
+        ]
+      }
+    },
+    {
+      "name": "water",
+      "source": "ocean",
+      "filter": ["class", "!has", ["reef", "shoal"]],
+      "layer": "water",
+      "type": "fill",
+      "opaque": true,
+      "minzoom": 0,
+      "layout": {},
+      "paint": {
+        "color": "#8fcaf9"
+      }
+    },
+    {
+      "name": "water",
+      "source": "water",
+      "filter": ["class", "!has", ["reef", "shoal"]],
+      "layer": "water",
+      "type": "fill",
+      "opaque": true,
+      "minzoom": 0,
+      "layout": {},
+      "paint": {
+        "color": "#8fcaf9"
+      }
+    },
+    {
+      "name": "reef_shoal",
+      "source": "world",
+      "filter": ["class", "has", ["reef", "shoal"]],
+      "layer": "water",
+      "type": "fill",
+      "opaque": true,
+      "minzoom": 0,
+      "layout": {},
+      "paint": {
+        "color": "rgb(185, 225, 255)"
+      }
+    },
+    {
+      "name": "buildings",
+      "source": "buildings",
+      "layer": "buildings",
+      "type": "fill",
+      "opaque": true,
+      "layout": {},
+      "paint": {
+        "color": [
+          "data-condition",
+          ["class", "has", ["aeroway", "office", "hotel", "hospital", "shop", "retail", "industrial", "school", "commercial", "public", "warehouse", "service", "stadium"]],
+          "#fdf9e9",
+          ["class", "==", "police"],
+          "#9bc1ef",
+          ["class", "==", "fire_station"],
+          "#fba69e",
+          "default",
+          "#f2f3f4"
+        ]
+      }
+    },
+    {
+      "name": "shade",
+      "source": "mask",
+      "type": "shade",
+      "maxzoom": 2
+    },
+    {
+      "name": "country_state",
+      "source": "places",
+      "filter": [
+        "or",
+        ["and", ["class", "==", "continent"], ["name_en", "==", "Antarctica"]],
+        ["class", "has", ["country", "state"]]
+      ],
+      "layer": "place",
+      "type": "text",
+      "layout": {
+        "family": "roboto-medium",
+        "field": [
+          "data-condition",
+          ["class", "==", "continent"],
+          "?!Uname",
+          ["class", "==", "state"],
+          [
+            "input-range",
+            "zoom",
+            "step",
+            0,
+            "?abbr,?name",
+            3,
+            "?!Uname"
+          ],
+          "default",
+          [
+            "input-range",
+            "zoom",
+            "step",
+            0,
+            "?abbr,?name",
+            3,
+            "?name"
+          ]
+        ],
+        "anchor": "center",
+        "offset": [0, 0],
+        "padding": [1, 1]
+      },
+      "paint": {
+        "size": [
+          "data-condition",
+          ["class", "==", "country"],
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            0,
+            17,
+            4,
+            36
+          ],
+          ["class", "==", "state"],
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            0,
+            12,
+            4,
+            22,
+            7,
+            36
+          ],
+          "default",
+          18
+        ],
+        "fill": [
+          "data-condition",
+          ["class", "==", "country"],
+          "rgb(42, 42, 42)",
+          ["class", "==", "continent"],
+          "rgb(65, 65, 65)",
+          ["class", "==", "state"],
+          "rgb(90, 90, 90)",
+          "default",
+          "rgba(0, 0, 0, 0)"
+        ],
+        "stroke": "rgba(255, 255, 255, 0.65)",
+        "strokeWidth": [
+          "data-condition",
+          ["class", "==", "state"],
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            0,
+            0.5,
+            4,
+            0.3
+          ],
+          ["class", "==", "continent"],
+          0.2,
+          "default",
+          0
+        ]
+      }
+    },
+    {
+      "name": "places",
+      "source": "places",
+      "minzoom": 4,
+      "filter": ["class", "has", ["city", "town", "village", "hamlet", "neighbourhood", "island", "suburb"]],
+      "layer": "place",
+      "type": "text",
+      "layout": {
+        "family": [
+          "data-condition",
+          ["class", "has", ["town", "hamlet"]],
+          "roboto-regular",
+          "default",
+          "roboto-medium"
+        ],
+        "field": [
+          "data-condition",
+          ["class", "has", ["hamlet", "village", "neighbourhood", "suburb", "island"]],
+          "?!Uname",
+          "default",
+          "?name"
+        ],
+        "anchor": "center",
+        "offset": [0, 0],
+        "padding": [1, 1]
+      },
+      "paint": {
+        "size": [
+          "data-condition",
+          ["class", "==", "city"],
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            5,
+            14,
+            9,
+            20,
+            13,
+            32
+          ],
+          ["class", "==", "town"],
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            8,
+            14,
+            10,
+            18,
+            13,
+            25
+          ],
+          ["class", "has", ["neighbourhood", "suburb"]],
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            10,
+            16,
+            15,
+            18
+          ],
+          ["class", "has", ["hamlet", "village"]],
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            10.5,
+            14,
+            12,
+            18
+          ],
+          "default",
+          17
+        ],
+        "fill": [
+          "data-condition",
+          ["class", "has", ["village", "island"]],
+          "rgb(98, 114, 138)",
+          ["class", "has", ["hamlet", "neighbourhood"]],
+          "#7d8ca2",
+          "default",
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            9,
+            "rgb(75, 75, 75)",
+            12,
+            "rgb(100, 100, 100)"
+          ]
+        ],
+        "stroke": "rgba(255, 255, 255, 0.75)",
+        "strokeWidth": 0.2
+      }
+    },
+    {
+      "name": "water_label",
+      "source": "places",
+      "filter": ["class", "==", "water"],
+      "layer": "poi",
+      "type": "text",
+      "layout": {
+        "family": "roboto-medium",
+        "field": "?name",
+        "anchor": "center",
+        "offset": [0, 0],
+        "padding": [1, 1]
+      },
+      "paint": {
+        "size": [
+          "data-condition",
+          ["type", "==", "ocean"],
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            0,
+            16,
+            3,
+            40
+          ],
+          ["type", "==", "sea"],
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            0,
+            12,
+            4,
+            22,
+            7,
+            40
+          ],
+          "default",
+          14
+        ],
+        "fill": "#00669E",
+        "stroke": "rgba(255, 255, 255, 0)",
+        "strokeWidth": 0
+      }
+    },
+    {
+      "name": "poi_labels",
+      "filter": ["class", "!=", "addr"],
+      "source": "poi",
+      "layer": "poi",
+      "type": "text",
+      "layout": {
+        "family": [
+          "data-condition",
+          ["class", "==", "aboriginal_lands"],
+          "roboto-medium",
+          "default",
+          "roboto-regular"
+        ],
+        "field": [
+          "data-condition",
+          ["class", "==", "aboriginal_lands"],
+          "?!Uname",
+          "default",
+          "?name"
+        ],
+        "anchor": "center",
+        "offset": [0, 0],
+        "padding": [1, 1]
+      },
+      "paint": {
+        "size": [
+          "data-condition",
+          ["class", "==", "aboriginal_lands"],
+          15,
+          "default",
+          17
+        ],
+        "fill": [
+          "data-condition",
+          ["class", "has", ["natural", "leisure", "landuse", "outdoor"]],
+          "#198038",
+          ["class", "==", "aboriginal_lands"],
+          "#868585",
+          ["class", "has", ["hospital", "medical"]],
+          "#d93026",
+          ["class", "==", "police"],
+          "#3878c7",
+          ["class", "has", ["fire_station", "ranger_station"]],
+          "#e94435",
+          ["class", "has", ["historic", "tourism"]],
+          "#0b8591",
+          ["class", "has", ["sport", "fuel"]],
+          "#5c6bc1",
+          ["class", "has", ["bus_station", "railway"]],
+          "#1a73e7",
+          ["class", "has", ["aeroway", "aerialway"]],
+          "#139cf1",
+          ["class", "==", "amenity"],
+          "#1a73e7",
+          ["class", "==", "water"],
+          "#00669E",
+          ["class", "==", "food_drink"],
+          "#d56d02",
+          ["class", "==", "rest"],
+          "#ef6292",
+          "default",
+          "#556e7a"
+        ],
+        "stroke": "rgba(255, 255, 255, 0.85)",
+        "strokeWidth": [
+          "data-condition",
+          ["class", "==", "water"],
+          0,
+          "default",
+          0.25
+        ]
+      }
+    }
+  ]
+}

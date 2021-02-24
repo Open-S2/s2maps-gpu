@@ -1,6 +1,6 @@
 // @flow
 import * as mat4 from '../../../util/mat4'
-import getTilesInView from './getTilesInView'
+import { default as getTiles } from './getTilesInView'
 import { degToRad } from 's2projection'
 
 import type { Projection } from './projection'
@@ -25,7 +25,7 @@ export type TileDefinition = [number, number, number, number, number]
 export type TileDefinitions = Array<TileDefinition>
 
 export default class Projector implements Projection {
-  view: Float32Array = new Float32Array(16) // [zoom, lon, lat, angle, pitch, time, ...extensions]
+  view: Float32Array = new Float32Array(16) // [zoom, lon, lat, angle, pitch, time, featureState, currFeature, ...extensions]
   translation: [number, number, number] = [0, 0, -10] // [x, y, z] only z should change for visual effects
   maxLatRotation: number = 85 // deg
   prevZoom: number = 0
@@ -36,8 +36,8 @@ export default class Projector implements Projection {
   lat: number = 0
   pitch: number = 0
   scale: number = 1
-  zNear: number = 0.5 // static; just for draw calls
-  zFar: number = 100 // static; just for draw calls
+  zNear: number = 500 // static; just for draw calls
+  zFar: number = 100000 // static; just for draw calls
   aspect: Float32Array = new Float32Array([400, 300]) // default canvas width x height
   multiplier: number = 1
   sizeMatrices: { [number | string]: Float32Array } = {} // key is tileSize
@@ -54,6 +54,14 @@ export default class Projector implements Projection {
     if (config.width) this.aspect[0] = config.width
     if (config.height) this.aspect[1] = config.height
     if (config.canvasMultiplier) this.multiplier = config.canvasMultiplier
+  }
+
+  setFeatureState (state: 0 | 1 | 2) {
+    this.view[6] = state
+  }
+
+  setCurrentFeature (id: number) {
+    this.view[7] = id
   }
 
   setStyleParameters (style, ignorePosition: boolean) {
@@ -128,6 +136,9 @@ export default class Projector implements Projection {
     // mat4.rotate(projection, [0, -0.001, 0])
     // translate
     mat4.translate(projection, this.translation)
+    // console.log('projection', projection)
+    // console.log('zoom', this.zoom)
+    // console.log('aspect', this.aspect)
     // rotate position
     mat4.rotate(projection, [degToRad(this.lat), degToRad(this.lon), 0])
     // multiply projection by view
@@ -139,6 +150,6 @@ export default class Projector implements Projection {
 
   getTilesInView (size?: number = 512): TileDefinitions { // [face, zoom, x, y, hash]
     const matrix = this.getMatrix(size)
-    return getTilesInView(this.zoom, matrix, this.lon, this.lat, size)
+    return getTiles(this.zoom, matrix, this.lon, this.lat, this.radius)
   }
 }

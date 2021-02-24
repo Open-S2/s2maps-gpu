@@ -1,7 +1,7 @@
 {
   "version": 1,
   "name": "s2test",
-  "center": [-122.444700, 37.780739],
+  "center": [0, 0],
   "zoom": 0,
   "minzoom": 0,
   "maxzoom": 20,
@@ -557,7 +557,7 @@
       "name": "tiles",
       "source": "tiles",
       "layer": "name",
-      "type": "text",
+      "type": "glyph",
       "layout": {
         "family": "roboto-medium",
         "field": ["?face", "-", "?zoom", "-", "?x", "-", "?y"],

@@ -1,5 +1,5 @@
 // @flow
-/* global requestAnimationFrame Event HTMLElement HTMLCanvasElement WheelEvent TouchEvent MouseEvent */
+/* global postMessage requestAnimationFrame Event HTMLElement HTMLCanvasElement WheelEvent TouchEvent MouseEvent */
 import Camera from './camera'
 import DragPan from './camera/dragPan'
 import Style from '../style'
@@ -9,7 +9,7 @@ import type { ProjectionType } from './camera/projections'
 
 export type MapOptions = {
   container: HTMLElement,
-  interactive?: boolean,
+  interactive: boolean,
   style: Object | string,
   projection?: ProjectionType,
   scrollZoom?: boolean,
@@ -29,10 +29,13 @@ type ResizeDimensions = { width: number, height: number }
 
 export default class Map extends Camera {
   id: string
+  parent: S2Map
   _canvas: HTMLCanvasElement
-  _interactive: boolean = true // allow the user to make visual changes to the map, whether that be zooming, panning, or dragging
+  _canDraw: boolean = false // let the render sequence know if the painter is ready to paint
+  _interactive: boolean = false // allow the user to make visual changes to the map, whether that be zooming, panning, or dragging
   _scrollZoom: boolean = true // allow the user to scroll over the canvas and cause a zoom change
   renderNextFrame: boolean = false
+  mousePosition: [number, number] = [0, 0]
   injectionQueue: Array<Function> = []
   resizeQueued: null | ResizeDimensions = null
   webworker: boolean = false
@@ -40,10 +43,14 @@ export default class Map extends Camera {
   dragPan: DragPan
   canMove: boolean = true
   canZoom: boolean = true
-  constructor (options: MapOptions, canvas: HTMLCanvasElement, id: string) {
+  mouseMoved: boolean = true
+  currAnimFunction: Function
+  currFeature: null | Object = null
+  constructor (options: MapOptions, canvas: HTMLCanvasElement, id: string, parent: S2Map) {
     // setup default variables
     super(options)
     this.id = id
+    this.parent = parent
     this._canvas = canvas
     // setup options
     const { style, webworker, interactive, scrollZoom, canMove, canZoom } = options
@@ -56,8 +63,13 @@ export default class Map extends Camera {
     if (canZoom !== undefined) this.canZoom = canZoom
     // now we setup canvas
     this._setupCanvas(options)
+    // build the painter and style
+    this._buildPaint(options, style)
+  }
+
+  async _buildPaint (options: MapOptions, style: Object | string) {
     // now that we have a canvas, prep the camera's painter
-    this.painter = new Painter(this._canvas, options)
+    this.painter = await new Painter(this._canvas, options)
     // setup the style - this goes AFTER creation of the painter, because the
     // style will tell the painter what programs it will be using
     this.style = new Style(options, this)
@@ -76,15 +88,21 @@ export default class Map extends Camera {
     this.painter.delete()
   }
 
-  setStyle (style: string | Object, ignorePosition: boolean) {
+  async setStyle (style: string | Object, ignorePosition: boolean) {
+    // ensure we don't draw for a sec
+    this._canDraw = false
     // incase style was imported, clear cache
     this.clearCache()
     // build style for the map, painter, and webworkers
-    this.style.buildStyle(style)
-    // inject minzoom and maxzoom
-    this.projection.setStyleParameters(this.style, ignorePosition)
-    // render our first pass
-    this.render()
+    return this.style.buildStyle(style)
+      .then(() => {
+        // ready to start drawing
+        this._canDraw = true
+        // inject minzoom and maxzoom
+        this.projection.setStyleParameters(this.style, ignorePosition)
+        // render our first pass
+        this.render()
+      })
   }
 
   jumpTo (lon: number, lat: number, zoom: number) {
@@ -148,18 +166,69 @@ export default class Map extends Camera {
     this.canZoom = !!state
   }
 
-  getCanvas (): HTMLCanvasElement {
-    return this._canvas
-  }
-
   resize (width: number, height: number) {
     this.resizeQueued = { width, height }
+    this.render()
+  }
+
+  // for interaction with features on the screen
+  onCanvasMouseMove (x: number, y: number) {
+    if (!this.style.interactive || this.projection.dirty) return
+    this.mousePosition[0] = x
+    this.mousePosition[1] = y
+    this.mouseMoved = true
+    this.render()
+  }
+
+  _onCanvasMouseMove () {
+    const featureID = this.painter.context.getFeatureAtMousePosition(...this.mousePosition)
+    // if we found an ID and said feature is not the same as the current, we dive down
+    if (!featureID && this.currFeature) {
+      this._handleFeatureChange(null)
+    } else if (featureID && (!this.currFeature || this.currFeature.__id !== featureID)) {
+      let found = false
+      for (const tile of this.tilesInView) {
+        const feature = tile.findInteractiveFeature(featureID)
+        if (feature) {
+          this._handleFeatureChange(feature)
+          found = true
+          break
+        }
+      }
+      if (!found && this.currFeature) this._handleFeatureChange(null)
+    }
+  }
+
+  _handleFeatureChange (newFeature: null | Object) {
+    const oldFeature = this.currFeature
+    // ensure currFeature is up-to-date
+    this.currFeature = newFeature
+    // handle old feature
+    if (this.webworker) {
+      postMessage({ type: 'mouseleave', feature: oldFeature })
+    } else {
+      if (oldFeature) this.parent.dispatchEvent(new CustomEvent('mouseleave', { detail: oldFeature }))
+      this._canvas.style.cursor = 'default'
+    }
+    // handle new feature
+    if (this.webworker) {
+      postMessage({ type: 'mouseenter', feature: newFeature })
+    } else {
+      if (newFeature) {
+        this.parent.dispatchEvent(new CustomEvent('mouseenter', { detail: newFeature }))
+        this._canvas.style.cursor = newFeature.__cursor || 'default'
+      }
+    }
+    // due to a potential change in feature draw properties (change in color/size/etc.) we draw again
     this.render()
   }
 
   _resize () {
     const { _canvas, resizeQueued } = this
     if (resizeQueued) {
+      // remove any prexisting animations
+      this.currAnimFunction = null
+      // grab width and height
       const { width, height } = resizeQueued
       _canvas.width = width
       _canvas.height = height
@@ -171,6 +240,8 @@ export default class Map extends Camera {
   _onZoom (deltaZ: number, deltaX?: number = 0, deltaY?: number = 0) {
     this.dragPan.clear()
     if (!this.canZoom) return
+    // remove any prexisting animations
+    this.currAnimFunction = null
     // update projection
     const update = this.projection.onZoom(deltaZ, deltaX, deltaY)
     // if the projection sees a zoom change, we need to render, but don't request new tiles until
@@ -192,6 +263,8 @@ export default class Map extends Camera {
   _onMovement (e: Event) {
     if (!this.canMove) return
     const { movementX, movementY } = this.dragPan
+    // remove any prexisting animations
+    this.currAnimFunction = null
     // update projection
     this.projection.onMove(movementX, movementY)
     this.render()
@@ -199,8 +272,8 @@ export default class Map extends Camera {
 
   _onSwipe (e: Event) {
     if (!this.canMove) return
-    const seed = this.dragPan.newSeed()
-    requestAnimationFrame(now => this.swipeAnimation(seed, now))
+    this.currAnimFunction = (now) => this.swipeAnimation(now)
+    this.render()
   }
 
   // builtin navigation controller inputs
@@ -214,49 +287,54 @@ export default class Map extends Camera {
       projection.setZoom(startZoom + deltaZoom)
       this._getTiles()
       projection.setZoom(startZoom)
-      // build animation seed and animate
-      const seed = this.dragPan.newSeed()
-      requestAnimationFrame(now => this.zoomAnimation(seed, startZoom, deltaZoom, now * 0.001))
+      // build animation function
+      this.currAnimFunction = (now) => this.zoomAnimation(startZoom, deltaZoom, now * 0.001)
+      // render
+      this.render()
     }
   }
 
-  swipeAnimation (seed: number, curTime: number) {
-    const self = this
-    const { dragPan, projection } = self
-    if (dragPan.animSeed !== seed) return
+  swipeAnimation (curTime: number) {
+    const { abs } = Math
+    const { dragPan, projection } = this
     const [newMovementX, newMovementY, time] = dragPan.getNextSwipeFrame(curTime * 0.001)
-    if (time) {
+    if (time && (abs(newMovementX) > 0.5 || abs(newMovementY) > 0.5)) {
+      // adjust position
       projection.onMove(newMovementX, newMovementY, 6, 6)
-      self.render()
-      requestAnimationFrame(now => self.swipeAnimation(seed, now))
+      // ensure new render is queued
+      this.render()
+      // set next animation
+      this.currAnimFunction = (now) => this.swipeAnimation(now)
     }
   }
 
-  zoomAnimation (seed: number, startZoom: number, deltaZoom: number, startTime: number, curTime?: number) {
-    const self = this
-    const { dragPan, projection } = self
-    if (dragPan.animSeed !== seed) return
+  zoomAnimation (startZoom: number, deltaZoom: number, startTime: number, curTime?: number) {
+    const { dragPan, projection } = this
     if (!curTime) curTime = dragPan.time = startTime
     const multiplier = dragPan.getNextZoomFrame(curTime)
-    self.render()
+    // ensure new render is queued
+    this.render()
     if (multiplier >= 1) {
       projection.setZoom(startZoom + deltaZoom)
     } else {
       projection.setZoom(startZoom + (multiplier * deltaZoom))
-      requestAnimationFrame(now => { self.zoomAnimation(seed, startZoom, deltaZoom, startTime, now * 0.001) })
+      this.currAnimFunction = (now) => this.zoomAnimation(startZoom, deltaZoom, startTime, now * 0.001)
     }
   }
 
-  _onClick (e: Event) {
-    // console.log('CLICK')
+  _onClick () {
+    const { currFeature } = this
+    if (this.webworker) {
+      postMessage({ type: 'click', feature: currFeature })
+    } else {
+      this.parent.dispatchEvent(new CustomEvent('click', { detail: currFeature }))
+    }
   }
 
   // tile data is stored in the map, waiting for the render to
   injectData (data) {
     this.injectionQueue.push(data)
-    this.injectionQueue = this.injectionQueue.sort(injectionDataSort)
-    // if (data.type === 'parentlayers') this.injectionQueue.unshift(data)
-    // else this.injectionQueue.push(data)
+    // this.injectionQueue = this.injectionQueue.sort(injectionDataSort)
     this.render()
   }
 
@@ -264,32 +342,41 @@ export default class Map extends Camera {
   // safely call render as many times as we like
   render () {
     const self = this
+    if (!self._canDraw) return
     if (self.renderNextFrame) return
     self.renderNextFrame = true
-    requestAnimationFrame(() => {
+    requestAnimationFrame(now => {
       self.renderNextFrame = false
+      // if animation currently exists, run it
+      if (self.currAnimFunction) self.currAnimFunction(now)
       // if resize has been queued, we do so now
-      if (this.resizeQueued) this._resize()
+      if (self.resizeQueued) self._resize()
       // if there is data to 'inject', we make sure to render another frame later
       if (self.injectionQueue.length) {
         // pull out the latest data we received (think about it, the newest data is the most constructive)
-        // console.log('this.injectionQueue', this.injectionQueue)
         const data = self.injectionQueue.pop()
         // tell the camera to inject data
         self._injectData(data)
-        // actually draw
-        self._draw()
         // setup another render queue
         self.render()
-      } else { // only draw, no future renders needed
-        self._draw()
+      }
+      // get state of scene
+      const projectionDirty = self.projection.dirty
+      // if the projection was dirty (zoom or movement) we run render again just incase
+      if (projectionDirty) self.render()
+      // run a draw, it will repaint framebuffers as necessary
+      self._draw()
+      // if mouse movement, check feature at position
+      if (self.mouseMoved && !projectionDirty) {
+        self.mouseMoved = false
+        self._onCanvasMouseMove()
       }
     })
   }
 }
 
-function injectionDataSort (a, b) {
-  const sortMethod = (type) => (type === 'glyph') ? 0 : 1
-
-  return sortMethod(b.type) - sortMethod(a.type)
-}
+// function injectionDataSort (a, b) {
+//   const sortMethod = (type) => (type === 'glyph') ? 0 : 1
+//
+//   return sortMethod(b.type) - sortMethod(a.type)
+// }

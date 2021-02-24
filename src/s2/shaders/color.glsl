@@ -1,4 +1,4 @@
-#define PI 3.1415926538
+@define PI 3.1415926538
 
 vec4 LCH2LAB (in vec4 lch) { // r -> l ; g -> c ; b -> h
   float h = lch.b * (PI / 180.);

@@ -2,13 +2,15 @@
 /* global WebGLRenderingContext */
 import Context from './context'
 
+import type { MapOptions } from '../../ui/map'
+
 export default class WebGLContext extends Context {
   elementIndexUint: 'OES_element_index_uint'
   angledInstancedArrays: 'ANGLE_instanced_arrays'
   vertexArrayObject: 'OES_vertex_array_object'
   blendMinMax: 'EXT_blend_minmax'
-  constructor (context: WebGLRenderingContext, devicePixelRatio: number) {
-    super(context, devicePixelRatio)
+  constructor (context: WebGLRenderingContext, options: MapOptions) {
+    super(context, options)
     // let the painter know it's a WebGLContext
     this.type = 1
     const { gl } = this
@@ -38,7 +40,6 @@ export default class WebGLContext extends Context {
       // deleteVertexArray
       gl.deleteVertexArray = (vao) => this.vertexArrayObject.deleteVertexArrayOES(vao)
     }
-
     // ANGLE_instanced_arrays
     if (this.angledInstancedArrays) {
       // vertexAttribDivisor
@@ -48,7 +49,6 @@ export default class WebGLContext extends Context {
       // drawElementsInstanced
       // this.gl.drawElementsInstanced = (mode, count, type, offset, primcount) => this.angledInstancedArrays.drawElementsInstancedANGLE(mode, count, type, offset, primcount)
     }
-
     // min max blending
     if (this.blendMinMax) gl.MAX = this.blendMinMax.MAX_EXT
   }

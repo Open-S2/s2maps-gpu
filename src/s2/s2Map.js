@@ -11,14 +11,16 @@ export default class S2Map extends EventTarget {
   _canvasContainer: HTMLElement
   _navigationContainer: HTMLElement
   _jollyRoger: HTMLElement
-  _canvasMultiplier: number = window.devicePixelRatio || 2
+  _canvasMultiplier: number
   _offscreen: boolean = false
   _canvas: HTMLCanvasElement
   map: Map | MapWorker
   id: string = Math.random().toString(36).replace('0.', '')
-  constructor (options: MapOptions) {
+  constructor (options: MapOptions = {}) {
     super()
-    this._canvasMultiplier = options.canvasMultiplier = Math.max(2, options.canvasMultiplier || this._canvasMultiplier)
+    // make sure certain options exist
+    options = { canvasMultiplier: window.devicePixelRatio || 2, interactive: true, ...options }
+    this._canvasMultiplier = Math.max(2, options.canvasMultiplier)
     // get the container
     if (typeof options.container === 'string') {
       this._container = window.document.getElementById(options.container)
@@ -42,7 +44,7 @@ export default class S2Map extends EventTarget {
     _canvas.replaceWith(_canvas.cloneNode(true))
   }
 
-  _setupContainer (): HTMLCanvasElement {
+  _setupContainer (options: MapOptions): HTMLCanvasElement {
     // prep container
     const container = this._container
     container.classList.add('s2-map')
@@ -50,7 +52,12 @@ export default class S2Map extends EventTarget {
     const canvasContainer = this._canvasContainer = window.document.createElement('div')
     canvasContainer.className = 's2-canvas-container'
     container.appendChild(canvasContainer)
-    if (this._interactive) canvasContainer.classList.add('s2-interactive')
+    // if we interact with the map, we need to both allow interaction with styling
+    // and watch how the mouse moves on the canvas
+    if (options.interactive === true) {
+      canvasContainer.classList.add('s2-interactive')
+      canvasContainer.addEventListener('mousemove', this._onCanvasMouseMove.bind(this))
+    }
     // build canvas
     const canvas = window.document.createElement('canvas')
     canvas.className = 's2-canvas'
@@ -112,7 +119,7 @@ export default class S2Map extends EventTarget {
         const mapWorker = self.map = new Map()
         mapWorker.onmessage = self._mapMessage.bind(self)
         mapWorker.postMessage({ type: 'canvas', options, canvas: offscreen, id: self.id }, [offscreen])
-        if (options.interactive === undefined || options.interactive === true) {
+        if (options.interactive === true) {
           if (options.scrollZoom === undefined || options.scrollZoom === true) canvas.addEventListener('wheel', self._onScroll.bind(self))
           canvas.addEventListener('mousedown', () => {
             mapWorker.postMessage({ type: 'mousedown' })
@@ -134,7 +141,7 @@ export default class S2Map extends EventTarget {
     } else {
       import('./ui/map').then(map => {
         const Map = map.default
-        self.map = new Map(options, canvas, self.id)
+        self.map = new Map(options, canvas, self.id, self)
         // let map know to finish the setup
         self._onCanvasReady(options)
       })
@@ -179,12 +186,34 @@ export default class S2Map extends EventTarget {
     this.map.postMessage({ type: 'mousemove', movementX, movementY })
   }
 
+  _onCanvasMouseMove (e: MouseEvent) {
+    const { map, _offscreen, _canvasContainer, _canvasMultiplier } = this
+    const { pageX, pageY } = e
+
+    const x = (pageX - _canvasContainer.offsetLeft) * _canvasMultiplier
+    const y = (pageY - _canvasContainer.offsetTop) * _canvasMultiplier
+
+    if (_offscreen && map) {
+      map.postMessage({ type: 'canvasmousemove', x, y })
+    } else if (map) { map.onCanvasMouseMove(x, y) }
+  }
+
   _mapMessage ({ data }) {
     const { mapID, type } = data
     if (type === 'request') {
       window.S2WorkerPool.tileRequest(mapID, data.tiles)
     } else if (type === 'style') {
       window.S2WorkerPool.injectStyle(mapID, data.style)
+    } else if (type === 'mouseenter') {
+      const { feature } = data
+      if (feature) this._canvas.style.cursor = feature.__cursor || 'default'
+      this.dispatchEvent(new CustomEvent('mouseenter', { detail: feature }))
+    } else if (type === 'mouseleave') {
+      const { feature } = data
+      this._canvas.style.cursor = 'default'
+      this.dispatchEvent(new CustomEvent('mouseleave', { detail: feature }))
+    } else if (type === 'click') {
+      this.dispatchEvent(new CustomEvent('click', { detail: data.feature }))
     }
   }
 
@@ -229,6 +258,8 @@ export default class S2Map extends EventTarget {
       else if (type === 'glyphdata') map.postMessage(data, [data.glyphFilterBuffer, data.glyphFillVertexBuffer, data.glyphFillIndexBuffer, data.glyphLineVertexBuffer, data.glyphQuadBuffer, data.layerGuideBuffer]) // $FlowIgnore
       else if (type === 'rasterdata') map.postMessage(data, [data.image]) // $FlowIgnore
       else if (type === 'maskdata') map.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.radiiBuffer]) // $FlowIgnore
+      else if (type === 'pointdata' || type === 'heatmapdata') map.postMessage(data, [data.vertexBuffer, data.weightBuffer, data.featureGuideBuffer]) // $FlowIgnore
+      else if (type === 'interactivedata') map.postMessage(data, [data.interactiveGuideBuffer, data.interactiveDataBuffer])
       else map.postMessage(data)
     } else if (map) { // $FlowIgnore
       map.injectData(data)

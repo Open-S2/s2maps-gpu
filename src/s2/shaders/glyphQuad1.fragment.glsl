@@ -1,7 +1,7 @@
 precision highp float;
 
-#define GAMMA 0.105
-#define MIN_ALPHA 0.078125 // 20. / 256.
+@define GAMMA 0.105
+@define MIN_ALPHA 0.078125 // 20. / 256.
 
 // Passed in from the vertex shader.
 varying float draw;

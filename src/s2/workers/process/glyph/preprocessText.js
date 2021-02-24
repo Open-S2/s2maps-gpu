@@ -10,10 +10,10 @@ type Point = [number, number]
 
 export default function processText (feature: VectorFeature, code: Array<number>,
   zoom: number, layer: Layer, layerIndex: number, extent: number, texts: Array<GlyphObject>,
-  webgl1: boolean, idGen: IDGen) {
+  webgl1: boolean, idGen: IDGen, interactive: boolean, interactiveMap: Map<number, Object>) {
   const geometry: Array<Point> = feature.loadGeometry()
   const { properties } = feature
-  const { paint, layoutLocal, paintLocal } = layer
+  const { name, cursor, source, paint, layoutLocal, paintLocal } = layer
 
   // build all layout and paint parameters
   // per tile properties
@@ -65,6 +65,8 @@ export default function processText (feature: VectorFeature, code: Array<number>
       // precreate children array for rtree
       children: []
     }
+    // store the properties data if interactive feature
+    if (interactive) interactiveMap.set(idGen.num, { __id: idGen.num, __cursor: cursor, __name: name, __source: source, __layer: layer.layer,  ...properties })
     // update and ensure ID wraps
     idGen.num += idGen.incrSize
     if (idGen.num >= idGen.maxNum) idGen.num = idGen.startNum

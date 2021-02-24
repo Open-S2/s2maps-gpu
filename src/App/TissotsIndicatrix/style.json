@@ -237,6 +237,10 @@
       "source": "tissots",
       "type": "line",
       "minzoom": 0,
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
       "paint": {
         "color": "rgba(220, 83, 83, 0.75)",
         "width": [

@@ -1,6 +1,8 @@
 #version 300 es
 precision highp float;
 
+@nomangle layout location color texture texelFetch
+
 layout (location = 0) in float aStep; // either 0 or 1
 layout (location = 1) in vec2 aST; // float [s, t]    (INSTANCED)
 layout (location = 2) in vec2 aXY; // float [x, y]    (INSTANCED)
@@ -8,6 +10,8 @@ layout (location = 3) in vec2 aPad; // float [x, y]   (INSTANCED)
 layout (location = 4) in float aWidth; // float width (INSTANCED)
 layout (location = 5) in float aIndex; // float index (INSTANCED)
 layout (location = 6) in float aID; // float ID       (INSTANCED)
+
+out vec4 color;
 
 uniform mat4 uMatrix;
 uniform vec2 uAspect;
@@ -18,10 +22,8 @@ uniform float uIndexOffset;
 uniform sampler2D uPoints;
 uniform sampler2D uQuads;
 
-#include ./decodeFeature2;
-#include ./ST2XYZ;
-
-out vec4 color;
+@include "./decodeFeature2.glsl"
+@include "./ST2XYZ.glsl"
 
 bool overlap (vec4 a, vec4 b) { // vec4(left, bottom, right, top)
   if (a.x >= b.z || b.x >= a.z) return false;

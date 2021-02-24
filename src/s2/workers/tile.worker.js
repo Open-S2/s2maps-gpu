@@ -1,15 +1,16 @@
 // @flow
 /* eslint-env worker */
 /* global createImageBitmap postMessage Blob OffscreenCanvas onmessage */
-import S2JsonVT from 's2json-vt'
+import S2JsonVT from './s2json-vt'
 import { S2Rtin, terrainToGrid } from 's2rtin'
 import { VectorTile } from 's2-vector-tile'
 import { parseLayers } from '../style/conditionals'
 import {
   preprocessFill, postprocessFill,
   preprocessLine, postprocessLine,
+  preprocessPoint, postprocessPoint,
   preprocessText, postprocessGlyph, GlyphBuilder,
-  buildTile
+  buildTile, postInteractiveData
 } from './process'
 import requestData from '../util/fetch'
 import { tileHash } from 's2projection'
@@ -96,6 +97,8 @@ export default class TileWorker {
   id: number
   maps: { [string]: StylePackage } = {} // mapID: StylePackage
   status: 'building' | 'ready' = 'ready'
+  cache: { [string]: Array<TileRequest> } = {} // mapID: TileRequests
+    cancelCache: Array<number> = []
   idGen: IDGen
 
   onMessage ({ data }) {
@@ -104,6 +107,7 @@ export default class TileWorker {
     else if (type === 'request') this._requestMessage(mapID, data.tiles)
     else if (type === 'status') postMessage({ type: 'status', status: this.status })
     else if (type === 'buildMesh') this._buildMesh(mapID, data.zoom, data.tileID, this.maps[mapID].sources[data.sourceName].s2rtin, { width: data.tileSize, height: data.tileSize, data: new Uint8ClampedArray(data.dem) })
+    else if (type === 'cancel') this._cancelTiles(mapID, data.tiles)
   }
 
   _styleMessage (mapID: string, style: StylePackage, id: number, totalWorkers: number) {
@@ -123,13 +127,24 @@ export default class TileWorker {
     this.buildSources(mapID)
   }
 
+  _cancelTiles (mapID: string, tiles: Array<CancelTileRequest>) {
+    // first check if any of the tiles are in a cache queue
+    this.cache[mapID].filter(tile => !tiles.includes(tile.hash))
+    // store the cache
+    this.cancelCache = tiles
+  }
+
   _requestMessage (mapID: string, tiles: Array<TileRequest>) {
-    // make the requests for each source
-    // console.log('REQUEST START', this.id, tiles)
-    const sources = this.maps[mapID].sources
-    for (const sourceName in sources) {
-      const source = sources[sourceName]
-      this.requestTiles(mapID, sourceName, source, tiles)
+    if (this.status === 'building') {
+      if (this.cache[mapID]) this.cache[mapID].push(...tiles)
+      else this.cache[mapID] = tiles
+    } else {
+      // make the requests for each source
+      const sources = this.maps[mapID].sources
+      for (const sourceName in sources) {
+        const source = sources[sourceName]
+        this.requestTiles(mapID, sourceName, source, tiles)
+      }
     }
   }
 
@@ -172,6 +187,8 @@ export default class TileWorker {
               if (!metadata) reject(new Error(`Request failed: "${fileName}/metadata"`))
               // build & add proper path to metadata if it does not exist
               if (!metadata.path) metadata.path = source
+              // ensure an extension
+              if (!metadata.extension) metadata.extension = 'pbf'
               // update source to said metadata
               sources[sourceName] = source = metadata
               // build the metadata as necessary
@@ -198,6 +215,10 @@ export default class TileWorker {
 
     // run the style config
     Promise.all(promises)
+      .then(() => {
+          this.status = 'ready'
+          this._checkCache()
+        })
   }
 
   _buildMetadata (source) {
@@ -205,6 +226,19 @@ export default class TileWorker {
     if (source.type === 'mask') source.s2rtin = new S2Rtin(source.tileSize)
     // if we have a WebP image source, but the browser doesn't support WebP, use the fallback
     if (source.fileType === 'webp' && !WEBP_COMPATIBLE) source.fileType = source.fallback
+  }
+
+  _checkCache () {
+    // if we have cached tiles, we are now ready to build more
+    const firstCache = Object.keys(this.cache)[0]
+    if (firstCache) {
+      // pull out the requests and delete the reference
+      const tileRequest = this.cache[firstCache]
+      delete this.cache[firstCache]
+      this._requestMessage(firstCache, tileRequest)
+    } else { // otherwise we have no more tiles to process, clear cancelCache should their be any leftover
+      this.cancelCache = []
+    }
   }
 
   async requestTiles (mapID: string, sourceName: string, source: Object, tiles: Array<TileRequest>) { // tile: [face, zoom, x, y]
@@ -224,7 +258,7 @@ export default class TileWorker {
           facesbounds[face][zoom][1] <= y && facesbounds[face][zoom][3] >= y // check y is within bounds
         ) {
           requestData(`${path}/${face}/${zoom}/${x}/${y}`, extension, (data) => {
-            if (data) self._processVectorData(mapID, sourceName, source, tile, new VectorTile(data))
+            if (data && !self.cancelCache.includes(hash)) self._processVectorData(mapID, sourceName, source, tile, new VectorTile(data))
             else self._getParentData(mapID, sourceName, source, tile) // incase we need to inject parent data
           })
         }
@@ -241,21 +275,21 @@ export default class TileWorker {
           for (const piece of pieces) {
             const { x, y, leftShift, bottomShift } = piece
             requestData(`${path}/${face}/${tilezoom}/${x}/${y}`, fileType, (data) => {
-              if (data) self._processRasterData(mapID, sourceName, source, tile.hash, data, { leftShift, bottomShift })
+              if (data && !self.cancelCache.includes(hash)) self._processRasterData(mapID, sourceName, source, tile.hash, data, { leftShift, bottomShift })
             }, (typeof createImageBitmap !== 'function'))
           }
         }
       } else if (type === 'json') {
         if (s2json.faces.has(face)) {
           const data = s2json.getTile(face, zoom, x, y)
-          if (data) self._processVectorData(mapID, sourceName, source, tile, data)
+          if (data && !self.cancelCache.includes(hash)) self._processVectorData(mapID, sourceName, source, tile, data)
         }
       } else if (type === 'mask') {
         if (minzoom <= zoom && maxzoom >= zoom) { // check zoom bounds
           const requestPath = `${path}/${face}/${zoom}/${x}/${y}`
           if (typeof OffscreenCanvas !== 'undefined') {
             requestData(requestPath, fileType, (data) => {
-              if (data) self._processMaskData(mapID, source, tile, data)
+              if (data && !self.cancelCache.includes(hash)) self._processMaskData(mapID, source, tile, data)
             })
           } else {
             postMessage({ mapID, id: self.id, type: 'imageBitmap', tileID: hash, sourceName, zoom, path: requestPath, fileType, tileSize: source.tileSize })
@@ -263,6 +297,7 @@ export default class TileWorker {
         }
       }
     }
+    self._checkCache()
   }
 
   _processRasterData (mapID: string, sourceName: string, source: Object,
@@ -324,6 +359,9 @@ export default class TileWorker {
     let featureSet, code, featureCode, cap
     const fillFeatures: Array<Feature> = []
     const lineFeatures: Array<Feature> = []
+    const pointFeatures: Array<Feature> = []
+    const heatmapFeatures: Array<Feature> = []
+    const interactiveMap: Map<number, Object> = new Map()
     const texts: Array<Text> = []
     const parentLayers: ParentLayers = {}
     const { layers, glType, glyphBuilder } = this.maps[mapID]
@@ -375,10 +413,17 @@ export default class TileWorker {
                   ]
                 }
                 featureSet = lineFeatures
+              } else if (layer.type === 'point' && type === 1) {
+                preprocessPoint(feature.loadGeometry(), vertices, indices, extent)
+                featureSet = pointFeatures
+              } else if (layer.type === 'heatmap' && type === 1) {
+                const weight = layer.layoutLocal.weight(null, properties, zoom)
+                preprocessPoint(feature.loadGeometry(), vertices, indices, extent, weight)
+                featureSet = heatmapFeatures
               } else if (layer.type === 'line3D' && type === 9) {
                 continue
-              } else if (layer.type === 'text' && type === 1) {
-                preprocessText(feature, code, zoom, layer, layerIndex, extent, texts, webgl1, this.idGen)
+              } else if (layer.type === 'glyph' && type === 1) {
+                preprocessText(feature, code, zoom, layer, layerIndex, extent, texts, webgl1, this.idGen, layer.interactive, interactiveMap)
                 continue
               } else if (layer.type === 'billboard' && type === 1) {
                 continue
@@ -407,9 +452,12 @@ export default class TileWorker {
     } // for (let layerIndex = 0, ll = layers.length; layerIndex < ll; layerIndex++) {
     // now post process data, this groups data for fewer draw calls
     // we seperate by type to make it seem like data is loading quicker, and to handle different vertex sizes
-    if (texts.length) postprocessGlyph(mapID, `${sourceName}:glyph`, hash, texts, glyphBuilder, this.id, postMessage)
     if (fillFeatures.length) postprocessFill(mapID, `${sourceName}:fill`, hash, fillFeatures, postMessage)
     if (lineFeatures.length) postprocessLine(mapID, `${sourceName}:line`, hash, lineFeatures, postMessage)
+    if (pointFeatures.length) postprocessPoint(mapID, `${sourceName}:point`, hash, pointFeatures, postMessage)
+    if (heatmapFeatures.length) postprocessPoint(mapID, `${sourceName}:heatmap`, hash, heatmapFeatures, postMessage, true)
+    if (texts.length) postprocessGlyph(mapID, `${sourceName}:glyph`, hash, texts, glyphBuilder, this.id, postMessage)
+    if (interactiveMap.size) postInteractiveData(mapID, `${sourceName}:glyph`, hash, interactiveMap)
     if (Object.keys(parentLayers).length) postMessage({ mapID, type: 'parentlayers', tileID: hash, parentLayers })
   }
 
