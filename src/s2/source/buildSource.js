@@ -53,11 +53,11 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
     if (source.subType === 'fill') {
       // link attributes (fill & point & heatmap & etc.)
       gl.enableVertexAttribArray(0)
-      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0)
+      gl.vertexAttribPointer(0, 2, gl.SHORT, false, 0, 0)
     } else if (source.subType === 'point' || source.subType === 'heatmap') {
       // link attributes (fill & point & heatmap & etc.)
       gl.enableVertexAttribArray(1)
-      gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 8, 0)
+      gl.vertexAttribPointer(1, 2, gl.SHORT, false, 4, 0)
       // make our aPos instanced
       gl.vertexAttribDivisor(1, 1)
 
@@ -88,9 +88,9 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
       gl.enableVertexAttribArray(1) // prev
       gl.enableVertexAttribArray(2) // curr
       gl.enableVertexAttribArray(3) // next
-      gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 24, 0)
-      gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 24, 8)
-      gl.vertexAttribPointer(3, 2, gl.FLOAT, false, 24, 16)
+      gl.vertexAttribPointer(1, 2, gl.SHORT, false, 12, 0)
+      gl.vertexAttribPointer(2, 2, gl.SHORT, false, 12, 4)
+      gl.vertexAttribPointer(3, 2, gl.SHORT, false, 12, 8)
       gl.vertexAttribDivisor(1, 1)
       gl.vertexAttribDivisor(2, 1)
       gl.vertexAttribDivisor(3, 1)
@@ -242,6 +242,16 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
     gl.vertexAttribPointer(6, 1, gl.FLOAT, false, 44, 40)
     gl.vertexAttribDivisor(6, 1)
 
+    // create the vertex and color buffers
+    source.glyphColorBuffer = gl.createBuffer()
+    // bind each and buffer the data
+    gl.bindBuffer(gl.ARRAY_BUFFER, source.glyphColorBuffer)
+    gl.bufferData(gl.ARRAY_BUFFER, source.glyphColors, gl.STATIC_DRAW)
+    // colors
+    gl.enableVertexAttribArray(7)
+    gl.vertexAttribPointer(7, 4, gl.UNSIGNED_BYTE, true, 4, 0)
+    gl.vertexAttribDivisor(7, 1)
+
     // cleanup
     context.cleanup()
   } else if (source.type === 'raster') {
@@ -260,7 +270,7 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
 }
 
 export function buildGlyphSource (context, layerGuideBuffer, glyphFilterVertices, glyphFillVertices,
-  glyphFillIndices, glyphLineVertices, glyphQuads) {
+  glyphFillIndices, glyphLineVertices, glyphQuads, glyphColors) {
   const glyphSource = {
     type: 'glyph',
     uvArray: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
@@ -271,7 +281,8 @@ export function buildGlyphSource (context, layerGuideBuffer, glyphFilterVertices
     glyphFillVertices,
     glyphFillIndices,
     glyphLineVertices,
-    glyphQuads
+    glyphQuads,
+    glyphColors
   }
 
   // build the VAO

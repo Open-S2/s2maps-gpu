@@ -5,24 +5,23 @@ precision highp float;
 
 layout (location = 0) in vec2 aPos;
 
-uniform mat4 uMatrix;
 uniform vec2 uAspect;
 uniform float uInputs[16]; // [zoom, ...] we just need zoom
 uniform float uDevicePixelRatio;
 
-@include "./ST2XYZ.glsl"
+@include "./getPos.glsl"
 
 out vec2 vPos;
 
 void main () {
   // set position and get it's distance from center
-  vec4 pos = uMatrix * STtoXYZ(aPos);
+  vec4 pos = getPos(aPos);
   // modify aspect to be a ratio of
-  vec2 radius = uAspect / (uDevicePixelRatio * 2.) / (512. * ((uInputs[0] / 2.) + 1.)) / 1000.;
+  vec2 radius = uAspect / (uDevicePixelRatio * 2.) / (720. * ((uInputs[0] / 1.65) + 1.));
   // get pixel distance
   vPos = pos.xy;
   // add offset
-  vPos += vec2(2500., -2500.) * 1000. / uAspect;
+  vPos += vec2(2500., -2500.) / uAspect;
   // scale
   vPos *= radius / 7.;
 

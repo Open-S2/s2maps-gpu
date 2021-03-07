@@ -1,12 +1,14 @@
 {
   "version": 1,
   "name": "s2test",
-  "center": [-111.811091, 40.718442],
+  "center": [-122.4585607773497, 37.778443127730476],
   "zoom": 0,
   "minzoom": 0,
   "maxzoom": 20,
   "sources": {
-    "ocean": "http://192.168.0.188:8000/data/ocean"
+    "ocean": "http://192.168.0.188:8000/data/ocean",
+    "landuse": "http://192.168.0.112:8000/data/utah-landuse",
+    "sahara": "http://192.168.0.112:8000/data/sahara"
   },
   "fonts": {
     "default": "https://s3.s2maps.io/fonts-v3/default",
@@ -24,11 +26,121 @@
     {
       "name": "background",
       "type": "fill",
-      "opaque": true,
       "source": "mask",
+      "opaque": true,
       "layout": {},
       "paint": {
-        "color": "#f0e9d7"
+        "color": [
+          "input-range",
+          "zoom",
+          "expo",
+          1.7,
+          2.75,
+          "rgb(244, 239, 226)",
+          3,
+          "rgb(243, 237, 223)",
+          8,
+          "rgb(243, 237, 223)",
+          9.5,
+          "rgb(225, 225, 229)",
+          11.5,
+          "rgb(229, 231, 236)",
+          13,
+          "rgb(232,232,232)",
+          14,
+          "rgb(248, 249, 250)"
+        ]
+      }
+    },
+    {
+      "name": "landuse",
+      "source": "landuse",
+      "layer": "landuse",
+      "type": "fill",
+      "opaque": true,
+      "filter": [
+        "or",
+        ["class", "==", "aeroway"],
+        [
+          "type", "has", ["park", "national_park", "protected_area",
+          "grass", "grassland", "garden", "meadow", "farmland",
+          "swamp", "wetland", "zoo", "cemetery", "sand", "beach", "desert",
+          "hospital", "school", "parking", "glacier",
+          "quarry", "retail", "pitch"]
+        ]
+      ],
+      "minzoom": 0,
+      "layout": {},
+      "paint": {
+        "color": [
+          "data-condition",
+          ["type", "==", "parking"],
+          "rgb(241, 243, 244)",
+          ["type", "==", "wetland"],
+          "rgb(210, 233, 255)",
+          ["type", "==", "quarry"],
+          "rgb(206, 208, 211)",
+          ["type", "==", "glacier"],
+          "rgb(249, 249, 249)",
+          ["type", "==", "beach"],
+          "rgb(255, 239, 195)",
+          ["type", "==", "cemetery"],
+          "rgb(208, 236, 208)",
+          ["type", "==", "pitch"],
+          "#9dd2ac",
+          ["type", "has", ["grass", "grassland", "garden", "meadow", "swamp", "zoo"]],
+          "#a8dab5",
+          ["type", "has", ["park", "national_park", "protected_area"]],
+          "#aee0bc",
+          ["type", "has", ["apron", "airstrip"]],
+          "#d4d8ea",
+          ["class", "==", "aeroway"],
+          "rgb(219, 222, 235)",
+          ["type", "==", "farmland"],
+          "rgb(228, 234, 210)",
+          ["type", "==", "hospital"],
+          "rgb(252, 228, 228)",
+          ["type", "==", "school"],
+          "rgb(226, 233, 238)",
+          ["type", "==", "retail"],
+          "rgb(254, 245, 220)",
+          ["type", "has", ["desert", "sand"]],
+          "rgb(241, 233, 195)",
+          "default",
+          "rgba(0, 0, 0, 0)"
+        ]
+      }
+    },
+    {
+      "name": "landuse",
+      "source": "sahara",
+      "layer": "landuse",
+      "type": "fill",
+      "opaque": true,
+      "filter": ["type", "==", "desert"],
+      "minzoom": 0,
+      "layout": {},
+      "paint": {
+        "color": "rgb(241, 233, 195)"
+      }
+    },
+    {
+      "name": "landuse_transparent",
+      "source": "landuse",
+      "layer": "landuse",
+      "type": "fill",
+      "filter": ["type", "has", ["aboriginal_lands", "military"]],
+      "layout": {},
+      "paint": {
+        "color": [
+          "data-condition",
+          ["type", "==", "aboriginal_lands"],
+          "rgba(240, 242, 240, 0.5)",
+          ["type", "==", "military"],
+          "rgba(226, 226, 224, 0.5)",
+          "default",
+          "rgba(0, 0, 0, 0)"
+        ]
       }
     },
     {

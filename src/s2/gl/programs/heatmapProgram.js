@@ -144,7 +144,7 @@ export default class HeatmapProgram extends Program {
     } else { this.setFeatureCode(featureCode) }
     // setup offsets and draw
     gl.bindBuffer(gl.ARRAY_BUFFER, source.vertexBuffer)
-    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 8, offset * 8)
+    gl.vertexAttribPointer(1, 2, gl.SHORT, false, 4, offset * 4)
     gl.bindBuffer(gl.ARRAY_BUFFER, source.weightBuffer)
     gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 4, offset * 4)
     gl.drawArraysInstanced(mode || gl.TRIANGLES, 0, 6, count)

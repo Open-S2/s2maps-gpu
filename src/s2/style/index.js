@@ -23,7 +23,7 @@ export default class Style {
   lat: number = 0
   sources: Sources = {}
   fonts: Sources = {}
-  billboards: Sources = {}
+  icons: Sources = {}
   layers: Array<Layer> = []
   mask: Mask
   colorBlind: boolean = false
@@ -69,7 +69,7 @@ export default class Style {
       // extract sources
       if (style.sources) self.sources = style.sources
       if (style.fonts) self.fonts = style.fonts
-      if (style.billboards) self.billboards = style.billboards
+      if (style.icons) self.icons = style.icons
       if (style.colorBlind) self.colorBlind = style.colorBlind
       // build wallpaper and sphere background if applicable
       if (style.wallpaper) self._buildWallpaper(style.wallpaper)
@@ -113,7 +113,7 @@ export default class Style {
       glType: this.glType,
       sources: style.sources,
       fonts: style.fonts,
-      billboards: style.billboards,
+      icons: style.icons,
       layers: style.layers
     }
     // If the map engine is running on the main thread, directly send the stylePackage to the worker pool.
@@ -180,6 +180,7 @@ export default class Style {
           code.push(...encodeLayerAttribute(layer.paint[key], layer.lch, colorBlind))
         }
         if (code.length) layer.code = new Float32Array(code)
+        if (layer.iconPaint) layer.iconCode = new Float32Array(encodeLayerAttribute(layer.iconPaint['icon-size'], layer.lch, colorBlind))
       } else if (this.glType === 1 && layer.source === 'mask') {
         for (const l in layer.layout) layer.layout[l] = parseFeatureFunction(layer.layout[l], l)
         for (const p in layer.paint) layer.paint[p] = parseFeatureFunction(layer.paint[p], p)

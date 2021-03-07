@@ -671,8 +671,8 @@
       "layer": "place",
       "type": "glyph",
       "layout": {
-        "family": "roboto-medium",
-        "field": [
+        "text-family": "roboto-medium",
+        "text-field": [
           "data-condition",
           ["class", "==", "State"],
           [
@@ -687,12 +687,12 @@
           "default",
           "?name"
         ],
-        "anchor": "center",
-        "offset": [0, 0],
-        "padding": [1, 1]
+        "text-anchor": "center",
+        "text-offset": [0, 0],
+        "text-padding": [1, 1]
       },
       "paint": {
-        "size": [
+        "text-size": [
           "data-condition",
           ["class", "==", "Country"],
           [
@@ -721,7 +721,7 @@
           "default",
           14
         ],
-        "fill": [
+        "text-fill": [
           "data-condition",
           ["class", "==", "Country"],
           "#4f4f4f",
@@ -730,8 +730,8 @@
           "default",
           "rgba(0, 0, 0, 0)"
         ],
-        "stroke": "rgba(255, 255, 255, 0.5)",
-        "strokeWidth": [
+        "text-stroke": "rgba(255, 255, 255, 0.5)",
+        "text-strokeWidth": [
           "data-condition",
           ["class", "==", "State"],
           [
@@ -757,26 +757,26 @@
       "layer": "place",
       "type": "glyph",
       "layout": {
-        "family": [
+        "text-family": [
           "data-condition",
           ["class", "has", ["Town", "Hamlet"]],
           "roboto-regular",
           "default",
           "roboto-medium"
         ],
-        "field": [
+        "text-field": [
           "data-condition",
           ["class", "has", ["Indian Reservation", "Hamlet", "Village", "Neighbourhood", "Island"]],
           "?!Uname",
           "default",
           "?name"
         ],
-        "anchor": "center",
-        "offset": [0, 0],
-        "padding": [1, 1]
+        "text-anchor": "center",
+        "text-offset": [0, 0],
+        "text-padding": [1, 1]
       },
       "paint": {
-        "size": [
+        "text-size": [
           "data-condition",
           ["class", "==", "City"],
           [
@@ -827,7 +827,7 @@
           "default",
           18
         ],
-        "fill": [
+        "text-fill": [
           "data-condition",
           ["class", "==", "Indian Reservation"],
           "rgb(143, 147, 125)",
@@ -846,8 +846,8 @@
             "rgb(100, 100, 100)"
           ]
         ],
-        "stroke": "rgba(255, 255, 255, 0.85)",
-        "strokeWidth": 0.4
+        "text-stroke": "rgba(255, 255, 255, 0.85)",
+        "text-strokeWidth": 0.4
       }
     }
   ]

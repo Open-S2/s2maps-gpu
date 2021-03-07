@@ -23,6 +23,8 @@ export default class Program {
   uLCH: WebGLUniformLocation
   uInteractive: WebGLUniformLocation
   uFaceST: WebGLUniformLocation
+  uBottom: WebGLUniformLocation
+  uTop: WebGLUniformLocation
   uInputs: WebGLUniformLocation
   uLayerCode: WebGLUniformLocation
   uFeatureCode: WebGLUniformLocation
@@ -88,9 +90,9 @@ export default class Program {
   }
 
   injectFrameUniforms (matrix: Float32Array, view: Float32Array, aspect: Float32Array) {
-    if (matrix && this.uMatrix) this.updateMatrix = matrix
-    if (view && this.uInputs) this.updateInputs = view
-    if (aspect && this.uAspect) this.updateAspect = aspect
+    this.updateMatrix = matrix
+    this.updateInputs = view
+    this.updateAspect = aspect
   }
 
   flush () {
@@ -121,6 +123,11 @@ export default class Program {
 
   setFaceST (faceST: Float32Array) {
     this.gl.uniform1fv(this.uFaceST, faceST, 0, faceST.length)
+  }
+
+  setTilePos (bottom: Float32Array, top: Float32Array) {
+    if (bottom) this.gl.uniform4fv(this.uBottom, bottom, 0, 4)
+    if (top) this.gl.uniform4fv(this.uTop, top, 0, 4)
   }
 
   setLayerCode (layerCode: Float32Array, lch?: boolean = false) {

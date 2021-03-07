@@ -63,9 +63,9 @@ export default class LineProgram extends Program {
     } else { this.setFeatureCode(featureCode) }
     // apply the appropriate offset in the source vertexBuffer attribute
     gl.bindBuffer(gl.ARRAY_BUFFER, source.vertexBuffer)
-    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 24, 0 + ((offset | 0) * 24))
-    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 24, 8 + ((offset | 0) * 24))
-    gl.vertexAttribPointer(3, 2, gl.FLOAT, false, 24, 16 + ((offset | 0) * 24))
+    gl.vertexAttribPointer(1, 2, gl.SHORT, false, 12, 0 + ((offset | 0) * 12))
+    gl.vertexAttribPointer(2, 2, gl.SHORT, false, 12, 4 + ((offset | 0) * 12))
+    gl.vertexAttribPointer(3, 2, gl.SHORT, false, 12, 8 + ((offset | 0) * 12))
     // draw elements
     gl.drawArraysInstanced(mode || gl.TRIANGLES, 0, 9, count) // gl.drawArraysInstancedANGLE(mode, first, count, primcount)
   }

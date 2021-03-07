@@ -14,7 +14,7 @@ uniform vec4 uFade2Color;
 
 void main () {
   vec2 pos = vertPos;
-  pos *= 0.1 / uScale;
+  pos *= 0.065 / uScale;
 
 
   float fade1 = length(pos);

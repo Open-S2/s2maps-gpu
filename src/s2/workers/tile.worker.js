@@ -1,7 +1,7 @@
 // @flow
 /* eslint-env worker */
 /* global createImageBitmap postMessage Blob OffscreenCanvas onmessage */
-import S2JsonVT from './s2json-vt'
+import S2JsonVT from 's2json-vt'
 import { S2Rtin, terrainToGrid } from 's2rtin'
 import { VectorTile } from 's2-vector-tile'
 import { parseLayers } from '../style/conditionals'
@@ -9,7 +9,7 @@ import {
   preprocessFill, postprocessFill,
   preprocessLine, postprocessLine,
   preprocessPoint, postprocessPoint,
-  preprocessText, postprocessGlyph, GlyphBuilder,
+  preprocessGlyph, postprocessGlyph, GlyphBuilder,
   buildTile, postInteractiveData
 } from './process'
 import requestData from '../util/fetch'
@@ -17,7 +17,7 @@ import { tileHash } from 's2projection'
 
 import type { Face } from 's2projection'
 import type { StylePackage } from '../style/styleSpec'
-import type { Text } from './process'
+import type { Glyph } from './process'
 
 const { userAgent } = navigator
 const IS_CHROME: boolean = userAgent.indexOf('Chrome') > -1
@@ -98,7 +98,7 @@ export default class TileWorker {
   maps: { [string]: StylePackage } = {} // mapID: StylePackage
   status: 'building' | 'ready' = 'ready'
   cache: { [string]: Array<TileRequest> } = {} // mapID: TileRequests
-    cancelCache: Array<number> = []
+  cancelCache: Array<number> = []
   idGen: IDGen
 
   onMessage ({ data }) {
@@ -148,7 +148,7 @@ export default class TileWorker {
     }
   }
 
-  // grab the metadata from each source, grab necessary fonts / billboards
+  // grab the metadata from each source, grab necessary fonts / icons
   // this may seem wasteful that each worker has to do this, but these assets are cached, so it will be fast.
   async buildSources (mapID: string) {
     const self = this
@@ -156,9 +156,9 @@ export default class TileWorker {
     // check all values are non-null
     if (!style.sources) style.sources = {}
     if (!style.fonts) style.fonts = {} // eventually have a default that always links to some cdn { default: '' }
-    if (!style.billboards) style.billboards = {}
-    // const { sources, fonts, billboards } = style
-    const { sources, fonts } = style
+    if (!style.icons) style.icons = {}
+    // const { sources, fonts, icons } = style
+    const { sources, fonts, icons } = style
     // build sources
     const promises = []
     for (const sourceName in sources) {
@@ -202,16 +202,16 @@ export default class TileWorker {
       }
     }
     // build fonts
-    for (const fontName in fonts) {
+    const fontIcons = { ...fonts, ...icons }
+    for (const name in fontIcons) {
       promises.push(new Promise((resolve, reject) => {
-        requestData(fonts[fontName], BROTLI_COMPATIBLE ? 'pbf.br' : 'pbf', font => {
-          // build the font
-          if (font) style.glyphBuilder.addFont(fontName, font)
+        requestData(fontIcons[name], BROTLI_COMPATIBLE ? 'pbf.br' : 'pbf', glyphPack => {
+          // build the glyphPack
+          if (glyphPack) style.glyphBuilder.addGlyphStore(name, glyphPack)
           resolve()
         })
       }))
     }
-    // TODO: get billboard data
 
     // run the style config
     Promise.all(promises)
@@ -362,7 +362,7 @@ export default class TileWorker {
     const pointFeatures: Array<Feature> = []
     const heatmapFeatures: Array<Feature> = []
     const interactiveMap: Map<number, Object> = new Map()
-    const texts: Array<Text> = []
+    const glyphs: Array<Glyph> = []
     const parentLayers: ParentLayers = {}
     const { layers, glType, glyphBuilder } = this.maps[mapID]
     const webgl1 = glType === 1
@@ -423,9 +423,7 @@ export default class TileWorker {
               } else if (layer.type === 'line3D' && type === 9) {
                 continue
               } else if (layer.type === 'glyph' && type === 1) {
-                preprocessText(feature, code, zoom, layer, layerIndex, extent, texts, webgl1, this.idGen, layer.interactive, interactiveMap)
-                continue
-              } else if (layer.type === 'billboard' && type === 1) {
+                preprocessGlyph(feature, code, zoom, layer, layerIndex, extent, glyphs, webgl1, this.idGen, interactiveMap)
                 continue
               } else { continue }
               if (vertices.length) featureSet.push({ type: layer.type, vertices, indices, code, layerIndex, featureCode, cap })
@@ -456,7 +454,7 @@ export default class TileWorker {
     if (lineFeatures.length) postprocessLine(mapID, `${sourceName}:line`, hash, lineFeatures, postMessage)
     if (pointFeatures.length) postprocessPoint(mapID, `${sourceName}:point`, hash, pointFeatures, postMessage)
     if (heatmapFeatures.length) postprocessPoint(mapID, `${sourceName}:heatmap`, hash, heatmapFeatures, postMessage, true)
-    if (texts.length) postprocessGlyph(mapID, `${sourceName}:glyph`, hash, texts, glyphBuilder, this.id, postMessage)
+    if (glyphs.length) postprocessGlyph(mapID, `${sourceName}:glyph`, hash, glyphs, glyphBuilder, this.id, postMessage)
     if (interactiveMap.size) postInteractiveData(mapID, `${sourceName}:glyph`, hash, interactiveMap)
     if (Object.keys(parentLayers).length) postMessage({ mapID, type: 'parentlayers', tileID: hash, parentLayers })
   }

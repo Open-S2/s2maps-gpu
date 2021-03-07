@@ -17,7 +17,8 @@ export type FontOptions = {
 export default class GlyphBuilder {
   texturePack: TexturePack = new TexturePack()
   glyphFilterVertices: Array<number> = []
-  glyphQuads: Array<number> = []
+  glyphQuads: Array<number> = [] // Float32Array
+  glyphColors: Array<number> = [] // Uint8ClampedArray [r, g, b, a, ...]
   layerGuide: Array<number> = []
   filterOffset: number = 0
   filterIndex: number = 0
@@ -32,11 +33,12 @@ export default class GlyphBuilder {
     this.glyphFilterVertices = []
     this.layerGuide = []
     this.glyphQuads = []
+    this.glyphColors = []
     this.filterOffset = 0
     this.quadOffset = 0
   }
 
-  finishLayer (layerIndex: number, code: Array<number> = [], subCode?: Array<number>) {
+  finishLayer (layerIndex: number, type: 'text' | 'icon', code: Array<number> = [], subCode?: Array<number>) {
     // get offsets
     const filterOffset = this.glyphFilterVertices.length / 9
     const quadOffset = this.glyphQuads.length / 11
@@ -46,7 +48,7 @@ export default class GlyphBuilder {
     // if any non-zero, draw
     if (filterCount > 0 || quadCount > 0) {
       // layerIndex, filterOffset, filterCount, quadOffset, quadCount, codeLength, code
-      this.layerGuide.push(layerIndex, this.filterOffset, filterCount, this.quadOffset, quadCount, code.length, ...code)
+      this.layerGuide.push(layerIndex, (type === 'text') ? 0 : 1, this.filterOffset, filterCount, this.quadOffset, quadCount, code.length, ...code)
       // if webgl1, subCode will exist
       if (subCode) this.layerGuide.push(...subCode)
       // update offsets
@@ -57,16 +59,17 @@ export default class GlyphBuilder {
     }
   }
 
-  addFont (familyName: string, pbf: ArrayBuffer, opts: FontOptions = {}) {
-    this.texturePack.addFont(familyName, pbf, opts)
+  addGlyphStore (familyName: string, pbf: ArrayBuffer, opts: FontOptions = {}) {
+    this.texturePack.addGlyphStore(familyName, pbf, opts)
     // if default font, try to setup the "char doesn't exist" glyph
     if (familyName === 'default') this.dneGlyph = this.texturePack.getGlyph('default', String.fromCharCode(9633))
   }
 
   testQuad (text: Text): boolean {
+    const { round } = Math
     // build the bbox
-    let s = Math.round(text.s * 512) // 768 is between 512 and 1080 and is a
-    let t = Math.round(text.t * 512) // compromise of zooming and reducing too much content
+    let s = round(text.s * 512) // 768 is between 512 and 1080 and is a
+    let t = round(text.t * 512) // compromise of zooming and reducing too much content
     text.minX = t + text.x
     text.minY = s + text.y
     text.maxX = text.minX + (text.width * text.size)
@@ -74,7 +77,18 @@ export default class GlyphBuilder {
     return !this.rtree.collides(text)
   }
 
-  getWidthAndGlyphData (family: string, field: string) {
+  getIconData (family: string, field: string) {
+    const glyphData = []
+    // first grab the list of features (glyph & color pairs)
+    const [width, features] = this.texturePack.getFeatures(family, field)
+    if (features.length) {
+      for (const [glyphID, color] of features) glyphData.push([family, glyphID, color])
+    }
+
+    return [width, glyphData]
+  }
+
+  getTextData (family: string, field: string) {
     const families = [family, 'default']
     const glyphData = []
     let width = 0
@@ -87,7 +101,7 @@ export default class GlyphBuilder {
         const glyph = this.texturePack.getGlyph(fam, char)
         if (glyph) {
           width += glyph.advanceWidth
-          glyphData.push([fam, char])
+          glyphData.push([fam, char, [255, 255, 255, 255]])
           found = true
           break
         }
@@ -100,7 +114,7 @@ export default class GlyphBuilder {
           glyphData.push(null)
         } else if (this.dneGlyph) {
           width += this.dneGlyph.advanceWidth
-          glyphData.push(['default', String.fromCharCode(9633)])
+          glyphData.push(['default', String.fromCharCode(9633), [255, 255, 255, 255]])
         } else { glyphData.push(null) }
       }
     }
@@ -115,27 +129,30 @@ export default class GlyphBuilder {
   // 2) add any missing glyphs to our texturePack
   // 3) reference the texture when building quad glyph data (always put strokes in the front, fills in the back)
   buildText (text: Text) {
-    const { s, t, x, y, width, id, padding, glyphData } = text
+    let { s, t, x, y, width, id, padding, glyphData, offset, overdraw, type } = text
+    // adjust s & t
+    s *= 8192
+    t *= 8192
     // 1) add to our glyphFilterVertices the text dimesions
-    this.glyphFilterVertices.push(s, t, x, y, ...padding, width, this.filterIndex++, id)
+    if (!overdraw) this.glyphFilterVertices.push(s, t, x, y, ...padding, width, this.filterIndex++, id)
     // 2 & 3) build our texture and glyph vertices
     let glyph: Glyph
     let xOffset = 0
-    // for each glyph in
-    const quads = []
+    // for each glyph, grab it's information and store
     for (const gData of glyphData) {
       if (gData) {
-        const [family, char] = gData
+        const [family, gID, color] = gData
         // grab the glyph
-        glyph = this.texturePack.getGlyph(family, char)
+        glyph = this.texturePack.getGlyph(family, gID)
         if (glyph) {
           // store the quad
-          quads.push(s, t, x, y, xOffset, glyph.yOffset, ...glyph.bbox, id)
+          this.glyphQuads.push(s, t, x + offset[0] / width, y + offset[1], xOffset, glyph.yOffset, ...glyph.bbox, id)
+          // store color (temp storing procedure)
+          this.glyphColors.push(...color)
           // update offset (remove the glyph excess padding)
-          xOffset += glyph.advanceWidth
+          if (type === 'text') xOffset += glyph.advanceWidth
         }
       }
     }
-    this.glyphQuads.push(...quads)
   }
 }

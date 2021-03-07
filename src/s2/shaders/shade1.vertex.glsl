@@ -11,7 +11,7 @@ uniform vec2 uAspect;
 uniform float uInputs[16]; // [zoom, ...] we just need zoom
 uniform float uDevicePixelRatio;
 
-@include "./ST2XYZ.glsl"
+@include "./getPos.glsl"
 
 varying vec2 vPos;
 

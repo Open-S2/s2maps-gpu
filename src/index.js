@@ -23,6 +23,7 @@ const Hover = lazy(() => import('./App/Hover'))
 const Invert = lazy(() => import('./App/Invert'))
 const Tiles = lazy(() => import('./App/Tiles'))
 const Tesla = lazy(() => import('./App/Tesla'))
+const OAD = lazy(() => import('./App/OpenAddressData'))
 const Earthquakes = lazy(() => import('./App/Earthquakes'))
 const TissotsIndicatrix = lazy(() => import('./App/TissotsIndicatrix'))
 
@@ -49,6 +50,7 @@ ReactDOM.render(
         <Route path='/tiles' component={Tiles} />
         <Route path='/earthquakes' component={Earthquakes} />
         <Route path='/tesla' component={Tesla} />
+        <Route path='/open-address-data' component={OAD} />
       </Switch>
     </Suspense>
   </Router>,

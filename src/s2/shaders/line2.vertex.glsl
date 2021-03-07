@@ -4,9 +4,9 @@ precision highp float;
 @nomangle layout location vWidth vNorm vCenter vColor vDrawType uDevicePixelRatio
 
 layout (location = 0) in float aType;
-layout (location = 1) in vec2 aPrev; //   (INSTANCED)
-layout (location = 2) in vec2 aCurr; //   (INSTANCED)
-layout (location = 3) in vec2 aNext; //   (INSTANCED)
+layout (location = 1) in vec2 aPrev; // (INSTANCED)
+layout (location = 2) in vec2 aCurr; // (INSTANCED)
+layout (location = 3) in vec2 aNext; // (INSTANCED)
 
 // out float lengthSoFar;
 out vec2 vWidth;
@@ -26,12 +26,11 @@ out float vDrawType;
 // 5 and 6 are used for end caps and joints
 
 uniform float uDevicePixelRatio;
-uniform mat4 uMatrix;
 uniform vec2 uAspect;
 uniform float uCap; // 0 -> butt ; 1 -> round ; 2 -> square
 
 @include "./decodeFeature2.glsl"
-@include "./ST2XYZ.glsl"
+@include "./getPos.glsl"
 
 bool isCCW (in vec2 prev, in vec2 curr, in vec2 next) {
   float det = (curr.y - prev.y) * (next.x - curr.x) - (curr.x - prev.x) * (next.y - curr.y);
@@ -56,10 +55,10 @@ void main () {
   // explain width to fragment shader
   vWidth = vec2(width, 0.);
   // get the position in projected space
-  curr = uMatrix * STtoXYZ(aCurr);
-  next = uMatrix * STtoXYZ(aNext);
-  prev = uMatrix * STtoXYZ(aPrev);
-  zero = uMatrix * vec4(0., 0., 0., 1.);
+  curr = getPos(aCurr);
+  next = getPos(aNext);
+  prev = getPos(aPrev);
+  zero = getZero();
   // adjust by w & get the position in screen space
   curr.xyz /= curr.w;
   next.xyz /= next.w;

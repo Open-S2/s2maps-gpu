@@ -13,7 +13,6 @@ layout (location = 6) in float aID; // float ID       (INSTANCED)
 
 out vec4 color;
 
-uniform mat4 uMatrix;
 uniform vec2 uAspect;
 uniform int uMode; // 0 => points ; 1 => quads ; 2 => results
 uniform float uDevicePixelRatio;
@@ -23,7 +22,7 @@ uniform sampler2D uPoints;
 uniform sampler2D uQuads;
 
 @include "./decodeFeature2.glsl"
-@include "./ST2XYZ.glsl"
+@include "./getPos.glsl"
 
 bool overlap (vec4 a, vec4 b) { // vec4(left, bottom, right, top)
   if (a.x >= b.z || b.x >= a.z) return false;
@@ -43,14 +42,19 @@ vec4 getBbox (in int index) {
 }
 
 void main () {
-  // prep xyz
-  vec4 xyz = STtoXYZ(aST);
-  // for points, add a little to ensure it doesn't get clipped
-  xyz.xyz *= 1.001;
-  // find the position on screen
-  vec4 glPos = uMatrix * xyz;
-  glPos.xyz /= glPos.w;
-  glPos.w = 1.;
+  vec4 glPos;
+  if (uFaceST[1] < 12.) {
+    // prep xyz
+    vec4 xyz = STtoXYZ(aST);
+    // for points, add a little to ensure it doesn't get clipped
+    xyz.xyz *= 1.001;
+    // find the position on screen
+    glPos = uMatrix * xyz;
+    glPos.xyz /= glPos.w;
+    glPos.w = 1.;
+  } else {
+    glPos = getPosLocal(aST);
+  }
   // set position
   gl_Position = glPos;
   // set point size

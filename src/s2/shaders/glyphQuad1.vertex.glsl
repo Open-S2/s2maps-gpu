@@ -28,7 +28,7 @@ uniform float uStrokeWidth;
 // The glyph filter texture.
 uniform sampler2D uFeatures;
 
-@include "./ST2XYZ.glsl"
+@include "./getPos.glsl"
 
 varying float draw;
 varying float buf;

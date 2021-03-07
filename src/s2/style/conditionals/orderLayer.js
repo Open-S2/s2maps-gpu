@@ -5,9 +5,8 @@ export default function orderLayer (layer: Layer) {
   if (layer.type === 'fill') orderFill(layer)
   else if (layer.type === 'point') orderPoint(layer)
   else if (layer.type === 'heatmap') orderHeatmap(layer)
-  else if (layer.type === 'line' || layer.type === 'line3D') orderLine(layer)
-  else if (layer.type === 'glyph') orderText(layer)
-  else if (layer.type === 'billboard') orderBillboard(layer)
+  else if (layer.type === 'line') orderLine(layer)
+  else if (layer.type === 'glyph') orderGlyph(layer)
 }
 
 function orderFill (layer: Layer) {
@@ -59,40 +58,43 @@ function orderLine (layer: Layer) {
 }
 
 // text order: (paint)size->strokeWidth->fill->stroke
-function orderText (layer: Layer) {
+function orderGlyph (layer: Layer) {
   const { layout, paint } = layer
-  const localSize = JSON.parse(JSON.stringify(paint.size))
+  // overdraw
+  if (layer.overdraw === undefined) layer.overdraw = false
+  // layout & paint
+  const localTextSize = (paint['text-size']) && JSON.parse(JSON.stringify(paint['text-size']))
+  const localIconSize = (paint['icon-size']) && JSON.parse(JSON.stringify(paint['icon-size']))
   // store
   layer.layoutLocal = {
-    family: layout.family || 'default',
-    field: layout.field || '',
-    anchor: layout.anchor || 'center',
-    padding: layout.padding || [0, 0],
-    offset: layout.offset || [0, 0]
+    // text
+    'text-family': layout['text-family'] || 'default',
+    'text-field': layout['text-field'],
+    'text-anchor': layout['text-anchor'] || 'center',
+    'text-padding': layout['text-padding'] || [0, 0],
+    'text-offset': layout['text-offset'] || [0, 0],
+    // icon
+    'icon-family': layout['icon-family'] || 'default',
+    'icon-field': layout['icon-field'],
+    'icon-anchor': layout['icon-anchor'] || 'center',
+    'icon-padding': layout['icon-padding'] || [0, 0],
+    'icon-offset': layout['icon-offset'] || [0, 0],
   }
-  layer.paintLocal = {
-    size: localSize || 16
-  }
+  layer.paintLocal = {}
+  // text
+  if (localTextSize) layer.paintLocal['text-size'] = localTextSize
+  // icon
+  if (localIconSize) layer.paintLocal['icon-size'] = localIconSize
   layer.layout = {}
+  // text paint
   layer.paint = {
-    size: paint.size || 16,
-    strokeWidth: paint.strokeWidth || 0,
-    fill: paint.fill || 'rgba(0, 0, 0, 0)',
-    stroke: paint.stroke || 'rgba(0, 0, 0, 0)'
+    'text-size': paint['text-size'] || 42,
+    'text-fill': paint['text-fill'] || 'rgba(0, 0, 0, 0)',
+    'text-strokeWidth': paint['text-strokeWidth'] || 0,
+    'text-stroke': paint['text-stroke'] || 'rgba(0, 0, 0, 0)'
   }
-}
-
-// line order: (paint)size->color->(layout)anchor->padding->offset
-function orderBillboard (layer: Layer) {
-  const { layout, paint } = layer
-  // store
-  layer.layout = {
-    field: layout.field,
-    offset: layout.offset,
-    padding: layout.padding
-  }
-  layer.paint = {
-    size: paint.size,
-    opacity: paint.opacity
+  // icon paint
+  layer.iconPaint = {
+    'icon-size': paint['icon-size'] || 16
   }
 }

@@ -9,7 +9,7 @@ layout (location = 6) in float aRadius;
 uniform mat4 uMatrix;
 uniform bool u3D;
 
-@include "./ST2XYZ.glsl"
+@include "./getPos.glsl"
 
 out vec2 vTexcoord;
 

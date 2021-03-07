@@ -1,10 +1,11 @@
 #version 300 es
 precision highp float;
 
-@define GAMMA 0.105
+@define GAMMA 0.09
+@define GAMMA_ICON 0.0525
 @define MIN_ALPHA 0.078125 // 20. / 256.
 
-@nomangle draw buf vTexcoord color texture uGlyphTex
+@nomangle draw buf vTexcoord color texture uGlyphTex uIsIcon
 
 // Passed in from the vertex shader.
 in float draw;
@@ -12,6 +13,7 @@ in float buf;
 in vec2 vTexcoord;
 in vec4 color;
 
+uniform bool uIsIcon;
 uniform bool uColor;
 // The glyph texture.
 uniform sampler2D uGlyphTex;
@@ -19,10 +21,13 @@ uniform sampler2D uGlyphTex;
 out vec4 fragColor;
 
 void main () {
-  if (draw == 0.) {
-    discard;
-  } else if (draw == 2.) {
+  if (draw == 2.) {
     fragColor = color;
+  } else if (uIsIcon) {
+    vec4 tex = texture(uGlyphTex, vTexcoord);
+    float mid = smoothstep(buf - GAMMA_ICON, buf + GAMMA_ICON, (tex.r + tex.g + tex.b + tex.a) / 4.);
+    if (mid < MIN_ALPHA) discard;
+    fragColor = color * mid;
   } else {
     vec4 tex = texture(uGlyphTex, vTexcoord);
     float green = smoothstep(buf - GAMMA, buf + GAMMA, tex.g);
@@ -37,8 +42,6 @@ void main () {
   		0.
   	);
 
-    rgba *= color.a;
-
-    fragColor = (!uColor) ? 1. - rgba : color * rgba;
+    fragColor = (!uColor) ? 1. - (rgba * color.a) : color * rgba;
   }
 }

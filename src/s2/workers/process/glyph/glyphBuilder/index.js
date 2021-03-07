@@ -1,6 +1,5 @@
 // @flow
 export { default as anchorOffset } from './anchorOffset'
-export { default as coalesceAnchor } from './coalesceAnchor'
 export { default as coalesceField } from './coalesceField'
 export { default as GlyphBuilder } from './glyphBuilder'
 export { default as RTree } from './rtree'

@@ -4516,15 +4516,15 @@ duplexify@^3.4.2, duplexify@^3.6.0:
     readable-stream "^2.0.0"
     stream-shift "^1.0.0"
 
-earclip@0.7.3:
-  version "0.7.3"
-  resolved "https://registry.yarnpkg.com/earclip/-/earclip-0.7.3.tgz#c3b24939a3af2771c72230047d6df0597b3d8441"
-  integrity sha512-1oFUztjgckveX6JtSabv9Fv1shYEWXqSDXcuWIfuXZ1mstfeklAs5AtoClcm/nLuAVLjIwDzN6YOYshpVZXk9A==
-
 earclip@^0.3.8:
   version "0.3.18"
   resolved "https://registry.yarnpkg.com/earclip/-/earclip-0.3.18.tgz#ab90019348eb6ca62923f1079d8f7e62f12d090e"
   integrity sha512-L9on2UAcQf1R3nLsOWp6PDhyV1tpQQwV7LhcXzMhZC+StEOuwHlXjztuN6yEhgW1pKOnXY1uLZMxEsj80SQtfA==
+
+earclip@^0.8.1:
+  version "0.8.1"
+  resolved "https://registry.yarnpkg.com/earclip/-/earclip-0.8.1.tgz#f2293f39c7dce14e6a4d714dd831194ebec0b075"
+  integrity sha512-vS3hhYlwBRfNiT+UYEeA8hIiwr2Gq67Ocrv6zm1m3O0hTQhSB7w2KVfAF4/4ovEIeNED08gXkKNQwEMLDSnZEg==
 
 ecc-jsbn@~0.1.1:
   version "0.1.2"
@@ -5806,10 +5806,10 @@ globby@^6.1.0:
     pify "^2.0.0"
     pinkie-promise "^2.0.0"
 
-glyph-pbf@^2.1.2:
-  version "2.1.2"
-  resolved "https://registry.yarnpkg.com/glyph-pbf/-/glyph-pbf-2.1.2.tgz#ce027d01ac51fc5bb9d93de75992418f66609ba9"
-  integrity sha512-OyY/UxsylN4c8bjRvwcPrsles4GHpUu9JZQIxR7okGJrhJ8kzKOfU17458BS2DVnCTnIumYsSeSsfAhW5901hg==
+glyph-pbf@^2.2.6:
+  version "2.2.6"
+  resolved "https://registry.yarnpkg.com/glyph-pbf/-/glyph-pbf-2.2.6.tgz#7b01619fabae8bd075971737b29024db97087623"
+  integrity sha512-0Q5Y32V6JI+uC9+qzM+WEdZigFapVsGfIRU9gAUrLo+ay/sel+0+tTK1CpZMn+04FG1+6fUVv5/GCYA30VC1Bw==
   dependencies:
     pbf "^3.2.1"
     svg-path-parser "^1.1.0"
@@ -10635,15 +10635,15 @@ s2-vector-tile@^1.4.5:
   dependencies:
     pbf "^3.2.1"
 
-s2json-vt@^0.6.8:
-  version "0.6.8"
-  resolved "https://registry.yarnpkg.com/s2json-vt/-/s2json-vt-0.6.8.tgz#ee46467bab82a51c6f3242ec77b80fc43fd98a5c"
-  integrity sha512-zMphU6Yf0DV3tzFTeQl7BxF1yDXkyd7KLSskmY6OK2QwhoSfTzhvzBZiOSV41BBVXhw7E/OrCK3d1612aUhz0A==
+s2json-vt@^0.7.2:
+  version "0.7.2"
+  resolved "https://registry.yarnpkg.com/s2json-vt/-/s2json-vt-0.7.2.tgz#665869c23368e601d7b4eb1f71cd784c8693d307"
+  integrity sha512-mi10VpgRpizWmX3BcECz+iQpWP/R1ZoYgfo9mvZfId/Gxwzn0Bf8CxAJhgbOPKr3kH3YGx6arAH90GQH5EDRog==
 
-s2projection@^1.9.0:
-  version "1.9.0"
-  resolved "https://registry.yarnpkg.com/s2projection/-/s2projection-1.9.0.tgz#2907e81336f1290125d1c83cd997fe16f1562a06"
-  integrity sha512-Innm9yBvd45lLoqVm0pk1pEeG7Z9ais42fdxM5fvtLB0ehF4vnMk38XawOpt7VxmC3T36llto+AkuggyvCHlLw==
+s2projection@^1.9.2:
+  version "1.9.2"
+  resolved "https://registry.yarnpkg.com/s2projection/-/s2projection-1.9.2.tgz#db2daf388cf14069aae223daf85efcd6e70f206e"
+  integrity sha512-/Uj4KU0kaDu2ZGewnwK7zp0oZIAICGbbfYg0K2B1ssV+tkHUiaVfBG0QrQqD0AQ5YO6qP7kEyFR+mdxi1A7p8A==
 
 s2rtin@^0.5.0:
   version "0.5.0"

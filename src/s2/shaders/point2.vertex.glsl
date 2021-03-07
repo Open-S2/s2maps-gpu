@@ -19,10 +19,9 @@ out float opacity;
 uniform bool uInteractive;
 uniform float uDevicePixelRatio;
 uniform vec2 uAspect;
-uniform mat4 uMatrix;
 
 @include "./decodeFeature2.glsl"
-@include "./ST2XYZ.glsl"
+@include "./getPos.glsl"
 
 void main () {
   // set color
@@ -44,12 +43,9 @@ void main () {
   // adjust color by opacity
   color.rgb *= color.a;
 
-  // set position
-  // prep xyz
-  vec4 xyz = STtoXYZ(aPos);
   // get position
-  vec4 glPos = uMatrix * xyz;
-  vec4 zero = uMatrix * vec4(0., 0., 0., 1.);
+  vec4 glPos = getPos(aPos);
+  vec4 zero = getZero();
   // adjust by w
   glPos.xyz /= glPos.w;
   zero.xyz /= zero.w;

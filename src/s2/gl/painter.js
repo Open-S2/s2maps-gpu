@@ -165,7 +165,9 @@ export default class Painter {
     // PREPARE PHASE
     // prep frame uniforms
     const { view, aspect } = projection
-    const matrix = projection.getMatrix(512) // NOTE: For now, we have a default size of 512.
+    const matrix = projection.getMatrix(768) // NOTE: For now, we have a default size of 512.
+    // if past zoom 12, the tile will self align to the screen
+    for (const tile of tiles) tile.setScreenPositions(matrix)
     this.injectFrameUniforms(matrix, view, aspect)
     // prep mask id's
     this._createTileMasksIDs(tiles)
@@ -178,7 +180,7 @@ export default class Painter {
     // sort features
     features.sort(featureSort)
     // prep glyph features for drawing box filters
-    const glyphFeatures = features.filter(feature => feature.type === 'glyph')
+    const glyphFeatures = features.filter(feature => feature.type === 'glyph' && !feature.overdraw)
     // use text boxes to filter out overlap
     if (glyphFeatures.length) this.paintGlyphFilter(tiles, glyphFeatures)
     // return to our default framebuffer
@@ -246,10 +248,11 @@ export default class Painter {
     gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE)
     // create mask for each tile
     for (const tile of tiles) {
-      const { tmpMaskID, faceST, sourceData } = tile
+      const { tmpMaskID, faceST, bottom, top, sourceData } = tile
       const { mask } = sourceData
       // set uniforms & stencil test
       fillProgram.setFaceST(faceST)
+      fillProgram.setTilePos(bottom, top)
       // set correct tile mask
       gl.stencilFunc(gl.ALWAYS, tmpMaskID, 0xFF)
       // use mask vao and fill program
@@ -271,9 +274,9 @@ export default class Painter {
     let program: Program
     // run through the features, and upon tile, layer, or program change, adjust accordingly
     for (const feature of features) {
-      const { tile, faceST, layerIndex, invert, depthPos, source, sourceName, type, layerCode, lch } = feature
-      const { tmpMaskID } = tile
-      const featureSource = source[sourceName]
+      const { tile, layerIndex, invert, depthPos, sourceName, type, layerCode, lch } = feature
+      const { sourceData, tmpMaskID, faceST, bottom, top } = tile
+      const featureSource = sourceData[sourceName]
       // inversion flush if necessary
       if (inversion && curLayer !== layerIndex) {
         this.flushInvert(tiles, program, inversion)
@@ -296,8 +299,9 @@ export default class Painter {
           inversion = depthPos
         }
       }
-      // adjust to the faceST
+      // adjust tile uniforms
       program.setFaceST(faceST)
+      program.setTilePos(bottom, top)
       // bind vao
       gl.bindVertexArray(featureSource.vao)
       // draw
@@ -312,12 +316,13 @@ export default class Painter {
     gl.colorMask(true, true, true, true)
     // draw tile masks
     for (const tile of tiles) {
-      const { tmpMaskID, faceST, sourceData } = tile
+      const { tmpMaskID, faceST, bottom, top, sourceData } = tile
       const { mask } = sourceData
       // inject depthPos
       mask.depthPos = depthPos
       // set uniforms & stencil test
       program.setFaceST(faceST)
+      program.setTilePos(bottom, top)
       // set correct tile mask
       gl.stencilFunc(gl.ALWAYS, tmpMaskID, 0xFF)
       // use mask vao and fill program
@@ -337,11 +342,13 @@ export default class Painter {
     program.setupTextureDraw()
     // draw all features
     for (const feature of features) {
-      const { source, sourceName, faceST, layerCode } = feature
+      const { tile, sourceName, layerCode } = feature
+      const { sourceData, faceST, bottom, top } = tile
       // grab feature source
-      const featureSource = source[sourceName]
+      const featureSource = sourceData[sourceName]
       // set faceST & layercode, bind vao, and draw
       program.setFaceST(faceST)
+      program.setTilePos(bottom, top)
       program.setLayerCode(layerCode)
       gl.bindVertexArray(featureSource.vao)
       program.drawTexture(feature, featureSource)
@@ -383,14 +390,16 @@ export default class Painter {
     glyphFilterProgram.setMode(mode)
     // draw each feature
     for (const glyphFeature of glyphFeatures) {
-      const { faceST, layerIndex, source, sourceName, layerCode } = glyphFeature
-      const featureSource = source[sourceName]
+      const { tile, layerIndex, sourceName, layerCode } = glyphFeature
+      const { sourceData, faceST, bottom, top } = tile
+      const featureSource = sourceData[sourceName]
       // update layerIndex
       if (curLayer !== layerIndex && layerCode) {
         curLayer = layerIndex
         glyphFilterProgram.setLayerCode(layerCode)
       }
       glyphFilterProgram.setFaceST(faceST)
+      glyphFilterProgram.setTilePos(bottom, top)
       gl.bindVertexArray(featureSource.filterVAO)
       // draw
       glyphFilterProgram.draw(glyphFeature, featureSource, mode)

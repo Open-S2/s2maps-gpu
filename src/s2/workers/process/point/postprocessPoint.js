@@ -80,7 +80,7 @@ export default function postprocessPoint (mapID: string, source: string, tileID:
   }
 
   // Upon building the batches, convert to buffers and ship.
-  const vertexBuffer = new Float32Array(vertices).buffer
+  const vertexBuffer = new Int16Array(vertices).buffer
   const weightBuffer = new Float32Array(weights).buffer
   const featureGuideBuffer = new Float32Array(featureGuide).buffer
   // ship the vector data.

@@ -4,8 +4,8 @@
 /** SOURCES **/
 export type Source = {
   path: string,
-  type: 'vector' | 'json' | 'raster' | 'mask' | 'font' | 'billboard',
-  fileType: 'json' | 's2json' | 'pbf' | 'png' | 'jpg',
+  type: 'vector' | 'json' | 'raster' | 'mask' | 'glyph' | 'heatmap' | 'point',
+  fileType: 'json' | 's2json' | 'pbf' | 'pbf.br' | 'png' | 'jpg' | 'webp',
   sourceName?: string // if you want to make requests without getting metadata, you need this
 }
 export type Sources = { [string]: Source }
@@ -17,7 +17,7 @@ export type Mask = {
 
 /** FILL **/
 export type FillPaint = {
-  color: string | Array<any>
+  color: string | Array<any>,
   opacity: number | Array<any>
 }
 
@@ -53,30 +53,24 @@ export type LinePaint = {
   gapwidth?: number | Array<any>
 }
 
-/** TEXT **/
-export type TextLayout = {
-  family: string | Array<any>,
-  field: string | Array<string> | Array<any>,
-  anchor?: string,
-  offset?: number | Array<any>, // default: [0, 0]
-  padding?: number | Array<any> // default: [0, 0]
+/** GLYPH **/
+export type GlyphLayout = {
+  text-family: string | Array<any>,
+  text-field: string | Array<string> | Array<any>,
+  text-anchor?: string,
+  text-offset?: number | Array<any>, // default: [0, 0]
+  text-padding?: number | Array<any>, // default: [0, 0]
+  icon-family: string | Array<any>,
+  icon-field: string | Array<string> | Array<any>,
+  icon-anchor?: string,
+  icon-offset?: number | Array<any>, // default: [0, 0]
+  icon-padding?: number | Array<any> // default: [0, 0]
 }
-export type TextPaint = {
-  size: number | Array<any>,
-  fillStyle: string | Array<any>,
-  strokeStyle?: number | Array<any>,
-  strokeWidth?: string | Array<any>
-}
-
-/** BILLBOARD **/
-export type BillboardLayout = {
-  field: string | Array<string> | Array<any>,
-  offset?: number | Array<any>,
-  padding?: number | Array<any>
-}
-export type BillboardPaint = {
-  size: number | Array<any>,
-  opacity?: number | Array<any>
+export type GlyphPaint = {
+  text-size: number | Array<any>,
+  text-fill: string | Array<any>,
+  text-stroke?: number | Array<any>,
+  text-strokeWidth?: string | Array<any>
 }
 
 /** Layer **/
@@ -89,10 +83,12 @@ export type Layer = {
   maxzoom: number,
   type: 'raster' | 'fill' | 'fill3D' | 'line' | 'line3D' | 'glyph' | 'point',
   filter: Array<any>, // ["any", ["class", "==", "ocean"], ["class", "==", "river"]]
-  layout: LineLayout | TextLayout | BillboardLayout,
-  paint: FillPaint | PointPaint | LinePaint | TextPaint | BillboardPaint,
+  layout: LineLayout | GlyphLayout,
+  paint: FillPaint | PointPaint | LinePaint | GlyphPaint,
+  iconPaint?: { icon-size: string | Array<any> },
   lch: boolean,
-  code?: Float32Array
+  code?: Float32Array,
+  iconCode?: Float32Array // special case for icon sizing
 }
 
 export type HeatmapLayer = {
@@ -118,7 +114,7 @@ export type StylePackage = {
   glType: GLType,
   sources: Sources,
   fonts: Sources,
-  billboards: Sources,
+  icons: Sources,
   layers: Array<Layer>
 }
 

@@ -255,7 +255,7 @@ export default class S2Map extends EventTarget {
       const { type } = data // $FlowIgnore
       if (type === 'filldata') map.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.codeTypeBuffer, data.featureGuideBuffer]) // $FlowIgnore
       else if (type === 'linedata') map.postMessage(data, [data.vertexBuffer, data.featureGuideBuffer]) // $FlowIgnore
-      else if (type === 'glyphdata') map.postMessage(data, [data.glyphFilterBuffer, data.glyphFillVertexBuffer, data.glyphFillIndexBuffer, data.glyphLineVertexBuffer, data.glyphQuadBuffer, data.layerGuideBuffer]) // $FlowIgnore
+      else if (type === 'glyphdata') map.postMessage(data, [data.glyphFilterBuffer, data.glyphFillVertexBuffer, data.glyphFillIndexBuffer, data.glyphLineVertexBuffer, data.glyphQuadBuffer, data.glyphColorBuffer, data.layerGuideBuffer]) // $FlowIgnore
       else if (type === 'rasterdata') map.postMessage(data, [data.image]) // $FlowIgnore
       else if (type === 'maskdata') map.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.radiiBuffer]) // $FlowIgnore
       else if (type === 'pointdata' || type === 'heatmapdata') map.postMessage(data, [data.vertexBuffer, data.weightBuffer, data.featureGuideBuffer]) // $FlowIgnore

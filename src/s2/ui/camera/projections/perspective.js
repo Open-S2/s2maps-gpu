@@ -55,7 +55,7 @@ export default class PerspectiveProjection extends Projector {
     return true
   }
 
-  getMatrixAtSize (tileSize?: number = 512): Float32Array {
+  getMatrixAtSize (tileSize?: number = 768): Float32Array {
     if (this.sizeMatrices[tileSize]) return mat4.clone(this.sizeMatrices[tileSize])
     const matrix = mat4.create()
     // create projection

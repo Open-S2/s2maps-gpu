@@ -109,7 +109,7 @@ export default class Camera {
     else if (type === 'heatmapdata') this._injectVectorSourceData(data.source, data.tileID, data.vertexBuffer, data.weightBuffer, data.codeTypeBuffer, data.featureGuideBuffer, true)
     else if (type === 'maskdata') this._injectMaskGeometry(data.tileID, data.vertexBuffer, data.indexBuffer, data.radiiBuffer)
     else if (type === 'rasterdata') this._injectRasterData(data.source, data.tileID, data.built, data.image, data.leftShift, data.bottomShift)
-    else if (type === 'glyphdata') this._injectGlyphSourceData(data.source, data.tileID, data.glyphFilterBuffer, data.glyphFillVertexBuffer, data.glyphFillIndexBuffer, data.glyphLineVertexBuffer, data.glyphQuadBuffer, data.layerGuideBuffer)
+    else if (type === 'glyphdata') this._injectGlyphSourceData(data.source, data.tileID, data.glyphFilterBuffer, data.glyphFillVertexBuffer, data.glyphFillIndexBuffer, data.glyphLineVertexBuffer, data.glyphQuadBuffer, data.glyphColorBuffer, data.layerGuideBuffer)
     else if (type === 'interactivedata') this._injectInteractiveData(data.source, data.tileID, data.interactiveGuideBuffer, data.interactiveDataBuffer)
     else if (type === 'parentlayers') this._injectParentLayers(data.tileID, data.parentLayers)
     // new 'paint', so painter is dirty
@@ -131,7 +131,7 @@ export default class Camera {
       // get tile
       const tile = this.tileCache.get(tileID)
       // inject into tile
-      tile.injectVectorSourceData(source, new Float32Array(vertexBuffer), (weight) ? new Float32Array(indexWeightBuffer) : new Uint32Array(indexWeightBuffer), codeTypeBuffer ? new Uint8Array(codeTypeBuffer) : null, new Float32Array(featureGuideBuffer), this.style.layers)
+      tile.injectVectorSourceData(source, new Int16Array(vertexBuffer), (weight) ? new Float32Array(indexWeightBuffer) : new Uint32Array(indexWeightBuffer), codeTypeBuffer ? new Uint8Array(codeTypeBuffer) : null, new Float32Array(featureGuideBuffer), this.style.layers)
     }
   }
 
@@ -155,14 +155,16 @@ export default class Camera {
 
   _injectGlyphSourceData (source: string, tileID: number, glyphFilterBuffer: ArrayBuffer,
     glyphFillVertexBuffer: ArrayBuffer, glyphFillIndexBuffer: ArrayBuffer,
-    glyphLineVertexBuffer: ArrayBuffer, glyphQuadBuffer: ArrayBuffer, layerGuideBuffer: ArrayBuffer) {
+    glyphLineVertexBuffer: ArrayBuffer, glyphQuadBuffer: ArrayBuffer,
+    glyphColorBuffer: ArrayBuffer, layerGuideBuffer: ArrayBuffer) {
     // store the vertexBuffer and texture in the gpu.
     if (this.tileCache.has(tileID)) {
       const tile = this.tileCache.get(tileID)
       const glyphSource = tile.injectGlyphSourceData(
         source, new Float32Array(glyphFilterBuffer), new Float32Array(glyphFillVertexBuffer),
         new Float32Array(glyphFillIndexBuffer), new Float32Array(glyphLineVertexBuffer),
-        new Float32Array(glyphQuadBuffer), new Float32Array(layerGuideBuffer), this.style.layers
+        new Float32Array(glyphQuadBuffer), new Uint8ClampedArray(glyphColorBuffer),
+        new Float32Array(layerGuideBuffer), this.style.layers
       )
       // tell the painter to prep the texture
       this.painter.buildGlyphTexture(glyphSource)

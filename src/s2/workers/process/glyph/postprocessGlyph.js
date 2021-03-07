@@ -14,8 +14,10 @@ export default function postprocessGlyph (mapID: string, sourceName: string,
   // existant text. Sometimes datapoints can range in the 100s in one tile, so
   // this step reduces cost dramatically.
   for (const glyph of glyphs) {
-    const { family, field, anchor } = glyph
-    let [width, glyphData] = glyphBuilder.getWidthAndGlyphData(family, field)
+    const { family, type, field, anchor } = glyph
+    let [width, glyphData] = (type === 'text')
+      ? glyphBuilder.getTextData(family, field)
+      : glyphBuilder.getIconData(family, field)
     if (!width) continue
     glyph.width = width
     glyph.glyphData = glyphData
@@ -27,9 +29,10 @@ export default function postprocessGlyph (mapID: string, sourceName: string,
   }
 
   // filter
-  glyphs = glyphs.filter(text => {
-    if (!text.width) return false
-    return glyphBuilder.testQuad(text)
+  glyphs = glyphs.filter(glyph => {
+    if (!glyph.width) return false
+    if (glyph.overdraw) return true
+    return glyphBuilder.testQuad(glyph)
   })
   if (!glyphs.length) return
 
@@ -39,15 +42,17 @@ export default function postprocessGlyph (mapID: string, sourceName: string,
   // 3) For each text object we need a "filter" quad defining it's total width and size.
   //    This is for the pre-draw step to check overlap. The GlyphBuilder will also be building this.
   let curlayerIndex = glyphs[0].layerIndex
+  let curType = glyphs[0].type
   let encoding: Array<number> = glyphs[0].code
   let subEncoding: Array<number> = glyphs[0].featureCode
   let codeStr: string = glyphs[0].code.toString()
   for (const glyph of glyphs) {
-    const { layerIndex, code, featureCode } = glyph
+    const { type, layerIndex, code, featureCode } = glyph
 
-    if (curlayerIndex !== layerIndex || codeStr !== code.toString()) {
-      glyphBuilder.finishLayer(curlayerIndex, encoding, subEncoding)
+    if (curlayerIndex !== layerIndex || codeStr !== code.toString() || type !== curType) {
+      glyphBuilder.finishLayer(curlayerIndex, curType, encoding, subEncoding)
       curlayerIndex = layerIndex
+      curType = type
       codeStr = code.toString()
       encoding = code
       subEncoding = featureCode
@@ -56,12 +61,12 @@ export default function postprocessGlyph (mapID: string, sourceName: string,
     glyphBuilder.buildText(glyph)
   }
   // finish the last layer
-  glyphBuilder.finishLayer(curlayerIndex, encoding, subEncoding)
+  glyphBuilder.finishLayer(curlayerIndex, curType, encoding, subEncoding)
   // if the layerGuide doesn't grow, we move on
   if (!glyphBuilder.layerGuide.length) return
 
   // pull out the data
-  const { texturePack, glyphFilterVertices, glyphQuads, layerGuide } = glyphBuilder
+  const { texturePack, glyphFilterVertices, glyphQuads, glyphColors, layerGuide } = glyphBuilder
   const { height, fillVertices, fillIndices, lineVertices } = texturePack
   // add the width and height to the beginning of the layerGuide
   layerGuide.unshift(id, height)
@@ -74,6 +79,7 @@ export default function postprocessGlyph (mapID: string, sourceName: string,
   const glyphLineVertexBuffer = new Float32Array(lineVertices).buffer
   // quad draw data
   const glyphQuadBuffer = new Float32Array(glyphQuads).buffer
+  const glyphColorBuffer = new Uint8ClampedArray(glyphColors).buffer
   const layerGuideBuffer = new Float32Array(layerGuide).buffer
 
   // ship the data
@@ -87,6 +93,7 @@ export default function postprocessGlyph (mapID: string, sourceName: string,
     glyphFillIndexBuffer,
     glyphLineVertexBuffer,
     glyphQuadBuffer,
+    glyphColorBuffer,
     layerGuideBuffer
   }, [glyphFilterBuffer, glyphFillVertexBuffer, glyphFillIndexBuffer, glyphLineVertexBuffer, glyphQuadBuffer, layerGuideBuffer])
 

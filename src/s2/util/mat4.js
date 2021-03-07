@@ -393,6 +393,7 @@ export function invert (matrix: Float32Array | Array<number>, input: Float32Arra
 
 export function project (matrix: Float32Array | Array<number>, vector: Float32Array | Array<number>): Array<number> {
   const mul = multiplyVector(matrix, vector)
+  // console.log(mul)
 
   return [mul[0] / mul[3], mul[1] / mul[3], mul[2] / mul[3]]
 }

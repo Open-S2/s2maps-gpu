@@ -11,7 +11,6 @@
   },
   "fonts": {
     "default": "https://s3.s2maps.io/fonts-v2/default",
-    "roboto-regular": "https://s3.s2maps.io/fonts-v2/RobotoRegular",
     "roboto-medium": "https://s3.s2maps.io/fonts-v2/RobotoMedium"
   },
   "wallpaper": {

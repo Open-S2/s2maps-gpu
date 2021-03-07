@@ -13,7 +13,6 @@ export type ProjectionConfig = {
   maxzoom?: number,
   lon?: number,
   lat?: number,
-  scale?: number,
   zNear?: number,
   zFar?: number,
   width?: number,
@@ -26,6 +25,8 @@ export type TileDefinitions = Array<TileDefinition>
 
 export default class Projector implements Projection {
   view: Float32Array = new Float32Array(16) // [zoom, lon, lat, angle, pitch, time, featureState, currFeature, ...extensions]
+  aspect: Float32Array = new Float32Array([400, 300]) // default canvas width x height
+  sizeMatrices: { [number | string]: Float32Array } = {} // key is tileSize
   translation: [number, number, number] = [0, 0, -10] // [x, y, z] only z should change for visual effects
   maxLatRotation: number = 85 // deg
   prevZoom: number = 0
@@ -35,12 +36,9 @@ export default class Projector implements Projection {
   lon: number = 0
   lat: number = 0
   pitch: number = 0
-  scale: number = 1
-  zNear: number = 500 // static; just for draw calls
-  zFar: number = 100000 // static; just for draw calls
-  aspect: Float32Array = new Float32Array([400, 300]) // default canvas width x height
+  zNear: number = 0.5 // static; just for draw calls
+  zFar: number = 10000 // static; just for draw calls
   multiplier: number = 1
-  sizeMatrices: { [number | string]: Float32Array } = {} // key is tileSize
   dirty: boolean = true
   constructor (config: ProjectionConfig) {
     if (config.translation) this.translation = config.translation
@@ -48,7 +46,6 @@ export default class Projector implements Projection {
     if (config.zoom) this.prevZoom = this.zoom = config.zoom
     if (config.lon) this.lon = config.lon
     if (config.lat) this.lat = config.lat
-    if (config.scale) this.scale = config.scale
     if (config.zNear) this.zNear = config.zNear
     if (config.zFar) this.zFar = config.zFar
     if (config.width) this.aspect[0] = config.width
@@ -130,26 +127,27 @@ export default class Projector implements Projection {
   }
 
   getMatrix (size: number): Float32Array {
-    const projection = this.getMatrixAtSize(size)
-    // create view
-    // const view = mat4.lookAt(this.translation, [0, 1, 1])
-    // mat4.rotate(projection, [0, -0.001, 0])
+    const matrix = this.getMatrixAtSize(size)
+    // const mv = mat4.create()
     // translate
-    mat4.translate(projection, this.translation)
-    // console.log('projection', projection)
-    // console.log('zoom', this.zoom)
-    // console.log('aspect', this.aspect)
+    // console.log('start', matrix)
+    mat4.translate(matrix, this.translation)
+    // console.log('translate', matrix)
     // rotate position
-    mat4.rotate(projection, [degToRad(this.lat), degToRad(this.lon), 0])
-    // multiply projection by view
-    // mat4.multiply(projection, view)
-    // console.log('projection', projection)
-
-    return projection
+    // console.log([degToRad(this.lat), degToRad(this.lon), 0])
+    // console.log('before', matrix)
+    mat4.rotate(matrix, [degToRad(this.lat), degToRad(this.lon), 0])
+    // console.log('rotate', matrix)
+    // console.log('after', matrix)
+    // return the matrix
+    return matrix
   }
 
-  getTilesInView (size?: number = 512): TileDefinitions { // [face, zoom, x, y, hash]
+  // [-514356.03125, 1244202.125, 0.6738368272781372, 0.6671320199966431, 0, 1903227, -0.6185612678527832, -0.6124063730239868, 809036.375, 791018.6875, 0.42840108275413513, 0.4241383671760559, 0, 0, 2.025125741958618, 3]
+  // [-514356.03125, 1244202.125, 0.6738368272781372, 0.6671319603919983, 0, 1903227, -0.6185612678527832, -0.6124063730239868, 809036.375, 791018.6875, 0.42840108275413513, 0.4241383671760559, 0, 0, 2.025125741958618, 3]
+
+  getTilesInView (size?: number = 768): TileDefinitions { // [face, zoom, x, y, hash]
     const matrix = this.getMatrix(size)
-    return getTiles(this.zoom, matrix, this.lon, this.lat, this.radius)
+    return getTiles(this.zoom, matrix, this.lon, this.lat)
   }
 }

@@ -13,18 +13,22 @@ import type { Context } from '../contexts'
 import type { FeatureGuide, GlyphTileSource } from '../../source/tile'
 
 export default class GlyphQuadProgram extends Program {
+  uOverdraw: WebGLUniformLocation
   uSize: WebGLUniformLocation
   uFill: WebGLUniformLocation
   uStroke: WebGLUniformLocation
   uStrokeWidth: WebGLUniformLocation
   uTexSize: WebGLUniformLocation
   uIsFill: WebGLUniformLocation
+  uIsIcon: WebGLUniformLocation
   uFeatures: WebGLUniformLocation
   uColor: WebGLUniformLocation
   uGlyphTex: WebGLUniformLocation
   glyphFilterProgram: Program
   glyphProgram: Program
+  glyphType: 'text' | 'icon'
   isFill: boolean
+  filter: boolean
   constructor (context: Context) {
     const { gl, type, devicePixelRatio } = context
     // build shaders
@@ -69,6 +73,20 @@ export default class GlyphQuadProgram extends Program {
     }
   }
 
+  setOverdraw (state: boolean) {
+    if (this.filter !== state) {
+      this.filter = state
+      this.gl.uniform1i(this.uOverdraw, state)
+    }
+  }
+
+  setGlyphType (type: 'text' | 'icon') {
+    if (this.glyphType !== type) {
+      this.gl.uniform1i(this.uIsIcon, (type === 'text') ? false : true)
+      this.glyphType = type
+    }
+  }
+
   draw (featureGuide: FeatureGuide, source: GlyphTileSource, interactive: boolean = false) {
     const { gl, context, glyphFilterProgram } = this
     const { type } = context
@@ -76,8 +94,8 @@ export default class GlyphQuadProgram extends Program {
     gl.activeTexture(gl.TEXTURE0)
     glyphFilterProgram.bindResultTexture()
     // pull out the appropriate data from the source
-    const { depthPos, featureCode, offset, count, size, fill, stroke, strokeWidth } = featureGuide
-    const { textureID, glyphQuadBuffer } = source
+    const { overdraw, glyphType, depthPos, featureCode, offset, count, size, fill, stroke, strokeWidth } = featureGuide
+    const { textureID, glyphQuadBuffer, glyphColorBuffer } = source
     // grab glyph texture
     const { texSize, texture } = this.glyphProgram.getFBO(textureID)
     // WebGL1 - set paint properties; WebGL2 - set feature code
@@ -91,7 +109,10 @@ export default class GlyphQuadProgram extends Program {
     context.stencilFunc(0)
     // ensure proper z-testing state
     context.enableDepthTest()
-    context.lessDepth()
+    // set overdraw
+    this.setOverdraw(overdraw)
+    // set draw type
+    this.setGlyphType(glyphType)
     // set the texture size uniform
     gl.uniform2fv(this.uTexSize, texSize)
     // bind the correct glyph texture
@@ -105,14 +126,24 @@ export default class GlyphQuadProgram extends Program {
     gl.vertexAttribPointer(4, 2, gl.FLOAT, false, 44, 24 + (offset * 44)) // texture u, v
     gl.vertexAttribPointer(5, 2, gl.FLOAT, false, 44, 32 + (offset * 44)) // width, height
     gl.vertexAttribPointer(6, 1, gl.FLOAT, false, 44, 40 + (offset * 44)) // id
+    gl.bindBuffer(gl.ARRAY_BUFFER, glyphColorBuffer)
+    gl.vertexAttribPointer(7, 4, gl.UNSIGNED_BYTE, true, 4, offset * 4)
     // interactive is just for fills
     if (interactive) {
       this.setFill(true)
       context.defaultBlend()
+      context.lessDepth()
       // gl.blendEquation(gl.MAX)
       // context.setDepthRange(depthPos + 3)
       gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count)
+    } else if (glyphType === 'icon') {
+      context.defaultBlend()
+      context.lequalDepth()
+      this.setFill(true)
+      this.setColor(true)
+      gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count)
     } else {
+      context.lessDepth()
       /** DRAW STROKE **/
       this.setFill(false)
       this.setColor(false)

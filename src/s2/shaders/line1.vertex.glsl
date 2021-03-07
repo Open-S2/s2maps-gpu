@@ -26,7 +26,7 @@ uniform float uCap; // 0 -> butt ; 1 -> round ; 2 -> square
 uniform vec4 uColor;
 uniform float uWidth;
 
-@include "./ST2XYZ.glsl"
+@include "./getPos.glsl"
 
 varying vec2 vWidth;
 varying vec2 vNorm;

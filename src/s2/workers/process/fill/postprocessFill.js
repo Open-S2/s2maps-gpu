@@ -84,7 +84,7 @@ export default function postprocessFill (mapID: string, source: string,
   }
 
   // Upon building the batches, convert to buffers and ship.
-  const vertexBuffer = new Float32Array(vertices).buffer
+  const vertexBuffer = new Int16Array(vertices).buffer
   const indexBuffer = new Uint32Array(indices).buffer
   const codeTypeBuffer = new Uint8Array(codeType).buffer
   const featureGuideBuffer = new Float32Array(featureGuide).buffer

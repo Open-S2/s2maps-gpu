@@ -18,18 +18,16 @@ out float vS;
 uniform float uDevicePixelRatio;
 uniform float uDrawState;
 uniform vec2 uAspect;
-uniform mat4 uMatrix;
 
 @include "./decodeFeature2.glsl"
-@include "./ST2XYZ.glsl"
+@include "./getPos.glsl"
 
 void main () {
   vec4 glPos;
   if (uDrawState == 0.) { // drawing to texture
     // set position
     // prep xyz & get position
-    vec4 xyz = STtoXYZ(aPos);
-    glPos = uMatrix * xyz;
+    glPos = getPos(aPos);
     glPos.xyz /= glPos.w;
     // set extent & weight
     vExtent = aExtent;

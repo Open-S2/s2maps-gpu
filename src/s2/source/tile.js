@@ -2,7 +2,8 @@
 /* global WebGLBuffer WebGLTexture WebGLVertexArrayObject GLenum Image */
 import Context from '../gl/contexts'
 import buildSource, { buildGlyphSource } from './buildSource'
-import { bboxST } from 's2projection' // https://github.com/Regia-Corporation/s2projection
+import * as mat4 from '../util/mat4'
+import { S2Point, bboxST } from 's2projection' // https://github.com/Regia-Corporation/s2projection
 
 import type { Face } from 's2projection' // https://github.com/Regia-Corporation/s2projection/blob/master/src/S2Projection.js#L4
 import type { Layer, Mask } from '../style/styleSpec'
@@ -77,6 +78,7 @@ export type FeatureGuide = { // eslint-disable-next-line
   filterOffset?: number, // glyph
   filterCount?: number, // glyph
   type: ProgramType,
+  glyphType?: 'text' | 'icon',
   depthPos?: number,
   featureCode: Float32Array,
   subFeatureCode?: Float32Array,
@@ -92,6 +94,13 @@ export type ChildRequest = { // eslint-disable-next-line
 // eslint-disable-next-line
 export type SourceData = { [string | number]: RasterTileSource | VectorTileSource | GlyphTileSource }
 
+export type Corners = {
+  topLeft: S2Point,
+  topRight: S2Point,
+  bottomLeft: S2Point,
+  bottomRight: S2Point
+}
+
 // tiles are designed to create mask geometry and store prebuilt layer data handed off by the worker pool
 // whenever rerenders are called, they will access these tile objects for the layer data / vaos
 // before managing sources asyncronously, a tile needs to synchronously build spherical background
@@ -106,6 +115,9 @@ export default class Tile {
   tmpMaskID: number
   bbox: [number, number, number, number]
   faceST: Float32Array
+  corners: Corners
+  bottom: Float32Array
+  top: Float32Array
   division: number
   sourceData: SourceData = {}
   heatmapGuide: Array<FeatureGuide> = []
@@ -124,6 +136,7 @@ export default class Tile {
     this.size = size
     const bbox = this.bbox = bboxST(x, y, zoom)
     this.faceST = new Float32Array([face, zoom, bbox[2] - bbox[0], bbox[0], bbox[3] - bbox[1], bbox[1]])
+    if (zoom >= 12) this._buildCorners()
     this._getMaskSource()
   }
 
@@ -132,6 +145,97 @@ export default class Tile {
     // remove all features
     this.featureGuide = []
     this.interactiveGuide = new Map()
+  }
+
+  _buildCorners () {
+    const { face, bbox } = this
+
+    this.corners = {
+      topLeft: S2Point.fromSTGL(face, bbox[0], bbox[3]).normalize(),
+      topRight: S2Point.fromSTGL(face, bbox[2], bbox[3]).normalize(),
+      bottomLeft: S2Point.fromSTGL(face, bbox[0], bbox[1]).normalize(),
+      bottomRight: S2Point.fromSTGL(face, bbox[2], bbox[1]).normalize()
+    }
+    // setup bottom and top
+    this.bottom = new Float32Array(4)
+    this.top = new Float32Array(4)
+  }
+
+  // given a matrix, compute the corners screen positions
+  setScreenPositions (matrix: Float32Array) {
+    if (this.corners) {
+      // pull out the S2Points
+      const { bottomLeft, bottomRight, topLeft, topRight } = this.corners
+      // project points and grab their x-y positions
+      const [blX, blY] = mat4.project(matrix, [bottomLeft.x, bottomLeft.y, bottomLeft.z])
+      const [brX, brY] = mat4.project(matrix, [bottomRight.x, bottomRight.y, bottomRight.z])
+      const [tlX, tlY] = mat4.project(matrix, [topLeft.x, topLeft.y, topLeft.z])
+      const [trX, trY] = mat4.project(matrix, [topRight.x, topRight.y, topRight.z])
+      // store for eventual uniform "upload"
+      this.bottom[0] = blX
+      this.bottom[1] = blY
+      this.bottom[2] = brX
+      this.bottom[3] = brY
+      this.top[0] = tlX
+      this.top[1] = tlY
+      this.top[2] = trX
+      this.top[3] = trY
+      // if (this.zoom === 20 && this.x === 32521 && this.y === 154489) {
+      //   console.log(' ')
+      //   console.log(matrix)
+      //   console.log(this.corners)
+      //   console.log(this.bottom, this.top)
+      //   console.log(' ')
+      // }
+    }
+  }
+
+  // bottomLeft: S2Point {x: -0.6669109129486108, y: 0.6126092575484308, z: -0.42419303595887914}
+  // bottomRight: S2Point {x: -0.6669115843854817, y: 0.6126082308739295, z: -0.4241934630306802}
+  // topLeft: S2Point {x: -0.6669113220653836, y: 0.6126096333538308, z: -0.42419185001964294}
+  // topRight: S2Point {x: -0.6669119935034901, y: 0.6126086066794564, z: -0.42419227709077395}
+
+  // [-514523.21875, 1655145.375, 0.6736140251159668, 0.6669113636016846, 0, 2530825.25, -0.6187666058540344, -0.6126096844673157, 808930.0625, 1052761.875, 0.4284549057483673, 0.4241916537284851, 0, 0, 2.025125741958618, 3]
+  // [-0.6747702360153198, -0.8958072662353516, -0.6747708916664124, -2.9754393100738525]
+  // [-0.08984924107789993, -0.1345764696598053, -0.0898493304848671, -2.2142090797424316]
+
+  // [-514523.21875, 1655145.375, 0.6736140251159668, 0.6669113636016846, 0, 2530825.25, -0.6187666058540344, -0.6126096844673157, 808930.0625, 1052761.875, 0.4284549355506897, 0.4241916537284851, 0, 0, 2.025125741958618, 3]
+  // [-0.6747702360153198, -0.8958072662353516, -0.6747708916664124, -2.9754393100738525]
+  // [-0.08984924107789993, -0.1345764696598053, -0.0898493304848671, -2.2142090797424316]
+
+
+  // out.push(m1[0] * p1[0] + m1[4] * p1[1] + m1[8] * p1[2] + m1[12])
+  // out.push(m1[1] * p1[0] + m1[5] * p1[1] + m1[9] * p1[2] + m1[13])
+  // out.push(m1[2] * p1[0] + m1[6] * p1[1] + m1[10] * p1[2] + m1[14])
+  // out.push(m1[3] * p1[0] + m1[7] * p1[1] + m1[11] * p1[2] + m1[15])
+
+
+
+
+  // Float32Array(16) [-514355.9375, 1244202.125, 0.6738369464874268, 0.6671320199966431, 0, 1903227.125, -0.6185612082481384, -0.612406313419342, 809036.4375, 791018.5, 0.42840105295181274, 0.42413830757141113, 0, 0, 2.025125741958618, 3]
+  // {topLeft: S2Point, topRight: S2Point, bottomLeft: S2Point, bottomRight: S2Point}
+  // Float32Array(4) [0.5365121960639954, -1.0022552013397217, 0.5365127325057983, -2.5663163661956787] Float32Array(4) [1.1216167211532593, -0.43018245697021484, 1.1216177940368652, -1.994243860244751]
+
+  // Float32Array(16) [-514355.96875, 1244202.125, 0.6738369464874268, 0.6671320199966431, 0, 1903227.125, -0.6185612082481384, -0.612406313419342, 809036.4375, 791018.5, 0.42840105295181274, 0.42413830757141113, 0, 0, 2.025125741958618, 3]
+  // {topLeft: S2Point, topRight: S2Point, bottomLeft: S2Point, bottomRight: S2Point}
+  // Float32Array(4) [0.5469361543655396, -1.0022552013397217, 0.5469366908073425, -2.5663163661956787] Float32Array(4) [1.1320406198501587, -0.43018245697021484, 1.1320418119430542, -1.994243860244751]
+
+//   Float32Array(16) [-514355.96875, 1244202.125, 0.6738369464874268, 0.6671320199966431, 0, 1903227.125, -0.6185612082481384, -0.612406313419342, 809036.4375, 791018.5, 0.42840105295181274, 0.42413830757141113, 0, 0, 2.025125741958618, 3]
+  // {topLeft: S2Point, topRight: S2Point, bottomLeft: S2Point, bottomRight: S2Point}
+  // Float32Array(4) [0.5469361543655396, -1.0022552013397217, 0.5469366908073425, -2.5663163661956787] Float32Array(4) [1.1320406198501587, -0.43018245697021484, 1.1320418119430542, -1.994243860244751]
+
+
+  // the zoom determines the number of divisions necessary to maintain a visually
+  // asthetic spherical shape. As we zoom in, the tiles are practically flat,
+  // so division is less useful.
+  // 0, 1 => 16  ;  2, 3 => 8  ;  4, 5 => 4  ;  6, 7 => 2  ;  8+ => 1
+  // context.getMask will have the division set to 16 / level
+  // context stores masks so we don't keep recreating them and put excess stress and memory on the GPU
+  _getMaskSource () {
+    const { context, zoom } = this
+    const level = 1 << Math.max(Math.min(Math.floor(zoom / 2), 4), 0) // max 4 as its level is 16
+    const division = this.division = 16 / level
+    this.sourceData.mask = context.getMask(level, division)
   }
 
   // inject references to featureGuide from each parentTile. Sometimes if we zoom really fast, we inject
@@ -181,19 +285,6 @@ export default class Tile {
       if (this.context.type === 1 && paint) feature.color = (paint.color(null, null, this.zoom)).getRGB()
       this.featureGuide.push(feature)
     }
-  }
-
-  // the zoom determines the number of divisions necessary to maintain a visually
-  // asthetic spherical shape. As we zoom in, the tiles are practically flat,
-  // so division is less useful.
-  // 0, 1 => 16  ;  2, 3 => 8  ;  4, 5 => 4  ;  6, 7 => 2  ;  8+ => 1
-  // context.getMask will have the division set to 16 / level
-  // context stores masks so we don't keep recreating them and put excess stress and memory on the GPU
-  _getMaskSource () {
-    const { context, zoom } = this
-    const level = 1 << Math.max(Math.min(Math.floor(zoom / 2), 4), 0) // max 4 as its level is 16
-    const division = this.division = 16 / level
-    this.sourceData.mask = context.getMask(level, division)
   }
 
   // For default mask geometry OR for future 3D terrain geometry
@@ -258,7 +349,7 @@ export default class Tile {
     if (rasterSource.count === rasterSource.total) this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === sourceName && fg.parent))
   }
 
-  injectVectorSourceData (sourceName: string, vertexArray: Float32Array, indexArray?: Uint32Array,
+  injectVectorSourceData (sourceName: string, vertexArray: Int16Array, indexArray?: Uint32Array,
     codeTypeArray: Uint8Array, featureGuideArray: Float32Array, layers: Array<Layer>): VectorTileSource {
     // Since a parent may have been injected, we need to remove any instances of the said source data.
     // however, ignore data that is pulled from a parent that doesn't exist at this zoom
@@ -292,9 +383,7 @@ export default class Tile {
       // create and store the featureGuide
       const feature = {
         tile: this,
-        faceST: this.faceST,
         layerIndex,
-        source: this.sourceData,
         sourceName,
         count,
         offset,
@@ -347,7 +436,8 @@ export default class Tile {
   injectGlyphSourceData (sourceName: string, glyphFilterVertices: Float32Array,
     glyphFillVertices: Float32Array, glyphFillIndices: Float32Array,
     glyphLineVertices: Float32Array, glyphQuads: Float32Array,
-    layerGuideBuffer: Float32Array, layers: Array<Layer>): GlyphTileSource {
+    glyphColors: Uint8ClampedArray, layerGuideBuffer: Float32Array,
+    layers: Array<Layer>): GlyphTileSource {
     // Since a parent may have been injected, we need to remove any instances of the said source data.
     this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === sourceName))
 
@@ -358,26 +448,26 @@ export default class Tile {
     while (i < lgl) {
       // grab the size, layerIndex, count, and offset, and update the index
       // layerIndex, filterOffset, filterCount, quadOffset, quadCount, codeLength, code
-      const [layerIndex, filterOffset, filterCount, offset, count, encodingSize] = layerGuideBuffer.slice(i, i + 6)
-      i += 6
+      const [layerIndex, type, filterOffset, filterCount, offset, count, encodingSize] = layerGuideBuffer.slice(i, i + 7)
+      i += 7
       // grab the layers type and code
-      const { depthPos, code, lch, interactive } = layers[layerIndex]
+      const { overdraw, depthPos, code, iconCode, lch, interactive } = layers[layerIndex]
       // create and store the featureGuide
       const feature = {
         tile: this,
-        faceST: this.faceST,
         layerIndex,
-        source: this.sourceData,
         sourceName,
         filterOffset,
         filterCount,
         offset,
         count,
         type: 'glyph',
+        glyphType: type === 0 ? 'text' : 'icon',
         depthPos,
         featureCode: new Float32Array(encodingSize ? [...layerGuideBuffer.slice(i, i + encodingSize)] : [0]),
-        layerCode: code,
+        layerCode: type === 0 ? code : iconCode,
         interactive,
+        overdraw,
         lch
       }
       i += encodingSize
@@ -397,7 +487,7 @@ export default class Tile {
     // setup source data
     const glyphSource = this.sourceData[sourceName] = buildGlyphSource(
       this.context, layerGuideBuffer, glyphFilterVertices, glyphFillVertices,
-      glyphFillIndices, glyphLineVertices, glyphQuads
+      glyphFillIndices, glyphLineVertices, glyphQuads, glyphColors
     )
     return glyphSource
   }

@@ -13,7 +13,7 @@ uniform bool u3D;
 
 uniform vec4 uColors[16];
 
-@include "./ST2XYZ.glsl"
+@include "./getPos.glsl"
 
 varying vec4 color;
 

@@ -13,9 +13,9 @@ export default function buildMask (division: number, context: WebGL2Context | We
   // now we can build out the vertices and indices
   // vertices
   for (let j = 0; j <= division; j++) {
-    t = 1 / division * j
+    t = 8192 / division * j
     for (let i = 0; i <= division; i++) {
-      s = 1 / division * i
+      s = 8192 / division * i
       vertices.push(s, t)
     }
   }
@@ -35,7 +35,7 @@ export default function buildMask (division: number, context: WebGL2Context | We
   const mask: VectorTileSource = {
     type: 'vector',
     subType: 'fill',
-    vertexArray: new Float32Array(vertices),
+    vertexArray: new Int16Array(vertices),
     indexArray: new Uint32Array(indices),
     count: indices.length,
     mode: context.gl.TRIANGLE_STRIP

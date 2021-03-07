@@ -40,12 +40,8 @@ export default class TexturePack {
   lineVertices: Array<number> = []
   fillIndices: Array<number> = []
   spaces: { [number | string]: Space } = {}
-  font: Map<string, GlyphStore> // familyName -> GlyphStore
-  glyphs: Map<string, Glyph> // 'family:char' -> Glyph
-  constructor () {
-    this.font = new Map()
-    this.glyphs = new Map()
-  }
+  glyphStores: Map<string, GlyphStore> = new Map() // familyName -> GlyphStore
+  glyphs: Map<string, Glyph> = new Map() // 'family:char' -> Glyph
 
   // upon creating a new tile, we can clear out vertices and indices as we don't need
   // to build those glyphs again
@@ -55,27 +51,50 @@ export default class TexturePack {
     this.fillIndices = []
   }
 
-  addFont (familyName: string, pbf: ArrayBuffer, opts: GlyphSetOptions) {
-    this.font.set(familyName, {
-      glyphSet: new GlyphSet(pbf),
-      size: (opts.size) ? opts.size : 34,
-      sdfMaxSize: (opts.sdfMaxSize) ? opts.sdfMaxSize : 4
+  addGlyphStore (familyName: string, pbf: ArrayBuffer, opts: GlyphSetOptions) {
+    const glyphSet = new GlyphSet(pbf)
+    this.glyphStores.set(familyName, {
+      glyphSet,
+      size: glyphSet.glyphSize,
+      sdfMaxSize: glyphSet.sdfMaxSize
     })
   }
 
-  getGlyph (family: string, char: string): typeof undefined | Glyph {
-    const key = `${family}:${char}`
+  // get list of glyph-color pairs, build glyphs, return the pairs
+  getFeatures (family: string, field: string) {
+    let width = 1
+    const glyphs = []
+    if (this.glyphStores.has(family)) {
+      const { glyphSet } = this.glyphStores.get(family)
+      if (glyphSet.has(field)) {
+        const { features } = glyphSet.get(field)
+        const { ratio } = glyphSet.get('' + features[0].glyphID)
+        width = ratio
+        for (const { glyphID, colorID } of features) {
+          // create color
+          const color = glyphSet.get(colorID)
+          // store
+          glyphs.push(['' + glyphID, color])
+        }
+      }
+    }
+
+    return [width, glyphs]
+  }
+
+  getGlyph (family: string, glyphID: string): typeof undefined | Glyph {
+    const key = `${family}:${glyphID}`
     // check if we've already built the glyph, otherwise build and replace
     if (this.glyphs.has(key)) {
       return this.glyphs.get(key)
-    } else if (this.font.has(family)) { // $FlowIgnore - flow just being ignorant
-      const { glyphSet, size, sdfMaxSize } = this.font.get(family)
-      // look for the char, build
-      if (glyphSet.has(char)) {
-        const gData = glyphSet.get(char)
-        let { yOffset, advanceWidth } = gData
+    } else if (this.glyphStores.has(family)) { // $FlowIgnore - flow just being ignorant
+      const { glyphSet, size, sdfMaxSize } = this.glyphStores.get(family)
+      // look for the glyphID, build
+      if (glyphSet.has(glyphID)) {
+        const gData = glyphSet.get(glyphID)
+        let { yOffset, advanceWidth, ratio } = gData
         // store the glyph to the texture
-        const glyph = this._addGlyphToTexture(key, advanceWidth, yOffset, size, sdfMaxSize)
+        const glyph = this._addGlyphToTexture(key, !isNaN(advanceWidth) ? advanceWidth : ratio, yOffset, size, sdfMaxSize)
         const { bbox } = glyph
         // now build the path using offset as a guide
         const offset = [bbox[0], bbox[1] + (yOffset * size) + 1]

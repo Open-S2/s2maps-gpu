@@ -512,26 +512,26 @@
       "layer": "place",
       "type": "glyph",
       "layout": {
-        "family": [
+        "text-family": [
           "data-condition",
           ["class", "has", ["Town", "Hamlet"]],
           "roboto-regular",
           "default",
           "roboto-medium"
         ],
-        "field": [
+        "text-field": [
           "data-condition",
           ["class", "has", ["Indian Reservation", "Hamlet", "Village", "Neighbourhood", "Island"]],
           "?!Uname",
           "default",
           "?name"
         ],
-        "anchor": "center",
-        "offset": [0, 0],
-        "padding": [1, 1]
+        "text-anchor": "center",
+        "text-offset": [0, 0],
+        "text-padding": [1, 1]
       },
       "paint": {
-        "size": [
+        "text-size": [
           "data-condition",
           ["class", "==", "City"],
           [
@@ -582,7 +582,7 @@
           "default",
           18
         ],
-        "fill": [
+        "text-fill": [
           "data-condition",
           ["class", "==", "Indian Reservation"],
           "#9f8f7e",
@@ -593,8 +593,8 @@
           "default",
           "#b7babe"
         ],
-        "stroke": "#2b2d2e",
-        "strokeWidth": 0.3
+        "text-stroke": "#2b2d2e",
+        "text-strokeWidth": 0.3
       }
     },
     {
@@ -604,8 +604,8 @@
       "layer": "place",
       "type": "glyph",
       "layout": {
-        "family": "roboto-medium",
-        "field": [
+        "text-family": "roboto-medium",
+        "text-field": [
           "data-condition",
           ["class", "==", "State"],
           [
@@ -620,12 +620,12 @@
           "default",
           "?name"
         ],
-        "anchor": "center",
-        "offset": [0, 0],
-        "padding": [1, 1]
+        "text-anchor": "center",
+        "text-offset": [0, 0],
+        "text-padding": [1, 1]
       },
       "paint": {
-        "size": [
+        "text-size": [
           "data-condition",
           ["class", "==", "Country"],
           [
@@ -654,15 +654,15 @@
           "default",
           14
         ],
-        "fill": [
+        "text-fill": [
           "data-condition",
           ["class", "==", "Country"],
           "#6c6f73",
           "default",
           "rgba(173, 178, 183, 0.75)"
         ],
-        "stroke": "#262b2f",
-        "strokeWidth": 0.3
+        "text-stroke": "#262b2f",
+        "text-strokeWidth": 0.3
       }
     }
   ]
