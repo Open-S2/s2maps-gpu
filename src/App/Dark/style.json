@@ -2,16 +2,16 @@
   "version": 1,
   "name": "s2test",
   "center": [-122.444700, 37.780739],
-  "zoom": 9.2,
+  "zoom": 0,
   "minzoom": 0,
   "maxzoom": 20,
   "sources": {
     "world": "https://s3.s2maps.io/streets-v1"
   },
   "fonts": {
-    "default": "https://s3.s2maps.io/fonts-v2/default",
-    "roboto-regular": "https://s3.s2maps.io/fonts-v2/RobotoRegular",
-    "roboto-medium": "https://s3.s2maps.io/fonts-v2/RobotoMedium"
+    "default": "https://s3.s2maps.io/fonts-v3/default",
+    "roboto-regular": "https://s3.s2maps.io/fonts-v3/RobotoRegular",
+    "roboto-medium": "https://s3.s2maps.io/fonts-v3/RobotoMedium"
   },
   "shade": false,
   "colorBlind": false,

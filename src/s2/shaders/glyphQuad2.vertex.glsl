@@ -3,7 +3,7 @@ precision highp float;
 
 #define MIN_SDF_SIZE 0.08
 
-@nomangle layout location draw buf vTexcoord color texture shouldDraw uIsIcon
+@nomangle layout location draw buf stroke vTexcoord color texture shouldDraw uIsIcon
 
 layout (location = 0) in vec2 aUV; // float [u, v]
 layout (location = 1) in vec2 aST; // float [s, t]                   (INSTANCED)
@@ -18,13 +18,13 @@ out float draw;
 out float buf;
 out vec2 vTexcoord;
 out vec4 color;
+out vec4 stroke;
 
 // glyph texture
 uniform bool uIsIcon;
 uniform bool uOverdraw;
 uniform vec2 uTexSize;
 uniform vec2 uAspect;
-uniform bool uIsFill;
 uniform bool uInteractive;
 uniform float uDevicePixelRatio;
 // The glyph filter texture.
@@ -37,6 +37,8 @@ uniform sampler2D uFeatures;
 void main () {
   vec4 glPos;
   if (uFaceST[1] < 12.) {
+    vec4 zero = getZero();
+    zero.xyz /= zero.w;
     // prep xyz
     vec4 xyz = STtoXYZ(aST);
     // for points, add a little to ensure it doesn't get clipped
@@ -45,6 +47,7 @@ void main () {
     glPos = uMatrix * xyz;
     glPos.xyz /= glPos.w;
     glPos.w = 1.;
+    if (glPos.z > zero.z) return;
   } else {
     glPos = getPosLocal(aST);
   }
@@ -79,13 +82,14 @@ void main () {
       ? aColor
       : decodeFeature(true, index, featureIndex);
 
-  if (uIsIcon) color.rgb *= color.a;
+  color.rgb *= color.a;
 
   // prep texture read buffer
   buf = 0.49;
-  if (!uIsFill && !uIsIcon) {
+  if (!uIsIcon) {
     strokeWidth = decodeFeature(false, index, featureIndex)[0] * uDevicePixelRatio * 2.;
-    color = decodeFeature(true, index, featureIndex);
+    stroke = decodeFeature(true, index, featureIndex);
+    stroke.rgb *= stroke.a;
     if (strokeWidth > 0.) {
       buf = clamp((MIN_SDF_SIZE - buf) * strokeWidth + buf, MIN_SDF_SIZE, buf); // deltaY / deltaX + y-intercept
     }

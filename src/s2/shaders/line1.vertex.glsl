@@ -4,6 +4,8 @@ precision highp float;
 precision mediump float;
 #endif
 
+@nomangle vWidth vNorm vCenter vColor vDrawType uDevicePixelRatio aType aPrev aCurr aNext
+
 attribute float aType;
 attribute vec2 aPrev; //   (INSTANCED)
 attribute vec2 aCurr; //   (INSTANCED)
@@ -18,7 +20,6 @@ attribute vec2 aNext; //   (INSTANCED)
 // 5 -> curr + (currNormal) + check ccw
 // 6 -> curr + (prevNormal) + check ccw
 
-uniform mat4 uMatrix;
 uniform vec2 uAspect;
 uniform float uDevicePixelRatio;
 uniform float uCap; // 0 -> butt ; 1 -> round ; 2 -> square
@@ -57,10 +58,10 @@ void main () {
   // explain width to fragment shader
   vWidth = vec2(width, 0.);
   // get the position in projected space
-  curr = uMatrix * STtoXYZ(aCurr);
-  next = uMatrix * STtoXYZ(aNext);
-  prev = uMatrix * STtoXYZ(aPrev);
-  zero = uMatrix * vec4(0., 0., 0., 1.);
+  curr = getPos(aCurr);
+  next = getPos(aNext);
+  prev = getPos(aPrev);
+  zero = getZero();
   // adjust by w & get the position in screen space
   curr.xyz /= curr.w;
   next.xyz /= next.w;

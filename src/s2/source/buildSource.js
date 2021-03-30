@@ -11,17 +11,6 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
     source.vao = gl.createVertexArray()
     // and make it the one we're currently working with
     gl.bindVertexArray(source.vao)
-    // RADII
-    if (source.radiiArray) {
-      // Create a vertex buffer
-      source.radiiBuffer = gl.createBuffer()
-      // Bind and buffer
-      gl.bindBuffer(gl.ARRAY_BUFFER, source.radiiBuffer)
-      gl.bufferData(gl.ARRAY_BUFFER, source.radiiArray, gl.STATIC_DRAW)
-      // setup radii attribute
-      gl.enableVertexAttribArray(6)
-      gl.vertexAttribPointer(6, 1, gl.FLOAT, false, 0, 0)
-    }
     // FEATURE INDEX
     if (source.codeTypeArray && source.codeTypeArray.length) {
       // Create the feature index buffer
@@ -63,15 +52,17 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
 
       // if heatmap, we encode the "indexArray"
       // Create a weight buffer
-      source.weightBuffer = gl.createBuffer()
-      // bind and buffer
-      gl.bindBuffer(gl.ARRAY_BUFFER, source.weightBuffer)
-      gl.bufferData(gl.ARRAY_BUFFER, source.indexArray, gl.STATIC_DRAW)
-      // link weights to attribute position 2
-      gl.enableVertexAttribArray(2)
-      gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 4, 0)
-      // make our aWeight instanced
-      gl.vertexAttribDivisor(2, 1)
+      if (source.subType === 'heatmap') {
+        source.weightBuffer = gl.createBuffer()
+        // bind and buffer
+        gl.bindBuffer(gl.ARRAY_BUFFER, source.weightBuffer)
+        gl.bufferData(gl.ARRAY_BUFFER, source.indexArray, gl.STATIC_DRAW)
+        // link weights to attribute position 2
+        gl.enableVertexAttribArray(2)
+        gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 4, 0)
+        // make our aWeight instanced
+        gl.vertexAttribDivisor(2, 1)
+      }
 
       // create default triangle set
       // [[-1, -1], [1, -1], [-1, 1]]  &  [[1, -1], [1, 1], [-1, 1]]

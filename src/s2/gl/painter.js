@@ -1,5 +1,4 @@
 // @flow
-/* global HTMLCanvasElement */
 import Style from '../style'
 /** CONTEXTS **/
 import { WebGL2Context, WebGLContext } from './contexts'
@@ -349,7 +348,7 @@ export default class Painter {
       // set faceST & layercode, bind vao, and draw
       program.setFaceST(faceST)
       program.setTilePos(bottom, top)
-      program.setLayerCode(layerCode)
+      if (layerCode) program.setLayerCode(layerCode)
       gl.bindVertexArray(featureSource.vao)
       program.drawTexture(feature, featureSource)
     }

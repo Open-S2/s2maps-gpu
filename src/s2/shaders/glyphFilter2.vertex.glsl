@@ -77,8 +77,8 @@ void main () {
     // check if point exists, that means it passed the depth test
     int id = int(aID);
     ivec3 colorID = ivec3(float(id & 255), float((id >> 8) & 255), float(id >> 16));
-    vec2 pPos = vec2(glPos.xy);
-    vec4 point = texture(uPoints, vec2(pPos / 2. + 0.5));
+    vec2 pPos = vec2(glPos.xy / 2. + 0.5);
+    vec4 point = texture(uPoints, pPos);
     if (colorID == ivec3(point.rgb * 256.)) {
       // prep the index and featureIndex
       int index = 0;
@@ -117,7 +117,9 @@ void main () {
       for (int i = 0; i < curIndex; i++) {
         vec4 bbox = getBbox(i);
         // if any of these bbox's overlap, than we should not render
-        if (bbox.x == 0. && bbox.z == 0.) {
+        if (i >= curIndex) {
+          break;
+        } else if (bbox.x == 0. && bbox.z == 0.) {
           continue;
         } else if (overlap(curBbox, bbox)) {
           color = vec4(0.);

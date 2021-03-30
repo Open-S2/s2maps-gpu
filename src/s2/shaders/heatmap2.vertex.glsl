@@ -9,7 +9,6 @@ precision highp float;
 layout (location = 0) in vec2 aExtent; // the quad
 layout (location = 1) in vec2 aPos; // STPoint positional data
 layout (location = 2) in float aWeight; // user inputed weight
-layout (location = 6) in float aRadius; // world sphere radial adjust
 
 out vec2 vExtent;
 out float vOpacity;

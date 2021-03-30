@@ -1,5 +1,4 @@
 // @flow
-/* global createImageBitmap Worker */
 import type S2Map from '../s2Map'
 import requestData from '../util/fetch'
 
@@ -15,6 +14,7 @@ const AVAILABLE_LOGICAL_PROCESSES = Math.floor((window.navigator.hardwareConcurr
 class WorkerPool {
   workerCount: number = Math.max(Math.min(AVAILABLE_LOGICAL_PROCESSES, 6), 1)
   workers: Array<Worker> = []
+  webP: boolean = document.createElement('canvas').toDataURL('image/webp').indexOf('data:image/webp') === 0
   maps: { [string]: S2Map } = {} // MapID: S2Map
   constructor () {
     for (let i = 0; i < this.workerCount; i++) { // $FlowIgnore
@@ -55,8 +55,9 @@ class WorkerPool {
   }
 
   injectStyle (mapID: string, style: StylePackage) {
-    const totalWorkers = this.workers.length
-    this.workers.forEach((worker, id) => { worker.postMessage({ mapID, type: 'style', style, id, totalWorkers }) })
+    const { workers, webP } = this
+    const totalWorkers = workers.length
+    this.workers.forEach((worker, id) => { worker.postMessage({ mapID, type: 'style', style, id, webP, totalWorkers }) })
   }
 
   tileRequest (mapID: string, tiles: Array<TileRequest>) {

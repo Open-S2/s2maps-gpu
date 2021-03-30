@@ -1,20 +1,20 @@
 #version 300 es
 precision highp float;
 
-@define GAMMA 0.09
+@define GAMMA_TEXT 0.105
 @define GAMMA_ICON 0.0525
 @define MIN_ALPHA 0.078125 // 20. / 256.
 
-@nomangle draw buf vTexcoord color texture uGlyphTex uIsIcon
+@nomangle draw buf stroke vTexcoord color texture uGlyphTex uIsIcon
 
 // Passed in from the vertex shader.
 in float draw;
 in float buf;
 in vec2 vTexcoord;
 in vec4 color;
+in vec4 stroke;
 
 uniform bool uIsIcon;
-uniform bool uColor;
 // The glyph texture.
 uniform sampler2D uGlyphTex;
 
@@ -25,23 +25,19 @@ void main () {
     fragColor = color;
   } else if (uIsIcon) {
     vec4 tex = texture(uGlyphTex, vTexcoord);
-    float mid = smoothstep(buf - GAMMA_ICON, buf + GAMMA_ICON, (tex.r + tex.g + tex.b + tex.a) / 4.);
-    if (mid < MIN_ALPHA) discard;
-    fragColor = color * mid;
+    float opacityT = smoothstep(0.49 - GAMMA_ICON, 0.49 + GAMMA_ICON, (tex.r + tex.g + tex.b + tex.a) / 4.);
+    if (opacityT < MIN_ALPHA) discard;
+    fragColor = color * opacityT;
   } else {
     vec4 tex = texture(uGlyphTex, vTexcoord);
-    float green = smoothstep(buf - GAMMA, buf + GAMMA, tex.g);
-    float mid = smoothstep(buf - GAMMA, buf + GAMMA, (tex.r + tex.b) / 2.);
-    float alpha = smoothstep(buf - GAMMA, buf + GAMMA, tex.a);
-    if (mid < MIN_ALPHA) discard;
-    // Average the energy over the pixels on either side
-    vec4 rgba = vec4(
-  		green,
-  		mid,
-  		alpha,
-  		0.
-  	);
-
-    fragColor = (!uColor) ? 1. - (rgba * color.a) : color * rgba;
+    float avg = (tex.r + tex.g + tex.b + tex.a) / 4.;
+    float opacityT = smoothstep(buf - GAMMA_TEXT, buf + GAMMA_TEXT, avg);
+    if (opacityT < MIN_ALPHA) discard;
+    if (buf == 0.49) {
+      fragColor = color * opacityT;
+    } else {
+      float opacityS = smoothstep(0.49 - GAMMA_TEXT, 0.49 + GAMMA_TEXT, avg);
+      fragColor = (opacityS == 0.) ? mix(stroke, vec4(0.), 1. - opacityT) : mix(color, stroke, opacityT - opacityS);
+    }
   }
 }

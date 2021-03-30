@@ -4,6 +4,8 @@ precision highp float;
 precision mediump float;
 #endif
 
+@nomangle aPos aPar aLimits aScale vPar vLimits vDistScale vColor
+
 attribute vec2 aPos;
 attribute vec2 aPar;
 attribute vec2 aLimits;

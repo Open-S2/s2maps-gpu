@@ -1,15 +1,15 @@
 {
-  "version": 1,
-  "name": "s2test",
-  "center": [-122.4585607773497, 37.778443127730476],
-  "zoom": 0,
+  "version": 2,
+  "name": "s2maps-streets",
+  "center": [-111.851217, 40.739061],
+  "zoom": 12,
   "minzoom": 0,
   "maxzoom": 20,
   "sources": {
     "streets-v2": "http://192.168.0.112:8000/data/streets-v2",
-    "terrain": "http://192.168.0.188:8000/data/terrain",
-    "landcover": "http://192.168.0.188:8000/data/landcover",
-    "buildings": "http://192.168.0.188:8000/data/buildings"
+    "terrain": "http://localhost:8000/data/terrain",
+    "landcover": "http://localhost:8000/data/landcover",
+    "buildings": "http://192.168.0.112:8000/data/buildings"
   },
   "fonts": {
     "default": "https://s3.s2maps.io/fonts-v3/default",
@@ -45,7 +45,7 @@
           9,
           "#f0e9d7",
           13,
-          "rgb(232,232,232)",
+          "#e8e8e8",
           14,
           "#f8f9fa"
         ]
@@ -57,7 +57,7 @@
       "layer": "landcover",
       "type": "fill",
       "minzoom": 0,
-      "maxzoom": 4,
+      "maxzoom": 3,
       "opaque": true,
       "layout": {},
       "paint": {
@@ -97,7 +97,7 @@
           "quarry", "retail", "urban", "pitch"]
         ]
       ],
-      "minzoom": 5,
+      "minzoom": 4,
       "layout": {},
       "paint": {
         "color": [
@@ -302,6 +302,112 @@
       }
     },
     {
+      "name": "motor_trunk_borders_tunnel",
+      "source": "streets-v2",
+      "layer": "transport",
+      "filter": [
+        "and",
+        ["tunnel", "==", true],
+        ["class", "==", "highway"],
+        ["type", "has", ["motorway", "motorway_link", "trunk", "trunk_link"]]
+      ],
+      "type": "line",
+      "minzoom": 2,
+      "layout": {
+        "cap": "round",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "#afafaf",
+        "width": [
+          "data-condition",
+          ["type", "has", ["motorway_link", "trunk_link"]],
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            2,
+            1.33,
+            7,
+            1.66,
+            10,
+            2.66,
+            13,
+            8.66
+          ],
+          "default",
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            2,
+            2,
+            7,
+            2.5,
+            10,
+            4,
+            13,
+            13
+          ]
+        ]
+      }
+    },
+    {
+      "name": "motor_trunk_tunnel",
+      "source": "streets-v2",
+      "layer": "transport",
+      "filter": [
+        "and",
+        ["tunnel", "==", true],
+        ["class", "==", "highway"],
+        ["type", "has", ["motorway", "motorway_link", "trunk", "trunk_link"]]
+      ],
+      "type": "line",
+      "minzoom": 4,
+      "layout": {
+        "cap": "round",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "#e3e3e3",
+        "width": [
+          "data-condition",
+          ["type", "has", ["motorway_link", "trunk_link"]],
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            2,
+            0.66,
+            7,
+            0.833,
+            10,
+            1,
+            13,
+            6.66
+          ],
+          "default",
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            2,
+            1,
+            7,
+            1.25,
+            10,
+            1.5,
+            13,
+            10
+          ]
+        ]
+      }
+    },
+    {
       "name": "transport_borders",
       "source": "streets-v2",
       "layer": "transport",
@@ -358,51 +464,13 @@
       }
     },
     {
-      "name": "transport_secondary_borders",
+      "name": "transport_primary_secondary_borders",
       "source": "streets-v2",
       "layer": "transport",
       "filter": [
         "and",
         ["class", "==", "highway"],
-        ["type", "has", ["secondary", "secondary_link"]]
-      ],
-      "type": "line",
-      "minzoom": 7,
-      "layout": {
-        "cap": [
-          "input-range",
-          "zoom",
-          "step",
-          0,
-          "butt",
-          12,
-          "round"
-        ],
-        "join": "bevel"
-      },
-      "paint": {
-        "color": "rgb(218, 220, 224)",
-        "width": [
-          "input-range",
-          "zoom",
-          "lin",
-          7,
-          1,
-          12,
-          7,
-          15,
-          19
-        ]
-      }
-    },
-    {
-      "name": "transport_primary_borders",
-      "source": "streets-v2",
-      "layer": "transport",
-      "filter": [
-        "and",
-        ["class", "==", "highway"],
-        ["type", "has", ["primary", "primary_link"]]
+        ["type", "has", ["primary", "primary_link", "secondary", "secondary_link"]]
       ],
       "type": "line",
       "minzoom": 5,
@@ -413,23 +481,53 @@
           "step",
           0,
           "butt",
-          10,
+          11,
           "round"
         ],
         "join": "bevel"
       },
       "paint": {
-        "color": "#f9ca4a",
+        "color": [
+          "data-condition",
+          ["tunnel", "==", true],
+          "#afafaf",
+          ["type", "has", ["primary", "primary_link"]],
+          "#f9ca4a",
+          "default",
+          "#dadce0"
+        ],
         "width": [
-          "input-range",
-          "zoom",
-          "lin",
-          7,
-          2,
-          10,
-          4,
-          13,
-          15
+          "data-condition",
+          ["type", "has", ["primary", "primary_link"]],
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            2,
+            2,
+            7,
+            2.5,
+            10,
+            4,
+            13,
+            13
+          ],
+          "default",
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            2,
+            2,
+            7,
+            2.5,
+            10,
+            4,
+            13,
+            13
+          ]
         ]
       }
     },
@@ -619,51 +717,13 @@
       }
     },
     {
-      "name": "transport-secondary",
-      "source": "streets-v2",
-      "layer": "transport",
-      "filter": [
-        "and",
-        ["class", "==", "highway"],
-        ["type", "has", ["secondary", "secondary_link"]]
-      ],
-      "type": "line",
-      "minzoom": 7,
-      "layout": {
-        "cap": [
-          "input-range",
-          "zoom",
-          "step",
-          0,
-          "butt",
-          12,
-          "round"
-        ],
-        "join": "bevel"
-      },
-      "paint": {
-        "color": "rgb(255, 255, 255)",
-        "width": [
-          "input-range",
-          "zoom",
-          "lin",
-          7,
-          1,
-          12,
-          4,
-          15,
-          15
-        ]
-      }
-    },
-    {
       "name": "transport-primary",
       "source": "streets-v2",
       "layer": "transport",
       "filter": [
         "and",
         ["class", "==", "highway"],
-        ["type", "has", ["primary", "primary_link"]]
+        ["type", "has", ["primary", "primary_link", "secondary", "secondary_link"]]
       ],
       "type": "line",
       "minzoom": 5,
@@ -674,23 +734,49 @@
           "step",
           0,
           "butt",
-          10,
+          11,
           "round"
         ],
         "join": "bevel"
       },
       "paint": {
-        "color": "#fbefb2",
+        "color": [
+          "data-condition",
+          ["tunnel", "==", true],
+          "#e3e3e3",
+          ["type", "has", ["primary", "primary_link"]],
+          "#fbefb2",
+          "default",
+          "#ffffff"
+        ],
         "width": [
-          "input-range",
-          "zoom",
-          "lin",
-          7,
-          1,
-          10,
-          3,
-          13,
-          12.5
+          "data-condition",
+          ["type", "has", ["primary", "primary_link"]],
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            7,
+            1,
+            10,
+            1.5,
+            13,
+            10
+          ],
+          "default",
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            7,
+            1,
+            10,
+            1.5,
+            13,
+            10
+          ]
         ]
       }
     },
@@ -700,6 +786,8 @@
       "layer": "transport",
       "filter": [
         "and",
+        ["or", ["layer", "==", null], ["layer", "<=", 0]],
+        ["tunnel", "!=", true],
         ["class", "==", "highway"],
         ["type", "has", ["motorway", "motorway_link", "trunk", "trunk_link"]]
       ],
@@ -728,17 +816,37 @@
           "#f1b743"
         ],
         "width": [
-          "input-range",
-          "zoom",
-          "lin",
-          2,
-          2,
-          7,
-          2.5,
-          10,
-          4,
-          13,
-          12.5
+          "data-condition",
+          ["type", "has", ["motorway_link", "trunk_link"]],
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            2,
+            1.33,
+            7,
+            1.66,
+            10,
+            2.66,
+            13,
+            8.66
+          ],
+          "default",
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            2,
+            2,
+            7,
+            2.5,
+            10,
+            4,
+            13,
+            13
+          ]
         ]
       }
     },
@@ -748,11 +856,13 @@
       "layer": "transport",
       "filter": [
         "and",
+        ["or", ["layer", "==", null], ["layer", "<=", 0]],
+        ["tunnel", "!=", true],
         ["class", "==", "highway"],
         ["type", "has", ["motorway", "motorway_link", "trunk", "trunk_link"]]
       ],
       "type": "line",
-      "minzoom": 2,
+      "minzoom": 5,
       "layout": {
         "cap": [
           "input-range",
@@ -776,17 +886,433 @@
           "#fde293"
         ],
         "width": [
+          "data-condition",
+          ["type", "has", ["motorway_link", "trunk_link"]],
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            2,
+            0.66,
+            7,
+            0.833,
+            10,
+            1,
+            13,
+            6.66
+          ],
+          "default",
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            2,
+            1,
+            7,
+            1.25,
+            10,
+            1.5,
+            13,
+            10
+          ]
+        ]
+      }
+    },
+    {
+      "name": "motor_trunk_borders_1",
+      "source": "streets-v2",
+      "layer": "transport",
+      "filter": [
+        "and",
+        ["layer", "==", 1],
+        ["tunnel", "!=", true],
+        ["class", "==", "highway"],
+        ["type", "has", ["motorway", "motorway_link", "trunk", "trunk_link"]]
+      ],
+      "type": "line",
+      "minzoom": 2,
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": [
+          "input-range",
+          "zoom",
+          "lin",
+          10,
+          "#f9ca4a",
+          12,
+          "#f1b743"
+        ],
+        "width": [
+          "data-condition",
+          ["type", "has", ["motorway_link", "trunk_link"]],
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            2,
+            1.33,
+            7,
+            1.66,
+            10,
+            2.66,
+            13,
+            8.66
+          ],
+          "default",
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            2,
+            2,
+            7,
+            2.5,
+            10,
+            4,
+            13,
+            13
+          ]
+        ]
+      }
+    },
+    {
+      "name": "motor_trunk_1",
+      "source": "streets-v2",
+      "layer": "transport",
+      "filter": [
+        "and",
+        ["layer", "==", 1],
+        ["tunnel", "!=", true],
+        ["class", "==", "highway"],
+        ["type", "has", ["motorway", "motorway_link", "trunk", "trunk_link"]]
+      ],
+      "type": "line",
+      "minzoom": 4,
+      "layout": {
+        "cap": [
+          "input-range",
+          "zoom",
+          "step",
+          0,
+          "butt",
+          10,
+          "round"
+        ],
+        "join": "bevel"
+      },
+      "paint": {
+        "color": [
           "input-range",
           "zoom",
           "lin",
           2,
-          1,
+          "#f9ca4a",
           7,
-          1.25,
+          "#fde293"
+        ],
+        "width": [
+          "data-condition",
+          ["type", "has", ["motorway_link", "trunk_link"]],
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            2,
+            0.66,
+            7,
+            0.833,
+            10,
+            1,
+            13,
+            6.66
+          ],
+          "default",
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            2,
+            1,
+            7,
+            1.25,
+            10,
+            1.5,
+            13,
+            10
+          ]
+        ]
+      }
+    },
+    {
+      "name": "motor_trunk_borders_2",
+      "source": "streets-v2",
+      "layer": "transport",
+      "filter": [
+        "and",
+        ["layer", "==", 2],
+        ["tunnel", "!=", true],
+        ["class", "==", "highway"],
+        ["type", "has", ["motorway", "motorway_link", "trunk", "trunk_link"]]
+      ],
+      "type": "line",
+      "minzoom": 2,
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": [
+          "input-range",
+          "zoom",
+          "lin",
           10,
-          1.5,
-          13,
-          10
+          "#f9ca4a",
+          12,
+          "#f1b743"
+        ],
+        "width": [
+          "data-condition",
+          ["type", "has", ["motorway_link", "trunk_link"]],
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            2,
+            1.33,
+            7,
+            1.66,
+            10,
+            2.66,
+            13,
+            8.66
+          ],
+          "default",
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            2,
+            2,
+            7,
+            2.5,
+            10,
+            4,
+            13,
+            13
+          ]
+        ]
+      }
+    },
+    {
+      "name": "motor_trunk_2",
+      "source": "streets-v2",
+      "layer": "transport",
+      "filter": [
+        "and",
+        ["layer", "==", 2],
+        ["tunnel", "!=", true],
+        ["class", "==", "highway"],
+        ["type", "has", ["motorway", "motorway_link", "trunk", "trunk_link"]]
+      ],
+      "type": "line",
+      "minzoom": 4,
+      "layout": {
+        "cap": [
+          "input-range",
+          "zoom",
+          "step",
+          0,
+          "butt",
+          10,
+          "round"
+        ],
+        "join": "bevel"
+      },
+      "paint": {
+        "color": [
+          "input-range",
+          "zoom",
+          "lin",
+          2,
+          "#f9ca4a",
+          7,
+          "#fde293"
+        ],
+        "width": [
+          "data-condition",
+          ["type", "has", ["motorway_link", "trunk_link"]],
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            2,
+            0.66,
+            7,
+            0.833,
+            10,
+            1,
+            13,
+            6.66
+          ],
+          "default",
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            2,
+            1,
+            7,
+            1.25,
+            10,
+            1.5,
+            13,
+            10
+          ]
+        ]
+      }
+    },
+    {
+      "name": "motor_trunk_borders_3",
+      "source": "streets-v2",
+      "layer": "transport",
+      "filter": [
+        "and",
+        ["layer", ">=", 3],
+        ["tunnel", "!=", true],
+        ["class", "==", "highway"],
+        ["type", "has", ["motorway", "motorway_link", "trunk", "trunk_link"]]
+      ],
+      "type": "line",
+      "minzoom": 2,
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": [
+          "input-range",
+          "zoom",
+          "lin",
+          10,
+          "#f9ca4a",
+          12,
+          "#f1b743"
+        ],
+        "width": [
+          "data-condition",
+          ["type", "has", ["motorway_link", "trunk_link"]],
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            2,
+            1.33,
+            7,
+            1.66,
+            10,
+            2.66,
+            13,
+            8.66
+          ],
+          "default",
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            2,
+            2,
+            7,
+            2.5,
+            10,
+            4,
+            13,
+            13
+          ]
+        ]
+      }
+    },
+    {
+      "name": "motor_trunk_3",
+      "source": "streets-v2",
+      "layer": "transport",
+      "filter": [
+        "and",
+        ["layer", ">=", 3],
+        ["tunnel", "!=", true],
+        ["class", "==", "highway"],
+        ["type", "has", ["motorway", "motorway_link", "trunk", "trunk_link"]]
+      ],
+      "type": "line",
+      "minzoom": 4,
+      "layout": {
+        "cap": [
+          "input-range",
+          "zoom",
+          "step",
+          0,
+          "butt",
+          10,
+          "round"
+        ],
+        "join": "bevel"
+      },
+      "paint": {
+        "color": [
+          "input-range",
+          "zoom",
+          "lin",
+          2,
+          "#f9ca4a",
+          7,
+          "#fde293"
+        ],
+        "width": [
+          "data-condition",
+          ["type", "has", ["motorway_link", "trunk_link"]],
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            2,
+            0.66,
+            7,
+            0.833,
+            10,
+            1,
+            13,
+            6.66
+          ],
+          "default",
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            2,
+            1,
+            7,
+            1.25,
+            10,
+            1.5,
+            13,
+            10
+          ]
         ]
       }
     },
@@ -904,6 +1430,7 @@
       "layer": "place",
       "type": "glyph",
       "interactive": true,
+      "maxzoom": 12,
       "cursor": "pointer",
       "layout": {
         "text-family": "roboto-medium",
@@ -1002,6 +1529,7 @@
       "name": "places",
       "source": "streets-v2",
       "minzoom": 4,
+      "maxzoom": 13,
       "filter": ["class", "has", ["city", "town", "village", "hamlet", "neighbourhood", "island", "suburb"]],
       "layer": "place",
       "type": "glyph",
@@ -1037,7 +1565,7 @@
             9,
             20,
             13,
-            32
+            38
           ],
           ["class", "==", "town"],
           [

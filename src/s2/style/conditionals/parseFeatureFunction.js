@@ -20,7 +20,7 @@ export default function parseFeatureFunction (input: any, attr: string) {
       const data = [conditionType, ...input]
       return () => data
     }
-  } else if (attr === 'color' || attr === 'fill' || attr === 'stroke') {
+  } else if (attr === 'color' || attr === 'stroke' || attr === 'text-fill' || attr === 'text-stroke') {
     const color = new Color(input)
     return () => color
   } else { return () => input }

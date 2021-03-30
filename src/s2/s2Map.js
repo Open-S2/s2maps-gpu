@@ -1,5 +1,4 @@
 // @flow
-/* global HTMLElement HTMLCanvasElement ResizeObserver TouchEvent WheelEvent MouseEvent */
 import type Map, { MapOptions } from './ui/map'
 import type MapWorker from './workers/map.worker.js'
 

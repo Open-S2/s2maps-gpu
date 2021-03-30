@@ -1,5 +1,4 @@
 // @flow
-/* global WebGLVertexArrayObject WebGLBuffer */
 import buildMask from '../../source/buildMask'
 import type { VectorTileSource } from '../../source/tile'
 

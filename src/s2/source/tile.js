@@ -1,5 +1,4 @@
 // @flow
-/* global WebGLBuffer WebGLTexture WebGLVertexArrayObject GLenum Image */
 import Context from '../gl/contexts'
 import buildSource, { buildGlyphSource } from './buildSource'
 import * as mat4 from '../util/mat4'
@@ -151,10 +150,10 @@ export default class Tile {
     const { face, bbox } = this
 
     this.corners = {
-      topLeft: S2Point.fromSTGL(face, bbox[0], bbox[3]).normalize(),
-      topRight: S2Point.fromSTGL(face, bbox[2], bbox[3]).normalize(),
-      bottomLeft: S2Point.fromSTGL(face, bbox[0], bbox[1]).normalize(),
-      bottomRight: S2Point.fromSTGL(face, bbox[2], bbox[1]).normalize()
+      topLeft: S2Point.fromSTGL(face, bbox[0], bbox[3]).normalize().mul(6371008.8),
+      topRight: S2Point.fromSTGL(face, bbox[2], bbox[3]).normalize().mul(6371008.8),
+      bottomLeft: S2Point.fromSTGL(face, bbox[0], bbox[1]).normalize().mul(6371008.8),
+      bottomRight: S2Point.fromSTGL(face, bbox[2], bbox[1]).normalize().mul(6371008.8)
     }
     // setup bottom and top
     this.bottom = new Float32Array(4)
@@ -180,50 +179,39 @@ export default class Tile {
       this.top[1] = tlY
       this.top[2] = trX
       this.top[3] = trY
-      // if (this.zoom === 20 && this.x === 32521 && this.y === 154489) {
-      //   console.log(' ')
-      //   console.log(matrix)
-      //   console.log(this.corners)
-      //   console.log(this.bottom, this.top)
-      //   console.log(' ')
-      // }
+      if (this.zoom === 17 && this.x === 3536 && this.y === 33785) {
+        console.log(' ')
+        console.log(matrix)
+        console.log(this.corners)
+        console.log(this.bottom, this.top)
+        console.log(' ')
+      }
     }
   }
 
-  // bottomLeft: S2Point {x: -0.6669109129486108, y: 0.6126092575484308, z: -0.42419303595887914}
-  // bottomRight: S2Point {x: -0.6669115843854817, y: 0.6126082308739295, z: -0.4241934630306802}
-  // topLeft: S2Point {x: -0.6669113220653836, y: 0.6126096333538308, z: -0.42419185001964294}
-  // topRight: S2Point {x: -0.6669119935034901, y: 0.6126086066794564, z: -0.42419227709077395}
+  // matrix: [-0.003514099633321166, 0.013845833018422127, 0.000007028890195215354, 0, 0, 0.017302338033914566, -0.0000065301010181428865, 0, 0.008758896961808205, 0.0055549959652125835, 0.000002820014969984186, 0, 0, 0, 0.06371008604764938, 1]
+  // bottomLeft: S2Point {x: -4478104.029470242, y: 4160294.237316001, z: -1796744.0802393358}
+  // bottomRight: S2Point {x: -4478144.718492576, y: 4160243.388781791, z: -1796760.4058448884}
+  // topLeft: S2Point {x: -4478117.434056253, y: 4160306.690582288, z: -1796681.8351547744}
+  // topRight: S2Point {x: -4478158.123443983, y: 4160255.8421221753, z: -1796698.16029249}
+  // 778a17a8-c24e-457d-a500-4288e2261009:5335 Float32Array(4) [-0.9925376176834106, -1.1695327758789062, -0.9925466179847717, -2.7033934593200684] Float32Array(4) [-0.40023428201675415, -0.7938886880874634, -0.40023791790008545, -2.3277504444122314]
 
-  // [-514523.21875, 1655145.375, 0.6736140251159668, 0.6669113636016846, 0, 2530825.25, -0.6187666058540344, -0.6126096844673157, 808930.0625, 1052761.875, 0.4284549057483673, 0.4241916537284851, 0, 0, 2.025125741958618, 3]
-  // [-0.6747702360153198, -0.8958072662353516, -0.6747708916664124, -2.9754393100738525]
-  // [-0.08984924107789993, -0.1345764696598053, -0.0898493304848671, -2.2142090797424316]
+  // out.push(matrix[0] * vector[0] + matrix[4] * vector[1] + matrix[8] * vector[2] + matrix[12])
+  // out.push(matrix[1] * vector[0] + matrix[5] * vector[1] + matrix[9] * vector[2] + matrix[13])
+  // out.push(matrix[2] * vector[0] + matrix[6] * vector[1] + matrix[10] * vector[2] + matrix[14])
+  // out.push(matrix[3] * vector[0] + matrix[7] * vector[1] + matrix[11] * vector[2] + matrix[15])
 
-  // [-514523.21875, 1655145.375, 0.6736140251159668, 0.6669113636016846, 0, 2530825.25, -0.6187666058540344, -0.6126096844673157, 808930.0625, 1052761.875, 0.4284549355506897, 0.4241916537284851, 0, 0, 2.025125741958618, 3]
-  // [-0.6747702360153198, -0.8958072662353516, -0.6747708916664124, -2.9754393100738525]
-  // [-0.08984924107789993, -0.1345764696598053, -0.0898493304848671, -2.2142090797424316]
+  // [4, 17, 3536, 33785, 103542719481]
 
-
-  // out.push(m1[0] * p1[0] + m1[4] * p1[1] + m1[8] * p1[2] + m1[12])
-  // out.push(m1[1] * p1[0] + m1[5] * p1[1] + m1[9] * p1[2] + m1[13])
-  // out.push(m1[2] * p1[0] + m1[6] * p1[1] + m1[10] * p1[2] + m1[14])
-  // out.push(m1[3] * p1[0] + m1[7] * p1[1] + m1[11] * p1[2] + m1[15])
-
-
-
-
-  // Float32Array(16) [-514355.9375, 1244202.125, 0.6738369464874268, 0.6671320199966431, 0, 1903227.125, -0.6185612082481384, -0.612406313419342, 809036.4375, 791018.5, 0.42840105295181274, 0.42413830757141113, 0, 0, 2.025125741958618, 3]
-  // {topLeft: S2Point, topRight: S2Point, bottomLeft: S2Point, bottomRight: S2Point}
-  // Float32Array(4) [0.5365121960639954, -1.0022552013397217, 0.5365127325057983, -2.5663163661956787] Float32Array(4) [1.1216167211532593, -0.43018245697021484, 1.1216177940368652, -1.994243860244751]
-
-  // Float32Array(16) [-514355.96875, 1244202.125, 0.6738369464874268, 0.6671320199966431, 0, 1903227.125, -0.6185612082481384, -0.612406313419342, 809036.4375, 791018.5, 0.42840105295181274, 0.42413830757141113, 0, 0, 2.025125741958618, 3]
-  // {topLeft: S2Point, topRight: S2Point, bottomLeft: S2Point, bottomRight: S2Point}
-  // Float32Array(4) [0.5469361543655396, -1.0022552013397217, 0.5469366908073425, -2.5663163661956787] Float32Array(4) [1.1320406198501587, -0.43018245697021484, 1.1320418119430542, -1.994243860244751]
-
-//   Float32Array(16) [-514355.96875, 1244202.125, 0.6738369464874268, 0.6671320199966431, 0, 1903227.125, -0.6185612082481384, -0.612406313419342, 809036.4375, 791018.5, 0.42840105295181274, 0.42413830757141113, 0, 0, 2.025125741958618, 3]
-  // {topLeft: S2Point, topRight: S2Point, bottomLeft: S2Point, bottomRight: S2Point}
-  // Float32Array(4) [0.5469361543655396, -1.0022552013397217, 0.5469366908073425, -2.5663163661956787] Float32Array(4) [1.1320406198501587, -0.43018245697021484, 1.1320418119430542, -1.994243860244751]
-
+  // matrix: [-0.00374555098824203, 0.014757266268134117, 7.028954751575611e-9, 0, 0, 0.018441857770085335, -6.529997431670154e-9, 0, 0.009335617534816265, 0.005920775234699249, 2.8200928259281e-9, 0, 0, 0, 0.06371008604764938, 1]
+  //
+  // bottomLeft: S2Point {x: -4478104.029470242, y: 4160294.237316001, z: -1796744.0802393358}
+  // bottomRight: S2Point {x: -4478144.718492576, y: 4160243.388781791, z: -1796760.4058448884}
+  // topLeft: S2Point {x: -4478117.434056253, y: 4160306.690582288, z: -1796681.8351547744}
+  // topRight: S2Point {x: -4478158.123443983, y: 4160255.8421221753, z: -1796698.16029249}
+  //
+  // bottom: [-0.7485679984092712, 0.8632135987281799, -0.7485748529434204, -0.7716467976570129]
+  // top: [-0.11726416647434235, 1.2635990381240845, -0.1172652319073677, -0.3712625801563263]
 
   // the zoom determines the number of divisions necessary to maintain a visually
   // asthetic spherical shape. As we zoom in, the tiles are practically flat,
@@ -236,27 +224,6 @@ export default class Tile {
     const level = 1 << Math.max(Math.min(Math.floor(zoom / 2), 4), 0) // max 4 as its level is 16
     const division = this.division = 16 / level
     this.sourceData.mask = context.getMask(level, division)
-  }
-
-  // inject references to featureGuide from each parentTile. Sometimes if we zoom really fast, we inject
-  // a parents' parent or deeper, so we need to reflect that int the tile property. The other case
-  // is the tile wants to display a layer that exists in a 'lower' zoom than this one.
-  injectParentTile (parentTile: Tile, permParent: boolean, filterLayers?: Array<number>) {
-    // const foundLayers = new Set()
-    // for (const feature of parentTile.featureGuide) {
-    //   const { maskLayer, type, parent, layerIndex } = feature
-    //   if (maskLayer) continue // ignore mask features
-    //   if (!parent) foundLayers.add(layerIndex)
-    //   if (type !== 'glyph') this.featureGuide.push({ ...feature, tile: this, permParent })
-    // }
-    // // if filterLayers, we need to check what layers were missing
-    // if (filterLayers) {
-    //   const missingLayers = filterLayers.filter(layerIndex => !foundLayers.has(layerIndex))
-    //   for (const missingLayer of missingLayers) {
-    //     if (!parentTile.childrenRequests[missingLayer]) parentTile.childrenRequests[missingLayer] = []
-    //     parentTile.childrenRequests[missingLayer].push(this)
-    //   }
-    // }
   }
 
   injectMaskLayers (layers: Array<Layer>) {
@@ -307,7 +274,7 @@ export default class Tile {
   // four children (if size is 512 and images are 512, otherwise we may store
   // 16 images of 256). Create a texture of size length x length to house
   // said data (length being this.size * 2).
-  injectRasterData (sourceName: string, layerIndexs: Array<number>, image: Image,
+  injectRasterData (sourceName: string, layerIndexes: Array<number>, image: Image,
     leftShift: number, bottomShift: number) {
     const { gl } = this.context
     const length = image.width
@@ -324,11 +291,11 @@ export default class Tile {
       }
       buildSource(this.context, rasterSource)
       // store texture information to featureGuide
-      for (const layerIndex of layerIndexs) {
+      for (const layerIndex of layerIndexes) {
         const guide = {
           tile: this,
           faceST: this.faceST,
-          layerIndex: layerIndex,
+          layerIndex,
           source: this.sourceData,
           sourceName: 'mask',
           subType: 'fill',
@@ -345,15 +312,10 @@ export default class Tile {
     gl.bindTexture(gl.TEXTURE_2D, texture)
     gl.texSubImage2D(gl.TEXTURE_2D, 0, leftShift * length, bottomShift * length, gl.RGBA, gl.UNSIGNED_BYTE, image)
     rasterSource.count++
-    // Since a parent may have been injected, we need to remove any instances of the said source data.
-    if (rasterSource.count === rasterSource.total) this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === sourceName && fg.parent))
   }
 
   injectVectorSourceData (sourceName: string, vertexArray: Int16Array, indexArray?: Uint32Array,
     codeTypeArray: Uint8Array, featureGuideArray: Float32Array, layers: Array<Layer>): VectorTileSource {
-    // Since a parent may have been injected, we need to remove any instances of the said source data.
-    // however, ignore data that is pulled from a parent that doesn't exist at this zoom
-    this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === sourceName && !fg.permParent))
     // store a reference to the source
     const subType = sourceName.split(':').pop()
     const vectorSource = this.sourceData[sourceName] = {
@@ -406,6 +368,10 @@ export default class Tile {
         i++
         feature.featureCode = new Float32Array(subEncodingSize ? [...featureGuideArray.slice(i, i + subEncodingSize)] : [0])
         i += subEncodingSize
+        // if (subType === 'fill') {
+        //   feature.color = feature.subFeatureCode.slice(0, 4)
+        //   feature.opacity = feature.subFeatureCode[4]
+        // } else if (subType === 'line') {
         if (subType === 'line') {
           feature.color = feature.subFeatureCode.slice(0, 4)
           feature.width = feature.subFeatureCode[4]
@@ -414,10 +380,11 @@ export default class Tile {
           feature.radius = feature.subFeatureCode[4]
           feature.stroke = feature.subFeatureCode.slice(5, 9)
           feature.strokeWidth = feature.subFeatureCode[9]
+          feature.opacity = feature.subFeatureCode[10]
         } else if (subType === 'heatmap') {
-          feature.radius = feature.subFeatureCode[0]
-          feature.opacity = feature.subFeatureCode[1]
-          feature.intensity = feature.subFeatureCode[2]
+          feature.intensity = feature.subFeatureCode[0]
+          feature.radius = feature.subFeatureCode[1]
+          feature.opacity = feature.subFeatureCode[2]
         }
       }
       // store
@@ -425,7 +392,7 @@ export default class Tile {
       else this.featureGuide.push(feature)
       // if a lower zoom tile needs this feature, we add
       const childRequest = this.childrenRequests[layerIndex]
-      if (childRequest && childRequest.length) for (const tile of childRequest) tile.featureGuide.push({ ...feature, tile, parent: this, permParent: true })
+      if (childRequest && childRequest.length) for (const tile of childRequest) tile.featureGuide.push({ ...feature, tile, parent: this })
     }
     // build the VAO
     buildSource(this.context, vectorSource)
@@ -438,9 +405,6 @@ export default class Tile {
     glyphLineVertices: Float32Array, glyphQuads: Float32Array,
     glyphColors: Uint8ClampedArray, layerGuideBuffer: Float32Array,
     layers: Array<Layer>): GlyphTileSource {
-    // Since a parent may have been injected, we need to remove any instances of the said source data.
-    this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === sourceName))
-
     // LayerCode: layerIndex, offset, count, codeLength, code
     // we work off the layerGuideBuffer, adding to the buffer as we go
     const lgl = layerGuideBuffer.length

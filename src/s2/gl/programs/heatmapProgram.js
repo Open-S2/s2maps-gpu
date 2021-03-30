@@ -1,5 +1,4 @@
 // @flow
-/* global WebGLUniformLocation */
 import Program from './program'
 
 // WEBGL1
@@ -27,7 +26,7 @@ export default class HeatmapProgram extends Program {
     // get gl from context
     const { gl, type, devicePixelRatio } = context
     // if webgl1, setup attribute locations
-    if (type === 1) gl.attributeLocations = { aExtent: 0, aPos: 1, aRadius: 6 }
+    if (type === 1) gl.attributeLocations = { aExtent: 0, aPos: 1 }
     // inject Program
     super(context)
     const self = this
@@ -130,7 +129,7 @@ export default class HeatmapProgram extends Program {
     const { context } = this
     const { gl, type } = context
     // get current source data
-    let { count, featureCode, radius, opacity, intensity, offset, mode } = featureGuide
+    let { count, featureCode, intensity, radius, opacity, offset, mode } = featureGuide
     // ensure proper blend state
     context.oneBlend()
     // ensure we are not stencil, cull, or depth testing
@@ -138,9 +137,9 @@ export default class HeatmapProgram extends Program {
     context.disableDepthTest()
     // set feature code (webgl 1 we store the colors, webgl 2 we store layerCode lookups)
     if (type === 1) {
-      if (radius) gl.uniform1f(this.uRadius, radius)
-      if (opacity) gl.uniform1f(this.uOpacity, opacity)
-      if (intensity) gl.uniform1f(this.uIntensity, intensity)
+      gl.uniform1f(this.uIntensity, intensity)
+      gl.uniform1f(this.uRadius, radius)
+      gl.uniform1f(this.uOpacity, opacity)
     } else { this.setFeatureCode(featureCode) }
     // setup offsets and draw
     gl.bindBuffer(gl.ARRAY_BUFFER, source.vertexBuffer)

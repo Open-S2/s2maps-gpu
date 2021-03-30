@@ -1,5 +1,4 @@
 // @flow
-/* global WebGLUniformLocation */
 import Program from './program'
 
 // WEBGL1
@@ -10,15 +9,16 @@ import vert2 from '../../shaders/fill2.vertex.glsl'
 import frag2 from '../../shaders/fill2.fragment.glsl'
 
 import type { Context } from '../contexts'
-import type { FeatureGuide, VectorTileSource } from '../../source/tile'
+import type { FeatureGuide } from '../../source/tile'
 
 export default class FillProgram extends Program {
   uColors: WebGLUniformLocation
+  uOpacity: WebGLUniformLocation
   constructor (context: Context) {
     // get gl from context
     const { gl, type } = context
     // if webgl1, setup attribute locations
-    if (type === 1) gl.attributeLocations = { aPos: 0, aRadius: 6, aIndex: 7 }
+    if (type === 1) gl.attributeLocations = { aPos: 0, aIndex: 7 }
     // inject Program
     super(context)
     const self = this
@@ -35,13 +35,12 @@ export default class FillProgram extends Program {
       })
   }
 
-  draw (featureGuide: FeatureGuide, source: VectorTileSource) {
+  draw (featureGuide: FeatureGuide) {
     // grab context
     const { context } = this
     const { gl, type } = context
     // get current source data
-    let { count, depthPos, featureCode, color, offset, mode } = featureGuide
-    const { threeD } = source
+    let { count, depthPos, featureCode, color, opacity, offset, mode } = featureGuide
     // ensure proper blend state
     context.defaultBlend()
     // adjust to current depthPos
@@ -52,11 +51,11 @@ export default class FillProgram extends Program {
     } else { context.resetDepthRange() }
     // ensure culling
     context.enableCullFace()
-    // set 3D uniform
-    this.set3D(threeD)
     // set feature code (webgl 1 we store the colors, webgl 2 we store layerCode lookups)
     if (type === 1) {
       if (color) gl.uniform4fv(this.uColors, color, 0, color.length)
+      if (opacity) gl.uniform1f(this.uOpacity, opacity)
+      else gl.uniform1f(this.uOpacity, 1)
     } else if (featureCode) { this.setFeatureCode(featureCode) }
     // draw elements
     gl.drawElements(mode || gl.TRIANGLES, count, gl.UNSIGNED_INT, (offset | 0) * 4)

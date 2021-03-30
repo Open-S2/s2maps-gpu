@@ -1,5 +1,4 @@
 // @flow
-/* global WebGLUniformLocation */
 import Program from './program'
 
 // WEBGL1
@@ -19,10 +18,8 @@ export default class GlyphQuadProgram extends Program {
   uStroke: WebGLUniformLocation
   uStrokeWidth: WebGLUniformLocation
   uTexSize: WebGLUniformLocation
-  uIsFill: WebGLUniformLocation
   uIsIcon: WebGLUniformLocation
   uFeatures: WebGLUniformLocation
-  uColor: WebGLUniformLocation
   uGlyphTex: WebGLUniformLocation
   glyphFilterProgram: Program
   glyphProgram: Program
@@ -62,17 +59,6 @@ export default class GlyphQuadProgram extends Program {
     this.glyphProgram = glyphProgram
   }
 
-  setColor (color?: boolean) {
-    this.gl.uniform1i(this.uColor, color)
-  }
-
-  setFill (state: boolean) {
-    if (this.isFill !== state) {
-      this.isFill = state
-      this.gl.uniform1i(this.uIsFill, state)
-    }
-  }
-
   setOverdraw (state: boolean) {
     if (this.filter !== state) {
       this.filter = state
@@ -90,9 +76,6 @@ export default class GlyphQuadProgram extends Program {
   draw (featureGuide: FeatureGuide, source: GlyphTileSource, interactive: boolean = false) {
     const { gl, context, glyphFilterProgram } = this
     const { type } = context
-    // ensure glyphFilterProgram's result texture is set
-    gl.activeTexture(gl.TEXTURE0)
-    glyphFilterProgram.bindResultTexture()
     // pull out the appropriate data from the source
     const { overdraw, glyphType, depthPos, featureCode, offset, count, size, fill, stroke, strokeWidth } = featureGuide
     const { textureID, glyphQuadBuffer, glyphColorBuffer } = source
@@ -100,15 +83,21 @@ export default class GlyphQuadProgram extends Program {
     const { texSize, texture } = this.glyphProgram.getFBO(textureID)
     // WebGL1 - set paint properties; WebGL2 - set feature code
     if (type === 1) {
-      gl.uniform1f(this.uSize, size)
-      gl.uniform4fv(this.uFill, fill)
-      gl.uniform4fv(this.uStroke, stroke)
-      gl.uniform1f(this.uStrokeWidth, strokeWidth)
+      if (!isNaN(size)) gl.uniform1f(this.uSize, size)
+      if (fill && fill.length) gl.uniform4fv(this.uFill, fill)
+      if (stroke && stroke.length) gl.uniform4fv(this.uStroke, stroke)
+      if (!isNaN(strokeWidth)) gl.uniform1f(this.uStrokeWidth, strokeWidth)
     } else { this.setFeatureCode(featureCode) }
     // turn stencil testing off
     context.stencilFunc(0)
     // ensure proper z-testing state
     context.enableDepthTest()
+    // set depth type
+    if (interactive) context.lessDepth()
+    else context.lequalDepth()
+    context.setDepthRange(depthPos)
+    // use default blending
+    context.defaultBlend()
     // set overdraw
     this.setOverdraw(overdraw)
     // set draw type
@@ -118,6 +107,9 @@ export default class GlyphQuadProgram extends Program {
     // bind the correct glyph texture
     gl.activeTexture(gl.TEXTURE1)
     gl.bindTexture(gl.TEXTURE_2D, texture)
+    // ensure glyphFilterProgram's result texture is set
+    gl.activeTexture(gl.TEXTURE0)
+    glyphFilterProgram.bindResultTexture()
     // apply the appropriate offset in the source vertexBuffer attribute
     gl.bindBuffer(gl.ARRAY_BUFFER, glyphQuadBuffer)
     gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 44, 0 + (offset * 44)) // s, t
@@ -128,46 +120,7 @@ export default class GlyphQuadProgram extends Program {
     gl.vertexAttribPointer(6, 1, gl.FLOAT, false, 44, 40 + (offset * 44)) // id
     gl.bindBuffer(gl.ARRAY_BUFFER, glyphColorBuffer)
     gl.vertexAttribPointer(7, 4, gl.UNSIGNED_BYTE, true, 4, offset * 4)
-    // interactive is just for fills
-    if (interactive) {
-      this.setFill(true)
-      context.defaultBlend()
-      context.lessDepth()
-      // gl.blendEquation(gl.MAX)
-      // context.setDepthRange(depthPos + 3)
-      gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count)
-    } else if (glyphType === 'icon') {
-      context.defaultBlend()
-      context.lequalDepth()
-      this.setFill(true)
-      this.setColor(true)
-      gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count)
-    } else {
-      context.lessDepth()
-      /** DRAW STROKE **/
-      this.setFill(false)
-      this.setColor(false)
-      context.zeroBlend()
-      context.setDepthRange(depthPos)
-      gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count)
-      this.setColor(true)
-      context.oneBlend()
-      context.setDepthRange(depthPos + 1)
-      gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count)
-      /** DRAW STROKE **/
-      /** DRAW FILL **/
-      this.setFill(true)
-      this.setColor(false)
-      context.zeroBlend()
-      context.setDepthRange(depthPos + 2)
-      gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count)
-      this.setColor(true)
-      context.oneBlend()
-      context.setDepthRange(depthPos + 3)
-      gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count)
-      /** DRAW FILL **/
-    }
-    // reset to active texture 0
-    gl.activeTexture(gl.TEXTURE0)
+    // draw
+    gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count)
   }
 }

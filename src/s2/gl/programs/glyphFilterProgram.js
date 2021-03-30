@@ -1,5 +1,4 @@
 // @flow
-/* global WebGLUniformLocation WebGLFramebuffer WebGLUniformLocation WebGLTexture WebGLRenderbuffer */
 import Program from './program'
 
 // WEBGL1
@@ -29,6 +28,8 @@ export default class GlyphFilterProgram extends Program {
   constructor (context: Context) {
     // get gl from context
     const { gl, type, devicePixelRatio } = context
+    // if webgl1, setup attribute locations
+    if (type === 1) gl.attributeLocations = { aStep: 0, aST: 1, aXY: 2, aPad: 3, aWidth: 4, aIndex: 5, aID: 6 }
     // inject Program
     super(context)
     const self = this

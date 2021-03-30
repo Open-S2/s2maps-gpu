@@ -9,8 +9,8 @@ export default function parseFilter (filter: undefined | Array<string | Array<an
   if (!andOr) {
     const [key, condition, value] = filter
     const filterLambda = parseFilterCondition(condition, value)
-    return (properties) => {
-      if (properties && properties[key] != null) return filterLambda(properties[key])
+    return (properties: Object = {}) => {
+      return filterLambda(properties[key])
     }
   }
   // first create all conditionals
@@ -29,19 +29,19 @@ export default function parseFilter (filter: undefined | Array<string | Array<an
   // if or, join all conditionals into an array, if "or" as soon as we see a true, return true
   // if "and" than ensure all cases return true
   if (andOr === 'or') {
-    return (properties: Object) => {
+    return (properties: Object = {}) => {
       for (const condition of conditionals) {
         if (condition.key) {
-          if (properties[condition.key] != null && condition.condition(properties[condition.key])) return true
+          if (condition.condition(properties[condition.key])) return true
         } else if (condition.condition(properties)) return true
       }
       return false
     }
   } else { // andOr === 'and'
-    return (properties: Object) => {
+    return (properties: Object = {}) => {
       for (const condition of conditionals) {
         if (condition.key) {
-          if (properties[condition.key] == null || !condition.condition(properties[condition.key])) return false
+          if (!condition.condition(properties[condition.key])) return false
         } else if (!condition.condition(properties)) return false
       }
       return true
@@ -51,8 +51,10 @@ export default function parseFilter (filter: undefined | Array<string | Array<an
 
 function parseFilterCondition (condition: string, value: string | number | Array<string | number>): Function {
   // manage multiple conditions
-  if (condition === '==') return (input) => input === value // ["class", "==", "ocean"] OR ["elev", "==", 50]
-  else if (condition === '!=') return (input) => input !== value // ["class", "!=", "ocean"] OR ["elev", "!=", 50]
+  // eslint-disable-next-line
+  if (condition === '==') return (input) => input == value // ["class", "==", "ocean"] OR ["elev", "==", 50]
+  // eslint-disable-next-line
+  else if (condition === '!=') return (input) => input != value // ["class", "!=", "ocean"] OR ["elev", "!=", 50]
   else if (condition === '>') return (input) => input > value // ["elev", ">", 50]
   else if (condition === '>=') return (input) => input >= value // ["elev", ">=", 50]
   else if (condition === '<') return (input) => input < value // ["elev", "<", 50]

@@ -7,6 +7,7 @@
 /src/index.js
 /src/serviceWorker.js
 /build
+/tmp
 # misc
 .DS_Store
 .env

@@ -1,5 +1,4 @@
 // @flow
-/* global Event */
 
 type TouchEvent = {
   length: number,

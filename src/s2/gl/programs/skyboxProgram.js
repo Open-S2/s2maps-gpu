@@ -1,5 +1,4 @@
 // @flow
-/* global createImageBitmap GLint WebGLTexture */
 import Program from './program'
 import Map from '../../ui/map'
 import requestData from '../../util/fetch'
@@ -72,8 +71,7 @@ export default class SkyboxProgram extends Program {
 
   draw (wallpaper: Wallpaper) {
     // setup variables
-    const { context } = this
-    const { gl } = context
+    const { gl, context } = this
     // if renderable, time to draw
     if (this.renderable) {
       // ignore z-fighting and only pass where stencil is 0

@@ -1,5 +1,7 @@
 precision highp float;
 
+@nomangle vST vColor
+
 varying vec2 vST;
 varying vec4 vColor;
 

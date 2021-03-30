@@ -1,5 +1,4 @@
 // @flow
-/* global WebGL2RenderingContext */
 import Context from './context'
 
 import type { MapOptions } from '../../ui/map'

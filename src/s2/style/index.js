@@ -1,5 +1,4 @@
 // @flow
-/* global postMessage */
 import Color from './color'
 import Map from '../ui/map'
 import { Wallpaper, Skybox, Tile } from '../source'
@@ -85,7 +84,7 @@ export default class Style {
       const layer = style.layers[i]
       layer.layerIndex = i
       if (!layer.minzoom) layer.minzoom = 0
-      if (!layer.maxzoom) layer.maxzoom = 30
+      if (!layer.maxzoom) layer.maxzoom = 20
       if (!layer.layer) layer.layer = 'default'
       if (layer.source === 'mask') this.maskLayers.push(layer)
       if (layer.interactive) this.interactive = true
@@ -108,14 +107,9 @@ export default class Style {
   }
 
   _sendStyleDataToWorkers (style: Object) {
+    const { sources, fonts, icons, layers, minzoom, maxzoom } = style
     // now that we have various source data, package up the style objects we need and send it off:
-    let stylePackage = {
-      glType: this.glType,
-      sources: style.sources,
-      fonts: style.fonts,
-      icons: style.icons,
-      layers: style.layers
-    }
+    let stylePackage = { glType: this.glType, sources, fonts, icons, layers, minzoom, maxzoom }
     // If the map engine is running on the main thread, directly send the stylePackage to the worker pool.
     // Otherwise perhaps this map instance is a web worker and has a global instance of postMessage
     if (this.webworker) {
@@ -158,18 +152,13 @@ export default class Style {
       // TODO: if bad layer, remove
       programs.add(layer.type)
       // add depth position
-      if (type === 'fill' || type === 'line' || type === 'point' || type === 'heatmap') {
-        layer.depthPos = depthPos
-        depthPos++
-      } else if (type === 'glyph') {
-        layer.depthPos = depthPos
-        depthPos += 4
-      }
+      layer.depthPos = depthPos
+      depthPos++
+      // order layers for GPU
+      orderLayer(layer)
       // if webgl2 or greater, we build layerCode
       if (this.glType > 1) {
         const code = []
-        // order layers for GPU
-        orderLayer(layer)
         // LAYOUTS
         for (let key in layer.layout) {
           if (key === 'cap' || key === 'join') continue

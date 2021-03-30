@@ -1,6 +1,5 @@
 // @flow
-import { VectorFeature } from 's2-vector-tile'
-import { coalesceField, coalesceAnchor } from './'
+import { coalesceField } from './'
 
 import type { GlyphObject } from './glyph'
 import type { IDGen } from '../../tile.worker'
@@ -32,12 +31,10 @@ export type Glyph = {
   children: Array<Glyph>
 }
 
-export default function preprocessGlyph (feature: VectorFeature, code: Array<number>,
-  zoom: number, layer: Layer, layerIndex: number, extent: number, glyphs: Array<GlyphObject>,
-  webgl1: boolean, idGen: IDGen, interactiveMap: Map<number, Object>) {
-  // grab geometry, property, and layer data
-  const geometry: Array<Point> = feature.loadGeometry()
-  const { properties } = feature
+export default function preprocessGlyph (geometry: Array<Point>, properties: Object,
+  code: Array<number>, zoom: number, layer: Layer, layerIndex: number, extent: number,
+  glyphs: Array<GlyphObject>, webgl1: boolean, idGen: IDGen, interactiveMap: Map<number, Object>) {
+  // grab layer data
   const { name, cursor, source, paint, layoutLocal, paintLocal, interactive, overdraw } = layer
 
   for (const type of ['text', 'icon']) {
@@ -59,7 +56,7 @@ export default function preprocessGlyph (feature: VectorFeature, code: Array<num
     if (webgl1) {
       featureCode = [size]
       if (type === 'text') {
-        size.push(
+        featureCode.push(
           ...(paint[`text-fill`](null, properties, zoom)).getRGB(),
           ...(paint[`text-stroke`](null, properties, zoom)).getRGB(),
           paint[`text-strokeWidth`](null, properties, zoom)

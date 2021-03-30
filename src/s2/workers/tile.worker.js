@@ -1,7 +1,5 @@
 // @flow
 /* eslint-env worker */
-/* global createImageBitmap postMessage Blob OffscreenCanvas onmessage */
-import S2JsonVT from 's2json-vt'
 import { S2Rtin, terrainToGrid } from 's2rtin'
 import { VectorTile } from 's2-vector-tile'
 import { parseLayers } from '../style/conditionals'
@@ -10,7 +8,7 @@ import {
   preprocessLine, postprocessLine,
   preprocessPoint, postprocessPoint,
   preprocessGlyph, postprocessGlyph, GlyphBuilder,
-  buildTile, postInteractiveData
+  buildTile, postInteractiveData, scaleShiftClip, S2JsonVT
 } from './process'
 import requestData from '../util/fetch'
 import { tileHash } from 's2projection'
@@ -21,15 +19,6 @@ import type { Glyph } from './process'
 
 const { userAgent } = navigator
 const IS_CHROME: boolean = userAgent.indexOf('Chrome') > -1
-const IS_FIREFOX: boolean = userAgent.indexOf('Firefox') > -1
-const IS_SAFARI: boolean = userAgent.indexOf('Safari') > -1
-let IS_MAC_BIG_SUR_PLUS: boolean = false
-if (IS_SAFARI) {
-  let macosx = navigator.userAgent.split('Mac OS X')
-  if (macosx[1]) IS_MAC_BIG_SUR_PLUS = (+navigator.userAgent.split('Mac OS X')[1].split('_')[0]) >= 11
-}
-const IS_OPERA: boolean = userAgent.indexOf('OP') > -1
-const WEBP_COMPATIBLE: boolean = IS_CHROME || IS_FIREFOX || IS_OPERA || IS_MAC_BIG_SUR_PLUS
 const BROTLI_COMPATIBLE: boolean = true
 
 export type CancelTileRequest = Array<number> // hashe IDs of tiles e.g. ['204', '1003', '1245', ...]
@@ -47,14 +36,16 @@ export type TileRequest = {
   size: number
 }
 
+export type ParentLayer = {
+  face: Face,
+  zoom: number,
+  x: number,
+  y: number,
+  layers: Array<number>
+}
+
 export type ParentLayers = {
-  [string | number]: { // tileHash:
-    face: Face,
-    zoom: number,
-    x: number,
-    y: number,
-    layers: Array<number>
-  }
+  [string | number]: ParentLayer
 }
 
 export type Feature = {
@@ -95,6 +86,7 @@ export const MAX_FEATURE_BATCH_SIZE = 1 << 7
 
 export default class TileWorker {
   id: number
+  webP: boolean
   maps: { [string]: StylePackage } = {} // mapID: StylePackage
   status: 'building' | 'ready' = 'ready'
   cache: { [string]: Array<TileRequest> } = {} // mapID: TileRequests
@@ -103,16 +95,18 @@ export default class TileWorker {
 
   onMessage ({ data }) {
     const { mapID, type } = data
-    if (type === 'style') this._styleMessage(mapID, data.style, data.id, data.totalWorkers)
+    if (type === 'style') this._styleMessage(mapID, data.style, data.id, data.webP, data.totalWorkers)
     else if (type === 'request') this._requestMessage(mapID, data.tiles)
     else if (type === 'status') postMessage({ type: 'status', status: this.status })
     else if (type === 'buildMesh') this._buildMesh(mapID, data.zoom, data.tileID, this.maps[mapID].sources[data.sourceName].s2rtin, { width: data.tileSize, height: data.tileSize, data: new Uint8ClampedArray(data.dem) })
     else if (type === 'cancel') this._cancelTiles(mapID, data.tiles)
   }
 
-  _styleMessage (mapID: string, style: StylePackage, id: number, totalWorkers: number) {
+  _styleMessage (mapID: string, style: StylePackage, id: number, webP: boolean, totalWorkers: number) {
     // set id
     this.id = id
+    // set that we can use webP or not
+    this.webP = webP
     // setup idGenerator
     if (!this.idGen) this.idGen = { num: id + 1, startNum: id + 1, incrSize: totalWorkers, maxNum: ID_MAX_SIZE }
     // set status
@@ -171,7 +165,7 @@ export default class TileWorker {
         promises.push(new Promise((resolve, reject) => {
           if (fileType === 's2json' || fileType === 'geojson' || fileType === 'json') { // s2json request
             fileName = fileName.split('.').slice(0, -1).join('.')
-            requestData(fileName, fileType, (json) => {
+            requestData(fileName, fileType, json => {
               if (!json) reject(new Error(`Request failed: "${fileName}.${fileType}"`))
               // create an S2JsonVT object
               if (json) {
@@ -183,7 +177,7 @@ export default class TileWorker {
               resolve()
             })
           } else { // standard metadata request
-            requestData(`${fileName}/metadata`, 'json', (metadata) => {
+            requestData(`${fileName}/metadata`, 'json', metadata => {
               if (!metadata) reject(new Error(`Request failed: "${fileName}/metadata"`))
               // build & add proper path to metadata if it does not exist
               if (!metadata.path) metadata.path = source
@@ -204,7 +198,7 @@ export default class TileWorker {
     // build fonts
     const fontIcons = { ...fonts, ...icons }
     for (const name in fontIcons) {
-      promises.push(new Promise((resolve, reject) => {
+      promises.push(new Promise(resolve => {
         requestData(fontIcons[name], BROTLI_COMPATIBLE ? 'pbf.br' : 'pbf', glyphPack => {
           // build the glyphPack
           if (glyphPack) style.glyphBuilder.addGlyphStore(name, glyphPack)
@@ -225,7 +219,7 @@ export default class TileWorker {
     // if mask type, we create an S2Rtin in prep
     if (source.type === 'mask') source.s2rtin = new S2Rtin(source.tileSize)
     // if we have a WebP image source, but the browser doesn't support WebP, use the fallback
-    if (source.fileType === 'webp' && !WEBP_COMPATIBLE) source.fileType = source.fallback
+    if (source.fileType === 'webp' && !this.webP) source.fileType = source.fallback
   }
 
   _checkCache () {
@@ -242,7 +236,6 @@ export default class TileWorker {
   }
 
   async requestTiles (mapID: string, sourceName: string, source: Object, tiles: Array<TileRequest>) { // tile: [face, zoom, x, y]
-    // console.log('REQUEST PROCESS', this.id, tiles)
     const self = this
     const { type, path, fileType, extension, minzoom, maxzoom, facesbounds, s2json } = source
     for (const tile of tiles) {
@@ -257,10 +250,12 @@ export default class TileWorker {
           facesbounds[face][zoom][0] <= x && facesbounds[face][zoom][2] >= x && // check x is within bounds
           facesbounds[face][zoom][1] <= y && facesbounds[face][zoom][3] >= y // check y is within bounds
         ) {
-          requestData(`${path}/${face}/${zoom}/${x}/${y}`, extension, (data) => {
-            if (data && !self.cancelCache.includes(hash)) self._processVectorData(mapID, sourceName, source, tile, new VectorTile(data))
-            else self._getParentData(mapID, sourceName, source, tile) // incase we need to inject parent data
+          requestData(`${path}/${face}/${zoom}/${x}/${y}`, extension, data => {
+            if (self.cancelCache.includes(hash)) return
+            else if (data) self._processVectorData(mapID, sourceName, source, tile, new VectorTile(data))
           })
+        } else if (zoom > maxzoom && zoom <= self.maps[mapID].maxzoom && facesbounds[face]) { // secondary case: check if a parent tile exists
+          self._getParentData(mapID, sourceName, source, tile) // incase we need to inject parent data
         }
       } else if (type === 'raster') {
         const tilezoom = zoom + 1
@@ -274,7 +269,7 @@ export default class TileWorker {
 
           for (const piece of pieces) {
             const { x, y, leftShift, bottomShift } = piece
-            requestData(`${path}/${face}/${tilezoom}/${x}/${y}`, fileType, (data) => {
+            requestData(`${path}/${face}/${tilezoom}/${x}/${y}`, fileType, data => {
               if (data && !self.cancelCache.includes(hash)) self._processRasterData(mapID, sourceName, source, tile.hash, data, { leftShift, bottomShift })
             }, (typeof createImageBitmap !== 'function'))
           }
@@ -288,7 +283,7 @@ export default class TileWorker {
         if (minzoom <= zoom && maxzoom >= zoom) { // check zoom bounds
           const requestPath = `${path}/${face}/${zoom}/${x}/${y}`
           if (typeof OffscreenCanvas !== 'undefined') {
-            requestData(requestPath, fileType, (data) => {
+            requestData(requestPath, fileType, data => {
               if (data && !self.cancelCache.includes(hash)) self._processMaskData(mapID, source, tile, data)
             })
           } else {
@@ -347,11 +342,12 @@ export default class TileWorker {
         const imageData = context.getImageData(0, 0, size, size)
         self._buildMesh(mapID, zoom, hash, s2rtin, imageData)
       })
-      .catch(_ => {})
   }
 
   _processVectorData (mapID: string, sourceName: string, source: Object,
-    tile: TileRequest, vectorTile: Object) {
+    tile: TileRequest, vectorTile: Object, parent?: ParentLayers) {
+    // sometimes the sourcename includes "sourceName:PARENT" so we need to remove parent for comparison
+    const subSourceName = sourceName.split(':')[0]
     // grab tiles basics
     const { face, zoom, x, y, division, hash } = tile
 
@@ -368,10 +364,13 @@ export default class TileWorker {
     const webgl1 = glType === 1
     for (let layerIndex = 0, ll = layers.length; layerIndex < ll; layerIndex++) {
       const layer = layers[layerIndex]
-      if (layer.source === sourceName) { // ensure we are in the right source
+      if (layer.source === subSourceName) { // ensure we are in the right source
         if (
           vectorTile.layers[layer.layer] && // the vectorTile has said layer in it
-          layer.minzoom <= zoom && layer.maxzoom >= zoom // zoom attributes fit
+          (
+            (parent && parent.layers.includes(layerIndex)) ||
+            (!parent && layer.minzoom <= zoom && layer.maxzoom >= zoom)
+          ) // zoom attributes fit
         ) {
           // run through the vectorTile's features of said layer and build batches
           // to reduce draw counts, we batch data of the same layer and type.
@@ -386,6 +385,9 @@ export default class TileWorker {
             const feature = vectorTileLayer.feature(f)
             // get prelude properties
             const { properties, type } = feature
+            let geometry = feature.loadGeometry()
+            if (parent) geometry = scaleShiftClip(geometry, type, extent, tile, parent)
+            if (!geometry) continue
             // lastly we need to filter according to the layer
             if (layer.filter(properties)) {
               // create encodings for the feature, if it is different than the previous feature, we start a new encoding set
@@ -395,8 +397,13 @@ export default class TileWorker {
               let vertices = []
               let indices = []
               if (layer.type === 'fill' && (type === 3 || type === 4)) {
-                preprocessFill(feature.loadGeometry(), type, vertices, indices, extent, division)
-                if (webgl1) featureCode = (layer.paint.color(null, properties, zoom)).getRGB()
+                preprocessFill(geometry, type, vertices, indices, extent, division)
+                if (webgl1) {
+                  featureCode = [
+                    ...(layer.paint.color(null, properties, zoom)).getRGB()
+                    // layer.paint.opacity(null, properties, zoom)
+                  ]
+                }
                 if (!indices.length) continue
                 featureSet = fillFeatures
               } else if (layer.type === 'fill3D' && (type === 7 || type === 8)) {
@@ -405,7 +412,7 @@ export default class TileWorker {
                 // check that we are not exluding fills
                 if (layer.onlyLines && type !== 2) continue
                 cap = layer.layout.cap(null, properties, zoom)
-                preprocessLine(feature.loadGeometry(), type, cap, false, vertices, division, extent)
+                preprocessLine(geometry, type, cap, false, vertices, division, extent)
                 if (webgl1) {
                   featureCode = [
                     ...(layer.paint.color(null, properties, zoom)).getRGB(),
@@ -414,22 +421,39 @@ export default class TileWorker {
                 }
                 featureSet = lineFeatures
               } else if (layer.type === 'point' && type === 1) {
-                preprocessPoint(feature.loadGeometry(), vertices, indices, extent)
+                preprocessPoint(geometry, vertices, indices, extent)
+                if (webgl1) {
+                  featureCode = [
+                    ...(layer.paint.color(null, properties, zoom)).getRGB(),
+                    layer.paint.radius(null, properties, zoom),
+                    ...(layer.paint.stroke(null, properties, zoom)).getRGB(),
+                    layer.paint.strokeWidth(null, properties, zoom),
+                    layer.paint.opacity(null, properties, zoom)
+                  ]
+                }
                 featureSet = pointFeatures
               } else if (layer.type === 'heatmap' && type === 1) {
                 const weight = layer.layoutLocal.weight(null, properties, zoom)
-                preprocessPoint(feature.loadGeometry(), vertices, indices, extent, weight)
+                preprocessPoint(geometry, vertices, indices, extent, weight)
+                if (webgl1) {
+                  featureCode = [
+                    layer.layout.intensity(null, properties, zoom),
+                    layer.paint.radius(null, properties, zoom),
+                    layer.paint.opacity(null, properties, zoom)
+                  ]
+                }
                 featureSet = heatmapFeatures
               } else if (layer.type === 'line3D' && type === 9) {
                 continue
               } else if (layer.type === 'glyph' && type === 1) {
-                preprocessGlyph(feature, code, zoom, layer, layerIndex, extent, glyphs, webgl1, this.idGen, interactiveMap)
+                preprocessGlyph(geometry, properties, code, zoom, layer, layerIndex, extent, glyphs, webgl1, this.idGen, interactiveMap)
                 continue
               } else { continue }
               if (vertices.length) featureSet.push({ type: layer.type, vertices, indices, code, layerIndex, featureCode, cap })
             } else { continue }
           } // for (let f = 0; f < vectorTileLayer.length; f++)
-        } else if (source.layers && source.layers[layer.layer] && source.layers[layer.layer].maxzoom < zoom) {
+        } else if (!parent && layer.maxzoom > zoom && source.layers &&
+          source.layers[layer.layer] && source.layers[layer.layer].maxzoom < zoom) {
           // we have passed the limit at which this data is stored. Rather than
           // processing the data more than once, we reference where to look for the layer
           const layerMaxZoom = source.layers[layer.layer].maxzoom
@@ -456,23 +480,24 @@ export default class TileWorker {
     if (heatmapFeatures.length) postprocessPoint(mapID, `${sourceName}:heatmap`, hash, heatmapFeatures, postMessage, true)
     if (glyphs.length) postprocessGlyph(mapID, `${sourceName}:glyph`, hash, glyphs, glyphBuilder, this.id, postMessage)
     if (interactiveMap.size) postInteractiveData(mapID, `${sourceName}:glyph`, hash, interactiveMap)
-    if (Object.keys(parentLayers).length) postMessage({ mapID, type: 'parentlayers', tileID: hash, parentLayers })
+    if (Object.keys(parentLayers).length) this._requestParentData(mapID, sourceName, source, tile, parentLayers)
   }
 
   _getParentData (mapID: string, sourceName: string, source: Object,
     tile: TileRequest) {
     // pull out data
     const { layers } = this.maps[mapID]
-    const { face, zoom, x, y, hash } = tile
+    const { face, zoom, x, y } = tile
     // setup parentLayers
     const parentLayers: ParentLayers = {}
     // iterate over layers and found any data doesn't exist at current zoom but the style asks for
     for (let layerIndex = 0, ll = layers.length; layerIndex < ll; layerIndex++) {
-      const layer = layers[layerIndex].layer
-      if (source.layers && source.layers[layer] && source.layers[layer].maxzoom < zoom) {
+      const layer = layers[layerIndex]
+      const layerSource = layer.layer
+      if (layer.maxzoom > zoom && source.layers && source.layers[layerSource] && source.layers[layerSource].maxzoom < zoom) {
         // we have passed the limit at which this data is stored. Rather than
         // processing the data more than once, we reference where to look for the layer
-        const layerMaxZoom = source.layers[layer].maxzoom
+        const layerMaxZoom = source.layers[layerSource].maxzoom
         let pZoom = zoom
         let pX = x
         let pY = y
@@ -488,7 +513,24 @@ export default class TileWorker {
       }
     }
     // if we stored any parent layers, ship it out
-    if (Object.keys(parentLayers).length) postMessage({ mapID, type: 'parentlayers', tileID: hash, parentLayers })
+    if (Object.keys(parentLayers).length) this._requestParentData(mapID, sourceName, source, tile, parentLayers)
+  }
+
+  // now that we know what the tile was missing, let's make the requests with the layer filters
+  _requestParentData (mapID: string, sourceName: string, source: Object,
+    tile: TileRequest, parentLayers: ParentLayers) {
+    const self = this
+    const { path, extension } = source
+    for (const hash in parentLayers) {
+      const parent = parentLayers[hash]
+      const { face, zoom, x, y, layers } = parent
+      if (layers.length) {
+        requestData(`${path}/${face}/${zoom}/${x}/${y}`, extension, data => {
+          if (self.cancelCache.includes(hash)) return
+          if (data) self._processVectorData(mapID, `${sourceName}:parent`, source, tile, new VectorTile(data), parent)
+        })
+      }
+    }
   }
 }
 

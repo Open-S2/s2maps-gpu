@@ -348,12 +348,11 @@ export function multiply (a: Float32Array | Array<number>, b: Float32Array | Arr
   return a
 }
 
-export function invert (matrix: Float32Array | Array<number>, input: Float32Array | Array<number>) {
-  let a00 = input[0]; let a01 = input[1]; let a02 = input[2]; let a03 = input[3]; let a10 = input[4]; let a11 = input[5]
+export function invert (matrix: Float32Array | Array<number>) {
+  let a00 = matrix[0]; let a01 = matrix[1]; let a02 = matrix[2]; let a03 = matrix[3]; let a10 = matrix[4]; let a11 = matrix[5]
+  let a12 = matrix[6]; let a13 = matrix[7]; let a20 = matrix[8]; let a21 = matrix[9]; let a22 = matrix[10]; let a23 = matrix[11]
+  let a30 = matrix[12]; let a31 = matrix[13]; let a32 = matrix[14]; let a33 = matrix[15]
 
-  let a12 = input[6]; let a13 = input[7]; let a20 = input[8]; let a21 = input[9]; let a22 = input[10]; let a23 = input[11]
-
-  let a30 = input[12]; let a31 = input[13]; let a32 = input[14]; let a33 = input[15]
   let b00 = a00 * a11 - a01 * a10
   let b01 = a00 * a12 - a02 * a10
   let b02 = a00 * a13 - a03 * a10
@@ -393,7 +392,6 @@ export function invert (matrix: Float32Array | Array<number>, input: Float32Arra
 
 export function project (matrix: Float32Array | Array<number>, vector: Float32Array | Array<number>): Array<number> {
   const mul = multiplyVector(matrix, vector)
-  // console.log(mul)
 
   return [mul[0] / mul[3], mul[1] / mul[3], mul[2] / mul[3]]
 }

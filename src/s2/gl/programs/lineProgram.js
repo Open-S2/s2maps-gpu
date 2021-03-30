@@ -1,5 +1,4 @@
 // @flow
-/* global WebGLUniformLocation */
 import Program from './program'
 
 // WEBGL1
@@ -58,8 +57,8 @@ export default class LineProgram extends Program {
     gl.uniform1f(this.uCap, cap)
     // set feature code
     if (type === 1) {
-      if (color) gl.uniform4fv(this.uColor, color)
-      if (width) gl.uniform1f(this.uWidth, width)
+      gl.uniform4fv(this.uColor, color)
+      gl.uniform1f(this.uWidth, width)
     } else { this.setFeatureCode(featureCode) }
     // apply the appropriate offset in the source vertexBuffer attribute
     gl.bindBuffer(gl.ARRAY_BUFFER, source.vertexBuffer)

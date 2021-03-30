@@ -16,14 +16,16 @@ out vec2 vPos;
 void main () {
   // set position and get it's distance from center
   vec4 pos = getPos(aPos);
+  pos.xyz /= pos.w;
+  pos.w = 1.;
   // modify aspect to be a ratio of
-  vec2 radius = uAspect / (uDevicePixelRatio * 2.) / (720. * ((uInputs[0] / 1.65) + 1.));
+  vec2 radius = uAspect / (uDevicePixelRatio * 2.) / ((uInputs[0] / 1.35) + 1.) / 500.;
   // get pixel distance
   vPos = pos.xy;
-  // add offset
-  vPos += vec2(2500., -2500.) / uAspect;
   // scale
-  vPos *= radius / 7.;
+  vPos *= radius;
+  // add offset
+  vPos += vec2(300., -175.) / uAspect;
 
   gl_Position = pos;
 }

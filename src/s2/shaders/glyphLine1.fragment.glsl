@@ -1,5 +1,7 @@
 precision highp float;
 
+@nomangle vPar vLimits vDistScale vColor
+
 varying vec2 vPar;
 varying vec2 vLimits;
 varying float vDistScale;
@@ -39,7 +41,6 @@ float solve_par_dist (in vec2 pcoord) {
   float dist = min(d0, d1);
   return dist;
 }
-
 
 void main () {
   float dist = solve_par_dist(vPar);

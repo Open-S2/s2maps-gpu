@@ -1,5 +1,4 @@
 // @flow
-/* global WebGLRenderingContext WebGLProgram WebGLUniformLocation */
 import loadShader from './loadShader'
 
 import type { Context } from '../contexts'

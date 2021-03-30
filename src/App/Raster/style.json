@@ -39,6 +39,12 @@
       "id": "sat",
       "source": "satellite",
       "type": "raster"
+    },
+    {
+      "name": "shade",
+      "source": "mask",
+      "type": "shade",
+      "maxzoom": 2
     }
   ]
 }

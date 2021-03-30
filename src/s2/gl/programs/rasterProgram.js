@@ -16,7 +16,7 @@ export default class RasterProgram extends Program {
     // get gl from context
     const { gl, type } = context
     // install shaders
-    if (type === 1) gl.attributeLocations = { aPos: 0, aRadius: 6 }
+    if (type === 1) gl.attributeLocations = { aPos: 0 }
     // inject Program
     super(context)
     const self = this
@@ -34,15 +34,20 @@ export default class RasterProgram extends Program {
   }
 
   draw (featureGuide: FeatureGuide, sourceData: RasterTileSource) {
-    // setup variables
-    const { context } = this
-    const { gl } = context
+    // grab gl from the context
+    const { gl, context } = this
 
     // get current source data
-    let { count, mode, threeD } = sourceData
-    let { texture } = featureGuide
-    // set 3D uniform
-    this.set3D(threeD)
+    let { count, mode } = sourceData
+    let { texture, depthPos } = featureGuide
+    // ensure proper blend state
+    context.defaultBlend()
+    // adjust to current depthPos
+    if (depthPos) {
+      context.enableDepthTest()
+      context.lessDepth()
+      context.setDepthRange(depthPos)
+    } else { context.resetDepthRange() }
     // setup the texture
     gl.bindTexture(gl.TEXTURE_2D, texture)
     // draw elements

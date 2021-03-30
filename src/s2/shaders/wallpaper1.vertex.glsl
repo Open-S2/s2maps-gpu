@@ -4,6 +4,8 @@ precision highp float;
 precision mediump float;
 #endif
 
+@nomangle aPos vertPos
+
 attribute vec2 aPos;
 varying vec2 vertPos;
 

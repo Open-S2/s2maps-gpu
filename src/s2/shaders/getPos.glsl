@@ -27,8 +27,11 @@ vec4 STtoXYZ (in vec2 st) { // x -> s, y -> t
   else if (face == 4) xyz = vec3(-1., -uv.x, uv.y);
   else xyz = vec3(uv.x, -1., uv.y);
   // normalize data
-  xyz = normalize(xyz);
-  // return
+  xyz = normalize(xyz) * 6371008.8;
+  // xyz *= 6371008.8;
+  // xyz.xz *= 6378137.;
+  // xyz.y *= 6356752.3;
+
   return vec4(xyz, 1.);
 }
 
@@ -51,6 +54,7 @@ vec4 getPos (in vec2 pos) {
   } else {
     return getPosLocal(pos);
   }
+  // return uMatrix * STtoXYZ(pos);
 }
 
 vec4 getZero () {

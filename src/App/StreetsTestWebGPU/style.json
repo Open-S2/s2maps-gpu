@@ -6,9 +6,7 @@
   "minzoom": 0,
   "maxzoom": 20,
   "sources": {
-    "ocean": "http://192.168.0.188:8000/data/ocean",
-    "landuse": "http://192.168.0.112:8000/data/utah-landuse",
-    "sahara": "http://192.168.0.112:8000/data/sahara"
+    "streets-v2": "http://192.168.0.112:8000/data/streets-v2"
   },
   "fonts": {
     "default": "https://s3.s2maps.io/fonts-v3/default",
@@ -53,99 +51,8 @@
       }
     },
     {
-      "name": "landuse",
-      "source": "landuse",
-      "layer": "landuse",
-      "type": "fill",
-      "opaque": true,
-      "filter": [
-        "or",
-        ["class", "==", "aeroway"],
-        [
-          "type", "has", ["park", "national_park", "protected_area",
-          "grass", "grassland", "garden", "meadow", "farmland",
-          "swamp", "wetland", "zoo", "cemetery", "sand", "beach", "desert",
-          "hospital", "school", "parking", "glacier",
-          "quarry", "retail", "pitch"]
-        ]
-      ],
-      "minzoom": 0,
-      "layout": {},
-      "paint": {
-        "color": [
-          "data-condition",
-          ["type", "==", "parking"],
-          "rgb(241, 243, 244)",
-          ["type", "==", "wetland"],
-          "rgb(210, 233, 255)",
-          ["type", "==", "quarry"],
-          "rgb(206, 208, 211)",
-          ["type", "==", "glacier"],
-          "rgb(249, 249, 249)",
-          ["type", "==", "beach"],
-          "rgb(255, 239, 195)",
-          ["type", "==", "cemetery"],
-          "rgb(208, 236, 208)",
-          ["type", "==", "pitch"],
-          "#9dd2ac",
-          ["type", "has", ["grass", "grassland", "garden", "meadow", "swamp", "zoo"]],
-          "#a8dab5",
-          ["type", "has", ["park", "national_park", "protected_area"]],
-          "#aee0bc",
-          ["type", "has", ["apron", "airstrip"]],
-          "#d4d8ea",
-          ["class", "==", "aeroway"],
-          "rgb(219, 222, 235)",
-          ["type", "==", "farmland"],
-          "rgb(228, 234, 210)",
-          ["type", "==", "hospital"],
-          "rgb(252, 228, 228)",
-          ["type", "==", "school"],
-          "rgb(226, 233, 238)",
-          ["type", "==", "retail"],
-          "rgb(254, 245, 220)",
-          ["type", "has", ["desert", "sand"]],
-          "rgb(241, 233, 195)",
-          "default",
-          "rgba(0, 0, 0, 0)"
-        ]
-      }
-    },
-    {
-      "name": "landuse",
-      "source": "sahara",
-      "layer": "landuse",
-      "type": "fill",
-      "opaque": true,
-      "filter": ["type", "==", "desert"],
-      "minzoom": 0,
-      "layout": {},
-      "paint": {
-        "color": "rgb(241, 233, 195)"
-      }
-    },
-    {
-      "name": "landuse_transparent",
-      "source": "landuse",
-      "layer": "landuse",
-      "type": "fill",
-      "filter": ["type", "has", ["aboriginal_lands", "military"]],
-      "layout": {},
-      "paint": {
-        "color": [
-          "data-condition",
-          ["type", "==", "aboriginal_lands"],
-          "rgba(240, 242, 240, 0.5)",
-          ["type", "==", "military"],
-          "rgba(226, 226, 224, 0.5)",
-          "default",
-          "rgba(0, 0, 0, 0)"
-        ]
-      }
-    },
-    {
       "name": "water",
-      "source": "ocean",
+      "source": "streets-v2",
       "filter": ["class", "!has", ["reef", "shoal"]],
       "layer": "water",
       "type": "fill",
@@ -154,6 +61,110 @@
       "layout": {},
       "paint": {
         "color": "#8fcaf9"
+      }
+    },
+    {
+      "name": "country_state",
+      "source": "streets-v2",
+      "filter": [
+        "or",
+        ["and", ["class", "==", "continent"], ["name_en", "==", "Antarctica"]],
+        ["class", "has", ["country", "state"]]
+      ],
+      "layer": "place",
+      "type": "glyph",
+      "cursor": "pointer",
+      "layout": {
+        "text-family": "roboto-medium",
+        "text-field": [
+          "data-condition",
+          ["class", "==", "continent"],
+          "?!Uname",
+          ["class", "==", "state"],
+          [
+            "input-range",
+            "zoom",
+            "step",
+            0,
+            "?abbr,?name",
+            3,
+            "?!Uname"
+          ],
+          "default",
+          [
+            "input-range",
+            "zoom",
+            "step",
+            0,
+            "?abbr,?name",
+            3,
+            "?name"
+          ]
+        ],
+        "text-anchor": "center",
+        "text-offset": [0, 0],
+        "text-padding": [1, 1]
+      },
+      "paint": {
+        "text-size": [
+          "data-condition",
+          ["class", "==", "country"],
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            0,
+            17,
+            4,
+            36
+          ],
+          ["class", "==", "state"],
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            0,
+            12,
+            4,
+            22,
+            7,
+            36
+          ],
+          "default",
+          18
+        ],
+        "text-fill": [
+          "data-condition",
+          ["class", "==", "country"],
+          "rgb(42, 42, 42)",
+          ["class", "==", "continent"],
+          "rgb(65, 65, 65)",
+          ["class", "==", "state"],
+          "rgb(90, 90, 90)",
+          "default",
+          "rgba(0, 0, 0, 0)"
+        ],
+        "text-stroke": "rgba(255, 255, 255, 0.65)",
+        "text-strokeWidth": [
+          "data-condition",
+          ["class", "==", "state"],
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.5,
+            0,
+            0.5,
+            4,
+            0.3
+          ],
+          ["class", "==", "continent"],
+          0.2,
+          "default",
+          0
+        ]
       }
     }
   ]

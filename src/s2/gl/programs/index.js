@@ -1,3 +1,4 @@
+// @flow
 export { default as FillProgram } from './fillProgram'
 export { default as GlyphFilterProgram } from './glyphFilterProgram'
 export { default as GlyphLineProgram } from './glyphLineProgram'

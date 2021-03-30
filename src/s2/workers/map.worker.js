@@ -1,6 +1,5 @@
 // @flow
 /* eslint-env worker */
-/* global HTMLCanvasElement onmessage */
 import Map from '../ui/map'
 
 import type { MapOptions } from '../ui/map'

@@ -3,8 +3,6 @@ import { earclip } from 'earclip'
 // import remapVertices from '../remapVertices'
 // import { zeroClip } from 'zero-clip'
 
-import type { TileRequest } from '../../tile.worker.js'
-
 type Point = [number, number]
 
 export default function preprocessFill (geometry: Array<Array<Point>> | Array<Point>,

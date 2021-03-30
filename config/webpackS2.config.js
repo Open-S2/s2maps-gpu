@@ -218,7 +218,7 @@ module.exports = function (webpackEnv) {
               use: [
                 {
                   loader: require.resolve('worker-loader'),
-                  options: { inline: 'no-fallback' },
+                  options: { inline: 'fallback' },
                 },
                 {
                   loader: require.resolve('babel-loader')

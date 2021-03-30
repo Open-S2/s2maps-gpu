@@ -14,6 +14,7 @@ const Streets = lazy(() => import('./App/Streets'))
 const StreetsTest = lazy(() => import('./App/StreetsTest'))
 const StreetsTestWebGPU = lazy(() => import('./App/StreetsTestWebGPU'))
 const Light = lazy(() => import('./App/Light'))
+const Coffee = lazy(() => import('./App/Coffee'))
 const Soft = lazy(() => import('./App/Soft'))
 const Dark = lazy(() => import('./App/Dark'))
 const Outdoor = lazy(() => import('./App/Outdoor'))
@@ -23,6 +24,7 @@ const Hover = lazy(() => import('./App/Hover'))
 const Invert = lazy(() => import('./App/Invert'))
 const Tiles = lazy(() => import('./App/Tiles'))
 const Tesla = lazy(() => import('./App/Tesla'))
+const Starlink = lazy(() => import('./App/Starlink'))
 const OAD = lazy(() => import('./App/OpenAddressData'))
 const Earthquakes = lazy(() => import('./App/Earthquakes'))
 const TissotsIndicatrix = lazy(() => import('./App/TissotsIndicatrix'))
@@ -40,6 +42,7 @@ ReactDOM.render(
         <Route path='/streets-test-webgpu' component={StreetsTestWebGPU} />
         <Route path='/soft' component={Soft} />
         <Route path='/light' component={Light} />
+        <Route path='/coffee' component={Coffee} />
         <Route path='/dark' component={Dark} />
         <Route path='/outdoor' component={Outdoor} />
         <Route path='/geojson' component={GeoJSON} />
@@ -50,6 +53,7 @@ ReactDOM.render(
         <Route path='/tiles' component={Tiles} />
         <Route path='/earthquakes' component={Earthquakes} />
         <Route path='/tesla' component={Tesla} />
+        <Route path='/starlink' component={Starlink} />
         <Route path='/open-address-data' component={OAD} />
       </Switch>
     </Suspense>

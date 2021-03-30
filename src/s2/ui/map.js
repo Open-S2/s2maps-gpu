@@ -1,5 +1,4 @@
 // @flow
-/* global postMessage requestAnimationFrame Event HTMLElement HTMLCanvasElement WheelEvent TouchEvent MouseEvent */
 import Camera from './camera'
 import DragPan from './camera/dragPan'
 import Style from '../style'

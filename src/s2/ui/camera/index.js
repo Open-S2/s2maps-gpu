@@ -1,39 +1,25 @@
 // @flow
-/* global ImageBitmap createImageBitmap Blob */
 /** STYLE **/
 import Style from '../../style'
 /** PAINT **/
 import { Painter } from '../../gl'
 import type { MapOptions } from '../map'
 /** PROJECTIONS **/
-import { tileHash } from 's2projection' // https://github.com/Regia-Corporation/s2projection
-import { BlendProjection, OrthographicProjection, PerspectiveProjection } from './projections'
-import type { Projection } from './projections'
+// import { tileHash } from 's2projection' // https://github.com/Regia-Corporation/s2projection
+import Projector from './projections'
 /** SOURCES **/
 import { Tile } from '../../source'
 import { buildGlyphSource } from '../../source/buildSource'
 import TileCache from './tileCache'
 
 import type { Face } from 's2projection'
-import type { TileDefinitions } from './projections/projector'
-
-export type ProjectionType = 'perspective' | 'persp' | 'orthographic' | 'ortho' | 'orthographicPerspective' | 'blend'
+import type { TileDefinitions } from './projections'
 
 declare class Timeout extends Number {
   +ref?: () => this;
   +unref?: () => this;
 }
 declare function SetTimeout (fn: Function, ms?: number): Timeout;
-
-type ParentLayers = {
-  [string | number]: { // tileHash:
-    face: Face,
-    zoom: number,
-    x: number,
-    y: number,
-    layers: Array<number>
-  }
-}
 
 export default class Camera {
   style: Style
@@ -50,7 +36,7 @@ export default class Camera {
   constructor (options: MapOptions) {
     this._updateWhileZooming = options.updateWhileZooming || true
     // setup projection
-    this.createProjection(options)
+    this.createProjector(options)
     // prep the tileCache for future tiles
     this.tileCache = new TileCache()
   }
@@ -62,17 +48,8 @@ export default class Camera {
     this.painter.clearCache()
   }
 
-  // TODO: Perspective Projection
-  createProjection (options: MapOptions) {
-    let { projection } = options
-    if (!projection) projection = 'blend'
-    if (projection === 'persp' || projection === 'perspective') {
-      this.projection = new PerspectiveProjection(options)
-    } else if (projection === 'blend' || projection === 'orthographicPerspective') {
-      this.projection = new BlendProjection(options)
-    } else {
-      this.projection = new OrthographicProjection(options)
-    }
+  createProjector (options: MapOptions) {
+    this.projection = new Projector(options)
   }
 
   resizeCamera (width: number, height: number) {
@@ -86,17 +63,6 @@ export default class Camera {
     const tile = new Tile(this.painter.context, face, zoom, x, y, hash)
     // should our style have default layers, let's add them
     if (style.maskLayers.length) tile.injectMaskLayers(style.maskLayers)
-    // inject parent should one exist
-    if (tile.zoom !== 0) {
-      // get closest parent hash. If actively zooming, the parent tile will pass along
-      // it's parent tile (and so forth) if its own data has not been processed yet.
-      const parentHash = tileHash(tile.face, tile.zoom - 1, Math.floor(tile.x / 2), Math.floor(tile.y / 2))
-      // check if parent tile exists, if so inject
-      if (this.tileCache.has(parentHash)) {
-        const parent = this.tileCache.get(parentHash)
-        tile.injectParentTile(parent, false)
-      }
-    }
     // store the tile
     this.tileCache.set(hash, tile)
 
@@ -111,7 +77,6 @@ export default class Camera {
     else if (type === 'rasterdata') this._injectRasterData(data.source, data.tileID, data.built, data.image, data.leftShift, data.bottomShift)
     else if (type === 'glyphdata') this._injectGlyphSourceData(data.source, data.tileID, data.glyphFilterBuffer, data.glyphFillVertexBuffer, data.glyphFillIndexBuffer, data.glyphLineVertexBuffer, data.glyphQuadBuffer, data.glyphColorBuffer, data.layerGuideBuffer)
     else if (type === 'interactivedata') this._injectInteractiveData(data.source, data.tileID, data.interactiveGuideBuffer, data.interactiveDataBuffer)
-    else if (type === 'parentlayers') this._injectParentLayers(data.tileID, data.parentLayers)
     // new 'paint', so painter is dirty
     this.painter.dirty = true
   }
@@ -186,31 +151,6 @@ export default class Camera {
       const tile = this.tileCache.get(tileID)
       tile.injectInteractiveData(source, new Uint32Array(interactiveGuideBuffer), new Uint8Array(interactiveDataBuffer))
     }
-  }
-
-  _injectParentLayers (tileID: number, parentLayers: ParentLayers = {}) {
-    // // if tile still exists
-    // if (this.tileCache.has(tileID)) {
-    //   // grab the main tile
-    //   const tile = this.tileCache.get(tileID)
-    //   // for each parentLayer, inject specified layers
-    //   for (let hash in parentLayers) {
-    //     hash = +hash
-    //     const layers = parentLayers[hash].layers
-    //     // check if parent exists in tileCache, if so, inject layers
-    //     if (this.tileCache.has(hash)) {
-    //       const parent = this.tileCache.get(hash)
-    //       tile.injectParentTile(parent, true, layers)
-    //     } else {
-    //       // if parent tile does not exist: create, set all the child's requests,
-    //       // and tell the styler to request the webworker(s) to process the tile
-    //       const { face, zoom, x, y } = parentLayers[hash]
-    //       const newTile = this._createTile(face, zoom, x, y, hash)
-    //       for (const layer of layers) newTile.childrenRequests[layer] = [tile]
-    //       this.style.requestTiles([newTile])
-    //     }
-    //   }
-    // }
   }
 
   _getTiles () {
