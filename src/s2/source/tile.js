@@ -161,15 +161,18 @@ export default class Tile {
   }
 
   // given a matrix, compute the corners screen positions
-  setScreenPositions (matrix: Float32Array) {
+  setScreenPositions (projection) {
     if (this.corners) {
+      const { eye } = projection
+      const [eyeX, eyeY, eyeZ] = eye.map(e => e * 1000)
+      const matrix = projection.getMatrix('km')
       // pull out the S2Points
       const { bottomLeft, bottomRight, topLeft, topRight } = this.corners
       // project points and grab their x-y positions
-      const [blX, blY] = mat4.project(matrix, [bottomLeft.x, bottomLeft.y, bottomLeft.z])
-      const [brX, brY] = mat4.project(matrix, [bottomRight.x, bottomRight.y, bottomRight.z])
-      const [tlX, tlY] = mat4.project(matrix, [topLeft.x, topLeft.y, topLeft.z])
-      const [trX, trY] = mat4.project(matrix, [topRight.x, topRight.y, topRight.z])
+      const [blX, blY] = mat4.project(matrix, [bottomLeft.x - eyeX, bottomLeft.y - eyeY, bottomLeft.z - eyeZ])
+      const [brX, brY] = mat4.project(matrix, [bottomRight.x - eyeX, bottomRight.y - eyeY, bottomRight.z - eyeZ])
+      const [tlX, tlY] = mat4.project(matrix, [topLeft.x - eyeX, topLeft.y - eyeY, topLeft.z - eyeZ])
+      const [trX, trY] = mat4.project(matrix, [topRight.x - eyeX, topRight.y - eyeY, topRight.z - eyeZ])
       // store for eventual uniform "upload"
       this.bottom[0] = blX
       this.bottom[1] = blY
@@ -179,39 +182,8 @@ export default class Tile {
       this.top[1] = tlY
       this.top[2] = trX
       this.top[3] = trY
-      if (this.zoom === 17 && this.x === 3536 && this.y === 33785) {
-        console.log(' ')
-        console.log(matrix)
-        console.log(this.corners)
-        console.log(this.bottom, this.top)
-        console.log(' ')
-      }
     }
   }
-
-  // matrix: [-0.003514099633321166, 0.013845833018422127, 0.000007028890195215354, 0, 0, 0.017302338033914566, -0.0000065301010181428865, 0, 0.008758896961808205, 0.0055549959652125835, 0.000002820014969984186, 0, 0, 0, 0.06371008604764938, 1]
-  // bottomLeft: S2Point {x: -4478104.029470242, y: 4160294.237316001, z: -1796744.0802393358}
-  // bottomRight: S2Point {x: -4478144.718492576, y: 4160243.388781791, z: -1796760.4058448884}
-  // topLeft: S2Point {x: -4478117.434056253, y: 4160306.690582288, z: -1796681.8351547744}
-  // topRight: S2Point {x: -4478158.123443983, y: 4160255.8421221753, z: -1796698.16029249}
-  // 778a17a8-c24e-457d-a500-4288e2261009:5335 Float32Array(4) [-0.9925376176834106, -1.1695327758789062, -0.9925466179847717, -2.7033934593200684] Float32Array(4) [-0.40023428201675415, -0.7938886880874634, -0.40023791790008545, -2.3277504444122314]
-
-  // out.push(matrix[0] * vector[0] + matrix[4] * vector[1] + matrix[8] * vector[2] + matrix[12])
-  // out.push(matrix[1] * vector[0] + matrix[5] * vector[1] + matrix[9] * vector[2] + matrix[13])
-  // out.push(matrix[2] * vector[0] + matrix[6] * vector[1] + matrix[10] * vector[2] + matrix[14])
-  // out.push(matrix[3] * vector[0] + matrix[7] * vector[1] + matrix[11] * vector[2] + matrix[15])
-
-  // [4, 17, 3536, 33785, 103542719481]
-
-  // matrix: [-0.00374555098824203, 0.014757266268134117, 7.028954751575611e-9, 0, 0, 0.018441857770085335, -6.529997431670154e-9, 0, 0.009335617534816265, 0.005920775234699249, 2.8200928259281e-9, 0, 0, 0, 0.06371008604764938, 1]
-  //
-  // bottomLeft: S2Point {x: -4478104.029470242, y: 4160294.237316001, z: -1796744.0802393358}
-  // bottomRight: S2Point {x: -4478144.718492576, y: 4160243.388781791, z: -1796760.4058448884}
-  // topLeft: S2Point {x: -4478117.434056253, y: 4160306.690582288, z: -1796681.8351547744}
-  // topRight: S2Point {x: -4478158.123443983, y: 4160255.8421221753, z: -1796698.16029249}
-  //
-  // bottom: [-0.7485679984092712, 0.8632135987281799, -0.7485748529434204, -0.7716467976570129]
-  // top: [-0.11726416647434235, 1.2635990381240845, -0.1172652319073677, -0.3712625801563263]
 
   // the zoom determines the number of divisions necessary to maintain a visually
   // asthetic spherical shape. As we zoom in, the tiles are practically flat,

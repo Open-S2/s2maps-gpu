@@ -2,14 +2,14 @@
   "version": 2,
   "name": "s2maps-streets",
   "center": [-111.851217, 40.739061],
-  "zoom": 12,
+  "zoom": 0,
   "minzoom": 0,
   "maxzoom": 20,
   "sources": {
-    "streets-v2": "http://192.168.0.112:8000/data/streets-v2",
+    "streets-v2": "http://192.168.0.110:8000/data/streets-v2",
     "terrain": "http://localhost:8000/data/terrain",
     "landcover": "http://localhost:8000/data/landcover",
-    "buildings": "http://192.168.0.112:8000/data/buildings"
+    "buildings": "http://192.168.0.110:8000/data/buildings"
   },
   "fonts": {
     "default": "https://s3.s2maps.io/fonts-v3/default",

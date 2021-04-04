@@ -1,8 +1,8 @@
 {
   "version": 1,
   "name": "s2test",
-  "center": [0, 0],
-  "zoom": 0,
+  "center": [-122.4585607773497, 37.778443127730476],
+  "zoom": 10,
   "minzoom": 0,
   "maxzoom": 20,
   "sources": {

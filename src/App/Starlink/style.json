@@ -21,18 +21,18 @@
     "starlink-icons": "http://localhost:8000/icons/starlink_icons"
   },
   "wallpaper": {
-    "background-color": "rgb(25, 28, 80)",
-    "fade-1": "#a0d2f5",
+    "background-color": "#030a2d",
+    "fade-1": "rgb(138, 204, 255)",
     "fade-2": "rgb(217, 255, 255)",
-    "halo": "#ffffff"
+    "halo": "rgb(230, 255, 255)"
   },
   "colorBlind": false,
   "layers": [
     {
       "name": "background",
       "type": "fill",
-      "source": "mask",
       "opaque": true,
+      "source": "mask",
       "layout": {},
       "paint": {
         "color": [
@@ -40,12 +40,14 @@
           "zoom",
           "expo",
           1.7,
-          0,
-          "#f9f7e7",
           2.75,
-          "#eeebe2",
-          7.5,
-          "#efeeed",
+          "#f9f7e7",
+          3,
+          "#f5f5f5",
+          6.5,
+          "#f0e9d7",
+          9,
+          "#f0e9d7",
           13,
           "#e8e8e8",
           14,
@@ -68,17 +70,17 @@
           ["class", "==", "snow"],
           "#ffffff",
           ["class", "==", "wood"],
-          "#b8d7b4",
+          "#93d2a5",
           ["class", "==", "tree"],
-          "#cbe5bd",
+          "#a8dab5",
           ["class", "==", "crop"],
-          "#e3eccf",
+          "#bbe2c6",
           ["class", "==", "shrub"],
-          "#f2eccf",
+          "rgb(242, 237, 224)",
           ["class", "==", "wasteland"],
-          "#eeede6",
+          "#e8e8e1",
           "default",
-          "#b8d7b4"
+          "#93d2a5"
         ]
       }
     },
@@ -96,7 +98,7 @@
           "grass", "grassland", "garden", "meadow", "farmland",
           "swamp", "wetland", "zoo", "cemetery", "sand", "beach", "desert",
           "hospital", "school", "parking", "glacier",
-          "quarry", "urban", "pitch"]
+          "quarry", "retail", "urban", "pitch"]
         ]
       ],
       "minzoom": 4,
@@ -107,33 +109,35 @@
           ["type", "==", "parking"],
           "rgb(241, 243, 244)",
           ["type", "==", "wetland"],
-          "#dee5e6",
+          "rgb(210, 233, 255)",
           ["type", "==", "quarry"],
           "rgb(206, 208, 211)",
           ["type", "==", "glacier"],
           "rgb(249, 249, 249)",
           ["type", "==", "beach"],
-          "#faeeca",
+          "rgb(255, 239, 195)",
           ["type", "==", "cemetery"],
-          "#cdeecd",
+          "rgb(208, 236, 208)",
           ["type", "==", "pitch"],
-          "#a8dcb7",
+          "#9dd2ac",
           ["type", "has", ["grass", "grassland", "garden", "meadow", "swamp", "zoo"]],
-          "#cdeecd",
+          "#a8dab5",
           ["type", "has", ["park", "national_park", "protected_area"]],
-          "#c8e8c8",
+          "#aee0bc",
           ["type", "has", ["apron", "airstrip"]],
           "#d4d8ea",
           ["class", "==", "aeroway"],
           "rgb(219, 222, 235)",
           ["type", "==", "farmland"],
-          "rgb(232, 237, 219)",
+          "rgb(228, 234, 210)",
           ["type", "==", "hospital"],
           "rgb(252, 228, 228)",
           ["type", "==", "school"],
           "rgb(226, 233, 238)",
+          ["type", "==", "retail"],
+          "rgb(254, 245, 220)",
           ["type", "has", ["desert", "sand"]],
-          "#efede2",
+          "rgb(241, 233, 195)",
           ["type", "==", "urban"],
           "#e9eaed",
           "default",
@@ -177,13 +181,13 @@
         "color": [
           "data-condition",
           ["type", "==", "bunker"],
-          "#faeeca",
+          "rgb(255, 239, 195)",
           ["type", "==", "green"],
-          "#eff5ef",
+          "rgb(233, 251, 217)",
           ["type", "==", "fairway"],
-          "#e1f1df",
+          "rgb(218, 245, 205)",
           ["type", "has", ["course", "rough"]],
-          "#d3eace",
+          "rgb(201, 238, 201)",
           "default",
           "rgba(0, 0, 0, 0)"
         ]
@@ -226,7 +230,16 @@
       "minzoom": 0,
       "layout": {},
       "paint": {
-        "color": "#a0d2f5"
+        "color": [
+          "input-range",
+          "zoom",
+          "expo",
+          0.35,
+          8,
+          "#8fcaf9",
+          10,
+          "#86bff2"
+        ]
       }
     },
     {
@@ -239,7 +252,7 @@
       "minzoom": 0,
       "layout": {},
       "paint": {
-        "color": "#dee5e6"
+        "color": "rgb(185, 225, 255)"
       }
     },
     {
@@ -255,7 +268,7 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "#a0d2f5",
+        "color": "#86bff2",
         "width": [
           "input-range",
           "zoom",
@@ -483,7 +496,7 @@
           ["tunnel", "==", true],
           "#afafaf",
           ["type", "has", ["primary", "primary_link"]],
-          "#cccccc",
+          "#f9ca4a",
           "default",
           "#dadce0"
         ],
@@ -645,13 +658,22 @@
         "color": [
           "data-condition",
           ["class", "==", "water"],
-          "#7ab6e2",
+          [
+            "input-range",
+            "zoom",
+            "expo",
+            1.75,
+            8,
+            "#82b3e6",
+            10,
+            "#6296ce"
+          ],
           ["type", "==", "path"],
-          "#8f8f8f",
+          "rgb(91, 185, 116)",
           ["or", ["type", "==", "road"], ["class", "==", "unclassified"]],
           "#f6f3ee",
           ["class", "==", "railway"],
-          "rgb(214, 217, 220)",
+          "rgb(199, 202, 205)",
           "default",
           "rgb(255, 255, 255)"
         ],
@@ -727,7 +749,7 @@
           ["tunnel", "==", true],
           "#e3e3e3",
           ["type", "has", ["primary", "primary_link"]],
-          "#e3e3e3",
+          "#fbefb2",
           "default",
           "#ffffff"
         ],
@@ -788,7 +810,15 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "#aeaeae",
+        "color": [
+          "input-range",
+          "zoom",
+          "lin",
+          10,
+          "#f9ca4a",
+          12,
+          "#f1b743"
+        ],
         "width": [
           "data-condition",
           ["type", "has", ["motorway_link", "trunk_link"]],
@@ -850,7 +880,15 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "#d7d7d7",
+        "color": [
+          "input-range",
+          "zoom",
+          "lin",
+          2,
+          "#f9ca4a",
+          7,
+          "#fde293"
+        ],
         "width": [
           "data-condition",
           ["type", "has", ["motorway_link", "trunk_link"]],
@@ -904,7 +942,15 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "#aeaeae",
+        "color": [
+          "input-range",
+          "zoom",
+          "lin",
+          10,
+          "#f9ca4a",
+          12,
+          "#f1b743"
+        ],
         "width": [
           "data-condition",
           ["type", "has", ["motorway_link", "trunk_link"]],
@@ -966,7 +1012,15 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "#d7d7d7",
+        "color": [
+          "input-range",
+          "zoom",
+          "lin",
+          2,
+          "#f9ca4a",
+          7,
+          "#fde293"
+        ],
         "width": [
           "data-condition",
           ["type", "has", ["motorway_link", "trunk_link"]],
@@ -1020,7 +1074,15 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "#aeaeae",
+        "color": [
+          "input-range",
+          "zoom",
+          "lin",
+          10,
+          "#f9ca4a",
+          12,
+          "#f1b743"
+        ],
         "width": [
           "data-condition",
           ["type", "has", ["motorway_link", "trunk_link"]],
@@ -1082,7 +1144,15 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "#d7d7d7",
+        "color": [
+          "input-range",
+          "zoom",
+          "lin",
+          2,
+          "#f9ca4a",
+          7,
+          "#fde293"
+        ],
         "width": [
           "data-condition",
           ["type", "has", ["motorway_link", "trunk_link"]],
@@ -1124,7 +1194,7 @@
       "layer": "transport",
       "filter": [
         "and",
-        ["layer", "==", 3],
+        ["layer", ">=", 3],
         ["tunnel", "!=", true],
         ["class", "==", "highway"],
         ["type", "has", ["motorway", "motorway_link", "trunk", "trunk_link"]]
@@ -1136,7 +1206,15 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "#aeaeae",
+        "color": [
+          "input-range",
+          "zoom",
+          "lin",
+          10,
+          "#f9ca4a",
+          12,
+          "#f1b743"
+        ],
         "width": [
           "data-condition",
           ["type", "has", ["motorway_link", "trunk_link"]],
@@ -1178,7 +1256,7 @@
       "layer": "transport",
       "filter": [
         "and",
-        ["layer", "==", 3],
+        ["layer", ">=", 3],
         ["tunnel", "!=", true],
         ["class", "==", "highway"],
         ["type", "has", ["motorway", "motorway_link", "trunk", "trunk_link"]]
@@ -1198,123 +1276,15 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "#d7d7d7",
-        "width": [
-          "data-condition",
-          ["type", "has", ["motorway_link", "trunk_link"]],
-          [
-            "input-range",
-            "zoom",
-            "expo",
-            1.5,
-            2,
-            0.66,
-            7,
-            0.833,
-            10,
-            1,
-            13,
-            6.66
-          ],
-          "default",
-          [
-            "input-range",
-            "zoom",
-            "expo",
-            1.5,
-            2,
-            1,
-            7,
-            1.25,
-            10,
-            1.5,
-            13,
-            10
-          ]
-        ]
-      }
-    },
-    {
-      "name": "motor_trunk_borders_4",
-      "source": "streets-v2",
-      "layer": "transport",
-      "filter": [
-        "and",
-        ["layer", ">=", 4],
-        ["tunnel", "!=", true],
-        ["class", "==", "highway"],
-        ["type", "has", ["motorway", "motorway_link", "trunk", "trunk_link"]]
-      ],
-      "type": "line",
-      "minzoom": 2,
-      "layout": {
-        "cap": "butt",
-        "join": "bevel"
-      },
-      "paint": {
-        "color": "#aeaeae",
-        "width": [
-          "data-condition",
-          ["type", "has", ["motorway_link", "trunk_link"]],
-          [
-            "input-range",
-            "zoom",
-            "expo",
-            1.5,
-            2,
-            1.33,
-            7,
-            1.66,
-            10,
-            2.66,
-            13,
-            8.66
-          ],
-          "default",
-          [
-            "input-range",
-            "zoom",
-            "expo",
-            1.5,
-            2,
-            2,
-            7,
-            2.5,
-            10,
-            4,
-            13,
-            13
-          ]
-        ]
-      }
-    },
-    {
-      "name": "motor_trunk_4",
-      "source": "streets-v2",
-      "layer": "transport",
-      "filter": [
-        "and",
-        ["layer", ">=", 4],
-        ["tunnel", "!=", true],
-        ["class", "==", "highway"],
-        ["type", "has", ["motorway", "motorway_link", "trunk", "trunk_link"]]
-      ],
-      "type": "line",
-      "minzoom": 4,
-      "layout": {
-        "cap": [
+        "color": [
           "input-range",
           "zoom",
-          "step",
-          0,
-          "butt",
-          10,
-          "round"
+          "lin",
+          2,
+          "#f9ca4a",
+          7,
+          "#fde293"
         ],
-        "join": "bevel"
-      },
-      "paint": {
-        "color": "#d7d7d7",
         "width": [
           "data-condition",
           ["type", "has", ["motorway_link", "trunk_link"]],
@@ -1456,7 +1426,6 @@
     {
       "name": "country_state",
       "source": "streets-v2",
-      "maxzoom": 12,
       "filter": [
         "or",
         ["and", ["class", "==", "continent"], ["name_en", "==", "Antarctica"]],
@@ -1464,6 +1433,7 @@
       ],
       "layer": "place",
       "type": "glyph",
+      "maxzoom": 12,
       "layout": {
         "text-family": "roboto-medium",
         "text-field": [
@@ -1561,7 +1531,7 @@
       "name": "places",
       "source": "streets-v2",
       "minzoom": 4,
-      "maxzoom": 12,
+      "maxzoom": 13,
       "filter": ["class", "has", ["city", "town", "village", "hamlet", "neighbourhood", "island", "suburb"]],
       "layer": "place",
       "type": "glyph",

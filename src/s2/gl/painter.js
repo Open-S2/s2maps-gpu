@@ -164,9 +164,9 @@ export default class Painter {
     // PREPARE PHASE
     // prep frame uniforms
     const { view, aspect } = projection
-    const matrix = projection.getMatrix(768) // NOTE: For now, we have a default size of 512.
+    const matrix = projection.getMatrix('m')
     // if past zoom 12, the tile will self align to the screen
-    for (const tile of tiles) tile.setScreenPositions(matrix)
+    for (const tile of tiles) tile.setScreenPositions(projection)
     this.injectFrameUniforms(matrix, view, aspect)
     // prep mask id's
     this._createTileMasksIDs(tiles)
