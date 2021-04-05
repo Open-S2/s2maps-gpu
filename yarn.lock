@@ -4222,10 +4222,10 @@ earclip@^0.3.8:
   resolved "https://registry.yarnpkg.com/earclip/-/earclip-0.3.18.tgz#ab90019348eb6ca62923f1079d8f7e62f12d090e"
   integrity sha512-L9on2UAcQf1R3nLsOWp6PDhyV1tpQQwV7LhcXzMhZC+StEOuwHlXjztuN6yEhgW1pKOnXY1uLZMxEsj80SQtfA==
 
-earclip@^0.8.1:
-  version "0.8.1"
-  resolved "https://registry.yarnpkg.com/earclip/-/earclip-0.8.1.tgz#f2293f39c7dce14e6a4d714dd831194ebec0b075"
-  integrity sha512-vS3hhYlwBRfNiT+UYEeA8hIiwr2Gq67Ocrv6zm1m3O0hTQhSB7w2KVfAF4/4ovEIeNED08gXkKNQwEMLDSnZEg==
+earclip@^0.9.3:
+  version "0.9.3"
+  resolved "https://registry.yarnpkg.com/earclip/-/earclip-0.9.3.tgz#cd62e35a4de669a65ee999d802e2e82d13b18f25"
+  integrity sha512-7aaGeGDfIjNMf2uiRPtO8b2cfeSHKPMVWqaPXqDIih3vim1dfNEYLqChpIQ8O3OF37HmTU2VhLtzSb0W1Q95/w==
 
 ecc-jsbn@~0.1.1:
   version "0.1.2"
@@ -9635,10 +9635,10 @@ run-queue@^1.0.0, run-queue@^1.0.3:
   dependencies:
     aproba "^1.1.1"
 
-s2-vector-tile@^1.4.5:
-  version "1.5.7"
-  resolved "https://registry.yarnpkg.com/s2-vector-tile/-/s2-vector-tile-1.5.7.tgz#98350e469aa608ed15c0eb8f59a3218346086dda"
-  integrity sha512-PCShfSR204N/RAM540UI7VNv4Us4ojNR1dl0adA+T9skZNwZ12Hft77IWmRBiHHh3xXnMfpLNA7c/fnb3IMfHQ==
+s2-vector-tile@^1.7.0:
+  version "1.7.0"
+  resolved "https://registry.yarnpkg.com/s2-vector-tile/-/s2-vector-tile-1.7.0.tgz#b21e510b8aca41a4021448c2188d9b7026deaf30"
+  integrity sha512-YLIBemRICAvN/K5Llzz92+0RSopGeUg9shfMuDvumargZeKezpKVViBblehHACh0mZw4WH8Zn7jdQTORslAw6g==
   dependencies:
     pbf "^3.2.1"
 

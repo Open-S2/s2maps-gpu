@@ -397,7 +397,7 @@ export default class TileWorker {
               let vertices = []
               let indices = []
               if (layer.type === 'fill' && (type === 3 || type === 4)) {
-                preprocessFill(geometry, type, vertices, indices, extent, division)
+                preprocessFill(geometry, !parent ? feature.indices : null, type, vertices, indices, extent, division)
                 if (webgl1) {
                   featureCode = [
                     ...(layer.paint.color(null, properties, zoom)).getRGB()

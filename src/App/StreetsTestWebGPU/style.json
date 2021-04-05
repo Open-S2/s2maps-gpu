@@ -6,7 +6,8 @@
   "minzoom": 0,
   "maxzoom": 20,
   "sources": {
-    "streets-v2": "http://192.168.0.112:8000/data/streets-v2"
+    "oceanLowZoom": "http://localhost:8000/data/oceanLowZoomIndices",
+    "landcover": "http://localhost:8000/data/landcoverIndices"
   },
   "fonts": {
     "default": "https://s3.s2maps.io/fonts-v3/default",
@@ -51,8 +52,37 @@
       }
     },
     {
+      "name": "landcover",
+      "source": "landcover",
+      "layer": "landcover",
+      "type": "fill",
+      "minzoom": 0,
+      "maxzoom": 3,
+      "opaque": true,
+      "layout": {},
+      "paint": {
+        "color": [
+          "data-condition",
+          ["class", "==", "snow"],
+          "#ffffff",
+          ["class", "==", "wood"],
+          "#93d2a5",
+          ["class", "==", "tree"],
+          "#a8dab5",
+          ["class", "==", "crop"],
+          "#bbe2c6",
+          ["class", "==", "shrub"],
+          "rgb(242, 237, 224)",
+          ["class", "==", "wasteland"],
+          "#e8e8e1",
+          "default",
+          "#93d2a5"
+        ]
+      }
+    },
+    {
       "name": "water",
-      "source": "streets-v2",
+      "source": "oceanLowZoom",
       "filter": ["class", "!has", ["reef", "shoal"]],
       "layer": "water",
       "type": "fill",
@@ -61,110 +91,6 @@
       "layout": {},
       "paint": {
         "color": "#8fcaf9"
-      }
-    },
-    {
-      "name": "country_state",
-      "source": "streets-v2",
-      "filter": [
-        "or",
-        ["and", ["class", "==", "continent"], ["name_en", "==", "Antarctica"]],
-        ["class", "has", ["country", "state"]]
-      ],
-      "layer": "place",
-      "type": "glyph",
-      "cursor": "pointer",
-      "layout": {
-        "text-family": "roboto-medium",
-        "text-field": [
-          "data-condition",
-          ["class", "==", "continent"],
-          "?!Uname",
-          ["class", "==", "state"],
-          [
-            "input-range",
-            "zoom",
-            "step",
-            0,
-            "?abbr,?name",
-            3,
-            "?!Uname"
-          ],
-          "default",
-          [
-            "input-range",
-            "zoom",
-            "step",
-            0,
-            "?abbr,?name",
-            3,
-            "?name"
-          ]
-        ],
-        "text-anchor": "center",
-        "text-offset": [0, 0],
-        "text-padding": [1, 1]
-      },
-      "paint": {
-        "text-size": [
-          "data-condition",
-          ["class", "==", "country"],
-          [
-            "input-range",
-            "zoom",
-            "expo",
-            1.5,
-            0,
-            17,
-            4,
-            36
-          ],
-          ["class", "==", "state"],
-          [
-            "input-range",
-            "zoom",
-            "expo",
-            1.5,
-            0,
-            12,
-            4,
-            22,
-            7,
-            36
-          ],
-          "default",
-          18
-        ],
-        "text-fill": [
-          "data-condition",
-          ["class", "==", "country"],
-          "rgb(42, 42, 42)",
-          ["class", "==", "continent"],
-          "rgb(65, 65, 65)",
-          ["class", "==", "state"],
-          "rgb(90, 90, 90)",
-          "default",
-          "rgba(0, 0, 0, 0)"
-        ],
-        "text-stroke": "rgba(255, 255, 255, 0.65)",
-        "text-strokeWidth": [
-          "data-condition",
-          ["class", "==", "state"],
-          [
-            "input-range",
-            "zoom",
-            "expo",
-            1.5,
-            0,
-            0.5,
-            4,
-            0.3
-          ],
-          ["class", "==", "continent"],
-          0.2,
-          "default",
-          0
-        ]
       }
     }
   ]
