@@ -61,7 +61,7 @@ function _clip (features: Array<FeatureVector>, scale: number, k1: number, k2: n
   k1 /= scale
   k2 /= scale
   // prep buffer
-  const buffer = s2json.buffer / s2json.extent / scale
+  const buffer =  (k2 - k1) / s2json.extent * s2json.buffer
 
   if (minAxis >= k1 && maxAxis < k2) return features // trivial accept
   else if (maxAxis < k1 || minAxis >= k2) return null // trivial reject

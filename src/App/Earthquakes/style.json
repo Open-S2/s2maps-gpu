@@ -6,11 +6,11 @@
   "minzoom": 0,
   "maxzoom": 20,
   "sources": {
-    "streets-v2": "http://192.168.0.110:8000/data/streets-v2",
-    "landcover": "http://localhost:8000/data/landcover",
-    "buildings": "http://localhost:8000/data/buildings",
-    "plates": "http://localhost:8000/json/plates.s2json",
-    "earthquakes": "http://localhost:8000/json/earthquakes.s2json"
+    "streets-v2": "https://s3.s2maps.io/streets-v2",
+    "landcover": "https://s3.s2maps.io/terrain-v1",
+    "buildings": "http://192.168.0.189:8000/data/buildings",
+    "plates": "https://s3.s2maps.io/s2json/plates.s2json",
+    "earthquakes": "https://s3.s2maps.io/s2json/earthquakes.s2json"
   },
   "fonts": {
     "default": "https://s3.s2maps.io/fonts-v2/default",

@@ -253,6 +253,7 @@ export default class TileWorker {
           requestData(`${path}/${face}/${zoom}/${x}/${y}`, extension, data => {
             if (self.cancelCache.includes(hash)) return
             else if (data) self._processVectorData(mapID, sourceName, source, tile, new VectorTile(data))
+            else self._getParentData(mapID, sourceName, source, tile)
           })
         } else if (zoom > maxzoom && zoom <= self.maps[mapID].maxzoom && facesbounds[face]) { // secondary case: check if a parent tile exists
           self._getParentData(mapID, sourceName, source, tile) // incase we need to inject parent data
@@ -462,8 +463,8 @@ export default class TileWorker {
           let pY = y
           while (pZoom > layerMaxZoom) {
             pZoom--
-            pX = Math.floor(pX / 2)
-            pY = Math.floor(pY / 2)
+            pX = pX >> 1
+            pY = pY >> 1
           }
           const hash = tileHash(face, pZoom, pX, pY)
           // store parent reference
@@ -503,8 +504,8 @@ export default class TileWorker {
         let pY = y
         while (pZoom > layerMaxZoom) {
           pZoom--
-          pX = Math.floor(pX / 2)
-          pY = Math.floor(pY / 2)
+          pX = pX >> 1
+          pY = pY >> 1
         }
         const hash = tileHash(face, pZoom, pX, pY)
         // store parent reference
