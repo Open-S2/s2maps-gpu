@@ -5,7 +5,7 @@ import Style from '../../style'
 import { Painter } from '../../gl'
 import type { MapOptions } from '../map'
 /** PROJECTIONS **/
-// import { tileHash } from 's2projection' // https://github.com/Regia-Corporation/s2projection
+import { tileHash } from 's2projection' // https://github.com/Regia-Corporation/s2projection
 import Projector from './projections'
 /** SOURCES **/
 import { Tile } from '../../source'
@@ -63,6 +63,17 @@ export default class Camera {
     const tile = new Tile(this.painter.context, face, zoom, x, y, hash)
     // should our style have default layers, let's add them
     if (style.maskLayers.length) tile.injectMaskLayers(style.maskLayers)
+    // inject parent should one exist
+    if (tile.zoom !== 0) {
+      // get closest parent hash. If actively zooming, the parent tile will pass along
+      // it's parent tile (and so forth) if its own data has not been processed yet.
+      const parentHash = tileHash(tile.face, tile.zoom - 1, Math.floor(tile.x / 2), Math.floor(tile.y / 2))
+      // check if parent tile exists, if so inject
+      if (this.tileCache.has(parentHash)) {
+        const parent = this.tileCache.get(parentHash)
+        tile.injectParentTile(parent, this.style.layers)
+      }
+    }
     // store the tile
     this.tileCache.set(hash, tile)
 

@@ -44,6 +44,9 @@ export default class DragPan extends EventTarget {
 
   onTouchEnd (touches: TouchEvent) {
     this._setTouchDelta(touches)
+    if (Math.abs(this.totalMovementX) < this.minMovementX && Math.abs(this.totalMovementY) < this.minMovementY) {
+      this.dispatchEvent(new Event('click'))
+    }
   }
 
   _setTouchDelta (touches: TouchEvent) {
@@ -80,7 +83,7 @@ export default class DragPan extends EventTarget {
       this.dispatchEvent(new Event('swipe'))
     } else if (Math.abs(this.totalMovementX) < this.minMovementX && Math.abs(this.totalMovementY) < this.minMovementY) {
       if (!this.wasActive) this.dispatchEvent(new Event('click'))
-      else this.wasActive = false
+      this.wasActive = false
     } else { this.wasActive = false }
   }
 

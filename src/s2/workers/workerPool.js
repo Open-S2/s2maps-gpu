@@ -1,10 +1,11 @@
 // @flow
-import type S2Map from '../s2Map'
+import TileWorker from './tile.worker.js'
 import requestData from '../util/fetch'
 
 // TODO:
 // https://stackoverflow.com/questions/21913673/execute-web-worker-from-different-origin
 
+import type S2Map from '../s2Map'
 import type { StylePackage } from '../style/styleSpec'
 import type { TileRequest } from './tile.worker'
 
@@ -18,13 +19,9 @@ class WorkerPool {
   maps: { [string]: S2Map } = {} // MapID: S2Map
   constructor () {
     for (let i = 0; i < this.workerCount; i++) { // $FlowIgnore
-      import('./tile.worker.js').then(res => {
-        const TileWorker = res.default
-        const worker = new TileWorker()
-        // const worker = new Worker('./tile.worker.js', { type: 'module' })
-        worker.onmessage = this._onMessage.bind(this)
-        this.workers.push(worker)
-      })
+      const worker = new TileWorker()
+      worker.onmessage = this._onMessage.bind(this)
+      this.workers.push(worker)
     }
   }
 

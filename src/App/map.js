@@ -3,32 +3,37 @@ import { S2Map } from '../s2'
 // import StreetStyle from './Streets/style.json'
 // import DarkStyle from './Dark/style.json'
 
+let s2map = null
+
 function Map (props) {
-  const { style, opts } = props
-  const { setMap } = useMapContainer(style, opts)
+  const [height, setHeight] = useState(window.innerHeight)
+  const { style, opts, click, ready } = props
+
+  function resize () { setHeight(window.innerHeight) }
+
+  window.addEventListener('resize', resize)
+  window.addEventListener('orientationchange', resize)
+
+  useEffect(() => {
+    // componentWillUnmount equivalent:
+    return () => {
+      window.removeEventListener('resize', resize)
+      window.removeEventListener('orientationchange', resize)
+      if (s2map) { s2map.delete(); s2map = null }
+    }
+  }, [])
+
   return (
     <div className='App'>
-      <div id='map-container' ref={c => setMap(c)} />
+      <div id='map-container' style={{ height }} ref={c => prepCanvas(c, style, opts, click, ready)} />
     </div>
   )
 }
 
-function useMapContainer (style, opts) {
-  let [mapContainer, setMap] = useState()
+function prepCanvas (container, style, opts = {}, click, ready) {
+  if (s2map) return s2map
 
-  // cause a prep of data
-  useEffect(() => {
-    let map
-    if (mapContainer) { map = prepCanvas(mapContainer, style, opts) }
-    // componentWillUnmount equivalent:
-    return () => { if (map) map.delete() }
-  }, [style, opts, mapContainer])
-
-  return { mapContainer, setMap }
-}
-
-function prepCanvas (container, style, opts = {}) {
-  const map = new S2Map({
+  s2map = new S2Map({
     ...opts,
     style,
     container,
@@ -36,21 +41,27 @@ function prepCanvas (container, style, opts = {}) {
     zoomController: true
   })
 
-  // map.addEventListener('click', (data) => {
-  //   console.log('click', data.detail)
-  // })
-  // map.addEventListener('mouseenter', (data) => {
+  if (ready) ready(s2map)
+
+  if (click) {
+    s2map.addEventListener('click', (data) => {
+      // console.log('click', data.detail)
+      click(data.detail)
+    })
+  }
+
+  // s2map.addEventListener('mouseenter', (data) => {
   //   console.log('mouseenter', data.detail)
   // })
-  // map.addEventListener('mouseleave', (data) => {
+  // s2map.addEventListener('mouseleave', (data) => {
   //   console.log('mouseleave', data.detail)
   // })
 
   // setTimeout(() => {
-  //   map.jumpTo(-18.287283, 64.920456, 4.4)
+  //   s2map.jumpTo(-18.287283, 64.920456, 4.4)
   // }, 5000)
 
-  return map
+  return s2map
 }
 
 export default Map

@@ -128,8 +128,8 @@ export default class GlyphBuilder {
   // 1) add to our glyphFilterVertices the text dimesions
   // 2) add any missing glyphs to our texturePack
   // 3) reference the texture when building quad glyph data (always put strokes in the front, fills in the back)
-  buildText (text: Text) {
-    let { s, t, x, y, width, id, padding, glyphData, offset, overdraw, type } = text
+  buildGlyphData (gData: Glyph) {
+    let { s, t, x, y, width, id, padding, glyphData, offset, overdraw, type } = gData
     // adjust s & t
     s *= 8192
     t *= 8192

@@ -2,8 +2,8 @@
   "version": 1,
   "name": "rasterTest",
   "center": [0, 0],
-  "zoom": 0,
-  "minzoom": 0,
+  "zoom": -0.5,
+  "minzoom": -1.5,
   "maxzoom": 4.9,
   "sources": {
     "satellite": {

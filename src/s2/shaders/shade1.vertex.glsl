@@ -22,7 +22,8 @@ void main () {
   pos.xyz /= pos.w;
   pos.w = 1.;
   // modify aspect to be a ratio of
-  vec2 radius = uAspect / (uDevicePixelRatio * 2.) / ((uInputs[0] / 1.35) + 1.) / 500.;
+  float zoom = (uInputs[0] < 0.) ? uInputs[0] / 1.45 : uInputs[0];
+  vec2 radius = uAspect / (uDevicePixelRatio * 2.) / ((zoom / 1.35) + 1.) / 500.;
   // get pixel distance
   vPos = pos.xy;
   // scale

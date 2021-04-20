@@ -3,11 +3,11 @@
   "name": "s2test",
   "center": [-122.4585607773497, 37.778443127730476],
   "zoom": 0,
-  "minzoom": 0,
-  "maxzoom": 20,
+  "minzoom": -0.5,
+  "maxzoom": 17.99,
   "sources": {
     "streets-v2": "https://s3.s2maps.io/streets-v2",
-    "landcover": "https://s3.s2maps.io/terrain-v1",
+    "terrain": "https://s3.s2maps.io/terrain-v1",
     "tissots": "https://s3.s2maps.io/s2json/tissotsIndicatrix.s2json"
   },
   "fonts": {
@@ -47,7 +47,7 @@
     },
     {
       "name": "landcover",
-      "source": "landcover",
+      "source": "terrain",
       "layer": "landcover",
       "type": "fill",
       "minzoom": 0,
@@ -176,33 +176,6 @@
           "#e1f1df",
           ["type", "has", ["course", "rough"]],
           "#d3eace",
-          "default",
-          "rgba(0, 0, 0, 0)"
-        ]
-      }
-    },
-    {
-      "name": "hillshade",
-      "source": "terrain",
-      "layer": "hillshade",
-      "type": "fill",
-      "minzoom": 0,
-      "layout": {},
-      "paint": {
-        "color": [
-          "data-condition",
-          ["and", ["class", "==", "shade"], ["level", "==", 3]],
-          "rgba(31, 81, 56, 0.25)",
-          ["and", ["class", "==", "shade"], ["level", "==", 2]],
-          "rgba(31, 81, 56, 0.2)",
-          ["and", ["class", "==", "shade"], ["level", "==", 1]],
-          "rgba(31, 81, 56, 0.15)",
-          ["and", ["class", "==", "shade"], ["level", "==", 0]],
-          "rgba(31, 81, 56, 0.1)",
-          ["and", ["class", "==", "highlight"], ["level", "==", 1]],
-          "rgba(255, 254, 250, 0.4)",
-          ["and", ["class", "==", "highlight"], ["level", "==", 0]],
-          "rgba(255, 254, 250, 0.2)",
           "default",
           "rgba(0, 0, 0, 0)"
         ]

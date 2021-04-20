@@ -49,6 +49,7 @@ void main () {
   // adjust color by opacity
   color.rgb *= color.a;
   color.rgba *= opacity;
+  stroke.rgba *= opacity;
 
   // get position
   vec4 glPos = getPos(aPos);

@@ -1,6 +1,8 @@
 // @flow
-import type Map, { MapOptions } from './ui/map'
-import type MapWorker from './workers/map.worker.js'
+import Map from './ui/map'
+import MapWorker from './workers/map.worker.js'
+
+import type { MapOptions } from './ui/map'
 
 // This is a builder / api instance for the end user.
 // We want individual map instances in their own web worker thread. However,
@@ -9,17 +11,17 @@ export default class S2Map extends EventTarget {
   _container: HTMLElement
   _canvasContainer: HTMLElement
   _navigationContainer: HTMLElement
-  _jollyRoger: HTMLElement
   _canvasMultiplier: number
   _offscreen: boolean = false
   _canvas: HTMLCanvasElement
   map: Map | MapWorker
+  firefoxScroll: boolean = navigator.platform !== 'MacIntel' && navigator.appCodeName === 'Mozilla'
   id: string = Math.random().toString(36).replace('0.', '')
   constructor (options: MapOptions = {}) {
     super()
     // make sure certain options exist
     options = { canvasMultiplier: window.devicePixelRatio || 2, interactive: true, ...options }
-    this._canvasMultiplier = Math.max(2, options.canvasMultiplier)
+    options.canvasMultiplier = this._canvasMultiplier = Math.max(2, options.canvasMultiplier)
     // get the container
     if (typeof options.container === 'string') {
       this._container = window.document.getElementById(options.container)
@@ -44,39 +46,82 @@ export default class S2Map extends EventTarget {
   }
 
   _setupContainer (options: MapOptions): HTMLCanvasElement {
+    const self = this
     // prep container
-    const container = this._container
+    const container = self._container
     container.classList.add('s2-map')
     // build canvas-container
-    const canvasContainer = this._canvasContainer = window.document.createElement('div')
+    const canvasContainer = self._canvasContainer = window.document.createElement('div')
     canvasContainer.className = 's2-canvas-container'
     container.appendChild(canvasContainer)
-    // if we interact with the map, we need to both allow interaction with styling
-    // and watch how the mouse moves on the canvas
-    if (options.interactive === true) {
-      canvasContainer.classList.add('s2-interactive')
-      canvasContainer.addEventListener('mousemove', this._onCanvasMouseMove.bind(this))
-    }
     // build canvas
     const canvas = window.document.createElement('canvas')
     canvas.className = 's2-canvas'
     canvas.setAttribute('tabindex', '0')
     canvas.setAttribute('aria-label', 'S2Map')
-    canvas.width = container.clientWidth * this._canvasMultiplier
-    canvas.height = container.clientHeight * this._canvasMultiplier
+    canvas.width = container.clientWidth * self._canvasMultiplier
+    canvas.height = container.clientHeight * self._canvasMultiplier
     canvasContainer.appendChild(canvas)
+
     return canvas
+  }
+
+  _setupCanvas (canvas: HTMLCanvasElement, options: MapOptions) {
+    const self = this
+    const { _canvasContainer } = self
+    // if browser supports it, create an instance of the mapWorker
+    if (false && canvas.transferControlToOffscreen) { // $FlowIgnore
+      const offscreen = canvas.transferControlToOffscreen()
+      self._offscreen = true
+      const mapWorker = self.map = new MapWorker()
+      mapWorker.onmessage = self._mapMessage.bind(self)
+      mapWorker.postMessage({ type: 'canvas', options, canvas: offscreen, id: self.id }, [offscreen])
+    } else {
+      self.map = new Map(options, canvas, self.id, self)
+    }
+    // if we interact with the map, we need to both allow interaction with styling
+    // and watch how the mouse moves on the canvas
+    if (options.interactive === true) {
+      _canvasContainer.classList.add('s2-interactive')
+      _canvasContainer.addEventListener('mousemove', self._onCanvasMouseMove.bind(self))
+      if (options.scrollZoom === undefined || options.scrollZoom === true) _canvasContainer.addEventListener('wheel', self._onScroll.bind(self))
+      _canvasContainer.addEventListener('mousedown', self._onMouseDown.bind(self))
+      _canvasContainer.addEventListener('touchstart', (e: TouchEvent) => self._onTouch(e, 'touchstart'))
+      _canvasContainer.addEventListener('touchend', (e: TouchEvent) => self._onTouch(e, 'touchend'))
+      _canvasContainer.addEventListener('touchmove', (e: TouchEvent) => self._onTouch(e, 'touchmove'))
+    }
+    // let map know to finish the setup
+    self._onCanvasReady(options)
+  }
+
+  _onCanvasReady (options: MapOptions) {
+    // now that canvas is setup, support resizing // $FlowIgnore
+    if ('ResizeObserver' in window) new ResizeObserver(this._resize.bind(this)).observe(this._container)
+    else window.addEventListener('resize', this._resize.bind(this))
+    // now that canvas is setup, add control containers as necessary
+    this._setupControlContainer(options)
+    // let the S2WorkerPool know of this maps existance
+    window.S2WorkerPool.addMap(this)
+    // lastly emit that the map is ready for commands
+    this.dispatchEvent(new Event('ready'))
   }
 
   _setupControlContainer (options: MapOptions) {
     const { _canvasContainer } = this
-    const { jollyRoger, zoomController, darkMode } = options
-    // if jollyRoger is not false, add the logo
-    if (jollyRoger !== false) {
-      const jR = this._jollyRoger = window.document.createElement('div')
-      jR.className = 's2-jolly-roger' + (darkMode ? '-dark' : '')
-      _canvasContainer.appendChild(jR)
-    }
+    const { zoomController, darkMode } = options
+    // add info bar with our jollyRoger
+    const attribution = window.document.createElement('div')
+    attribution.id = 's2-attribution'
+    const info = window.document.createElement('div')
+    info.id = 's2-info'
+    info.innerHTML = 'ⓘ'
+    info.onclick = function () { attribution.classList.toggle('show') }
+    const popup = window.document.createElement('div')
+    popup.className = 's2-popup-container'
+    popup.innerHTML = '<div>Rendered with ❤ by</div><a href="https://s2maps.io" target="popup"><div class="s2-jolly-roger"></div></a><div><a href="https://www.openstreetmap.org/copyright/" target="popup">OpenStreetMap</a></div><div><a href="https://s2maps.io/data" target="popup">S2 Maps data</a></div>'
+    attribution.appendChild(info)
+    attribution.appendChild(popup)
+    _canvasContainer.appendChild(attribution)
     // if zoom or compass controllers, add
     if (zoomController) {
       // first create the container
@@ -107,82 +152,63 @@ export default class S2Map extends EventTarget {
     }
   }
 
-  _setupCanvas (canvas: HTMLCanvasElement, options: MapOptions) {
-    const self = this
-    // if browser supports it, create an instance of the mapWorker
-    if (canvas.transferControlToOffscreen) { // $FlowIgnore
-      const offscreen = canvas.transferControlToOffscreen()
-      self._offscreen = true
-      import('./workers/map.worker.js').then(res => {
-        const Map: MapWorker = res.default
-        const mapWorker = self.map = new Map()
-        mapWorker.onmessage = self._mapMessage.bind(self)
-        mapWorker.postMessage({ type: 'canvas', options, canvas: offscreen, id: self.id }, [offscreen])
-        if (options.interactive === true) {
-          if (options.scrollZoom === undefined || options.scrollZoom === true) canvas.addEventListener('wheel', self._onScroll.bind(self))
-          canvas.addEventListener('mousedown', () => {
-            mapWorker.postMessage({ type: 'mousedown' })
-            // build mousemove
-            const mouseMoveFunc = (e: MouseEvent) => { self._onMouseMove(e) }
-            window.addEventListener('mousemove', mouseMoveFunc)
-            window.addEventListener('mouseup', () => {
-              window.removeEventListener('mousemove', mouseMoveFunc)
-              mapWorker.postMessage({ type: 'mouseup' })
-            }, { once: true })
-          })
-          canvas.addEventListener('touchstart', (e: TouchEvent) => self._onTouch(e, 'touchstart'))
-          canvas.addEventListener('touchend', (e: TouchEvent) => self._onTouch(e, 'touchend'))
-          canvas.addEventListener('touchmove', (e: TouchEvent) => self._onTouch(e, 'touchmove'))
-        }
-        // let map know to finish the setup
-        self._onCanvasReady(options)
-      })
-    } else {
-      import('./ui/map').then(map => {
-        const Map = map.default
-        self.map = new Map(options, canvas, self.id, self)
-        // let map know to finish the setup
-        self._onCanvasReady(options)
-      })
-    }
-  }
-
-  _onCanvasReady (options: MapOptions) {
-    // now that canvas is setup, support resizing // $FlowIgnore
-    if ('ResizeObserver' in window) new ResizeObserver(this._resize.bind(this)).observe(this._container)
-    else window.addEventListener('resize', this._resize.bind(this))
-    // now that canvas is setup, add control containers as necessary
-    this._setupControlContainer(options)
-    // let the S2WorkerPool know of this maps existance
-    window.S2WorkerPool.addMap(this)
-    // lastly emit that the map is ready for commands
-    this.dispatchEvent(new Event('ready'))
-  }
-
   _onTouch (e: TouchEvent, type: string) {
+    const { map, _offscreen, _canvasContainer, _canvasMultiplier } = this
     e.preventDefault()
     const { touches } = e
     const { length } = touches
     const touchEvent = { length }
 
     for (let i = 0; i < length; i++) {
-      const { clientX, clientY } = touches[i]
-      touchEvent[i] = { clientX, clientY }
+      const { clientX, clientY, pageX, pageY } = touches[i]
+      const x = (pageX - _canvasContainer.offsetLeft) * _canvasMultiplier
+      const y = (pageY - _canvasContainer.offsetTop) * _canvasMultiplier
+      touchEvent[i] = { clientX, clientY, x, y }
     }
-    // $FlowIgnore
-    this.map.postMessage({ type, touchEvent })
+    if (_offscreen && map) {
+      map.postMessage({ type, touchEvent })
+    } else if (map) {
+      if (type === 'touchstart') map.onTouchStart(touchEvent)
+      else if (type === 'touchend') map.dragPan.onTouchEnd(touchEvent)
+      else if (type === 'touchmove') map.dragPan.onTouchMove(touchEvent)
+    }
   }
 
   _onScroll (e: WheelEvent) {
     e.preventDefault()
+    const { map, _offscreen, firefoxScroll } = this
     const { clientX, clientY, deltaY } = e
     const rect = this._canvas.getBoundingClientRect() // $FlowIgnore
-    this.map.postMessage({ type: 'scroll', rect, clientX, clientY, deltaY })
+    if (_offscreen && map) {
+      map.postMessage({ type: 'scroll', rect, clientX, clientY, deltaY })
+    } else if (map) { map._onZoom(deltaY * (firefoxScroll ? 25 : 1), clientX - rect.left, clientY - rect.top) }
+  }
+
+  _onMouseDown () {
+    const self = this
+    const { map, _offscreen } = self
+    // send off a mousedown
+    if (_offscreen && map) {
+      map.postMessage({ type: 'mousedown' })
+    } else if (map) { map.dragPan.onMouseDown() }
+    // build a listener to mousemovement
+    const mouseMoveFunc = self._onMouseMove.bind(self)
+    window.addEventListener('mousemove', mouseMoveFunc)
+    // upon eventual mouseup, let the map know
+    window.addEventListener('mouseup', () => {
+      window.removeEventListener('mousemove', mouseMoveFunc)
+      if (_offscreen && map) {
+        map.postMessage({ type: 'mouseup' })
+      } else if (map) { map.dragPan.onMouseUp() }
+    }, { once: true })
   }
 
   _onMouseMove (e: MouseEvent) {
+    const { map, _offscreen } = this
     const { movementX, movementY } = e // $FlowIgnore
-    this.map.postMessage({ type: 'mousemove', movementX, movementY })
+    if (_offscreen && map) {
+      map.postMessage({ type: 'mousemove', movementX, movementY })
+    } else if (map) { map.dragPan.onMouseMove(movementX, movementY) }
   }
 
   _onCanvasMouseMove (e: MouseEvent) {
@@ -205,12 +231,14 @@ export default class S2Map extends EventTarget {
       window.S2WorkerPool.injectStyle(mapID, data.style)
     } else if (type === 'mouseenter') {
       const { feature } = data
-      if (feature) this._canvas.style.cursor = feature.__cursor || 'default'
-      this.dispatchEvent(new CustomEvent('mouseenter', { detail: feature }))
+      if (feature) {
+        this._canvas.style.cursor = feature.__cursor || 'default'
+        this.dispatchEvent(new CustomEvent('mouseenter', { detail: feature }))
+      }
     } else if (type === 'mouseleave') {
       const { feature } = data
       this._canvas.style.cursor = 'default'
-      this.dispatchEvent(new CustomEvent('mouseleave', { detail: feature }))
+      if (feature) this.dispatchEvent(new CustomEvent('mouseleave', { detail: feature }))
     } else if (type === 'click') {
       this.dispatchEvent(new CustomEvent('click', { detail: data.feature }))
     }

@@ -2,14 +2,12 @@
   "version": 1,
   "name": "s2test",
   "center": [-111.865828, 40.765627],
-  "zoom": 12,
-  "minzoom": 0,
-  "maxzoom": 20,
+  "zoom": 3,
+  "minzoom": -0.5,
+  "maxzoom": 17.99,
   "sources": {
-    "streets-v2": "http://192.168.0.110:8000/data/streets-v2",
-    "terrain": "http://localhost:8000/data/terrain",
-    "landcover": "http://localhost:8000/data/landcover",
-    "buildings": "http://localhost:8000/data/buildings",
+    "streets-v2": "https://s3.s2maps.io/streets-v2",
+    "terrain": "https://s3.s2maps.io/terrain-v1",
     "openAddressData": "https://s3.s2maps.io/client-data/openaddresses/oad-v1"
   },
   "fonts": {
@@ -52,7 +50,7 @@
     },
     {
       "name": "landcover",
-      "source": "landcover",
+      "source": "terrain",
       "layer": "landcover",
       "type": "fill",
       "minzoom": 0,
@@ -130,7 +128,7 @@
           ["type", "==", "school"],
           "rgb(226, 233, 238)",
           ["type", "has", ["desert", "sand"]],
-          "#efede2",
+          "#f1e9c3",
           ["type", "==", "urban"],
           "#e9eaed",
           "default",
@@ -1401,7 +1399,7 @@
     },
     {
       "name": "buildings",
-      "source": "buildings",
+      "source": "streets-v2",
       "layer": "buildings",
       "type": "fill",
       "opaque": true,
@@ -1422,7 +1420,7 @@
     },
     {
       "name": "buildings_highlight",
-      "source": "buildings",
+      "source": "streets-v2",
       "layer": "buildings",
       "type": "line",
       "layout": {
@@ -1443,6 +1441,12 @@
         ],
         "width": 1.5
       }
+    },
+    {
+      "name": "shade",
+      "source": "mask",
+      "type": "shade",
+      "maxzoom": 2
     },
     {
       "name": "country_state",

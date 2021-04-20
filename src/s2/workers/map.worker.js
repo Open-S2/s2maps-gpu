@@ -16,7 +16,7 @@ export default class MapWorker implements Worker {
     else if (type === 'mouseup') this.map.dragPan.onMouseUp()
     else if (type === 'mousemove') this.map.dragPan.onMouseMove(data.movementX, data.movementY)
     else if (type === 'canvasmousemove') this.map.onCanvasMouseMove(data.x, data.y)
-    else if (type === 'touchstart') this.map.dragPan.onTouchStart(data.touchEvent)
+    else if (type === 'touchstart') this.map.onTouchStart(data.touchEvent)
     else if (type === 'touchend') this.map.dragPan.onTouchEnd(data.touchEvent)
     else if (type === 'touchmove') this.map.dragPan.onTouchMove(data.touchEvent)
     else if (type === 'nav') this.map.navEvent(data.ctrl)

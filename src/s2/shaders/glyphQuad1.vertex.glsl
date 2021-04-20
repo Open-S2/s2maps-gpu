@@ -88,13 +88,17 @@ void main () {
   float strokeWidth;
   vec4 inputID;
   // if we are filtering, check if this glyph was filtered out
-  if (!uOverdraw || uInteractive) {
+  if (!uOverdraw) {
     // Check the "glyphFilter" result texture at current glPos to see if the aID matches
     // if not, we stop right here for color (discard)
     int id = int(aID);
     ivec3 colorID = ivec3(float(AND(id, 255)), float(AND(rightShift(id, 8.), 255)), float(rightShift(id, 16.)));
     inputID = texture2D(uFeatures, vec2(glPos / 2. + 0.5));
     if (colorID != ivec3(inputID.rgb * 256.)) shouldDraw = false;
+  } else if (uInteractive) {
+    int id = int(aID);
+    inputID = vec4(float(AND(id, 255)), float(AND(rightShift(id, 8.), 255)), float(rightShift(id, 16.)), 1.);
+    inputID.rgb /= 255.;
   }
   // move on if not drawing
   if (!shouldDraw) return;

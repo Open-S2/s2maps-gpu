@@ -1,19 +1,16 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import S2Logo from './S2Logo.svg'
-import StreetsWEBP from './streets.webp'
 import StreetsJPG from './streets.jpg'
-import DarkWEBP from './dark.webp'
 import DarkJPG from './dark.jpg'
-import LightWEBP from './light.webp'
 import LightJPG from './light.jpg'
-import RasterWEBP from './raster.webp'
 import RasterJPG from './raster.jpg'
-import GeoJSONWEBP from './geojson.webp'
 import GeoJSONJPG from './geojson.jpg'
-import TissotsWEBP from './tissots.webp'
+import HeatmapJPG from './heatmap.jpg'
+import PointsJPG from './points.jpg'
+import InteractJPG from './interact.jpg'
 import TissotsJPG from './tissots.jpg'
-import DEM from './dem.mp4'
+import TilesJPG from './tiles.jpg'
 
 function Home () {
   return (
@@ -28,69 +25,58 @@ function Home () {
 
           <Link to='/streets'>
             <div className='link-container'>
-              <picture>
-                <source async loading='lazy' width='640px' height='363px' alt='streets' srcSet={StreetsWEBP} type='image/webp' />
-                <source async loading='lazy' width='640px' height='363px' alt='streets' srcSet={StreetsJPG} type='image/jpeg' />
-                <img async loading='lazy' width='640px' height='363px' alt='streets' src={StreetsJPG} />
-              </picture>
+              <img async loading='lazy' width='640px' height='363px' alt='streets' src={StreetsJPG} />
               <div className='link-name'>Streets</div>
             </div>
           </Link>
 
           <Link to='/dark'>
             <div className='link-container'>
-              <picture>
-                <source async loading='lazy' width='640px' height='363px' alt='dark' srcSet={DarkWEBP} type='image/webp' />
-                <source async loading='lazy' width='640px' height='363px' alt='dark' srcSet={DarkJPG} type='image/jpeg' />
-                <img async loading='lazy' width='640px' height='363px' alt='dark' src={DarkJPG} />
-              </picture>
+              <img async loading='lazy' width='640px' height='363px' alt='dark' src={DarkJPG} />
               <div className='link-name'>Dark</div>
             </div>
           </Link>
 
           <Link to='/light'>
             <div className='link-container'>
-              <picture>
-                <source async loading='lazy' width='640px' height='363px' alt='light' srcSet={LightWEBP} type='image/webp' />
-                <source async loading='lazy' width='640px' height='363px' alt='light' srcSet={LightJPG} type='image/jpeg' />
-                <img async loading='lazy' width='640px' height='363px' alt='light' src={LightJPG} />
-              </picture>
+              <img async loading='lazy' width='640px' height='363px' alt='light' src={LightJPG} />
               <div className='link-name'>Light</div>
             </div>
           </Link>
 
           <Link to='/raster' className='link-container'>
-            <picture>
-              <source async loading='lazy' width='640px' height='363px' alt='raster' srcSet={RasterWEBP} type='image/webp' />
-              <source async loading='lazy' width='640px' height='363px' alt='raster' srcSet={RasterJPG} type='image/jpeg' />
-              <img async loading='lazy' width='640px' height='363px' alt='raster' src={RasterJPG} />
-            </picture>
+            <img async loading='lazy' width='640px' height='363px' alt='raster' src={RasterJPG} />
             <div className='link-name'>Raster</div>
           </Link>
 
-          <Link to='/dem' className='link-container'>
-            <video async className='link-video' autoPlay loop autobuffer='true' muted playsInline>
-              <source loading='lazy' src={DEM} type='video/mp4' />
-            </video>
-            <div className='link-name'>DEM</div>
-          </Link>
-
           <Link to='/geojson' className='link-container'>
-            <picture>
-              <source async loading='lazy' width='640px' height='363px' alt='geojson' srcSet={GeoJSONWEBP} type='image/webp' />
-              <source async loading='lazy' width='640px' height='363px' alt='geojson' srcSet={GeoJSONJPG} type='image/jpeg' />
-              <img async loading='lazy' width='640px' height='363px' alt='geojson' src={GeoJSONJPG} />
-            </picture>
+            <img async loading='lazy' width='640px' height='363px' alt='geojson' src={GeoJSONJPG} />
             <div className='link-name'>GeoJSON</div>
           </Link>
 
+          <Link to='/earthquakes' className='link-container'>
+            <img async loading='lazy' width='640px' height='363px' alt='earthquakes' src={HeatmapJPG} />
+            <div className='link-name'>Heatmap</div>
+          </Link>
+
+          <Link to='/open-address-data' className='link-container'>
+            <img async loading='lazy' width='640px' height='363px' alt='open-address-data' src={PointsJPG} />
+            <div className='link-name'>Point Data</div>
+          </Link>
+
+          <Link to='/tesla' className='link-container'>
+            <img async loading='lazy' width='640px' height='363px' alt='tesla' src={InteractJPG} />
+            <div className='link-name'>Interactive Data</div>
+          </Link>
+
           <Link to='/tissots' className='link-container'>
-            <picture>
-              <source async loading='lazy' width='640px' height='363px' alt='tissots' srcSet={TissotsWEBP} type='image/webp' />
-              <source async loading='lazy' width='640px' height='363px' alt='tissots' srcSet={TissotsJPG} type='image/jpeg' />
-              <img async loading='lazy' width='640px' height='363px' alt='tissots' src={TissotsJPG} />
-            </picture>
+            <img async loading='lazy' width='640px' height='363px' alt='tissots' src={TissotsJPG} />
             <div className='link-name'>Tissot's Indicatrix</div>
+          </Link>
+
+          <Link to='/tiles' className='link-container'>
+            <img async loading='lazy' width='640px' height='363px' alt='tiles' src={TilesJPG} />
+            <div className='link-name'>Tiles</div>
           </Link>
 
         </div>

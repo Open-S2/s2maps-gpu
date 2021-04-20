@@ -273,9 +273,14 @@ export default class Painter {
     let program: Program
     // run through the features, and upon tile, layer, or program change, adjust accordingly
     for (const feature of features) {
-      const { tile, layerIndex, invert, depthPos, sourceName, type, layerCode, lch } = feature
-      const { sourceData, tmpMaskID, faceST, bottom, top } = tile
-      const featureSource = sourceData[sourceName]
+      const {
+        tile, parent, layerIndex, source, faceST, invert,
+        depthPos, sourceName, type, layerCode, lch
+      } = feature
+      const { tmpMaskID } = tile
+      const bottom = parent ? parent.bottom : tile.bottom
+      const top = parent ? parent.top : tile.top
+      const featureSource = source[sourceName]
       // inversion flush if necessary
       if (inversion && curLayer !== layerIndex) {
         this.flushInvert(tiles, program, inversion)
@@ -341,10 +346,11 @@ export default class Painter {
     program.setupTextureDraw()
     // draw all features
     for (const feature of features) {
-      const { tile, sourceName, layerCode } = feature
-      const { sourceData, faceST, bottom, top } = tile
-      // grab feature source
-      const featureSource = sourceData[sourceName]
+      const { tile, parent, source, faceST, sourceName, layerCode } = feature
+      // grab feature source and bottom-top
+      const featureSource = source[sourceName]
+      const bottom = parent ? parent.bottom : tile.bottom
+      const top = parent ? parent.top : tile.top
       // set faceST & layercode, bind vao, and draw
       program.setFaceST(faceST)
       program.setTilePos(bottom, top)

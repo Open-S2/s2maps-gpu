@@ -17,6 +17,7 @@ code {
   text-align: center;
   color: #efefef;
   width: 100vw;
+  min-width: 100%;
   height: 100vh;
   overflow: hidden;
 }
@@ -94,28 +95,84 @@ code {
   border-left: 1px solid #666;
 }
 
-.s2-jolly-roger {
+#s2-attribution {
+  z-index: 3000;
+  user-select: none;
   position: absolute;
   left: 0;
   bottom: 0;
+  margin-bottom: 5px;
+  margin-left: 5px;
+  color: #515151;
+}
+
+#s2-info {
+  padding: 4px;
+  font-size: 26px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  background: #ededed;
+  border-radius: 100%;
+  box-shadow: 0px 1px 4px rgb(0 0 0 / 35%);
+}
+#s2-info:hover {
+  background: #fff;
+}
+#s2-info:active {
+  background: #fff;
+}
+
+.s2-popup-container {
+  cursor: default;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  position: absolute;
+  bottom: 40px;
+  left: 2px;
+  border-radius: 6px;
+  width: 200px;
+  height: auto;
+  background-color: #fff;
+  overflow: hidden;
+  font-size: 16px;
+  padding: 10px 0;
+  box-shadow: 0px 1px 4px rgb(0 0 0 / 35%);
+}
+
+.s2-popup-container a {
+  cursor: pointer;
+}
+.s2-popup-container a:hover {
+  color: #515151;
+  cursor: pointer;
+}
+
+.s2-jolly-roger {
   width: 111.2px;
-  height: 40.4px;
+  height: 42px;
   background-repeat: no-repeat;
   margin: 0 0 0 12.5px;
   pointer-events: none;
   background-image: url('./s2/svg/s2-jolly-roger.svg');
+  background-position: center center;
 }
 
-.s2-jolly-roger-dark {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 111.2px;
-  height: 40.4px;
-  background-repeat: no-repeat;
-  margin: 0 0 0 12.5px;
-  pointer-events: none;
-  background-image: url('./s2/svg/s2-jolly-roger-dark.svg');
+#s2-attribution .s2-popup-container {
+  visibility: hidden;
+}
+
+#s2-attribution.show .s2-popup-container {
+  visibility: visible;
+}
+
+.s2-popup-container div {
+  margin: 5px 0;
 }
 
 .s2-canvas {

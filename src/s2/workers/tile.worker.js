@@ -479,8 +479,8 @@ export default class TileWorker {
     if (lineFeatures.length) postprocessLine(mapID, `${sourceName}:line`, hash, lineFeatures, postMessage)
     if (pointFeatures.length) postprocessPoint(mapID, `${sourceName}:point`, hash, pointFeatures, postMessage)
     if (heatmapFeatures.length) postprocessPoint(mapID, `${sourceName}:heatmap`, hash, heatmapFeatures, postMessage, true)
-    if (glyphs.length) postprocessGlyph(mapID, `${sourceName}:glyph`, hash, glyphs, glyphBuilder, this.id, postMessage)
     if (interactiveMap.size) postInteractiveData(mapID, `${sourceName}:glyph`, hash, interactiveMap)
+    if (glyphs.length) postprocessGlyph(mapID, `${sourceName}:glyph`, hash, glyphs, glyphBuilder, this.id, postMessage)
     if (Object.keys(parentLayers).length) this._requestParentData(mapID, sourceName, source, tile, parentLayers)
   }
 
@@ -522,13 +522,14 @@ export default class TileWorker {
     tile: TileRequest, parentLayers: ParentLayers) {
     const self = this
     const { path, extension } = source
+    let count = 0
     for (const hash in parentLayers) {
       const parent = parentLayers[hash]
       const { face, zoom, x, y, layers } = parent
       if (layers.length) {
         requestData(`${path}/${face}/${zoom}/${x}/${y}`, extension, data => {
           if (self.cancelCache.includes(hash)) return
-          if (data) self._processVectorData(mapID, `${sourceName}:parent`, source, tile, new VectorTile(data), parent)
+          if (data) self._processVectorData(mapID, `${sourceName}:parent:${++count}`, source, tile, new VectorTile(data), parent)
         })
       }
     }

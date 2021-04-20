@@ -38,7 +38,6 @@ export default class Map extends Camera {
   injectionQueue: Array<Function> = []
   resizeQueued: null | ResizeDimensions = null
   webworker: boolean = false
-  firefoxScroll: boolean = navigator.platform !== 'MacIntel' && navigator.appCodeName === 'Mozilla'
   dragPan: DragPan
   canMove: boolean = true
   canZoom: boolean = true
@@ -122,31 +121,6 @@ export default class Map extends Camera {
       self.dragPan = new DragPan()
       // let dragPan know if we can zoom
       if (self._scrollZoom) self.dragPan.zoomActive = true
-      // if not a webworker we add all events
-      if (!self.webworker) {
-        // listen to scroll events
-        if (self._scrollZoom) {
-          self._canvas.addEventListener('wheel', (e: WheelEvent) => {
-            e.preventDefault()
-            const { clientX, clientY, deltaY } = e
-            const rect = this._canvas.getBoundingClientRect()
-            self._onZoom((this.firefoxScroll) ? deltaY * 25 : deltaY, clientX - rect.left, clientY - rect.top)
-          })
-        }
-        // listen to mouse movement
-        self._canvas.addEventListener('touchstart', (e: TouchEvent) => { e.preventDefault(); self.dragPan.onTouchStart(e.touches) })
-        self._canvas.addEventListener('touchend', (e: TouchEvent) => { e.preventDefault(); self.dragPan.onTouchEnd(e.touches) })
-        self._canvas.addEventListener('mousedown', () => {
-          self.dragPan.onMouseDown()
-          const mouseMoveFunc = (e: MouseEvent) => { self.dragPan.onMouseMove(e.movementX, e.movementY) }
-          window.addEventListener('mousemove', mouseMoveFunc)
-          window.addEventListener('mouseup', () => {
-            window.removeEventListener('mousemove', mouseMoveFunc)
-            self.dragPan.onMouseUp()
-          }, { once: true })
-        })
-        self._canvas.addEventListener('touchmove', (e: MouseEvent) => { e.preventDefault(); self.dragPan.onTouchMove(e.touches) })
-      }
       // listen to dragPans updates
       self.dragPan.addEventListener('move', self._onMovement.bind(self))
       self.dragPan.addEventListener('swipe', self._onSwipe.bind(self))
@@ -196,6 +170,16 @@ export default class Map extends Camera {
       }
       if (!found && this.currFeature) this._handleFeatureChange(null)
     }
+  }
+
+  onTouchStart (touches) {
+    this.dragPan.onTouchStart(touches)
+    if (!this.style.interactive || this.projection.dirty || touches.length > 1) return
+    const { x, y } = touches[0]
+    this.mousePosition[0] = x
+    this.mousePosition[1] = y
+    this.mouseMoved = true
+    this.render()
   }
 
   _handleFeatureChange (newFeature: null | Object) {
@@ -304,7 +288,7 @@ export default class Map extends Camera {
       this.render()
       // set next animation
       this.currAnimFunction = (now) => this.swipeAnimation(now)
-    }
+    } else { dragPan.wasActive = false }
   }
 
   zoomAnimation (startZoom: number, deltaZoom: number, startTime: number, curTime?: number) {
@@ -333,7 +317,6 @@ export default class Map extends Camera {
   // tile data is stored in the map, waiting for the render to
   injectData (data) {
     this.injectionQueue.push(data)
-    // this.injectionQueue = this.injectionQueue.sort(injectionDataSort)
     this.render()
   }
 
@@ -373,9 +356,3 @@ export default class Map extends Camera {
     })
   }
 }
-
-// function injectionDataSort (a, b) {
-//   const sortMethod = (type) => (type === 'glyph') ? 0 : 1
-//
-//   return sortMethod(b.type) - sortMethod(a.type)
-// }

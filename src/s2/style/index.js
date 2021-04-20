@@ -60,7 +60,7 @@ export default class Style {
         self.lat = style.center[1]
       }
       if (!isNaN(style.zoom)) self.zoom = style.zoom
-      if (!isNaN(style.minzoom) && style.minzoom >= 0) self.minzoom = style.minzoom
+      if (!isNaN(style.minzoom) && style.minzoom >= -2) self.minzoom = style.minzoom
       if (!isNaN(style.maxzoom)) {
         if (style.maxzoom <= self.minzoom) self.maxzoom = self.minzoom + 1
         else if (style.maxzoom <= 20) self.maxzoom = style.maxzoom

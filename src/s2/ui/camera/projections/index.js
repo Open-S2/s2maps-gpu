@@ -69,8 +69,8 @@ export default class Projector {
   setStyleParameters (style, ignorePosition: boolean) {
     const { minzoom, maxzoom, zoom, lon, lat } = style
     // clamp values and ensure minzoom is less than maxzoom
-    this.minzoom = (minzoom < -10) ? -10 : (minzoom > maxzoom) ? maxzoom - 1 : (minzoom > 29) ? 29 : minzoom
-    this.maxzoom = (maxzoom > 30) ? 30 : (maxzoom < this.minzoom) ? this.minzoom + 1 : maxzoom
+    this.minzoom = (minzoom < -2) ? -2 : (minzoom > maxzoom) ? maxzoom - 1 : (minzoom > 19) ? 19 : minzoom
+    this.maxzoom = (maxzoom > 20) ? 20 : (maxzoom < this.minzoom) ? this.minzoom + 1 : maxzoom
     // set position
     if (!ignorePosition) this.setPosition(lon, lat, zoom)
     else { this.matrices = {}; this.dirty = true } // ensure this projector is dirty (incase of ignorePosition === true)
@@ -108,7 +108,6 @@ export default class Projector {
     this.prevZoom = this.zoom
     this.zoom -= 0.003 * zoomInput
     const { prevZoom, minzoom, maxzoom } = this
-    // const { prevZoom, minzoom, maxzoom } = this
     if (this.zoom > maxzoom) {
       this.zoom = maxzoom // if it overzooms but the previous zoom was not at maxzoom, we need to render one more time
       if (prevZoom === maxzoom) return false

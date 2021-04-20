@@ -146,6 +146,19 @@ export default class Tile {
     this.interactiveGuide = new Map()
   }
 
+  // inject references to featureGuide from each parentTile. Sometimes if we zoom really fast, we inject
+  // a parents' parent or deeper, so we need to reflect that int the tile property. The other case
+  // is the tile wants to display a layer that exists in a 'lower' zoom than this one.
+  injectParentTile (parent: Tile, layers: Array<Layer>) {
+    if (this.zoom >= 12) return
+    for (const feature of parent.featureGuide) {
+      const { maskLayer, type, layerIndex } = feature
+      const { maxzoom } = layers[layerIndex]
+      if (maskLayer) continue // ignore mask features
+      if (type !== 'glyph' && this.zoom <= maxzoom) this.featureGuide.push({ ...feature, tile: this, parent })
+    }
+  }
+
   _buildCorners () {
     const { face, bbox } = this
 
@@ -284,10 +297,14 @@ export default class Tile {
     gl.bindTexture(gl.TEXTURE_2D, texture)
     gl.texSubImage2D(gl.TEXTURE_2D, 0, leftShift * length, bottomShift * length, gl.RGBA, gl.UNSIGNED_BYTE, image)
     rasterSource.count++
+    // Since a parent may have been injected, we need to remove any instances of the said source data.
+    if (rasterSource.count === rasterSource.total) this.featureGuide = this.featureGuide.filter(fg => !(layerIndexes.includes(fg.layerIndex) && fg.parent))
   }
 
   injectVectorSourceData (sourceName: string, vertexArray: Int16Array, indexArray?: Uint32Array,
     codeTypeArray: Uint8Array, featureGuideArray: Float32Array, layers: Array<Layer>): VectorTileSource {
+    // Since a parent may have been injected, we need to remove any instances of the said source data.
+    // this.featureGuide = this.featureGuide.filter(fg => fg.sourceName !== sourceName)
     // store a reference to the source
     const subType = sourceName.split(':').pop()
     const vectorSource = this.sourceData[sourceName] = {
@@ -297,6 +314,8 @@ export default class Tile {
       indexArray,
       codeTypeArray
     }
+    // keep track of layerIndexs used for removing parent data if necessary
+    let layerIndexes = new Set()
     // we work off the featureGuideArray, adding to the buffer as we go
     const lgl = featureGuideArray.length
     let i = 0
@@ -309,6 +328,7 @@ export default class Tile {
       }
       // grab the size, layerIndex, count, and offset, and update the index
       const [layerIndex, count, offset, encodingSize] = featureGuideArray.slice(i, i + 4)
+      layerIndexes.add(layerIndex)
       i += 4
       // build featureCode
       const featureCode = new Float32Array(encodingSize ? [...featureGuideArray.slice(i, i + encodingSize)] : [0])
@@ -317,7 +337,9 @@ export default class Tile {
       // create and store the featureGuide
       const feature = {
         tile: this,
+        faceST: this.faceST,
         layerIndex,
+        source: this.sourceData,
         sourceName,
         count,
         offset,
@@ -366,6 +388,9 @@ export default class Tile {
       const childRequest = this.childrenRequests[layerIndex]
       if (childRequest && childRequest.length) for (const tile of childRequest) tile.featureGuide.push({ ...feature, tile, parent: this })
     }
+    // filter parent data if applicable
+    layerIndexes = [...layerIndexes]
+    this.featureGuide = this.featureGuide.filter(fg => !(layerIndexes.includes(fg.layerIndex) && fg.parent))
     // build the VAO
     buildSource(this.context, vectorSource)
     // return the source
@@ -377,6 +402,8 @@ export default class Tile {
     glyphLineVertices: Float32Array, glyphQuads: Float32Array,
     glyphColors: Uint8ClampedArray, layerGuideBuffer: Float32Array,
     layers: Array<Layer>): GlyphTileSource {
+    // keep track of layerIndexs used for removing parent data if necessary
+    let layerIndexes = new Set()
     // LayerCode: layerIndex, offset, count, codeLength, code
     // we work off the layerGuideBuffer, adding to the buffer as we go
     const lgl = layerGuideBuffer.length
@@ -385,13 +412,16 @@ export default class Tile {
       // grab the size, layerIndex, count, and offset, and update the index
       // layerIndex, filterOffset, filterCount, quadOffset, quadCount, codeLength, code
       const [layerIndex, type, filterOffset, filterCount, offset, count, encodingSize] = layerGuideBuffer.slice(i, i + 7)
+      layerIndexes.add(layerIndex)
       i += 7
       // grab the layers type and code
       const { overdraw, depthPos, code, iconCode, lch, interactive } = layers[layerIndex]
       // create and store the featureGuide
       const feature = {
         tile: this,
+        faceST: this.faceST,
         layerIndex,
+        source: this.sourceData,
         sourceName,
         filterOffset,
         filterCount,
@@ -419,6 +449,10 @@ export default class Tile {
       // store feature
       this.featureGuide.push(feature)
     }
+
+    // filter parent data if applicable
+    layerIndexes = [...layerIndexes]
+    this.featureGuide = this.featureGuide.filter(fg => !(layerIndexes.includes(fg.layerIndex) && fg.parent))
 
     // setup source data
     const glyphSource = this.sourceData[sourceName] = buildGlyphSource(

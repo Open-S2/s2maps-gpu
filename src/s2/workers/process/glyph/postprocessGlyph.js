@@ -58,7 +58,7 @@ export default function postprocessGlyph (mapID: string, sourceName: string,
       subEncoding = featureCode
     }
 
-    glyphBuilder.buildText(glyph)
+    glyphBuilder.buildGlyphData(glyph)
   }
   // finish the last layer
   glyphBuilder.finishLayer(curlayerIndex, curType, encoding, subEncoding)

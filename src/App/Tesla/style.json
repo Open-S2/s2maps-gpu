@@ -1,15 +1,13 @@
 {
   "version": 2,
   "name": "s2maps-tesla",
-  "center": [-122.4585607773497, 37.778443127730476],
-  "zoom": 11,
-  "minzoom": 0,
-  "maxzoom": 20,
+  "center": [-122.42, 37.778443127730476],
+  "zoom": 10,
+  "minzoom": -0.5,
+  "maxzoom": 17.99,
   "sources": {
     "streets-v2": "https://s3.s2maps.io/streets-v2",
-    "terrain": "http://localhost:8000/data/terrain",
     "landcover": "https://s3.s2maps.io/terrain-v1",
-    "buildings": "http://192.168.0.189:8000/data/buildings",
     "tesla": "https://s3.s2maps.io/s2json/tesla-locations.s2json"
   },
   "fonts": {
@@ -18,7 +16,7 @@
     "roboto-medium": "https://s3.s2maps.io/fonts-v3/RobotoMedium"
   },
   "icons": {
-    "tesla-icons": "http://localhost:8000/icons/tesla_icons"
+    "tesla-icons": "https://s3.s2maps.io/icons-v1/tesla_icons"
   },
   "wallpaper": {
     "background-color": "rgb(25, 28, 80)",
@@ -133,7 +131,7 @@
           ["type", "==", "school"],
           "rgb(226, 233, 238)",
           ["type", "has", ["desert", "sand"]],
-          "#efede2",
+          "#f1e9c3",
           ["type", "==", "urban"],
           "#e9eaed",
           "default",
@@ -184,33 +182,6 @@
           "#e1f1df",
           ["type", "has", ["course", "rough"]],
           "#d3eace",
-          "default",
-          "rgba(0, 0, 0, 0)"
-        ]
-      }
-    },
-    {
-      "name": "hillshade",
-      "source": "terrain",
-      "layer": "hillshade",
-      "type": "fill",
-      "minzoom": 0,
-      "layout": {},
-      "paint": {
-        "color": [
-          "data-condition",
-          ["and", ["class", "==", "shade"], ["level", "==", 3]],
-          "rgba(31, 81, 56, 0.25)",
-          ["and", ["class", "==", "shade"], ["level", "==", 2]],
-          "rgba(31, 81, 56, 0.2)",
-          ["and", ["class", "==", "shade"], ["level", "==", 1]],
-          "rgba(31, 81, 56, 0.15)",
-          ["and", ["class", "==", "shade"], ["level", "==", 0]],
-          "rgba(31, 81, 56, 0.1)",
-          ["and", ["class", "==", "highlight"], ["level", "==", 1]],
-          "rgba(255, 254, 250, 0.4)",
-          ["and", ["class", "==", "highlight"], ["level", "==", 0]],
-          "rgba(255, 254, 250, 0.2)",
           "default",
           "rgba(0, 0, 0, 0)"
         ]
@@ -1404,7 +1375,7 @@
     },
     {
       "name": "buildings",
-      "source": "buildings",
+      "source": "streets-v2",
       "layer": "buildings",
       "type": "fill",
       "opaque": true,
@@ -1425,7 +1396,7 @@
     },
     {
       "name": "buildings_highlight",
-      "source": "buildings",
+      "source": "streets-v2",
       "layer": "buildings",
       "type": "line",
       "layout": {
@@ -1825,6 +1796,8 @@
       "type": "glyph",
       "minzoom": 7,
       "overdraw": true,
+      "interactive": true,
+      "cursor": "pointer",
       "layout": {
         "icon-family": "tesla-icons",
         "icon-field": [
