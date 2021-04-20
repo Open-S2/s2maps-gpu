@@ -15,7 +15,7 @@ export default class S2Map extends EventTarget {
   _offscreen: boolean = false
   _canvas: HTMLCanvasElement
   map: Map | MapWorker
-  firefoxScroll: boolean = navigator.platform !== 'MacIntel' && navigator.appCodeName === 'Mozilla'
+  firefoxScroll: boolean = navigator.platform !== 'MacIntel' && navigator.userAgent.includes('Firefox')
   id: string = Math.random().toString(36).replace('0.', '')
   constructor (options: MapOptions = {}) {
     super()
