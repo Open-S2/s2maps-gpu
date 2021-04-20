@@ -527,6 +527,7 @@ export default class TileWorker {
       const parent = parentLayers[hash]
       const { face, zoom, x, y, layers } = parent
       if (layers.length) {
+        // eslint-disable-next-line
         requestData(`${path}/${face}/${zoom}/${x}/${y}`, extension, data => {
           if (self.cancelCache.includes(hash)) return
           if (data) self._processVectorData(mapID, `${sourceName}:parent:${++count}`, source, tile, new VectorTile(data), parent)

@@ -1,28 +1,25 @@
 {
-  "short_name": "S2 Maps",
-  "name": "S2 Maps: 21st Century Cartography",
-  "description": "View planets using three dimensional space cartography.",
+  "short_name": "React App",
+  "name": "Create React App Sample",
   "icons": [
     {
-      "src": "/favicon.ico",
+      "src": "favicon.ico",
       "sizes": "64x64 32x32 24x24 16x16",
       "type": "image/x-icon"
     },
     {
-      "src": "/images/icon_192.png",
+      "src": "logo192.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "/images/icon_512.png",
+      "src": "logo512.png",
       "type": "image/png",
       "sizes": "512x512"
     }
   ],
-  "prefer_related_applications": false,
-  "start_url": "/",
-  "background_color": "#333333",
+  "start_url": ".",
   "display": "standalone",
-  "scope": "/",
-  "theme_color": "#d8514e"
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
 }
