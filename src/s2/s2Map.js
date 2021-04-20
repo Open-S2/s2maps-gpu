@@ -79,6 +79,8 @@ export default class S2Map extends EventTarget {
     } else {
       self.map = new Map(options, canvas, self.id, self)
     }
+    // now that canvas is setup, add control containers as necessary
+    this._setupControlContainer(options)
     // if we interact with the map, we need to both allow interaction with styling
     // and watch how the mouse moves on the canvas
     if (options.interactive === true) {
@@ -91,15 +93,13 @@ export default class S2Map extends EventTarget {
       _canvasContainer.addEventListener('touchmove', (e: TouchEvent) => self._onTouch(e, 'touchmove'))
     }
     // let map know to finish the setup
-    self._onCanvasReady(options)
+    self._onCanvasReady()
   }
 
-  _onCanvasReady (options: MapOptions) {
+  _onCanvasReady () {
     // now that canvas is setup, support resizing // $FlowIgnore
     if ('ResizeObserver' in window) new ResizeObserver(this._resize.bind(this)).observe(this._container)
     else window.addEventListener('resize', this._resize.bind(this))
-    // now that canvas is setup, add control containers as necessary
-    this._setupControlContainer(options)
     // let the S2WorkerPool know of this maps existance
     window.S2WorkerPool.addMap(this)
     // lastly emit that the map is ready for commands
@@ -107,7 +107,7 @@ export default class S2Map extends EventTarget {
   }
 
   _setupControlContainer (options: MapOptions) {
-    const { _canvasContainer } = this
+    const { _container } = this
     const { zoomController, darkMode } = options
     // add info bar with our jollyRoger
     const attribution = window.document.createElement('div')
@@ -121,14 +121,14 @@ export default class S2Map extends EventTarget {
     popup.innerHTML = '<div>Rendered with ❤ by</div><a href="https://s2maps.io" target="popup"><div class="s2-jolly-roger"></div></a><div><a href="https://www.openstreetmap.org/copyright/" target="popup">OpenStreetMap</a></div><div><a href="https://s2maps.io/data" target="popup">S2 Maps data</a></div>'
     attribution.appendChild(info)
     attribution.appendChild(popup)
-    _canvasContainer.appendChild(attribution)
+    _container.appendChild(attribution)
     // if zoom or compass controllers, add
     if (zoomController) {
       // first create the container
       const navigationContainer = this._navigationContainer = window.document.createElement('div')
       navigationContainer.className = 's2-nav-container'
       if (darkMode) navigationContainer.classList.add('s2-nav-dark')
-      _canvasContainer.appendChild(navigationContainer)
+      _container.appendChild(navigationContainer)
       if (zoomController) {
         // plus
         const zoomPlus = window.document.createElement('button')
