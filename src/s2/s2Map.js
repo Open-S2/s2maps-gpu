@@ -114,7 +114,6 @@ export default class S2Map extends EventTarget {
     attribution.id = 's2-attribution'
     const info = window.document.createElement('div')
     info.id = 's2-info'
-    info.innerHTML = 'ⓘ'
     info.onclick = function () { attribution.classList.toggle('show') }
     const popup = window.document.createElement('div')
     popup.className = 's2-popup-container'
