@@ -1,8 +1,17 @@
 // @flow
 import Map from './ui/map'
 import MapWorker from './workers/map.worker.js'
+// import caesar from './caesar.wasm'
 
 import type { MapOptions } from './ui/map'
+
+// fetch('http://192.168.0.189:5000/caesar.wasm')
+//   .then(res => res.arrayBuffer())
+//   .then(ab => WebAssembly.compile(ab))
+//   .then(module => new WebAssembly.Instance(module))
+//   .then(instance => {
+//     console.log('instance', instance)
+//   })
 
 // This is a builder / api instance for the end user.
 // We want individual map instances in their own web worker thread. However,
@@ -70,10 +79,11 @@ export default class S2Map extends EventTarget {
     const self = this
     const { _canvasContainer } = self
     // if browser supports it, create an instance of the mapWorker
-    if (false && canvas.transferControlToOffscreen) { // $FlowIgnore
+    if (canvas.transferControlToOffscreen) { // $FlowIgnore
       const offscreen = canvas.transferControlToOffscreen()
       self._offscreen = true
       const mapWorker = self.map = new MapWorker()
+      // const mapWorker = self.map = new Worker(new URL('./workers/map.worker.js', import.meta.url))
       mapWorker.onmessage = self._mapMessage.bind(self)
       mapWorker.postMessage({ type: 'canvas', options, canvas: offscreen, id: self.id }, [offscreen])
     } else {
@@ -240,6 +250,9 @@ export default class S2Map extends EventTarget {
       if (feature) this.dispatchEvent(new CustomEvent('mouseleave', { detail: feature }))
     } else if (type === 'click') {
       this.dispatchEvent(new CustomEvent('click', { detail: data.feature }))
+    } else if (type === 'pos') {
+      const { zoom, lon, lat } = data
+      this.dispatchEvent(new CustomEvent('pos', { detail: { zoom, lon, lat } }))
     }
   }
 

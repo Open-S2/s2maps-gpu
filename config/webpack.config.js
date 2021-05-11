@@ -378,11 +378,31 @@ module.exports = function (webpackEnv) {
                 name: 'static/media/[name].[hash:8].[ext]',
               },
             },
+            // {
+            //   test: /\.wasm$/,
+            //   type: 'javascript/auto',
+            //   loaders: ['arraybuffer-loader']
+            // },
+            // {
+            //   test: /\.bin/,
+            //   exclude: /node_modules/,
+            //   use: [
+            //     {
+            //       loader: 'url-loader',
+            //       options: {
+            //         encoding: false,
+            //         mimetype: false,
+            //         generator: (content) => { return content }
+            //       }
+            //     }
+            //   ]
+            // },
             {
               test: /\.glsl$/,
               // loader: require.resolve('./glsl-loader.js')
               loader: require.resolve('webpack-glsl-minify')
             },
+            // https://stackoverflow.com/questions/21913673/execute-web-worker-from-different-origin
             {
               test: /\.worker\.js$/,
               include: paths.appSrc,

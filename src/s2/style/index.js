@@ -2,7 +2,6 @@
 import Color from './color'
 import Map from '../ui/map'
 import { Wallpaper, Skybox, Tile } from '../source'
-import requestData from '../util/fetch'
 import buildColorRamp from './buildColorRamp'
 import { encodeLayerAttribute, parseFeatureFunction, orderLayer } from './conditionals'
 
@@ -44,38 +43,32 @@ export default class Style {
   async buildStyle (style: string | Object) {
     const self = this
     self.dirty = true
-    if (typeof style === 'string') {
-      requestData(style, 'json', (res) => {
-        if (res) { self.buildStyle(res) }
-      })
-    } else if (typeof style === 'object') {
-      style = JSON.parse(JSON.stringify(style))
-      // check style & fill default params
-      this._prebuildStyle(style)
-      // Before manipulating the style, send it off to the worker pool manager
-      this._sendStyleDataToWorkers(style)
-      // extract starting values
-      if (style.center && Array.isArray(style.center)) {
-        self.lon = style.center[0]
-        self.lat = style.center[1]
-      }
-      if (!isNaN(style.zoom)) self.zoom = style.zoom
-      if (!isNaN(style.minzoom) && style.minzoom >= -2) self.minzoom = style.minzoom
-      if (!isNaN(style.maxzoom)) {
-        if (style.maxzoom <= self.minzoom) self.maxzoom = self.minzoom + 1
-        else if (style.maxzoom <= 20) self.maxzoom = style.maxzoom
-      }
-      // extract sources
-      if (style.sources) self.sources = style.sources
-      if (style.fonts) self.fonts = style.fonts
-      if (style.icons) self.icons = style.icons
-      if (style.colorBlind) self.colorBlind = style.colorBlind
-      // build wallpaper and sphere background if applicable
-      if (style.wallpaper) self._buildWallpaper(style.wallpaper)
-      // build the layers
-      if (style.layers) self.layers = style.layers
-      await self._buildLayers()
+    style = JSON.parse(JSON.stringify(style))
+    // check style & fill default params
+    this._prebuildStyle(style)
+    // Before manipulating the style, send it off to the worker pool manager
+    this._sendStyleDataToWorkers(style)
+    // extract starting values
+    if (style.center && Array.isArray(style.center)) {
+      self.lon = style.center[0]
+      self.lat = style.center[1]
     }
+    if (!isNaN(style.zoom)) self.zoom = style.zoom
+    if (!isNaN(style.minzoom) && style.minzoom >= -2) self.minzoom = style.minzoom
+    if (!isNaN(style.maxzoom)) {
+      if (style.maxzoom <= self.minzoom) self.maxzoom = self.minzoom + 1
+      else if (style.maxzoom <= 20) self.maxzoom = style.maxzoom
+    }
+    // extract sources
+    if (style.sources) self.sources = style.sources
+    if (style.fonts) self.fonts = style.fonts
+    if (style.icons) self.icons = style.icons
+    if (style.colorBlind) self.colorBlind = style.colorBlind
+    // build wallpaper and sphere background if applicable
+    if (style.wallpaper) self._buildWallpaper(style.wallpaper)
+    // build the layers
+    if (style.layers) self.layers = style.layers
+    await self._buildLayers()
   }
 
   _prebuildStyle (style: Object) {
@@ -152,8 +145,7 @@ export default class Style {
       // TODO: if bad layer, remove
       programs.add(layer.type)
       // add depth position
-      layer.depthPos = depthPos
-      depthPos++
+      layer.depthPos = depthPos++
       // order layers for GPU
       orderLayer(layer)
       // if webgl2 or greater, we build layerCode

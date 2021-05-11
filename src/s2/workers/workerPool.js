@@ -1,50 +1,56 @@
 // @flow
 import TileWorker from './tile.worker.js'
-import requestData from '../util/fetch'
+import SourceWorker from './source.worker.js'
 
 // TODO:
 // https://stackoverflow.com/questions/21913673/execute-web-worker-from-different-origin
 
 import type S2Map from '../s2Map'
 import type { StylePackage } from '../style/styleSpec'
-import type { TileRequest } from './tile.worker'
+
+export type TileRequest = {
+  hash: number,
+  face: Face,
+  zoom: number,
+  bbox: [number, number, number, number],
+  x: number,
+  y: number,
+  division: number,
+  size: number
+}
 
 // workerPool is designed to manage the workers and when a worker is free, send... work
-const AVAILABLE_LOGICAL_PROCESSES = Math.floor((window.navigator.hardwareConcurrency || 4) / 2)
+// const AVAILABLE_LOGICAL_PROCESSES = Math.floor((window.navigator.hardwareConcurrency || 4) / 2)
 
 class WorkerPool {
-  workerCount: number = Math.max(Math.min(AVAILABLE_LOGICAL_PROCESSES, 6), 1)
-  workers: Array<Worker> = []
-  webP: boolean = document.createElement('canvas').toDataURL('image/webp').indexOf('data:image/webp') === 0
+  workerCount: number = 2 // Math.max(Math.min(AVAILABLE_LOGICAL_PROCESSES, 6), 1)
+  workers: Array<TileWorker> = []
+  sourceWorker: SourceWorker
   maps: { [string]: S2Map } = {} // MapID: S2Map
   constructor () {
+    // create source worker
+    const sourceWorker = this.sourceWorker = new SourceWorker()
+    sourceWorker.onmessage = this._onSourceMessage.bind(this)
+    // create process workers
     for (let i = 0; i < this.workerCount; i++) { // $FlowIgnore
-      const worker = new TileWorker()
-      worker.onmessage = this._onMessage.bind(this)
-      this.workers.push(worker)
+      const tileWorker = new TileWorker()
+      // const worker = new Worker(new URL('./tile.worker.js', import.meta.url))
+      tileWorker.onmessage = this._onProcessMessage.bind(this)
+      this.workers.push(tileWorker)
+      // build communication channels
+      const channel = new MessageChannel()
+      const { port1, port2 } = channel
+      sourceWorker.postMessage({ type: 'port', port: port1 }, [port1])
+      tileWorker.postMessage({ type: 'port', port: port2, id: i, totalWorkers: this.workerCount }, [port2])
     }
   }
 
-  _onMessage ({ data }) {
-    // a worker has processed tiles, so we are going to send it back to the appropriate mapID
-    if (data.type === 'imageBitmap') {
-      const { mapID, id, tileID, sourceName, zoom, tileSize, path, fileType } = data
-      // build the canvas and draw the image
-      requestData(path, fileType, (data) => {
-        if (data) {
-          createImageBitmap(data)
-            .then(image => {
-              const canvas = document.createElement('canvas')
-              canvas.width = canvas.height = tileSize
-              const context = canvas.getContext('2d')
-              context.drawImage(image, 0, 0)
-              const imageData = context.getImageData(0, 0, tileSize, tileSize)
-              const dem = imageData.data.buffer
-              this.workers[id].postMessage({ mapID, type: 'buildMesh', tileID, sourceName, zoom, dem, tileSize }, [dem])
-            })
-        }
-      })
-    } else { this.maps[data.mapID].injectData(data) }
+  _onProcessMessage ({ data }) {
+    this.maps[data.mapID].injectData(data)
+  }
+
+  _onSourceMessage ({ data }) {
+    this.maps[data.mapID].injectData(data)
   }
 
   addMap (map: S2Map) {
@@ -52,21 +58,13 @@ class WorkerPool {
   }
 
   injectStyle (mapID: string, style: StylePackage) {
-    const { workers, webP } = this
-    const totalWorkers = workers.length
-    this.workers.forEach((worker, id) => { worker.postMessage({ mapID, type: 'style', style, id, webP, totalWorkers }) })
+    const { sourceWorker } = this
+    sourceWorker.postMessage({ mapID, type: 'style', style })
+    for (const worker of this.workers) worker.postMessage({ mapID, type: 'style', style })
   }
 
   tileRequest (mapID: string, tiles: Array<TileRequest>) {
-    const self = this
-    // step1: split the tiles up by workerCount
-    const groupedTiles = new Array(self.workerCount)
-    for (let i = 0; i < self.workerCount; i++) groupedTiles[i] = []
-    tiles.forEach((tile, i) => { groupedTiles[i % self.workerCount].push(tile) })
-    // step2: send the tile groups off to each worker
-    groupedTiles.forEach((tiles, i) => {
-      if (tiles.length) self.workers[i].postMessage({ mapID, type: 'request', tiles })
-    })
+    this.sourceWorker.postMessage({ mapID, type: 'request', tiles })
   }
 }
 

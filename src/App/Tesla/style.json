@@ -2,7 +2,7 @@
   "version": 2,
   "name": "s2maps-tesla",
   "center": [-122.42, 37.778443127730476],
-  "zoom": 10,
+  "zoom": 0,
   "minzoom": -0.5,
   "maxzoom": 17.99,
   "sources": {

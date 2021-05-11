@@ -28,6 +28,7 @@ export type MatrixType = 'm' | 'km' // meters of kilometers
 export default class Projector {
   radius: number = 6_371.0088
   radii: number = [6378137, 6356752.3, 6378137]
+  circumference: number = 2 * Math.PI * 6_371.0088
   zTranslateStart: number = 5
   zTranslateEnd: number = 1.001
   zoomEnd: number = 5
@@ -35,7 +36,7 @@ export default class Projector {
   aspect: Float32Array = new Float32Array([400, 300]) // default canvas width x height
   matrices: { [MatrixType]: Float32Array } = {}
   eye: [number, number, number] = [0, 0, 0] // [x, y, z] only z should change for visual effects
-  maxLatRotation: number = 85 // deg
+  maxLatRotation: number = 89.99999 // deg
   prevZoom: number = 0
   zoom: number = -1
   minzoom: number = 0
@@ -49,7 +50,7 @@ export default class Projector {
   dirty: boolean = true
   constructor (config: MapOptions) {
     const { style } = config
-    if (style.maxLatRotation) this.maxLatRotation = style.maxLatRotation
+    if (!isNaN(style.maxLatRotation)) this.maxLatRotation = Math.min(style.maxLatRotation, this.maxLatRotation)
     const zoom = style.zoom | 0
     const center = (style.center && Array.isArray(style.center)) ? style.center : [0, 0]
     this.setPosition(...center, zoom)
@@ -115,9 +116,11 @@ export default class Projector {
       this.zoom = minzoom // if it underzooms but the previous zoom was not at minzoom, we need to render one more time
       if (prevZoom === minzoom) return false
     }
-    const { zoom } = this
+    // adjust latitude accordingly
+    this._adjustLat()
     // update view
-    this.view[0] = zoom
+    this.view[0] = this.zoom
+    this.view[2] = this.lat
     // cleanup
     this.matrices = {}
     this.dirty = true
@@ -125,14 +128,15 @@ export default class Projector {
   }
 
   onMove (movementX?: number = 0, movementY?: number = 0, multiplierX?: number = 3, multiplierY?: number = 3) {
-    const { lat, zoom, maxLatRotation } = this
-    const zoomMultiplier = 2 * Math.pow(2, Math.max(zoom, 0))
-    const latMultiplier = 1.25 / maxLatRotation * Math.abs(lat) + 1 // if we are near the poles, we don't want to *feel* slowed down
+    const { lat, zoom, radius, circumference } = this
+    const { pow, max, min, cos, PI } = Math
+    const zoomMultiplier = 2 * pow(2, max(zoom, 0))
+    // https://math.stackexchange.com/questions/377445/given-a-latitude-how-many-miles-is-the-corresponding-longitude
+    const latMultiplier = min(30, circumference / (2 * PI * radius * cos(lat * PI / 180)))
     if (movementX) this.lon -= movementX / (multiplierX * zoomMultiplier) * latMultiplier
     if (movementY) this.lat += movementY / (multiplierY * zoomMultiplier)
-    // check that we don't over move on the x axis
-    if (this.lat > maxLatRotation) this.lat = maxLatRotation
-    else if (this.lat < -maxLatRotation) this.lat = -maxLatRotation
+    // adjust latitude accordingly
+    this._adjustLat()
     // update view
     this.view[1] = this.lon
     this.view[2] = this.lat
@@ -142,6 +146,15 @@ export default class Projector {
     // cleanup
     this.matrices = {}
     this.dirty = true
+  }
+
+  _adjustLat () {
+    const { zoom, maxLatRotation } = this
+    const { min } = Math
+    // ensure we hit a limit on latitude so we don't flip movement
+    const curMaxLat = min(80 + min(9.999999, (9.999999 / 5) * zoom), maxLatRotation)
+    if (this.lat > curMaxLat) this.lat = curMaxLat
+    else if (this.lat < -curMaxLat) this.lat = -curMaxLat
   }
 
   setLonLat (lon: number, lat: number) {
@@ -190,13 +203,8 @@ export default class Projector {
     const matrix = mat4.create()
 
     // BLEND LOOKS A BIT DIFF const multpl = -radius / multiplier / (tileSize * scale * radius * 5)
-    if (type === 'km') {
-      radius *= 1000
-      // multpl = radius / multiplier / (768 * Math.pow(2, 12 - zoom))
-      multpl = radius / multiplier / (768 * Math.pow(2, zoom))
-    } else { // case of any zoom less then 12
-      multpl = radius / multiplier / (768 * Math.pow(2, zoom))
-    }
+    if (type === 'km') radius *= 1000
+    multpl = radius / multiplier / (768 * Math.pow(2, zoom))
 
     // create projection
     // mat4.blend(matrix, aspect[0] * multpl, aspect[1] * multpl, 0.5, zFar)

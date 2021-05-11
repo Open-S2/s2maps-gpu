@@ -4,12 +4,12 @@
   "center": [0, 0],
   "zoom": -0.5,
   "minzoom": -1.5,
-  "maxzoom": 4.9,
+  "maxzoom": 5.5,
   "sources": {
     "satellite": {
       "path": "https://s3.s2maps.io/modis-v1/7",
       "type": "raster",
-      "fileType": "jpg",
+      "extension": "jpg",
       "minzoom": 0,
       "maxzoom": 5,
       "tileSize": 512
@@ -36,7 +36,7 @@
       }
     },
     {
-      "id": "sat",
+      "name": "sat",
       "source": "satellite",
       "type": "raster"
     },

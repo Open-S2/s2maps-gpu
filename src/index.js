@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom'
 import { BrowserRouter as Router, Route, Switch } from 'react-router-dom'
 
 import './index.css'
+import './s2maps.css'
 
 import * as serviceWorker from './serviceWorker'
 
@@ -24,10 +25,12 @@ const Hover = lazy(() => import('./App/Hover'))
 const Invert = lazy(() => import('./App/Invert'))
 const Tiles = lazy(() => import('./App/Tiles'))
 const Tesla = lazy(() => import('./App/Tesla'))
+const Moon = lazy(() => import('./App/Moon'))
 const Starlink = lazy(() => import('./App/Starlink'))
 const OAD = lazy(() => import('./App/OpenAddressData'))
 const Earthquakes = lazy(() => import('./App/Earthquakes'))
 const TissotsIndicatrix = lazy(() => import('./App/TissotsIndicatrix'))
+const Studio = lazy(() => import('./App/Studio'))
 
 ReactDOM.render(
   <Router>
@@ -37,6 +40,7 @@ ReactDOM.render(
         <Route path='/dem' component={DEM} />
         <Route path='/raster' component={Raster} />
         <Route path='/mars' component={Mars} />
+        <Route path='/moon' component={Moon} />
         <Route path='/streets' component={Streets} />
         <Route path='/streets-test' component={StreetsTest} />
         <Route path='/streets-test-webgpu' component={StreetsTestWebGPU} />
@@ -55,6 +59,7 @@ ReactDOM.render(
         <Route path='/tesla' component={Tesla} />
         <Route path='/starlink' component={Starlink} />
         <Route path='/open-address-data' component={OAD} />
+        <Route path='/studio' component={Studio} />
       </Switch>
     </Suspense>
   </Router>,

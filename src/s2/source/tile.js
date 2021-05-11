@@ -255,32 +255,27 @@ export default class Tile {
     buildSource(this.context, mask)
   }
 
-  // if a style has a raster source & layer pointing to it, we request the tiles
-  // four children (if size is 512 and images are 512, otherwise we may store
-  // 16 images of 256). Create a texture of size length x length to house
-  // said data (length being this.size * 2).
   injectRasterData (sourceName: string, layerIndexes: Array<number>, image: Image,
-    leftShift: number, bottomShift: number) {
-    const { gl } = this.context
-    const length = image.width
+    layers: Array<Layer>) {
+    const { size } = this
     // prep the source
     let rasterSource = this.sourceData[sourceName]
     // prep phase (should the source not exist)
     if (!rasterSource) {
       rasterSource = this.sourceData[sourceName] = {
         type: 'raster',
-        size: this.size,
-        total: Math.pow((this.size * 2) / length, 2),
-        count: 0,
-        texture: gl.createTexture()
+        size,
+        image
       }
       buildSource(this.context, rasterSource)
       // store texture information to featureGuide
       for (const layerIndex of layerIndexes) {
+        const { depthPos } = layers[layerIndex]
         const guide = {
           tile: this,
           faceST: this.faceST,
           layerIndex,
+          depthPos,
           source: this.sourceData,
           sourceName: 'mask',
           subType: 'fill',
@@ -291,14 +286,8 @@ export default class Tile {
         this.featureGuide.push(guide)
       }
     }
-    // pull out the texture
-    const { texture } = rasterSource
-    // store in texture
-    gl.bindTexture(gl.TEXTURE_2D, texture)
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, leftShift * length, bottomShift * length, gl.RGBA, gl.UNSIGNED_BYTE, image)
-    rasterSource.count++
     // Since a parent may have been injected, we need to remove any instances of the said source data.
-    if (rasterSource.count === rasterSource.total) this.featureGuide = this.featureGuide.filter(fg => !(layerIndexes.includes(fg.layerIndex) && fg.parent))
+    this.featureGuide = this.featureGuide.filter(fg => !(layerIndexes.includes(fg.layerIndex) && fg.parent))
   }
 
   injectVectorSourceData (sourceName: string, vertexArray: Int16Array, indexArray?: Uint32Array,

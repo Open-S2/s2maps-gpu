@@ -13,6 +13,10 @@ if (!('createImageBitmap' in window)) {
   }
 }
 
+// TODO:
+// Every time you are finished with a url created by URL.createObjectURL,
+// you need to call URL.revokeObjectURL
+
 /** Opera Mini polyfill
   * https://caniuse.com/?search=requestAnimationFrame
   */

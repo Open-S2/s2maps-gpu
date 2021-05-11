@@ -31,11 +31,12 @@ function Map (props) {
 }
 
 function prepCanvas (container, style, opts = {}, click, ready) {
-  if (s2map) return s2map
+  if (s2map) return
 
   s2map = new S2Map({
     ...opts,
     style,
+    apiKey: 's2.sdfjsdlfjdslfjsdlkfj.sdfsdfsdfsdf',
     container,
     projection: 'blend',
     zoomController: true
@@ -60,8 +61,6 @@ function prepCanvas (container, style, opts = {}, click, ready) {
   // setTimeout(() => {
   //   s2map.jumpTo(-18.287283, 64.920456, 4.4)
   // }, 5000)
-
-  return s2map
 }
 
 export default Map

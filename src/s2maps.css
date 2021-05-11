@@ -1,0 +1,174 @@
+.s2-canvas-container {
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
+
+.s2-nav-container {
+  position: absolute;
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  bottom: 15px;
+  right: 15px;
+  width: auto;
+  height: auto;
+  background-color: #fff;
+  box-shadow: 0px 1px 4px rgba(0,0,0,0.35);
+  border-radius: 8px;
+}
+
+.s2-nav-dark {
+  background-color: #adadad;
+}
+
+.s2-zoom-button {
+  width: 29px;
+  height: 29px;
+  border-radius: 7px;
+  background-color: inherit;
+  border: none;
+  outline: none;
+  transition: background-color 0.27s ease-out;
+  background-repeat: no-repeat;
+  pointer-events: all;
+  cursor: pointer;
+}
+.s2-zoom-button:hover {
+  background-color: #e6eaed;
+}
+
+.s2-zoom-plus {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  background-image: url('./s2/svg/zoom-plus.svg');
+}
+
+.s2-zoom-minus {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  background-image: url('./s2/svg/zoom-minus.svg');
+}
+
+.s2-nav-sep {
+  height: 18px;
+  border-left: 1px solid #ddd;
+}
+
+.s2-nav-sep-dark {
+  height: 18px;
+  border-left: 1px solid #666;
+}
+
+#s2-attribution {
+  z-index: 3000;
+  user-select: none;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  margin-bottom: 10px;
+  margin-left: 10px;
+  color: #515151;
+}
+
+#s2-info {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  background: #ededed;
+  background-image: url('./s2/svg/info.svg');
+  border-radius: 100%;
+  box-shadow: 0px 1px 4px rgb(0 0 0 / 35%);
+}
+#s2-info:hover {
+  background: #fff;
+  background-image: url('./s2/svg/info.svg');
+}
+#s2-info:active {
+  background: #fff;
+  background-image: url('./s2/svg/info.svg');
+}
+
+.s2-popup-container {
+  cursor: default;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  position: absolute;
+  bottom: 40px;
+  left: 2px;
+  border-radius: 6px;
+  width: 200px;
+  height: auto;
+  background-color: #fff;
+  overflow: hidden;
+  font-size: 16px;
+  padding: 10px 0;
+  box-shadow: 0px 1px 4px rgb(0 0 0 / 35%);
+}
+
+.s2-popup-container a {
+  cursor: pointer;
+}
+.s2-popup-container a:hover {
+  color: #515151;
+  cursor: pointer;
+}
+
+.s2-jolly-roger {
+  width: 111.2px;
+  height: 42px;
+  background-repeat: no-repeat;
+  margin: 0 0 0 12.5px;
+  pointer-events: none;
+  background-image: url('./s2/svg/s2-jolly-roger.svg');
+  background-position: center center;
+}
+
+#s2-attribution .s2-popup-container {
+  visibility: hidden;
+}
+
+#s2-attribution.show .s2-popup-container {
+  visibility: visible;
+}
+
+.s2-popup-container div {
+  margin: 5px 0;
+}
+
+.s2-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  height: inherit;
+  width: inherit;
+  outline: none;
+}
+
+#s2-logo {
+  width: 500px;
+}
+
+@media only screen and (max-width: 700px) {
+  .banner {
+    height: 250px;
+  }
+
+  #s2-logo {
+    width: 275px;
+  }
+}
+
+@media only screen and (max-width: 650px) {
+  .s2-jolly-roger {
+    width: 74.13px;
+    height: 26.93px;
+  }
+}

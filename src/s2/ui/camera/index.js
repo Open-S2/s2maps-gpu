@@ -85,7 +85,7 @@ export default class Camera {
     if (type === 'filldata' || type === 'linedata' || type === 'pointdata') this._injectVectorSourceData(data.source, data.tileID, data.vertexBuffer, data.indexBuffer, data.codeTypeBuffer, data.featureGuideBuffer)
     else if (type === 'heatmapdata') this._injectVectorSourceData(data.source, data.tileID, data.vertexBuffer, data.weightBuffer, data.codeTypeBuffer, data.featureGuideBuffer, true)
     else if (type === 'maskdata') this._injectMaskGeometry(data.tileID, data.vertexBuffer, data.indexBuffer, data.radiiBuffer)
-    else if (type === 'rasterdata') this._injectRasterData(data.source, data.tileID, data.built, data.image, data.leftShift, data.bottomShift)
+    else if (type === 'rasterdata') this._injectRasterData(data.source, data.tileID, data.built, data.image)
     else if (type === 'glyphdata') this._injectGlyphSourceData(data.source, data.tileID, data.glyphFilterBuffer, data.glyphFillVertexBuffer, data.glyphFillIndexBuffer, data.glyphLineVertexBuffer, data.glyphQuadBuffer, data.glyphColorBuffer, data.layerGuideBuffer)
     else if (type === 'interactivedata') this._injectInteractiveData(data.source, data.tileID, data.interactiveGuideBuffer, data.interactiveDataBuffer)
     // new 'paint', so painter is dirty
@@ -111,21 +111,18 @@ export default class Camera {
     }
   }
 
-  _injectRasterData (source: string, tileID: number, built: boolean, image: ImageBitmap,
-    leftShift: number, bottomShift: number) {
+  _injectRasterData (source: string, tileID: number, built: boolean, image: ImageBitmap | ArrayBuffer) {
     if (this.tileCache.has(tileID)) {
       // get tile
       const tile = this.tileCache.get(tileID)
       // find all layers that utilize the raster data
-      const layerIndexs = this.style.layers.filter(layer => layer.source === source).map((layer, i) => i)
+      const layerIndexs = this.style.layers.filter(layer => layer.source === source).map(layer => layer.layerIndex)
       // inject into tile
       if (!built) {
         createImageBitmap(new Blob([image]))
-          .then(image => tile.injectRasterData(source, layerIndexs, image, leftShift, bottomShift))
+          .then(image => tile.injectRasterData(source, layerIndexs, image, this.style.layers))
           .catch(err => console.log('ERROR', err))
-      } else {
-        tile.injectRasterData(source, layerIndexs, image, leftShift, bottomShift)
-      }
+      } else { tile.injectRasterData(source, layerIndexs, image, this.style.layers) }
     }
   }
 

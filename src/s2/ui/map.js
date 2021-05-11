@@ -314,6 +314,16 @@ export default class Map extends Camera {
     }
   }
 
+  _onPositionUpdate () {
+    const { projection } = this
+    const { zoom, lon, lat } = projection
+    if (this.webworker) {
+      postMessage({ type: 'pos', zoom, lon, lat })
+    } else {
+      this.parent.dispatchEvent(new CustomEvent('pos', { detail: { zoom, lon, lat } }))
+    }
+  }
+
   // tile data is stored in the map, waiting for the render to
   injectData (data) {
     this.injectionQueue.push(data)
@@ -345,7 +355,10 @@ export default class Map extends Camera {
       // get state of scene
       const projectionDirty = self.projection.dirty
       // if the projection was dirty (zoom or movement) we run render again just incase
-      if (projectionDirty) self.render()
+      if (projectionDirty) {
+        self.render()
+        self._onPositionUpdate()
+      }
       // run a draw, it will repaint framebuffers as necessary
       self._draw()
       // if mouse movement, check feature at position

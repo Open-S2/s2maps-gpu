@@ -10,9 +10,8 @@
     "terrain": "https://s3.s2maps.io/terrain-v1"
   },
   "fonts": {
-    "default": "https://s3.s2maps.io/fonts-v3/default",
-    "roboto-regular": "https://s3.s2maps.io/fonts-v3/RobotoRegular",
-    "roboto-medium": "https://s3.s2maps.io/fonts-v3/RobotoMedium"
+    "roboto-regular": "http://localhost:8000/fonts/RobotoRegular",
+    "roboto-medium": "http://localhost:8000/fonts/RobotoMedium"
   },
   "wallpaper": {
     "background-color": "#030a2d",

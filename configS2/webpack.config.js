@@ -1,0 +1,89 @@
+const webpack = require('webpack')
+
+const CompressionPlugin = require('compression-webpack-plugin')
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin
+
+// This is the production and development configuration.
+// It is focused on developer experience, fast rebuilds, and a minimal bundle.
+module.exports = {
+  mode: 'production',
+  // These are the 'entry points' to our application.
+  // This means they will be the 'root' imports that are included in JS bundle.
+  entry: __dirname + '/../src/s2/index.js',
+  output: {
+    path: __dirname + '/../buildS2',
+    filename: `s2maps-gl.min.js`,
+    // this defaults to 'window', but by setting it to 'this' then
+    // module chunks which are built will work in web workers as well.
+    globalObject: 'this'
+  },
+  module: {
+    rules: [
+      {
+        test: /\.glsl$/,
+        use: 'webpack-glsl-minify'
+      },
+      {
+        test: /\.worker\.js$/,
+        use: [
+          {
+            loader: require.resolve('worker-loader'),
+            options: { inline: 'no-fallback' }
+          }
+        ]
+      },
+      {
+        test: /\.(js|mjs)$/,
+        exclude: /@babel(?:\/|\\{1,2})runtime/,
+        loader: require.resolve('babel-loader'),
+        options: {
+          babelrc: false,
+          configFile: false,
+          compact: false,
+          presets: [
+            '@babel/preset-flow',
+            '@babel/preset-env'
+          ],
+          plugins: [
+            '@babel/plugin-proposal-class-properties'
+          ],
+          cacheDirectory: true,
+          // See #6846 for context on why cacheCompression is disabled
+          cacheCompression: false,
+
+          // Babel sourcemaps are needed for debugging into node_modules
+          // code.  Without the options below, debuggers like VSCode
+          // show incorrect code and set breakpoints on the wrong lines.
+          sourceMaps: false,
+          inputSourceMap: false,
+        },
+      }
+    ]
+  },
+  plugins: [
+    new webpack.ProgressPlugin(),
+    // new CompressionPlugin({
+    //   filename: `[path]s2maps-gl.min.js.gz`,
+    //   algorithm: 'gzip',
+    //   test: /\.js$/,
+    //   threshold: 0,
+    //   minRatio: 1
+    // }),
+    // new CompressionPlugin({
+    //   filename: `[path]s2maps-gl.min.js.br`,
+    //   algorithm: 'brotliCompress',
+    //   test: /\.js$/,
+    //   compressionOptions: {
+    //     level: 11,
+    //   },
+    //   threshold: 0,
+    //   minRatio: 1
+    // }),
+    new BundleAnalyzerPlugin({ analyzerMode: 'static', generateStatsFile: true, statsFilename: 'bundle-stat.json' })
+  ],
+  // resolve: {
+  //   fallback: {
+  //     zlib: false
+  //   }
+  // }
+}
