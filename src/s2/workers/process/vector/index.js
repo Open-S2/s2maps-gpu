@@ -4,6 +4,7 @@ import processFill from './fill'
 import GlyphManager from './glyph'
 import processLine from './line'
 import processPoint from './point'
+import postInteractiveData from './postInteractive'
 
 import type { TileRequest } from '../../workerPool'
 import type { Layer } from '../../../style/styleSpec'
@@ -18,19 +19,23 @@ export default class VectorManager {
   webgl1: boolean = false
   mainThread: Function
   glyphManager: GlyphManager
-  constructor (mainThread: Function, sourceThread: Function) {
+  idGen: IDGen
+  constructor (mainThread: Function, sourceThread: MessageChannel.port2, id: number, idGen: IDGen) {
     this.mainThread = mainThread
-    this.glyphManager = new GlyphManager(mainThread, sourceThread)
+    this.glyphManager = new GlyphManager(mainThread, sourceThread, id)
+    this.idGen = idGen
   }
 
   processVector (mapID: string, tile: TileRequest, sourceName: string,
     vectorTile: VectorTile, layers: Array<Layer>, parent?: boolean = false) {
-    const { webgl1, glyphManager, mainThread } = this
+    const { webgl1, glyphManager, mainThread, idGen } = this
     const { zoom } = tile
     // sometimes the sourcename includes "${sourceName}:PARENT" so we need to remove parent for comparison
     const subSourceName = sourceName.split(':')[0]
     // filter layers to source
     const sourceLayers = layers.filter(layer => layer.source === subSourceName)
+    // prep an interactive map
+    const interactiveMap = new Map()
 
     const featureStore = {
       fill: [],
@@ -44,7 +49,10 @@ export default class VectorManager {
       // grab layer name
       const sourceLayerName = sourceLayer.layer
       // pull out the layer properties we need
-      const { minzoom, maxzoom, type, filter, layerIndex, onlyLines, paint, layout } = sourceLayer
+      const {
+        name, cursor, source, minzoom, maxzoom, type, interactive,
+        filter, layerIndex, onlyLines, paint, layout
+      } = sourceLayer
       if (minzoom > zoom || maxzoom < zoom) continue
       // use the appropriate feature array
       if (!featureStore[type]) continue
@@ -68,11 +76,14 @@ export default class VectorManager {
           // if (parent) geometry = scaleShiftClip(geometry, type, extent, tile, parent)
           // scale and filter as necessary
           if (!geometry.length) continue
+          const id = idGen.getNum()
           features.push({
-            layerIndex, geometry, code, featureCode: webgl1 && buildFeactureCode(type, paint, layout, properties, zoom),
+            id, layerIndex, geometry, code, featureCode: webgl1 && buildFeactureCode(type, paint, layout, properties, zoom),
             extent, type: feature.type, properties, vertices: [],
             indices: (feature.indices) ? feature.indices : [], sourceLayer
           })
+          // if the layer is interactive, store the id's property data
+          if (interactive) interactiveMap.set(id, { __id: id, __cursor: cursor, __name: name, __source: source, __layer: sourceLayerName,  ...properties })
         }
       }
     }
@@ -82,6 +93,7 @@ export default class VectorManager {
     if (featureStore.point.length) processPoint(mapID, tile, sourceName, featureStore.point, mainThread)
     if (featureStore.heatmap.length) processPoint(mapID, tile, sourceName, featureStore.heatmap, mainThread)
     if (featureStore.glyph.length) glyphManager.processGlyphs(mapID, tile, sourceName, featureStore.glyph)
+    if (interactiveMap.size) postInteractiveData(mapID, sourceName, hash, interactiveMap, mainThread)
   }
 }
 
@@ -108,12 +120,6 @@ function buildFeactureCode (type, paint, layout, properties, zoom) {
       layout.intensity(null, properties, zoom),
       paint.radius(null, properties, zoom),
       paint.opacity(null, properties, zoom)
-    )
-  } else if (type === 'glyph') {
-    featureCode.push(
-      ...(paint[`text-fill`](null, properties, zoom)).getRGB(),
-      ...(paint[`text-stroke`](null, properties, zoom)).getRGB(),
-      paint[`text-strokeWidth`](null, properties, zoom)
     )
   }
 

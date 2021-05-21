@@ -3,7 +3,7 @@ uniform float uLayerCode[128];
 uniform float uFeatureCode[64];
 uniform bool uLCH;
 
-@include "./color.glsl"
+@import "./color.glsl"
 
 // y = e^x OR y = Math.pow(2, 10 * x)
 float exponentialInterpolation (float inputVal, float start, float end, float base) {

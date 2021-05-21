@@ -55,22 +55,24 @@ export type LinePaint = {
 
 /** GLYPH **/
 export type GlyphLayout = {
-  text-family: string | Array<any>,
-  text-field: string | Array<string> | Array<any>,
-  text-anchor?: string,
-  text-offset?: number | Array<any>, // default: [0, 0]
-  text-padding?: number | Array<any>, // default: [0, 0]
-  icon-family: string | Array<any>,
-  icon-field: string | Array<string> | Array<any>,
-  icon-anchor?: string,
-  icon-offset?: number | Array<any>, // default: [0, 0]
-  icon-padding?: number | Array<any> // default: [0, 0]
+  'text-family': string | Array<any>,
+  'text-field': string | Array<string> | Array<any>,
+  'text-anchor'?: string,
+  'text-offset'?: number | Array<any>, // default: [0, 0]
+  'text-padding'?: number | Array<any>, // default: [0, 0]
+  'text-word-wrap'?: number | Array<any>,
+  'text-align'?: string | Array<any>,
+  'icon-family': string | Array<any>,
+  'icon-field': string | Array<string> | Array<any>,
+  'icon-anchor'?: string,
+  'icon-offset'?: number | Array<any>, // default: [0, 0]
+  'icon-padding'?: number | Array<any> // default: [0, 0]
 }
 export type GlyphPaint = {
-  text-size: number | Array<any>,
-  text-fill: string | Array<any>,
-  text-stroke?: number | Array<any>,
-  text-strokeWidth?: string | Array<any>
+  'text-size': number | Array<any>,
+  'text-fill': string | Array<any>,
+  'text-stroke'?: number | Array<any>,
+  'text-strokeWidth'?: string | Array<any>
 }
 
 /** Layer **/
@@ -85,7 +87,7 @@ export type Layer = {
   filter: Array<any>, // ["any", ["class", "==", "ocean"], ["class", "==", "river"]]
   layout: LineLayout | GlyphLayout,
   paint: FillPaint | PointPaint | LinePaint | GlyphPaint,
-  iconPaint?: { icon-size: string | Array<any> },
+  iconPaint?: { 'icon-size': string | Array<any> },
   lch: boolean,
   code?: Float32Array,
   iconCode?: Float32Array // special case for icon sizing

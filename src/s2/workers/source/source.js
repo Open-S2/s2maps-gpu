@@ -1,5 +1,4 @@
 // @flow
-
 import type { TileRequest } from '../workerPool'
 import type { Face } from 's2projection'
 
@@ -47,7 +46,7 @@ export default class Source {
   // if this function runs, we assume default tile source
   async _build () {
     const self = this
-    const metadata = await this._fetch(`${this.path}/metadata.json`, 'json')
+    const metadata = await this._fetch(`${this.path}/metadata.json`, true)
     if (!metadata) {
       self.active = false
       console.log(`FAILED TO extrapolate ${this.path} metadata`)
@@ -99,17 +98,16 @@ export default class Source {
     const { name, path } = this
     const { face, zoom, x, y } = tile
 
-    const data = await this._fetch(`${path}/${face}/${zoom}/${x}/${y}.${this.extension}`, this.extension)
+    const data = await this._fetch(`${path}/${face}/${zoom}/${x}/${y}.${this.extension}`)
     const type = (this.extension.includes('pbf')) ? 'pbfdata' : 'rasterdata'
     if (data) worker.postMessage({ mapID, type, tile, sourceName: name, parent, data }, [data])
   }
 
-  async _fetch (path: string, ext: string) {
+  async _fetch (path: string, json?: boolean = false) {
     const res = await fetch(path)
     if (res.status !== 200 && res.status !== 206) return null
-    if (ext.includes('pbf')) return res.arrayBuffer()
-    else if (ext === 'json') return res.json()
-    else return res.blob()
+    if (!json) return res.arrayBuffer()
+    else return res.json()
   }
 }
 

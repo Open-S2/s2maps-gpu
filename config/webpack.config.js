@@ -399,8 +399,8 @@ module.exports = function (webpackEnv) {
             // },
             {
               test: /\.glsl$/,
-              // loader: require.resolve('./glsl-loader.js')
-              loader: require.resolve('webpack-glsl-minify')
+              loader: require.resolve('./glsl-loader')
+              // loader: require.resolve('webpack-glsl-minify')
             },
             // https://stackoverflow.com/questions/21913673/execute-web-worker-from-different-origin
             {

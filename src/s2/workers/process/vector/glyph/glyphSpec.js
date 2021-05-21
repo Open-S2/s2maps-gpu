@@ -17,7 +17,7 @@ export type GlyphObject = {
   offset: [number, number],
   padding: [number, number],
   // paint
-  size: number
+  size: number,
   // tile's position
   s: number,
   t: number,

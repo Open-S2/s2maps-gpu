@@ -1,7 +1,5 @@
 precision highp float;
 
-@nomangle vPos uSkybox
-
 uniform samplerCube uSkybox;
 
 varying vec4 vPos;

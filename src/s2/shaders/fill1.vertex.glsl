@@ -4,15 +4,13 @@ precision highp float;
 precision mediump float;
 #endif
 
-@nomangle aPos aIndex color
-
 attribute vec2 aPos;
 attribute float aIndex;
 
 uniform vec4 uColors[16];
 uniform float uOpacity;
 
-@include "./getPos.glsl"
+@import "./getPos.glsl"
 
 varying vec4 color;
 

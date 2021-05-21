@@ -1,9 +1,7 @@
 // @flow
-import 'regenerator-runtime/runtime'
-/* eslint-env worker */
 import { VectorTile } from 's2-vector-tile'
 import { parseLayers } from '../style/conditionals'
-import { processVector, processRaster } from './process'
+import { VectorManager, processRaster } from './process'
 // import { tileHash } from 's2projection'
 
 import type { Face } from 's2projection'
@@ -14,8 +12,6 @@ import type { StylePackage, Layer } from '../style/styleSpec'
 // const IS_CHROME: boolean = userAgent.indexOf('Chrome') > -1
 
 export type CancelTileRequest = Array<number> // hashe IDs of tiles e.g. ['204', '1003', '1245', ...]
-
-// https://stackoverflow.com/questions/53996916/unable-to-turn-off-eslint-no-unused-expressions
 
 export type ParentLayer = {
   face: Face,
@@ -58,28 +54,42 @@ export default class TileWorker {
   webgl1: boolean = false
   vectorManager: VectorManager
   maps: { [string]: Array<Layer> } = {}
-  sourcePort: MessageChannel.port1
-  idGen: IDGen
+  messagePort: MessageChannel.port1
+  postPort: MessageChannel.port2
 
   onMessage ({ data }) {
     const { mapID, type } = data
-    if (type === 'port') this._loadWorkerPort(data.port, data.id, data.totalWorkers)
+    if (type === 'port') this._loadWorkerPort(data.messagePort, data.postPort, data.id, data.totalWorkers)
     else if (type === 'style') this._loadStyle(mapID, data.style)
     else if (type === 'pbfdata') this._processPBF(mapID, data.tile, data.sourceName, data.parent, data.data)
     else if (type === 'rasterdata') this._processRaster(mapID, data.tile, data.sourceName, data.parent, data.data)
     else if (type === 'jsondata') this._processJSONData(mapID, data.tile, data.sourceName, data.data)
+    else if (type === 'glyphresponse') this._processGlyphResponse(mapID, data.reqID, data.glyphSources)
   }
 
-  _loadWorkerPort (port: MessageChannel.port1, id: number, totalWorkers: number) {
+  _loadWorkerPort (messagePort: MessageChannel.port1, postPort: MessageChannel.port2,
+    id: number, totalWorkers: number) {
     // maintain communication channel with source worker
-    port.onmessage = this.onMessage.bind(this)
-    this.sourcePort = port
+    messagePort.onmessage = this.onMessage.bind(this)
+    this.postPort = postPort
+    this.messagePort = messagePort
     // set id
     this.id = id
     // setup idGenerator
-    this.idGen = { num: id + 1, startNum: id + 1, incrSize: totalWorkers, maxNum: ID_MAX_SIZE }
+    const idGen = {
+      num: id + 1,
+      startNum: id + 1,
+      incrSize: totalWorkers,
+      maxNum: ID_MAX_SIZE,
+      getNum: function () {
+        const res = this.num
+        this.num += this.incrSize
+        if (this.num >= this.maxNum) this.num = this.startNum
+        return res
+      }
+    }
     // setup vectorManager
-    this.vectorManager = new VectorManager(postMessage, port)
+    this.vectorManager = new VectorManager(postMessage, postPort, id, idGen)
   }
 
   // pull in the layers and preprocess them
@@ -96,7 +106,7 @@ export default class TileWorker {
   }
 
   _processRaster (mapID: string, tile: TileRequest, sourceName: string,
-    parent: boolean, data: Blob) {
+    parent: boolean, data: ArrayBuffer) {
     processRaster(mapID, tile, sourceName, parent, data, postMessage)
   }
 
@@ -110,6 +120,10 @@ export default class TileWorker {
     }
     // step 3: process the vector data
     this.vectorManager.processVector(mapID, tile, sourceName, data, this.maps[mapID])
+  }
+
+  _processGlyphResponse (mapID: string, reqID: string, glyphSources: { [string]: ArrayBuffer }) {
+    this.vectorManager.glyphManager.processGlyphResponse(reqID, glyphSources)
   }
 }
 

@@ -1,8 +1,6 @@
 #version 300 es
 precision highp float;
 
-@nomangle vPos texture uSkybox
-
 in vec4 vPos;
 out vec4 fragColor;
 

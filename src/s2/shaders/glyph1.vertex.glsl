@@ -4,46 +4,139 @@ precision highp float;
 precision mediump float;
 #endif
 
-@nomangle aPos aType vST vColor
+@define MIN_SDF_SIZE 0.08
 
-attribute vec2 aPos;
-attribute float aType;
+attribute vec2 aUV; // float [u, v]
+attribute vec2 aST; // float [s, t]                   (INSTANCED)
+attribute vec2 aXY; // float [x, y]                   (INSTANCED)
+attribute vec2 aOffset; // float [xOffset, yOffset]   (INSTANCED)
+attribute vec2 aTexXY; // float [u, v]                (INSTANCED)
+attribute vec2 aTexWH; // float [width, height]       (INSTANCED)
+attribute float aID; // float ID                      (INSTANCED)
+attribute vec4 aColor; // [r, g, b, a]                (INSTANCED)
 
-uniform int uOffset;
+varying float draw;
+varying float buf;
+varying vec2 vTexcoord;
+varying vec4 color;
+varying vec4 stroke;
+
+// glyph texture
+uniform bool uIsIcon;
+uniform bool uOverdraw;
 uniform vec2 uTexSize;
+uniform vec2 uAspect;
+uniform bool uInteractive;
+uniform float uDevicePixelRatio;
+// WebGL1 specific uniforms
+uniform float uSize;
+uniform vec4 uFill;
+uniform vec4 uStroke;
+uniform float uStrokeWidth;
+// The glyph filter texture.
+uniform sampler2D uFeatures;
 
-varying vec2 vST;
-varying vec4 vColor;
+@import "./getPos.glsl"
 
-/**
-Since we are drawing quads, there are 4 types
-polygons are all defined by type 0: [0, 1]
-the start of a quad is defined by type 1: [0, 0]
-the middle (control) of a quad is defined by type 2: [0.5, 0]
-the end of a quad is defined by type 3: [1, 1]
-**/
+// https://gist.github.com/EliCDavis/f35a9e4afb8e1c9ae94cce8f3c2c9b9a
+int AND (int n1, int n2) {
+  float v1 = float(n1);
+  float v2 = float(n2);
 
-void main () {
-  // setup type
-  if (aType == 0.) vST = vec2(0., 1.);
-  else if (aType == 1.) vST = vec2(-1., 1.);
-  else if (aType == 2.) vST = vec2(0., -1.);
-  else vST = vec2(1., 1.);
-  // prepare color store and position offset
-  vec2 offset;
-  if (uOffset == 0) {
-    vColor = vec4(1., 0., 0., 0.);
-    offset = vec2(0., 0.33333333);
-  } else if (uOffset == 1) {
-    vColor = vec4(0., 1., 0., 0.);
-    offset = vec2(0.33333333, 0.);
-  } else if (uOffset == 2) {
-    vColor = vec4(0., 0., 1., 0.);
-    offset = vec2(0., -0.33333333);
-  } else { // uOffset == 3
-    vColor = vec4(0., 0., 0., 1.);
-    offset = vec2(-0.33333333, 0.);
+  int byteVal = 1;
+  int result = 0;
+
+  for (int i = 0; i < 32; i++) {
+    bool keepGoing = v1 > 0.0 || v2 > 0.0;
+    if (keepGoing) {
+      bool addOn = mod(v1, 2.0) > 0.0 && mod(v2, 2.0) > 0.0;
+
+      if (addOn) result += byteVal;
+
+      v1 = floor(v1 / 2.0);
+      v2 = floor(v2 / 2.0);
+      byteVal *= 2;
+    } else { return result; }
   }
-  // set position (reproject from "0 -> 1" to "(-1) -> 1")
-  gl_Position = vec4(2. * (aPos + offset) / uTexSize - 1., 0., 1.);
+
+  return result;
+}
+
+int rightShift (int num, float shifts) {
+  return int(floor(float(num) / pow(2.0, shifts)));
+}
+
+// text order: (paint)size->strokeWidth->fill->stroke
+void main () {
+  vec4 glPos;
+  if (uFaceST[1] < 12.) {
+    // prep xyz
+    vec4 xyz = STtoXYZ(aST);
+    // for points, add a little to ensure it doesn't get clipped
+    xyz.xyz *= 1.001;
+    // find the position on screen
+    glPos = uMatrix * xyz;
+    glPos.xyz /= glPos.w;
+    glPos.w = 1.;
+  } else {
+    glPos = getPosLocal(aST);
+  }
+
+  bool shouldDraw = true;
+  float strokeWidth;
+  vec4 inputID;
+  // if we are filtering, check if this glyph was filtered out
+  if (!uOverdraw) {
+    // Check the "glyphFilter" result texture at current glPos to see if the aID matches
+    // if not, we stop right here for color (discard)
+    int id = int(aID);
+    ivec3 colorID = ivec3(float(AND(id, 255)), float(AND(rightShift(id, 8.), 255)), float(rightShift(id, 16.)));
+    inputID = texture2D(uFeatures, vec2(glPos / 2. + 0.5));
+    if (colorID != ivec3(inputID.rgb * 256.)) shouldDraw = false;
+  } else if (uInteractive) {
+    int id = int(aID);
+    inputID = vec4(float(AND(id, 255)), float(AND(rightShift(id, 8.), 255)), float(rightShift(id, 16.)), 1.);
+    inputID.rgb /= 255.;
+  }
+  // move on if not drawing
+  if (!shouldDraw) return;
+
+  // explain to fragment we are going to draw
+  draw = (uInteractive) ? 2. : 1.;
+
+  // prep the index and featureIndex
+  int index = 0;
+  int featureIndex = 0;
+  // decode size
+  float size = uSize * uDevicePixelRatio * 2.;
+  // set fill
+  color = (uInteractive)
+    ? vec4(inputID.rgb, 1.)
+    : (uIsIcon)
+      ? aColor
+      : uFill;
+
+  color.rgb *= color.a;
+
+  // prep texture read buffer
+  buf = 0.5;
+  if (!uIsIcon) {
+    strokeWidth = uStrokeWidth * uDevicePixelRatio * 2.;
+    stroke = uStroke;
+    stroke.rgb *= stroke.a;
+    if (strokeWidth > 0.) {
+      buf = clamp((MIN_SDF_SIZE - buf) * strokeWidth + buf, MIN_SDF_SIZE, buf); // deltaY / deltaX + y-intercept
+    }
+  }
+
+  // get the size of the glyph stored
+  vec2 glyphSize = vec2(aTexWH.x * size, size);
+  // add x-y offset as well as use the UV to map the quad
+  vec2 XY = vec2(aXY.x + aOffset.x, aXY.y - aOffset.y) * size; // subtract the sdfWidth
+  glPos.xy += (XY / uAspect) + (glyphSize / uAspect * aUV);
+  // set texture position (don't bother wasting time looking up if drawing "interactive quad")
+  if (!uInteractive) vTexcoord = (aTexXY / uTexSize) + (vec2(aTexWH.x * aTexWH.y, aTexWH.y) / uTexSize * aUV);
+
+  // set position (reproject from "0 - 1" to "(-1) - 1")
+  gl_Position = glPos;
 }

@@ -1,54 +1,133 @@
 // @flow
-// [xOffset, yOffset, texU, texV, texWidth, texHeight]
-export type Quad = [number, number, number, number, number, number]
+// [s, t, xOffset, yOffset, xPos, yPos, texX, texY, texWidth, texHeight, id]
+export type Quad = [number, number, number, number, number, number, number, number, number]
+// the xPos and yPos are for the 0->1 ratio placement. This is computed internally with size
+// meanwhile xOffset and yOffset are where to start from the s, t position (the pixel based offset)
 
-export type GlyphQuads = {
-  bbox: [number, number, number, number], // [x, y, width, height]
-  glyphQuads: Array<Quad>
-}
+// [s, t, x, y, width, height, index, id]
+export type Filter = [number, number, number, number, number, number, number, number]
+
+export type Anchor = 'center' | 'topRight' | 'right' | 'bottomRight' | 'bottom' | 'bottomLeft' | 'left' | 'topLeft'
+export type Alignment = 'center' | 'left' | 'right'
 
 // This step exclusively creates quad data, E.G. How to draw each glyph on the screen,
 // given the anchor point as a basis for drawing. This step is seperate to preprocessing
 // as we are avoiding doing too much work prior to potentially filtering the object (rtree).
-export function buildGlyphQuads (glyph: GlyphObject, glyphSet: GlyphSet) {
-  const { field, anchor, wordWrap } = glyph
-  // setup variable
-  const quads: Array<Quad> = []
-  const bbox: [number, number, number, number] = [0, 0, 0, 0]
-  let cursorX = 0
-  let cursorY = 0
-  // run through string using the glyphSet as a guide to build the quads
-  for (const char of field) {
-    const glyph = glyphSet.get(char)
-    if (glyph) {
-
-    } else {
-
-    }
-  }
-  // build bbox given cursor positions
-
-  // now adjust by the anchor
-
-  // store results
-  glyph.bbox = bbox
-  glyph.quads = quads
-}
-
 // NOTE: EVERY GLYPH is currently "normalized", with a 0->1 scale so it can later be
 // multiplied by "size"
-
 // NOTE: Just put the glyph offsets + word-wrap-y offset provided at first,
 // add in the excess anchor offset AFTER we know the bbox size
+export default function buildGlyphQuads (feature: GlyphObject, glyphMap: GlyphSet, index: number) {
+  const { max } = Math
+  const { s, t, id, offset, padding, field, family, anchor, wordWrap, align, size } = feature
+  const familyMap = glyphMap[family]
+  const adjustX = offset[0]
+  const adjustY = offset[1]
+  // setup variable
+  const quads: Array<Quad> = []
+  const rows: Array<[number, number]> = [] // a row: [glyph count, rowMaxWidth]
+  let rowCount = 0
+  let rowWidth = 0
+  let rowHeight = 0
+  let cursorX = 0
+  let cursorY = 0
+  let maxHeight = 0
+  // run through string using the glyphSet as a guide to build the quads
+  for (let i = 0, fl = field.length; i < fl; i++) {
+    // grab the unicode data
+    const unicode = field.charCodeAt(i)
+    // word-wrap if line break or length exceeds max allowed.
+    if (unicode === 10 || unicode === 13 || (unicode === 32 && wordWrap && cursorX >= wordWrap)) {
+      cursorX = 0
+      updateoffset(quads, 0, rowCount ? rowHeight + 0.25 : 0) // we move all previous content up a row
+      rows.push([rowCount, rowWidth])
+      rowCount = 0
+      rowWidth = 0
+      rowHeight = 0
+      continue
+    }
+    // grab the unicode information
+    const { texX, texY, texW, texH, xOffset, yOffset, width, height, advanceWidth } = familyMap.get(unicode)
+    // prep x-y positions
+    const xPos = cursorX + xOffset
+    const yPos = cursorY + yOffset
+    if (texW && texH) {
+      // store quad
+      quads.push(s * 8192, t * 8192, adjustX, adjustY, xPos, yPos, width, height, texX, texY, texW, texH, id)
+      // update number of glyphs and draw box height
+      rowCount++
+      rowHeight = max(rowHeight, yOffset + height)
+      maxHeight = max(maxHeight, yPos + height)
+    }
+    // always update rowWidth by advanceWidth
+    rowWidth = max(rowWidth, xPos + advanceWidth)
+    // advance cursor psoition
+    cursorX += advanceWidth
+  }
+  // store the last row
+  rows.push([rowCount, rowWidth])
+  // grab max width from said
+  const maxWidth = rows.reduce((acc, curr) => max(acc, curr[1]), 0)
+  // adjust text based upon center-align or right-align
+  alignText(align, quads, rows, maxWidth)
+  // now adjust all glyphs and max-values by the anchor and alignment
+  const [anchorOffsetX, anchorOffsetY] = anchorOffset(anchor, maxWidth, maxHeight)
+  updateoffset(quads, anchorOffsetX, anchorOffsetY)
+  // build bbox given current size
+  const bbox = [anchorOffsetX, anchorOffsetY, maxWidth + anchorOffsetX, maxHeight + anchorOffsetY]
+  // set minX, maxX, minY, maxY in the feature
+  feature.minX = (s * 512) + adjustX + (anchorOffsetX * size)
+  feature.minY = (t * 512) + adjustY + (anchorOffsetY * size)
+  feature.maxX = feature.minX + (maxWidth * size)
+  feature.maxY = feature.minY + (maxHeight * size)
+  // store the final quads
+  feature.quads = quads
+  // store the filter
+  feature.filter = [s * 8192, t * 8192, anchorOffsetX, anchorOffsetY, ...padding, maxWidth, maxHeight, index, id]
+}
 
-// GlyphSet => { [unicode]: Glyph }
+function updateoffset (quads: Quad, adjustX: number, adjustY: number) {
+  for (let i = 0, ql = quads.length; i < ql; i += 13) {
+    quads[i + 4] += adjustX
+    quads[i + 5] += adjustY
+  }
+}
 
-// export type Glyph = {
-//   texX: number, // x position on glyph texture sheet
-//   texY: number, // y position on glyph texture sheet
-//   texW: number,
-//   texH: number,
-//   xOffset: number, // x offset for glyph
-//   yOffset: number, // y offset for glyph
-//   advanceWidth: number // how far to move the cursor
-// }
+function anchorOffset (anchor: Anchor, width: number, height: number): [number, number] {
+  if (anchor === 'center') return [-width / 2, -height / 2]
+  else if (anchor === 'top') return [-width / 2, -height]
+  else if (anchor === 'topRight') return [-width, -height]
+  else if (anchor === 'right') return [-width, -height / 2]
+  else if (anchor === 'bottomRight') return [-width, 0]
+  else if (anchor === 'bottom') return [-width / 2, 0]
+  else if (anchor === 'bottomLeft') return [0, 0]
+  else if (anchor === 'left') return [0, -height / 2]
+  else if (anchor === 'topLeft') return [0, -height]
+  else return [-width / 2, -height / 2] // default to center
+}
+
+function alignText (align: Alignment, quads: Quad, rows: Array<number, number>, maxWidth: number) {
+  if (align !== 'center' && align !== 'right') return
+  const alignFunc = (align === 'center')
+    ? (mW, rW) => (mW - rW) / 2 // center align
+    : (mW, rW) => mW - rW // right align
+
+  let currPos = 0
+  let idx = 0
+  // iterate rows, grab their count and width, adjust as necessary
+  for (const [rowCount, rowWidth] of rows) {
+    // if row is same size as the width of the display box, move on
+    if (rowWidth === maxWidth) {
+      currPos += rowCount
+      continue
+    }
+    // find the alignment based upon the rows width and the total draw box width
+    const adjust = alignFunc(maxWidth, rowWidth)
+    // iterate the rows, adding the x-y adjustment as appropriate
+    for (let i = 0; i < rowCount; i++) {
+      idx = currPos * 13
+      quads[idx + 4] += adjust
+      currPos++
+    }
+  }
+}

@@ -1,7 +1,5 @@
 precision highp float;
 
-@nomangle vColor vWidth vNorm vCenter vDrawType uDevicePixelRatio
-
 uniform float uDevicePixelRatio;
 
 varying vec4 vColor;

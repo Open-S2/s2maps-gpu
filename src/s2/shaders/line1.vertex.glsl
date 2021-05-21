@@ -4,8 +4,6 @@ precision highp float;
 precision mediump float;
 #endif
 
-@nomangle vWidth vNorm vCenter vColor vDrawType uDevicePixelRatio aType aPrev aCurr aNext
-
 attribute float aType;
 attribute vec2 aPrev; //   (INSTANCED)
 attribute vec2 aCurr; //   (INSTANCED)
@@ -27,7 +25,7 @@ uniform float uCap; // 0 -> butt ; 1 -> round ; 2 -> square
 uniform vec4 uColor;
 uniform float uWidth;
 
-@include "./getPos.glsl"
+@import "./getPos.glsl"
 
 varying vec2 vWidth;
 varying vec2 vNorm;

@@ -1,16 +1,16 @@
 // @flow
 import Style from '../style'
 /** CONTEXTS **/
-import { WebGL2Context, WebGLContext } from './contexts'
+// import { WebGL2Context, WebGLContext } from './contexts'
+import WebGL2Context from './contexts/webGL2Context'
+import WebGLContext from './contexts/webGLContext'
 // import { WebGL2Context, WebGLContext, WebGPUContext } from './contexts'
 /** PROGRAMS **/
 import {
   Program,
   FillProgram,
   GlyphFilterProgram,
-  GlyphLineProgram,
   GlyphProgram,
-  GlyphQuadProgram,
   HeatmapProgram,
   LineProgram,
   PointProgram,
@@ -24,7 +24,7 @@ import { Tile } from '../source'
 
 import type { MapOptions } from '../ui/map'
 import type { Projection } from '../ui/camera/projections'
-import type { FeatureGuide, GlyphTileSource } from '../source/tile'
+import type { FeatureGuide } from '../source/tile'
 import type { ProgramType } from './programs/program'
 
 export default class Painter {
@@ -34,11 +34,10 @@ export default class Painter {
   currProgram: ProgramType
   dirty: boolean = true
   constructor (canvas: HTMLCanvasElement, options: MapOptions) {
-    const self = this
     // setup canvas
-    self._canvas = canvas
+    this._canvas = canvas
     // create a webgl or webgl2 context
-    return self._createContext(options).then(() => { return self })
+    this._createContext(options)
   }
 
   delete () {
@@ -47,12 +46,7 @@ export default class Painter {
     context.delete()
   }
 
-  clearCache () {
-    const glyphProgram: GlyphProgram = this.programs.glyphFill
-    if (glyphProgram) glyphProgram.clearCache()
-  }
-
-  async _createContext (options: MapOptions) {
+  _createContext (options: MapOptions) {
     // prep options
     const webglOptions = { powerPreference: 'high-performance', antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: false, alpha: true, stencil: true }
     let context
@@ -79,54 +73,41 @@ export default class Painter {
     }
   }
 
-  async buildPrograms (buildSet: Set<ProgramType>) {
-    const self = this
-    const { programs } = self
-    let promises = []
+  buildPrograms (buildSet: Set<ProgramType>) {
+    const { programs } = this
     for (const program of buildSet) {
       switch (program) {
         case 'raster':
-          promises.push((new RasterProgram(self.context)).then(p => programs.raster = p))
+          programs.raster = new RasterProgram(this.context)
           break
         case 'fill':
-          promises.push((new FillProgram(self.context)).then(p => programs.fill = p))
+          programs.fill = new FillProgram(this.context)
           break
         case 'line':
-          promises.push((new LineProgram(self.context)).then(p => programs.line = p))
+          programs.line = new LineProgram(this.context)
           break
         case 'point':
-          promises.push((new PointProgram(self.context)).then(p => programs.point = p))
+          programs.point = new PointProgram(this.context)
           break
         case 'heatmap':
-          promises.push((new HeatmapProgram(self.context)).then(p => programs.heatmap = p))
+          programs.heatmap = new HeatmapProgram(this.context)
           break
         case 'shade':
-          promises.push((new ShadeProgram(self.context)).then(p => programs.shade = p))
+          programs.shade = new ShadeProgram(this.context)
           break
         case 'glyph':
-          promises.push((new GlyphLineProgram(self.context)).then(p => programs.glyphLineProgram = p))
-          promises.push((new GlyphFilterProgram(self.context)).then(p => programs.glyphFilter = p))
-          promises.push((new GlyphProgram(self.context)).then(p => programs.glyphFill = p))
-          promises.push((new GlyphQuadProgram(self.context)).then(p => { programs.glyph = p }))
+          programs.glyphFilter = new GlyphFilterProgram(this.context)
+          programs.glyph = new GlyphProgram(this.context, programs.glyphFilter)
           break
         case 'wallpaper':
-          promises.push((new WallpaperProgram(self.context)).then(p => programs.wallpaper = p))
+          programs.wallpaper = new WallpaperProgram(this.context)
           break
         case 'skybox':
-          promises.push((new SkyboxProgram(self.context)).then(p => programs.skybox = p))
+          programs.skybox = new SkyboxProgram(this.context)
           break
         default: break
       }
     }
-
-    await Promise.all(promises).then(() => {
-      const { programs } = self
-      // if we build the glyph programs, ensure the programs know of eachother
-      if (programs.glyph) {
-        programs.glyphFill.injectGlyphLine(programs.glyphLineProgram)
-        programs.glyph.injectGlyphPrograms(programs.glyphFilter, programs.glyphFill)
-      }
-    })
   }
 
   injectFrameUniforms (matrix: Float32Array, view: Float32Array, aspect: Float32Array) {
@@ -226,13 +207,6 @@ export default class Painter {
       tile.tmpMaskID = maskRef
       maskRef++
     }
-  }
-
-  buildGlyphTexture (glyphSource: GlyphTileSource): void | Error {
-    // get the glyphProgram & draw the glyphs to a texture
-    const glyphProgram: GlyphProgram = this.useProgram('glyphFill')
-    if (glyphProgram) glyphProgram.draw(glyphSource)
-    else return new Error('The "glyphFill" program does not exist, can not paint.')
   }
 
   paintMasks (tiles: Array<Tile>) {
@@ -409,6 +383,12 @@ export default class Painter {
       // draw
       glyphFilterProgram.draw(glyphFeature, featureSource, mode)
     }
+  }
+
+  injectGlyphImages (maxHeight: number, images: GlyphImages) {
+    if (!this.programs.glyph) this.buildPrograms(new Set(['glyph']))
+    const { glyph } = this.programs
+    glyph.injectImages(maxHeight, images)
   }
 }
 

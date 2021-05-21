@@ -1,8 +1,6 @@
 #version 300 es
 precision highp float;
 
-@nomangle vExtent vOpacity vS uDrawState texture uImage uColorRamp
-
 in vec2 vExtent;
 in float vOpacity;
 in float vS;

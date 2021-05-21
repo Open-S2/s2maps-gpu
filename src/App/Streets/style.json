@@ -10,8 +10,16 @@
     "terrain": "https://s3.s2maps.io/terrain-v1"
   },
   "fonts": {
-    "roboto-regular": "http://localhost:8000/fonts/RobotoRegular",
-    "roboto-medium": "http://localhost:8000/fonts/RobotoMedium"
+    "noto-sans-regular": "http://localhost:8000/fonts/Noto/NotoSansRegular",
+    "noto-sans-medium": "http://localhost:8000/fonts/Noto/NotoSansMedium",
+    "roboto-regular": {
+      "path": "http://localhost:8000/fonts/Roboto/RobotoRegular",
+      "fallback": "noto-sans-regular"
+    },
+    "roboto-medium": {
+      "path": "http://localhost:8000/fonts/Roboto/RobotoMedium",
+      "fallback": "noto-sans-medium"
+    }
   },
   "wallpaper": {
     "background-color": "#030a2d",
@@ -69,7 +77,7 @@
           ["class", "==", "crop"],
           "#bbe2c6",
           ["class", "==", "shrub"],
-          "rgb(242, 237, 224)",
+          "#f1e9d7",
           ["class", "==", "wasteland"],
           "#e8e8e1",
           "default",
@@ -88,7 +96,7 @@
         ["class", "==", "aeroway"],
         [
           "type", "has", ["park", "national_park", "protected_area",
-          "grass", "grassland", "garden", "meadow", "farmland",
+          "grass", "grassland", "garden", "meadow", "farmland", "heath",
           "swamp", "wetland", "zoo", "cemetery", "sand", "beach", "desert",
           "hospital", "school", "parking", "glacier",
           "quarry", "retail", "urban", "pitch"]
@@ -121,7 +129,7 @@
           "#d4d8ea",
           ["class", "==", "aeroway"],
           "rgb(219, 222, 235)",
-          ["type", "==", "farmland"],
+          ["type", "has", ["farmland", "heath"]],
           "rgb(228, 234, 210)",
           ["type", "==", "hospital"],
           "rgb(252, 228, 228)",
@@ -234,16 +242,7 @@
       "minzoom": 0,
       "layout": {},
       "paint": {
-        "color": [
-          "input-range",
-          "zoom",
-          "expo",
-          0.35,
-          8,
-          "#8fcaf9",
-          10,
-          "#86bff2"
-        ]
+        "color": "#86bff2"
       }
     },
     {
@@ -290,7 +289,7 @@
       "source": "streets-v2",
       "layer": "landuse",
       "filter": ["type", "==", "aboriginal_lands"],
-      "minzoom": 5,
+      "minzoom": 3,
       "type": "line",
       "layout": {
         "cap": [
@@ -1508,7 +1507,13 @@
             0,
             "?abbr,?name",
             3,
-            "?!Uname"
+            [
+              "data-condition",
+              ["and", ["name_en", "!=", ""], ["name_en", "has", "?name"]],
+              "?!Uname",
+              "default",
+              ["?!Uname", "\n", "?name_en"]
+            ]
           ],
           "default",
           [
@@ -1535,25 +1540,22 @@
             "expo",
             1.5,
             0,
-            17,
+            14.45,
             4,
-            36
+            30.6
           ],
           ["class", "==", "state"],
           [
             "input-range",
             "zoom",
-            "expo",
-            1.5,
+            "lin",
             0,
-            12,
-            4,
-            22,
-            7,
-            36
+            10,
+            5,
+            18
           ],
           "default",
-          18
+          15.3
         ],
         "text-fill": [
           "data-condition",
@@ -1570,16 +1572,7 @@
         "text-strokeWidth": [
           "data-condition",
           ["class", "==", "state"],
-          [
-            "input-range",
-            "zoom",
-            "expo",
-            1.5,
-            0,
-            0.5,
-            4,
-            0.3
-          ],
+          0.7,
           ["class", "==", "continent"],
           0.2,
           "default",
@@ -1623,11 +1616,11 @@
             "zoom",
             "lin",
             5,
-            14,
+            12,
             9,
-            20,
+            17,
             13,
-            38
+            32.3
           ],
           ["class", "==", "town"],
           [
@@ -1635,11 +1628,11 @@
             "zoom",
             "lin",
             8,
-            14,
+            12,
             10,
-            18,
+            15.3,
             13,
-            25
+            21.25
           ],
           ["class", "has", ["neighbourhood", "suburb"]],
           [
@@ -1647,9 +1640,9 @@
             "zoom",
             "lin",
             10,
-            16,
+            13.6,
             15,
-            18
+            15.3
           ],
           ["class", "has", ["hamlet", "village"]],
           [
@@ -1657,12 +1650,12 @@
             "zoom",
             "lin",
             10.5,
-            14,
             12,
-            18
+            12,
+            15.3
           ],
           "default",
-          17
+          14.45
         ],
         "text-fill": [
           "data-condition",
@@ -1708,9 +1701,9 @@
             "expo",
             1.5,
             0,
-            16,
+            14,
             3,
-            40
+            34
           ],
           ["type", "==", "sea"],
           [
@@ -1719,14 +1712,14 @@
             "expo",
             1.5,
             0,
-            12,
+            10.2,
             4,
-            22,
+            18.7,
             7,
-            40
+            34
           ],
           "default",
-          16
+          13.6
         ],
         "text-fill": "#00669E",
         "text-stroke": "#00669E",
@@ -1762,9 +1755,9 @@
         "text-size": [
           "data-condition",
           ["class", "==", "aboriginal_lands"],
-          15,
+          12.75,
           "default",
-          17
+          14.45
         ],
         "text-fill": [
           "data-condition",

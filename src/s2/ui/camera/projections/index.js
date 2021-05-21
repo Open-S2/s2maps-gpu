@@ -28,10 +28,10 @@ export type MatrixType = 'm' | 'km' // meters of kilometers
 export default class Projector {
   radius: number = 6_371.0088
   radii: number = [6378137, 6356752.3, 6378137]
-  circumference: number = 2 * Math.PI * 6_371.0088
   zTranslateStart: number = 5
   zTranslateEnd: number = 1.001
   zoomEnd: number = 5
+  positionalZoom: boolean = true
   view: Float32Array = new Float32Array(16) // [zoom, lon, lat, angle, pitch, time, featureState, currFeature, ...extensions]
   aspect: Float32Array = new Float32Array([400, 300]) // default canvas width x height
   matrices: { [MatrixType]: Float32Array } = {}
@@ -57,6 +57,7 @@ export default class Projector {
     if (style.zNear) this.zNear = style.zNear
     if (style.zFar) this.zFar = style.zFar
     if (config.canvasMultiplier) this.multiplier = config.canvasMultiplier
+    if (config.positionalZoom === false) this.positionalZoom = false
   }
 
   setFeatureState (state: 0 | 1 | 2) {
@@ -106,6 +107,9 @@ export default class Projector {
   }
 
   onZoom (zoomInput?: number = 0, canvasX?: number = 0, canvasY?: number = 0): boolean {
+    const { positionalZoom, multiplier, aspect } = this
+    const { pow, max, min, cos, PI } = Math
+    // adjust the zoom
     this.prevZoom = this.zoom
     this.zoom -= 0.003 * zoomInput
     const { prevZoom, minzoom, maxzoom } = this
@@ -116,10 +120,32 @@ export default class Projector {
       this.zoom = minzoom // if it underzooms but the previous zoom was not at minzoom, we need to render one more time
       if (prevZoom === minzoom) return false
     }
+    // if positionalZoom, we adjust the lon and lat according to the mouse position.
+    // consider the distance between the lon-lat of our current "center" position and
+    // the lon-lat of the cursor position PRE-zoom adjustment. After zooming, we
+    // want to readjust our lon-lat position to compensate for that delta.
+    if (positionalZoom && canvasX && canvasY) {
+      // STEP 1: Get the distance from the center in pixels (up is +y, right is +x)
+      // this value is considered our "previous" distance metric.
+      const [width, height] = aspect
+      const posX = canvasX - (width / multiplier / 2)
+      const posY = (height / multiplier / 2) - canvasY
+      // STEP 2: find the distance POST-zoom adjustment. In other words,
+      // multiply the previous position by the scale change
+      const zoomScale = 1 + (this.zoom - this.prevZoom)
+      const posDeltaX = posX * zoomScale - posX
+      const posDeltaY = posY * zoomScale - posY
+      // STEP 3: The deltas need to be converted to deg change
+      const zoomMultiplier = pow(2, max(this.zoom, 0))
+      const lonMultiplier = min(30, 1 / cos(this.lat * PI / 180))
+      this.lon += posDeltaX / 3072 * 360 / zoomMultiplier * lonMultiplier
+      this.lat += posDeltaY / 1536 * 180 / zoomMultiplier
+    }
     // adjust latitude accordingly
     this._adjustLat()
     // update view
     this.view[0] = this.zoom
+    this.view[1] = this.lon
     this.view[2] = this.lat
     // cleanup
     this.matrices = {}
@@ -128,12 +154,12 @@ export default class Projector {
   }
 
   onMove (movementX?: number = 0, movementY?: number = 0, multiplierX?: number = 3, multiplierY?: number = 3) {
-    const { lat, zoom, radius, circumference } = this
+    const { lat, zoom } = this
     const { pow, max, min, cos, PI } = Math
     const zoomMultiplier = 2 * pow(2, max(zoom, 0))
     // https://math.stackexchange.com/questions/377445/given-a-latitude-how-many-miles-is-the-corresponding-longitude
-    const latMultiplier = min(30, circumference / (2 * PI * radius * cos(lat * PI / 180)))
-    if (movementX) this.lon -= movementX / (multiplierX * zoomMultiplier) * latMultiplier
+    const lonMultiplier = min(30, 1 / cos(lat * PI / 180))
+    if (movementX) this.lon -= movementX * lonMultiplier / (multiplierX * zoomMultiplier)
     if (movementY) this.lat += movementY / (multiplierY * zoomMultiplier)
     // adjust latitude accordingly
     this._adjustLat()
@@ -152,7 +178,7 @@ export default class Projector {
     const { zoom, maxLatRotation } = this
     const { min } = Math
     // ensure we hit a limit on latitude so we don't flip movement
-    const curMaxLat = min(80 + min(9.999999, (9.999999 / 5) * zoom), maxLatRotation)
+    const curMaxLat = min(75 + min(14.999999, (14.999999 / 5) * zoom), maxLatRotation)
     if (this.lat > curMaxLat) this.lat = curMaxLat
     else if (this.lat < -curMaxLat) this.lat = -curMaxLat
   }

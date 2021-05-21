@@ -23,18 +23,9 @@ export default class WallpaperProgram extends Program {
     const { type } = context
     // inject Program
     super(context)
-    const self = this
     // install shaders
-    return Promise.all([
-      (type === 1) ? vert1 : vert2,
-      (type === 1) ? frag1 : frag2
-    ])
-      .then(([vertex, fragment]) => {
-        // build shaders
-        self.buildShaders(vertex, fragment)
-
-        return self
-      })
+    if (type === 1) this.buildShaders(vert1, frag1)
+    else this.buildShaders(vert2, frag2)
   }
 
   draw (wallpaper: Wallpaper) {

@@ -1,7 +1,5 @@
 precision highp float;
 
-@nomangle vPos
-
 vec2 fadeStep = vec2(0., 0.325);
 vec4 nullColor = vec4(1.);
 vec4 darkColor = vec4(0.6, 0.6, 0.6, 1.);

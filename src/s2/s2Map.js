@@ -1,17 +1,10 @@
 // @flow
 import Map from './ui/map'
+// import createWorker from './util/createWorker'
 import MapWorker from './workers/map.worker.js'
-// import caesar from './caesar.wasm'
+// import mapWorkerURL from './workers/map.worker.url.js'
 
 import type { MapOptions } from './ui/map'
-
-// fetch('http://192.168.0.189:5000/caesar.wasm')
-//   .then(res => res.arrayBuffer())
-//   .then(ab => WebAssembly.compile(ab))
-//   .then(module => new WebAssembly.Instance(module))
-//   .then(instance => {
-//     console.log('instance', instance)
-//   })
 
 // This is a builder / api instance for the end user.
 // We want individual map instances in their own web worker thread. However,
@@ -79,11 +72,12 @@ export default class S2Map extends EventTarget {
     const self = this
     const { _canvasContainer } = self
     // if browser supports it, create an instance of the mapWorker
-    if (canvas.transferControlToOffscreen) { // $FlowIgnore
+    if (false && canvas.transferControlToOffscreen) { // $FlowIgnore
       const offscreen = canvas.transferControlToOffscreen()
       self._offscreen = true
       const mapWorker = self.map = new MapWorker()
-      // const mapWorker = self.map = new Worker(new URL('./workers/map.worker.js', import.meta.url))
+      // const mapWorker = self.map = new Worker(new URL('./workers/map.worker.js', import.meta.url), { name: 'map-worker', type: 'module' })
+      // const mapWorker = self.map = createWorker(mapWorkerURL, 'map-worker')
       mapWorker.onmessage = self._mapMessage.bind(self)
       mapWorker.postMessage({ type: 'canvas', options, canvas: offscreen, id: self.id }, [offscreen])
     } else {
@@ -294,7 +288,8 @@ export default class S2Map extends EventTarget {
       const { type } = data // $FlowIgnore
       if (type === 'filldata') map.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.codeTypeBuffer, data.featureGuideBuffer]) // $FlowIgnore
       else if (type === 'linedata') map.postMessage(data, [data.vertexBuffer, data.featureGuideBuffer]) // $FlowIgnore
-      else if (type === 'glyphdata') map.postMessage(data, [data.glyphFilterBuffer, data.glyphFillVertexBuffer, data.glyphFillIndexBuffer, data.glyphLineVertexBuffer, data.glyphQuadBuffer, data.glyphColorBuffer, data.layerGuideBuffer]) // $FlowIgnore
+      else if (type === 'glyphdata') map.postMessage(data, [data.glyphFilterBuffer, data.glyphQuadBuffer, data.glyphColorBuffer, data.featureGuideBuffer]) // $FlowIgnore
+      else if (type === 'glyphimages') map.postMessage(data, data.images.map(i => i.data))
       else if (type === 'rasterdata') map.postMessage(data, [data.image]) // $FlowIgnore
       else if (type === 'maskdata') map.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.radiiBuffer]) // $FlowIgnore
       else if (type === 'pointdata' || type === 'heatmapdata') map.postMessage(data, [data.vertexBuffer, data.weightBuffer, data.featureGuideBuffer]) // $FlowIgnore

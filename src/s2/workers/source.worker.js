@@ -1,6 +1,4 @@
 // @flow
-import 'regenerator-runtime/runtime'
-
 import { GlyphSource, LocalSource, S2JSONSource, S2TilesSource, Source, TexturePack } from './source'
 
 import type { StylePackage } from '../style/styleSpec'
@@ -52,19 +50,20 @@ export default class SourceWorker {
   sessionToken: SessionToken = { age: 0 }
   sources: { [string]: Source } = {} // path is the key, so ["https://api.s2maps.io/data/oconnorct1/test.s2tiles"] = Source
   glyphs: { [string]: GlyphSource } = {} // path is key again
-  texturePath: TexturePack = new TexturePack()
+  texturePack: TexturePack = new TexturePack()
 
   onMessage ({ data }) {
     const { mapID, type } = data
-    if (type === 'port') this._loadWorkerPort(data.port)
+    if (type === 'port') this._loadWorkerPort(data.messagePort, data.postPort, data.id)
     else if (type === 'style') this._loadStyle(mapID, data.style)
-    else if (type === 'request') this._request(mapID, data.tiles)
+    else if (type === 'tilerequest') this._request(mapID, data.tiles)
+    else if (type === 'glyphrequest') this._glyphRequest(mapID, data.id, data.reqID, data.glyphList)
   }
 
-  _loadWorkerPort (port) {
+  _loadWorkerPort (messagePort: MessageChannel.port1, postPort: MessageChannel.port2, id: number) {
     this.totalWorkers++
-    port.onmessage = this.onMessage.bind(this)
-    this.workers.push(port)
+    messagePort.onmessage = this.onMessage.bind(this)
+    this.workers[id] = postPort
   }
 
   _loadStyle (mapID: string, style: StylePackage = {}) {
@@ -79,18 +78,28 @@ export default class SourceWorker {
     for (const [name, source] of Object.entries(sources)) {
       promises.push(this._createSource(name, source, layers.filter(layer => layer.source === name)))
     }
-    // fonts
-    for (const [name, source] of Object.entries(fonts)) promises.push(this._createGlyphSource(name, source))
-    // icons
-    for (const [name, source] of Object.entries(icons)) promises.push(this._createGlyphSource(name, source))
+    // fonts & icons
+    for (let [name, source] of Object.entries({ ...fonts, ...icons })) {
+      if (typeof source === 'object') {
+        promises.push(this._createGlyphSource(name, source.path, source.fallback))
+      } else { promises.push(this._createGlyphSource(name, source)) }
+    }
 
     // run the style config
     Promise.all(promises)
       .then(() => {
+        // add in fallbacks
+        this._injectFallbacks()
         this.status = 'ready'
         this._checkCache()
       })
-      .catch(err => console.log('ERROR', err))
+  }
+
+  _injectFallbacks () {
+    const { glyphs } = this
+    for (const glyphSource of Object.values(glyphs)) {
+      if (glyphSource.fallback) glyphSource.fallback = glyphs[glyphSource.fallback]
+    }
   }
 
   _checkCache () {
@@ -125,14 +134,14 @@ export default class SourceWorker {
     this.sources[path] = source
   }
 
-  async _createGlyphSource (name: string, input: string) {
-    const { texturePath } = this
+  async _createGlyphSource (name: string, input: string, fallback?: string) {
+    const { texturePack } = this
     // prepare
     const apiSource = input.includes('s2maps://')
     const path = (apiSource) ? input.replace('s2maps://', 'https://api.s2maps.io/data/') : input
     // check if already exists
     if (this.glyphs[name]) return
-    const source = new GlyphSource(name, path, texturePath)
+    const source = new GlyphSource(name, path, fallback, texturePack)
     await source._build()
     // build
     this.glyphs[name] = source
@@ -155,6 +164,32 @@ export default class SourceWorker {
         }
         self._checkCache()
       })
+  }
+
+  async _glyphRequest (mapID: string, workerID: number, reqID: string,
+    sourceGlyphs: { [string]: GlyphRequest }) {
+    // prep
+    const { workers } = this
+    const promises = []
+    const glyphSources = {}
+    const images = []
+    // iterate the glyph sources for the unicodes
+    for (const [name, unicodes] of Object.entries(sourceGlyphs)) {
+      if (this.glyphs[name]) promises.push(this.glyphs[name].glyphRequest(glyphSources, images, new Uint16Array(unicodes)))
+    }
+    await Promise.all(promises)
+
+    // if glyphResponse has data, send it back to the worker
+    if (Object.keys(glyphSources).length) {
+      for (const glyphSource in glyphSources) {
+        glyphSources[glyphSource] = (new Float32Array(glyphSources[glyphSource])).buffer
+      }
+      workers[workerID].postMessage({ mapID, type: 'glyphresponse', reqID, glyphSources }, Object.values(glyphSources))
+    }
+
+    // send any images to the main thread
+    const maxHeight = images.reduce((acc, cur) => Math.max(acc, cur.posY + cur.height), 0)
+    if (images.length) postMessage({ mapID, type: 'glyphimages', images, maxHeight }, images.map(i => i.data))
   }
 
   _requestToken (mapID) {

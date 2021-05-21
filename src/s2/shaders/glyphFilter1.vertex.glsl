@@ -4,13 +4,11 @@ precision highp float;
 precision mediump float;
 #endif
 
-@nomangle aStep aST aXY aPad aWidth aIndex aID color
-
 attribute float aStep; // either 0 or 1
 attribute vec2 aST; // float [s, t]    (INSTANCED)
 attribute vec2 aXY; // float [x, y]    (INSTANCED)
 attribute vec2 aPad; // float [x, y]   (INSTANCED)
-attribute float aWidth; // float width (INSTANCED)
+attribute vec2 aWH; // float [w, h]   (INSTANCED)
 attribute float aIndex; // float index (INSTANCED)
 attribute float aID; // float ID       (INSTANCED)
 
@@ -25,7 +23,7 @@ uniform sampler2D uQuads;
 // WebGL1 specific uniforms
 uniform float uSize;
 
-@include "./getPos.glsl"
+@import "./getPos.glsl"
 
 varying vec4 color;
 
@@ -119,7 +117,7 @@ void main () {
       // grab the size
       float size = uSize;
       // create width & height, adding padding to the total size
-      vec2 WH = vec2(aWidth, 1.) * size * (uDevicePixelRatio * 2.) + (aPad * 2.);
+      vec2 WH = aWH * size * (uDevicePixelRatio * 2.) + (aPad * 2.);
       // place the x1, y1, x2, y2 into the texture
       // I add the length and width of the canvas to the total just incase a glyph filter
       // starts slightly below or to the left of the canvas

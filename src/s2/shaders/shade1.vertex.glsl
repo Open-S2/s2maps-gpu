@@ -4,15 +4,13 @@ precision highp float;
 precision mediump float;
 #endif
 
-@nomangle aPos vPos
-
 attribute vec2 aPos;
 
 uniform vec2 uAspect;
 uniform float uInputs[16]; // [zoom, ...] we just need zoom
 uniform float uDevicePixelRatio;
 
-@include "./getPos.glsl"
+@import "./getPos.glsl"
 
 varying vec2 vPos;
 

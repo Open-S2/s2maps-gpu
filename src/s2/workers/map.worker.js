@@ -1,5 +1,4 @@
 // @flow
-import 'regenerator-runtime/runtime'
 /* eslint-env worker */
 import Map from '../ui/map'
 

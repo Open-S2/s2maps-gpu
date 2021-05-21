@@ -1,15 +1,13 @@
 #version 300 es
 precision highp float;
 
-@nomangle layout location vPos
-
 layout (location = 0) in vec2 aPos;
 
 uniform vec2 uAspect;
 uniform float uInputs[16]; // [zoom, ...] we just need zoom
 uniform float uDevicePixelRatio;
 
-@include "./getPos.glsl"
+@import "./getPos.glsl"
 
 out vec2 vPos;
 

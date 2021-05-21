@@ -22,9 +22,9 @@ export default class TexturePack {
 
     // if spaces doesn't have the height OR the width of the space is maxed out, create new
     if (!this.spaces[height] || this.spaces[height].widthOffset + width > this.maxWidth) {
-      this.spaces[height] = { heightOffset: this.height, widthOffset: 0 }
+      this.spaces[height] = { heightOffset: this.height + 1, widthOffset: 0 }
       // update height offset of texture
-      this.height += height
+      this.height += height + 1
     }
 
     // add to the space
@@ -32,7 +32,7 @@ export default class TexturePack {
     bbox[0] = widthOffset
     bbox[1] = heightOffset
     // update width offset of row
-    this.spaces[height].widthOffset += width
+    this.spaces[height].widthOffset += width + 1
 
     // return the textures position
     return [bbox[0], bbox[1]]

@@ -1,45 +1,64 @@
 // @flow
-import featureSort from '../featureSort'
-import { GlyphBuilder, anchorOffset } from './glyphBuilder'
-
 import type { GlyphObject } from './glyph'
 
 export default function postprocessGlyph (mapID: string, sourceName: string,
-  tileID: string, glyphs: Array<GlyphObject>, glyphBuilder: GlyphBuilder, id: number,
-  postMessage: Function) {
-  // sort by layerIndex
-  glyphs = glyphs.sort(featureSort)
-
-  // Assuming we pass the quad test, We need to build 3 components:
-  // 1) Glyph quads explaining where to draw, and where on the texture to look
-  // 3) For each text object we need a "filter" quad defining it's total width and size.
-  //    This is for the pre-draw step to check overlap. The GlyphBuilder will also be building this.
-  let curlayerIndex = glyphs[0].layerIndex
-  let curType = glyphs[0].type
-  let encoding: Array<number> = glyphs[0].code
-  let subEncoding: Array<number> = glyphs[0].featureCode
-  let codeStr: string = glyphs[0].code.toString()
-  for (const glyph of glyphs) {
-    const { type, layerIndex, code, featureCode } = glyph
-
-    if (curlayerIndex !== layerIndex || codeStr !== code.toString() || type !== curType) {
-      // glyphBuilder.finishLayer(curlayerIndex, curType, encoding, subEncoding)
+  tileID: string, features: Array<GlyphObject>, postMessage: Function) {
+  // setup draw thread variables
+  const glyphFilterVertices = []
+  const glyphQuads = []
+  const glyphColors = []
+  const featureGuide = []
+  // run through features and store
+  let curlayerIndex = features[0].layerIndex
+  let curType = features[0].type
+  let encoding: Array<number> = features[0].code
+  let subEncoding: Array<number> = features[0].featureCode
+  let codeStr: string = features[0].code.toString()
+  let filterOffset = 0
+  let quadOffset = 0
+  let filterCount = 0
+  let quadCount = 0
+  // iterate features, store as we go
+  for (const glyph of features) {
+    const { type, layerIndex, code, featureCode, quads, filter } = glyph
+    // if there is a change in layer index or
+    if (quadCount && (curlayerIndex !== layerIndex || codeStr !== code.toString() || curType !== type)) {
+      // store featureGuide
+      featureGuide.push(curlayerIndex, curType, filterOffset, filterCount, quadOffset, quadCount, encoding.length, ...encoding)
+      if (subEncoding) featureGuide.push(...subEncoding)
+      // update to new codes
       curlayerIndex = layerIndex
-      curType = type
       codeStr = code.toString()
+      curType = type
       encoding = code
       subEncoding = featureCode
+      // update offests
+      filterOffset += filterCount
+      quadOffset += quadCount
+      // reset counts
+      filterCount = 0
+      quadCount = 0
     }
+    // store the quads and colors
+    glyphFilterVertices.push(...filter)
+    filterCount += filter.length / 10
+    glyphQuads.push(...quads)
+    const qCount = quads.length / 13
+    quadCount += qCount
+    for (let i = 0; i < qCount; i++) glyphColors.push(255, 255, 255, 255)
   }
-  // add the width and height to the beginning of the layerGuide
-  layerGuide.unshift(id, height)
+  // store last set
+  if (quadCount) {
+    featureGuide.push(curlayerIndex, curType, filterOffset, filterCount, quadOffset, quadCount, encoding.length, ...encoding)
+    if (subEncoding) featureGuide.push(...subEncoding)
+  }
 
   // filter data
   const glyphFilterBuffer = new Float32Array(glyphFilterVertices).buffer
   // quad draw data
   const glyphQuadBuffer = new Float32Array(glyphQuads).buffer
   const glyphColorBuffer = new Uint8ClampedArray(glyphColors).buffer
-  const layerGuideBuffer = new Float32Array(layerGuide).buffer
+  const featureGuideBuffer = new Float32Array(featureGuide).buffer
 
   // ship the data
   postMessage({
@@ -50,6 +69,6 @@ export default function postprocessGlyph (mapID: string, sourceName: string,
     glyphFilterBuffer,
     glyphQuadBuffer,
     glyphColorBuffer,
-    layerGuideBuffer
-  }, [glyphFilterBuffer, glyphQuadBuffer, glyphColorBuffer, layerGuideBuffer])
+    featureGuideBuffer
+  }, [glyphFilterBuffer, glyphQuadBuffer, glyphColorBuffer, featureGuideBuffer])
 }

@@ -4,8 +4,6 @@ precision highp float;
 precision mediump float;
 #endif
 
-@nomangle aPos vPos
-
 attribute vec4 aPos;
 
 uniform mat4 uMatrix;

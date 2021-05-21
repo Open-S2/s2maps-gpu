@@ -22,20 +22,11 @@ export default class SkyboxProgram extends Program {
     const { gl, type } = context
     // install shaders
     super(context)
-    const self = this
-
-    return Promise.all([
-      (type === 1) ? vert1 : vert2,
-      (type === 1) ? frag1 : frag2
-    ])
-      .then(([vertex, fragment]) => {
-        // build shaders
-        self.buildShaders(vertex, fragment)
-        // prep a cube texture
-        self.cubeMap = gl.createTexture()
-
-        return self
-      })
+    // build shaders
+    if (type === 1) this.buildShaders(vert1, frag1)
+    else this.buildShaders(vert2, frag2)
+    // prep a cube texture
+    this.cubeMap = gl.createTexture()
   }
 
   injectImages (skybox: Skybox, map: Map) {

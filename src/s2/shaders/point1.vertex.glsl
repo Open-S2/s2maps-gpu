@@ -4,9 +4,6 @@ precision highp float;
 precision mediump float;
 #endif
 
-@nomangle aExtent aPos extent antialiasFactor color radius stroke strokeWidth
-@nomangle uInteractive uDevicePixelRatio
-
 attribute vec2 aExtent; // the quad
 attribute vec2 aPos; // STPoint positional data
 // layout (location = 2) in float aID; // float ID
@@ -29,7 +26,7 @@ uniform vec4 uStroke;
 uniform float uStrokeWidth;
 uniform float uOpacity;
 
-@include "./getPos.glsl"
+@import "./getPos.glsl"
 
 void main () {
   // decode attributes

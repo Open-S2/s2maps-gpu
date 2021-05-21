@@ -21,18 +21,9 @@ export default class FillProgram extends Program {
     if (type === 1) gl.attributeLocations = { aPos: 0, aIndex: 7 }
     // inject Program
     super(context)
-    const self = this
-
-    return Promise.all([
-      (type === 1) ? vert1 : vert2,
-      (type === 1) ? frag1 : frag2
-    ])
-      .then(([vertex, fragment]) => {
-        // build shaders
-        self.buildShaders(vertex, fragment)
-
-        return self
-      })
+    // build shaders
+    if (type === 1) this.buildShaders(vert1, frag1)
+    else this.buildShaders(vert2, frag2)
   }
 
   draw (featureGuide: FeatureGuide) {

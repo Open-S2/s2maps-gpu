@@ -1,8 +1,6 @@
 #version 300 es
 precision highp float;
 
-@nomangle layout location extent antialiasFactor color radius stroke strokeWidth uInteractive uDevicePixelRatio
-
 layout (location = 0) in vec2 aExtent; // the quad
 layout (location = 1) in vec2 aPos; // STPoint positional data
 // layout (location = 2) in float aID; // float ID
@@ -19,8 +17,8 @@ out float strokeWidth;
 uniform float uDevicePixelRatio;
 uniform vec2 uAspect;
 
-@include "./decodeFeature2.glsl"
-@include "./getPos.glsl"
+@import "./decodeFeature2.glsl"
+@import "./getPos.glsl"
 
 void main () {
   // set color

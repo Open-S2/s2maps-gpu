@@ -40,7 +40,7 @@ export default class Style {
     this.glType = type
   }
 
-  async buildStyle (style: string | Object) {
+  buildStyle (style: string | Object) {
     const self = this
     self.dirty = true
     style = JSON.parse(JSON.stringify(style))
@@ -68,7 +68,7 @@ export default class Style {
     if (style.wallpaper) self._buildWallpaper(style.wallpaper)
     // build the layers
     if (style.layers) self.layers = style.layers
-    await self._buildLayers()
+    self._buildLayers()
   }
 
   _prebuildStyle (style: Object) {
@@ -134,7 +134,7 @@ export default class Style {
 
   // 1) ensure "bad" layers are removed (missing important keys or subkeys)
   // 2) ensure the order is correct for when WebGL eventually parses the encodings
-  async _buildLayers () {
+  _buildLayers () {
     const { colorBlind } = this
     let depthPos = 1
     // now we build our program set simultaneous to encoding our layers
@@ -172,7 +172,7 @@ export default class Style {
       }
     }
     // tell the painter what we are using
-    await this.map.painter.buildPrograms(programs)
+    this.map.painter.buildPrograms(programs)
     // prebuild wallpaper
     if (this.wallpaper) {
       const { skybox } = this.wallpaper

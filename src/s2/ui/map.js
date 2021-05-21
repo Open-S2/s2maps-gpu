@@ -65,9 +65,9 @@ export default class Map extends Camera {
     this._buildPaint(options, style)
   }
 
-  async _buildPaint (options: MapOptions, style: Object | string) {
+  _buildPaint (options: MapOptions, style: Object | string) {
     // now that we have a canvas, prep the camera's painter
-    this.painter = await new Painter(this._canvas, options)
+    this.painter = new Painter(this._canvas, options)
     // setup the style - this goes AFTER creation of the painter, because the
     // style will tell the painter what programs it will be using
     this.style = new Style(options, this)
@@ -86,21 +86,19 @@ export default class Map extends Camera {
     this.painter.delete()
   }
 
-  async setStyle (style: string | Object, ignorePosition: boolean) {
+  setStyle (style: string | Object, ignorePosition: boolean) {
     // ensure we don't draw for a sec
     this._canDraw = false
     // incase style was imported, clear cache
     this.clearCache()
     // build style for the map, painter, and webworkers
-    return this.style.buildStyle(style)
-      .then(() => {
-        // ready to start drawing
-        this._canDraw = true
-        // inject minzoom and maxzoom
-        this.projection.setStyleParameters(this.style, ignorePosition)
-        // render our first pass
-        this.render()
-      })
+    this.style.buildStyle(style)
+    // ready to start drawing
+    this._canDraw = true
+    // inject minzoom and maxzoom
+    this.projection.setStyleParameters(this.style, ignorePosition)
+    // render our first pass
+    this.render()
   }
 
   jumpTo (lon: number, lat: number, zoom: number) {

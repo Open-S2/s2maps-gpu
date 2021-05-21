@@ -48,11 +48,11 @@ export default class Program {
     if (attrLoc) for (const attr in attrLoc) gl.bindAttribLocation(program, attrLoc[attr], attr)
   }
 
-  async buildShaders (vertex: shaderSource, fragment: shaderSource) {
+  buildShaders (vertex: shaderSource, fragment: shaderSource) {
     const { gl, glProgram } = this
-    const vertexShaderSource = vertex.sourceCode
+    const vertexShaderSource = vertex.source
     const vertexUniforms = vertex.uniforms
-    const fragmentShaderSource = fragment.sourceCode
+    const fragmentShaderSource = fragment.source
     const fragmentUniforms = fragment.uniforms
     // load vertex and fragment shaders
     const vertexShader = this.vertexShader = loadShader(gl, vertexShaderSource, gl.VERTEX_SHADER)
@@ -74,7 +74,9 @@ export default class Program {
   setupUniforms (uniforms) {
     const { gl, glProgram } = this
 
-    for (const uniform in uniforms) this[uniform] = gl.getUniformLocation(glProgram, uniforms[uniform].variableName)
+    for (const [uniform, code] of Object.entries(uniforms)) {
+      this[uniform] = gl.getUniformLocation(glProgram, code)
+    }
   }
 
   delete () {
@@ -116,7 +118,7 @@ export default class Program {
   }
 
   setAspect (aspect: Float32Array) {
-    this.gl.uniform2fv(this.uAspect, aspect)
+    if (this.uAspect) this.gl.uniform2fv(this.uAspect, aspect)
     this.updateAspect = null
   }
 

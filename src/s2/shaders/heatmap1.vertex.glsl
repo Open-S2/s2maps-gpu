@@ -4,8 +4,6 @@ precision highp float;
 precision mediump float;
 #endif
 
-@nomangle aExtent aPos aWeight vExtent vOpacity vS uDrawState
-
 @define ZERO 0.00196078431372549 // 1. / 255. / 2.
 @define GAUSS_COEF 0.3989422804014327
 
@@ -25,7 +23,7 @@ uniform float uIntensity;
 uniform float uRadius;
 uniform float uOpacity;
 
-@include "./getPos.glsl"
+@import "./getPos.glsl"
 
 void main () {
   vec4 glPos;

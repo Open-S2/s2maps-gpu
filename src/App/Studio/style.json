@@ -1,8 +1,8 @@
 {
   "version": 2,
   "name": "s2maps-streets-v2",
-  "center": [-44.86586, 29.50989],
-  "zoom": -0.514,
+  "center": [-122.4585607773497, 37.778443127730476],
+  "zoom": -0.25,
   "minzoom": -1,
   "maxzoom": 17.99,
   "sources": {
@@ -10,9 +10,8 @@
     "terrain": "https://s3.s2maps.io/terrain-v1"
   },
   "fonts": {
-    "default": "https://s3.s2maps.io/fonts-v3/default",
-    "roboto-regular": "https://s3.s2maps.io/fonts-v3/RobotoRegular",
-    "roboto-medium": "https://s3.s2maps.io/fonts-v3/RobotoMedium"
+    "roboto-regular": "http://localhost:8000/fonts/RobotoRegular",
+    "roboto-medium": "http://localhost:8000/fonts/RobotoMedium"
   },
   "wallpaper": {
     "background-color": "#030a2d",
@@ -1382,7 +1381,6 @@
       }
     },
     {
-      "name": "boundary-lines",
       "id": "boundaries",
       "source": "streets-v2",
       "layer": "boundary",
@@ -1537,9 +1535,9 @@
             "expo",
             1.5,
             0,
-            17,
+            14.45,
             4,
-            36
+            30.6
           ],
           ["class", "==", "state"],
           [
@@ -1548,14 +1546,14 @@
             "expo",
             1.5,
             0,
-            12,
+            10.2,
             4,
-            22,
+            18.7,
             7,
-            36
+            30.6
           ],
           "default",
-          18
+          15.3
         ],
         "text-fill": [
           "data-condition",
@@ -1578,9 +1576,9 @@
             "expo",
             1.5,
             0,
-            0.5,
+            1,
             4,
-            0.3
+            0.7
           ],
           ["class", "==", "continent"],
           0.2,
@@ -1625,11 +1623,11 @@
             "zoom",
             "lin",
             5,
-            14,
+            12,
             9,
-            20,
+            17,
             13,
-            38
+            32.3
           ],
           ["class", "==", "town"],
           [
@@ -1637,11 +1635,11 @@
             "zoom",
             "lin",
             8,
-            14,
+            12,
             10,
-            18,
+            15.3,
             13,
-            25
+            21.25
           ],
           ["class", "has", ["neighbourhood", "suburb"]],
           [
@@ -1649,9 +1647,9 @@
             "zoom",
             "lin",
             10,
-            16,
+            13.6,
             15,
-            18
+            15.3
           ],
           ["class", "has", ["hamlet", "village"]],
           [
@@ -1659,12 +1657,12 @@
             "zoom",
             "lin",
             10.5,
-            14,
             12,
-            18
+            12,
+            15.3
           ],
           "default",
-          17
+          14.45
         ],
         "text-fill": [
           "data-condition",
@@ -1710,9 +1708,9 @@
             "expo",
             1.5,
             0,
-            16,
+            14,
             3,
-            40
+            34
           ],
           ["type", "==", "sea"],
           [
@@ -1721,14 +1719,14 @@
             "expo",
             1.5,
             0,
-            12,
+            10.2,
             4,
-            22,
+            18.7,
             7,
-            40
+            34
           ],
           "default",
-          16
+          13.6
         ],
         "text-fill": "#00669E",
         "text-stroke": "#00669E",
@@ -1764,9 +1762,9 @@
         "text-size": [
           "data-condition",
           ["class", "==", "aboriginal_lands"],
-          15,
+          12.75,
           "default",
-          17
+          14.45
         ],
         "text-fill": [
           "data-condition",

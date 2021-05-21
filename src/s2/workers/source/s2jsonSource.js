@@ -6,7 +6,7 @@ export default class S2JSONSource extends Source {
   s2json: S2JsonVt
   async _build () {
     const self = this
-    const json = await this._fetch(`${this.path}`, 'json')
+    const json = await this._fetch(`${this.path}`, true)
     if (!json) {
       self.active = false
       console.log(`FAILED TO extrapolate ${this.path} json data`)

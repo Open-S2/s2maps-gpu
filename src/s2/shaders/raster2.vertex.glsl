@@ -1,11 +1,9 @@
 #version 300 es
 precision highp float;
 
-@nomangle layout location vTexcoord
-
 layout (location = 0) in vec2 aPos;
 
-@include "./getPos.glsl"
+@import "./getPos.glsl"
 
 out vec2 vTexcoord;
 

@@ -71,14 +71,16 @@ function orderGlyph (layer: Layer) {
     'text-family': layout['text-family'] || 'default',
     'text-field': layout['text-field'],
     'text-anchor': layout['text-anchor'] || 'center',
-    'text-padding': layout['text-padding'] || [0, 0],
+    'text-align': layout['text-align'] || 'center',
     'text-offset': layout['text-offset'] || [0, 0],
+    'text-padding': layout['text-padding'] || [0, 0],
+    'text-word-wrap': layout['text-word-wrap'] || 6,
     // icon
     'icon-family': layout['icon-family'] || 'default',
     'icon-field': layout['icon-field'],
     'icon-anchor': layout['icon-anchor'] || 'center',
-    'icon-padding': layout['icon-padding'] || [0, 0],
     'icon-offset': layout['icon-offset'] || [0, 0],
+    'icon-padding': layout['icon-padding'] || [0, 0]
   }
   layer.paintLocal = {}
   // text

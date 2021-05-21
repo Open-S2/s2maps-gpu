@@ -1,8 +1,6 @@
 #version 300 es
 precision highp float;
 
-@nomangle layout location vExtent vOpacity vS uDrawState
-
 @define ZERO 0.00196078431372549 // 1. / 255. / 2.
 @define GAUSS_COEF 0.3989422804014327
 
@@ -18,8 +16,8 @@ uniform float uDevicePixelRatio;
 uniform float uDrawState;
 uniform vec2 uAspect;
 
-@include "./decodeFeature2.glsl"
-@include "./getPos.glsl"
+@import "./decodeFeature2.glsl"
+@import "./getPos.glsl"
 
 void main () {
   vec4 glPos;

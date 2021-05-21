@@ -21,22 +21,13 @@ export default class LineProgram extends Program {
     if (type === 1) gl.attributeLocations = { aType: 0, aPrev: 1, aCurr: 2, aNext: 3 }
     // inject Program
     super(context)
-    const self = this
-
-    return Promise.all([
-      (type === 1) ? vert1 : vert2,
-      (type === 1) ? frag1 : frag2
-    ])
-      .then(([vertex, fragment]) => {
-        // build said shaders
-        self.buildShaders(vertex, fragment)
-        // activate so we can setup samplers
-        self.use()
-        // set device pixel ratio
-        self.setDevicePixelRatio(devicePixelRatio)
-
-        return self
-      })
+    // build shaders
+    if (type === 1) this.buildShaders(vert1, frag1)
+    else this.buildShaders(vert2, frag2)
+    // activate so we can setup samplers
+    this.use()
+    // set device pixel ratio
+    this.setDevicePixelRatio(devicePixelRatio)
   }
 
   draw (featureGuide: FeatureGuide, source: VectorTileSource) {

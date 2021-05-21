@@ -1,4 +1,5 @@
 // @flow
+import { coalesceField } from './'
 // examples:
 // "filter": ["or", ["class", "==", "ocean"], ["class", "==", "river"]]
 // "filter": ["and", ["class", "==", "ocean"], ["class", "==", "lake"], ["class", "!=", "river"]]
@@ -10,7 +11,7 @@ export default function parseFilter (filter: undefined | Array<string | Array<an
     const [key, condition, value] = filter
     const filterLambda = parseFilterCondition(condition, value)
     return (properties: Object = {}) => {
-      return filterLambda(properties[key])
+      return filterLambda(properties[coalesceField(key, properties)], properties)
     }
   }
   // first create all conditionals
@@ -32,7 +33,7 @@ export default function parseFilter (filter: undefined | Array<string | Array<an
     return (properties: Object = {}) => {
       for (const condition of conditionals) {
         if (condition.key) {
-          if (condition.condition(properties[condition.key])) return true
+          if (condition.condition(properties[condition.key], properties)) return true
         } else if (condition.condition(properties)) return true
       }
       return false
@@ -41,7 +42,7 @@ export default function parseFilter (filter: undefined | Array<string | Array<an
     return (properties: Object = {}) => {
       for (const condition of conditionals) {
         if (condition.key) {
-          if (!condition.condition(properties[condition.key])) return false
+          if (!condition.condition(properties[condition.key], properties)) return false
         } else if (!condition.condition(properties)) return false
       }
       return true
@@ -49,17 +50,23 @@ export default function parseFilter (filter: undefined | Array<string | Array<an
   }
 }
 
-function parseFilterCondition (condition: string, value: string | number | Array<string | number>): Function {
+const parseFilterCondition = (condition: string,
+  value: string | number | Array<string | number>): Function => {
   // manage multiple conditions
   // eslint-disable-next-line
-  if (condition === '==') return (input) => input == value // ["class", "==", "ocean"] OR ["elev", "==", 50]
+  if (condition === '==') return (input, properties) => input == buildValue(value, properties) // ["class", "==", "ocean"] OR ["elev", "==", 50]
   // eslint-disable-next-line
-  else if (condition === '!=') return (input) => input != value // ["class", "!=", "ocean"] OR ["elev", "!=", 50]
-  else if (condition === '>') return (input) => input > value // ["elev", ">", 50]
-  else if (condition === '>=') return (input) => input >= value // ["elev", ">=", 50]
-  else if (condition === '<') return (input) => input < value // ["elev", "<", 50]
-  else if (condition === '<=') return (input) => input <= value // ["elev", "<=", 50]
-  else if (condition === 'has') return (input) => value.includes(input) // ["class", "has", ["ocean", "river"]] OR ["elev", "in", [2, 3, 4, 5]]
-  else if (condition === '!has') return (input) => !value.includes(input) // ["class", "!has", ["ocean", "river"]] OR ["elev", "!in", [2, 3, 4, 5]]
+  else if (condition === '!=') return (input, properties) => input != buildValue(value, properties) // ["class", "!=", "ocean"] OR ["elev", "!=", 50]
+  else if (condition === '>') return (input, properties) => input > buildValue(value, properties) // ["elev", ">", 50]
+  else if (condition === '>=') return (input, properties) => input >= buildValue(value, properties) // ["elev", ">=", 50]
+  else if (condition === '<') return (input, properties) => input < buildValue(value, properties) // ["elev", "<", 50]
+  else if (condition === '<=') return (input, properties) => input <= buildValue(value, properties) // ["elev", "<=", 50]
+  else if (condition === 'has') return (input, properties) => buildValue(value, properties).includes(input) // ["class", "has", ["ocean", "river"]] OR ["elev", "in", [2, 3, 4, 5]]
+  else if (condition === '!has') return (input, properties) => !buildValue(value, properties).includes(input) // ["class", "!has", ["ocean", "river"]] OR ["elev", "!in", [2, 3, 4, 5]]
   else return () => false
+}
+
+const buildValue = (value: any, properties: Object = {}): any => {
+  if (typeof value === 'string') return coalesceField(value, properties)
+  return value
 }

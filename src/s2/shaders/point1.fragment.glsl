@@ -1,7 +1,5 @@
 precision highp float;
 
-@nomangle extent color stroke radius strokeWidth antialiasFactor uInteractive
-
 varying vec2 extent;
 varying float antialiasFactor;
 varying vec4 color;

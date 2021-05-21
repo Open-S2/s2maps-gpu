@@ -1,7 +1,7 @@
 // @flow
 export default function postInteractiveData (mapID: string, source: string,
-  tileID: string, interactiveMap: Map<number, Object>) {
-    const interactiveGuide = []
+  tileID: string, interactiveMap: Map<number, Object>, postMessage: Function) {
+  const interactiveGuide = []
   const interactiveData = []
 
   const textEncoder = new TextEncoder('utf-8')

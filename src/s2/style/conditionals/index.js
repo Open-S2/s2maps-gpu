@@ -1,4 +1,5 @@
 // @flow
+export { default as coalesceField } from './coalesceField'
 export { default as getEasingFunction } from './easingFunctions'
 export { default as encodeLayerAttribute } from './encodeLayerAttribute'
 export { default as orderLayer } from './orderLayer'
