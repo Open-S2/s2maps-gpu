@@ -547,7 +547,7 @@
           ]
         ],
         "text-stroke": "rgba(255, 255, 255, 0.85)",
-        "text-strokeWidth": [
+        "text-stroke-width": [
           "data-condition",
           ["class", "==", "Indian Reservation"],
           0.4,
@@ -623,7 +623,7 @@
           "rgba(0, 0, 0, 0)"
         ],
         "text-stroke": "rgba(255, 255, 255, 0.7)",
-        "text-strokeWidth": [
+        "text-stroke-width": [
           "data-condition",
           ["class", "==", "State"],
           [

@@ -1,4 +1,6 @@
 // @flow
+import { tileHash } from 's2projection'
+
 import type { TileRequest } from '../workerPool'
 import type { Face } from 's2projection'
 
@@ -22,6 +24,18 @@ type Metadata = {
   faces: Set<Face>,
   facesbounds: FaceBounds,
   layers: LayerMetaData
+}
+
+export type ParentLayer = {
+  face: Face,
+  zoom: number,
+  x: number,
+  y: number,
+  layers: Array<number>
+}
+
+export type ParentLayers = {
+  [string | number]: ParentLayer
 }
 
 export default class Source {
@@ -71,7 +85,7 @@ export default class Source {
 
   // all tile requests undergo a basic check on whether that data exists within the metadata boundaries
   async tileRequest (mapID: string, tile: TileRequest, worker: Worker, token: string) {
-    const { active, minzoom, maxzoom, faces, facesbounds, sessionToken, type } = this
+    const { active, minzoom, maxzoom, faces, facesbounds, sessionToken, type, name } = this
     const { hash, face, zoom, x, y } = tile
     if ( // massive quality check to not over burden servers / lambdas with duds
       active && // we have the correct properties to make proper requests
@@ -87,20 +101,60 @@ export default class Source {
         )
       )
     ) {
-      return this._tileRequest(mapID, tile, worker, false, token)
+      this._tileRequest(mapID, tile, worker, name, false, token)
+    }
+    // now make requests for parent data as necessary
+    this._getParentData(mapID, tile, worker, token)
+  }
+
+  // incase
+  _getParentData (mapID: string, tile: TileRequest, worker: Worker, token: string) {
+    const { layers, styleLayers, name } = this
+    // pull out data
+    const { face, zoom, x, y } = tile
+    // setup parentLayers
+    const parentLayers: ParentLayers = {}
+    // iterate over layers and found any data doesn't exist at current zoom but the style asks for
+    for (let i = 0, ll = styleLayers.length; i < ll; i++) {
+      const layer = styleLayers[i]
+      if (!layers) continue
+      const sourceLayer = layers[layer.layer]
+      if (layer.maxzoom > zoom && sourceLayer && sourceLayer.maxzoom < zoom) {
+        // we have passed the limit at which this data is stored. Rather than
+        // processing the data more than once, we reference where to look for the layer
+        const sourceLayerMaxZoom = sourceLayer.maxzoom
+        let pZoom = zoom
+        let pX = x
+        let pY = y
+        while (pZoom > sourceLayerMaxZoom) {
+          pZoom--
+          pX = pX >> 1
+          pY = pY >> 1
+        }
+        const hash = tileHash(face, pZoom, pX, pY)
+        // store parent reference
+        if (!parentLayers[hash]) parentLayers[hash] = { face, hash, zoom: pZoom, x: pX, y: pY, layers: [] }
+        parentLayers[hash].layers.push(layer.layerIndex)
+      }
+    }
+    // if we stored any parent layers, make the necessary requests
+    if (Object.keys(parentLayers).length) {
+      for (const [hash, parent] of Object.entries(parentLayers)) {
+        this._tileRequest(mapID, tile, worker, `${name}:${hash}`, parent, token)
+      }
     }
   }
 
   // if this function runs, we assume default tile source.
   // in the default case, we want the worker to process the data
   async _tileRequest (mapID: string, tile: TileRequest, worker: Worker,
-    parent: boolean, token: string) {
+    sourceName: string, parent: boolean | ParentLayer, token: string) {
     const { name, path } = this
-    const { face, zoom, x, y } = tile
+    const { face, zoom, x, y } = parent ? parent : tile
 
     const data = await this._fetch(`${path}/${face}/${zoom}/${x}/${y}.${this.extension}`)
     const type = (this.extension.includes('pbf')) ? 'pbfdata' : 'rasterdata'
-    if (data) worker.postMessage({ mapID, type, tile, sourceName: name, parent, data }, [data])
+    if (data) worker.postMessage({ mapID, type, tile, sourceName, parent, data }, [data])
   }
 
   async _fetch (path: string, json?: boolean = false) {
@@ -110,53 +164,3 @@ export default class Source {
     else return res.json()
   }
 }
-
-// _getParentData (mapID: string, sourceName: string, source: Object,
-//   tile: TileRequest, layers) {
-//   // pull out data
-//   const { face, zoom, x, y } = tile
-//   // setup parentLayers
-//   const parentLayers: ParentLayers = {}
-//   // iterate over layers and found any data doesn't exist at current zoom but the style asks for
-//   for (let layerIndex = 0, ll = layers.length; layerIndex < ll; layerIndex++) {
-//     const layer = layers[layerIndex]
-//     const layerSource = layer.layer
-//     if (layer.maxzoom > zoom && source.layers && source.layers[layerSource] && source.layers[layerSource].maxzoom < zoom) {
-//       // we have passed the limit at which this data is stored. Rather than
-//       // processing the data more than once, we reference where to look for the layer
-//       const layerMaxZoom = source.layers[layerSource].maxzoom
-//       let pZoom = zoom
-//       let pX = x
-//       let pY = y
-//       while (pZoom > layerMaxZoom) {
-//         pZoom--
-//         pX = pX >> 1
-//         pY = pY >> 1
-//       }
-//       const hash = tileHash(face, pZoom, pX, pY)
-//       // store parent reference
-//       if (!parentLayers[hash]) parentLayers[hash] = { face, zoom: pZoom, x: pX, y: pY, layers: [] }
-//       parentLayers[hash].layers.push(layerIndex)
-//     }
-//   }
-//   // if we stored any parent layers, ship it out
-//   if (Object.keys(parentLayers).length) this._requestParentData(mapID, sourceName, source, tile, parentLayers)
-// }
-//
-// // now that we know what the tile was missing, let's make the requests with the layer filters
-// _requestParentData (mapID: string, sourceName: string, source: Object,
-//   tile: TileRequest, parentLayers: ParentLayers) {
-//   const self = this
-//   const { path, extension } = source
-//   let count = 0
-//   for (const hash in parentLayers) {
-//     const parent = parentLayers[hash]
-//     const { face, zoom, x, y, layers } = parent
-//     if (layers.length) {
-//       // eslint-disable-next-line
-//       fetch(`${path}/${face}/${zoom}/${x}/${y}`, extension, data => {
-//         if (data) self._processVectorData(mapID, `${sourceName}:parent:${++count}`, source, tile, new VectorTile(data), parent)
-//       })
-//     }
-//   }
-// }

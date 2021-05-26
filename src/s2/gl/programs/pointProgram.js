@@ -42,7 +42,7 @@ export default class PointProgram extends Program {
     // ensure proper blend state and depth testing is on
     context.defaultBlend()
     context.enableDepthTest()
-    context.stencilFunc(0)
+    context.stencilFuncAlways(0)
     // adjust to current depthPos
     context.lequalDepth()
     context.setDepthRange(depthPos)

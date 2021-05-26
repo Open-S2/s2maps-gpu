@@ -138,13 +138,39 @@ export default class Tile {
   // a parents' parent or deeper, so we need to reflect that int the tile property. The other case
   // is the tile wants to display a layer that exists in a 'lower' zoom than this one.
   injectParentTile (parent: Tile, layers: Array<Layer>) {
-    if (this.zoom >= 12) return
-    for (const feature of parent.featureGuide) {
-      const { maskLayer, type, layerIndex } = feature
-      const { maxzoom } = layers[layerIndex]
-      if (maskLayer) continue // ignore mask features
-      if (type !== 'glyph' && this.zoom <= maxzoom) this.featureGuide.push({ ...feature, tile: this, parent })
+    // if (this.zoom >= 12) return
+    // const bounds = this._buildBounds(parent)
+    // for (const feature of parent.featureGuide) {
+    //   const { maskLayer, layerIndex } = feature
+    //   const { maxzoom } = layers[layerIndex]
+    //   if (maskLayer) continue // ignore mask features
+    //   if (this.zoom <= maxzoom) this.featureGuide.push({ ...feature, tile: this, parent, bounds })
+    // }
+  }
+
+  // currently this is only for glyphs. By sharing glyph data with children,
+  // the glyphs will be rendered 4 or even more times. To alleviate this, we can set boundaries
+  // of what points will be considered
+  _buildBounds (parent: Tile) {
+    let { x, y, zoom } = this
+    const parentZoom = parent.zoom
+    // get the scale
+    const scale = 1 << (zoom - parentZoom)
+    // get x and y shift
+    let xShift = 0
+    let yShift = 0
+    while (zoom > parentZoom) {
+      const div = 1 << (zoom - parentZoom)
+      if (x % 2 !== 0) xShift += 8192 / div
+      if (y % 2 !== 0) yShift += 8192 / div
+      // decrement
+      x = x >> 1
+      y = y >> 1
+      zoom--
     }
+
+    // build the bounds bbox
+    return [0 + xShift, 0 + yShift, 8192 / scale + xShift, 8192 / scale + yShift]
   }
 
   _buildCorners () {

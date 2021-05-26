@@ -10,13 +10,15 @@
     "moon": {
       "path": "http://192.168.0.110:8000/data/moon-v1",
       "type": "raster",
-      "fileType": "webp",
+      "extension": "webp",
       "minzoom": 0,
       "maxzoom": 10,
       "tileSize": 512
     }
   },
-  "fonts": {},
+  "fonts": {
+    "roboto-medium": "http://localhost:8000/fonts/Roboto/RobotoMedium"
+  },
   "icons": {},
   "wallpaper": {
     "skybox": "https://s3.s2maps.io/backgrounds/milkyway",
@@ -43,18 +45,32 @@
       "type": "raster"
     },
     {
-      "name": "moon-artificial",
+      "name": "moon-craters",
       "source": "moon-poi",
       "layer": "craters",
-      "type": "point",
+      "type": "glyph",
       "minzoom": 0,
-      "maxzoom": 6,
-      "layout": {},
+      "layout": {
+        "text-family": "roboto-medium",
+        "text-field": "?name",
+        "text-anchor": "center",
+        "text-offset": [0, 0],
+        "text-padding": [0, 0]
+      },
       "paint": {
-        "color": "#cc0202",
-        "radius": 12,
-        "stroke": "#ffffff",
-        "strokeWidth": 3.5
+        "text-size": [
+          "input-range",
+          "zoom",
+          "expo",
+          1.5,
+          0,
+          12,
+          4,
+          18
+        ],
+        "text-fill": "#ededed",
+        "text-stroke": "rgba(35, 35, 35, 0.85)",
+        "text-stroke-width": 0.65
       }
     }
   ]

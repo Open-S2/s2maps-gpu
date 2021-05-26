@@ -19,7 +19,10 @@ export type Alignment = 'center' | 'left' | 'right'
 // add in the excess anchor offset AFTER we know the bbox size
 export default function buildGlyphQuads (feature: GlyphObject, glyphMap: GlyphSet, index: number) {
   const { max } = Math
-  const { s, t, id, offset, padding, field, family, anchor, wordWrap, align, size } = feature
+  const {
+    s, t, id, size, offset, padding, field, family,
+    anchor, wordWrap, align, kerning, lineHeight, type
+  } = feature
   const familyMap = glyphMap[family]
   const adjustX = offset[0]
   const adjustY = offset[1]
@@ -30,17 +33,17 @@ export default function buildGlyphQuads (feature: GlyphObject, glyphMap: GlyphSe
   let rowWidth = 0
   let rowHeight = 0
   let cursorX = 0
-  let cursorY = 0
-  let maxHeight = 0
   // run through string using the glyphSet as a guide to build the quads
-  for (let i = 0, fl = field.length; i < fl; i++) {
-    // grab the unicode data
-    const unicode = field.charCodeAt(i)
+  for (const unicode of field) {
     // word-wrap if line break or length exceeds max allowed.
-    if (unicode === 10 || unicode === 13 || (unicode === 32 && wordWrap && cursorX >= wordWrap)) {
+    if (
+      type === 0 && // is text
+      unicode === 10 || unicode === 13 || (unicode === 32 && wordWrap && cursorX >= wordWrap)
+    ) {
       cursorX = 0
-      updateoffset(quads, 0, rowCount ? rowHeight + 0.25 : 0) // we move all previous content up a row
-      rows.push([rowCount, rowWidth])
+      const heightAdjust = rowCount ? rowHeight + lineHeight : 0
+      updateoffset(quads, 0, heightAdjust) // we move all previous content up a row
+      rows.push([rowCount, rowWidth, heightAdjust])
       rowCount = 0
       rowWidth = 0
       rowHeight = 0
@@ -50,24 +53,24 @@ export default function buildGlyphQuads (feature: GlyphObject, glyphMap: GlyphSe
     const { texX, texY, texW, texH, xOffset, yOffset, width, height, advanceWidth } = familyMap.get(unicode)
     // prep x-y positions
     const xPos = cursorX + xOffset
-    const yPos = cursorY + yOffset
+    const yPos = yOffset
     if (texW && texH) {
       // store quad
       quads.push(s * 8192, t * 8192, adjustX, adjustY, xPos, yPos, width, height, texX, texY, texW, texH, id)
       // update number of glyphs and draw box height
       rowCount++
-      rowHeight = max(rowHeight, yOffset + height)
-      maxHeight = max(maxHeight, yPos + height)
+      rowHeight = max(rowHeight, height)
     }
     // always update rowWidth by advanceWidth
-    rowWidth = max(rowWidth, xPos + advanceWidth)
+    rowWidth = max(rowWidth, xPos + width, xPos + advanceWidth)
     // advance cursor psoition
-    cursorX += advanceWidth
+    cursorX += advanceWidth + kerning
   }
   // store the last row
-  rows.push([rowCount, rowWidth])
+  rows.push([rowCount, rowWidth, rowCount ? rowHeight + lineHeight : 0])
   // grab max width from said
   const maxWidth = rows.reduce((acc, curr) => max(acc, curr[1]), 0)
+  const maxHeight = rows.reduce((acc, curr) => acc + curr[2], 0)
   // adjust text based upon center-align or right-align
   alignText(align, quads, rows, maxWidth)
   // now adjust all glyphs and max-values by the anchor and alignment

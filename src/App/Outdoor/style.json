@@ -731,7 +731,7 @@
           "rgba(0, 0, 0, 0)"
         ],
         "text-stroke": "rgba(255, 255, 255, 0.5)",
-        "text-strokeWidth": [
+        "text-stroke-width": [
           "data-condition",
           ["class", "==", "State"],
           [
@@ -847,7 +847,7 @@
           ]
         ],
         "text-stroke": "rgba(255, 255, 255, 0.85)",
-        "text-strokeWidth": 0.4
+        "text-stroke-width": 0.4
       }
     }
   ]

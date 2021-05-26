@@ -20,6 +20,7 @@ export default class GlyphManager {
   mainThread: Function
   sourceThread: MessageChannel.port2
   rtree: RTree = new RTree()
+  iconPacks: IconPacks = {}
   glyphMap: { [string]: Map<Unicode, Glyph> } = {}
   glyphStore: Map<string, Array<Feature>> = new Map()
   constructor (mainThread: Function, sourceThread: MessageChannel.port2, id: number) {
@@ -28,14 +29,18 @@ export default class GlyphManager {
     this.id = id
   }
 
+  loadIconsPacks (iconPacks: IconPacks) {
+    for (const [name, pack] of Object.entries(iconPacks)) this.iconPacks[name] = pack
+  }
+
   processGlyphs (mapID: string, tile: TileRequest, sourceName: string,
     features: Array<Feature>) {
-    const { id, glyphMap, glyphStore, sourceThread } = this
+    const { id, glyphMap, glyphStore, iconPacks, sourceThread } = this
     const { hash, zoom } = tile
     // prep variables
     const glyphList: { _total: number, [string]: Set<Unicode> } = { _total: 0 }
     // Step 1: Preprocess the glyph
-    const builtFeatures = preprocessGlyphs(features, zoom, glyphMap, glyphList)
+    const builtFeatures = preprocessGlyphs(features, zoom, glyphMap, glyphList, iconPacks)
     // Step 2: Request for any glyph data we do not have information on, if not, immediately postProcess
     if (glyphList._total) {
       delete glyphList._total // remove the total so we can add a transfer array
@@ -94,9 +99,9 @@ export default class GlyphManager {
       // Step 1: prebuild the glyph positions and bbox
       buildGlyphQuads(feature, glyphMap, size++)
       // Step 2: check the rtree if we want to pre filter
-      if (!rtree.collides(feature)) res.push(feature)
+      if (feature.overdraw || !rtree.collides(feature)) res.push(feature)
     }
     // post process -> compile all the work and ship it out to the main thread
-    if (res.length) postProcessGlyphs(mapID, sourceName, hash, res, mainThread)
+    if (res.length) postProcessGlyphs(mapID, `${sourceName}:glyph`, hash, res, mainThread)
   }
 }

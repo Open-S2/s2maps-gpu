@@ -54,7 +54,7 @@ export default class S2TilesSource extends Source {
 
   // Here, we use the memory mapped file directory tree system to find our data
   async _tileRequest (mapID: string, tile: TileRequest, worker: Worker,
-    parent: boolean, token: string) {
+    sourceName: string, parent: boolean, token: string) {
     const { name, s2json } = this
     let { face, zoom, x, y } = tile
 
@@ -73,7 +73,7 @@ export default class S2TilesSource extends Source {
 
     // we found the vector file, let's send the details off to the tile worker
     const data = await getRange(this.path, node[0], node[1])
-    if (data) worker.postMessage({ mapID, type: 'pbfdata', tile, sourceName: name, parent, data }, [data])
+    if (data) worker.postMessage({ mapID, type: 'pbfdata', tile, sourceName, parent, data }, [data])
   }
 
   // from a starting directory and leaf identifier, move to the next leaf directory

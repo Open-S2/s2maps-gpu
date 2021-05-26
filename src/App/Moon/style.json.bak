@@ -73,7 +73,7 @@
         ],
         "text-fill": "#ededed",
         "text-stroke": "rgba(35, 35, 35, 0.95)",
-        "text-strokeWidth": 0.85
+        "text-stroke-width": 0.85
       }
     },
     {

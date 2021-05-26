@@ -3,6 +3,7 @@ precision highp float;
 
 @define MAX_GAMMA 0.105
 @define MIN_GAMMA 0.0525
+@define ICON_GAMMA 0.08
 
 // aUV is just a 0->1 quad fan
 // aST is the position dimension
@@ -36,6 +37,7 @@ uniform bool uOverdraw;
 uniform bool uIsStroke;
 uniform vec2 uAspect;
 uniform vec2 uTexSize;
+uniform vec4 uBounds;
 uniform bool uInteractive;
 uniform float uDevicePixelRatio;
 // The glyph filter texture.
@@ -46,6 +48,7 @@ uniform sampler2D uFeatures;
 
 // text order: (paint)size->strokeWidth->fill->stroke
 void main () {
+  if (aST.x < uBounds.x || aST.x > uBounds.z || aST.y < uBounds.y || aST.y > uBounds.w) return;
   vec4 glPos;
   if (uFaceST[1] < 12.) {
     vec4 zero = getZero();
@@ -100,21 +103,18 @@ void main () {
   vColor.rgb *= vColor.a;
 
   // prep texture read buffer
-  vBuf = 0.49;
+  vBuf = 0.5;
   if (uIsStroke) {
     strokeWidth = decodeFeature(false, index, featureIndex)[0];
     if (strokeWidth > 0.) {
       vColor = decodeFeature(true, index, featureIndex);
       vColor.rgb *= vColor.a;
-      vBuf = 1. - clamp(0.49 + (strokeWidth / 2.), 0.49, 0.999); // strokeWidth is 0->1
-    } else {
-      glPos.xy = vec2(0.);
-      vColor = vec4(0.);
-    }
+      vBuf = 1. - clamp(0.5 + (strokeWidth / 2.), 0.5, 0.999); // strokeWidth is 0->1
+    } else { return; }
   }
 
   // set gamma based upon size
-  vGamma = max(
+  vGamma = uIsIcon ? ICON_GAMMA : max(
     MIN_GAMMA,
     min(
       MAX_GAMMA,

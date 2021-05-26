@@ -7,7 +7,7 @@ export default async function processRaster (mapID: string, tile: TileRequest,
   // https://bugzilla.mozilla.org/show_bug.cgi?id=1335594
   let built = true
   const getImage = (IS_CHROME)
-    ? createImageBitmap(new Blob([data]), { imageOrientation: 'flipY', premultiplyAlpha: 'premultiply' })
+    ? createImageBitmap(new Blob([data]), { premultiplyAlpha: 'premultiply' })
     : (typeof createImageBitmap === 'function')
       ? createImageBitmap(new Blob([data]))
       : new Promise((resolve) => { built = false; resolve(data) })

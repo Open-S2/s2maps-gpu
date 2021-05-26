@@ -138,8 +138,8 @@ export default class Projector {
       // STEP 3: The deltas need to be converted to deg change
       const zoomMultiplier = pow(2, max(this.zoom, 0))
       const lonMultiplier = min(30, 1 / cos(this.lat * PI / 180))
-      this.lon += posDeltaX / 3072 * 360 / zoomMultiplier * lonMultiplier
-      this.lat += posDeltaY / 1536 * 180 / zoomMultiplier
+      this.lon += posDeltaX / (3072 * zoomMultiplier) * 360 * lonMultiplier
+      this.lat += posDeltaY / (1536 * zoomMultiplier) * 180
     }
     // adjust latitude accordingly
     this._adjustLat()

@@ -29,6 +29,7 @@ export default class GlyphProgram extends Program {
   uInteractive: WebGLUniformLocation
   uTexSize: WebGLUniformLocation
   uIsIcon: WebGLUniformLocation
+  uBounds: WebGLUniformLocation
   uIsStroke: WebGLUniformLocation
   uFeatures: WebGLUniformLocation
   uGlyphTex: WebGLUniformLocation
@@ -168,6 +169,7 @@ export default class GlyphProgram extends Program {
     this._increaseFBOSize(maxHeight)
     // iterate through images and store
     gl.bindTexture(gl.TEXTURE_2D, this.fbo.texture)
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false)
     for (const { posX, posY, width, height, data } of images) {
       gl.texSubImage2D(gl.TEXTURE_2D, 0, posX, posY, width, height, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8ClampedArray(data))
     }
@@ -177,7 +179,10 @@ export default class GlyphProgram extends Program {
     const { gl, context, fbo, glyphFilterProgram } = this
     const { type } = context
     // pull out the appropriate data from the source
-    const { overdraw, glyphType, depthPos, featureCode, offset, count, size, fill, stroke, strokeWidth } = featureGuide
+    const {
+      overdraw, glyphType, depthPos, featureCode, offset,
+      count, size, fill, stroke, strokeWidth, bounds
+    } = featureGuide
     const { glyphQuadBuffer, glyphColorBuffer } = source
     // grab glyph texture
     const { texture } = fbo
@@ -188,8 +193,11 @@ export default class GlyphProgram extends Program {
       if (stroke && stroke.length) gl.uniform4fv(this.uStroke, stroke)
       if (!isNaN(strokeWidth)) gl.uniform1f(this.uStrokeWidth, strokeWidth)
     } else { this.setFeatureCode(featureCode) }
+    // if bounds exists, set them, otherwise set default bounds
+    if (bounds) gl.uniform4fv(this.uBounds, bounds)
+    else gl.uniform4fv(this.uBounds, [0, 0, 8192, 8192])
     // turn stencil testing off
-    context.stencilFunc(0)
+    context.stencilFuncAlways(0)
     // ensure proper z-testing state
     context.enableDepthTest()
     // set depth type

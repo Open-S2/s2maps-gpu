@@ -1507,7 +1507,7 @@
           "rgba(0, 0, 0, 0)"
         ],
         "text-stroke": "rgba(255, 255, 255, 0.65)",
-        "text-strokeWidth": [
+        "text-stroke-width": [
           "data-condition",
           ["class", "==", "state"],
           [
@@ -1622,7 +1622,7 @@
           ]
         ],
         "text-stroke": "rgba(255, 255, 255, 0.75)",
-        "text-strokeWidth": 0.2
+        "text-stroke-width": 0.2
       }
     },
     {
@@ -1670,7 +1670,7 @@
         ],
         "text-fill": "#00669E",
         "text-stroke": "#00669E",
-        "text-strokeWidth": 0
+        "text-stroke-width": 0
       }
     },
     {
@@ -1738,7 +1738,7 @@
           "#556e7a"
         ],
         "text-stroke": "rgba(255, 255, 255, 0.85)",
-        "text-strokeWidth": [
+        "text-stroke-width": [
           "data-condition",
           ["class", "==", "water"],
           0,

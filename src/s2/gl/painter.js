@@ -363,15 +363,17 @@ export default class Painter {
   }
 
   _paintGlyphFilter (glyphFilterProgram: GlyphFilterProgram, glyphFeatures: Array<FeatureGuide>, mode: 0 | 1 | 2) {
-    const { gl } = this.context
+    const { context } = this
+    const { gl } = context
     let curLayer: number = -1
     // set mode
     glyphFilterProgram.setMode(mode)
     // draw each feature
     for (const glyphFeature of glyphFeatures) {
-      const { tile, layerIndex, sourceName, layerCode } = glyphFeature
-      const { sourceData, faceST, bottom, top } = tile
-      const featureSource = sourceData[sourceName]
+      const { layerIndex, source, faceST, sourceName, layerCode } = glyphFeature
+      const tile = glyphFeature.parent ? glyphFeature.parent : glyphFeature.tile
+      const { bottom, top } = tile
+      const featureSource = source[sourceName]
       // update layerIndex
       if (curLayer !== layerIndex && layerCode) {
         curLayer = layerIndex

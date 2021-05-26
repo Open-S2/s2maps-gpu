@@ -23,6 +23,7 @@ uniform sampler2D uQuads;
 @import "./getPos.glsl"
 
 bool overlap (vec4 a, vec4 b) { // vec4(left, bottom, right, top)
+  if (b.x == 0. && b.z == 0.) return false;
   if (a.x >= b.z || b.x >= a.z) return false;
   if (a.w <= b.y || b.w <= a.y) return false;
   return true;
@@ -117,8 +118,6 @@ void main () {
         // if any of these bbox's overlap, than we should not render
         if (i >= curIndex) {
           break;
-        } else if (bbox.x == 0. && bbox.z == 0.) {
-          continue;
         } else if (overlap(curBbox, bbox)) {
           color = vec4(0.);
           break;

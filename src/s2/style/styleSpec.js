@@ -62,6 +62,8 @@ export type GlyphLayout = {
   'text-padding'?: number | Array<any>, // default: [0, 0]
   'text-word-wrap'?: number | Array<any>,
   'text-align'?: string | Array<any>,
+  'text-kerning'?: string | Array<any>,
+  'text-line-height'?: string | Array<any>,
   'icon-family': string | Array<any>,
   'icon-field': string | Array<string> | Array<any>,
   'icon-anchor'?: string,
@@ -72,7 +74,7 @@ export type GlyphPaint = {
   'text-size': number | Array<any>,
   'text-fill': string | Array<any>,
   'text-stroke'?: number | Array<any>,
-  'text-strokeWidth'?: string | Array<any>
+  'text-stroke-width'?: string | Array<any>
 }
 
 /** Layer **/

@@ -22,8 +22,6 @@ export default class S2JSONSource extends Source {
       // grab the data
       let data = s2json.getTile(face, zoom, x, y)
       if (!data || !data.layers || !data.layers.default) return
-      // cleanup
-      delete data.source
       // compress
       data = (new TextEncoder('utf-8').encode(JSON.stringify(data))).buffer
       // send off

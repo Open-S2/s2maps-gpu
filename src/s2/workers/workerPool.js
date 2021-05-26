@@ -32,14 +32,10 @@ class WorkerPool {
   constructor () {
     // create source worker
     const sourceWorker = this.sourceWorker = new SourceWorker()
-    // const sourceWorker = this.sourceWorker = new Worker(new URL('./source.worker.js', import.meta.url), { name: 'source-worker', type: 'module' })
-    // const sourceWorker = this.sourceWorker = createWorker(sourceWorkerURL, 'source-worker')
     sourceWorker.onmessage = this._onSourceMessage.bind(this)
     // create process workers
     for (let i = 0; i < this.workerCount; i++) { // $FlowIgnore
       const tileWorker = new TileWorker()
-      // const tileWorker = new Worker(new URL('./tile.worker.js', import.meta.url), { name: 'tile-worker', type: 'module' })
-      // const tileWorker = createWorker(tileWorkerURL, 'tile-worker')
       tileWorker.onmessage = this._onProcessMessage.bind(this)
       this.workers.push(tileWorker)
       // build communication channels; port1 can postMessage, and port2 can onMessage

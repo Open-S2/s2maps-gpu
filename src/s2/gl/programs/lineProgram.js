@@ -14,6 +14,7 @@ import type { FeatureGuide, VectorTileSource } from '../../source/tile'
 export default class LineProgram extends Program {
   uColor: WebGLUniformLocation
   uWidth: WebGLUniformLocation
+  uCap: WebGLUniformLocation
   constructor (context: Context) {
     // get gl from context
     const { gl, type, devicePixelRatio } = context

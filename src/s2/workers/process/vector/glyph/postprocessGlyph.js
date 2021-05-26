@@ -20,7 +20,7 @@ export default function postprocessGlyph (mapID: string, sourceName: string,
   let quadCount = 0
   // iterate features, store as we go
   for (const glyph of features) {
-    const { type, layerIndex, code, featureCode, quads, filter } = glyph
+    const { type, layerIndex, code, featureCode, quads, filter, color } = glyph
     // if there is a change in layer index or
     if (quadCount && (curlayerIndex !== layerIndex || codeStr !== code.toString() || curType !== type)) {
       // store featureGuide
@@ -45,7 +45,8 @@ export default function postprocessGlyph (mapID: string, sourceName: string,
     glyphQuads.push(...quads)
     const qCount = quads.length / 13
     quadCount += qCount
-    for (let i = 0; i < qCount; i++) glyphColors.push(255, 255, 255, 255)
+    if (color) glyphColors.push(...color)
+    else for (let i = 0; i < qCount; i++) glyphColors.push(255, 255, 255, 255)
   }
   // store last set
   if (quadCount) {

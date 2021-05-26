@@ -156,7 +156,7 @@ export default class HeatmapProgram extends Program {
     context.defaultBlend()
     context.enableDepthTest()
     context.disableCullFace()
-    context.stencilFunc(0)
+    context.stencilFuncAlways(0)
     // adjust to current depthPos
     context.lessDepth()
     context.setDepthRange(depthPos)

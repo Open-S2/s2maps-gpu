@@ -92,8 +92,6 @@ export default class S2JsonVT {
       let tile = this.tiles[id]
       // if the tile we need does not exist, we create it
       if (!tile) tile = this.tiles[id] = createTile(features, face, z, x, y, this)
-      // save reference to original geometry in tile so that we can drill down later if we stop now
-      tile.source = features
       // stop tiling if it's the first-pass tiling, and we either reached max zoom or the tile is too simple
       if (!cz && (z === this.indexMaxZoom || tile.numPoints <= this.indexMaxPoints)) {
         continue
@@ -109,7 +107,6 @@ export default class S2JsonVT {
       // dummy check: no features to clip
       if (features.length === 0) continue
       // acquire the new four tiles
-      // const [bl, br, tl, tr] = split(features, tile, this)
       const [bl, br, tl, tr] = clip(features, tile, this)
       // push the new features to the stack
       stack.push(bl, z + 1, x * 2, y * 2)

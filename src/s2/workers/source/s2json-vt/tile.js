@@ -46,7 +46,7 @@ export default function createTile (features: Array<Feature>, face: number, z: n
     numPoints: 0,
     numSimplified: 0,
     numFeatures: 0,
-    source: null,
+    source: features,
     face,
     x,
     y,

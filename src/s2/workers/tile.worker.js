@@ -61,6 +61,7 @@ export default class TileWorker {
     const { mapID, type } = data
     if (type === 'port') this._loadWorkerPort(data.messagePort, data.postPort, data.id, data.totalWorkers)
     else if (type === 'style') this._loadStyle(mapID, data.style)
+    else if (type === 'iconpacks') this._loadIconPacks(data.iconPacks)
     else if (type === 'pbfdata') this._processPBF(mapID, data.tile, data.sourceName, data.parent, data.data)
     else if (type === 'rasterdata') this._processRaster(mapID, data.tile, data.sourceName, data.parent, data.data)
     else if (type === 'jsondata') this._processJSONData(mapID, data.tile, data.sourceName, data.data)
@@ -98,6 +99,10 @@ export default class TileWorker {
     parseLayers(layers, glType)
     this.maps[mapID] = layers
     this.vectorManager.webgl1 = this.webgl1 = glType === 1
+  }
+
+  _loadIconPacks (iconPacks: IconPacks) {
+    this.vectorManager.glyphManager.loadIconsPacks(iconPacks)
   }
 
   _processPBF (mapID: string, tile: TileRequest, sourceName: string,

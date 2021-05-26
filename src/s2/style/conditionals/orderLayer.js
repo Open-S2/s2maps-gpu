@@ -75,6 +75,8 @@ function orderGlyph (layer: Layer) {
     'text-offset': layout['text-offset'] || [0, 0],
     'text-padding': layout['text-padding'] || [0, 0],
     'text-word-wrap': layout['text-word-wrap'] || 6,
+    'text-kerning': layout['text-kerning'] || 0,
+    'text-line-height': layout['text-line-height'] || 0.1,
     // icon
     'icon-family': layout['icon-family'] || 'default',
     'icon-field': layout['icon-field'],
@@ -92,7 +94,7 @@ function orderGlyph (layer: Layer) {
   layer.paint = {
     'text-size': paint['text-size'] || 42,
     'text-fill': paint['text-fill'] || 'rgba(0, 0, 0, 0)',
-    'text-strokeWidth': paint['text-strokeWidth'] || 0,
+    'text-stroke-width': paint['text-stroke-width'] || 0,
     'text-stroke': paint['text-stroke'] || 'rgba(0, 0, 0, 0)'
   }
   // icon paint

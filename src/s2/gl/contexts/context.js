@@ -367,9 +367,14 @@ export default class Context {
     gl.disable(gl.STENCIL_TEST)
   }
 
-  stencilFunc (ref: number) {
+  stencilFuncAlways (ref: number) {
     const { gl } = this
     gl.stencilFunc(gl.ALWAYS, ref, 0xFF)
+  }
+
+  stencilFuncEqual (ref: number) {
+    const { gl } = this
+    gl.stencilFunc(gl.EQUAL, ref, 0xFF)
   }
 
   stencilInvert () {

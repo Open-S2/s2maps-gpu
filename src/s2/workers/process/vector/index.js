@@ -5,6 +5,7 @@ import GlyphManager from './glyph'
 import processLine from './line'
 import processPoint from './point'
 import postInteractiveData from './postInteractive'
+import scaleShiftClip from './scaleShiftClip'
 
 import type { TileRequest } from '../../workerPool'
 import type { Layer } from '../../../style/styleSpec'
@@ -27,10 +28,10 @@ export default class VectorManager {
   }
 
   processVector (mapID: string, tile: TileRequest, sourceName: string,
-    vectorTile: VectorTile, layers: Array<Layer>, parent?: boolean = false) {
+    vectorTile: VectorTile, layers: Array<Layer>, parent?: boolean | ParentLayer = false) {
     const { webgl1, glyphManager, mainThread, idGen } = this
-    const { zoom } = tile
-    // sometimes the sourcename includes "${sourceName}:PARENT" so we need to remove parent for comparison
+    const { hash, zoom } = tile
+    // sometimes the sourcename includes "${sourceName}:PARENT_HASH" so we need to remove parent for comparison
     const subSourceName = sourceName.split(':')[0]
     // filter layers to source
     const sourceLayers = layers.filter(layer => layer.source === subSourceName)
@@ -54,6 +55,7 @@ export default class VectorManager {
         filter, layerIndex, onlyLines, paint, layout
       } = sourceLayer
       if (minzoom > zoom || maxzoom < zoom) continue
+      if (parent && !parent.layers.includes(layerIndex)) continue
       // use the appropriate feature array
       if (!featureStore[type]) continue
       const features = featureStore[type]
@@ -72,15 +74,15 @@ export default class VectorManager {
           for (const p in paint) paint[p](code, properties, zoom)
           for (const l in layout) layout[l](code, properties, zoom)
           // store
-          const geometry = feature.loadGeometry()
-          // if (parent) geometry = scaleShiftClip(geometry, type, extent, tile, parent)
+          let geometry = feature.loadGeometry()
+          if (parent) geometry = scaleShiftClip(geometry, feature.type, extent, tile, parent)
           // scale and filter as necessary
-          if (!geometry.length) continue
+          if (!geometry || !geometry.length) continue
           const id = idGen.getNum()
           features.push({
             id, layerIndex, geometry, code, featureCode: webgl1 && buildFeactureCode(type, paint, layout, properties, zoom),
             extent, type: feature.type, properties, vertices: [],
-            indices: (feature.indices) ? feature.indices : [], sourceLayer
+            indices: (!parent && feature.indices) ? feature.indices : [], sourceLayer
           })
           // if the layer is interactive, store the id's property data
           if (interactive) interactiveMap.set(id, { __id: id, __cursor: cursor, __name: name, __source: source, __layer: sourceLayerName,  ...properties })
@@ -101,7 +103,10 @@ function buildFeactureCode (type, paint, layout, properties, zoom) {
   const featureCode = []
 
   if (type === 'fill') {
-    featureCode.push(...(paint.color(null, properties, zoom)).getRGB())
+    featureCode.push(
+      ...(paint.color(null, properties, zoom)).getRGB(),
+      paint.opacity(null, properties, zoom)
+    )
   } else if (type === 'line') {
     featureCode.push(
       ...(paint.color(null, properties, zoom)).getRGB(),

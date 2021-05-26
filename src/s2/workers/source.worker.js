@@ -9,6 +9,12 @@ type SessionToken = {
   age: number
 }
 
+export type IconSet = { glyphID: number, colorID: number }
+
+export type IconMap = { [string]: Array<IconSet> }
+
+export type IconPacks = { [string]: IconMap }
+
 /**
   SOURCE WORKER
 
@@ -89,16 +95,23 @@ export default class SourceWorker {
     Promise.all(promises)
       .then(() => {
         // add in fallbacks
-        this._injectFallbacks()
+        this._finalizeGlyphs()
         this.status = 'ready'
         this._checkCache()
       })
   }
 
-  _injectFallbacks () {
-    const { glyphs } = this
-    for (const glyphSource of Object.values(glyphs)) {
-      if (glyphSource.fallback) glyphSource.fallback = glyphs[glyphSource.fallback]
+  // inject fallbacks & let workers know about icon data
+  _finalizeGlyphs () {
+    const { glyphs, workers } = this
+    const iconPacks: IconPacks = {}
+    for (const [name, glyphSource] of Object.entries(glyphs)) {
+      const { fallback, iconMap, colors } = glyphSource
+      if (fallback) glyphSource.fallback = glyphs[fallback]
+      if (iconMap) iconPacks[name] = { iconMap, colors }
+    }
+    if (Object.keys(iconPacks).length) {
+      for (const worker of workers) worker.postMessage({ type: 'iconpacks', iconPacks })
     }
   }
 
@@ -189,7 +202,11 @@ export default class SourceWorker {
 
     // send any images to the main thread
     const maxHeight = images.reduce((acc, cur) => Math.max(acc, cur.posY + cur.height), 0)
-    if (images.length) postMessage({ mapID, type: 'glyphimages', images, maxHeight }, images.map(i => i.data))
+    // ensure a max chunk size of 30 to not overload the GPU when uploading glyph data
+    for (let i = 0, j = images.length; i < j; i += 30) {
+      const imageChunk = images.slice(i, i + 30)
+      postMessage({ mapID, type: 'glyphimages', images: imageChunk, maxHeight }, imageChunk.map(i => i.data))
+    }
   }
 
   _requestToken (mapID) {

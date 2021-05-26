@@ -32,6 +32,8 @@ export type Glyph = {
   advanceWidth: number // how far to move the cursor
 }
 
+type IconMap = { [string]: Unicode } // ex: ['airport']: [0, 1, 2, 5, 7] (name maps reference a list of unicodes)
+
 export default class GlyphSource {
   version: number
   extent: number
@@ -41,7 +43,10 @@ export default class GlyphSource {
   defaultAdvance: number
   maxHeight: number
   range: number
+  pageSize: number = 100
   texturePack: TexturePack
+  colors: Array<[number, number, number, number]>
+  iconMap: IconMap
   glyphSet: Set<Unicode> // existing glyphs
   glyphsMap: Map<Glyph> = new Map() // glyphs we have built already
   constructor (name: string, path: string, fallback?: string, texturePack: TexturePack) {
@@ -61,14 +66,17 @@ export default class GlyphSource {
   }
 
   _buildMetadata (metadata) {
-    const { version, extent, defaultAdvance, size, maxHeight, range, glyphs } = metadata
+    const { version, pageSize, extent, colors, iconMap, defaultAdvance, size, maxHeight, range, glyphs } = metadata
     this.version = version
     this.extent = extent
     this.defaultAdvance = defaultAdvance
     this.size = size
     this.maxHeight = maxHeight
     this.range = range
+    this.colors = colors
+    this.iconMap = iconMap
     this.glyphSet = new Set(glyphs)
+    if (pageSize) this.pageSize = pageSize
   }
 
   async glyphRequest (glyphResponse: GlyphResponse, images: GlyphImages, glyphList: GlyphRequest): GlyphResponse {
@@ -103,21 +111,22 @@ export default class GlyphSource {
   }
 
   _findGlyphs (source: GlyphSource, unicode: number, glyphSourceRes: Array<Glyph>, notbuilt: Object) {
+    const { pageSize } = this
     const { glyphsMap } = source
     const { floor } = Math
     if (glyphsMap.has(unicode)) { // A: this source has already built this unicode
       const { texX, texY, texW, texH, xOffset, yOffset, width, height, advanceWidth } = glyphsMap.get(unicode)
       glyphSourceRes.push(unicode, texX, texY, texW, texH, xOffset, yOffset, width, height, advanceWidth)
     } else { // B: this source has the unicode but needs to retrieve and build the unicode
-      const page = floor(unicode / 100)
+      const page = floor(unicode / pageSize)
       if (!notbuilt[page]) notbuilt[page] = new Set()
       notbuilt[page].add(unicode)
     }
   }
 
   // PAGES:
-  // a page contains max 100 glyphs per page. The page will always contain a range of
-  // 100. so for instance, page 0 has utf8 codes: [0, 100) and page 1 has [100, 200) and so on
+  // a page contains max pageSize glyphs per page. The page will always contain a range of
+  // pageSize. so for instance, page 0 has utf8 codes: [0, pageSize) and page 1 has [pageSize, 200) and so on
   // the buffer container: [[glyph metadata], [glyph images]]
   async _buildGlyphPage (source: GlyphSource, page: number, pageGlyphList: Set,
     glyphSourceRes: Array<Glyph>, images: GlyphImages) {

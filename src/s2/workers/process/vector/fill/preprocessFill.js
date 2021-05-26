@@ -17,7 +17,7 @@ export default function preprocessFill (feature: Feature, division: number) {
   const multiplier = 8192 / extent
   // process
   const { round } = Math
-  if (indices) {
+  if (indices.length) {
     const verts = []
     // build vertices
     for (const poly of polys) {
