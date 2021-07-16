@@ -25,7 +25,7 @@ export default class GlyphProgram extends Program {
   uSize: WebGLUniformLocation
   uFill: WebGLUniformLocation
   uStroke: WebGLUniformLocation
-  uStrokeWidth: WebGLUniformLocation
+  uSWidth: WebGLUniformLocation
   uInteractive: WebGLUniformLocation
   uTexSize: WebGLUniformLocation
   uIsIcon: WebGLUniformLocation
@@ -37,11 +37,12 @@ export default class GlyphProgram extends Program {
   glyphFilterProgram: Program
   filter: boolean
   fbo: FBO
+  defaultBounds: Float32Array = new Float32Array([0, 0, 8192, 8192])
   constructor (context: Context, glyphFilterProgram: Program) {
     // get gl from context
     const { gl, type, devicePixelRatio } = context
     // build shaders
-    if (type === 1) gl.attributeLocations = { aPos: 0, aType: 7 }
+    if (type === 1) gl.attributeLocations = { aUV: 0, aST: 1, aXY: 2, aOffset: 3, aWH: 4, aTexXY: 5, aTexWH: 6, aID: 7, aColor: 8 }
     // inject Program
     super(context)
     // build shaders
@@ -176,7 +177,7 @@ export default class GlyphProgram extends Program {
   }
 
   draw (featureGuide: FeatureGuide, source: GlyphTileSource, interactive: boolean = false) {
-    const { gl, context, fbo, glyphFilterProgram } = this
+    const { gl, context, defaultBounds, fbo, glyphFilterProgram, uBounds } = this
     const { type } = context
     // pull out the appropriate data from the source
     const {
@@ -191,11 +192,11 @@ export default class GlyphProgram extends Program {
       if (!isNaN(size)) gl.uniform1f(this.uSize, size)
       if (fill && fill.length) gl.uniform4fv(this.uFill, fill)
       if (stroke && stroke.length) gl.uniform4fv(this.uStroke, stroke)
-      if (!isNaN(strokeWidth)) gl.uniform1f(this.uStrokeWidth, strokeWidth)
+      if (!isNaN(strokeWidth)) gl.uniform1f(this.uSWidth, strokeWidth)
     } else { this.setFeatureCode(featureCode) }
     // if bounds exists, set them, otherwise set default bounds
-    if (bounds) gl.uniform4fv(this.uBounds, bounds)
-    else gl.uniform4fv(this.uBounds, [0, 0, 8192, 8192])
+    if (bounds) gl.uniform4fv(uBounds, bounds)
+    else gl.uniform4fv(uBounds, defaultBounds)
     // turn stencil testing off
     context.stencilFuncAlways(0)
     // ensure proper z-testing state

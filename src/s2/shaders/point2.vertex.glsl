@@ -15,12 +15,14 @@ out float strokeWidth;
 
 // uniform bool uInteractive;
 uniform float uDevicePixelRatio;
+uniform vec4 uBounds;
 uniform vec2 uAspect;
 
 @import "./decodeFeature2.glsl"
 @import "./getPos.glsl"
 
 void main () {
+  if (aPos.x < uBounds.x || aPos.x > uBounds.z || aPos.y < uBounds.y || aPos.y > uBounds.w) return;
   // set color
   // prep layer index and feature index positions
   int index = 0;

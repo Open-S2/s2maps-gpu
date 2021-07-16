@@ -137,6 +137,10 @@
   visibility: visible;
 }
 
+#s2-attr {
+  font-weight: bold;
+}
+
 .s2-popup-container div {
   margin: 5px 0;
 }

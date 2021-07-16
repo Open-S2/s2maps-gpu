@@ -153,9 +153,9 @@ export default class Painter {
     this._createTileMasksIDs(tiles)
     // prep all tile's features to draw
     // $FlowIgnore
-    const features = tiles.flatMap(tile => tile.featureGuide)
+    const features = tiles.flatMap(tile => tile.featureGuide.filter(f => f.type !== 'heatmap'))
     // draw heatmap data if applicable
-    const heatmapFeatures = tiles.flatMap(tile => tile.heatmapGuide)
+    const heatmapFeatures = tiles.flatMap(tile => tile.featureGuide.filter(f => f.type === 'heatmap'))
     if (heatmapFeatures.length) features.push(this.paintHeatmap(heatmapFeatures))
     // sort features
     features.sort(featureSort)
@@ -313,6 +313,7 @@ export default class Painter {
   }
 
   paintHeatmap (features: Array<FeatureGuide>) {
+    // console.log(features)
     const { gl } = this.context
     // grab heatmap program
     const program = this.useProgram('heatmap')
@@ -321,6 +322,7 @@ export default class Painter {
     // draw all features
     for (const feature of features) {
       const { tile, parent, source, faceST, sourceName, layerCode } = feature
+      // if (parent) console.log(true)
       // grab feature source and bottom-top
       const featureSource = source[sourceName]
       const bottom = parent ? parent.bottom : tile.bottom
@@ -339,30 +341,41 @@ export default class Painter {
   }
 
   paintGlyphFilter (tiles: Array<Tile>, glyphFeatures: Array<FeatureGuide>) {
-    const { context } = this
-    const glyphFilterProgram: GlyphFilterProgram = this.programs.glyphFilter
-    if (!glyphFilterProgram) return new Error('The "glyphFilter" program does not exist, can not paint.')
-    // disable blending
-    context.enableDepthTest()
-    // Step 1: draw points
-    glyphFilterProgram.bindPointFrameBuffer()
-    // setup mask first (uses the "fillProgram" - that's why we have not 'used' the glyphFilterProgram yet)
-    this.paintMasks(tiles)
-    // use the box program
-    glyphFilterProgram.use()
-    // paint the glyph "filter" points
-    this._paintGlyphFilter(glyphFilterProgram, glyphFeatures, 0)
-    // Step 2: draw quads
-    context.disableBlend()
+    const glyphFilterProgram: GlyphFilterProgram = this.useProgram('glyphFilter')
+    // Step 1: draw quads
     glyphFilterProgram.bindQuadFrameBuffer()
     this._paintGlyphFilter(glyphFilterProgram, glyphFeatures, 1)
-    context.enableBlend()
-    // Step 3: draw result points
+
+
+    // // glyphFilterProgram.quadTexture
+    // const pixels = new Uint8Array(2048 * 2 * 4)
+    // gl.readPixels(0, 0, 2048, 2, gl.RGBA, gl.UNSIGNED_BYTE, pixels)
+    // // console.log('pixels', pixels)
+    // const bboxs = []
+    // for (let i = 0; i < 40; i++) {
+    //   const left = (pixels[i * 4] << 8) + (pixels[i * 4 + 1])
+    //   const bottom = (pixels[i * 4 + 2] << 8) + (pixels[i * 4 + 3])
+    //   const right = (pixels[(i + 2048) * 4] << 8) + (pixels[(i + 2048) * 4 + 1])
+    //   const top = (pixels[(i + 2048) * 4 + 2] << 8) + (pixels[(i + 2048) * 4 + 3])
+    //   bboxs.push([left, bottom, right, top])
+    // }
+    // console.log(bboxs)
+
+    // Step 2: draw result points
     glyphFilterProgram.bindResultFramebuffer()
     this._paintGlyphFilter(glyphFilterProgram, glyphFeatures, 2)
   }
 
-  _paintGlyphFilter (glyphFilterProgram: GlyphFilterProgram, glyphFeatures: Array<FeatureGuide>, mode: 0 | 1 | 2) {
+  getScreen (): Uint8ClampedArray {
+    const { gl } = this.context
+    const { width, height, RGBA, UNSIGNED_BYTE } = gl
+    const pixels = new Uint8ClampedArray(width * height * 4)
+    gl.readPixels(0, 0, width, height, RGBA, UNSIGNED_BYTE, pixels)
+
+    return pixels
+  }
+
+  _paintGlyphFilter (glyphFilterProgram: GlyphFilterProgram, glyphFeatures: Array<FeatureGuide>, mode: 1 | 2) {
     const { context } = this
     const { gl } = context
     let curLayer: number = -1
@@ -395,11 +408,11 @@ export default class Painter {
 }
 
 function featureSort (a: FeatureGuide, b: FeatureGuide): number {
-  let zoomDiff = a.tile.zoom - b.tile.zoom
-  if (zoomDiff) return zoomDiff
   let diff = a.layerIndex - b.layerIndex
   if (diff) return diff
   let index = 0
+  let zoomDiff = (a.parent ? 1 : 0) - (b.parent ? 1 : 0)
+  if (zoomDiff) return zoomDiff
   let maxSize = Math.min(a.featureCode.length, b.featureCode.length)
   while (diff === 0 && index < maxSize) {
     diff = a.featureCode[index] - b.featureCode[index]

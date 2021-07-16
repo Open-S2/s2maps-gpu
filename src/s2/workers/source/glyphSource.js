@@ -49,16 +49,19 @@ export default class GlyphSource {
   iconMap: IconMap
   glyphSet: Set<Unicode> // existing glyphs
   glyphsMap: Map<Glyph> = new Map() // glyphs we have built already
-  constructor (name: string, path: string, fallback?: string, texturePack: TexturePack) {
+  needsToken: boolean = false
+  constructor (name: string, path: string, fallback?: string, texturePack: TexturePack, needsToken?: boolean) {
     this.name = name
     this.path = path
     this.fallback = fallback // temporary reference to the source name
     this.texturePack = texturePack
+    this.needsToken = needsToken
   }
 
-  async _build () {
+  async build (token: string) {
     const self = this
-    const metadata = await this._fetch(`${this.path}/metadata.json`, true)
+    const metadata = await this._fetch(`${this.path}/metadata.json`, true, token)
+
     if (!metadata) {
       self.active = false
       console.log(`FAILED TO extrapolate ${this.path} metadata`)
@@ -79,7 +82,8 @@ export default class GlyphSource {
     if (pageSize) this.pageSize = pageSize
   }
 
-  async glyphRequest (glyphResponse: GlyphResponse, images: GlyphImages, glyphList: GlyphRequest): GlyphResponse {
+  async glyphRequest (glyphResponse: GlyphResponse, images: GlyphImages,
+    glyphList: GlyphRequest, token?: string): GlyphResponse {
     // prep variables
     const { name, glyphSet, glyphsMap, defaultAdvance, fallback } = this
 
@@ -104,8 +108,8 @@ export default class GlyphSource {
 
     // Step 2: build glyphs we don't have yet from their perspective pages
     const pageBuilds = []
-    for (const page in notbuilt) pageBuilds.push(this._buildGlyphPage(this, page, notbuilt[page], glyphSourceRes, images))
-    for (const page in notBuiltFallback) pageBuilds.push(this._buildGlyphPage(fallback, page, notBuiltFallback[page], glyphSourceRes, images))
+    for (const page in notbuilt) pageBuilds.push(this._buildGlyphPage(this, page, notbuilt[page], glyphSourceRes, images, token))
+    for (const page in notBuiltFallback) pageBuilds.push(this._buildGlyphPage(fallback, page, notBuiltFallback[page], glyphSourceRes, images, token))
     // send the build promises
     return Promise.all(pageBuilds)
   }
@@ -129,11 +133,11 @@ export default class GlyphSource {
   // pageSize. so for instance, page 0 has utf8 codes: [0, pageSize) and page 1 has [pageSize, 200) and so on
   // the buffer container: [[glyph metadata], [glyph images]]
   async _buildGlyphPage (source: GlyphSource, page: number, pageGlyphList: Set,
-    glyphSourceRes: Array<Glyph>, images: GlyphImages) {
+    glyphSourceRes: Array<Glyph>, images: GlyphImages, token?: string) {
     const { extent, size, path, maxHeight, texturePack, glyphsMap } = source
     const { ceil } = Math
     // pull in the page
-    const pageData = await this._fetch(`${path}/${page}.gz`)
+    const pageData = await this._fetch(`${path}/${page}.msdf`, false, token)
     // parse the page glyphs, if the page includes a glyph in pageGlyphList,
     // build and add to res & glyphsMap
     if (pageData) {
@@ -193,8 +197,10 @@ export default class GlyphSource {
     }
   }
 
-  async _fetch (path: string, json?: boolean = false) {
-    const res = await fetch(path)
+  async _fetch (path: string, json?: boolean = false, Authorization?: string) {
+    const headers = {}
+    if (this.needsToken && Authorization) headers.Authorization = Authorization
+    const res = await fetch(path, { headers })
     if (res.status !== 200 && res.status !== 206) return null
     if (!json) return res.arrayBuffer()
     else return res.json()

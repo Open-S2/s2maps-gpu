@@ -12,7 +12,7 @@ export default function preprocessGlyphs (features: Feature, zoom: number,
   // iterate features, creating both a text and icon version as applicable
   for (const feature of features) {
     const { id, layerIndex, extent, code, sourceLayer, featureCode, properties, geometry } = feature
-    const { overdraw, layoutLocal, paintLocal } = sourceLayer
+    const { overdraw, layoutLocal, paintLocal, paint } = sourceLayer
 
     for (const type of ['icon', 'text']) { // icon FIRST incase text draws over the icon
       if (!paintLocal[`${type}-size`]) continue
@@ -70,7 +70,7 @@ export default function preprocessGlyphs (features: Feature, zoom: number,
           lineHeight,
           // paint
           color,
-          featureCode: buildFeatureCode(featureCode, type, paintLocal, properties, zoom),
+          featureCode: buildFeatureCode(featureCode, type, paint, properties, zoom),
           // tile position
           s: point[0] / extent,
           t: point[1] / extent,
@@ -102,17 +102,18 @@ function addMissingChars (field: string, family: string, glyphMap: Map<Unicode, 
 }
 
 function buildFeatureCode (featureCode, type, paint, properties, zoom) {
-  if (!featureCode) return featureCode
-  if (type === 1) { // icon
-    featureCode.push(paintLocal[`icon-size`](null, properties, zoom))
+  if (!featureCode) return null
+  const res = []
+  if (type === 'icon') { // icon
+    res.push(paint['icon-size'](null, properties, zoom))
   } else { // text
-    featureCode.push(
-      paintLocal[`text-size`](null, properties, zoom),
-      ...(paint[`text-fill`](null, properties, zoom)).getRGB(),
-      ...(paint[`text-stroke`](null, properties, zoom)).getRGB(),
-      paint[`text-stroke-width`](null, properties, zoom)
+    res.push(
+      paint['text-size'](null, properties, zoom),
+      ...(paint['text-fill'](null, properties, zoom)).getRGB(),
+      ...(paint['text-stroke'](null, properties, zoom)).getRGB(),
+      paint['text-stroke-width'](null, properties, zoom) || 0
     )
   }
 
-  return featureCode
+  return res
 }

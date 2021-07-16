@@ -64,6 +64,17 @@ class WorkerPool {
     for (const worker of this.workers) worker.postMessage({ mapID, type: 'style', style })
   }
 
+  // NOTE: TEMPORARY SOLUTION :(
+  delete () {
+    this.sourceWorker.terminate()
+    for (const worker of this.workers) worker.terminate()
+    window.S2WorkerPool = new WorkerPool()
+  }
+
+  // delete (mapID: string) {
+  //   this.sourceWorker.postMessage({ mapID, type: 'delete' })
+  // }
+
   tileRequest (mapID: string, tiles: Array<TileRequest>) {
     this.sourceWorker.postMessage({ mapID, type: 'tilerequest', tiles })
   }

@@ -1,8 +1,4 @@
-#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
-#else
-precision mediump float;
-#endif
 
 @define ZERO 0.00196078431372549 // 1. / 255. / 2.
 @define GAUSS_COEF 0.3989422804014327
@@ -17,6 +13,7 @@ varying float vS;
 
 uniform float uDevicePixelRatio;
 uniform float uDrawState;
+uniform vec4 uBounds;
 uniform vec2 uAspect;
 
 uniform float uIntensity;
@@ -28,6 +25,7 @@ uniform float uOpacity;
 void main () {
   vec4 glPos;
   if (uDrawState == 0.) { // drawing to texture
+    if (aPos.x < uBounds.x || aPos.x > uBounds.z || aPos.y < uBounds.y || aPos.y > uBounds.w) return;
     // set position
     // prep xyz & get position
     glPos = getPos(aPos);

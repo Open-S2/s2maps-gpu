@@ -1,7 +1,7 @@
 // @flow
 import Source from './source'
 
-const HEADER_SIZE = 512_000
+const MAX_SIZE = 1_500_000 // ~1.5 MB
 const ROOT_DIR_SIZE = 5_461 * 10 // (54_610) -> 7 levels, the 7th level is always a leaf (1+4+16+64+256+1024+4096)
 
 export type RootDirectory = {
@@ -16,11 +16,11 @@ export type RootDirectory = {
 export default class S2TilesSource extends Source {
   version: number = 1
   rootDir: RootDirectory = {}
-  async _build () {
+  async build (token: string) {
     const self = this
     // fetch the metadata
-    const ab = await getRange(this.path, 0, HEADER_SIZE)
-    if (!ab || ab.byteLength !== 512000) { // if the return is empty, we failed
+    const ab = await this.getRange(`${this.path}?type=metadata`, 0, 327669, token)
+    if (!ab || ab.byteLength !== 327669) { // if the return is empty, we failed
       self.active = false
       console.log(`Failed to extrapolate ${this.path} metadata`)
     } else { // prep a data view, store in header, build metadata
@@ -38,8 +38,8 @@ export default class S2TilesSource extends Source {
         this.rootDir[3] = new DataView(ab, 163839, ROOT_DIR_SIZE)
         this.rootDir[4] = new DataView(ab, 218449, ROOT_DIR_SIZE)
         this.rootDir[5] = new DataView(ab, 273059, ROOT_DIR_SIZE)
-        // const metadata = JSON.parse(new DataView(ab, 327669, mL))
-        const metadata = JSON.parse(new TextDecoder('utf-8').decode(new DataView(ab, 327669, mL)))
+        const md = await this.getRange(`${this.path}?type=metadata`, 327669, mL, token)
+        const metadata = JSON.parse(new TextDecoder('utf-8').decode(new DataView(md, 0, mL)))
         this._buildMetadata(metadata)
       }
     }
@@ -53,38 +53,41 @@ export default class S2TilesSource extends Source {
   }
 
   // Here, we use the memory mapped file directory tree system to find our data
-  async _tileRequest (mapID: string, tile: TileRequest, worker: Worker,
-    sourceName: string, parent: boolean, token: string) {
-    const { name, s2json } = this
-    let { face, zoom, x, y } = tile
+  async _tileRequest (mapID: string, token: string, tile: TileRequest, worker: Worker,
+    sourceName: string, parent: false | Object) {
+    const { name, s2json, type, encoding } = this
+    let { face, zoom, x, y, hash } = parent ? parent : tile
 
     // pull in the correct face's directory
     let dir = this.rootDir[face]
     // now we walk to the next directory as necessary
     const path = getPath(zoom, x, y)
     for (const leaf of path) {
-      if (leaf[0] === 6) dir = await this._walkPath(dir, leaf)
+      if (leaf[0] === 6) dir = await this._walkPath(dir, leaf, token)
       else { zoom = leaf[0]; x = leaf[1]; y = leaf[2] }
-      if (!dir) return
+      if (!dir) return this._flush(mapID, hash, sourceName)
     }
     // if we made it here, we need to pull out the node and read its [offset, length]
     const node = this._readNode(dir, zoom, x, y)
-    if (!node) return
+    if (!node) return this._flush(mapID, hash, sourceName)
 
     // we found the vector file, let's send the details off to the tile worker
-    const data = await getRange(this.path, node[0], node[1])
-    if (data) worker.postMessage({ mapID, type: 'pbfdata', tile, sourceName, parent, data }, [data])
+    const data = await this.getRange(`${this.path}?type=tile&subtype=${type}&enc=${encoding}`, node[0], node[1], token)
+    if (data) {
+      worker.postMessage({ mapID, type: type === 'vector' ? 'pbfdata' : 'rasterdata', tile, sourceName, parent, data }, [data])
+      // postMessage({ mapID, type: 'addsource', hash, sourceName })
+    } else { return this._flush(mapID, hash, sourceName) }
   }
 
   // from a starting directory and leaf identifier, move to the next leaf directory
   // if said directory does not exist, we create it (assuming we are writing and not reading)
-  async _walkPath (dir: DataView, leaf: [number, number, number]): DataView {
+  async _walkPath (dir: DataView, leaf: [number, number, number], token: string): DataView {
     // pull position from leaf
     const [zoom, x, y] = leaf
     const newDir = this._readNode(dir, zoom, x, y)
     if (!newDir || newDir[1] === 0) return null // corner cases: length = 0 because that leaf does not exist
     // return the new directory
-    const ab = await getRange(this.path, newDir[0], newDir[1])
+    const ab = await this.getRange(`${this.path}?type=dir`, newDir[0], newDir[1], token)
     if (ab) return new DataView(ab)
   }
 
@@ -99,13 +102,14 @@ export default class S2TilesSource extends Source {
 
     return [offset, length]
   }
-}
 
-const getRange = async (url: string, offset: number, length: number): ArrayBuffer => {
-  if (length === 0 || length > HEADER_SIZE) return null
-  const res = await fetch(url, { headers: { Range: 'bytes=' + offset + '-' + (offset + length - 1) } })
-  if (res.status !== 200 && res.status !== 206) return null
-  return res.arrayBuffer()
+  async getRange (url: string, offset: number, length: number, Authorization?: string): ArrayBuffer {
+    if (!this.needsToken) Authorization = null
+    if (length === 0 || length > MAX_SIZE) return null
+    const res = await fetch(url, { headers: { Authorization, Bytes: offset + '-' + (offset + length - 1) } })
+    if (res.status !== 200 && res.status !== 206) return null
+    return res.arrayBuffer()
+  }
 }
 
 const getUint48 = (dataview: DataView, pos: number): number => {

@@ -1,18 +1,26 @@
 {
   "version": 2,
-  "name": "s2maps-streets-v2",
+  "name": "s2maps-streets-v3",
   "center": [-122.4585607773497, 37.778443127730476],
-  "zoom": -0.25,
+  "zoom": 0,
   "minzoom": -1,
-  "maxzoom": 17.99,
+  "maxzoom": 18.99,
   "sources": {
-    "streets-v2": "https://s3.s2maps.io/streets-v2",
-    "terrain": "https://s3.s2maps.io/terrain-v1"
+    "streets-v3": "http://192.168.0.110:8000/s2tiles/streets-v3.s2tiles",
+    "terrain": "https://s3.s2maps.io/terrain-v1",
+    "dem": "http://192.168.0.110:8000/s2tiles/terrain.s2tiles"
   },
   "fonts": {
-    "default": "https://s3.s2maps.io/fonts-v3/default",
-    "roboto-regular": "https://s3.s2maps.io/fonts-v3/RobotoRegular",
-    "roboto-medium": "https://s3.s2maps.io/fonts-v3/RobotoMedium"
+    "noto-sans-regular": "https://api.s2maps.io/public/glyphs/Noto/NotoSansRegular",
+    "noto-sans-medium": "https://api.s2maps.io/public/glyphs/Noto/NotoSansMedium",
+    "roboto-regular": {
+      "path": "https://api.s2maps.io/public/glyphs/Roboto/RobotoRegular",
+      "fallback": "noto-sans-regular"
+    },
+    "roboto-medium": {
+      "path": "https://api.s2maps.io/public/glyphs/Roboto/RobotoMedium",
+      "fallback": "noto-sans-medium"
+    }
   },
   "wallpaper": {
     "background-color": "#030a2d",
@@ -70,7 +78,7 @@
           ["class", "==", "crop"],
           "#bbe2c6",
           ["class", "==", "shrub"],
-          "rgb(242, 237, 224)",
+          "#f1e9d7",
           ["class", "==", "wasteland"],
           "#e8e8e1",
           "default",
@@ -80,7 +88,7 @@
     },
     {
       "name": "landuse",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "landuse",
       "type": "fill",
       "opaque": true,
@@ -89,7 +97,7 @@
         ["class", "==", "aeroway"],
         [
           "type", "has", ["park", "national_park", "protected_area",
-          "grass", "grassland", "garden", "meadow", "farmland",
+          "grass", "grassland", "garden", "meadow", "farmland", "heath",
           "swamp", "wetland", "zoo", "cemetery", "sand", "beach", "desert",
           "hospital", "school", "parking", "glacier",
           "quarry", "retail", "urban", "pitch"]
@@ -122,7 +130,7 @@
           "#d4d8ea",
           ["class", "==", "aeroway"],
           "rgb(219, 222, 235)",
-          ["type", "==", "farmland"],
+          ["type", "has", ["farmland", "heath"]],
           "rgb(228, 234, 210)",
           ["type", "==", "hospital"],
           "rgb(252, 228, 228)",
@@ -141,7 +149,7 @@
     },
     {
       "name": "landuse_transparent",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "landuse",
       "type": "fill",
       "filter": ["type", "has", ["aboriginal_lands", "military"]],
@@ -160,7 +168,7 @@
     },
     {
       "name": "golf",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "landuse",
       "type": "fill",
       "opaque": true,
@@ -188,12 +196,38 @@
       }
     },
     {
+      "name": "water",
+      "source": "streets-v3",
+      "filter": ["class", "!has", ["bay", "reef", "shoal"]],
+      "layer": "water",
+      "type": "fill",
+      "opaque": true,
+      "minzoom": 0,
+      "layout": {},
+      "paint": {
+        "color": "#86bff2"
+      }
+    },
+    {
+      "name": "reef_shoal",
+      "source": "streets-v3",
+      "filter": ["class", "has", ["reef", "shoal"]],
+      "layer": "water",
+      "type": "fill",
+      "opaque": true,
+      "minzoom": 0,
+      "layout": {},
+      "paint": {
+        "color": "rgb(185, 225, 255)"
+      }
+    },
+    {
       "name": "hillshade",
-      "source": "terrain",
+      "source": "dem",
       "layer": "hillshade",
       "type": "fill",
       "minzoom": 0,
-      "maxzoom": 15,
+      "maxzoom": 12,
       "layout": {},
       "paint": {
         "color": [
@@ -226,43 +260,8 @@
       }
     },
     {
-      "name": "water",
-      "source": "streets-v2",
-      "filter": ["class", "!has", ["bay", "reef", "shoal"]],
-      "layer": "water",
-      "type": "fill",
-      "opaque": true,
-      "minzoom": 0,
-      "layout": {},
-      "paint": {
-        "color": [
-          "input-range",
-          "zoom",
-          "expo",
-          0.35,
-          8,
-          "#8fcaf9",
-          10,
-          "#86bff2"
-        ]
-      }
-    },
-    {
-      "name": "reef_shoal",
-      "source": "streets-v2",
-      "filter": ["class", "has", ["reef", "shoal"]],
-      "layer": "water",
-      "type": "fill",
-      "opaque": true,
-      "minzoom": 0,
-      "layout": {},
-      "paint": {
-        "color": "rgb(185, 225, 255)"
-      }
-    },
-    {
       "name": "water_lines",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "water",
       "onlyLines": true,
       "minzoom": 10,
@@ -288,10 +287,10 @@
     },
     {
       "name": "aboriginal_border",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "landuse",
       "filter": ["type", "==", "aboriginal_lands"],
-      "minzoom": 5,
+      "minzoom": 3,
       "type": "line",
       "layout": {
         "cap": [
@@ -312,7 +311,7 @@
     },
     {
       "name": "motor_trunk_borders_tunnel",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "transport",
       "filter": [
         "and",
@@ -369,7 +368,7 @@
     },
     {
       "name": "motor_trunk_tunnel",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "transport",
       "filter": [
         "and",
@@ -426,7 +425,7 @@
     },
     {
       "name": "transport_borders",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "transport",
       "filter": [
         "and",
@@ -486,7 +485,7 @@
     },
     {
       "name": "transport_primary_secondary_borders",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "transport",
       "filter": [
         "and",
@@ -558,7 +557,7 @@
     },
     {
       "name": "transport_aeroway",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "transport",
       "filter": [
         "and",
@@ -601,7 +600,7 @@
     },
     {
       "name": "transport_piste_aerialway",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "transport",
       "filter": [
         "or",
@@ -649,7 +648,7 @@
     },
     {
       "name": "transport_low_zoom",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "transport",
       "filter": ["or",
         [
@@ -679,16 +678,7 @@
         "color": [
           "data-condition",
           ["class", "==", "water"],
-          [
-            "input-range",
-            "zoom",
-            "expo",
-            1.75,
-            8,
-            "#82b3e6",
-            10,
-            "#6296ce"
-          ],
+          "#6296ce",
           ["type", "==", "path"],
           "rgb(91, 185, 116)",
           ["or", ["type", "==", "road"], ["class", "==", "unclassified"]],
@@ -747,7 +737,7 @@
     },
     {
       "name": "transport-primary",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "transport",
       "filter": [
         "and",
@@ -815,7 +805,7 @@
     },
     {
       "name": "motor_trunk_borders",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "transport",
       "filter": [
         "and",
@@ -889,7 +879,7 @@
     },
     {
       "name": "motor_trunk",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "transport",
       "filter": [
         "and",
@@ -963,7 +953,7 @@
     },
     {
       "name": "motor_trunk_borders_1",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "transport",
       "filter": [
         "and",
@@ -1029,7 +1019,7 @@
     },
     {
       "name": "motor_trunk_1",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "transport",
       "filter": [
         "and",
@@ -1103,7 +1093,7 @@
     },
     {
       "name": "motor_trunk_borders_2",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "transport",
       "filter": [
         "and",
@@ -1169,7 +1159,7 @@
     },
     {
       "name": "motor_trunk_2",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "transport",
       "filter": [
         "and",
@@ -1243,7 +1233,7 @@
     },
     {
       "name": "motor_trunk_borders_3",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "transport",
       "filter": [
         "and",
@@ -1309,7 +1299,7 @@
     },
     {
       "name": "motor_trunk_3",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "transport",
       "filter": [
         "and",
@@ -1383,7 +1373,7 @@
     },
     {
       "id": "boundaries",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "boundary",
       "filter": ["and", ["adminLevel", "has", [2, 4]], ["maritime", "==", false]],
       "type": "line",
@@ -1419,7 +1409,7 @@
     },
     {
       "name": "equator",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "equator",
       "type": "line",
       "minzoom": 0,
@@ -1435,7 +1425,7 @@
     },
     {
       "name": "buildings",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "buildings",
       "type": "fill",
       "opaque": true,
@@ -1456,7 +1446,7 @@
     },
     {
       "name": "buildings_highlight",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "buildings",
       "type": "line",
       "layout": {
@@ -1486,10 +1476,10 @@
     },
     {
       "name": "country_state",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "filter": [
         "or",
-        ["and", ["class", "==", "continent"], ["name_en", "==", "Antarctica"]],
+        ["and", ["class", "==", "continent"], ["?name", "==", "Antarctica"]],
         ["class", "has", ["country", "state"]]
       ],
       "layer": "place",
@@ -1500,17 +1490,7 @@
         "text-field": [
           "data-condition",
           ["class", "==", "continent"],
-          "?!Uname",
-          ["class", "==", "state"],
-          [
-            "input-range",
-            "zoom",
-            "step",
-            0,
-            "?abbr,?name",
-            3,
-            "?!Uname"
-          ],
+          "?!P!Uname_XX",
           "default",
           [
             "input-range",
@@ -1519,12 +1499,19 @@
             0,
             "?abbr,?name",
             3,
-            "?name"
+            [
+              "data-condition",
+              ["and", ["?!Pname_XX", "!=", ""], ["?!Pname_XX", "has", "?name"]],
+              "?name",
+              "default",
+              ["?name", "\n", "?!Pname_XX"]
+            ]
           ]
         ],
         "text-anchor": "center",
+        "text-line-height": 0.02,
         "text-offset": [0, 0],
-        "text-padding": [1, 1]
+        "text-padding": [4, 2]
       },
       "paint": {
         "text-size": [
@@ -1536,25 +1523,22 @@
             "expo",
             1.5,
             0,
-            17,
+            14,
             4,
-            36
+            28
           ],
           ["class", "==", "state"],
           [
             "input-range",
             "zoom",
-            "expo",
-            1.5,
+            "lin",
             0,
-            12,
-            4,
-            22,
-            7,
-            36
+            10,
+            6,
+            20
           ],
           "default",
-          18
+          15.3
         ],
         "text-fill": [
           "data-condition",
@@ -1571,18 +1555,9 @@
         "text-stroke-width": [
           "data-condition",
           ["class", "==", "state"],
-          [
-            "input-range",
-            "zoom",
-            "expo",
-            1.5,
-            0,
-            0.5,
-            4,
-            0.3
-          ],
+          0.7,
           ["class", "==", "continent"],
-          0.2,
+          0.5,
           "default",
           0
         ]
@@ -1590,7 +1565,7 @@
     },
     {
       "name": "places",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "minzoom": 4,
       "maxzoom": 13,
       "filter": ["class", "has", ["city", "town", "village", "hamlet", "neighbourhood", "island", "suburb"]],
@@ -1624,11 +1599,11 @@
             "zoom",
             "lin",
             5,
-            14,
+            12,
             9,
-            20,
+            17,
             13,
-            38
+            32.3
           ],
           ["class", "==", "town"],
           [
@@ -1636,11 +1611,11 @@
             "zoom",
             "lin",
             8,
-            14,
+            12,
             10,
-            18,
+            15.3,
             13,
-            25
+            21.25
           ],
           ["class", "has", ["neighbourhood", "suburb"]],
           [
@@ -1648,9 +1623,9 @@
             "zoom",
             "lin",
             10,
-            16,
+            13.6,
             15,
-            18
+            15.3
           ],
           ["class", "has", ["hamlet", "village"]],
           [
@@ -1658,12 +1633,12 @@
             "zoom",
             "lin",
             10.5,
-            14,
             12,
-            18
+            12,
+            15.3
           ],
           "default",
-          17
+          14.45
         ],
         "text-fill": [
           "data-condition",
@@ -1683,18 +1658,24 @@
           ]
         ],
         "text-stroke": "rgba(255, 255, 255, 0.75)",
-        "text-stroke-width": 0.2
+        "text-stroke-width": 0.65
       }
     },
     {
       "name": "water_label",
-      "source": "streets-v2",
+      "source": "streets-v3",
       "filter": ["class", "==", "water"],
       "layer": "poi",
       "type": "glyph",
       "layout": {
         "text-family": "roboto-medium",
-        "text-field": "?name",
+        "text-field": [
+          "data-condition",
+          ["and", ["name_en", "!=", ""], ["name_en", "has", "?name"]],
+          "?name",
+          "default",
+          ["?name", "\n", "?name_en"]
+        ],
         "text-anchor": "center",
         "text-offset": [0, 0],
         "text-padding": [1, 1]
@@ -1709,9 +1690,9 @@
             "expo",
             1.5,
             0,
-            16,
+            14,
             3,
-            40
+            22
           ],
           ["type", "==", "sea"],
           [
@@ -1720,14 +1701,14 @@
             "expo",
             1.5,
             0,
-            12,
+            10,
             4,
-            22,
+            16,
             7,
-            40
+            22
           ],
           "default",
-          16
+          13.6
         ],
         "text-fill": "#00669E",
         "text-stroke": "#00669E",
@@ -1737,7 +1718,7 @@
     {
       "name": "poi_labels",
       "filter": ["class", "!=", "addr"],
-      "source": "streets-v2",
+      "source": "streets-v3",
       "layer": "poi",
       "type": "glyph",
       "layout": {
@@ -1763,9 +1744,9 @@
         "text-size": [
           "data-condition",
           ["class", "==", "aboriginal_lands"],
-          15,
+          12.75,
           "default",
-          17
+          14.45
         ],
         "text-fill": [
           "data-condition",
@@ -1798,13 +1779,13 @@
           "default",
           "#556e7a"
         ],
-        "text-stroke": "rgba(255, 255, 255, 0.85)",
+        "text-stroke": "rgba(255, 255, 255, 0.75)",
         "text-stroke-width": [
           "data-condition",
           ["class", "==", "water"],
           0,
           "default",
-          0.25
+          0.5
         ]
       }
     }

@@ -42,21 +42,16 @@ export default class Program {
     const { gl } = context
     this.gl = gl
     // create the program
-    const program = this.glProgram = gl.createProgram()
-    // setup attribute location data if necessary
-    const attrLoc = gl.attributeLocations
-    if (attrLoc) for (const attr in attrLoc) gl.bindAttribLocation(program, attrLoc[attr], attr)
+    this.glProgram = gl.createProgram()
   }
 
   buildShaders (vertex: shaderSource, fragment: shaderSource) {
     const { gl, glProgram } = this
-    const vertexShaderSource = vertex.source
-    const vertexUniforms = vertex.uniforms
-    const fragmentShaderSource = fragment.source
-    const fragmentUniforms = fragment.uniforms
+    // setup attribute locations prior to building
+    this.setupAttributes(vertex.attributes)
     // load vertex and fragment shaders
-    const vertexShader = this.vertexShader = loadShader(gl, vertexShaderSource, gl.VERTEX_SHADER)
-    const fragmentShader = this.fragmentShader = loadShader(gl, fragmentShaderSource, gl.FRAGMENT_SHADER)
+    const vertexShader = this.vertexShader = loadShader(gl, vertex.source, gl.VERTEX_SHADER)
+    const fragmentShader = this.fragmentShader = loadShader(gl, fragment.source, gl.FRAGMENT_SHADER)
     // if shaders worked, attach, link, validate, etc.
     if (vertexShader && fragmentShader) {
       gl.attachShader(glProgram, vertexShader)
@@ -67,7 +62,7 @@ export default class Program {
         throw Error(gl.getProgramInfoLog(glProgram))
       }
 
-      this.setupUniforms({ ...vertexUniforms, ...fragmentUniforms })
+      this.setupUniforms({ ...vertex.uniforms, ...fragment.uniforms })
     } else { throw Error('missing shaders') }
   }
 
@@ -79,6 +74,15 @@ export default class Program {
     }
   }
 
+  setupAttributes (attributes) {
+    const { gl, glProgram } = this
+    const attrLoc = gl.attributeLocations
+
+    if (attrLoc) for (const attr in attrLoc) {
+      gl.bindAttribLocation(glProgram, attrLoc[attr], attributes[attr])
+    }
+  }
+
   delete () {
     const { gl, vertexShader, fragmentShader } = this
     gl.deleteShader(vertexShader)
@@ -86,7 +90,9 @@ export default class Program {
   }
 
   use () {
-    this.gl.useProgram(this.glProgram)
+    const { gl, glProgram } = this
+
+    gl.useProgram(glProgram)
     this.flush()
   }
 

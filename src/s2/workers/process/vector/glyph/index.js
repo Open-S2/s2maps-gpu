@@ -91,13 +91,12 @@ export default class GlyphManager {
     const { rtree, mainThread, glyphMap } = this
     rtree.clear()
     const res = []
-    let size = 0
     // sort the features before running the collisions
     features = features.sort(featureSort)
     // process the features
     for (const feature of features) {
       // Step 1: prebuild the glyph positions and bbox
-      buildGlyphQuads(feature, glyphMap, size++)
+      buildGlyphQuads(feature, glyphMap)
       // Step 2: check the rtree if we want to pre filter
       if (feature.overdraw || !rtree.collides(feature)) res.push(feature)
     }

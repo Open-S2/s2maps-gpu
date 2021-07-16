@@ -1,8 +1,4 @@
-#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
-#else
-precision mediump float;
-#endif
 
 attribute vec2 aExtent; // the quad
 attribute vec2 aPos; // STPoint positional data
@@ -18,17 +14,19 @@ varying float strokeWidth;
 
 // uniform bool uInteractive;
 uniform float uDevicePixelRatio;
+uniform vec4 uBounds;
 uniform vec2 uAspect;
 
 uniform vec4 uColor;
 uniform float uRadius;
 uniform vec4 uStroke;
-uniform float uStrokeWidth;
+uniform float uSWidth;
 uniform float uOpacity;
 
 @import "./getPos.glsl"
 
 void main () {
+  if (aPos.x < uBounds.x || aPos.x > uBounds.z || aPos.y < uBounds.y || aPos.y > uBounds.w) return;
   // decode attributes
   // if (false) {
   //   int id = int(aID);
@@ -39,7 +37,7 @@ void main () {
   color = uColor;
   radius = uRadius * uDevicePixelRatio;
   stroke = uStroke;
-  strokeWidth = uStrokeWidth * uDevicePixelRatio;
+  strokeWidth = uSWidth * uDevicePixelRatio;
   // if (!uInteractive) opacity = decodeFeature(false, index, featureIndex)[0];
   float opacity = uOpacity;
   // else opacity = 1.;

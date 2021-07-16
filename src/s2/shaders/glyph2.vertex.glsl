@@ -49,22 +49,7 @@ uniform sampler2D uFeatures;
 // text order: (paint)size->strokeWidth->fill->stroke
 void main () {
   if (aST.x < uBounds.x || aST.x > uBounds.z || aST.y < uBounds.y || aST.y > uBounds.w) return;
-  vec4 glPos;
-  if (uFaceST[1] < 12.) {
-    vec4 zero = getZero();
-    zero.xyz /= zero.w;
-    // prep xyz
-    vec4 xyz = STtoXYZ(aST);
-    // for points, add a little to ensure it doesn't get clipped
-    xyz.xyz *= 1.001;
-    // find the position on screen
-    glPos = uMatrix * xyz;
-    glPos.xyz /= glPos.w;
-    glPos.w = 1.;
-    if (glPos.z > zero.z) return;
-  } else {
-    glPos = getPosLocal(aST);
-  }
+  vec4 glPos = getPos(aST);
 
   bool shouldDraw = true;
   float strokeWidth;

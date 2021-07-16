@@ -196,6 +196,7 @@ export default class Map extends Camera {
       postMessage({ type: 'mouseenter', feature: newFeature })
     } else {
       if (newFeature) {
+        console.log(newFeature)
         this.parent.dispatchEvent(new CustomEvent('mouseenter', { detail: newFeature }))
         this._canvas.style.cursor = newFeature.__cursor || 'default'
       }
@@ -320,6 +321,20 @@ export default class Map extends Camera {
     } else {
       this.parent.dispatchEvent(new CustomEvent('pos', { detail: { zoom, lon, lat } }))
     }
+  }
+
+  screenshot () {
+    requestAnimationFrame(() => {
+      if (this._fullyRenderedScreen()) {
+        // assuming the screen is ready for a screen shot we ask for a draw
+        const screen = this.painter.getScreen()
+        if (this.webworker) {
+          postMessage({ type: 'screenshot', screen })
+        } else {
+          this.parent.dispatchEvent(new CustomEvent('screenshot', { detail: screen }))
+        }
+      } else { this.screenshot() }
+    })
   }
 
   // tile data is stored in the map, waiting for the render to

@@ -10,7 +10,7 @@ import type { ProgramType } from '../gl/programs/program'
 
 export type VectorTileSource = {
   type: 'vector',
-  subType: 'fill' | 'line' | 'point',
+  subType: 'fill' | 'line' | 'point' | 'heatmap',
   vertexArray: Int16Array,
   radiiArray?: Float32Array,
   indexArray: Uint32Array,
@@ -74,10 +74,6 @@ export type FeatureGuide = { // eslint-disable-next-line
   lch?: boolean
 }
 
-export type ChildRequest = { // eslint-disable-next-line
-  [string | number]: Array<Tile> // layerIndex (hash):
-}
-
 // eslint-disable-next-line
 export type SourceData = { [string | number]: RasterTileSource | VectorTileSource | GlyphTileSource }
 
@@ -107,11 +103,10 @@ export default class Tile {
   top: Float32Array
   division: number
   sourceData: SourceData = {}
-  heatmapGuide: Array<FeatureGuide> = []
   featureGuide: Array<FeatureGuide> = []
   context: Context
-  childrenRequests: ChildRequest = {}
   interactiveGuide: Map<number, Object> = new Map()
+  rendered: boolean = false
   constructor (context: Context, face: number, zoom: number,
     x: number, y: number, hash: number, size?: number = 512) {
     this.context = context
@@ -138,17 +133,17 @@ export default class Tile {
   // a parents' parent or deeper, so we need to reflect that int the tile property. The other case
   // is the tile wants to display a layer that exists in a 'lower' zoom than this one.
   injectParentTile (parent: Tile, layers: Array<Layer>) {
-    // if (this.zoom >= 12) return
-    // const bounds = this._buildBounds(parent)
-    // for (const feature of parent.featureGuide) {
-    //   const { maskLayer, layerIndex } = feature
-    //   const { maxzoom } = layers[layerIndex]
-    //   if (maskLayer) continue // ignore mask features
-    //   if (this.zoom <= maxzoom) this.featureGuide.push({ ...feature, tile: this, parent, bounds })
-    // }
+    if (this.zoom >= 12) return
+    const bounds = this._buildBounds(parent)
+    // feature guides
+    for (const feature of parent.featureGuide) {
+      const { maxzoom } = layers[feature.layerIndex]
+      if (feature.maskLayer) continue // ignore mask features
+      if (this.zoom <= maxzoom) this.featureGuide.push({ ...feature, tile: this, parent, bounds })
+    }
   }
 
-  // currently this is only for glyphs. By sharing glyph data with children,
+  // currently this is for glyphs, points, and heatmaps. By sharing glyph data with children,
   // the glyphs will be rendered 4 or even more times. To alleviate this, we can set boundaries
   // of what points will be considered
   _buildBounds (parent: Tile) {
@@ -212,6 +207,21 @@ export default class Tile {
     }
   }
 
+  flush (data) {
+    const { source } = data
+    // remove "left over" feature guide data from parent injection that wont be replaced in the future
+    this.featureGuide = this.featureGuide.filter(fg => {
+      const split = fg.sourceName.split(':')
+      const fgSource = split[0]
+      const fgType = split.pop()
+      return !(
+        fgSource === source &&
+        !data[fgType] &&
+        fg.parent
+      )
+    })
+  }
+
   // the zoom determines the number of divisions necessary to maintain a visually
   // asthetic spherical shape. As we zoom in, the tiles are practically flat,
   // so division is less useful.
@@ -248,7 +258,10 @@ export default class Tile {
         lch,
         mode: this.sourceData.mask.mode
       }
-      if (this.context.type === 1 && paint) feature.color = (paint.color(null, null, this.zoom)).getRGB()
+      if (this.context.type === 1 && paint) {
+        feature.color = (paint.color(null, null, this.zoom)).getRGB()
+        feature.opacity = [paint.opacity(null, null, this.zoom)]
+      }
       this.featureGuide.push(feature)
     }
   }
@@ -306,8 +319,8 @@ export default class Tile {
 
   injectVectorSourceData (sourceName: string, vertexArray: Int16Array, indexArray?: Uint32Array,
     codeTypeArray: Uint8Array, featureGuideArray: Float32Array, layers: Array<Layer>): VectorTileSource {
-    // Since a parent may have been injected, we need to remove any instances of the said source data.
-    // this.featureGuide = this.featureGuide.filter(fg => fg.sourceName !== sourceName)
+    // filter parent data if applicable
+    this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === sourceName && fg.parent))
     // store a reference to the source
     const subType = sourceName.split(':').pop()
     const vectorSource = this.sourceData[sourceName] = {
@@ -317,8 +330,6 @@ export default class Tile {
       indexArray,
       codeTypeArray
     }
-    // keep track of layerIndexs used for removing parent data if necessary
-    let layerIndexes = new Set()
     // we work off the featureGuideArray, adding to the buffer as we go
     const lgl = featureGuideArray.length
     let i = 0
@@ -331,7 +342,6 @@ export default class Tile {
       }
       // grab the size, layerIndex, count, and offset, and update the index
       const [layerIndex, count, offset, encodingSize] = featureGuideArray.slice(i, i + 4)
-      layerIndexes.add(layerIndex)
       i += 4
       // build featureCode
       const featureCode = new Float32Array(encodingSize ? [...featureGuideArray.slice(i, i + encodingSize)] : [0])
@@ -360,40 +370,38 @@ export default class Tile {
       i += encodingSize
       // if webgl1, we have color (and width if line) data
       if (this.context.type === 1) {
-        feature.color = feature.subFeatureCode = feature.featureCode // default subFeatureCode is for fill which is only color
+        const subFeatureCode = featureCode // default subFeatureCode is for fill which is only color
         const subEncodingSize = featureGuideArray[i]
         i++
         feature.featureCode = new Float32Array(subEncodingSize ? [...featureGuideArray.slice(i, i + subEncodingSize)] : [0])
         i += subEncodingSize
-        // if (subType === 'fill') {
-        //   feature.color = feature.subFeatureCode.slice(0, 4)
-        //   feature.opacity = feature.subFeatureCode[4]
-        // } else if (subType === 'line') {
-        if (subType === 'line') {
-          feature.color = feature.subFeatureCode.slice(0, 4)
-          feature.width = feature.subFeatureCode[4]
+        if (subType === 'fill') {
+          feature.color = []
+          feature.opacity = []
+          const len = subFeatureCode.length / 5
+          for (let s = 0; s < len; s++) {
+            const idx = s * 5
+            feature.color.push(...subFeatureCode.slice(idx, idx + 4))
+            feature.opacity.push(subFeatureCode[idx + 4])
+          }
+        } else if (subType === 'line') {
+          feature.color = subFeatureCode.slice(0, 4)
+          feature.width = subFeatureCode[4]
         } else if (subType === 'point') {
-          feature.color = feature.subFeatureCode.slice(0, 4)
-          feature.radius = feature.subFeatureCode[4]
-          feature.stroke = feature.subFeatureCode.slice(5, 9)
-          feature.strokeWidth = feature.subFeatureCode[9]
-          feature.opacity = feature.subFeatureCode[10]
+          feature.color = subFeatureCode.slice(0, 4)
+          feature.radius = subFeatureCode[4]
+          feature.stroke = subFeatureCode.slice(5, 9)
+          feature.strokeWidth = subFeatureCode[9]
+          feature.opacity = subFeatureCode[10]
         } else if (subType === 'heatmap') {
-          feature.intensity = feature.subFeatureCode[0]
-          feature.radius = feature.subFeatureCode[1]
-          feature.opacity = feature.subFeatureCode[2]
+          feature.intensity = subFeatureCode[0]
+          feature.radius = subFeatureCode[1]
+          feature.opacity = subFeatureCode[2]
         }
       }
       // store
-      if (subType === 'heatmap') this.heatmapGuide.push(feature)
-      else this.featureGuide.push(feature)
-      // if a lower zoom tile needs this feature, we add
-      const childRequest = this.childrenRequests[layerIndex]
-      if (childRequest && childRequest.length) for (const tile of childRequest) tile.featureGuide.push({ ...feature, tile, parent: this })
+      this.featureGuide.push(feature)
     }
-    // filter parent data if applicable
-    layerIndexes = [...layerIndexes]
-    this.featureGuide = this.featureGuide.filter(fg => !(layerIndexes.includes(fg.layerIndex) && fg.parent))
     // build the VAO
     buildSource(this.context, vectorSource)
   }
@@ -401,6 +409,8 @@ export default class Tile {
   injectGlyphSourceData (sourceName: string, glyphFilterVertices: Float32Array,
     glyphQuads: Float32Array, glyphColors: Uint8ClampedArray,
     featureGuideBuffer: Float32Array, layers: Array<Layer>) {
+    // filter parent data if applicable
+    this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === sourceName && fg.parent))
     const { context } = this
     const glyphSource = this.sourceData[sourceName] = {
       type: 'glyph',
@@ -408,8 +418,6 @@ export default class Tile {
       glyphQuads,
       glyphColors
     }
-    // keep track of layerIndexs used for removing parent data if necessary
-    let layerIndexes = new Set()
     // LayerCode: layerIndex, offset, count, codeLength, code
     // we work off the featureGuideBuffer, adding to the buffer as we go
     const lgl = featureGuideBuffer.length
@@ -417,9 +425,9 @@ export default class Tile {
     while (i < lgl) {
       // grab the size, layerIndex, count, and offset, and update the index
       const [layerIndex, type, filterOffset, filterCount, offset, count, encodingSize] = featureGuideBuffer.slice(i, i + 7)
-      layerIndexes.add(layerIndex)
       i += 7
       // grab the layers type and code
+      if (!layers[layerIndex]) console.log(layerIndex, featureGuideBuffer)
       const { overdraw, depthPos, code, iconCode, lch, interactive } = layers[layerIndex]
       // create and store the featureGuide
       const feature = {
@@ -462,9 +470,6 @@ export default class Tile {
 
     // build the VAO
     buildSource(context, glyphSource)
-    // filter parent data if applicable
-    layerIndexes = [...layerIndexes]
-    this.featureGuide = this.featureGuide.filter(fg => !(layerIndexes.includes(fg.layerIndex) && fg.parent))
   }
 
   // we don't parse the interactiveData immediately to save time

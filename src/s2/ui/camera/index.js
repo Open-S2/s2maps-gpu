@@ -86,8 +86,17 @@ export default class Camera {
     else if (type === 'glyphdata') this._injectGlyphSourceData(data.source, data.tileID, data.glyphFilterBuffer, data.glyphQuadBuffer, data.glyphColorBuffer, data.featureGuideBuffer)
     else if (type === 'glyphimages') this.painter.injectGlyphImages(data.maxHeight, data.images)
     else if (type === 'interactivedata') this._injectInteractiveData(data.source, data.tileID, data.interactiveGuideBuffer, data.interactiveDataBuffer)
+    else if (type === 'flush') this._injectFlush(data)
     // new 'paint', so painter is dirty
     this.painter.dirty = true
+  }
+
+  _injectFlush (data) {
+    const { tileID } = data
+    if (this.tileCache.has(tileID)) {
+      const tile = this.tileCache.get(tileID)
+      tile.flush(data)
+    }
   }
 
   _injectMaskGeometry (tileID: number, vertexBuffer: ArrayBuffer,
@@ -169,6 +178,18 @@ export default class Camera {
     } else { return this.tilesInView }
   }
 
+  _fullyRenderedScreen (): boolean {
+    const tiles = this._getTiles()
+    let fullyRendered = true
+    for (const tile of tiles) {
+      if (tile.rendered !== true) {
+        fullyRendered = false
+        break
+      }
+    }
+    return fullyRendered
+  }
+
   _draw () {
     const { style, painter, projection } = this
     // prep tiles
@@ -191,7 +212,5 @@ export default class Camera {
     painter.dirty = false
     style.dirty = false
     projection.dirty = false
-    // flush incase
-    // this.painter.context.gl.flush()
   }
 }

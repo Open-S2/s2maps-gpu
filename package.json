@@ -148,7 +148,7 @@
     "react-router-dom": "^5.2.0",
     "resolve": "1.18.1",
     "resolve-url-loader": "^3.1.2",
-    "s2-vector-tile": "^1.7.2",
+    "s2-vector-tile": "^1.7.4",
     "s2projection": "^1.9.2",
     "s2rtin": "^0.5.0",
     "sass-loader": "^10.0.5",

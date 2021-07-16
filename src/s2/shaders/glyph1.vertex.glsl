@@ -1,40 +1,42 @@
-#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
-#else
-precision mediump float;
-#endif
 
-@define MIN_SDF_SIZE 0.08
+@define MAX_GAMMA 0.105
+@define MIN_GAMMA 0.0525
+@define ICON_GAMMA 0.08
 
 attribute vec2 aUV; // float [u, v]
 attribute vec2 aST; // float [s, t]                   (INSTANCED)
 attribute vec2 aXY; // float [x, y]                   (INSTANCED)
 attribute vec2 aOffset; // float [xOffset, yOffset]   (INSTANCED)
-attribute vec2 aTexXY; // float [u, v]                (INSTANCED)
+attribute vec2 aWH; // float [width, height]          (INSTANCED)
+attribute vec2 aTexXY; // float [x, y]                (INSTANCED)
 attribute vec2 aTexWH; // float [width, height]       (INSTANCED)
 attribute float aID; // float ID                      (INSTANCED)
 attribute vec4 aColor; // [r, g, b, a]                (INSTANCED)
 
-varying float draw;
-varying float buf;
+varying float vDraw;
+varying float vBuf;
+varying float vGamma;
 varying vec2 vTexcoord;
-varying vec4 color;
-varying vec4 stroke;
+varying vec4 vColor;
 
 // glyph texture
 uniform bool uIsIcon;
 uniform bool uOverdraw;
-uniform vec2 uTexSize;
+uniform bool uIsStroke;
 uniform vec2 uAspect;
+uniform vec2 uTexSize;
+uniform vec4 uBounds;
 uniform bool uInteractive;
 uniform float uDevicePixelRatio;
-// WebGL1 specific uniforms
+// The glyph filter texture.
+uniform sampler2D uFeatures;
+
+// webgl1 inputs
 uniform float uSize;
 uniform vec4 uFill;
 uniform vec4 uStroke;
-uniform float uStrokeWidth;
-// The glyph filter texture.
-uniform sampler2D uFeatures;
+uniform float uSWidth;
 
 @import "./getPos.glsl"
 
@@ -68,19 +70,8 @@ int rightShift (int num, float shifts) {
 
 // text order: (paint)size->strokeWidth->fill->stroke
 void main () {
-  vec4 glPos;
-  if (uFaceST[1] < 12.) {
-    // prep xyz
-    vec4 xyz = STtoXYZ(aST);
-    // for points, add a little to ensure it doesn't get clipped
-    xyz.xyz *= 1.001;
-    // find the position on screen
-    glPos = uMatrix * xyz;
-    glPos.xyz /= glPos.w;
-    glPos.w = 1.;
-  } else {
-    glPos = getPosLocal(aST);
-  }
+  if (aST.x < uBounds.x || aST.x > uBounds.z || aST.y < uBounds.y || aST.y > uBounds.w) return;
+  vec4 glPos = getPos(aST);
 
   bool shouldDraw = true;
   float strokeWidth;
@@ -102,40 +93,48 @@ void main () {
   if (!shouldDraw) return;
 
   // explain to fragment we are going to draw
-  draw = (uInteractive) ? 2. : 1.;
+  vDraw = (uInteractive) ? 2. : 1.;
 
   // prep the index and featureIndex
   int index = 0;
   int featureIndex = 0;
   // decode size
-  float size = uSize * uDevicePixelRatio * 2.;
+  float _size = uSize;
+  float size = _size * uDevicePixelRatio * 2.;
   // set fill
-  color = (uInteractive)
+  vColor = (uInteractive)
     ? vec4(inputID.rgb, 1.)
     : (uIsIcon)
       ? aColor
       : uFill;
-
-  color.rgb *= color.a;
+  vColor.rgb *= vColor.a;
 
   // prep texture read buffer
-  buf = 0.5;
-  if (!uIsIcon) {
-    strokeWidth = uStrokeWidth * uDevicePixelRatio * 2.;
-    stroke = uStroke;
-    stroke.rgb *= stroke.a;
+  vBuf = 0.5;
+  if (uIsStroke) {
+    strokeWidth = uSWidth;
     if (strokeWidth > 0.) {
-      buf = clamp((MIN_SDF_SIZE - buf) * strokeWidth + buf, MIN_SDF_SIZE, buf); // deltaY / deltaX + y-intercept
-    }
+      vColor = uStroke;
+      vColor.rgb *= vColor.a;
+      vBuf = 1. - clamp(0.5 + (strokeWidth / 2.), 0.5, 0.999); // strokeWidth is 0->1
+    } else { return; }
   }
 
-  // get the size of the glyph stored
-  vec2 glyphSize = vec2(aTexWH.x * size, size);
+  // set gamma based upon size
+  vGamma = uIsIcon ? ICON_GAMMA : max(
+    MIN_GAMMA,
+    min(
+      MAX_GAMMA,
+      ((MAX_GAMMA - MIN_GAMMA) / (15. - 30.)) * (_size - 15.) + MAX_GAMMA
+    )
+  );
+
   // add x-y offset as well as use the UV to map the quad
-  vec2 XY = vec2(aXY.x + aOffset.x, aXY.y - aOffset.y) * size; // subtract the sdfWidth
-  glPos.xy += (XY / uAspect) + (glyphSize / uAspect * aUV);
+  vec2 XY = (aXY + (aOffset * size)) / uAspect; // setup the xy positional change in pixels
+  vec2 quad = (aWH * size) / uAspect * aUV;
+  glPos.xy += XY + quad;
   // set texture position (don't bother wasting time looking up if drawing "interactive quad")
-  if (!uInteractive) vTexcoord = (aTexXY / uTexSize) + (vec2(aTexWH.x * aTexWH.y, aTexWH.y) / uTexSize * aUV);
+  if (!uInteractive) vTexcoord = (aTexXY / uTexSize) + (aTexWH / uTexSize * aUV);
 
   // set position (reproject from "0 - 1" to "(-1) - 1")
   gl_Position = glPos;

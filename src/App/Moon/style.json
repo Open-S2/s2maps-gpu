@@ -5,26 +5,24 @@
   "zoom": 0,
   "minzoom": -1,
   "maxzoom": 9.99,
+  "zoom-offset": 0.5,
   "sources": {
-    "moon-poi": "https://s3.s2maps.io/moon-poi.s2tiles",
-    "moon": {
-      "path": "http://192.168.0.110:8000/data/moon-v1",
-      "type": "raster",
-      "extension": "webp",
-      "minzoom": 0,
-      "maxzoom": 10,
-      "tileSize": 512
-    }
+    "moon-poi": "%REACT_APP_S2TILES%/moon-poi-v1.s2tiles",
+    "moon": "%REACT_APP_S2TILES%/moon-v1.s2tiles"
   },
   "fonts": {
-    "roboto-medium": "http://localhost:8000/fonts/Roboto/RobotoMedium"
+    "noto-sans-medium": "https://api.s2maps.io/public/glyphs/Noto/NotoSansMedium",
+    "roboto-medium": {
+      "path": "https://api.s2maps.io/public/glyphs/Roboto/RobotoMedium",
+      "fallback": "noto-sans-medium"
+    }
   },
   "icons": {},
   "wallpaper": {
-    "skybox": "https://s3.s2maps.io/backgrounds/milkyway",
+    "skybox": "https://api.s2maps.io/public/backgrounds/milkyway",
     "loadingBackground": "rgb(9, 8, 17)",
-    "size": 1024,
-    "type": "jpg"
+    "size": 2048,
+    "type": "webp"
   },
   "colorBlind": false,
   "layers": [

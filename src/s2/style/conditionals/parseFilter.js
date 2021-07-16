@@ -11,7 +11,7 @@ export default function parseFilter (filter: undefined | Array<string | Array<an
     const [key, condition, value] = filter
     const filterLambda = parseFilterCondition(condition, value)
     return (properties: Object = {}) => {
-      return filterLambda(properties[coalesceField(key, properties)], properties)
+      return filterLambda(coalesceField(key, properties, true), properties)
     }
   }
   // first create all conditionals
@@ -33,7 +33,7 @@ export default function parseFilter (filter: undefined | Array<string | Array<an
     return (properties: Object = {}) => {
       for (const condition of conditionals) {
         if (condition.key) {
-          if (condition.condition(properties[condition.key], properties)) return true
+          if (condition.condition(coalesceField(condition.key, properties, true), properties)) return true
         } else if (condition.condition(properties)) return true
       }
       return false
@@ -42,7 +42,7 @@ export default function parseFilter (filter: undefined | Array<string | Array<an
     return (properties: Object = {}) => {
       for (const condition of conditionals) {
         if (condition.key) {
-          if (!condition.condition(properties[condition.key], properties)) return false
+          if (!condition.condition(coalesceField(condition.key, properties, true), properties)) return false
         } else if (!condition.condition(properties)) return false
       }
       return true

@@ -4,16 +4,13 @@ import { GlyphSource, LocalSource, S2JSONSource, S2TilesSource, Source, TextureP
 import type { StylePackage } from '../style/styleSpec'
 import type { TileRequest } from './workerPool'
 
-type SessionToken = {
-  token: string,
-  age: number
-}
-
 export type IconSet = { glyphID: number, colorID: number }
 
 export type IconMap = { [string]: Array<IconSet> }
 
 export type IconPacks = { [string]: IconMap }
+
+type Sources = { [string]: Source }
 
 /**
   SOURCE WORKER
@@ -53,9 +50,10 @@ export default class SourceWorker {
   status: 'building' | 'ready' = 'building'
   workers: Array<MessageChannel.port2> = []
   cache: Array<[string, Array<TileRequest>]> = [] // each element in array -> [mapID, Array<TileRequest>]
-  sessionToken: SessionToken = { age: 0 }
-  sources: { [string]: Source } = {} // path is the key, so ["https://api.s2maps.io/data/oconnorct1/test.s2tiles"] = Source
+  sessionKeys: { [string]: { token: string, key: string, exp: number } } = {} // [mapID]: token
+  sources: { [string]: Sources } = {} // [mapID]: { [sourceName]: Source }
   glyphs: { [string]: GlyphSource } = {} // path is key again
+  analytics: Analytics
   texturePack: TexturePack = new TexturePack()
 
   onMessage ({ data }) {
@@ -73,32 +71,47 @@ export default class SourceWorker {
   }
 
   _loadStyle (mapID: string, style: StylePackage = {}) {
+    // create the source map, if sources already exists, we are dumping the old sources
+    this.sources[mapID] = {}
+    // pull style data
+    const { sources, layers, fonts, icons, analytics, apiKey } = style
+
     this.status = 'building'
+    // store analytics
+    this.analytics = analytics || {}
+    // store apiKey if it exists
+    if (apiKey) this.sessionKeys[mapID] = { apiKey }
     // now build sources
-    this._buildSources(style.sources, style.layers, style.fonts, style.icons)
+    this._buildSources(mapID, sources, layers, fonts, icons)
   }
 
-  _buildSources (sources = {}, layers: Array<Layer>, fonts = {}, icons = {}) {
+  async _buildSources (mapID: string, sources = {}, layers: Array<Layer>, fonts = {}, icons = {}) {
     const promises = []
     // sources
     for (const [name, source] of Object.entries(sources)) {
-      promises.push(this._createSource(name, source, layers.filter(layer => layer.source === name)))
+      promises.push(this._createSource(mapID, name, source, layers.filter(layer => layer.source === name)))
     }
     // fonts & icons
     for (let [name, source] of Object.entries({ ...fonts, ...icons })) {
       if (typeof source === 'object') {
-        promises.push(this._createGlyphSource(name, source.path, source.fallback))
-      } else { promises.push(this._createGlyphSource(name, source)) }
+        promises.push(this._createGlyphSource(mapID, name, source.path, source.fallback))
+      } else { promises.push(this._createGlyphSource(mapID, name, source)) }
     }
 
     // run the style config
-    Promise.all(promises)
-      .then(() => {
-        // add in fallbacks
-        this._finalizeGlyphs()
-        this.status = 'ready'
-        this._checkCache()
-      })
+    await Promise.allSettled(promises)
+
+    // grab all the attributions and send them off
+    const attributions = {}
+    for (const source of Object.values(this.sources[mapID])) {
+      for (const [name, link] of Object.entries(source.attributions)) attributions[name] = link
+    }
+    if (Object.keys(attributions).length) postMessage({ mapID, type: 'attributions', attributions })
+
+    // add in fallbacks
+    this._finalizeGlyphs()
+    this.status = 'ready'
+    this._checkCache()
   }
 
   // inject fallbacks & let workers know about icon data
@@ -122,7 +135,7 @@ export default class SourceWorker {
     }
   }
 
-  async _createSource (name: string, input: string, layers: Array<Layer>) {
+  async _createSource (mapID: string, name: string, input: string, layers: Array<Layer>) {
     // prepare variables to build appropriate source type
     let metadata
     if (typeof input === 'object') {
@@ -130,10 +143,8 @@ export default class SourceWorker {
       input = input.path
     }
     const fileType = input.split('.').pop().toLowerCase()
-    const apiSource = input.includes('s2maps://')
-    const path = (apiSource) ? input.replace('s2maps://', 'https://api.s2maps.io/data/') : input
-    // if another map already created the source, return
-    if (this.sources[path]) return
+    const apiSource = input.includes('s2maps://data')
+    const path = (apiSource) ? input.replace('s2maps://', `${process.env.REACT_APP_API_URL}/`) : input
     // create the proper source type
     let source
     if (fileType === 's2tiles') source = new S2TilesSource(name, layers, path, apiSource)
@@ -141,46 +152,45 @@ export default class SourceWorker {
     else if (input === 'tile') source = new LocalSource(name, layers)
     else source = new Source(name, layers, path, apiSource) // default -> folder structure
     // build
-    await source._build()
+    await source.build(apiSource ? await this._requestSessionToken(mapID) : null)
     // incase the input was originally an object, insert the metadata
     if (metadata) source._buildMetadata(metadata)
-    this.sources[path] = source
+    this.sources[mapID][name] = source
   }
 
-  async _createGlyphSource (name: string, input: string, fallback?: string) {
+  async _createGlyphSource (mapID: string, name: string, input: string, fallback?: string) {
     const { texturePack } = this
     // prepare
-    const apiSource = input.includes('s2maps://')
-    const path = (apiSource) ? input.replace('s2maps://', 'https://api.s2maps.io/data/') : input
+    const apiSource = input.includes('s2maps://data')
+    const path = (apiSource) ? input.replace('s2maps://', `${process.env.REACT_APP_API_URL}/`) : input
     // check if already exists
     if (this.glyphs[name]) return
-    const source = new GlyphSource(name, path, fallback, texturePack)
-    await source._build()
+    const source = new GlyphSource(name, path, fallback, texturePack, apiSource)
+    await source.build(apiSource ? await this._requestSessionToken(mapID) : null)
     // build
     this.glyphs[name] = source
   }
 
-  _request (mapID: string, tiles: Array<TileRequest>) {
+  async _request (mapID: string, tiles: Array<TileRequest>) {
     // cache the request if not ready
     if (this.status === 'building') { this.cache.push([mapID, tiles]); return }
     // build requests
-    const self = this
-    self._requestToken(mapID)
-      .then(token => { // ensure we have an up to date request token
-        for (const tile of tiles) {
-          for (const source of Object.values(self.sources)) {
-            const worker = self.workers[self.currWorker]
-            source.tileRequest(mapID, tile, worker, token)
-            self.currWorker++
-            if (self.currWorker >= self.totalWorkers) self.currWorker = 0
-          }
-        }
-        self._checkCache()
-      })
+    const token = await this._requestSessionToken(mapID)
+    for (const tile of tiles) {
+      for (const source of Object.values(this.sources[mapID])) {
+        const worker = this.workers[this.currWorker]
+        source.tileRequest(mapID, token, tile, worker)
+        this.currWorker++
+        if (this.currWorker >= this.totalWorkers) this.currWorker = 0
+      }
+    }
+    this._checkCache()
   }
 
   async _glyphRequest (mapID: string, workerID: number, reqID: string,
     sourceGlyphs: { [string]: GlyphRequest }) {
+    // grab token incase we need it
+    const token = await this._requestSessionToken(mapID)
     // prep
     const { workers } = this
     const promises = []
@@ -188,9 +198,9 @@ export default class SourceWorker {
     const images = []
     // iterate the glyph sources for the unicodes
     for (const [name, unicodes] of Object.entries(sourceGlyphs)) {
-      if (this.glyphs[name]) promises.push(this.glyphs[name].glyphRequest(glyphSources, images, new Uint16Array(unicodes)))
+      if (this.glyphs[name]) promises.push(this.glyphs[name].glyphRequest(glyphSources, images, new Uint16Array(unicodes), token))
     }
-    await Promise.all(promises)
+    await Promise.allSettled(promises)
 
     // if glyphResponse has data, send it back to the worker
     if (Object.keys(glyphSources).length) {
@@ -209,17 +219,32 @@ export default class SourceWorker {
     }
   }
 
-  _requestToken (mapID) {
-    // use mapID to keep track of the api used
-    return new Promise(resolve => {
-      resolve(null)
-    })
+  async _requestSessionToken (mapID: string) {
+    const { sessionKeys, analytics } = this
+    const mapSessionKey = sessionKeys[mapID]
+    if (!mapSessionKey || !mapSessionKey.apiKey) return null
+    const { apiKey, token, exp } = mapSessionKey
+    if (exp && token && exp - new Date().getTime() > 0) return token
+    const { gpu, context, language, width, height } = analytics
+    // grab a new token
+    const sessionKey = await fetch(`${process.env.REACT_APP_API_URL}/session`, {
+        method: 'POST',
+        body: JSON.stringify({ apiKey, gpu, context, language, width, height }),
+        headers: { 'Content-Type': 'application/json' }
+      }).then(res => {
+        if (res.status !== 200 && res.status !== 206) return null
+        return res.json()
+      }).then(t => {
+        if (t.token) return { token: t.token, exp: new Date().getTime() + t.maxAge }
+        return null
+      })
+    // store the new key, exp, and return the key to use
+    if (!sessionKey) return null
+    mapSessionKey.token = sessionKey.token
+    mapSessionKey.exp = sessionKey.exp
+    return mapSessionKey.token
   }
 }
-
-// function requestHash (sessionToken?: string) {
-//   if (!sessionToken) return
-// }
 
 // create the tileworker
 const sourceWorker = new SourceWorker()

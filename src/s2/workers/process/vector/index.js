@@ -23,7 +23,7 @@ export default class VectorManager {
   idGen: IDGen
   constructor (mainThread: Function, sourceThread: MessageChannel.port2, id: number, idGen: IDGen) {
     this.mainThread = mainThread
-    this.glyphManager = new GlyphManager(mainThread, sourceThread, id)
+    this.glyphManager = new GlyphManager(mainThread, sourceThread, id, idGen)
     this.idGen = idGen
   }
 
@@ -90,6 +90,11 @@ export default class VectorManager {
       }
     }
     // build for any feature type that we have features in
+    mainThread({
+      mapID, tileID: hash, source: sourceName, type: 'flush', fill: featureStore.fill.length !== 0,
+      line: featureStore.line.length !== 0, point: featureStore.point.length !== 0,
+      heatmap: featureStore.heatmap.length !== 0, glyph: featureStore.glyph.length !== 0
+    })
     if (featureStore.fill.length) processFill(mapID, tile, sourceName, featureStore.fill, mainThread)
     if (featureStore.line.length) processLine(mapID, tile, sourceName, featureStore.line, mainThread)
     if (featureStore.point.length) processPoint(mapID, tile, sourceName, featureStore.point, mainThread)

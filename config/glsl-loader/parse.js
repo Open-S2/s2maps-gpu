@@ -44,6 +44,7 @@ const variableDefs = new Set([
 ])
 
 const constants = new Set([
+  'gl_FragColor', 'gl_Position',
   // Basic types
   'bool', 'double', 'float', 'int', 'uint',
   // Vector types
@@ -95,7 +96,7 @@ const constants = new Set([
   // Floating point functions
   'isinf', 'isnan',
   // Boolean functions
-  'all', 'any', 'equal','greaterThan', 'greaterThanEqual', 'lessThan', 'lessThanEqual', 'not', 'notEqual',
+  'all', 'any', 'equal', 'greaterThan', 'greaterThanEqual', 'lessThan', 'lessThanEqual', 'not', 'notEqual',
   // Vector functions
   'cross', 'distance', 'dot', 'faceforward', 'length', 'outerProduct', 'normalize', 'reflect', 'refract',
   // Matrix functions

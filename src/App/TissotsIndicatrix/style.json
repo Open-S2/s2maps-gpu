@@ -4,14 +4,13 @@
   "center": [-122.4585607773497, 37.778443127730476],
   "zoom": 0,
   "minzoom": -0.5,
-  "maxzoom": 17.99,
+  "maxzoom": 8,
   "sources": {
-    "streets-v2": "https://s3.s2maps.io/streets-v2",
-    "terrain": "https://s3.s2maps.io/terrain-v1",
-    "tissots": "https://s3.s2maps.io/s2json/tissotsIndicatrix.s2json"
+    "streets": "%REACT_APP_S2TILES%/streets-v1.s2tiles",
+    "terrain": "%REACT_APP_S2TILES%/terrain-v1.s2tiles",
+    "tissots": "https://api.s2maps.io/public/demos/s2json/tissotsIndicatrix.s2json"
   },
-  "fonts": {
-  },
+  "fonts": {},
   "wallpaper": {
     "background-color": "rgb(25, 28, 80)",
     "fade-1": "rgb(138, 204, 255)",
@@ -76,7 +75,7 @@
     },
     {
       "name": "landuse",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "landuse",
       "type": "fill",
       "opaque": true,
@@ -135,7 +134,7 @@
     },
     {
       "name": "landuse_transparent",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "landuse",
       "type": "fill",
       "filter": ["type", "has", ["aboriginal_lands", "military"]],
@@ -154,7 +153,7 @@
     },
     {
       "name": "golf",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "landuse",
       "type": "fill",
       "opaque": true,
@@ -183,7 +182,7 @@
     },
     {
       "name": "water",
-      "source": "streets-v2",
+      "source": "streets",
       "filter": ["class", "!has", ["bay", "reef", "shoal"]],
       "layer": "water",
       "type": "fill",
@@ -196,7 +195,7 @@
     },
     {
       "name": "reef_shoal",
-      "source": "streets-v2",
+      "source": "streets",
       "filter": ["class", "has", ["reef", "shoal"]],
       "layer": "water",
       "type": "fill",
@@ -209,7 +208,7 @@
     },
     {
       "name": "water_lines",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "water",
       "onlyLines": true,
       "minzoom": 10,
@@ -235,7 +234,7 @@
     },
     {
       "name": "aboriginal_border",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "landuse",
       "filter": ["type", "==", "aboriginal_lands"],
       "minzoom": 5,
@@ -259,7 +258,7 @@
     },
     {
       "name": "equator",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "equator",
       "type": "line",
       "minzoom": 0,

@@ -15,8 +15,10 @@ export default class PointProgram extends Program {
   uColors: WebGLUniformLocation
   uRadius: WebGLUniformLocation
   uStroke: WebGLUniformLocation
-  uStrokeWidth: WebGLUniformLocation
+  uSWidth: WebGLUniformLocation
   uOpacity: WebGLUniformLocation
+  uBounds: WebGLUniformLocation
+  defaultBounds: Float32Array = new Float32Array([0, 0, 8192, 8192])
   constructor (context: Context) {
     // get gl from context
     const { gl, type, devicePixelRatio } = context
@@ -35,10 +37,10 @@ export default class PointProgram extends Program {
 
   draw (featureGuide: FeatureGuide, source: VectorTileSource, interactive?: boolean) {
     // grab context
-    const { gl, context } = this
+    const { gl, context, defaultBounds, uColor, uRadius, uStroke, uSWidth, uOpacity, uBounds } = this
     const { type } = context
     // get current source data
-    let { count, featureCode, depthPos, color, radius, stroke, strokeWidth, opacity, offset, mode } = featureGuide
+    let { count, featureCode, depthPos, color, radius, stroke, strokeWidth, opacity, offset, mode, bounds } = featureGuide
     // ensure proper blend state and depth testing is on
     context.defaultBlend()
     context.enableDepthTest()
@@ -46,13 +48,16 @@ export default class PointProgram extends Program {
     // adjust to current depthPos
     context.lequalDepth()
     context.setDepthRange(depthPos)
+    // if bounds exists, set them, otherwise set default bounds
+    if (bounds) gl.uniform4fv(uBounds, bounds)
+    else gl.uniform4fv(uBounds, defaultBounds)
     // set feature code (webgl 1 we store the colors, webgl 2 we store layerCode lookups)
     if (type === 1) {
-      gl.uniform4fv(this.uColor, color, 0, color.length)
-      gl.uniform1f(this.uRadius, radius)
-      gl.uniform4fv(this.uStroke, stroke, 0, stroke.length)
-      gl.uniform1f(this.uStrokeWidth, strokeWidth)
-      gl.uniform1f(this.uOpacity, opacity)
+      gl.uniform4fv(uColor, color, 0, color.length)
+      gl.uniform1f(uRadius, radius)
+      gl.uniform4fv(uStroke, stroke, 0, stroke.length)
+      gl.uniform1f(uSWidth, strokeWidth)
+      gl.uniform1f(uOpacity, opacity)
     } else { this.setFeatureCode(featureCode) }
     // setup offsets and draw
     gl.bindBuffer(gl.ARRAY_BUFFER, source.vertexBuffer)

@@ -17,7 +17,7 @@ export type Alignment = 'center' | 'left' | 'right'
 // multiplied by "size"
 // NOTE: Just put the glyph offsets + word-wrap-y offset provided at first,
 // add in the excess anchor offset AFTER we know the bbox size
-export default function buildGlyphQuads (feature: GlyphObject, glyphMap: GlyphSet, index: number) {
+export default function buildGlyphQuads (feature: GlyphObject, glyphMap: GlyphSet) {
   const { max } = Math
   const {
     s, t, id, size, offset, padding, field, family,
@@ -79,14 +79,14 @@ export default function buildGlyphQuads (feature: GlyphObject, glyphMap: GlyphSe
   // build bbox given current size
   const bbox = [anchorOffsetX, anchorOffsetY, maxWidth + anchorOffsetX, maxHeight + anchorOffsetY]
   // set minX, maxX, minY, maxY in the feature
-  feature.minX = (s * 512) + adjustX + (anchorOffsetX * size)
-  feature.minY = (t * 512) + adjustY + (anchorOffsetY * size)
+  feature.minX = (s * 1024) + adjustX + (anchorOffsetX * size)
+  feature.minY = (t * 1024) + adjustY + (anchorOffsetY * size)
   feature.maxX = feature.minX + (maxWidth * size)
   feature.maxY = feature.minY + (maxHeight * size)
   // store the final quads
   feature.quads = quads
   // store the filter
-  feature.filter = [s * 8192, t * 8192, anchorOffsetX, anchorOffsetY, ...padding, maxWidth, maxHeight, index, id]
+  feature.filter = [s * 8192, t * 8192, anchorOffsetX, anchorOffsetY, ...padding, maxWidth, maxHeight, 0, id]
 }
 
 function updateoffset (quads: Quad, adjustX: number, adjustY: number) {

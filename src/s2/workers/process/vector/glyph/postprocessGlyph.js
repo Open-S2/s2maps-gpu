@@ -18,11 +18,12 @@ export default function postprocessGlyph (mapID: string, sourceName: string,
   let quadOffset = 0
   let filterCount = 0
   let quadCount = 0
+  let indexPos = 0
   // iterate features, store as we go
   for (const glyph of features) {
     const { type, layerIndex, code, featureCode, quads, filter, color } = glyph
     // if there is a change in layer index or
-    if (quadCount && (curlayerIndex !== layerIndex || codeStr !== code.toString() || curType !== type)) {
+    if ((quadCount || filterCount) && (curlayerIndex !== layerIndex || codeStr !== code.toString() || curType !== type)) {
       // store featureGuide
       featureGuide.push(curlayerIndex, curType, filterOffset, filterCount, quadOffset, quadCount, encoding.length, ...encoding)
       if (subEncoding) featureGuide.push(...subEncoding)
@@ -38,10 +39,12 @@ export default function postprocessGlyph (mapID: string, sourceName: string,
       // reset counts
       filterCount = 0
       quadCount = 0
+      indexPos = 0
     }
     // store the quads and colors
+    filter[8] = indexPos++
     glyphFilterVertices.push(...filter)
-    filterCount += filter.length / 10
+    filterCount++
     glyphQuads.push(...quads)
     const qCount = quads.length / 13
     quadCount += qCount
@@ -49,7 +52,7 @@ export default function postprocessGlyph (mapID: string, sourceName: string,
     else for (let i = 0; i < qCount; i++) glyphColors.push(255, 255, 255, 255)
   }
   // store last set
-  if (quadCount) {
+  if (quadCount || filterCount) {
     featureGuide.push(curlayerIndex, curType, filterOffset, filterCount, quadOffset, quadCount, encoding.length, ...encoding)
     if (subEncoding) featureGuide.push(...subEncoding)
   }

@@ -45,7 +45,7 @@ export default class FillProgram extends Program {
     // set feature code (webgl 1 we store the colors, webgl 2 we store layerCode lookups)
     if (type === 1) {
       if (color) gl.uniform4fv(this.uColors, color, 0, color.length)
-      if (opacity) gl.uniform1f(this.uOpacity, opacity)
+      if (opacity) gl.uniform1fv(this.uOpacity, opacity, 0, opacity.length)
       else gl.uniform1f(this.uOpacity, 1)
     } else if (featureCode) { this.setFeatureCode(featureCode) }
     // draw elements

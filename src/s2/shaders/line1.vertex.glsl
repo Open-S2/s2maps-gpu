@@ -1,13 +1,16 @@
-#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
-#else
-precision mediump float;
-#endif
 
 attribute float aType;
 attribute vec2 aPrev; //   (INSTANCED)
 attribute vec2 aCurr; //   (INSTANCED)
 attribute vec2 aNext; //   (INSTANCED)
+
+// varying float lengthSoFar;
+varying vec2 vWidth;
+varying vec2 vNorm;
+varying vec2 vCenter;
+varying vec4 vColor;
+varying float vDrawType;
 
 // POSITION TYPES:
 // 0 -> curr
@@ -20,21 +23,15 @@ attribute vec2 aNext; //   (INSTANCED)
 
 uniform vec2 uAspect;
 uniform float uDevicePixelRatio;
-uniform float uCap; // 0 -> butt ; 1 -> round ; 2 -> square
 
+uniform float uCap; // 0 -> butt ; 1 -> round ; 2 -> square
 uniform vec4 uColor;
 uniform float uWidth;
 
 @import "./getPos.glsl"
 
-varying vec2 vWidth;
-varying vec2 vNorm;
-varying vec2 vCenter;
-varying vec4 vColor;
-varying float vDrawType;
-
-bool isCCW (in vec2 prev, in vec2 curr, in vec2 next) {
-  float det = (curr.y - prev.y) * (next.x - curr.x) - (curr.x - prev.x) * (next.y - curr.y);
+bool isCCW (in vec2 cPrev, in vec2 cCurr, in vec2 cNext) {
+  float det = (cCurr.y - cPrev.y) * (cNext.x - cCurr.x) - (cCurr.x - cPrev.x) * (cNext.y - cCurr.y);
 
   return det < 0.;
 }

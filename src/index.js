@@ -31,6 +31,8 @@ const OAD = lazy(() => import('./App/OpenAddressData'))
 const Earthquakes = lazy(() => import('./App/Earthquakes'))
 const TissotsIndicatrix = lazy(() => import('./App/TissotsIndicatrix'))
 const Studio = lazy(() => import('./App/Studio'))
+const CountriesPoints = lazy(() => import('./App/CountriesPoints'))
+const Weather = lazy(() => import('./App/Weather'))
 
 ReactDOM.render(
   <Router>
@@ -60,6 +62,8 @@ ReactDOM.render(
         <Route path='/starlink' component={Starlink} />
         <Route path='/open-address-data' component={OAD} />
         <Route path='/studio' component={Studio} />
+        <Route path='/countries-points' component={CountriesPoints} />
+        <Route path='/weather' component={Weather} />
       </Switch>
     </Suspense>
   </Router>,

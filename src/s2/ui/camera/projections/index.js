@@ -41,6 +41,7 @@ export default class Projector {
   zoom: number = -1
   minzoom: number = 0
   maxzoom: number = 20
+  zoomOffset: number = 0
   lon: number = -1
   lat: number = -1
   pitch: number = 0
@@ -73,6 +74,7 @@ export default class Projector {
     // clamp values and ensure minzoom is less than maxzoom
     this.minzoom = (minzoom < -2) ? -2 : (minzoom > maxzoom) ? maxzoom - 1 : (minzoom > 19) ? 19 : minzoom
     this.maxzoom = (maxzoom > 20) ? 20 : (maxzoom < this.minzoom) ? this.minzoom + 1 : maxzoom
+    this.zoomOffset = style.zoomOffset
     // set position
     if (!ignorePosition) this.setPosition(lon, lat, zoom)
     else { this.matrices = {}; this.dirty = true } // ensure this projector is dirty (incase of ignorePosition === true)
@@ -108,7 +110,7 @@ export default class Projector {
 
   onZoom (zoomInput?: number = 0, canvasX?: number = 0, canvasY?: number = 0): boolean {
     const { positionalZoom, multiplier, aspect } = this
-    const { pow, max, min, cos, PI } = Math
+    const { abs, pow, max, min, cos, PI } = Math
     // adjust the zoom
     this.prevZoom = this.zoom
     this.zoom -= 0.003 * zoomInput
@@ -137,7 +139,7 @@ export default class Projector {
       const posDeltaY = posY * zoomScale - posY
       // STEP 3: The deltas need to be converted to deg change
       const zoomMultiplier = pow(2, max(this.zoom, 0))
-      const lonMultiplier = min(30, 1 / cos(this.lat * PI / 180))
+      const lonMultiplier = min(30, 1 / cos(abs(this.lat) * PI / 180))
       this.lon += posDeltaX / (3072 * zoomMultiplier) * 360 * lonMultiplier
       this.lat += posDeltaY / (1536 * zoomMultiplier) * 180
     }
@@ -155,10 +157,10 @@ export default class Projector {
 
   onMove (movementX?: number = 0, movementY?: number = 0, multiplierX?: number = 3, multiplierY?: number = 3) {
     const { lat, zoom } = this
-    const { pow, max, min, cos, PI } = Math
+    const { abs, pow, max, min, cos, PI } = Math
     const zoomMultiplier = 2 * pow(2, max(zoom, 0))
     // https://math.stackexchange.com/questions/377445/given-a-latitude-how-many-miles-is-the-corresponding-longitude
-    const lonMultiplier = min(30, 1 / cos(lat * PI / 180))
+    const lonMultiplier = min(30, 1 / cos(abs(lat) * PI / 180))
     if (movementX) this.lon -= movementX * lonMultiplier / (multiplierX * zoomMultiplier)
     if (movementY) this.lat += movementY / (multiplierY * zoomMultiplier)
     // adjust latitude accordingly
@@ -240,8 +242,8 @@ export default class Projector {
   }
 
   getTilesInView (): TileDefinitions { // [face, zoom, x, y, hash]
-    let { radius, zoom, lon, lat } = this
+    let { radius, zoom, zoomOffset, lon, lat } = this
     const matrix = this.getMatrix('m')
-    return getTiles(zoom, matrix, lon, lat, radius)
+    return getTiles(zoom + zoomOffset, matrix, lon, lat, radius)
   }
 }

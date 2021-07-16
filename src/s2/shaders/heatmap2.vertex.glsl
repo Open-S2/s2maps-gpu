@@ -14,6 +14,7 @@ out float vS;
 
 uniform float uDevicePixelRatio;
 uniform float uDrawState;
+uniform vec4 uBounds;
 uniform vec2 uAspect;
 
 @import "./decodeFeature2.glsl"
@@ -22,6 +23,7 @@ uniform vec2 uAspect;
 void main () {
   vec4 glPos;
   if (uDrawState == 0.) { // drawing to texture
+    if (aPos.x < uBounds.x || aPos.x > uBounds.z || aPos.y < uBounds.y || aPos.y > uBounds.w) return;
     // set position
     // prep xyz & get position
     glPos = getPos(aPos);

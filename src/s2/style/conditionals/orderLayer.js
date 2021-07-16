@@ -95,10 +95,11 @@ function orderGlyph (layer: Layer) {
     'text-size': paint['text-size'] || 42,
     'text-fill': paint['text-fill'] || 'rgba(0, 0, 0, 0)',
     'text-stroke-width': paint['text-stroke-width'] || 0,
-    'text-stroke': paint['text-stroke'] || 'rgba(0, 0, 0, 0)'
+    'text-stroke': paint['text-stroke'] || 'rgba(0, 0, 0, 0)',
+    'icon-size': paint['icon-size'] || 16
   }
   // icon paint
   layer.iconPaint = {
-    'icon-size': paint['icon-size'] || 16
+    'icon-size': (paint['icon-size']) ? JSON.parse(JSON.stringify(paint['icon-size'])) : 16
   }
 }

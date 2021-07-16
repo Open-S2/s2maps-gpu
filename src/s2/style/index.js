@@ -9,14 +9,24 @@ import type { MapOptions } from '../ui/map'
 import type { Sources, Layer, Mask, WallpaperStyle } from './styleSpec'
 import type { TileRequest } from '../workers/tile.worker'
 
+export type Analytics = {
+  gpu: number,
+  context: number,
+  language: string,
+  width: number,
+  height: number
+}
+
 export default class Style {
   map: Map
   glType: number
   webworker: boolean = false
   interactive: boolean = false // this is seperate from the options. If a layer is interactive then we draw more
+  apiKey: string
   zoom: number = 0
   minzoom: number = 0
   maxzoom: number = 20
+  zoomOffset: number = 0
   lon: number = 0
   lat: number = 0
   sources: Sources = {}
@@ -30,14 +40,27 @@ export default class Style {
   wallpaperStyle: typeof undefined | WallpaperStyle
   clearColor: typeof undefined | [number, number, number, number]
   maskLayers: Array<Layer> = []
+  analytics: Analytics = {}
   dirty: boolean = true
   constructor (options: MapOptions, map: Map) {
-    const { webworker } = options
+    const { webworker, apiKey } = options
     if (webworker) this.webworker = true
+    this.apiKey = apiKey
     const { painter } = this.map = map
     // grap the painter type, so we can tell the webworkers if we are using WEBGL, WEBGL2, or WEBGPU
-    const { type } = painter.context
+    const { gl, renderer, type } = painter.context
     this.glType = type
+    this._buildAnalytics(renderer, type, gl.canvas.width, gl.canvas.height)
+  }
+
+  _buildAnalytics (gpu: string, context: number = -1, width: number, height: number) {
+    this.analytics = {
+      gpu,
+      context,
+      language: navigator.language.split('-')[0] || 'en',
+      width,
+      height
+    }
   }
 
   buildStyle (style: string | Object) {
@@ -59,6 +82,8 @@ export default class Style {
       if (style.maxzoom <= self.minzoom) self.maxzoom = self.minzoom + 1
       else if (style.maxzoom <= 20) self.maxzoom = style.maxzoom
     }
+    // set zoom offset if applicable
+    if (style['zoom-offset']) self.zoomOffset = style['zoom-offset']
     // extract sources
     if (style.sources) self.sources = style.sources
     if (style.fonts) self.fonts = style.fonts
@@ -100,9 +125,10 @@ export default class Style {
   }
 
   _sendStyleDataToWorkers (style: Object) {
+    const { apiKey, analytics } = this
     const { sources, fonts, icons, layers, minzoom, maxzoom } = style
     // now that we have various source data, package up the style objects we need and send it off:
-    let stylePackage = { glType: this.glType, sources, fonts, icons, layers, minzoom, maxzoom }
+    let stylePackage = { glType: this.glType, sources, fonts, icons, layers, minzoom, maxzoom, apiKey, analytics }
     // If the map engine is running on the main thread, directly send the stylePackage to the worker pool.
     // Otherwise perhaps this map instance is a web worker and has a global instance of postMessage
     if (this.webworker) {
