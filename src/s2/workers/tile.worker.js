@@ -65,7 +65,7 @@ export default class TileWorker {
     else if (type === 'pbfdata') this._processPBF(mapID, data.tile, data.sourceName, data.parent, data.data)
     else if (type === 'rasterdata') this._processRaster(mapID, data.tile, data.sourceName, data.parent, data.data)
     else if (type === 'jsondata') this._processJSONData(mapID, data.tile, data.sourceName, data.data)
-    else if (type === 'glyphresponse') this._processGlyphResponse(mapID, data.reqID, data.glyphSources)
+    else if (type === 'glyphresponse') this._processGlyphResponse(mapID, data.reqID, data.glyphMetadata, data.familyName)
   }
 
   _loadWorkerPort (messagePort: MessageChannel.port1, postPort: MessageChannel.port2,
@@ -127,8 +127,8 @@ export default class TileWorker {
     this.vectorManager.processVector(mapID, tile, sourceName, data, this.maps[mapID])
   }
 
-  _processGlyphResponse (mapID: string, reqID: string, glyphSources: { [string]: ArrayBuffer }) {
-    this.vectorManager.glyphManager.processGlyphResponse(reqID, glyphSources)
+  _processGlyphResponse (mapID: string, reqID: string, glyphMetadata: ArrayBuffer, familyName: string) {
+    this.vectorManager.glyphManager.processGlyphResponse(reqID, glyphMetadata, familyName)
   }
 }
 

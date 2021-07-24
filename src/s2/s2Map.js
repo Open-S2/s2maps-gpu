@@ -76,7 +76,7 @@ export default class S2Map extends EventTarget {
     const self = this
     const { _canvasContainer } = self
     // if browser supports it, create an instance of the mapWorker
-    if (false && canvas.transferControlToOffscreen) { // $FlowIgnore
+    if (canvas.transferControlToOffscreen) { // $FlowIgnore
       const offscreen = canvas.transferControlToOffscreen()
       self._offscreen = true
       const mapWorker = self.map = new MapWorker()

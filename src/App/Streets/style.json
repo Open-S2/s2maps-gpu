@@ -8,17 +8,19 @@
   "sources": {
     "streets": "%REACT_APP_S2TILES%/streets-v1.s2tiles",
     "places": "%REACT_APP_S2TILES%/places.s2tiles",
-    "terrain": "%REACT_APP_S2TILES%/terrain-v1.s2tiles"
+    "terrain": "%REACT_APP_S2TILES%/terrain-v1.s2tiles",
+    "parcels": "%REACT_APP_S2TILES%/parcels.s2tiles",
+    "addresses": "%REACT_APP_S2TILES%/addresses.s2tiles"
   },
   "fonts": {
-    "noto-sans-regular": "https://api.s2maps.io/public/glyphs/Noto/NotoSansRegular",
-    "noto-sans-medium": "https://api.s2maps.io/public/glyphs/Noto/NotoSansMedium",
+    "noto-sans-regular": "http://192.168.0.110:8000/glyphs/Noto/NotoSansRegular.font",
+    "noto-sans-medium": "http://192.168.0.110:8000/glyphs/Noto/NotoSansMedium.font",
     "roboto-regular": {
-      "path": "https://api.s2maps.io/public/glyphs/Roboto/RobotoRegular",
+      "path": "http://192.168.0.110:8000/glyphs/Roboto/RobotoRegular.font",
       "fallback": "noto-sans-regular"
     },
     "roboto-medium": {
-      "path": "https://api.s2maps.io/public/glyphs/Roboto/RobotoMedium",
+      "path": "http://192.168.0.110:8000/glyphs/Roboto/RobotoMedium.font",
       "fallback": "noto-sans-medium"
     }
   },
@@ -275,6 +277,20 @@
           11,
           0
         ]
+      }
+    },
+    {
+      "name": "parcel-lines",
+      "source": "parcels",
+      "layer": "parcel",
+      "type": "line",
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "#dbdee3",
+        "width": 1.5
       }
     },
     {
@@ -1502,8 +1518,6 @@
       ],
       "layer": "place",
       "type": "glyph",
-      "interactive": true,
-      "cursor": "pointer",
       "maxzoom": 12,
       "layout": {
         "text-family": "roboto-medium",
@@ -1588,8 +1602,6 @@
       "source": "places",
       "minzoom": 4,
       "maxzoom": 13,
-      "interactive": true,
-      "cursor": "pointer",
       "filter": ["class", "has", ["city", "town", "village", "hamlet", "locality", "neighbourhood", "island", "suburb"]],
       "layer": "place",
       "type": "glyph",
@@ -1821,6 +1833,27 @@
           "default",
           0.5
         ]
+      }
+    },
+    {
+      "name": "address",
+      "source": "addresses",
+      "layer": "addr",
+      "type": "glyph",
+      "minzoom": 16,
+      "layout": {
+        "text-family": "roboto-regular",
+        "text-field": "?housenumber",
+        "text-anchor": "center",
+        "text-line-height": 0.02,
+        "text-offset": [0, 0],
+        "text-padding": [4, 2]
+      },
+      "paint": {
+        "text-size": 14,
+        "text-fill": "rgb(100, 100, 100)",
+        "text-stroke": "rgba(255, 255, 255, 0.65)",
+        "text-stroke-width": 0.7
       }
     }
   ]

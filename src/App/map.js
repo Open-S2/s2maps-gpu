@@ -12,6 +12,10 @@ function Map (props) {
   const [height, setHeight] = useState(window.innerHeight)
   const { style, opts, click, ready } = props
   for (const source in style.sources) style.sources[source] = style.sources[source].replace('%REACT_APP_S2TILES%', process.env.REACT_APP_S2TILES)
+  for (const font in style.fonts) {
+    if (style.fonts[font].path) style.fonts[font].path = style.fonts[font].path.replace('%REACT_APP_S2TILES%', process.env.REACT_APP_S2TILES)
+    else style.fonts[font] = style.fonts[font].replace('%REACT_APP_S2TILES%', process.env.REACT_APP_S2TILES)
+  }
 
   function resize () { setHeight(window.innerHeight) }
 

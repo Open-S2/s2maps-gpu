@@ -34,6 +34,16 @@ export type Glyph = {
 
 type IconMap = { [string]: Unicode } // ex: ['airport']: [0, 1, 2, 5, 7] (name maps reference a list of unicodes)
 
+const zagzig = (num: number): number => {
+  return (num >> 1) ^ (-(num & 1))
+}
+
+const base36 = (num: number): number => {
+  return num.toString(36)
+}
+
+const genID = (): string => { return Math.random().toString(16).replace('0.', '') }
+
 export default class GlyphSource {
   version: number
   extent: number
@@ -43,170 +53,216 @@ export default class GlyphSource {
   defaultAdvance: number
   maxHeight: number
   range: number
-  pageSize: number = 100
   texturePack: TexturePack
   colors: Array<[number, number, number, number]>
   iconMap: IconMap
-  glyphSet: Set<Unicode> // existing glyphs
-  glyphsMap: Map<Glyph> = new Map() // glyphs we have built already
-  needsToken: boolean = false
-  constructor (name: string, path: string, fallback?: string, texturePack: TexturePack, needsToken?: boolean) {
+  glyphMap: Map<Unicode, { pos: number, length: number }> = new Map() // existing glyphs
+  glyphWaitlist: Map<Unicode, Promise> = new Map()
+  glyphCache: Map<Glyph> = new Map() // glyphs we have built already
+  constructor (name: string, path: string, fallback?: string, texturePack: TexturePack) {
     this.name = name
     this.path = path
     this.fallback = fallback // temporary reference to the source name
     this.texturePack = texturePack
-    this.needsToken = needsToken
   }
 
-  async build (token: string) {
+  async build () {
     const self = this
-    const metadata = await this._fetch(`${this.path}/metadata.json`, true, token)
+    const metadata = await this._fetch(`${this.path}?bytes=0-u`)
 
     if (!metadata) {
       self.active = false
       console.log(`FAILED TO extrapolate ${this.path} metadata`)
-    } else { self._buildMetadata(metadata) }
+    } else { await self._buildMetadata(metadata) }
   }
 
-  _buildMetadata (metadata) {
-    const { version, pageSize, extent, colors, iconMap, defaultAdvance, size, maxHeight, range, glyphs } = metadata
-    this.version = version
-    this.extent = extent
-    this.defaultAdvance = defaultAdvance
-    this.size = size
-    this.maxHeight = maxHeight
-    this.range = range
-    this.colors = colors
-    this.iconMap = iconMap
-    this.glyphSet = new Set(glyphs)
-    if (pageSize) this.pageSize = pageSize
+  async _buildMetadata (metadata) {
+    const { glyphMap } = this
+    const meta = new DataView(metadata)
+    // this.colors = colors
+    // this.iconMap = iconMap
+    // build the metadata
+    this.version = meta.getUint16(2, true)
+    this.extent = meta.getUint16(4, true)
+    this.size = meta.getUint16(6, true)
+    this.maxHeight = meta.getUint16(8, true)
+    this.range = meta.getUint16(10, true)
+    this.defaultAdvance = meta.getUint16(12, true) / this.extent
+    const glyphMetaSize = meta.getUint32(14, true)
+    const iconMapSize = meta.getUint32(22, true)
+    const colorBufSize = meta.getUint32(26, true)
+    const metadataBuf = await this._fetch(`${this.path}?bytes=u-${base36(glyphMetaSize)}`)
+    const glyphMapSize = metadataBuf.byteLength - iconMapSize - colorBufSize
+    const glyphCount = glyphMapSize / 8
+
+    // store glyphMap
+    const gmdv = new DataView(metadataBuf, 0, glyphMapSize)
+    for (let i = 0; i < glyphCount; i++) {
+      const pos = i * 8
+      glyphMap.set(gmdv.getUint16(pos, true), { pos: gmdv.getUint32(pos + 2, true), length: gmdv.getUint16(pos + 6, true) })
+    }
+    // build icon metadata
+    if (iconMapSize) {
+      this._buildIconMap(iconMapSize, new DataView(metadataBuf, glyphMapSize, iconMapSize))
+      this._buildColorMap(colorBufSize, new DataView(metadataBuf, glyphMapSize + iconMapSize, colorBufSize))
+    }
   }
 
-  async glyphRequest (glyphResponse: GlyphResponse, images: GlyphImages,
-    glyphList: GlyphRequest, token?: string): GlyphResponse {
-    // prep variables
-    const { name, glyphSet, glyphsMap, defaultAdvance, fallback } = this
+  _buildIconMap (iconMapSize, dv: DataView) {
+    this.iconMap = {}
+    let pos = 0
+    while (pos < iconMapSize) {
+      const nameLength = dv.getUint8(pos)
+      const mapLength = dv.getUint8(pos + 1)
+      pos += 2
+      let name = []
+      for (let i = 0; i < nameLength; i++) name.push(dv.getUint8(pos + i))
+      name = name.map(n => String.fromCharCode(n)).join('')
+      pos += nameLength
+      const map = []
+      for (let i = 0; i < mapLength; i++) {
+        map.push({ glyphID: dv.getUint16(pos, true), colorID: dv.getUint16(pos + 2, true) })
+        pos += 4
+      }
+      this.iconMap[name] = map
+    }
+  }
 
-    if (!glyphResponse[name]) glyphResponse[name] = []
-    const glyphSourceRes = glyphResponse[name]
+  _buildColorMap (colorSize: number, dv: DataView) {
+    this.colors = []
+    for (let i = 0; i < colorSize; i += 4) {
+      this.colors.push([dv.getUint8(i), dv.getUint8(i + 1), dv.getUint8(i + 2), dv.getUint8(i + 3)])
+    }
+  }
 
-    const notbuilt = {} // { [page]: [unicode, unicode, unicode, ...] }
-    const notBuiltFallback = {}
+  glyphRequest (glyphList: GlyphRequest, mapID: string, reqID: string, worker: MessageChannel.port2) {
+    const self = this
+    const { glyphCache, glyphMap, fallback, glyphWaitlist, defaultAdvance, name } = self
 
-    // Step 1: all glyphs we already have the solution to we put in res,
-    // otherwise report the glyph in notbuilt assuming the metadata claims it exists
+    const promiseList = []
+    const requestList = []
+    const fallbackrequestList = []
+    const waitlistPromiseMap = new Map()
     for (const unicode of glyphList) {
-      if (glyphSet.has(unicode)) { // 1: this source has the glyph
-        this._findGlyphs(this, unicode, glyphSourceRes, notbuilt)
-      } else if (fallback && fallback.glyphSet.has(unicode)) { // 2: the fallback glyph source exists and has the glyph
-        this._findGlyphs(fallback, unicode, glyphSourceRes, notBuiltFallback)
-      } else { // no glyph source exists that can handle this glyph type
-        glyphsMap.set(unicode, { texX: 0, texY: 0, texW: 0, texH: 0, xOffset: 0, yOffset: 0, width: 0, height: 0, advanceWidth: defaultAdvance })
-        glyphSourceRes.push(unicode, 0, 0, 0, 0, 0, 0, 0, 0, defaultAdvance)
+      // 1) already cached in glyphCache; do nothing
+      if (glyphCache.has(unicode)) continue
+      // 2) already exists in the glyphWaitlist (downloading)
+      if (glyphWaitlist.has(unicode)) {
+        const promise = glyphWaitlist.get(unicode)
+        waitlistPromiseMap.set(promise.id, promise)
+      } else if (glyphMap.has(unicode)) { // 3) this glyphset has it
+        requestList.push(unicode)
+      } else if (fallback.glyphMap.has(unicode)) { // 4) the fallback glyphset has it
+        fallbackrequestList.push(unicode)
+      } else { // 5) no one has it
+        glyphCache.set(unicode, { texX: 0, texY: 0, texW: 0, texH: 0, xOffset: 0, yOffset: 0, width: 0, height: 0, advanceWidth: defaultAdvance })
       }
     }
-
-    // Step 2: build glyphs we don't have yet from their perspective pages
-    const pageBuilds = []
-    for (const page in notbuilt) pageBuilds.push(this._buildGlyphPage(this, page, notbuilt[page], glyphSourceRes, images, token))
-    for (const page in notBuiltFallback) pageBuilds.push(this._buildGlyphPage(fallback, page, notBuiltFallback[page], glyphSourceRes, images, token))
-    // send the build promises
-    return Promise.all(pageBuilds)
-  }
-
-  _findGlyphs (source: GlyphSource, unicode: number, glyphSourceRes: Array<Glyph>, notbuilt: Object) {
-    const { pageSize } = this
-    const { glyphsMap } = source
-    const { floor } = Math
-    if (glyphsMap.has(unicode)) { // A: this source has already built this unicode
-      const { texX, texY, texW, texH, xOffset, yOffset, width, height, advanceWidth } = glyphsMap.get(unicode)
-      glyphSourceRes.push(unicode, texX, texY, texW, texH, xOffset, yOffset, width, height, advanceWidth)
-    } else { // B: this source has the unicode but needs to retrieve and build the unicode
-      const page = floor(unicode / pageSize)
-      if (!notbuilt[page]) notbuilt[page] = new Set()
-      notbuilt[page].add(unicode)
+    // create THIS glyphs missing glyphs request
+    if (requestList.length) {
+      const promise = self._requestGlyphs(requestList, mapID)
+      promise.id = genID()
+      promiseList.push(promise)
+      for (const unicode of requestList) glyphWaitlist.set(unicode, promise)
     }
-  }
+    // create FALLBACK glyphs missing glyphs request
+    if (fallbackrequestList.length) {
+      const promise = fallback._requestGlyphs(fallbackrequestList, mapID)
+      promise.id = genID()
+      promiseList.push(promise)
+      for (const unicode of fallbackrequestList) glyphWaitlist.set(unicode, promise)
+    }
+    // add all waitlist promises
+    promiseList.push(...Array.from(waitlistPromiseMap, ([, promise]) => promise))
 
-  // PAGES:
-  // a page contains max pageSize glyphs per page. The page will always contain a range of
-  // pageSize. so for instance, page 0 has utf8 codes: [0, pageSize) and page 1 has [pageSize, 200) and so on
-  // the buffer container: [[glyph metadata], [glyph images]]
-  async _buildGlyphPage (source: GlyphSource, page: number, pageGlyphList: Set,
-    glyphSourceRes: Array<Glyph>, images: GlyphImages, token?: string) {
-    const { extent, size, path, maxHeight, texturePack, glyphsMap } = source
-    const { ceil } = Math
-    // pull in the page
-    const pageData = await this._fetch(`${path}/${page}.msdf`, false, token)
-    // parse the page glyphs, if the page includes a glyph in pageGlyphList,
-    // build and add to res & glyphsMap
-    if (pageData) {
-      // create dataview and grab the size (number of glyphs stored)
-      const dv = new DataView(pageData)
-      const glyphLength = dv.getUint16(0, true)
-      // iterate glyphs, if we find a glyph we need to build... build
-      for (let i = 0; i < glyphLength; i++) {
-        const idx = 2 + (i * 18)
-        const unicode = dv.getUint16(idx, true)
-        if (pageGlyphList.has(unicode)) {
-          if (glyphsMap.has(unicode)) { // another request already created the glyph
-            const { texX, texY, texW, texH, xOffset, yOffset, width, height, advanceWidth } = glyphsMap.get(unicode)
-            glyphSourceRes.push(unicode, texX, texY, texW, texH, xOffset, yOffset, width, height, advanceWidth)
-          } else {
-            // pull the glyph width and height; recreate the texture size
-            const width = dv.getUint16(idx + 6, true) / extent
-            const height = dv.getUint16(idx + 8, true) / extent
-            const texW = dv.getUint8(idx + 10)
-            const texH = dv.getUint8(idx + 11)
-            const xOffset = zagzig(dv.getUint16(idx + 12, true)) / extent
-            const yOffset = zagzig(dv.getUint16(idx + 14, true)) / extent
-            const advanceWidth = zagzig(dv.getUint16(idx + 16, true)) / extent
-            // only ask the texturePack if there is a texture size
-            let posX, posY
-            if (!texW || !texH) { posX = 0; posY = 0 }
-            else {
-              const [pX, pY] = texturePack.addGlyph(texW, maxHeight)
-              posX = pX
-              posY = pY
-            }
-            // build the meta object
-            const glyphMeta = {
-              texX: posX,
-              texY: posY,
-              texW,
-              texH,
-              xOffset,
-              yOffset,
-              width,
-              height,
-              advanceWidth
-            }
-            // store glyph data
-            glyphSourceRes.push(unicode, posX, posY, texW, texH, xOffset, yOffset, width, height, advanceWidth)
-            glyphsMap.set(unicode, glyphMeta)
-            // create the image
-            const offset = dv.getUint32(idx + 2, true)
-            const length = texW * texH * 4
-            if (length) {
-              const data = new Uint8ClampedArray(pageData.slice(offset, offset + length))
-              images.push({ posX, posY, width: texW, height: texH, data: data.buffer })
-            }
-          }
+    Promise.all(promiseList).then(() => {
+      // convert glyphList into a Float32Array of unicode data and ship it out
+      const shipment = []
+      for (const unicode of glyphList) {
+        let glyph = (glyphCache.has(unicode)) ? glyphCache.get(unicode)
+          : (fallback.glyphCache.has(unicode)) ? fallback.glyphCache.get(unicode)
+          : null
+
+        if (glyph) {
+          const { texX, texY, texW, texH, xOffset, yOffset, width, height, advanceWidth } = glyph
+          shipment.push(unicode, texX, texY, texW, texH, xOffset, yOffset, width, height, advanceWidth)
         }
       }
+      const glyphMetadata = (new Float32Array(shipment)).buffer
+      worker.postMessage({ mapID, type: 'glyphresponse', reqID, glyphMetadata, familyName: name }, [glyphMetadata])
+    })
+  }
+
+  _requestGlyphs (list, mapID) {
+    const { extent, glyphCache, glyphWaitlist, maxHeight, texturePack } = this
+    // 1) build the ranges, max 35 glyphs per request
+    const requests = this.buildRequests(list)
+    // 2) return the request promise, THEN: store the glyphs in cache, build the images, and ship the images to the mapID
+    const promises = []
+    for (const request of requests) {
+      promises.push(this._fetch(request).then(glyphsBuf => {
+        const images = []
+        const dv = new DataView(glyphsBuf)
+        const size = dv.byteLength - 1
+        let pos = 0
+        while (pos < size) {
+          // build glyph metadata
+          const unicode = dv.getUint16(pos, true)
+          const glyph = {
+            unicode,
+            width: dv.getUint16(pos + 2, true) / extent,
+            height: dv.getUint16(pos + 4, true) / extent,
+            texW: dv.getUint8(pos + 6),
+            texH: dv.getUint8(pos + 7),
+            xOffset: zagzig(dv.getUint16(pos + 8, true)) / extent,
+            yOffset: zagzig(dv.getUint16(pos + 10, true)) / extent,
+            advanceWidth: zagzig(dv.getUint16(pos + 12, true)) / extent
+          }
+          pos += 14
+          // store in texturePack
+          const [posX, posY] = texturePack.addGlyph(glyph.texW, maxHeight)
+          glyph.texX = posX
+          glyph.texY = posY
+          // store glyph in cache
+          glyphCache.set(unicode, glyph)
+          // remove from waitlist cache
+          glyphWaitlist.delete(unicode)
+          // grab the image
+          const imageSize = glyph.texW * glyph.texH * 4
+          const data = (new Uint8ClampedArray(glyphsBuf.slice(pos, pos + imageSize))).buffer
+          images.push({ posX, posY, width: glyph.texW, height: glyph.texH, data })
+          pos += imageSize
+        }
+        // send off the images
+        const imagesMaxHeight = images.reduce((acc, cur) => Math.max(acc, cur.posY + cur.height), 0)
+        postMessage({ mapID, type: 'glyphimages', images, maxHeight: imagesMaxHeight }, images.map(i => i.data))
+      }))
     }
+    return Promise.all(promises)
   }
 
-  async _fetch (path: string, json?: boolean = false, Authorization?: string) {
-    const headers = {}
-    if (this.needsToken && Authorization) headers.Authorization = Authorization
-    const res = await fetch(path, { headers })
+  buildRequests (list) {
+    const { path, glyphMap } = this
+    const requests = []
+    const chunks = []
+    // group into batches of 35
+    for (let i = 0; i < list.length; i += 35) chunks.push(list.slice(i, i + 35))
+    // group unicode numbers adjacent into the same range
+    for (const chunk of chunks) {
+      const ranges = []
+      for (const unicode of chunk) {
+        const { pos, length } = glyphMap.get(unicode)
+        ranges.push(`${base36(pos)}-${base36(length)}`)
+      }
+      requests.push(`${path}?bytes=${ranges.join(',')}`)
+    }
+
+    return requests
+  }
+
+  async _fetch (path: string) {
+    const res = await fetch(path)
     if (res.status !== 200 && res.status !== 206) return null
-    if (!json) return res.arrayBuffer()
-    else return res.json()
+    return res.arrayBuffer()
   }
-}
-
-const zagzig = (num: number): number => {
-  return (num >> 1) ^ (-(num & 1))
 }

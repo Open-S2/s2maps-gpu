@@ -46,24 +46,29 @@ export default class GlyphManager {
       delete glyphList._total // remove the total so we can add a transfer array
       const reqID = `${mapID}:${hash}:${sourceName}`
       for (const glyphSource in glyphList) {
-        glyphList[glyphSource] = (new Uint16Array([...glyphList[glyphSource]])).buffer
+        const list = [...glyphList[glyphSource]].sort((a, b) => a - b)
+        glyphList[glyphSource] = (new Uint16Array(list)).buffer
       }
+      const glyphFamilyCount = Object.keys(glyphList).length
       sourceThread.postMessage({ type: 'glyphrequest', mapID, id, reqID, glyphList }, Object.values(glyphList))
-      glyphStore.set(reqID, builtFeatures)
+      glyphStore.set(reqID, { builtFeatures, glyphFamilyCount, processed: 0 })
     } else { this.buildGlyphs(mapID, hash, sourceName, builtFeatures) }
   }
 
   // the source worker completed the request, here are the unicode properties
-  processGlyphResponse (reqID: string, glyphSources: GlyphResponse) {
+  processGlyphResponse (reqID: string, glyphMetadata: ArrayBuffer, familyName: string) {
     let [mapID, hash, sourceName] = reqID.split(':')
     hash = +hash
     // pull in the features and delete the reference
-    const builtFeatures = this.glyphStore.get(reqID)
-    this.glyphStore.delete(reqID)
+    const store = this.glyphStore.get(reqID)
+    store.processed++
     // store our response glyphs
-    for (const [familyName, unicodes] of Object.entries(glyphSources)) this._importGlyphs(familyName, new Float32Array(unicodes))
-    // now process the built glyphs
-    this.buildGlyphs(mapID, hash, sourceName, builtFeatures)
+    this._importGlyphs(familyName, new Float32Array(glyphMetadata))
+    // If we have all data, we now process the built glyphs
+    if (store.glyphFamilyCount === store.processed) {
+      this.glyphStore.delete(reqID)
+      this.buildGlyphs(mapID, hash, sourceName, store.builtFeatures)
+    }
   }
 
   // a response from the sourceThread for glyph data
@@ -93,7 +98,6 @@ export default class GlyphManager {
     const res = []
     // sort the features before running the collisions
     features = features.sort(featureSort)
-    // process the features
     for (const feature of features) {
       // Step 1: prebuild the glyph positions and bbox
       buildGlyphQuads(feature, glyphMap)

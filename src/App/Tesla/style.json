@@ -11,19 +11,19 @@
     "tesla": "https://api.s2maps.io/public/demos/s2json/tesla-locations.s2json"
   },
   "fonts": {
-    "noto-sans-regular": "https://api.s2maps.io/public/glyphs/Noto/NotoSansRegular",
-    "noto-sans-medium": "https://api.s2maps.io/public/glyphs/Noto/NotoSansMedium",
+    "noto-sans-regular": "http://192.168.0.110:8000/glyphs/Noto/NotoSansRegular.font",
+    "noto-sans-medium": "http://192.168.0.110:8000/glyphs/Noto/NotoSansMedium.font",
     "roboto-regular": {
-      "path": "https://api.s2maps.io/public/glyphs/Roboto/RobotoRegular",
+      "path": "http://192.168.0.110:8000/glyphs/Roboto/RobotoRegular.font",
       "fallback": "noto-sans-regular"
     },
     "roboto-medium": {
-      "path": "https://api.s2maps.io/public/glyphs/Roboto/RobotoMedium",
+      "path": "http://192.168.0.110:8000/glyphs/Roboto/RobotoMedium.font",
       "fallback": "noto-sans-medium"
     }
   },
   "icons": {
-    "tesla-icons": "https://api.s2maps.io/public/glyphs/Tesla/Icons"
+    "tesla-icons": "http://192.168.0.110:8000/glyphs/tesla/tesla.icon"
   },
   "wallpaper": {
     "background-color": "rgb(25, 28, 80)",

@@ -187,35 +187,13 @@ export default class SourceWorker {
     this._checkCache()
   }
 
-  async _glyphRequest (mapID: string, workerID: number, reqID: string,
+  _glyphRequest (mapID: string, workerID: number, reqID: string,
     sourceGlyphs: { [string]: GlyphRequest }) {
-    // grab token incase we need it
-    const token = await this._requestSessionToken(mapID)
     // prep
     const { workers } = this
-    const promises = []
-    const glyphSources = {}
-    const images = []
     // iterate the glyph sources for the unicodes
     for (const [name, unicodes] of Object.entries(sourceGlyphs)) {
-      if (this.glyphs[name]) promises.push(this.glyphs[name].glyphRequest(glyphSources, images, new Uint16Array(unicodes), token))
-    }
-    await Promise.allSettled(promises)
-
-    // if glyphResponse has data, send it back to the worker
-    if (Object.keys(glyphSources).length) {
-      for (const glyphSource in glyphSources) {
-        glyphSources[glyphSource] = (new Float32Array(glyphSources[glyphSource])).buffer
-      }
-      workers[workerID].postMessage({ mapID, type: 'glyphresponse', reqID, glyphSources }, Object.values(glyphSources))
-    }
-
-    // send any images to the main thread
-    const maxHeight = images.reduce((acc, cur) => Math.max(acc, cur.posY + cur.height), 0)
-    // ensure a max chunk size of 30 to not overload the GPU when uploading glyph data
-    for (let i = 0, j = images.length; i < j; i += 30) {
-      const imageChunk = images.slice(i, i + 30)
-      postMessage({ mapID, type: 'glyphimages', images: imageChunk, maxHeight }, imageChunk.map(i => i.data))
+      this.glyphs[name].glyphRequest(new Uint16Array(unicodes), mapID, reqID, workers[workerID])
     }
   }
 
