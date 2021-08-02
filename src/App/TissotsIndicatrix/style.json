@@ -6,9 +6,9 @@
   "minzoom": -0.5,
   "maxzoom": 8,
   "sources": {
-    "streets": "%REACT_APP_S2TILES%/streets-v1.s2tiles",
-    "terrain": "%REACT_APP_S2TILES%/terrain-v1.s2tiles",
-    "tissots": "https://api.s2maps.io/public/demos/s2json/tissotsIndicatrix.s2json"
+    "streets": "s2maps://data/s2maps/streets-v1.s2tiles",
+    "terrain": "s2maps://data/s2maps/terrain-v1.s2tiles",
+    "tissots": "https://data.s2maps.io/public/demos/s2json/tissotsIndicatrix.s2json"
   },
   "fonts": {},
   "wallpaper": {

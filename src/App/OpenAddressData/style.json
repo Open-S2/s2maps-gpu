@@ -2,24 +2,23 @@
   "version": 2,
   "name": "s2maps-open-street-map",
   "center": [-111.865828, 40.765627],
-  "zoom": 11,
+  "zoom": 4,
   "minzoom": -0.5,
   "maxzoom": 17.99,
   "sources": {
-    "streets": "%REACT_APP_S2TILES%/streets-v1.s2tiles",
-    "terrain": "%REACT_APP_S2TILES%/terrain-v1.s2tiles",
-    "openAddressData": "%REACT_APP_S2TILES%/open-address-data-v2.s2tiles",
-    "parcels": "%REACT_APP_S2TILES%/parcels.s2tiles"
+    "streets": "s2maps://data/s2maps/streets-v1.s2tiles",
+    "terrain": "s2maps://data/s2maps/terrain-v1.s2tiles",
+    "openAddressData": "s2maps://data/s2maps/open-address-data-v1.s2tiles"
   },
   "fonts": {
-    "noto-sans-regular": "https://api.s2maps.io/public/glyphs/Noto/NotoSansRegular",
-    "noto-sans-medium": "https://api.s2maps.io/public/glyphs/Noto/NotoSansMedium",
+    "noto-sans-regular": "https://data.s2maps.io/glyphs/Noto/NotoSansRegular.font",
+    "noto-sans-medium": "https://data.s2maps.io/glyphs/Noto/NotoSansMedium.font",
     "roboto-regular": {
-      "path": "https://api.s2maps.io/public/glyphs/Roboto/RobotoRegular",
+      "path": "https://data.s2maps.io/glyphs/Roboto/RobotoRegular.font",
       "fallback": "noto-sans-regular"
     },
     "roboto-medium": {
-      "path": "https://api.s2maps.io/public/glyphs/Roboto/RobotoMedium",
+      "path": "https://data.s2maps.io/glyphs/Roboto/RobotoMedium.font",
       "fallback": "noto-sans-medium"
     }
   },
@@ -1404,20 +1403,6 @@
           12,
           0.65
         ]
-      }
-    },
-    {
-      "name": "parce_lines",
-      "source": "parcels",
-      "layer": "parcel",
-      "type": "line",
-      "layout": {
-        "cap": "butt",
-        "join": "bevel"
-      },
-      "paint": {
-        "color": "#648dbf",
-        "width": 1.5
       }
     },
     {

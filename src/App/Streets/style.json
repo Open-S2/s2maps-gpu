@@ -6,21 +6,18 @@
   "minzoom": -1,
   "maxzoom": 18.99,
   "sources": {
-    "streets": "%REACT_APP_S2TILES%/streets-v1.s2tiles",
-    "places": "%REACT_APP_S2TILES%/places.s2tiles",
-    "terrain": "%REACT_APP_S2TILES%/terrain-v1.s2tiles",
-    "parcels": "%REACT_APP_S2TILES%/parcels.s2tiles",
-    "addresses": "%REACT_APP_S2TILES%/addresses.s2tiles"
+    "streets": "s2maps://data/s2maps/streets-v3.s2tiles",
+    "terrain": "s2maps://data/s2maps/terrain-v1.s2tiles"
   },
   "fonts": {
-    "noto-sans-regular": "http://192.168.0.110:8000/glyphs/Noto/NotoSansRegular.font",
-    "noto-sans-medium": "http://192.168.0.110:8000/glyphs/Noto/NotoSansMedium.font",
+    "noto-sans-regular": "https://data.s2maps.io/glyphs/Noto/NotoSansRegular.font",
+    "noto-sans-medium": "https://data.s2maps.io/glyphs/Noto/NotoSansMedium.font",
     "roboto-regular": {
-      "path": "http://192.168.0.110:8000/glyphs/Roboto/RobotoRegular.font",
+      "path": "https://data.s2maps.io/glyphs/Roboto/RobotoRegular.font",
       "fallback": "noto-sans-regular"
     },
     "roboto-medium": {
-      "path": "http://192.168.0.110:8000/glyphs/Roboto/RobotoMedium.font",
+      "path": "https://data.s2maps.io/glyphs/Roboto/RobotoMedium.font",
       "fallback": "noto-sans-medium"
     }
   },
@@ -281,15 +278,25 @@
     },
     {
       "name": "parcel-lines",
-      "source": "parcels",
+      "source": "streets",
       "layer": "parcel",
       "type": "line",
+      "minzoom": 15,
       "layout": {
         "cap": "butt",
         "join": "bevel"
       },
       "paint": {
-        "color": "#dbdee3",
+        "color": [
+          "input-range",
+          "zoom",
+          "expo",
+          1.5,
+          15,
+          "rgba(219, 222, 227, 0)",
+          16,
+          "#dbdee3"
+        ],
         "width": 1.5
       }
     },
@@ -1510,7 +1517,7 @@
     },
     {
       "name": "country_state",
-      "source": "places",
+      "source": "streets",
       "filter": [
         "or",
         ["and", ["class", "==", "continent"], ["?name", "==", "Antarctica"]],
@@ -1599,7 +1606,7 @@
     },
     {
       "name": "places",
-      "source": "places",
+      "source": "streets",
       "minzoom": 4,
       "maxzoom": 13,
       "filter": ["class", "has", ["city", "town", "village", "hamlet", "locality", "neighbourhood", "island", "suburb"]],
@@ -1837,7 +1844,7 @@
     },
     {
       "name": "address",
-      "source": "addresses",
+      "source": "streets",
       "layer": "addr",
       "type": "glyph",
       "minzoom": 16,

@@ -144,7 +144,8 @@ export default class SourceWorker {
     }
     const fileType = input.split('.').pop().toLowerCase()
     const apiSource = input.includes('s2maps://data')
-    const path = (apiSource) ? input.replace('s2maps://', `${process.env.REACT_APP_API_URL}/`) : input
+    // const path = (apiSource) ? input.replace('s2maps://', `${process.env.REACT_APP_API_URL}/`) : input
+    const path = (apiSource) ? input.replace('s2maps://', `https://data.s2maps.io/`) : input
     // create the proper source type
     let source
     if (fileType === 's2tiles') source = new S2TilesSource(name, layers, path, apiSource)
@@ -162,7 +163,8 @@ export default class SourceWorker {
     const { texturePack } = this
     // prepare
     const apiSource = input.includes('s2maps://data')
-    const path = (apiSource) ? input.replace('s2maps://', `${process.env.REACT_APP_API_URL}/`) : input
+    // const path = (apiSource) ? input.replace('s2maps://', `${process.env.REACT_APP_API_URL}/`) : input
+    const path = (apiSource) ? input.replace('s2maps://', `https://data.s2maps.io/`) : input
     // check if already exists
     if (this.glyphs[name]) return
     const source = new GlyphSource(name, path, fallback, texturePack, apiSource)
@@ -202,10 +204,11 @@ export default class SourceWorker {
     const mapSessionKey = sessionKeys[mapID]
     if (!mapSessionKey || !mapSessionKey.apiKey) return null
     const { apiKey, token, exp } = mapSessionKey
-    if (exp && token && exp - new Date().getTime() > 0) return token
+    if (exp && token && exp - (new Date()).getTime() > 0) return token
     const { gpu, context, language, width, height } = analytics
     // grab a new token
-    const sessionKey = await fetch(`${process.env.REACT_APP_API_URL}/session`, {
+    // const sessionKey = await fetch(`${process.env.REACT_APP_API_URL}/session`, {
+    const sessionKey = await fetch(`https://api.s2maps.io/session`, {
         method: 'POST',
         body: JSON.stringify({ apiKey, gpu, context, language, width, height }),
         headers: { 'Content-Type': 'application/json' }
@@ -213,7 +216,9 @@ export default class SourceWorker {
         if (res.status !== 200 && res.status !== 206) return null
         return res.json()
       }).then(t => {
-        if (t.token) return { token: t.token, exp: new Date().getTime() + t.maxAge }
+        const expDate = new Date()
+        expDate.setSeconds(expDate.getSeconds() + t.maxAge)
+        if (t.token) return { token: t.token, exp: expDate.getTime()  }
         return null
       })
     // store the new key, exp, and return the key to use

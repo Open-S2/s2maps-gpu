@@ -39,7 +39,7 @@ export default class S2TilesSource extends Source {
         this.rootDir[4] = new DataView(ab, 218449, ROOT_DIR_SIZE)
         this.rootDir[5] = new DataView(ab, 273059, ROOT_DIR_SIZE)
         const md = await this.getRange(`${this.path}?type=metadata`, 327669, mL, token)
-        const metadata = JSON.parse(new TextDecoder('utf-8').decode(new DataView(md, 0, mL)))
+        const metadata = JSON.parse(new TextDecoder('utf-8').decode(md))
         this._buildMetadata(metadata)
       }
     }
@@ -104,9 +104,14 @@ export default class S2TilesSource extends Source {
   }
 
   async getRange (url: string, offset: number, length: number, Authorization?: string): ArrayBuffer {
-    if (!this.needsToken) Authorization = null
+    const { type } = this
+    const headers = {
+      Accept: type === 'vector' ? 'application/protobuf' : 'image/webp'
+    }
+    const bytes = offset + '-' + (offset + length - 1)
+    if (this.needsToken) headers.Authorization = Authorization
     if (length === 0 || length > MAX_SIZE) return null
-    const res = await fetch(url, { headers: { Authorization, Bytes: offset + '-' + (offset + length - 1) } })
+    const res = await fetch(`${url}&bytes=${bytes}`, { headers })
     if (res.status !== 200 && res.status !== 206) return null
     return res.arrayBuffer()
   }

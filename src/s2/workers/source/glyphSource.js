@@ -261,7 +261,7 @@ export default class GlyphSource {
   }
 
   async _fetch (path: string) {
-    const res = await fetch(path)
+    const res = await fetch(path, { headers: { Accept: 'application/protobuf' } })
     if (res.status !== 200 && res.status !== 206) return null
     return res.arrayBuffer()
   }

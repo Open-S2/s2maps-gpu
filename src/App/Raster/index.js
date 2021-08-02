@@ -30,7 +30,7 @@ function Raster () {
               onClick={() => {
                 if (num !== month) {
                   setMonth(num)
-                  style.sources.satellite = `${process.env.REACT_APP_S2TILES}/${num}.s2tiles`
+                  style.sources.satellite = `s2maps://data/s2maps/modis-v1/${num}.s2tiles`
                   map.current.setStyle(style)
                 }
               }}

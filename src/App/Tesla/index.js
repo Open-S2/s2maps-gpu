@@ -28,7 +28,7 @@ function Tesla () {
     if (locationID) {
       setInfo(null)
       setDisplay(true)
-      fetch(`https://api.s2maps.io/public/demos/tesla/location-data/${locationID}.json`)
+      fetch(`https://data.s2maps.io/public/demos/tesla/location-data/${locationID}.json`)
         .then(response => response.json())
         .then(data => setInfo(data))
     }

@@ -5,7 +5,7 @@ import { S2Map } from '../s2'
 
 // let s2map = null
 
-// const API_KEY = 'eyJ1IjoiY3JhaWdnbGVzIiwiaSI6ImhXUVQzbW9OMVNmUEFPbU4tNnBYNSJ9.skRpxwvqX8K2SJga8X9OX8XNK_bPPj5prFOiCL6G-53BRCxQAPC8G5mU-uFk_kYEyBzXtkqhuOkdAuLBTppWxw'
+const API_KEY = 'eyJ1IjoiYWRtaW4iLCJpIjoiekg3aFBMWl9nQzhnTk95UVFNdGRHIn0.ADmB9-ySWOWHIFlNj3Miw7p82QtVLoHDT4t_4dEtjEQzJNvA5-r7BvNfRlQKLxU8RmEZvFhmtQQHe88gCqrjrA'
 
 function Map (props) {
   const s2map = useRef()
@@ -42,7 +42,7 @@ function prepCanvas (container, s2map, style, opts = {}, click, ready) {
   s2map.current = new S2Map({
     ...opts,
     style,
-    // apiKey: API_KEY,
+    apiKey: API_KEY,
     container,
     projection: 'blend',
     zoomController: (typeof opts.zoomController === 'boolean') ? opts.zoomController : true
