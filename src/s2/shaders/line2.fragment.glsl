@@ -1,8 +1,6 @@
 #version 300 es
 precision highp float;
 
-@nomangle vWidth vNorm vCenter vColor vDrawType uDevicePixelRatio
-
 in vec2 vWidth;
 in vec2 vNorm;
 in vec2 vCenter;

@@ -5,12 +5,14 @@ import StreetsJPG from './streets.jpg'
 import DarkJPG from './dark.jpg'
 import LightJPG from './light.jpg'
 import RasterJPG from './raster.jpg'
+import MoonJPG from './moon.jpg'
 import GeoJSONJPG from './geojson.jpg'
 import HeatmapJPG from './heatmap.jpg'
 import PointsJPG from './points.jpg'
 import InteractJPG from './interact.jpg'
 import TissotsJPG from './tissots.jpg'
-import TilesJPG from './tiles.jpg'
+import OutdoorJPG from './outdoor.jpg'
+import InvertJPG from './invert.jpg'
 
 function Home () {
   return (
@@ -44,14 +46,31 @@ function Home () {
             </div>
           </Link>
 
+          <Link to='/outdoor'>
+            <div className='link-container'>
+              <img async loading='lazy' width='640px' height='363px' alt='outdoor' src={OutdoorJPG} />
+              <div className='link-name'>Outdoor</div>
+            </div>
+          </Link>
+
           <Link to='/raster' className='link-container'>
             <img async loading='lazy' width='640px' height='363px' alt='raster' src={RasterJPG} />
             <div className='link-name'>Raster</div>
           </Link>
 
+          <Link to='/moon' className='link-container'>
+            <img async loading='lazy' width='640px' height='363px' alt='moon' src={MoonJPG} />
+            <div className='link-name'>Moon</div>
+          </Link>
+
           <Link to='/geojson' className='link-container'>
             <img async loading='lazy' width='640px' height='363px' alt='geojson' src={GeoJSONJPG} />
             <div className='link-name'>GeoJSON</div>
+          </Link>
+
+          <Link to='/invert' className='link-container'>
+            <img async loading='lazy' width='640px' height='363px' alt='invert' src={InvertJPG} />
+            <div className='link-name'>Invert Data</div>
           </Link>
 
           <Link to='/earthquakes' className='link-container'>
@@ -72,11 +91,6 @@ function Home () {
           <Link to='/tissots' className='link-container'>
             <img async loading='lazy' width='640px' height='363px' alt='tissots' src={TissotsJPG} />
             <div className='link-name'>Tissot's Indicatrix</div>
-          </Link>
-
-          <Link to='/tiles' className='link-container'>
-            <img async loading='lazy' width='640px' height='363px' alt='tiles' src={TilesJPG} />
-            <div className='link-name'>Tiles</div>
           </Link>
 
         </div>

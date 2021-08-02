@@ -1,18 +1,12 @@
-#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
-#else
-precision mediump float;
-#endif
-
-@nomangle aPos aIndex color
 
 attribute vec2 aPos;
 attribute float aIndex;
 
 uniform vec4 uColors[16];
-uniform float uOpacity;
+uniform float uOpacity[16];
 
-@include "./getPos.glsl"
+@import "./getPos.glsl"
 
 varying vec4 color;
 
@@ -23,6 +17,6 @@ void main () {
   int index = int(aIndex);
   // decode color
   color = uColors[index];
-  color *= uOpacity;
+  color *= uOpacity[index];
   color.rgb *= color.a;
 }

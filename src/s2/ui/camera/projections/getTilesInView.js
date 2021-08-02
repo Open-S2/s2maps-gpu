@@ -2,7 +2,7 @@
 import * as mat4 from '../../../util/mat4'
 import { S2Point, tileXYFromSTZoom, bboxST, updateFace, tileHash } from 's2projection'
 
-import type { TileDefinitions } from './projector'
+import type { TileDefinitions } from './'
 
 export default function getTilesInView (zoom: number, matrix: Float32Array,
   lon: number, lat: number, radius?: number = 1): TileDefinitions {

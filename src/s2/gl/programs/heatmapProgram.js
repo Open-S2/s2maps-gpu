@@ -18,10 +18,12 @@ export default class HeatmapProgram extends Program {
   uDrawState: WebGLUniformLocation
   uImage: WebGLUniformLocation
   uColorRamp: WebGLUniformLocation
+  uBounds: WebGLUniformLocation
   texture: WebGLTexture
   nullTextureA: WebGLTexture
   nullTextureB: WebGLTexture
   framebuffer: WebGLFramebuffer
+  defaultBounds: Float32Array = new Float32Array([0, 0, 8192, 8192])
   constructor (context: Context) {
     // get gl from context
     const { gl, type, devicePixelRatio } = context
@@ -29,27 +31,18 @@ export default class HeatmapProgram extends Program {
     if (type === 1) gl.attributeLocations = { aExtent: 0, aPos: 1 }
     // inject Program
     super(context)
-    const self = this
-
-    return Promise.all([
-      (type === 1) ? vert1 : vert2,
-      (type === 1) ? frag1 : frag2
-    ])
-      .then(([vertex, fragment]) => {
-        // build shaders
-        self.buildShaders(vertex, fragment)
-        // activate so we can setup samplers
-        self.use()
-        // set device pixel ratio
-        self.setDevicePixelRatio(devicePixelRatio)
-        // set sampler positions
-        gl.uniform1i(self.uColorRamp, 0)
-        gl.uniform1i(self.uImage, 1)
-        // build heatmap texture + FBO
-        self._setupFBO()
-
-        return self
-      })
+    // build shaders
+    if (type === 1) this.buildShaders(vert1, frag1)
+    else this.buildShaders(vert2, frag2)
+    // activate so we can setup samplers
+    this.use()
+    // set device pixel ratio
+    this.setDevicePixelRatio(devicePixelRatio)
+    // set sampler positions
+    gl.uniform1i(this.uColorRamp, 0)
+    gl.uniform1i(this.uImage, 1)
+    // build heatmap texture + FBO
+    this._setupFBO()
   }
 
   delete () {
@@ -122,14 +115,16 @@ export default class HeatmapProgram extends Program {
     const { gl } = this
     // set draw state
     gl.uniform1f(this.uDrawState, 1)
+    // revert back to texture 0
+    gl.activeTexture(gl.TEXTURE0)
   }
 
   drawTexture (featureGuide: FeatureGuide, source: VectorTileSource) {
     // grab context
-    const { context } = this
+    const { context, defaultBounds, uIntensity, uRadius, uOpacity, uBounds } = this
     const { gl, type } = context
     // get current source data
-    let { count, featureCode, intensity, radius, opacity, offset, mode } = featureGuide
+    let { count, featureCode, intensity, radius, opacity, offset, mode, bounds } = featureGuide
     // ensure proper blend state
     context.oneBlend()
     // ensure we are not stencil, cull, or depth testing
@@ -137,10 +132,13 @@ export default class HeatmapProgram extends Program {
     context.disableDepthTest()
     // set feature code (webgl 1 we store the colors, webgl 2 we store layerCode lookups)
     if (type === 1) {
-      gl.uniform1f(this.uIntensity, intensity)
-      gl.uniform1f(this.uRadius, radius)
-      gl.uniform1f(this.uOpacity, opacity)
+      gl.uniform1f(uIntensity, intensity)
+      gl.uniform1f(uRadius, radius)
+      gl.uniform1f(uOpacity, opacity)
     } else { this.setFeatureCode(featureCode) }
+    // if bounds exists, set them, otherwise set default bounds
+    if (bounds) gl.uniform4fv(uBounds, bounds)
+    else gl.uniform4fv(uBounds, defaultBounds)
     // setup offsets and draw
     gl.bindBuffer(gl.ARRAY_BUFFER, source.vertexBuffer)
     gl.vertexAttribPointer(1, 2, gl.SHORT, false, 4, offset * 4)
@@ -165,10 +163,12 @@ export default class HeatmapProgram extends Program {
     context.defaultBlend()
     context.enableDepthTest()
     context.disableCullFace()
-    context.stencilFunc(0)
+    context.stencilFuncAlways(0)
     // adjust to current depthPos
-    context.lessDepth()
-    context.setDepthRange(depthPos)
+    if (depthPos) {
+      context.lessDepth()
+      context.setDepthRange(depthPos)
+    } else { context.resetDepthRange() }
     // draw a fan
     gl.drawArrays(gl.TRIANGLE_FAN, 0, 4)
   }

@@ -18,22 +18,13 @@ export default class ShadeProgram extends Program {
     if (type === 1) gl.attributeLocations = { aPos: 0 }
     // inject Program
     super(context)
-    const self = this
-
-    return Promise.all([
-      (type === 1) ? vert1 : vert2,
-      (type === 1) ? frag1 : frag2
-    ])
-      .then(([vertex, fragment]) => {
-        // build said shaders
-        self.buildShaders(vertex, fragment)
-        // activate so we can setup samplers
-        self.use()
-        // set pixel ratio
-        self.setDevicePixelRatio(devicePixelRatio)
-
-        return self
-      })
+    // build shaders
+    if (type === 1) this.buildShaders(vert1, frag1)
+    else this.buildShaders(vert2, frag2)
+    // activate so we can setup samplers
+    this.use()
+    // set pixel ratio
+    this.setDevicePixelRatio(devicePixelRatio)
   }
 
   draw (featureGuide: FeatureGuide, source: VectorTileSource) {

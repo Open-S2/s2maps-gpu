@@ -1,10 +1,4 @@
-#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
-#else
-precision mediump float;
-#endif
-
-@nomangle aPos vertPos
 
 attribute vec2 aPos;
 varying vec2 vertPos;

@@ -1,8 +1,12 @@
 // @flow
 import Map from './ui/map'
+// import createWorker from './util/createWorker'
 import MapWorker from './workers/map.worker.js'
+// import mapWorkerURL from './workers/map.worker.url.js'
 
 import type { MapOptions } from './ui/map'
+
+type Attributions = { [string]: string }
 
 // This is a builder / api instance for the end user.
 // We want individual map instances in their own web worker thread. However,
@@ -14,8 +18,8 @@ export default class S2Map extends EventTarget {
   _canvasMultiplier: number
   _offscreen: boolean = false
   _canvas: HTMLCanvasElement
+  _attributionPopup: HTMLCanvasElement
   map: Map | MapWorker
-  firefoxScroll: boolean = navigator.platform !== 'MacIntel' && navigator.userAgent.includes('Firefox')
   id: string = Math.random().toString(36).replace('0.', '')
   constructor (options: MapOptions = {}) {
     super()
@@ -41,6 +45,8 @@ export default class S2Map extends EventTarget {
     const { _offscreen, map, _canvas } = this
     if (_offscreen && map) map.postMessage({ type: 'delete' }) // $FlowIgnore
     else if (map) map.delete()
+    // reset the worker pool
+    window.S2WorkerPool.delete()
     // lastly, remove all canvas listeners via cloning
     _canvas.replaceWith(_canvas.cloneNode(true))
   }
@@ -70,10 +76,12 @@ export default class S2Map extends EventTarget {
     const self = this
     const { _canvasContainer } = self
     // if browser supports it, create an instance of the mapWorker
-    if (false && canvas.transferControlToOffscreen) { // $FlowIgnore
+    if (canvas.transferControlToOffscreen) { // $FlowIgnore
       const offscreen = canvas.transferControlToOffscreen()
       self._offscreen = true
       const mapWorker = self.map = new MapWorker()
+      // const mapWorker = self.map = new Worker(new URL('./workers/map.worker.js', import.meta.url), { name: 'map-worker', type: 'module' })
+      // const mapWorker = self.map = createWorker(mapWorkerURL, 'map-worker')
       mapWorker.onmessage = self._mapMessage.bind(self)
       mapWorker.postMessage({ type: 'canvas', options, canvas: offscreen, id: self.id }, [offscreen])
     } else {
@@ -108,16 +116,18 @@ export default class S2Map extends EventTarget {
 
   _setupControlContainer (options: MapOptions) {
     const { _container } = this
-    const { zoomController, darkMode } = options
+    const { attributions, zoomController, darkMode } = options
     // add info bar with our jollyRoger
     const attribution = window.document.createElement('div')
     attribution.id = 's2-attribution'
     const info = window.document.createElement('div')
     info.id = 's2-info'
     info.onclick = function () { attribution.classList.toggle('show') }
-    const popup = window.document.createElement('div')
+    const popup = this._attributionPopup = window.document.createElement('div')
     popup.className = 's2-popup-container'
-    popup.innerHTML = '<div>Rendered with ❤ by</div><a href="https://s2maps.io" target="popup"><div class="s2-jolly-roger"></div></a><div><a href="https://www.openstreetmap.org/copyright/" target="popup">OpenStreetMap</a></div><div><a href="https://s2maps.io/data" target="popup">S2 Maps data</a></div>'
+    popup.innerHTML = '<div>Rendered with ❤ by</div><a href="https://s2maps.io" target="popup"><div class="s2-jolly-roger"></div></a>'
+    // add attributions
+    if (attributions) for (const name in attributions) popup.innerHTML += `<div><a href="${attributions[name]}" target="popup">${name}</a></div>`
     attribution.appendChild(info)
     attribution.appendChild(popup)
     _container.appendChild(attribution)
@@ -151,6 +161,11 @@ export default class S2Map extends EventTarget {
     }
   }
 
+  _addAttributions (attributions: Attributions) {
+    const { _attributionPopup } = this
+    for (const name in attributions) _attributionPopup.innerHTML += `<div><a href="${attributions[name]}" target="popup">${name}</a></div>`
+  }
+
   _onTouch (e: TouchEvent, type: string) {
     const { map, _offscreen, _canvasContainer, _canvasMultiplier } = this
     e.preventDefault()
@@ -175,12 +190,12 @@ export default class S2Map extends EventTarget {
 
   _onScroll (e: WheelEvent) {
     e.preventDefault()
-    const { map, _offscreen, firefoxScroll } = this
+    const { map, _offscreen } = this
     const { clientX, clientY, deltaY } = e
     const rect = this._canvas.getBoundingClientRect() // $FlowIgnore
     if (_offscreen && map) {
       map.postMessage({ type: 'scroll', rect, clientX, clientY, deltaY })
-    } else if (map) { map._onZoom(deltaY * (firefoxScroll ? 25 : 1), clientX - rect.left, clientY - rect.top) }
+    } else if (map) { map._onZoom(deltaY, clientX - rect.left, clientY - rect.top) }
   }
 
   _onMouseDown () {
@@ -240,6 +255,11 @@ export default class S2Map extends EventTarget {
       if (feature) this.dispatchEvent(new CustomEvent('mouseleave', { detail: feature }))
     } else if (type === 'click') {
       this.dispatchEvent(new CustomEvent('click', { detail: data.feature }))
+    } else if (type === 'pos') {
+      const { zoom, lon, lat } = data
+      this.dispatchEvent(new CustomEvent('pos', { detail: { zoom, lon, lat } }))
+    } else if (type === 'screenshot') {
+      this.dispatchEvent(new CustomEvent('screenshot', { detail: data.screen }))
     }
   }
 
@@ -276,12 +296,15 @@ export default class S2Map extends EventTarget {
 
   injectData (data) {
     const { map, _offscreen } = this
-    if (_offscreen && map) {
+    if (data.type === 'attributions') {
+      this._addAttributions(data.attributions)
+    } else if (_offscreen && map) {
       // prep ArrayBuffer 0 copy transfer
       const { type } = data // $FlowIgnore
       if (type === 'filldata') map.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.codeTypeBuffer, data.featureGuideBuffer]) // $FlowIgnore
       else if (type === 'linedata') map.postMessage(data, [data.vertexBuffer, data.featureGuideBuffer]) // $FlowIgnore
-      else if (type === 'glyphdata') map.postMessage(data, [data.glyphFilterBuffer, data.glyphFillVertexBuffer, data.glyphFillIndexBuffer, data.glyphLineVertexBuffer, data.glyphQuadBuffer, data.glyphColorBuffer, data.layerGuideBuffer]) // $FlowIgnore
+      else if (type === 'glyphdata') map.postMessage(data, [data.glyphFilterBuffer, data.glyphQuadBuffer, data.glyphColorBuffer, data.featureGuideBuffer]) // $FlowIgnore
+      else if (type === 'glyphimages') map.postMessage(data, data.images.map(i => i.data))
       else if (type === 'rasterdata') map.postMessage(data, [data.image]) // $FlowIgnore
       else if (type === 'maskdata') map.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.radiiBuffer]) // $FlowIgnore
       else if (type === 'pointdata' || type === 'heatmapdata') map.postMessage(data, [data.vertexBuffer, data.weightBuffer, data.featureGuideBuffer]) // $FlowIgnore
@@ -319,6 +342,15 @@ export default class S2Map extends EventTarget {
 
   flyTo (lon: number, lat: number, zoom: number) {
 
+  }
+
+  screenshot () {
+    const { _offscreen, map } = this
+    if (_offscreen && map) map.postMessage({ type: 'screenshot' }) // $FlowIgnore
+    else if (map) map.screenshot()
+    return new Promise(resolve => {
+      this.addEventListener('screenshot', (data) => { resolve(data) }, { once: true })
+    })
   }
 }
 

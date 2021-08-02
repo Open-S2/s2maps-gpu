@@ -1,6 +1,5 @@
 // @flow
 import * as mat4 from '../../../util/mat4'
-import Projector from './projector'
 
 export type PerspectiveConfig = {
   translation?: [number, number, number],

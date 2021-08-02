@@ -1,8 +1,6 @@
 #version 300 es
 precision highp float;
 
-@nomangle extent color stroke radius strokeWidth antialiasFactor uInteractive
-
 in vec2 extent;
 in float antialiasFactor;
 in vec4 color;

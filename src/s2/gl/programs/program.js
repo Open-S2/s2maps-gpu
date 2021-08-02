@@ -42,21 +42,16 @@ export default class Program {
     const { gl } = context
     this.gl = gl
     // create the program
-    const program = this.glProgram = gl.createProgram()
-    // setup attribute location data if necessary
-    const attrLoc = gl.attributeLocations
-    if (attrLoc) for (const attr in attrLoc) gl.bindAttribLocation(program, attrLoc[attr], attr)
+    this.glProgram = gl.createProgram()
   }
 
-  async buildShaders (vertex: shaderSource, fragment: shaderSource) {
+  buildShaders (vertex: shaderSource, fragment: shaderSource) {
     const { gl, glProgram } = this
-    const vertexShaderSource = vertex.sourceCode
-    const vertexUniforms = vertex.uniforms
-    const fragmentShaderSource = fragment.sourceCode
-    const fragmentUniforms = fragment.uniforms
+    // setup attribute locations prior to building
+    this.setupAttributes(vertex.attributes)
     // load vertex and fragment shaders
-    const vertexShader = this.vertexShader = loadShader(gl, vertexShaderSource, gl.VERTEX_SHADER)
-    const fragmentShader = this.fragmentShader = loadShader(gl, fragmentShaderSource, gl.FRAGMENT_SHADER)
+    const vertexShader = this.vertexShader = loadShader(gl, vertex.source, gl.VERTEX_SHADER)
+    const fragmentShader = this.fragmentShader = loadShader(gl, fragment.source, gl.FRAGMENT_SHADER)
     // if shaders worked, attach, link, validate, etc.
     if (vertexShader && fragmentShader) {
       gl.attachShader(glProgram, vertexShader)
@@ -67,14 +62,25 @@ export default class Program {
         throw Error(gl.getProgramInfoLog(glProgram))
       }
 
-      this.setupUniforms({ ...vertexUniforms, ...fragmentUniforms })
+      this.setupUniforms({ ...vertex.uniforms, ...fragment.uniforms })
     } else { throw Error('missing shaders') }
   }
 
   setupUniforms (uniforms) {
     const { gl, glProgram } = this
 
-    for (const uniform in uniforms) this[uniform] = gl.getUniformLocation(glProgram, uniforms[uniform].variableName)
+    for (const [uniform, code] of Object.entries(uniforms)) {
+      this[uniform] = gl.getUniformLocation(glProgram, code)
+    }
+  }
+
+  setupAttributes (attributes) {
+    const { gl, glProgram } = this
+    const attrLoc = gl.attributeLocations
+
+    if (attrLoc) for (const attr in attrLoc) {
+      gl.bindAttribLocation(glProgram, attrLoc[attr], attributes[attr])
+    }
   }
 
   delete () {
@@ -84,7 +90,9 @@ export default class Program {
   }
 
   use () {
-    this.gl.useProgram(this.glProgram)
+    const { gl, glProgram } = this
+
+    gl.useProgram(glProgram)
     this.flush()
   }
 
@@ -116,7 +124,7 @@ export default class Program {
   }
 
   setAspect (aspect: Float32Array) {
-    this.gl.uniform2fv(this.uAspect, aspect)
+    if (this.uAspect) this.gl.uniform2fv(this.uAspect, aspect)
     this.updateAspect = null
   }
 

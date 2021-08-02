@@ -1,0 +1,78 @@
+// @flow
+import type { GlyphObject } from './glyph'
+
+export default function postprocessGlyph (mapID: string, sourceName: string,
+  tileID: string, features: Array<GlyphObject>, postMessage: Function) {
+  // setup draw thread variables
+  const glyphFilterVertices = []
+  const glyphQuads = []
+  const glyphColors = []
+  const featureGuide = []
+  // run through features and store
+  let curlayerIndex = features[0].layerIndex
+  let curType = features[0].type
+  let encoding: Array<number> = features[0].code
+  let subEncoding: Array<number> = features[0].featureCode
+  let codeStr: string = features[0].code.toString()
+  let filterOffset = 0
+  let quadOffset = 0
+  let filterCount = 0
+  let quadCount = 0
+  let indexPos = 0
+  // iterate features, store as we go
+  for (const glyph of features) {
+    const { type, layerIndex, code, featureCode, quads, filter, color } = glyph
+    // if there is a change in layer index or
+    if ((quadCount || filterCount) && (curlayerIndex !== layerIndex || codeStr !== code.toString() || curType !== type)) {
+      // store featureGuide
+      featureGuide.push(curlayerIndex, curType, filterOffset, filterCount, quadOffset, quadCount, encoding.length, ...encoding)
+      if (subEncoding) featureGuide.push(...subEncoding)
+      // update to new codes
+      curlayerIndex = layerIndex
+      codeStr = code.toString()
+      curType = type
+      encoding = code
+      subEncoding = featureCode
+      // update offests
+      filterOffset += filterCount
+      quadOffset += quadCount
+      // reset counts
+      filterCount = 0
+      quadCount = 0
+      indexPos = 0
+    }
+    // store the quads and colors
+    filter[8] = indexPos++
+    glyphFilterVertices.push(...filter)
+    filterCount++
+    glyphQuads.push(...quads)
+    const qCount = quads.length / 13
+    quadCount += qCount
+    if (color) glyphColors.push(...color)
+    else for (let i = 0; i < qCount; i++) glyphColors.push(255, 255, 255, 255)
+  }
+  // store last set
+  if (quadCount || filterCount) {
+    featureGuide.push(curlayerIndex, curType, filterOffset, filterCount, quadOffset, quadCount, encoding.length, ...encoding)
+    if (subEncoding) featureGuide.push(...subEncoding)
+  }
+
+  // filter data
+  const glyphFilterBuffer = new Float32Array(glyphFilterVertices).buffer
+  // quad draw data
+  const glyphQuadBuffer = new Float32Array(glyphQuads).buffer
+  const glyphColorBuffer = new Uint8ClampedArray(glyphColors).buffer
+  const featureGuideBuffer = new Float32Array(featureGuide).buffer
+
+  // ship the data
+  postMessage({
+    mapID,
+    type: 'glyphdata',
+    source: sourceName,
+    tileID,
+    glyphFilterBuffer,
+    glyphQuadBuffer,
+    glyphColorBuffer,
+    featureGuideBuffer
+  }, [glyphFilterBuffer, glyphQuadBuffer, glyphColorBuffer, featureGuideBuffer])
+}

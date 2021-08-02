@@ -6,14 +6,10 @@
   "minzoom": 0,
   "maxzoom": 20,
   "sources": {
-    "oceanLowZoom": "http://localhost:8000/data/oceanLowZoomIndices",
-    "landcover": "http://localhost:8000/data/landcoverIndices"
+    "streets-v2": "https://s3.s2maps.io/streets-v2",
+    "terrain": "https://s3.s2maps.io/terrain-v1"
   },
-  "fonts": {
-    "default": "https://s3.s2maps.io/fonts-v3/default",
-    "roboto-regular": "https://s3.s2maps.io/fonts-v3/RobotoRegular",
-    "roboto-medium": "https://s3.s2maps.io/fonts-v3/RobotoMedium"
-  },
+  "fonts": {},
   "wallpaper": {
     "background-color": "#030a2d",
     "fade-1": "rgb(138, 204, 255)",
@@ -53,7 +49,7 @@
     },
     {
       "name": "landcover",
-      "source": "landcover",
+      "source": "terrain",
       "layer": "landcover",
       "type": "fill",
       "minzoom": 0,
@@ -82,7 +78,7 @@
     },
     {
       "name": "water",
-      "source": "oceanLowZoom",
+      "source": "streets-v2",
       "filter": ["class", "!has", ["reef", "shoal"]],
       "layer": "water",
       "type": "fill",
@@ -91,6 +87,42 @@
       "layout": {},
       "paint": {
         "color": "#8fcaf9"
+      }
+    },
+    {
+      "id": "boundaries",
+      "source": "streets-v2",
+      "layer": "boundary",
+      "filter": ["and", ["adminLevel", "has", [2, 4]], ["maritime", "==", false]],
+      "type": "line",
+      "minzoom": 0,
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": [
+          "data-condition",
+          ["adminLevel", "==", 2],
+          "rgb(120, 120, 120)",
+          "default",
+          "rgb(160, 160, 160)"
+        ],
+        "width": [
+          "data-condition",
+          ["adminLevel", "==", 4],
+          1.25,
+          "default",
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            1.25,
+            1,
+            2,
+            1.75
+          ]
+        ]
       }
     }
   ]

@@ -1,8 +1,6 @@
 #version 300 es
 precision highp float;
 
-@nomangle vertPos
-
 in vec2 vertPos;
 out vec4 fragColor;
 

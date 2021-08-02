@@ -1,8 +1,6 @@
 #version 300 es
 precision highp float;
 
-@nomangle layout location vWidth vNorm vCenter vColor vDrawType uDevicePixelRatio
-
 layout (location = 0) in float aType;
 layout (location = 1) in vec2 aPrev; // (INSTANCED)
 layout (location = 2) in vec2 aCurr; // (INSTANCED)
@@ -29,11 +27,11 @@ uniform float uDevicePixelRatio;
 uniform vec2 uAspect;
 uniform float uCap; // 0 -> butt ; 1 -> round ; 2 -> square
 
-@include "./decodeFeature2.glsl"
-@include "./getPos.glsl"
+@import "./decodeFeature2.glsl"
+@import "./getPos.glsl"
 
-bool isCCW (in vec2 prev, in vec2 curr, in vec2 next) {
-  float det = (curr.y - prev.y) * (next.x - curr.x) - (curr.x - prev.x) * (next.y - curr.y);
+bool isCCW (in vec2 cPrev, in vec2 cCurr, in vec2 cNext) {
+  float det = (cCurr.y - cPrev.y) * (cNext.x - cCurr.x) - (cCurr.x - cPrev.x) * (cNext.y - cCurr.y);
 
   return det < 0.;
 }

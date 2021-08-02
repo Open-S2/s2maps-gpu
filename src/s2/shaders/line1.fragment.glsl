@@ -1,14 +1,12 @@
 precision highp float;
 
-@nomangle vColor vWidth vNorm vCenter vDrawType uDevicePixelRatio
-
-uniform float uDevicePixelRatio;
-
-varying vec4 vColor;
 varying vec2 vWidth;
 varying vec2 vNorm;
 varying vec2 vCenter;
+varying vec4 vColor;
 varying float vDrawType;
+
+uniform float uDevicePixelRatio;
 
 void main () {
   // Calculate the distance of the pixel from the line in pixels.

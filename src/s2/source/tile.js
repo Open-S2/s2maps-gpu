@@ -1,6 +1,6 @@
 // @flow
-import Context from '../gl/contexts'
-import buildSource, { buildGlyphSource } from './buildSource'
+import { Context } from '../gl/contexts'
+import buildSource from './buildSource'
 import * as mat4 from '../util/mat4'
 import { S2Point, bboxST } from 's2projection' // https://github.com/Regia-Corporation/s2projection
 
@@ -10,7 +10,7 @@ import type { ProgramType } from '../gl/programs/program'
 
 export type VectorTileSource = {
   type: 'vector',
-  subType: 'fill' | 'line' | 'point',
+  subType: 'fill' | 'line' | 'point' | 'heatmap',
   vertexArray: Int16Array,
   radiiArray?: Float32Array,
   indexArray: Uint32Array,
@@ -28,27 +28,15 @@ export type VectorTileSource = {
 
 export type GlyphTileSource = {
   type: 'glyph',
-  uvArray: Float32Array,
-  stepArray: Float32Array,
   textureID: number,
   height: number,
   glyphFilterVertices: Float32Array,
-  glyphFillVertices: Float32Array,
-  glyphFillIndices: Uint32Array,
-  glyphLineVertices: Float32Array,
-  glyphLineTypeArray: Float32Array,
   glyphQuads: Float32Array,
   filterVAO?: WebGLVertexArrayObject,
-  glyphFillVAO?: WebGLVertexArrayObject,
-  glyphLineVAO?: WebGLVertexArrayObject,
   vao?: WebGLVertexArrayObject, // quad vao
   uvBuffer?: WebGLBuffer,
   stepBuffer?: WebGLBuffer,
   glyphFilterBuffer?: WebGLBuffer,
-  glyphFillVertexBuffer?: WebGLBuffer,
-  glyphFillIndexBuffer?: WebGLBuffer,
-  glyphLineVertexBuffer?: WebGLBuffer,
-  glyphLineTypeBuffer?: WebGLBuffer,
   glyphIndexBuffer?: WebGLBuffer,
   glyphQuadBuffer?: WebGLBuffer
 }
@@ -86,10 +74,6 @@ export type FeatureGuide = { // eslint-disable-next-line
   lch?: boolean
 }
 
-export type ChildRequest = { // eslint-disable-next-line
-  [string | number]: Array<Tile> // layerIndex (hash):
-}
-
 // eslint-disable-next-line
 export type SourceData = { [string | number]: RasterTileSource | VectorTileSource | GlyphTileSource }
 
@@ -119,11 +103,10 @@ export default class Tile {
   top: Float32Array
   division: number
   sourceData: SourceData = {}
-  heatmapGuide: Array<FeatureGuide> = []
   featureGuide: Array<FeatureGuide> = []
   context: Context
-  childrenRequests: ChildRequest = {}
   interactiveGuide: Map<number, Object> = new Map()
+  rendered: boolean = false
   constructor (context: Context, face: number, zoom: number,
     x: number, y: number, hash: number, size?: number = 512) {
     this.context = context
@@ -151,12 +134,38 @@ export default class Tile {
   // is the tile wants to display a layer that exists in a 'lower' zoom than this one.
   injectParentTile (parent: Tile, layers: Array<Layer>) {
     if (this.zoom >= 12) return
+    const bounds = this._buildBounds(parent)
+    // feature guides
     for (const feature of parent.featureGuide) {
-      const { maskLayer, type, layerIndex } = feature
-      const { maxzoom } = layers[layerIndex]
-      if (maskLayer) continue // ignore mask features
-      if (type !== 'glyph' && this.zoom <= maxzoom) this.featureGuide.push({ ...feature, tile: this, parent })
+      const { maxzoom } = layers[feature.layerIndex]
+      if (feature.maskLayer) continue // ignore mask features
+      if (this.zoom <= maxzoom) this.featureGuide.push({ ...feature, tile: this, parent, bounds })
     }
+  }
+
+  // currently this is for glyphs, points, and heatmaps. By sharing glyph data with children,
+  // the glyphs will be rendered 4 or even more times. To alleviate this, we can set boundaries
+  // of what points will be considered
+  _buildBounds (parent: Tile) {
+    let { x, y, zoom } = this
+    const parentZoom = parent.zoom
+    // get the scale
+    const scale = 1 << (zoom - parentZoom)
+    // get x and y shift
+    let xShift = 0
+    let yShift = 0
+    while (zoom > parentZoom) {
+      const div = 1 << (zoom - parentZoom)
+      if (x % 2 !== 0) xShift += 8192 / div
+      if (y % 2 !== 0) yShift += 8192 / div
+      // decrement
+      x = x >> 1
+      y = y >> 1
+      zoom--
+    }
+
+    // build the bounds bbox
+    return [0 + xShift, 0 + yShift, 8192 / scale + xShift, 8192 / scale + yShift]
   }
 
   _buildCorners () {
@@ -198,6 +207,21 @@ export default class Tile {
     }
   }
 
+  flush (data) {
+    const { source } = data
+    // remove "left over" feature guide data from parent injection that wont be replaced in the future
+    this.featureGuide = this.featureGuide.filter(fg => {
+      const split = fg.sourceName.split(':')
+      const fgSource = split[0]
+      const fgType = split.pop()
+      return !(
+        fgSource === source &&
+        !data[fgType] &&
+        fg.parent
+      )
+    })
+  }
+
   // the zoom determines the number of divisions necessary to maintain a visually
   // asthetic spherical shape. As we zoom in, the tiles are practically flat,
   // so division is less useful.
@@ -234,7 +258,10 @@ export default class Tile {
         lch,
         mode: this.sourceData.mask.mode
       }
-      if (this.context.type === 1 && paint) feature.color = (paint.color(null, null, this.zoom)).getRGB()
+      if (this.context.type === 1 && paint) {
+        feature.color = (paint.color(null, null, this.zoom)).getRGB()
+        feature.opacity = [paint.opacity(null, null, this.zoom)]
+      }
       this.featureGuide.push(feature)
     }
   }
@@ -255,32 +282,27 @@ export default class Tile {
     buildSource(this.context, mask)
   }
 
-  // if a style has a raster source & layer pointing to it, we request the tiles
-  // four children (if size is 512 and images are 512, otherwise we may store
-  // 16 images of 256). Create a texture of size length x length to house
-  // said data (length being this.size * 2).
   injectRasterData (sourceName: string, layerIndexes: Array<number>, image: Image,
-    leftShift: number, bottomShift: number) {
-    const { gl } = this.context
-    const length = image.width
+    layers: Array<Layer>) {
+    const { size } = this
     // prep the source
     let rasterSource = this.sourceData[sourceName]
     // prep phase (should the source not exist)
     if (!rasterSource) {
       rasterSource = this.sourceData[sourceName] = {
         type: 'raster',
-        size: this.size,
-        total: Math.pow((this.size * 2) / length, 2),
-        count: 0,
-        texture: gl.createTexture()
+        size,
+        image
       }
       buildSource(this.context, rasterSource)
       // store texture information to featureGuide
       for (const layerIndex of layerIndexes) {
+        const { depthPos } = layers[layerIndex]
         const guide = {
           tile: this,
           faceST: this.faceST,
           layerIndex,
+          depthPos,
           source: this.sourceData,
           sourceName: 'mask',
           subType: 'fill',
@@ -291,20 +313,14 @@ export default class Tile {
         this.featureGuide.push(guide)
       }
     }
-    // pull out the texture
-    const { texture } = rasterSource
-    // store in texture
-    gl.bindTexture(gl.TEXTURE_2D, texture)
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, leftShift * length, bottomShift * length, gl.RGBA, gl.UNSIGNED_BYTE, image)
-    rasterSource.count++
     // Since a parent may have been injected, we need to remove any instances of the said source data.
-    if (rasterSource.count === rasterSource.total) this.featureGuide = this.featureGuide.filter(fg => !(layerIndexes.includes(fg.layerIndex) && fg.parent))
+    this.featureGuide = this.featureGuide.filter(fg => !(layerIndexes.includes(fg.layerIndex) && fg.parent))
   }
 
   injectVectorSourceData (sourceName: string, vertexArray: Int16Array, indexArray?: Uint32Array,
     codeTypeArray: Uint8Array, featureGuideArray: Float32Array, layers: Array<Layer>): VectorTileSource {
-    // Since a parent may have been injected, we need to remove any instances of the said source data.
-    // this.featureGuide = this.featureGuide.filter(fg => fg.sourceName !== sourceName)
+    // filter parent data if applicable
+    this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === sourceName && fg.parent))
     // store a reference to the source
     const subType = sourceName.split(':').pop()
     const vectorSource = this.sourceData[sourceName] = {
@@ -314,8 +330,6 @@ export default class Tile {
       indexArray,
       codeTypeArray
     }
-    // keep track of layerIndexs used for removing parent data if necessary
-    let layerIndexes = new Set()
     // we work off the featureGuideArray, adding to the buffer as we go
     const lgl = featureGuideArray.length
     let i = 0
@@ -328,7 +342,6 @@ export default class Tile {
       }
       // grab the size, layerIndex, count, and offset, and update the index
       const [layerIndex, count, offset, encodingSize] = featureGuideArray.slice(i, i + 4)
-      layerIndexes.add(layerIndex)
       i += 4
       // build featureCode
       const featureCode = new Float32Array(encodingSize ? [...featureGuideArray.slice(i, i + encodingSize)] : [0])
@@ -357,64 +370,64 @@ export default class Tile {
       i += encodingSize
       // if webgl1, we have color (and width if line) data
       if (this.context.type === 1) {
-        feature.color = feature.subFeatureCode = feature.featureCode // default subFeatureCode is for fill which is only color
+        const subFeatureCode = featureCode // default subFeatureCode is for fill which is only color
         const subEncodingSize = featureGuideArray[i]
         i++
         feature.featureCode = new Float32Array(subEncodingSize ? [...featureGuideArray.slice(i, i + subEncodingSize)] : [0])
         i += subEncodingSize
-        // if (subType === 'fill') {
-        //   feature.color = feature.subFeatureCode.slice(0, 4)
-        //   feature.opacity = feature.subFeatureCode[4]
-        // } else if (subType === 'line') {
-        if (subType === 'line') {
-          feature.color = feature.subFeatureCode.slice(0, 4)
-          feature.width = feature.subFeatureCode[4]
+        if (subType === 'fill') {
+          feature.color = []
+          feature.opacity = []
+          const len = subFeatureCode.length / 5
+          for (let s = 0; s < len; s++) {
+            const idx = s * 5
+            feature.color.push(...subFeatureCode.slice(idx, idx + 4))
+            feature.opacity.push(subFeatureCode[idx + 4])
+          }
+        } else if (subType === 'line') {
+          feature.color = subFeatureCode.slice(0, 4)
+          feature.width = subFeatureCode[4]
         } else if (subType === 'point') {
-          feature.color = feature.subFeatureCode.slice(0, 4)
-          feature.radius = feature.subFeatureCode[4]
-          feature.stroke = feature.subFeatureCode.slice(5, 9)
-          feature.strokeWidth = feature.subFeatureCode[9]
-          feature.opacity = feature.subFeatureCode[10]
+          feature.color = subFeatureCode.slice(0, 4)
+          feature.radius = subFeatureCode[4]
+          feature.stroke = subFeatureCode.slice(5, 9)
+          feature.strokeWidth = subFeatureCode[9]
+          feature.opacity = subFeatureCode[10]
         } else if (subType === 'heatmap') {
-          feature.intensity = feature.subFeatureCode[0]
-          feature.radius = feature.subFeatureCode[1]
-          feature.opacity = feature.subFeatureCode[2]
+          feature.intensity = subFeatureCode[0]
+          feature.radius = subFeatureCode[1]
+          feature.opacity = subFeatureCode[2]
         }
       }
       // store
-      if (subType === 'heatmap') this.heatmapGuide.push(feature)
-      else this.featureGuide.push(feature)
-      // if a lower zoom tile needs this feature, we add
-      const childRequest = this.childrenRequests[layerIndex]
-      if (childRequest && childRequest.length) for (const tile of childRequest) tile.featureGuide.push({ ...feature, tile, parent: this })
+      this.featureGuide.push(feature)
     }
-    // filter parent data if applicable
-    layerIndexes = [...layerIndexes]
-    this.featureGuide = this.featureGuide.filter(fg => !(layerIndexes.includes(fg.layerIndex) && fg.parent))
     // build the VAO
     buildSource(this.context, vectorSource)
-    // return the source
-    return vectorSource
   }
 
   injectGlyphSourceData (sourceName: string, glyphFilterVertices: Float32Array,
-    glyphFillVertices: Float32Array, glyphFillIndices: Float32Array,
-    glyphLineVertices: Float32Array, glyphQuads: Float32Array,
-    glyphColors: Uint8ClampedArray, layerGuideBuffer: Float32Array,
-    layers: Array<Layer>): GlyphTileSource {
-    // keep track of layerIndexs used for removing parent data if necessary
-    let layerIndexes = new Set()
+    glyphQuads: Float32Array, glyphColors: Uint8ClampedArray,
+    featureGuideBuffer: Float32Array, layers: Array<Layer>) {
+    // filter parent data if applicable
+    this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === sourceName && fg.parent))
+    const { context } = this
+    const glyphSource = this.sourceData[sourceName] = {
+      type: 'glyph',
+      glyphFilterVertices,
+      glyphQuads,
+      glyphColors
+    }
     // LayerCode: layerIndex, offset, count, codeLength, code
-    // we work off the layerGuideBuffer, adding to the buffer as we go
-    const lgl = layerGuideBuffer.length
-    let i = 2
+    // we work off the featureGuideBuffer, adding to the buffer as we go
+    const lgl = featureGuideBuffer.length
+    let i = 0
     while (i < lgl) {
       // grab the size, layerIndex, count, and offset, and update the index
-      // layerIndex, filterOffset, filterCount, quadOffset, quadCount, codeLength, code
-      const [layerIndex, type, filterOffset, filterCount, offset, count, encodingSize] = layerGuideBuffer.slice(i, i + 7)
-      layerIndexes.add(layerIndex)
+      const [layerIndex, type, filterOffset, filterCount, offset, count, encodingSize] = featureGuideBuffer.slice(i, i + 7)
       i += 7
       // grab the layers type and code
+      if (!layers[layerIndex]) console.log(layerIndex, featureGuideBuffer)
       const { overdraw, depthPos, code, iconCode, lch, interactive } = layers[layerIndex]
       // create and store the featureGuide
       const feature = {
@@ -430,7 +443,7 @@ export default class Tile {
         type: 'glyph',
         glyphType: type === 0 ? 'text' : 'icon',
         depthPos,
-        featureCode: new Float32Array(encodingSize ? [...layerGuideBuffer.slice(i, i + encodingSize)] : [0]),
+        featureCode: new Float32Array(encodingSize ? [...featureGuideBuffer.slice(i, i + encodingSize)] : [0]),
         layerCode: type === 0 ? code : iconCode,
         interactive,
         overdraw,
@@ -438,28 +451,25 @@ export default class Tile {
       }
       i += encodingSize
       // if WebGL1 - we also have to grab the fill, stroke, and strokeWidth
-      if (this.context.type === 1) {
-        // get fill, stroke, and stroke width. Increment
-        feature.size = layerGuideBuffer[i]
-        feature.fill = layerGuideBuffer.slice(i + 1, i + 5)
-        feature.stroke = layerGuideBuffer.slice(i + 5, i + 9)
-        feature.strokeWidth = layerGuideBuffer[i + 9]
-        i += 10
+      if (context.type === 1) {
+        if (type === 0) { // text
+          // get fill, stroke, and stroke width. Increment
+          feature.size = featureGuideBuffer[i]
+          feature.fill = featureGuideBuffer.slice(i + 1, i + 5)
+          feature.stroke = featureGuideBuffer.slice(i + 5, i + 9)
+          feature.strokeWidth = featureGuideBuffer[i + 9]
+          i += 10
+        } else { // icon
+          feature.size = featureGuideBuffer[i]
+          i++
+        }
       }
       // store feature
       this.featureGuide.push(feature)
     }
 
-    // filter parent data if applicable
-    layerIndexes = [...layerIndexes]
-    this.featureGuide = this.featureGuide.filter(fg => !(layerIndexes.includes(fg.layerIndex) && fg.parent))
-
-    // setup source data
-    const glyphSource = this.sourceData[sourceName] = buildGlyphSource(
-      this.context, layerGuideBuffer, glyphFilterVertices, glyphFillVertices,
-      glyphFillIndices, glyphLineVertices, glyphQuads, glyphColors
-    )
-    return glyphSource
+    // build the VAO
+    buildSource(context, glyphSource)
   }
 
   // we don't parse the interactiveData immediately to save time

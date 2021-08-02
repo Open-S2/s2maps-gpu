@@ -65,9 +65,9 @@ export default class Map extends Camera {
     this._buildPaint(options, style)
   }
 
-  async _buildPaint (options: MapOptions, style: Object | string) {
+  _buildPaint (options: MapOptions, style: Object | string) {
     // now that we have a canvas, prep the camera's painter
-    this.painter = await new Painter(this._canvas, options)
+    this.painter = new Painter(this._canvas, options)
     // setup the style - this goes AFTER creation of the painter, because the
     // style will tell the painter what programs it will be using
     this.style = new Style(options, this)
@@ -86,21 +86,19 @@ export default class Map extends Camera {
     this.painter.delete()
   }
 
-  async setStyle (style: string | Object, ignorePosition: boolean) {
+  setStyle (style: string | Object, ignorePosition: boolean) {
     // ensure we don't draw for a sec
     this._canDraw = false
     // incase style was imported, clear cache
     this.clearCache()
     // build style for the map, painter, and webworkers
-    return this.style.buildStyle(style)
-      .then(() => {
-        // ready to start drawing
-        this._canDraw = true
-        // inject minzoom and maxzoom
-        this.projection.setStyleParameters(this.style, ignorePosition)
-        // render our first pass
-        this.render()
-      })
+    this.style.buildStyle(style)
+    // ready to start drawing
+    this._canDraw = true
+    // inject minzoom and maxzoom
+    this.projection.setStyleParameters(this.style, ignorePosition)
+    // render our first pass
+    this.render()
   }
 
   jumpTo (lon: number, lat: number, zoom: number) {
@@ -198,6 +196,7 @@ export default class Map extends Camera {
       postMessage({ type: 'mouseenter', feature: newFeature })
     } else {
       if (newFeature) {
+        console.log(newFeature)
         this.parent.dispatchEvent(new CustomEvent('mouseenter', { detail: newFeature }))
         this._canvas.style.cursor = newFeature.__cursor || 'default'
       }
@@ -314,6 +313,30 @@ export default class Map extends Camera {
     }
   }
 
+  _onPositionUpdate () {
+    const { projection } = this
+    const { zoom, lon, lat } = projection
+    if (this.webworker) {
+      postMessage({ type: 'pos', zoom, lon, lat })
+    } else {
+      this.parent.dispatchEvent(new CustomEvent('pos', { detail: { zoom, lon, lat } }))
+    }
+  }
+
+  screenshot () {
+    requestAnimationFrame(() => {
+      if (this._fullyRenderedScreen()) {
+        // assuming the screen is ready for a screen shot we ask for a draw
+        const screen = this.painter.getScreen()
+        if (this.webworker) {
+          postMessage({ type: 'screenshot', screen })
+        } else {
+          this.parent.dispatchEvent(new CustomEvent('screenshot', { detail: screen }))
+        }
+      } else { this.screenshot() }
+    })
+  }
+
   // tile data is stored in the map, waiting for the render to
   injectData (data) {
     this.injectionQueue.push(data)
@@ -345,7 +368,10 @@ export default class Map extends Camera {
       // get state of scene
       const projectionDirty = self.projection.dirty
       // if the projection was dirty (zoom or movement) we run render again just incase
-      if (projectionDirty) self.render()
+      if (projectionDirty) {
+        self.render()
+        self._onPositionUpdate()
+      }
       // run a draw, it will repaint framebuffers as necessary
       self._draw()
       // if mouse movement, check feature at position

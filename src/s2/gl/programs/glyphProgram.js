@@ -21,62 +21,56 @@ type FBO = {
 }
 
 export default class GlyphProgram extends Program {
+  uOverdraw: WebGLUniformLocation
+  uSize: WebGLUniformLocation
+  uFill: WebGLUniformLocation
+  uStroke: WebGLUniformLocation
+  uSWidth: WebGLUniformLocation
+  uInteractive: WebGLUniformLocation
   uTexSize: WebGLUniformLocation
-  uOffset: WebGLUniformLocation
-  glyphLineProgram: Program
-  fbos: Array<FBO> = []
-  constructor (context: Context) {
+  uIsIcon: WebGLUniformLocation
+  uBounds: WebGLUniformLocation
+  uIsStroke: WebGLUniformLocation
+  uFeatures: WebGLUniformLocation
+  uGlyphTex: WebGLUniformLocation
+  glyphType: 'text' | 'icon'
+  glyphFilterProgram: Program
+  filter: boolean
+  fbo: FBO
+  defaultBounds: Float32Array = new Float32Array([0, 0, 8192, 8192])
+  constructor (context: Context, glyphFilterProgram: Program) {
     // get gl from context
-    const { gl, type } = context
+    const { gl, type, devicePixelRatio } = context
     // build shaders
-    if (type === 1) gl.attributeLocations = { aPos: 0, aType: 7 }
-    // inject program
+    if (type === 1) gl.attributeLocations = { aUV: 0, aST: 1, aXY: 2, aOffset: 3, aWH: 4, aTexXY: 5, aTexWH: 6, aID: 7, aColor: 8 }
+    // inject Program
     super(context)
-    const self = this
-
-    return Promise.all([
-      (type === 1) ? vert1 : vert2,
-      (type === 1) ? frag1 : frag2
-    ])
-      .then(([vertex, fragment]) => {
-        // build said shaders
-        self.buildShaders(vertex, fragment)
-
-        return self
-      })
-  }
-
-  injectGlyphLine (glyphLineProgram: Program) {
-    // store line program
-    this.glyphLineProgram = glyphLineProgram
+    // build shaders
+    if (type === 1) this.buildShaders(vert1, frag1)
+    else this.buildShaders(vert2, frag2)
+    // set the glyphFilter program
+    this.glyphFilterProgram = glyphFilterProgram
+    // activate so we can setup samplers
+    this.use()
+    // set texture positions
+    gl.uniform1i(this.uFeatures, 0) // uFeatures texture unit 0
+    gl.uniform1i(this.uGlyphTex, 1) // uGlyphTex texture unit 1
+    // setup the devicePixelRatio
+    this.setDevicePixelRatio(devicePixelRatio)
+    // build an initial fbo
+    this.fbo = this._buildFramebuffer(200)
+    // set the current fbo size
+    gl.uniform2fv(this.uTexSize, this.fbo.texSize)
   }
 
   delete () {
     // cleanup fbos
-    this.clearCache()
+    this._deleteFBO(this.fbo)
     // cleanup programs
     super.delete()
   }
 
-  injectFrameUniforms () {}
-  flush () {}
-
-  getFBO (id: number, height?: number = 1): FBO {
-    let fbo = this.fbos[id]
-    // if fbo exists, return it, otherwise we have to create the fbo
-    if (!fbo) fbo = this.fbos[id] = this._buildFramebuffer(id, Math.max(height, 210))
-    // if the height doesn't match the source, we update the height
-    else if (height > fbo.height) fbo = this.fbos[id] = this._increaseFBOSize(id, fbo, height)
-
-    return fbo
-  }
-
-  clearCache () {
-    for (const fbo of this.fbos) this._deleteFBO(fbo)
-    this.fbos = []
-  }
-
-  _buildFramebuffer (id: number, height: number): FBO {
+  _buildFramebuffer (height: number): FBO {
     const { gl } = this
     const fbo = {
       height,
@@ -114,12 +108,14 @@ export default class GlyphProgram extends Program {
     return fbo
   }
 
-  _increaseFBOSize (id: number, fbo: FBO, height: number): FBO {
-    // TODO: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/copyTexSubImage2D
-    const { gl, context } = this
+  _increaseFBOSize (height: number): FBO {
+    const { gl, context, fbo } = this
+    if (height <= fbo.height) return
 
+    // use to update texture size
+    this.use()
     // build the new fbo
-    const newFBO = this._buildFramebuffer(id, height)
+    const newFBO = this._buildFramebuffer(height)
     // copy over data
     if (context.type === 1) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, fbo.glyphFramebuffer)
@@ -131,10 +127,12 @@ export default class GlyphProgram extends Program {
       gl.blitFramebuffer(0, 0, 2048, fbo.height, 0, 0, 2048, fbo.height, gl.COLOR_BUFFER_BIT, gl.LINEAR)
     }
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
-    // TODO: delete old FBO and set new
+    // set the texture size uniform
+    gl.uniform2fv(this.uTexSize, newFBO.texSize)
+    // delete old FBO and set new
     this._deleteFBO(fbo)
     // update to new FBO
-    return newFBO
+    this.fbo = newFBO
   }
 
   _deleteFBO (fbo: FBO) {
@@ -152,85 +150,90 @@ export default class GlyphProgram extends Program {
     }
   }
 
-  setTexSize (texSize: Float32Array) {
-    this.gl.uniform2fv(this.uTexSize, texSize)
-  }
-
-  cleanGlyphSource (source: GlyphTileSource) {
-    const { gl } = this
-
-    gl.deleteBuffer(source.glyphFillVertexBuffer)
-    gl.deleteBuffer(source.glyphFillIndexBuffer)
-    gl.deleteBuffer(source.glyphLineVertexBuffer)
-    gl.deleteVertexArray(source.glyphFillVAO)
-    gl.deleteVertexArray(source.glyphLineVAO)
-    delete source.glyphFillVertexBuffer
-    delete source.glyphFillIndexBuffer
-    delete source.glyphLineVertexBuffer
-    delete source.glyphFillVAO
-    delete source.glyphLineVAO
-    delete source.glyphLineVertices
-    delete source.glyphLineTypeArray
-    delete source.glyphFillVertices
-    delete source.glyphFillIndices
-  }
-
-  draw (source: GlyphTileSource) {
-    const { context, gl, glyphLineProgram, uOffset } = this
-    // pull out the appropriate data from the source
-    const { textureID, glyphFillVAO, glyphFillIndices } = source
-
-    // PREPARE
-    // grab the correct framebuffer variables
-    const { height, texSize, glyphFramebuffer } = this.getFBO(textureID, source.height)
-    // bind the framebuffer
-    gl.bindFramebuffer(gl.FRAMEBUFFER, glyphFramebuffer)
-    // set the viewport
-    gl.viewport(0, 0, 2048, height)
-    // allow front and back faces
-    context.disableCullFace()
-
-    // LINE
-    // set depth test is on
-    context.disableDepthTest()
-    // disable stencil
-    context.disableStencilTest()
-    // set program as current
-    glyphLineProgram.use()
-    // set appropriate aspect
-    glyphLineProgram.setAspect(texSize)
-    // draw lines
-    glyphLineProgram.draw(source)
-
-    // FILL
-    const indexLength = glyphFillIndices.length
-    if (indexLength) {
-      // prep blending type
-      context.inversionBlend()
-      // now use current program
-      this.use()
-      // set the texture size uniform
-      this.setTexSize(texSize)
-      // set the correct vao
-      gl.bindVertexArray(glyphFillVAO)
-      for (let i = 0; i < 4; i++) {
-        // set the offset
-        gl.uniform1i(uOffset, i)
-        // draw fill onto the stencil
-        context.stencilInvert()
-        gl.drawElements(gl.TRIANGLES, indexLength, gl.UNSIGNED_INT, 0)
-        // draw fill onto texture using the stencil as a guide
-        context.stencilZero()
-        gl.drawElements(gl.TRIANGLES, indexLength, gl.UNSIGNED_INT, 0)
-      }
+  setOverdraw (state: boolean) {
+    if (this.filter !== state) {
+      this.filter = state
+      this.gl.uniform1i(this.uOverdraw, state)
     }
+  }
 
-    // cleanup
-    this.cleanGlyphSource(source)
+  setGlyphType (type: 'text' | 'icon') {
+    if (this.glyphType !== type) {
+      this.gl.uniform1i(this.uIsIcon, (type === 'text') ? false : true)
+      this.glyphType = type
+    }
+  }
 
-    // rebind default framebuffer
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
-    // reset viewport
-    context.resetViewport()
+  injectImages (maxHeight: number, images: GlyphImages) {
+    const { gl } = this
+    // increase texture size if necessary
+    this._increaseFBOSize(maxHeight)
+    // iterate through images and store
+    gl.bindTexture(gl.TEXTURE_2D, this.fbo.texture)
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false)
+    for (const { posX, posY, width, height, data } of images) {
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, posX, posY, width, height, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8ClampedArray(data))
+    }
+  }
+
+  draw (featureGuide: FeatureGuide, source: GlyphTileSource, interactive: boolean = false) {
+    const { gl, context, defaultBounds, fbo, glyphFilterProgram, uBounds } = this
+    const { type } = context
+    // pull out the appropriate data from the source
+    const {
+      overdraw, glyphType, depthPos, featureCode, offset,
+      count, size, fill, stroke, strokeWidth, bounds
+    } = featureGuide
+    const { glyphQuadBuffer, glyphColorBuffer } = source
+    // grab glyph texture
+    const { texture } = fbo
+    // WebGL1 - set paint properties; WebGL2 - set feature code
+    if (type === 1) {
+      if (!isNaN(size)) gl.uniform1f(this.uSize, size)
+      if (fill && fill.length) gl.uniform4fv(this.uFill, fill)
+      if (stroke && stroke.length) gl.uniform4fv(this.uStroke, stroke)
+      if (!isNaN(strokeWidth)) gl.uniform1f(this.uSWidth, strokeWidth)
+    } else { this.setFeatureCode(featureCode) }
+    // if bounds exists, set them, otherwise set default bounds
+    if (bounds) gl.uniform4fv(uBounds, bounds)
+    else gl.uniform4fv(uBounds, defaultBounds)
+    // turn stencil testing off
+    context.stencilFuncAlways(0)
+    // ensure proper z-testing state
+    context.enableDepthTest()
+    // set depth type
+    if (interactive) context.lessDepth()
+    else context.lequalDepth()
+    context.setDepthRange(depthPos)
+    // use default blending
+    context.defaultBlend()
+    // set overdraw
+    this.setOverdraw(overdraw)
+    // set draw type
+    this.setGlyphType(glyphType)
+    // bind the correct glyph texture
+    gl.activeTexture(gl.TEXTURE1)
+    gl.bindTexture(gl.TEXTURE_2D, texture)
+    // ensure glyphFilterProgram's result texture is set
+    gl.activeTexture(gl.TEXTURE0)
+    glyphFilterProgram.bindResultTexture()
+    // apply the appropriate offset in the source vertexBuffer attribute
+    gl.bindBuffer(gl.ARRAY_BUFFER, glyphQuadBuffer)
+    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 52, 0 + (offset * 52)) // s, t
+    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 52, 8 + (offset * 52)) // x, y
+    gl.vertexAttribPointer(3, 2, gl.FLOAT, false, 52, 16 + (offset * 52)) // xOffset, yOffset
+    gl.vertexAttribPointer(4, 2, gl.FLOAT, false, 52, 24 + (offset * 52)) // width, height
+    gl.vertexAttribPointer(5, 2, gl.FLOAT, false, 52, 32 + (offset * 52)) // texture x, y
+    gl.vertexAttribPointer(6, 2, gl.FLOAT, false, 52, 40 + (offset * 52)) // width, height
+    gl.vertexAttribPointer(7, 1, gl.FLOAT, false, 52, 48 + (offset * 52)) // id
+    gl.bindBuffer(gl.ARRAY_BUFFER, glyphColorBuffer)
+    gl.vertexAttribPointer(8, 4, gl.UNSIGNED_BYTE, true, 4, offset * 4)
+    // draw
+    if (glyphType === 'text') {
+      gl.uniform1i(this.uIsStroke, true)
+      gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count)
+      gl.uniform1i(this.uIsStroke, false)
+    }
+    gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count)
   }
 }

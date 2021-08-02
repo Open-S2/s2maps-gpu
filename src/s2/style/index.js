@@ -2,7 +2,6 @@
 import Color from './color'
 import Map from '../ui/map'
 import { Wallpaper, Skybox, Tile } from '../source'
-import requestData from '../util/fetch'
 import buildColorRamp from './buildColorRamp'
 import { encodeLayerAttribute, parseFeatureFunction, orderLayer } from './conditionals'
 
@@ -10,14 +9,24 @@ import type { MapOptions } from '../ui/map'
 import type { Sources, Layer, Mask, WallpaperStyle } from './styleSpec'
 import type { TileRequest } from '../workers/tile.worker'
 
+export type Analytics = {
+  gpu: number,
+  context: number,
+  language: string,
+  width: number,
+  height: number
+}
+
 export default class Style {
   map: Map
   glType: number
   webworker: boolean = false
   interactive: boolean = false // this is seperate from the options. If a layer is interactive then we draw more
+  apiKey: string
   zoom: number = 0
   minzoom: number = 0
   maxzoom: number = 20
+  zoomOffset: number = 0
   lon: number = 0
   lat: number = 0
   sources: Sources = {}
@@ -31,51 +40,60 @@ export default class Style {
   wallpaperStyle: typeof undefined | WallpaperStyle
   clearColor: typeof undefined | [number, number, number, number]
   maskLayers: Array<Layer> = []
+  analytics: Analytics = {}
   dirty: boolean = true
   constructor (options: MapOptions, map: Map) {
-    const { webworker } = options
+    const { webworker, apiKey } = options
     if (webworker) this.webworker = true
+    this.apiKey = apiKey
     const { painter } = this.map = map
     // grap the painter type, so we can tell the webworkers if we are using WEBGL, WEBGL2, or WEBGPU
-    const { type } = painter.context
+    const { gl, renderer, type } = painter.context
     this.glType = type
+    this._buildAnalytics(renderer, type, gl.canvas.width, gl.canvas.height)
   }
 
-  async buildStyle (style: string | Object) {
+  _buildAnalytics (gpu: string, context: number = -1, width: number, height: number) {
+    this.analytics = {
+      gpu,
+      context,
+      language: navigator.language.split('-')[0] || 'en',
+      width,
+      height
+    }
+  }
+
+  buildStyle (style: string | Object) {
     const self = this
     self.dirty = true
-    if (typeof style === 'string') {
-      requestData(style, 'json', (res) => {
-        if (res) { self.buildStyle(res) }
-      })
-    } else if (typeof style === 'object') {
-      style = JSON.parse(JSON.stringify(style))
-      // check style & fill default params
-      this._prebuildStyle(style)
-      // Before manipulating the style, send it off to the worker pool manager
-      this._sendStyleDataToWorkers(style)
-      // extract starting values
-      if (style.center && Array.isArray(style.center)) {
-        self.lon = style.center[0]
-        self.lat = style.center[1]
-      }
-      if (!isNaN(style.zoom)) self.zoom = style.zoom
-      if (!isNaN(style.minzoom) && style.minzoom >= -2) self.minzoom = style.minzoom
-      if (!isNaN(style.maxzoom)) {
-        if (style.maxzoom <= self.minzoom) self.maxzoom = self.minzoom + 1
-        else if (style.maxzoom <= 20) self.maxzoom = style.maxzoom
-      }
-      // extract sources
-      if (style.sources) self.sources = style.sources
-      if (style.fonts) self.fonts = style.fonts
-      if (style.icons) self.icons = style.icons
-      if (style.colorBlind) self.colorBlind = style.colorBlind
-      // build wallpaper and sphere background if applicable
-      if (style.wallpaper) self._buildWallpaper(style.wallpaper)
-      // build the layers
-      if (style.layers) self.layers = style.layers
-      await self._buildLayers()
+    style = JSON.parse(JSON.stringify(style))
+    // check style & fill default params
+    this._prebuildStyle(style)
+    // Before manipulating the style, send it off to the worker pool manager
+    this._sendStyleDataToWorkers(style)
+    // extract starting values
+    if (style.center && Array.isArray(style.center)) {
+      self.lon = style.center[0]
+      self.lat = style.center[1]
     }
+    if (!isNaN(style.zoom)) self.zoom = style.zoom
+    if (!isNaN(style.minzoom) && style.minzoom >= -2) self.minzoom = style.minzoom
+    if (!isNaN(style.maxzoom)) {
+      if (style.maxzoom <= self.minzoom) self.maxzoom = self.minzoom + 1
+      else if (style.maxzoom <= 20) self.maxzoom = style.maxzoom
+    }
+    // set zoom offset if applicable
+    if (style['zoom-offset']) self.zoomOffset = style['zoom-offset']
+    // extract sources
+    if (style.sources) self.sources = style.sources
+    if (style.fonts) self.fonts = style.fonts
+    if (style.icons) self.icons = style.icons
+    if (style.colorBlind) self.colorBlind = style.colorBlind
+    // build wallpaper and sphere background if applicable
+    if (style.wallpaper) self._buildWallpaper(style.wallpaper)
+    // build the layers
+    if (style.layers) self.layers = style.layers
+    self._buildLayers()
   }
 
   _prebuildStyle (style: Object) {
@@ -107,9 +125,10 @@ export default class Style {
   }
 
   _sendStyleDataToWorkers (style: Object) {
+    const { apiKey, analytics } = this
     const { sources, fonts, icons, layers, minzoom, maxzoom } = style
     // now that we have various source data, package up the style objects we need and send it off:
-    let stylePackage = { glType: this.glType, sources, fonts, icons, layers, minzoom, maxzoom }
+    let stylePackage = { glType: this.glType, sources, fonts, icons, layers, minzoom, maxzoom, apiKey, analytics }
     // If the map engine is running on the main thread, directly send the stylePackage to the worker pool.
     // Otherwise perhaps this map instance is a web worker and has a global instance of postMessage
     if (this.webworker) {
@@ -141,7 +160,7 @@ export default class Style {
 
   // 1) ensure "bad" layers are removed (missing important keys or subkeys)
   // 2) ensure the order is correct for when WebGL eventually parses the encodings
-  async _buildLayers () {
+  _buildLayers () {
     const { colorBlind } = this
     let depthPos = 1
     // now we build our program set simultaneous to encoding our layers
@@ -152,8 +171,7 @@ export default class Style {
       // TODO: if bad layer, remove
       programs.add(layer.type)
       // add depth position
-      layer.depthPos = depthPos
-      depthPos++
+      layer.depthPos = depthPos++
       // order layers for GPU
       orderLayer(layer)
       // if webgl2 or greater, we build layerCode
@@ -180,7 +198,7 @@ export default class Style {
       }
     }
     // tell the painter what we are using
-    await this.map.painter.buildPrograms(programs)
+    this.map.painter.buildPrograms(programs)
     // prebuild wallpaper
     if (this.wallpaper) {
       const { skybox } = this.wallpaper

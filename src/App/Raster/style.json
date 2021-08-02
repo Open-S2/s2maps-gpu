@@ -4,26 +4,20 @@
   "center": [0, 0],
   "zoom": -0.5,
   "minzoom": -1.5,
-  "maxzoom": 4.9,
+  "maxzoom": 5.25,
+  "zoom-offset": 0.5,
   "sources": {
-    "satellite": {
-      "path": "https://s3.s2maps.io/modis-v1/7",
-      "type": "raster",
-      "fileType": "jpg",
-      "minzoom": 0,
-      "maxzoom": 5,
-      "tileSize": 512
-    }
+    "satellite": "s2maps://data/s2maps/modis-v1/7.s2tiles"
   },
   "shade": false,
   "mask": {
     "exaggeration": 1.5
   },
   "wallpaper": {
-    "skybox": "https://s3.s2maps.io/backgrounds/milkyway",
+    "skybox": "https://data.s2maps.io/public/backgrounds/milkyway",
     "loadingBackground": "rgb(9, 8, 17)",
-    "size": 1024,
-    "type": "jpg"
+    "size": 2048,
+    "type": "webp"
   },
   "layers": [
     {
@@ -36,7 +30,7 @@
       }
     },
     {
-      "id": "sat",
+      "name": "sat",
       "source": "satellite",
       "type": "raster"
     },

@@ -1,7 +1,5 @@
 precision highp float;
 
-@nomangle vExtent vOpacity vS uDrawState uImage uColorRamp
-
 varying vec2 vExtent;
 varying float vOpacity;
 varying float vS;

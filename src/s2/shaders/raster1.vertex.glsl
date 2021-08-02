@@ -1,14 +1,8 @@
-#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
-#else
-precision mediump float;
-#endif
-
-@nomangle vTexcoord aPos
 
 attribute vec2 aPos;
 
-@include "./getPos.glsl"
+@import "./getPos.glsl"
 
 varying vec2 vTexcoord;
 

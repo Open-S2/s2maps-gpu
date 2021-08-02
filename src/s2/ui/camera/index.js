@@ -9,7 +9,6 @@ import { tileHash } from 's2projection' // https://github.com/Regia-Corporation/
 import Projector from './projections'
 /** SOURCES **/
 import { Tile } from '../../source'
-import { buildGlyphSource } from '../../source/buildSource'
 import TileCache from './tileCache'
 
 import type { Face } from 's2projection'
@@ -44,8 +43,6 @@ export default class Camera {
   clearCache () {
     // first clear the tile cache
     this.tileCache.deleteAll()
-    // clear any cache the painter might have (i.e. glyph textures)
-    this.painter.clearCache()
   }
 
   createProjector (options: MapOptions) {
@@ -85,11 +82,21 @@ export default class Camera {
     if (type === 'filldata' || type === 'linedata' || type === 'pointdata') this._injectVectorSourceData(data.source, data.tileID, data.vertexBuffer, data.indexBuffer, data.codeTypeBuffer, data.featureGuideBuffer)
     else if (type === 'heatmapdata') this._injectVectorSourceData(data.source, data.tileID, data.vertexBuffer, data.weightBuffer, data.codeTypeBuffer, data.featureGuideBuffer, true)
     else if (type === 'maskdata') this._injectMaskGeometry(data.tileID, data.vertexBuffer, data.indexBuffer, data.radiiBuffer)
-    else if (type === 'rasterdata') this._injectRasterData(data.source, data.tileID, data.built, data.image, data.leftShift, data.bottomShift)
-    else if (type === 'glyphdata') this._injectGlyphSourceData(data.source, data.tileID, data.glyphFilterBuffer, data.glyphFillVertexBuffer, data.glyphFillIndexBuffer, data.glyphLineVertexBuffer, data.glyphQuadBuffer, data.glyphColorBuffer, data.layerGuideBuffer)
+    else if (type === 'rasterdata') this._injectRasterData(data.source, data.tileID, data.built, data.image)
+    else if (type === 'glyphdata') this._injectGlyphSourceData(data.source, data.tileID, data.glyphFilterBuffer, data.glyphQuadBuffer, data.glyphColorBuffer, data.featureGuideBuffer)
+    else if (type === 'glyphimages') this.painter.injectGlyphImages(data.maxHeight, data.images)
     else if (type === 'interactivedata') this._injectInteractiveData(data.source, data.tileID, data.interactiveGuideBuffer, data.interactiveDataBuffer)
+    else if (type === 'flush') this._injectFlush(data)
     // new 'paint', so painter is dirty
     this.painter.dirty = true
+  }
+
+  _injectFlush (data) {
+    const { tileID } = data
+    if (this.tileCache.has(tileID)) {
+      const tile = this.tileCache.get(tileID)
+      tile.flush(data)
+    }
   }
 
   _injectMaskGeometry (tileID: number, vertexBuffer: ArrayBuffer,
@@ -111,48 +118,30 @@ export default class Camera {
     }
   }
 
-  _injectRasterData (source: string, tileID: number, built: boolean, image: ImageBitmap,
-    leftShift: number, bottomShift: number) {
+  _injectRasterData (source: string, tileID: number, built: boolean, image: ImageBitmap | ArrayBuffer) {
     if (this.tileCache.has(tileID)) {
       // get tile
       const tile = this.tileCache.get(tileID)
       // find all layers that utilize the raster data
-      const layerIndexs = this.style.layers.filter(layer => layer.source === source).map((layer, i) => i)
+      const layerIndexs = this.style.layers.filter(layer => layer.source === source).map(layer => layer.layerIndex)
       // inject into tile
       if (!built) {
         createImageBitmap(new Blob([image]))
-          .then(image => tile.injectRasterData(source, layerIndexs, image, leftShift, bottomShift))
-          .catch(err => console.log('ERROR', err))
-      } else {
-        tile.injectRasterData(source, layerIndexs, image, leftShift, bottomShift)
-      }
+          .then(image => tile.injectRasterData(source, layerIndexs, image, this.style.layers))
+      } else { tile.injectRasterData(source, layerIndexs, image, this.style.layers) }
     }
   }
 
   _injectGlyphSourceData (source: string, tileID: number, glyphFilterBuffer: ArrayBuffer,
-    glyphFillVertexBuffer: ArrayBuffer, glyphFillIndexBuffer: ArrayBuffer,
-    glyphLineVertexBuffer: ArrayBuffer, glyphQuadBuffer: ArrayBuffer,
-    glyphColorBuffer: ArrayBuffer, layerGuideBuffer: ArrayBuffer) {
+    glyphQuadBuffer: ArrayBuffer, glyphColorBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer) {
     // store the vertexBuffer and texture in the gpu.
     if (this.tileCache.has(tileID)) {
       const tile = this.tileCache.get(tileID)
-      const glyphSource = tile.injectGlyphSourceData(
-        source, new Float32Array(glyphFilterBuffer), new Float32Array(glyphFillVertexBuffer),
-        new Float32Array(glyphFillIndexBuffer), new Float32Array(glyphLineVertexBuffer),
-        new Float32Array(glyphQuadBuffer), new Uint8ClampedArray(glyphColorBuffer),
-        new Float32Array(layerGuideBuffer), this.style.layers
+      tile.injectGlyphSourceData(
+        source, new Float32Array(glyphFilterBuffer), new Float32Array(glyphQuadBuffer),
+        new Uint8ClampedArray(glyphColorBuffer), new Float32Array(featureGuideBuffer),
+        this.style.layers
       )
-      // tell the painter to prep the texture
-      this.painter.buildGlyphTexture(glyphSource)
-    } else { // we still have to render the glyph data
-      // build the glyphs
-      const glyphSource = buildGlyphSource(this.painter.context, new Float32Array(layerGuideBuffer),
-        new Float32Array(glyphFilterBuffer), new Float32Array(glyphFillVertexBuffer),
-        new Float32Array(glyphFillIndexBuffer), new Float32Array(glyphLineVertexBuffer),
-        new Float32Array(glyphQuadBuffer)
-      )
-      // tell the painter to prep the texture
-      this.painter.buildGlyphTexture(glyphSource)
     }
   }
 
@@ -189,6 +178,18 @@ export default class Camera {
     } else { return this.tilesInView }
   }
 
+  _fullyRenderedScreen (): boolean {
+    const tiles = this._getTiles()
+    let fullyRendered = true
+    for (const tile of tiles) {
+      if (tile.rendered !== true) {
+        fullyRendered = false
+        break
+      }
+    }
+    return fullyRendered
+  }
+
   _draw () {
     const { style, painter, projection } = this
     // prep tiles
@@ -211,7 +212,5 @@ export default class Camera {
     painter.dirty = false
     style.dirty = false
     projection.dirty = false
-    // flush incase
-    // this.painter.context.gl.flush()
   }
 }

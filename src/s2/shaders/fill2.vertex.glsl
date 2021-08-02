@@ -1,13 +1,11 @@
 #version 300 es
 precision highp float;
 
-@nomangle layout location color
-
 layout (location = 0) in vec2 aPos;
 layout (location = 7) in float aIndex;
 
-@include "./decodeFeature2.glsl"
-@include "./getPos.glsl"
+@import "./decodeFeature2.glsl"
+@import "./getPos.glsl"
 
 out vec4 color;
 

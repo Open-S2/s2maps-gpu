@@ -1,9 +1,7 @@
 // @flow
 export { default as FillProgram } from './fillProgram'
 export { default as GlyphFilterProgram } from './glyphFilterProgram'
-export { default as GlyphLineProgram } from './glyphLineProgram'
 export { default as GlyphProgram } from './glyphProgram'
-export { default as GlyphQuadProgram } from './glyphQuadProgram'
 export { default as HeatmapProgram } from './heatmapProgram'
 export { default as LineProgram } from './lineProgram'
 export { default as PointProgram } from './pointProgram'

@@ -4,11 +4,13 @@ import style from './style.json'
 
 import './raster.css'
 
+for (const source in style.sources) style.sources[source] = style.sources[source].replace('%REACT_APP_S2TILES%', process.env.REACT_APP_S2TILES)
+
 function Raster () {
   const [month, setMonth] = useState(7)
   const [active, setActive] = useState(false)
   const [mapContainer, setMap] = useState()
-  let map = useRef(null)
+  const map = useRef(null)
 
   // cause a prep of data
   useEffect(() => {
@@ -17,27 +19,39 @@ function Raster () {
     return () => { if (map.current) map.current.delete() }
   }, [mapContainer])
 
-  const monthDropdown = <div id="raster-dropdown-content">
-    {
-      [...Array(12).keys()].map(num => {
-        return <div className={num === month ? 'raster-gray' : 'raster-drop'} key={num} onClick={() => {
-          if (num !== month) {
-            setMonth(num)
-            style.sources.satellite.path = `https://s3.s2maps.io/modis-v1/${num}`
-            map.current.setStyle(style)
-          }
-        }}>{toMonth(num)}</div>
-      })
-    }
-  </div>
-
-  return <div>
-    <div id='map-container' ref={c => setMap(c)} />
-    <div id="raster-dropdown-container" onClick={() => { setActive(!active) }}>
-      <div id="raster-dropdown">Set Current Month: {toMonth(month)}</div>
-      {active ? monthDropdown : null}
+  const monthDropdown = (
+    <div id='raster-dropdown-content'>
+      {
+        [...Array(12).keys()].map(num => {
+          return (
+            <div
+              className={num === month ? 'raster-gray' : 'raster-drop'}
+              key={num}
+              onClick={() => {
+                if (num !== month) {
+                  setMonth(num)
+                  style.sources.satellite = `s2maps://data/s2maps/modis-v1/${num}.s2tiles`
+                  map.current.setStyle(style)
+                }
+              }}
+            >
+              {toMonth(num)}
+            </div>
+          )
+        })
+      }
     </div>
-  </div>
+  )
+
+  return (
+    <div>
+      <div id='map-container' ref={c => setMap(c)} />
+      <div id='raster-dropdown-container' onClick={() => { setActive(!active) }}>
+        <div id='raster-dropdown'>Set Current Month: {toMonth(month)}</div>
+        {active ? monthDropdown : null}
+      </div>
+    </div>
+  )
 }
 
 function prepCanvas (container, opts = {}) {

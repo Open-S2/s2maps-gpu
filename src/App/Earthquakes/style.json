@@ -6,14 +6,21 @@
   "minzoom": -0.5,
   "maxzoom": 17.99,
   "sources": {
-    "streets-v2": "https://s3.s2maps.io/streets-v2",
-    "plates": "https://s3.s2maps.io/s2json/plates.s2json",
-    "earthquakes": "https://s3.s2maps.io/s2json/earthquakes.s2json"
+    "streets": "s2maps://data/s2maps/streets-v1.s2tiles",
+    "plates": "https://data.s2maps.io/public/demos/s2json/plates.s2json",
+    "earthquakes": "https://data.s2maps.io/public/demos/s2json/earthquakes.s2json"
   },
   "fonts": {
-    "default": "https://s3.s2maps.io/fonts-v2/default",
-    "roboto-regular": "https://s3.s2maps.io/fonts-v2/RobotoRegular",
-    "roboto-medium": "https://s3.s2maps.io/fonts-v2/RobotoMedium"
+    "noto-sans-regular": "https://data.s2maps.io/glyphs/Noto/NotoSansRegular.font",
+    "noto-sans-medium": "https://data.s2maps.io/glyphs/Noto/NotoSansMedium.font",
+    "roboto-regular": {
+      "path": "https://data.s2maps.io/glyphs/Roboto/RobotoRegular.font",
+      "fallback": "noto-sans-regular"
+    },
+    "roboto-medium": {
+      "path": "https://data.s2maps.io/glyphs/Roboto/RobotoMedium.font",
+      "fallback": "noto-sans-medium"
+    }
   },
   "shade": false,
   "colorBlind": false,
@@ -37,7 +44,7 @@
     },
     {
       "name": "landuse",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "landuse",
       "type": "fill",
       "opaque": true,
@@ -83,7 +90,7 @@
     },
     {
       "name": "landuse_transparent",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "landuse",
       "type": "fill",
       "filter": ["type", "has", ["aboriginal_lands", "military"]],
@@ -102,7 +109,7 @@
     },
     {
       "name": "golf",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "landuse",
       "type": "fill",
       "opaque": true,
@@ -131,7 +138,7 @@
     },
     {
       "name": "water",
-      "source": "streets-v2",
+      "source": "streets",
       "filter": ["class", "!has", ["bay", "reef", "shoal"]],
       "layer": "water",
       "type": "fill",
@@ -144,7 +151,7 @@
     },
     {
       "name": "reef_shoal",
-      "source": "streets-v2",
+      "source": "streets",
       "filter": ["class", "has", ["reef", "shoal"]],
       "layer": "water",
       "type": "fill",
@@ -157,7 +164,7 @@
     },
     {
       "name": "water_lines",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "water",
       "onlyLines": true,
       "minzoom": 10,
@@ -183,7 +190,7 @@
     },
     {
       "name": "aboriginal_border",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "landuse",
       "filter": ["type", "==", "aboriginal_lands"],
       "minzoom": 5,
@@ -207,7 +214,7 @@
     },
     {
       "name": "motor_trunk_borders_tunnel",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "transport",
       "filter": [
         "and",
@@ -260,7 +267,7 @@
     },
     {
       "name": "motor_trunk_tunnel",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "transport",
       "filter": [
         "and",
@@ -313,7 +320,7 @@
     },
     {
       "name": "transport_aeroway",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "transport",
       "filter": [
         "and",
@@ -356,7 +363,7 @@
     },
     {
       "name": "transport_low_zoom",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "transport",
       "filter": ["or",
         [
@@ -441,7 +448,7 @@
     },
     {
       "name": "transport-primary",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "transport",
       "filter": [
         "and",
@@ -505,7 +512,7 @@
     },
     {
       "name": "motor_trunk_borders",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "transport",
       "filter": [
         "and",
@@ -575,7 +582,7 @@
     },
     {
       "name": "motor_trunk",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "transport",
       "filter": [
         "and",
@@ -637,7 +644,7 @@
     },
     {
       "name": "motor_trunk_borders_1",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "transport",
       "filter": [
         "and",
@@ -691,7 +698,7 @@
     },
     {
       "name": "motor_trunk_1",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "transport",
       "filter": [
         "and",
@@ -753,7 +760,7 @@
     },
     {
       "name": "motor_trunk_borders_2",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "transport",
       "filter": [
         "and",
@@ -807,7 +814,7 @@
     },
     {
       "name": "motor_trunk_2",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "transport",
       "filter": [
         "and",
@@ -869,7 +876,7 @@
     },
     {
       "name": "motor_trunk_borders_3",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "transport",
       "filter": [
         "and",
@@ -923,7 +930,7 @@
     },
     {
       "name": "motor_trunk_3",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "transport",
       "filter": [
         "and",
@@ -985,7 +992,7 @@
     },
     {
       "name": "motor_trunk_borders_4",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "transport",
       "filter": [
         "and",
@@ -1039,7 +1046,7 @@
     },
     {
       "name": "motor_trunk_4",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "transport",
       "filter": [
         "and",
@@ -1101,7 +1108,7 @@
     },
     {
       "id": "boundaries",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "boundary",
       "filter": ["and", ["adminLevel", "has", [2, 4]], ["maritime", "==", false]],
       "type": "line",
@@ -1137,7 +1144,7 @@
     },
     {
       "name": "equator",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "equator",
       "type": "line",
       "minzoom": 0,
@@ -1153,47 +1160,13 @@
     },
     {
       "name": "buildings",
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "buildings",
       "type": "fill",
       "opaque": true,
       "layout": {},
       "paint": {
-        "color": [
-          "data-condition",
-          ["class", "has", ["aeroway", "office", "hotel", "hospital", "shop", "retail", "industrial", "school", "commercial", "public", "warehouse", "service", "stadium"]],
-          "#fdf9e9",
-          ["class", "==", "police"],
-          "#9bc1ef",
-          ["class", "==", "fire_station"],
-          "#fba69e",
-          "default",
-          "#f2f3f4"
-        ]
-      }
-    },
-    {
-      "name": "buildings_highlight",
-      "source": "streets-v2",
-      "layer": "buildings",
-      "type": "line",
-      "layout": {
-        "cap": "butt",
-        "join": "bevel"
-      },
-      "paint": {
-        "color": [
-          "data-condition",
-          ["class", "has", ["aeroway", "office", "hotel", "hospital", "shop", "retail", "industrial", "school", "commercial", "public", "warehouse", "service", "stadium"]],
-          "#f5e0a4",
-          ["class", "==", "police"],
-          "#648dbf",
-          ["class", "==", "fire_station"],
-          "#d07870",
-          "default",
-          "#d8dade"
-        ],
-        "width": 1.5
+        "color": "#333638"
       }
     },
     {
@@ -1339,7 +1312,7 @@
     },
     {
       "name": "country_state",
-      "source": "streets-v2",
+      "source": "streets",
       "maxzoom": 12,
       "filter": [
         "or",
@@ -1421,7 +1394,7 @@
           "rgba(0, 0, 0, 0)"
         ],
         "text-stroke": "#262b2f",
-        "text-strokeWidth": [
+        "text-stroke-width": [
           "data-condition",
           ["class", "==", "state"],
           [
@@ -1443,7 +1416,7 @@
     },
     {
       "name": "places",
-      "source": "streets-v2",
+      "source": "streets",
       "minzoom": 4,
       "maxzoom": 12,
       "filter": ["class", "has", ["city", "town", "village", "hamlet", "neighbourhood", "island", "suburb"]],
@@ -1526,12 +1499,12 @@
           "rgb(185, 185, 185)"
         ],
         "text-stroke": "rgba(38, 43, 47, 0.55)",
-        "text-strokeWidth": 0.2
+        "text-stroke-width": 0.2
       }
     },
     {
       "name": "water_label",
-      "source": "streets-v2",
+      "source": "streets",
       "filter": ["class", "==", "water"],
       "layer": "poi",
       "type": "glyph",
@@ -1574,13 +1547,13 @@
         ],
         "text-fill": "#095a88",
         "text-stroke": "#095a88",
-        "text-strokeWidth": 0
+        "text-stroke-width": 0
       }
     },
     {
       "name": "poi_labels",
       "filter": ["class", "!=", "addr"],
-      "source": "streets-v2",
+      "source": "streets",
       "layer": "poi",
       "type": "glyph",
       "layout": {
@@ -1642,7 +1615,7 @@
           "#556e7a"
         ],
         "text-stroke": "rgba(38, 43, 47, 0.75)",
-        "text-strokeWidth": [
+        "text-stroke-width": [
           "data-condition",
           ["class", "==", "water"],
           0,

@@ -1,8 +1,6 @@
 #version 300 es
 precision highp float;
 
-@nomangle vertPos
-
 in vec2 aPos;
 out vec2 vertPos;
 

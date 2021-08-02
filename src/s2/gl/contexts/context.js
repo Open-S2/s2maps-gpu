@@ -7,6 +7,7 @@ import type { MapOptions } from '../../ui/map'
 
 export default class Context {
   gl: WebGLRenderingContext | WebGL2RenderingContext
+  renderer: string // ex: AMD Radeon Pro 560 OpenGL Engine (https://github.com/pmndrs/detect-gpu)
   devicePixelRatio: number
   interactive: boolean
   depthEpsilon: number = 1 / Math.pow(2, 16)
@@ -31,6 +32,9 @@ export default class Context {
     this.devicePixelRatio = canvasMultiplier
     this.interactive = interactive
     if (interactive) this._buildInteractFramebuffer()
+    // lastly grab the renderers id
+    const debugRendererInfo = context.getExtension('WEBGL_debug_renderer_info')
+    if (debugRendererInfo) this.renderer = cleanRenderer(context.getParameter(debugRendererInfo.UNMASKED_RENDERER_WEBGL))
   }
 
   // SETUP INTERACTIVE BUFFER
@@ -208,8 +212,6 @@ export default class Context {
     const texture = gl.createTexture()
     gl.bindTexture(gl.TEXTURE_2D, texture)
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, imageData)
-    // gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true)
-    // gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
@@ -369,9 +371,14 @@ export default class Context {
     gl.disable(gl.STENCIL_TEST)
   }
 
-  stencilFunc (ref: number) {
+  stencilFuncAlways (ref: number) {
     const { gl } = this
     gl.stencilFunc(gl.ALWAYS, ref, 0xFF)
+  }
+
+  stencilFuncEqual (ref: number) {
+    const { gl } = this
+    gl.stencilFunc(gl.EQUAL, ref, 0xFF)
   }
 
   stencilInvert () {
@@ -404,4 +411,11 @@ export default class Context {
     gl.bindBuffer(gl.ARRAY_BUFFER, null)
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null)
   }
+}
+
+function cleanRenderer (renderer) {
+  return renderer
+    .toLowerCase()
+    .replace(/angle \((.+)\)*$/, '$1')
+    .replace(/\s+([0-9]+gb|direct3d|opengl.+$)|\(r\)| \([^)]+\)$/g, '')
 }

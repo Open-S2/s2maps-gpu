@@ -1,7 +1,5 @@
 precision highp float;
 
-@nomangle vertPos
-
 varying vec2 vertPos;
 
 uniform vec2 uScale;

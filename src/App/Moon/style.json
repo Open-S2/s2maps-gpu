@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "name": "s2test",
+  "center": [0, 0],
+  "zoom": 0,
+  "minzoom": -1,
+  "maxzoom": 9.99,
+  "zoom-offset": 0.5,
+  "sources": {
+    "moon-poi": "s2maps://data/s2maps/moon-poi-v1.s2tiles",
+    "moon": "s2maps://data/s2maps/moon-v1.s2tiles"
+  },
+  "fonts": {
+    "noto-sans-medium": "https://data.s2maps.io/glyphs/Noto/NotoSansMedium.font",
+    "roboto-medium": {
+      "path": "https://data.s2maps.io/glyphs/Roboto/RobotoMedium.font",
+      "fallback": "noto-sans-medium"
+    }
+  },
+  "icons": {},
+  "wallpaper": {
+    "skybox": "https://data.s2maps.io/public/backgrounds/milkyway",
+    "loadingBackground": "rgb(9, 8, 17)",
+    "size": 2048,
+    "type": "webp"
+  },
+  "colorBlind": false,
+  "layers": [
+    {
+      "name": "background",
+      "type": "fill",
+      "source": "mask",
+      "opaque": true,
+      "layout": {},
+      "paint": {
+        "color": "rgb(64, 64, 64)"
+      }
+    },
+    {
+      "name": "moon-raster",
+      "source": "moon",
+      "opaque": true,
+      "type": "raster"
+    },
+    {
+      "name": "moon-craters",
+      "source": "moon-poi",
+      "layer": "craters",
+      "type": "glyph",
+      "minzoom": 0,
+      "layout": {
+        "text-family": "roboto-medium",
+        "text-field": "?name",
+        "text-anchor": "center",
+        "text-offset": [0, 0],
+        "text-padding": [0, 0]
+      },
+      "paint": {
+        "text-size": [
+          "input-range",
+          "zoom",
+          "expo",
+          1.5,
+          0,
+          12,
+          4,
+          18
+        ],
+        "text-fill": "#ededed",
+        "text-stroke": "rgba(35, 35, 35, 0.85)",
+        "text-stroke-width": 0.65
+      }
+    }
+  ]
+}
