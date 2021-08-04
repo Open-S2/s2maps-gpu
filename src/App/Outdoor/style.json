@@ -2,7 +2,7 @@
   "version": 2,
   "name": "s2maps-outdoor",
   "center": [-111.811091, 40.718442],
-  "zoom": 9,
+  "zoom": 2,
   "minzoom": 1,
   "maxzoom": 18.99,
   "sources": {
@@ -832,7 +832,7 @@
         "join": "bevel"
       },
       "paint": {
-        "color": "#ffffff",
+        "color": "#d09fa0",
         "width": [
           "data-condition",
           ["type", "has", ["motorway_link", "trunk_link"]],

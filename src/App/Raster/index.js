@@ -4,7 +4,9 @@ import style from './style.json'
 
 import './raster.css'
 
-for (const source in style.sources) style.sources[source] = style.sources[source].replace('%REACT_APP_S2TILES%', process.env.REACT_APP_S2TILES)
+const { REACT_APP_API_KEY, REACT_APP_S2TILES } = process.env
+
+for (const source in style.sources) style.sources[source] = style.sources[source].replace('%REACT_APP_S2TILES%', REACT_APP_S2TILES)
 
 function Raster () {
   const [month, setMonth] = useState(7)
@@ -60,7 +62,8 @@ function prepCanvas (container, opts = {}) {
     style,
     container,
     projection: 'blend',
-    zoomController: true
+    zoomController: true,
+    apiKey: REACT_APP_API_KEY
   })
 
   return map
