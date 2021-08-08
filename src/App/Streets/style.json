@@ -1526,8 +1526,6 @@
       "layer": "place",
       "type": "glyph",
       "maxzoom": 12,
-      "interactive": true,
-      "cursor": "pointer",
       "layout": {
         "text-family": "roboto-medium",
         "text-field": [
@@ -1614,8 +1612,6 @@
       "filter": ["class", "has", ["city", "town", "village", "hamlet", "locality", "neighbourhood", "island", "suburb"]],
       "layer": "place",
       "type": "glyph",
-      "interactive": true,
-      "cursor": "pointer",
       "layout": {
         "text-family": [
           "data-condition",
