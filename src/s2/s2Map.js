@@ -445,3 +445,10 @@ if (window) window.S2Map = S2Map
 // 3D terrain
 // geocoding
 // isochrones
+
+// olympus
+// * new point + line + poly algorithm
+// * improve joining algorthim (use same as msdf)
+// * redo fills (also low zooms shouldn't have to split on front end)
+// * redo roads -> working for road signs
+// * redo terrain

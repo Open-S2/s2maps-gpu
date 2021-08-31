@@ -2,7 +2,7 @@
   "version": 2,
   "name": "s2maps-streets",
   "center": [-122.4585607773497, 37.778443127730476],
-  "zoom": 12,
+  "zoom": 0,
   "minzoom": -1,
   "maxzoom": 18.99,
   "sources": {
