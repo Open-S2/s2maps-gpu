@@ -2,10 +2,10 @@
 import { coalesceField } from '../../../../style/conditionals'
 
 import type { GlyphObject } from './glyph'
+import type { Unicode, GlyphMap, IconMap, GlyphList, IconList } from './'
 
 export default function preprocessGlyphs (features: Feature, zoom: number,
-  glyphMap: Map<string, Glyph>, glyphList: { _total: number, [string]: Array<Unicode> },
-  iconPacks: IconPacks) {
+  glyphMap: GlyphMap, iconMap: IconMap, glyphList: GlyphList, iconList: IconList) {
   // prep variables
   const glyphFeatures = []
 
@@ -19,26 +19,17 @@ export default function preprocessGlyphs (features: Feature, zoom: number,
 
       // build all layout and paint parameters
       // per tile properties
-      let color
       let field = coalesceField(layoutLocal[`${type}-field`](null, properties, zoom), properties)
       if (!field) continue
       const family = layoutLocal[`${type}-family`](null, properties, zoom)
       const anchor = layoutLocal[`${type}-anchor`](null, properties, zoom)
       // if icon, convert field to list of codes, otherwise create a unicode array
       if (type === 'icon') {
-        if (iconPacks[family] && iconPacks[family].iconMap[field]) {
-          const { iconMap, colors } = iconPacks[family]
-          const icon = iconMap[field]
-          color = []
-          field = icon.map(g => {
-            color.push(...colors[g.colorID])
-            return g.glyphID
-          })
-        } else { field = [] }
+        addMissingIcons(field, family, glyphMap, iconMap, iconList)
       } else {
         field = field.split('').map(char => char.charCodeAt(0))
+        addMissingChars(field, family, glyphMap, glyphList)
       }
-      addMissingChars(field, family, glyphMap, glyphList)
       // positional properties
       const offset = layoutLocal[`${type}-offset`](null, properties, zoom)
       const padding = layoutLocal[`${type}-padding`](null, properties, zoom)
@@ -69,7 +60,6 @@ export default function preprocessGlyphs (features: Feature, zoom: number,
           kerning,
           lineHeight,
           // paint
-          color,
           featureCode: buildFeatureCode(featureCode, type, paint, properties, zoom),
           // tile position
           s: point[0] / extent,
@@ -87,8 +77,7 @@ export default function preprocessGlyphs (features: Feature, zoom: number,
   return glyphFeatures
 }
 
-function addMissingChars (field: string, family: string, glyphMap: Map<Unicode, Glyph>,
-  glyphList: { _total: number, [string]: Array<Unicode> }) {
+function addMissingChars (field: Array<Unicode>, family: string, glyphMap: GlyphMap, glyphList: GlyphList) {
   if (!glyphMap[family]) glyphMap[family] = new Map()
   if (!glyphList[family]) glyphList[family] = new Set()
   const familyList = glyphList[family]
@@ -98,6 +87,19 @@ function addMissingChars (field: string, family: string, glyphMap: Map<Unicode, 
       glyphList._total++
       familyList.add(unicode)
     }
+  }
+}
+
+function addMissingIcons (field: string, family: string, glyphMap: GlyphMap,
+  iconMap: IconMap, iconList: IconList) {
+  if (!glyphMap[family]) glyphMap[family] = new Map()
+  if (!iconMap[family]) iconMap[family] = new Map()
+  if (!iconList[family]) iconList[family] = new Set()
+  const familyList = iconList[family]
+  const familyMap = iconMap[family]
+  if (!familyMap.has(field)) {
+    iconList._total++
+    familyList.add(field)
   }
 }
 

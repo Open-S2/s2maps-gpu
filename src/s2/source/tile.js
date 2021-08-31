@@ -129,11 +129,17 @@ export default class Tile {
     this.interactiveGuide = new Map()
   }
 
+  deleteSources (sourceNames: Array<string>) {
+    for (const sourceName of sourceNames) delete this.sourceData[sourceName]
+    this.featureGuide = this.featureGuide.filter(fg => {
+      const fgSourceName = fg.sourceName.split(':')[0]
+      return !sourceNames.includes(fgSourceName)
+    })
+  }
+
   // inject references to featureGuide from each parentTile. Sometimes if we zoom really fast, we inject
-  // a parents' parent or deeper, so we need to reflect that int the tile property. The other case
-  // is the tile wants to display a layer that exists in a 'lower' zoom than this one.
+  // a parents' parent or deeper, so we need to reflect that in the tile property.
   injectParentTile (parent: Tile, layers: Array<Layer>) {
-    if (this.zoom >= 12) return
     const bounds = this._buildBounds(parent)
     // feature guides
     for (const feature of parent.featureGuide) {
@@ -209,11 +215,11 @@ export default class Tile {
 
   flush (data) {
     const { source } = data
-    // remove "left over" feature guide data from parent injection that wont be replaced in the future
+    // remove "left over" feature guide data from parent injection or old data that wont be replaced in the future
     this.featureGuide = this.featureGuide.filter(fg => {
       const split = fg.sourceName.split(':')
-      const fgSource = split[0]
       const fgType = split.pop()
+      const fgSource = split.join(':')
       return !(
         fgSource === source &&
         !data[fgType] &&
@@ -246,7 +252,7 @@ export default class Tile {
         tile: this,
         faceST: this.faceST,
         layerIndex,
-        source: this.sourceData,
+        source: this.sourceData.mask,
         sourceName: 'mask',
         subType: 'fill',
         count: this.sourceData.mask.count,
@@ -289,11 +295,7 @@ export default class Tile {
     let rasterSource = this.sourceData[sourceName]
     // prep phase (should the source not exist)
     if (!rasterSource) {
-      rasterSource = this.sourceData[sourceName] = {
-        type: 'raster',
-        size,
-        image
-      }
+      rasterSource = this.sourceData[sourceName] = { type: 'raster', size, image }
       buildSource(this.context, rasterSource)
       // store texture information to featureGuide
       for (const layerIndex of layerIndexes) {
@@ -303,7 +305,7 @@ export default class Tile {
           faceST: this.faceST,
           layerIndex,
           depthPos,
-          source: this.sourceData,
+          source: this.sourceData.mask,
           sourceName: 'mask',
           subType: 'fill',
           type: 'raster',
@@ -320,7 +322,7 @@ export default class Tile {
   injectVectorSourceData (sourceName: string, vertexArray: Int16Array, indexArray?: Uint32Array,
     codeTypeArray: Uint8Array, featureGuideArray: Float32Array, layers: Array<Layer>): VectorTileSource {
     // filter parent data if applicable
-    this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === sourceName && fg.parent))
+    this.featureGuide = this.featureGuide.filter(fg => fg.sourceName !== sourceName)
     // store a reference to the source
     const subType = sourceName.split(':').pop()
     const vectorSource = this.sourceData[sourceName] = {
@@ -352,7 +354,7 @@ export default class Tile {
         tile: this,
         faceST: this.faceST,
         layerIndex,
-        source: this.sourceData,
+        source: vectorSource,
         sourceName,
         count,
         offset,
@@ -410,7 +412,7 @@ export default class Tile {
     glyphQuads: Float32Array, glyphColors: Uint8ClampedArray,
     featureGuideBuffer: Float32Array, layers: Array<Layer>) {
     // filter parent data if applicable
-    this.featureGuide = this.featureGuide.filter(fg => !(fg.sourceName === sourceName && fg.parent))
+    this.featureGuide = this.featureGuide.filter(fg => fg.sourceName !== sourceName)
     const { context } = this
     const glyphSource = this.sourceData[sourceName] = {
       type: 'glyph',
@@ -434,7 +436,7 @@ export default class Tile {
         tile: this,
         faceST: this.faceST,
         layerIndex,
-        source: this.sourceData,
+        source: glyphSource,
         sourceName,
         filterOffset,
         filterCount,

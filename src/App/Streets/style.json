@@ -2,7 +2,7 @@
   "version": 2,
   "name": "s2maps-streets",
   "center": [-122.4585607773497, 37.778443127730476],
-  "zoom": 0,
+  "zoom": 12,
   "minzoom": -1,
   "maxzoom": 18.99,
   "sources": {
@@ -20,6 +20,9 @@
       "path": "https://data.s2maps.io/glyphs/Roboto/RobotoMedium.font",
       "fallback": "noto-sans-medium"
     }
+  },
+  "icons": {
+    "street-icons": "http://localhost:8000/glyphs/streets/streets.icon"
   },
   "wallpaper": {
     "background-color": "#030a2d",
@@ -1510,10 +1513,63 @@
       }
     },
     {
+      "name": "info-fill",
+      "source": "_info",
+      "type": "fill",
+      "invert": true,
+      "minzoom": 0,
+      "paint": {
+        "color": "rgba(64, 64, 64, 0.15)"
+      }
+    },
+    {
+      "name": "info-border",
+      "source": "_info",
+      "type": "line",
+      "minzoom": 0,
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "rgba(161, 106, 179, 0.85)",
+        "width": [
+          "input-range",
+          "zoom",
+          "lin",
+          0,
+          2,
+          3,
+          2.5
+        ]
+      }
+    },
+    {
       "name": "shade",
       "source": "mask",
       "type": "shade",
       "maxzoom": 2
+    },
+    {
+      "name": "address",
+      "source": "streets",
+      "layer": "addr",
+      "type": "glyph",
+      "minzoom": 16,
+      "layout": {
+        "text-family": "roboto-regular",
+        "text-field": "?housenumber",
+        "text-anchor": "center",
+        "text-line-height": 0.02,
+        "text-offset": [0, 0],
+        "text-padding": [4, 2]
+      },
+      "paint": {
+        "text-size": 14,
+        "text-fill": "rgb(100, 100, 100)",
+        "text-stroke": "rgba(255, 255, 255, 0.65)",
+        "text-stroke-width": 0.7
+      }
     },
     {
       "name": "country_state",
@@ -1526,6 +1582,8 @@
       "layer": "place",
       "type": "glyph",
       "maxzoom": 12,
+      "interactive": true,
+      "cursor": "pointer",
       "layout": {
         "text-family": "roboto-medium",
         "text-field": [
@@ -1789,9 +1847,14 @@
           "default",
           "?name"
         ],
-        "text-anchor": "center",
+        "text-anchor": "top",
         "text-offset": [0, 0],
-        "text-padding": [1, 1]
+        "text-padding": [1, 1],
+        "icon-family": "street-icons",
+        "icon-field": "?icon",
+        "icon-anchor": "bottom",
+        "icon-offset": [3, -4],
+        "icon-padding": [0, 0]
       },
       "paint": {
         "text-size": [
@@ -1843,24 +1906,19 @@
       }
     },
     {
-      "name": "address",
-      "source": "streets",
-      "layer": "addr",
+      "name": "markers",
+      "source": "_markers",
       "type": "glyph",
-      "minzoom": 16,
+      "overdraw": true,
       "layout": {
-        "text-family": "roboto-regular",
-        "text-field": "?housenumber",
-        "text-anchor": "center",
-        "text-line-height": 0.02,
-        "text-offset": [0, 0],
-        "text-padding": [4, 2]
+        "icon-family": "street-icons",
+        "icon-field": "marker",
+        "icon-anchor": "bottom",
+        "icon-offset": [3, -4],
+        "icon-padding": [0, 0]
       },
       "paint": {
-        "text-size": 14,
-        "text-fill": "rgb(100, 100, 100)",
-        "text-stroke": "rgba(255, 255, 255, 0.65)",
-        "text-stroke-width": 0.7
+        "icon-size": 36
       }
     }
   ]

@@ -73,7 +73,7 @@ export default class DragPan extends EventTarget {
     this.clear()
   }
 
-  onMouseUp () {
+  onMouseUp (posX: number, posY: number) {
     this.mouseActive = false
     this.time = 0
     // if movement is greater than mins, animate swipe,
@@ -82,7 +82,7 @@ export default class DragPan extends EventTarget {
       this.wasActive = true
       this.dispatchEvent(new Event('swipe'))
     } else if (Math.abs(this.totalMovementX) < this.minMovementX && Math.abs(this.totalMovementY) < this.minMovementY) {
-      if (!this.wasActive) this.dispatchEvent(new Event('click'))
+      if (!this.wasActive) this.dispatchEvent(new CustomEvent('click', { detail: { posX, posY } }))
       this.wasActive = false
     } else { this.wasActive = false }
   }
@@ -131,6 +131,7 @@ export default class DragPan extends EventTarget {
   }
 
   getNextZoomFrame (now: number) {
+    this.wasActive = true
     const delta = now - this.time
     if (delta > 1) {
       this.clear()
@@ -140,6 +141,7 @@ export default class DragPan extends EventTarget {
   }
 
   getNextSwipeFrame (now: number) {
+    this.wasActive = true
     if (this.time === -1) {
       return [0, 0, 0]
     }

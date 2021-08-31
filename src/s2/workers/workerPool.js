@@ -9,6 +9,7 @@ import TileWorker from './tile.worker.js'
 
 import type S2Map from '../s2Map'
 import type { StylePackage } from '../style/styleSpec'
+import type { Marker } from './source/MarkerSource'
 
 export type TileRequest = {
   hash: number,
@@ -59,8 +60,7 @@ class WorkerPool {
   }
 
   injectStyle (mapID: string, style: StylePackage) {
-    const { sourceWorker } = this
-    sourceWorker.postMessage({ mapID, type: 'style', style })
+    this.sourceWorker.postMessage({ mapID, type: 'style', style })
     for (const worker of this.workers) worker.postMessage({ mapID, type: 'style', style })
   }
 
@@ -75,8 +75,24 @@ class WorkerPool {
   //   this.sourceWorker.postMessage({ mapID, type: 'delete' })
   // }
 
-  tileRequest (mapID: string, tiles: Array<TileRequest>) {
-    this.sourceWorker.postMessage({ mapID, type: 'tilerequest', tiles })
+  tileRequest (mapID: string, tiles: Array<TileRequest>, sourceNames: Array<string>) {
+    this.sourceWorker.postMessage({ mapID, type: 'tilerequest', tiles, sourceNames })
+  }
+
+  getInfo (mapID: string, featureID: number) {
+    this.sourceWorker.postMessage({ mapID, type: 'getInfo', featureID })
+  }
+
+  addMarkers (mapID: string, markers: Array<Marker>, sourceName: string) {
+    this.sourceWorker.postMessage({ mapID, type: 'addMarkers', markers, sourceName })
+  }
+
+  removeMarkers (mapID: string, ids: Array<number>, sourceName: string) {
+    this.sourceWorker.postMessage({ mapID, type: 'removeMarkers', ids, sourceName })
+  }
+
+  deleteSource (mapID: string, sourceNames: Array<string>) {
+    this.sourceWorker.postMessage({ mapID, type: 'deleteSource', sourceNames })
   }
 }
 

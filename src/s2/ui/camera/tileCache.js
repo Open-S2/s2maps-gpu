@@ -13,7 +13,7 @@ export default class TileCache extends Map<number, Tile> {
   set (key: number, tile: Tile) {
     // place in front the new
     this.order.unshift(key)
-    while (this.order.length > this.maxCacheSize) this._delete(this.order.pop())
+    while (this.order.length > this.maxCacheSize) this.delete(this.order.pop())
     return super.set(key, tile)
   }
 
@@ -32,7 +32,7 @@ export default class TileCache extends Map<number, Tile> {
     return tiles
   }
 
-  _delete (key: number) {
+  delete (key: number) {
     this.order.splice(this.order.indexOf(key), 1)
     const tile = super.get(key)
     if (tile) tile.delete()

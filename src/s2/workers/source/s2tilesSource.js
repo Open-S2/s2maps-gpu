@@ -16,10 +16,10 @@ export type RootDirectory = {
 export default class S2TilesSource extends Source {
   version: number = 1
   rootDir: RootDirectory = {}
-  async build (token: string) {
+  async build (mapID: string) {
     const self = this
     // fetch the metadata
-    const ab = await this.getRange(`${this.path}?type=metadata`, 0, 327669, token)
+    const ab = await this.getRange(`${this.path}?type=metadata`, 0, 327669, mapID)
     if (!ab || ab.byteLength !== 327669) { // if the return is empty, we failed
       self.active = false
       console.log(`Failed to extrapolate ${this.path} metadata`)
@@ -38,9 +38,9 @@ export default class S2TilesSource extends Source {
         this.rootDir[3] = new DataView(ab, 163839, ROOT_DIR_SIZE)
         this.rootDir[4] = new DataView(ab, 218449, ROOT_DIR_SIZE)
         this.rootDir[5] = new DataView(ab, 273059, ROOT_DIR_SIZE)
-        const md = await this.getRange(`${this.path}?type=metadata`, 327669, mL, token)
+        const md = await this.getRange(`${this.path}?type=metadata`, 327669, mL, mapID)
         const metadata = JSON.parse(new TextDecoder('utf-8').decode(md))
-        this._buildMetadata(metadata)
+        this._buildMetadata(metadata, mapID)
       }
     }
   }
@@ -53,9 +53,9 @@ export default class S2TilesSource extends Source {
   }
 
   // Here, we use the memory mapped file directory tree system to find our data
-  async _tileRequest (mapID: string, token: string, tile: TileRequest, worker: Worker,
+  async _tileRequest (mapID: string, tile: TileRequest,
     sourceName: string, parent: false | Object) {
-    const { name, s2json, type, encoding } = this
+    const { name, s2json, type, encoding, session } = this
     let { face, zoom, x, y, hash } = parent ? parent : tile
 
     // pull in the correct face's directory
@@ -63,7 +63,7 @@ export default class S2TilesSource extends Source {
     // now we walk to the next directory as necessary
     const path = getPath(zoom, x, y)
     for (const leaf of path) {
-      if (leaf[0] === 6) dir = await this._walkPath(dir, leaf, token)
+      if (leaf[0] === 6) dir = await this._walkPath(dir, leaf, mapID)
       else { zoom = leaf[0]; x = leaf[1]; y = leaf[2] }
       if (!dir) return this._flush(mapID, hash, sourceName)
     }
@@ -72,22 +72,22 @@ export default class S2TilesSource extends Source {
     if (!node) return this._flush(mapID, hash, sourceName)
 
     // we found the vector file, let's send the details off to the tile worker
-    const data = await this.getRange(`${this.path}?type=tile&subtype=${type}&enc=${encoding}`, node[0], node[1], token)
+    const data = await this.getRange(`${this.path}?type=tile&subtype=${type}&enc=${encoding}`, node[0], node[1], mapID)
     if (data) {
+      const worker = session.requestWorker()
       worker.postMessage({ mapID, type: type === 'vector' ? 'pbfdata' : 'rasterdata', tile, sourceName, parent, data }, [data])
-      // postMessage({ mapID, type: 'addsource', hash, sourceName })
     } else { return this._flush(mapID, hash, sourceName) }
   }
 
   // from a starting directory and leaf identifier, move to the next leaf directory
   // if said directory does not exist, we create it (assuming we are writing and not reading)
-  async _walkPath (dir: DataView, leaf: [number, number, number], token: string): DataView {
+  async _walkPath (dir: DataView, leaf: [number, number, number], mapID: string): DataView {
     // pull position from leaf
     const [zoom, x, y] = leaf
     const newDir = this._readNode(dir, zoom, x, y)
     if (!newDir || newDir[1] === 0) return null // corner cases: length = 0 because that leaf does not exist
     // return the new directory
-    const ab = await this.getRange(`${this.path}?type=dir`, newDir[0], newDir[1], token)
+    const ab = await this.getRange(`${this.path}?type=dir`, newDir[0], newDir[1], mapID)
     if (ab) return new DataView(ab)
   }
 
@@ -103,13 +103,14 @@ export default class S2TilesSource extends Source {
     return [offset, length]
   }
 
-  async getRange (url: string, offset: number, length: number, Authorization?: string): ArrayBuffer {
+  async getRange (url: string, offset: number, length: number, mapID: string): ArrayBuffer {
     const { type } = this
     const headers = {
       Accept: type === 'vector' ? 'application/protobuf' : 'image/webp'
     }
     const bytes = offset + '-' + (offset + length - 1)
-    if (this.needsToken) headers.Authorization = Authorization
+    const Authorization = this.needsToken && await this.session.requestSessionToken(mapID)
+    if (Authorization) headers.Authorization = Authorization
     if (length === 0 || length > MAX_SIZE) return null
     const res = await fetch(`${url}&bytes=${bytes}`, { headers })
     if (res.status !== 200 && res.status !== 206) return null

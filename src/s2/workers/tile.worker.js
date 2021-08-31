@@ -61,11 +61,10 @@ export default class TileWorker {
     const { mapID, type } = data
     if (type === 'port') this._loadWorkerPort(data.messagePort, data.postPort, data.id, data.totalWorkers)
     else if (type === 'style') this._loadStyle(mapID, data.style)
-    else if (type === 'iconpacks') this._loadIconPacks(data.iconPacks)
     else if (type === 'pbfdata') this._processPBF(mapID, data.tile, data.sourceName, data.parent, data.data)
     else if (type === 'rasterdata') this._processRaster(mapID, data.tile, data.sourceName, data.parent, data.data)
     else if (type === 'jsondata') this._processJSONData(mapID, data.tile, data.sourceName, data.data)
-    else if (type === 'glyphresponse') this._processGlyphResponse(mapID, data.reqID, data.glyphMetadata, data.familyName)
+    else if (type === 'glyphresponse') this._processGlyphResponse(mapID, data.reqID, data.glyphMetadata, data.familyName, data.icons, data.colors)
   }
 
   _loadWorkerPort (messagePort: MessageChannel.port1, postPort: MessageChannel.port2,
@@ -101,10 +100,6 @@ export default class TileWorker {
     this.vectorManager.webgl1 = this.webgl1 = glType === 1
   }
 
-  _loadIconPacks (iconPacks: IconPacks) {
-    this.vectorManager.glyphManager.loadIconsPacks(iconPacks)
-  }
-
   _processPBF (mapID: string, tile: TileRequest, sourceName: string,
     parent: boolean, data: ArrayBuffer) {
     this.vectorManager.processVector(mapID, tile, sourceName, new VectorTile(data), this.maps[mapID], parent)
@@ -127,8 +122,8 @@ export default class TileWorker {
     this.vectorManager.processVector(mapID, tile, sourceName, data, this.maps[mapID])
   }
 
-  _processGlyphResponse (mapID: string, reqID: string, glyphMetadata: ArrayBuffer, familyName: string) {
-    this.vectorManager.glyphManager.processGlyphResponse(reqID, glyphMetadata, familyName)
+  _processGlyphResponse (mapID: string, reqID: string, glyphMetadata: ArrayBuffer, familyName: string, icons: IconMap, colors: ColorMap) {
+    this.vectorManager.glyphManager.processGlyphResponse(reqID, glyphMetadata, familyName, icons, colors)
   }
 }
 

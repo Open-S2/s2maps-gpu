@@ -10,6 +10,7 @@ export type GlyphObject = {
   code: Array<number>,
   featureCode: typeof undefined | Array<number>, // [fill, stroke, strokeWidth, ...]
   // layout
+  overdraw: boolean,
   family: string,
   field: string | Array<string>,
   anchor: number, // 0 => center ; 1 => top; 2 => topRight ; 3 => right ; 4 => bottomRight ; 5 => bottom ; 6 => bottomLeft ; 7 => left ; 8 => topLeft

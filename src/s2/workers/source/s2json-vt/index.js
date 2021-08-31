@@ -53,7 +53,7 @@ export default class S2JsonVT {
   indexMaxZoom: number = 4
   indexMaxPoints: number = 100000
   tolerance: number = 3
-  extent: number = 4096
+  extent: number = 8192
   buffer: number = 64
   promoteId: null | number = null
   generateId: boolean = false

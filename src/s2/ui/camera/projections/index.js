@@ -1,6 +1,7 @@
 // @flow
 import * as mat4 from '../../../util/mat4'
 import { default as getTiles } from './getTilesInView'
+import { default as _cursorToLonLat } from './cursorToLonLat'
 import { S2Point } from 's2projection'
 
 export type ProjectionConfig = {
@@ -47,6 +48,7 @@ export default class Projector {
   pitch: number = 0
   zNear: number = 0.5 // static; just for draw calls
   zFar: number = 100_000_000 // static; just for draw calls
+  tileSize: number = 768
   multiplier: number = 1
   dirty: boolean = true
   constructor (config: MapOptions) {
@@ -169,8 +171,8 @@ export default class Projector {
     this.view[1] = this.lon
     this.view[2] = this.lat
     // if we hit 360, just swing back to 0
-    while (this.lon >= 360) { this.lon -= 360 }
-    while (this.lon <= 0) { this.lon += 360 }
+    while (this.lon >= 180) { this.lon -= 360 }
+    while (this.lon < -180) { this.lon += 360 }
     // cleanup
     this.matrices = {}
     this.dirty = true
@@ -186,6 +188,8 @@ export default class Projector {
   }
 
   setLonLat (lon: number, lat: number) {
+    while (lon >= 180) { lon -= 360 }
+    while (lon < -180) { lon += 360 }
     if (this.lon !== lon && this.lat !== lat) {
       this.lon = lon
       this.lat = lat
@@ -225,20 +229,26 @@ export default class Projector {
   }
 
   _getProjectionMatrix (type: MatrixType): Float32Array {
-    let { zoom, radius, aspect, multiplier } = this
+    let { zoom, radius, aspect, tileSize, multiplier } = this
     let multpl
     // prep a matrix
     const matrix = mat4.create()
 
     // BLEND LOOKS A BIT DIFF const multpl = -radius / multiplier / (tileSize * scale * radius * 5)
     if (type === 'km') radius *= 1000
-    multpl = radius / multiplier / (768 * Math.pow(2, zoom))
+    multpl = radius / multiplier / (tileSize * Math.pow(2, zoom))
 
     // create projection
     // mat4.blend(matrix, aspect[0] * multpl, aspect[1] * multpl, 0.5, zFar)
     mat4.ortho(matrix, aspect[0] * multpl, aspect[1] * multpl, 100_000)
 
     return matrix
+  }
+
+  // x and y are the distances from the center of the screen
+  cursorToLonLat (x: number, y: number) {
+    const { lon, lat, zoom, tileSize } = this
+    return _cursorToLonLat(lon, lat, x, y, (tileSize * Math.pow(2, zoom)) / 2)
   }
 
   getTilesInView (): TileDefinitions { // [face, zoom, x, y, hash]

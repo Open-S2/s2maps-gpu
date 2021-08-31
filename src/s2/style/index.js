@@ -96,6 +96,10 @@ export default class Style {
     self._buildLayers()
   }
 
+  deleteSources (sourceNames: Array<string>) {
+    for (const sourceName of sourceNames) delete this.sources[sourceName]
+  }
+
   _prebuildStyle (style: Object) {
     // ensure certain default layer values exist. If it is a raster layer: seggregate
     for (let i = 0, sl = style.layers.length; i < sl; i++) {
@@ -218,7 +222,7 @@ export default class Style {
     })
     // send the tiles over to the worker pool manager to split the workload
     if (this.webworker) { // $FlowIgnore
-      postMessage({ mapID: this.map.id, type: 'request', tiles: tileRequests })
+      postMessage({ mapID: this.map.id, type: 'tilerequest', tiles: tileRequests })
     } else {
       window.S2WorkerPool.tileRequest(this.map.id, tileRequests)
     }

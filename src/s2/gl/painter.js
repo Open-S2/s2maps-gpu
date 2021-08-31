@@ -146,8 +146,6 @@ export default class Painter {
     // prep frame uniforms
     const { view, aspect } = projection
     const matrix = projection.getMatrix('m')
-    // if past zoom 12, the tile will self align to the screen
-    for (const tile of tiles) tile.setScreenPositions(projection)
     this.injectFrameUniforms(matrix, view, aspect)
     // prep mask id's
     this._createTileMasksIDs(tiles)
@@ -159,10 +157,13 @@ export default class Painter {
     if (heatmapFeatures.length) features.push(this.paintHeatmap(heatmapFeatures))
     // sort features
     features.sort(featureSort)
+    // corner case: all features tiles past zoom 12 must set screen positions
+    const featureTiles = features.map(f => f.parent ? f.parent : f.tile)
+    for (const tile of featureTiles) tile.setScreenPositions(projection)
     // prep glyph features for drawing box filters
     const glyphFeatures = features.filter(feature => feature.type === 'glyph' && !feature.overdraw)
     // use text boxes to filter out overlap
-    if (glyphFeatures.length) this.paintGlyphFilter(tiles, glyphFeatures)
+    if (glyphFeatures.length) this.paintGlyphFilter(glyphFeatures)
     // return to our default framebuffer
     context.bindMainBuffer()
     // clear main buffer
@@ -248,13 +249,11 @@ export default class Painter {
     // run through the features, and upon tile, layer, or program change, adjust accordingly
     for (const feature of features) {
       const {
-        tile, parent, layerIndex, source, faceST, invert,
-        depthPos, sourceName, type, layerCode, lch
+        tile, parent, layerIndex, source, invert, faceST,
+        depthPos, type, layerCode, lch
       } = feature
       const { tmpMaskID } = tile
-      const bottom = parent ? parent.bottom : tile.bottom
-      const top = parent ? parent.top : tile.top
-      const featureSource = source[sourceName]
+      const { bottom, top } = parent ? parent : tile
       // inversion flush if necessary
       if (inversion && curLayer !== layerIndex) {
         this.flushInvert(tiles, program, inversion)
@@ -281,9 +280,9 @@ export default class Painter {
       program.setFaceST(faceST)
       program.setTilePos(bottom, top)
       // bind vao
-      gl.bindVertexArray(featureSource.vao)
+      gl.bindVertexArray(source.vao)
       // draw
-      program.draw(feature, featureSource, interactive)
+      program.draw(feature, source, interactive)
     }
   }
 
@@ -321,18 +320,15 @@ export default class Painter {
     program.setupTextureDraw()
     // draw all features
     for (const feature of features) {
-      const { tile, parent, source, faceST, sourceName, layerCode } = feature
-      // if (parent) console.log(true)
-      // grab feature source and bottom-top
-      const featureSource = source[sourceName]
-      const bottom = parent ? parent.bottom : tile.bottom
-      const top = parent ? parent.top : tile.top
+      const { tile, parent, source, layerCode, faceST } = feature
+      // grab bottom-top
+      const { bottom, top } = parent ? parent : tile
       // set faceST & layercode, bind vao, and draw
       program.setFaceST(faceST)
       program.setTilePos(bottom, top)
       if (layerCode) program.setLayerCode(layerCode)
-      gl.bindVertexArray(featureSource.vao)
-      program.drawTexture(feature, featureSource)
+      gl.bindVertexArray(source.vao)
+      program.drawTexture(feature, source)
     }
     // prep program for canvas draws
     program.setupCanvasDraw()
@@ -340,7 +336,7 @@ export default class Painter {
     return features[0]
   }
 
-  paintGlyphFilter (tiles: Array<Tile>, glyphFeatures: Array<FeatureGuide>) {
+  paintGlyphFilter (glyphFeatures: Array<FeatureGuide>) {
     const glyphFilterProgram: GlyphFilterProgram = this.useProgram('glyphFilter')
     // Step 1: draw quads
     glyphFilterProgram.bindQuadFrameBuffer()
@@ -383,10 +379,8 @@ export default class Painter {
     glyphFilterProgram.setMode(mode)
     // draw each feature
     for (const glyphFeature of glyphFeatures) {
-      const { layerIndex, source, faceST, sourceName, layerCode } = glyphFeature
-      const tile = glyphFeature.parent ? glyphFeature.parent : glyphFeature.tile
-      const { bottom, top } = tile
-      const featureSource = source[sourceName]
+      const { tile, parent, layerIndex, source, layerCode, faceST } = glyphFeature
+      const { bottom, top } = parent ? parent : tile
       // update layerIndex
       if (curLayer !== layerIndex && layerCode) {
         curLayer = layerIndex
@@ -394,9 +388,9 @@ export default class Painter {
       }
       glyphFilterProgram.setFaceST(faceST)
       glyphFilterProgram.setTilePos(bottom, top)
-      gl.bindVertexArray(featureSource.filterVAO)
+      gl.bindVertexArray(source.filterVAO)
       // draw
-      glyphFilterProgram.draw(glyphFeature, featureSource, mode)
+      glyphFilterProgram.draw(glyphFeature, source, mode)
     }
   }
 

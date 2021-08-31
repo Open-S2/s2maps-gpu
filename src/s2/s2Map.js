@@ -1,10 +1,12 @@
 // @flow
 import Map from './ui/map'
+import Info from './ui/info'
 // import createWorker from './util/createWorker'
 import MapWorker from './workers/map.worker.js'
 // import mapWorkerURL from './workers/map.worker.url.js'
 
 import type { MapOptions } from './ui/map'
+import type { Marker } from './workers/source/MarkerSource'
 
 type Attributions = { [string]: string }
 
@@ -19,7 +21,9 @@ export default class S2Map extends EventTarget {
   _offscreen: boolean = false
   _canvas: HTMLCanvasElement
   _attributionPopup: HTMLCanvasElement
+  _attributions: Attributions = {}
   map: Map | MapWorker
+  info: Info
   id: string = Math.random().toString(36).replace('0.', '')
   constructor (options: MapOptions = {}) {
     super()
@@ -68,6 +72,8 @@ export default class S2Map extends EventTarget {
     canvas.width = container.clientWidth * self._canvasMultiplier
     canvas.height = container.clientHeight * self._canvasMultiplier
     canvasContainer.appendChild(canvas)
+    // add infoLayers should they exist
+    if (Array.isArray(options.infoLayers)) this.info = new Info(this, container, options.infoLayers)
 
     return canvas
   }
@@ -115,7 +121,7 @@ export default class S2Map extends EventTarget {
   }
 
   _setupControlContainer (options: MapOptions) {
-    const { _container } = this
+    const { _container, _attributions } = this
     const { attributions, zoomController, darkMode } = options
     // add info bar with our jollyRoger
     const attribution = window.document.createElement('div')
@@ -127,7 +133,14 @@ export default class S2Map extends EventTarget {
     popup.className = 's2-popup-container'
     popup.innerHTML = '<div>Rendered with ❤ by</div><a href="https://s2maps.io" target="popup"><div class="s2-jolly-roger"></div></a>'
     // add attributions
-    if (attributions) for (const name in attributions) popup.innerHTML += `<div><a href="${attributions[name]}" target="popup">${name}</a></div>`
+    if (attributions) {
+      for (const name in attributions) {
+        if (!_attributions[name]) {
+          _attributions[name] = attributions[name]
+          popup.innerHTML += `<div><a href="${attributions[name]}" target="popup">${name}</a></div>`
+        }
+      }
+    }
     attribution.appendChild(info)
     attribution.appendChild(popup)
     _container.appendChild(attribution)
@@ -161,9 +174,14 @@ export default class S2Map extends EventTarget {
     }
   }
 
-  _addAttributions (attributions: Attributions) {
-    const { _attributionPopup } = this
-    for (const name in attributions) _attributionPopup.innerHTML += `<div><a href="${attributions[name]}" target="popup">${name}</a></div>`
+  _addAttributions (attributions: Attributions = {}) {
+    const { _attributionPopup, _attributions } = this
+    for (const name in attributions) {
+      if (!_attributions[name]) {
+        _attributions[name] = attributions[name]
+        _attributionPopup.innerHTML += `<div><a href="${attributions[name]}" target="popup">${name}</a></div>`
+      }
+    }
   }
 
   _onTouch (e: TouchEvent, type: string) {
@@ -209,11 +227,13 @@ export default class S2Map extends EventTarget {
     const mouseMoveFunc = self._onMouseMove.bind(self)
     window.addEventListener('mousemove', mouseMoveFunc)
     // upon eventual mouseup, let the map know
-    window.addEventListener('mouseup', () => {
+    window.addEventListener('mouseup', (e) => {
+      const rect = self._canvas.getBoundingClientRect()
+      const { clientX, clientY } = e
       window.removeEventListener('mousemove', mouseMoveFunc)
       if (_offscreen && map) {
-        map.postMessage({ type: 'mouseup' })
-      } else if (map) { map.dragPan.onMouseUp() }
+        map.postMessage({ type: 'mouseup', clientX, clientY, rect })
+      } else if (map) { map.dragPan.onMouseUp(clientX - rect.left - (rect.width / 2), (rect.height / 2) - clientY - rect.top) }
     }, { once: true })
   }
 
@@ -239,8 +259,8 @@ export default class S2Map extends EventTarget {
 
   _mapMessage ({ data }) {
     const { mapID, type } = data
-    if (type === 'request') {
-      window.S2WorkerPool.tileRequest(mapID, data.tiles)
+    if (type === 'tilerequest') {
+      window.S2WorkerPool.tileRequest(mapID, data.tiles, data.sourceNames)
     } else if (type === 'style') {
       window.S2WorkerPool.injectStyle(mapID, data.style)
     } else if (type === 'mouseenter') {
@@ -254,7 +274,9 @@ export default class S2Map extends EventTarget {
       this._canvas.style.cursor = 'default'
       if (feature) this.dispatchEvent(new CustomEvent('mouseleave', { detail: feature }))
     } else if (type === 'click') {
-      this.dispatchEvent(new CustomEvent('click', { detail: data.feature }))
+      const { feature, lon, lat } = data
+      if (this.info) this.info.click(feature, lon, lat)
+      this.dispatchEvent(new CustomEvent('click', { detail: { feature, lon, lat } }))
     } else if (type === 'pos') {
       const { zoom, lon, lat } = data
       this.dispatchEvent(new CustomEvent('pos', { detail: { zoom, lon, lat } }))
@@ -298,8 +320,9 @@ export default class S2Map extends EventTarget {
     const { map, _offscreen } = this
     if (data.type === 'attributions') {
       this._addAttributions(data.attributions)
+    } else if (data.type === 'info') {
+      if (this.info) this.info.injectInfo(data.json)
     } else if (_offscreen && map) {
-      // prep ArrayBuffer 0 copy transfer
       const { type } = data // $FlowIgnore
       if (type === 'filldata') map.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.codeTypeBuffer, data.featureGuideBuffer]) // $FlowIgnore
       else if (type === 'linedata') map.postMessage(data, [data.vertexBuffer, data.featureGuideBuffer]) // $FlowIgnore
@@ -344,6 +367,56 @@ export default class S2Map extends EventTarget {
 
   }
 
+  getInfo (featureID: number) {
+    const { _offscreen, map } = this
+    // 1) tell worker pool we need info data
+    window.S2WorkerPool.getInfo(this.id, featureID)
+    // 2) clear old info s2json data should it exist
+    const sourceNames = ['_info']
+    if (_offscreen && map) map.postMessage({ type: 'resetSource', sourceNames, keepCache: true }) // $FlowIgnore
+    else if (map) map.resetSource(sourceNames, true)
+  }
+
+  resetSource (sourceNames: string | Array<string>, keepCache?: boolean = false, awaitReplace?: boolean = false) {
+    const { _offscreen, map } = this
+    if (!Array.isArray(sourceNames)) sourceNames = [sourceNames]
+    // 1) tell worker pool we dont need info data anymore
+    window.S2WorkerPool.deleteSource(this.id, sourceNames)
+    // 2) clear old info s2json data should it exist
+    if (_offscreen && map) map.postMessage({ type: 'resetSource', sourceNames }) // $FlowIgnore
+    else if (map) map.resetSource(sourceNames, keepCache, awaitReplace)
+  }
+
+  deleteSource (sourceNames: string | Array<string>) {
+    const { _offscreen, map } = this
+    if (!Array.isArray(sourceNames)) sourceNames = [sourceNames]
+    // 1) tell worker pool we dont need info data anymore
+    window.S2WorkerPool.deleteSource(this.id, sourceNames)
+    // 2) clear old info s2json data should it exist
+    if (_offscreen && map) map.postMessage({ type: 'clearSource', sourceNames }) // $FlowIgnore
+    else if (map) map.clearSource(sourceNames)
+  }
+
+  addMarker (markers: Marker | Array<Marker>, sourceName?: string = '_markers') {
+    const { _offscreen, map } = this
+    if (!Array.isArray(markers)) markers = [markers]
+    // 1) let the worker pool know we have new marker(s)
+    window.S2WorkerPool.addMarkers(this.id, markers, sourceName)
+    // 2) tell the map that (a) new marker(s) has/have been added
+    if (_offscreen && map) map.postMessage({ type: 'resetSource', sourceNames: [sourceName], keepCache: true, awaitReplace: true }) // $FlowIgnore
+    else if (map) map.resetSource(sourceName, true, true)
+  }
+
+  removeMarker (ids: number | Array<number>, sourceName?: string = '_markers') {
+    const { _offscreen, map } = this
+    if (!Array.isArray(ids)) ids = [ids]
+    // 1) let the worker pool know we need to remove marker(s)
+    window.S2WorkerPool.removeMarkers(this.id, ids, sourceName)
+    // 2) tell the map that (a) marker(s) has/have to be removed
+    if (_offscreen && map) map.postMessage({ type: 'resetSource', sourceNames: [sourceName], keepCache: true, awaitReplace: true }) // $FlowIgnore
+    else if (map) map.resetSource(sourceName, true, true)
+  }
+
   screenshot () {
     const { _offscreen, map } = this
     if (_offscreen && map) map.postMessage({ type: 'screenshot' }) // $FlowIgnore
@@ -355,3 +428,20 @@ export default class S2Map extends EventTarget {
 }
 
 if (window) window.S2Map = S2Map
+
+// 1) markers/popups with html
+// 2) fix glyph filter overlap / interact should be the same as filter overlap
+// 3) glyph icon + text pairs (required checking if same id overlap)
+// 4) text along path
+// 5) road signs
+// 6) dashed lines + rounded joins
+// 7) interact with points, lines, and fills
+
+// 3D points
+// 3D buildings (shapes)
+// hillshade fixes
+// webgpu
+// view at angle + camera system upgrade
+// 3D terrain
+// geocoding
+// isochrones

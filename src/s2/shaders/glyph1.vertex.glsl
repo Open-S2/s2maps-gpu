@@ -91,6 +91,14 @@ void main () {
   }
   // move on if not drawing
   if (!shouldDraw) return;
+  // if overdraw we never checked if behind the sphere
+  if (uOverdraw) {
+    glPos.xyz /= glPos.w;
+    glPos.w = 1.;
+    vec4 zero = getZero();
+    zero.xyz /= zero.w;
+    if (glPos.z > zero.z) return;
+  }
 
   // explain to fragment we are going to draw
   vDraw = (uInteractive) ? 2. : 1.;

@@ -10,7 +10,7 @@ const { REACT_APP_API_KEY } = process.env
 function Map (props) {
   const s2map = useRef()
   const [height, setHeight] = useState(window.innerHeight)
-  const { style, opts, click, ready } = props
+  const { style, opts, click, ready, info } = props
   for (const source in style.sources) style.sources[source] = style.sources[source].replace('%REACT_APP_S2TILES%', process.env.REACT_APP_S2TILES)
   for (const font in style.fonts) {
     if (style.fonts[font].path) style.fonts[font].path = style.fonts[font].path.replace('%REACT_APP_S2TILES%', process.env.REACT_APP_S2TILES)
@@ -31,12 +31,12 @@ function Map (props) {
 
   return (
     <div className='App'>
-      <div id='map-container' style={{ height }} ref={c => prepCanvas(c, s2map, style, opts, click, ready)} />
+      <div id='map-container' style={{ height }} ref={c => prepCanvas(c, s2map, style, opts, click, ready, info)} />
     </div>
   )
 }
 
-function prepCanvas (container, s2map, style, opts = {}, click, ready) {
+function prepCanvas (container, s2map, style, opts = {}, click, ready, info) {
   if (s2map.current) return
 
   s2map.current = new S2Map({
@@ -52,8 +52,15 @@ function prepCanvas (container, s2map, style, opts = {}, click, ready) {
 
   if (click) {
     s2map.current.addEventListener('click', (data) => {
+      const { feature, lon, lat } = data.detail
+      click(feature, lon, lat, s2map.current)
+    })
+  }
+
+  if (info) {
+    s2map.current.addEventListener('info', (data) => {
       // console.log('click', data.detail)
-      click(data.detail, s2map)
+      info(data.detail, s2map.current)
     })
   }
 

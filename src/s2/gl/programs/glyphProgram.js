@@ -219,7 +219,7 @@ export default class GlyphProgram extends Program {
     glyphFilterProgram.bindResultTexture()
     // apply the appropriate offset in the source vertexBuffer attribute
     gl.bindBuffer(gl.ARRAY_BUFFER, glyphQuadBuffer)
-    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 52, 0 + (offset * 52)) // s, t
+    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 52, offset * 52) // s, t
     gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 52, 8 + (offset * 52)) // x, y
     gl.vertexAttribPointer(3, 2, gl.FLOAT, false, 52, 16 + (offset * 52)) // xOffset, yOffset
     gl.vertexAttribPointer(4, 2, gl.FLOAT, false, 52, 24 + (offset * 52)) // width, height

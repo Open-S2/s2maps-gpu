@@ -3,6 +3,8 @@ import { buildGlyphQuads, RTree } from './util'
 import preprocessGlyphs from './preprocessGlyph'
 import postProcessGlyphs from './postprocessGlyph'
 
+import type { GlyphObject } from './glyphSpec'
+
 type Glyph = {
   texX: number, // x position on glyph texture sheet
   texY: number, // y position on glyph texture sheet
@@ -15,13 +17,30 @@ type Glyph = {
   advanceWidth: number // how far to move the cursor
 }
 
+export type Unicode = number
+
+export type Color = [number, number, number, number]
+
+export type Colors = Array<Color>
+
+export type IconMap = { [string]: Array<{ glyphID: Unicode, colorID: number }> }
+
+export type ColorMap = { [number | string]: Color }
+
+export type GlyphMap = { [string]: Map<Unicode, Glyph> } // family: Map
+
+export type GlyphList = { _total: number, [string]: Set<Unicode> }
+
+export type IconList = { _total: number, [string]: Set<string> }
+
 export default class GlyphManager {
   id: number
   mainThread: Function
   sourceThread: MessageChannel.port2
   rtree: RTree = new RTree()
-  iconPacks: IconPacks = {}
-  glyphMap: { [string]: Map<Unicode, Glyph> } = {}
+  glyphMap: GlyphMap = {}
+  iconMap: IconMap = {}
+  colorMap: { [string]: Colors } = {}
   glyphStore: Map<string, Array<Feature>> = new Map()
   constructor (mainThread: Function, sourceThread: MessageChannel.port2, id: number) {
     this.mainThread = mainThread
@@ -29,34 +48,37 @@ export default class GlyphManager {
     this.id = id
   }
 
-  loadIconsPacks (iconPacks: IconPacks) {
-    for (const [name, pack] of Object.entries(iconPacks)) this.iconPacks[name] = pack
-  }
-
-  processGlyphs (mapID: string, tile: TileRequest, sourceName: string,
-    features: Array<Feature>) {
-    const { id, glyphMap, glyphStore, iconPacks, sourceThread } = this
+  processGlyphs (mapID: string, tile: TileRequest, sourceName: string, features: Array<Feature>) {
+    const { id, glyphMap, iconMap, glyphStore, sourceThread } = this
     const { hash, zoom } = tile
     // prep variables
-    const glyphList: { _total: number, [string]: Set<Unicode> } = { _total: 0 }
+    const glyphList: GlyphList = { _total: 0 }
+    const iconList: IconList = { _total: 0 }
     // Step 1: Preprocess the glyph
-    const builtFeatures = preprocessGlyphs(features, zoom, glyphMap, glyphList, iconPacks)
+    const builtFeatures = preprocessGlyphs(features, zoom, glyphMap, iconMap, glyphList, iconList)
     // Step 2: Request for any glyph data we do not have information on, if not, immediately postProcess
-    if (glyphList._total) {
+    if (glyphList._total || iconList._total) {
       delete glyphList._total // remove the total so we can add a transfer array
+      delete iconList._total
       const reqID = `${mapID}:${hash}:${sourceName}`
-      for (const glyphSource in glyphList) {
-        const list = [...glyphList[glyphSource]].sort((a, b) => a - b)
-        glyphList[glyphSource] = (new Uint16Array(list)).buffer
+      // prep glyphList for transfer
+      for (const glyphFamily in glyphList) {
+        const list = [...glyphList[glyphFamily]].sort((a, b) => a - b)
+        glyphList[glyphFamily] = (new Uint16Array(list)).buffer
       }
-      const glyphFamilyCount = Object.keys(glyphList).length
-      sourceThread.postMessage({ type: 'glyphrequest', mapID, id, reqID, glyphList }, Object.values(glyphList))
+      // prep iconList for transfer
+      for (const iconFamily in iconList) iconList[iconFamily] = [...iconList[iconFamily]]
+      // get family count
+      const glyphFamilyCount = Object.keys(glyphList).length + Object.keys(iconList).length
+      // send off and prep for response
+      sourceThread.postMessage({ type: 'glyphrequest', mapID, id, reqID, glyphList, iconList }, Object.values(glyphList))
       glyphStore.set(reqID, { builtFeatures, glyphFamilyCount, processed: 0 })
     } else { this.buildGlyphs(mapID, hash, sourceName, builtFeatures) }
   }
 
   // the source worker completed the request, here are the unicode properties
-  processGlyphResponse (reqID: string, glyphMetadata: ArrayBuffer, familyName: string) {
+  processGlyphResponse (reqID: string, glyphMetadata: ArrayBuffer, familyName: string,
+    icons: IconMap, colors: ColorMap) {
     let [mapID, hash, sourceName] = reqID.split(':')
     hash = +hash
     // pull in the features and delete the reference
@@ -64,10 +86,16 @@ export default class GlyphManager {
     store.processed++
     // store our response glyphs
     this._importGlyphs(familyName, new Float32Array(glyphMetadata))
+    // if icons, store icons
+    if (icons) this._importIconMetadata(familyName, icons, colors)
     // If we have all data, we now process the built glyphs
     if (store.glyphFamilyCount === store.processed) {
       this.glyphStore.delete(reqID)
-      this.buildGlyphs(mapID, hash, sourceName, store.builtFeatures)
+      // pull the builtFeatures and remap icons by replacing strings with iconMap's unicode guide
+      const { builtFeatures } = store
+      this._remapIcons(builtFeatures)
+      // build
+      this.buildGlyphs(mapID, hash, sourceName, builtFeatures)
     }
   }
 
@@ -91,16 +119,48 @@ export default class GlyphManager {
     }
   }
 
+  _importIconMetadata (familyName: String, icons: IconMap, colors: ColorMap) {
+    // store icon metadata
+    const iconMap = this.iconMap[familyName]
+    for (const icon in icons) iconMap[icon] = icons[icon]
+    // store colors
+    if (!this.colorMap[familyName]) this.colorMap[familyName] = []
+    const colorMap = this.colorMap[familyName]
+    for (const color in colors) colorMap[+color] = colors[color]
+  }
+
+  _remapIcons (features: Array<GlyphObject>) {
+    const { iconMap, colorMap } = this
+    for (const feature of features) {
+      if (feature.type === 1) {
+        const { family, field } = feature
+        const icon = iconMap[family][field]
+        const colors = colorMap[family]
+        if (icon && colors) {
+          const color = []
+          const field = []
+          for (const { glyphID, colorID } of icon) {
+            field.push(glyphID)
+            color.push(...colors[colorID])
+          }
+          feature.field = field
+          feature.color = color
+        }
+      }
+    }
+  }
+
   buildGlyphs (mapID: string, hash: number, sourceName: string, features: Array<GlyphObject>) {
     // prepare
-    const { rtree, mainThread, glyphMap } = this
+    const { rtree, mainThread, glyphMap, iconMap } = this
     rtree.clear()
     const res = []
-    // sort the features before running the collisions
+    // remove empty features; sort the features before running the collisions
+    features = features.filter(feature => feature.field.length)
     features = features.sort(featureSort)
     for (const feature of features) {
       // Step 1: prebuild the glyph positions and bbox
-      buildGlyphQuads(feature, glyphMap)
+      buildGlyphQuads(feature, glyphMap, iconMap)
       // Step 2: check the rtree if we want to pre filter
       if (feature.overdraw || !rtree.collides(feature)) res.push(feature)
     }

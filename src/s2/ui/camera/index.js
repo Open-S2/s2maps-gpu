@@ -40,11 +40,6 @@ export default class Camera {
     this.tileCache = new TileCache()
   }
 
-  clearCache () {
-    // first clear the tile cache
-    this.tileCache.deleteAll()
-  }
-
   createProjector (options: MapOptions) {
     this.projection = new Projector(options)
   }

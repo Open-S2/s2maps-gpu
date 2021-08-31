@@ -176,3 +176,241 @@
     height: 26.93px;
   }
 }
+
+/** INFO **/
+
+#s2-card {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  left: 16px;
+  top: 16px;
+  width: 425px;
+  min-height: 100px;
+  max-height: calc(100vh - 64px);
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 8px 16px 0 rgb(0 0 0 / 28%);
+  color: #52535d;
+}
+
+#s2-card a:link {
+  text-decoration: none!important;
+  color: #007fff;
+}
+#s2-card a:hover {
+  text-decoration: underline!important;
+  color: #007fff;
+}
+#s2-card a:active {
+  text-decoration: underline!important;
+  color: #007fff;
+}
+#s2-card a:visited {
+  text-decoration: none!important;
+  color: #007fff;
+}
+
+#s2-card-close-container {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 36px;
+  height: 36px;
+  border-bottom-left-radius: 10px;
+}
+#s2-card-close-container:hover {
+  background-color: #cc0202;
+  cursor: pointer;
+}
+
+#s2-card-close {
+  box-sizing: border-box;
+  position: relative;
+  display: block;
+  width: 22px;
+  height: 22px;
+  border: 2px solid transparent;
+  border-radius: 40px
+}
+#s2-card-close::after,
+#s2-card-close::before {
+  content: "";
+  display: block;
+  box-sizing: border-box;
+  position: absolute;
+  width: 16px;
+  height: 2px;
+  background: currentColor;
+  transform: rotate(45deg);
+  border-radius: 5px;
+  top: 8px;
+  left: 1px
+}
+#s2-card-close::after {
+  transform: rotate(-45deg)
+}
+#s2-card-close-container:hover #s2-card-close {
+  color: #fff;
+}
+
+#s2-skeleton {
+  margin-top: 10px;
+  margin-bottom: 5px;
+}
+
+.s2-skel-container {
+  margin: 25px
+}
+
+.s2-skel-header {
+  height: 45px;
+  width: 100%;
+  background: #d9d9d9;
+  border-radius: 25px;
+  position: relative;
+  overflow: hidden;
+}
+
+.s2-skel-container .s2-skel-line::before,
+.s2-skel-header::before {
+  position: absolute;
+  content: "";
+  height: 100%;
+  width: 100%;
+  left: 0;
+  background-image: linear-gradient(to right, #d9d9d9 0%, rgba(0,0,0,0.05) 20%, #d9d9d9 40%, #d9d9d9 100%);
+  background-repeat: no-repeat;
+  background-size: 450px 400px;
+  animation: shimmer 1s linear infinite;
+}
+.s2-skel-container .s2-skel-line {
+  background: #d9d9d9;
+  border-radius: 10px;
+  height: 13px;
+  margin: 10px 0;
+  overflow: hidden;
+  position: relative;
+}
+.s2-skel-container .s2-skel-line-1 {
+  width: calc(100% - 15%);
+}
+.s2-skel-container .s2-skel-line-3 {
+  width: calc(100% - 40%);
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -450px 0;
+  }
+  100% {
+    background-position: 450px 0;
+  }
+}
+
+#s2-card-body {
+  max-height: calc(100vh - 64px);
+  overflow-y: scroll;
+  padding: 0 16px;
+  padding-top: 20px;
+  padding-bottom: 50px;
+  text-align: left;
+}
+
+.s2-card-item {
+  font-size: 15.5px;
+  line-height: 23px;
+  padding: 7px 12px;
+  padding-bottom: 7px;
+}
+
+.s2-card-item p {
+  margin: 0;
+}
+
+.s2-card-item-flex {
+  display: flex;
+  justify-content: flex-start;
+  align-items:flex-start;
+}
+
+.s2-card-item-no-padding {
+  padding: 0 12px;
+}
+
+.s2-card-item-title {
+  font-weight: bold;
+  font-size: 27px;
+  line-height: 28px;
+}
+
+.s2-card-item-key {
+  font-family: "RobotoMedium";
+  padding-right: 10px;
+}
+
+.s2-card-item-value {
+
+}
+
+.s2-card-phone {
+  display: flex;
+  justify-content: space-between;
+  margin: 5px 0;
+}
+
+.s2-card-footer-container {
+  position: relative;
+}
+
+.s2-card-footer {
+  padding: 0;
+  margin: 0;
+  background-color: #007fff;
+  height: 52px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  user-select: none;
+  color: #fff !important;
+  font-weight: 500;
+}
+
+#s2-mini-card {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  width: auto;
+  height: auto;
+  background-color: #fff;
+  border-radius: 7px;
+  box-shadow: 0 8px 16px 0 rgb(0 0 0 / 28%);
+  color: #63646f;
+  font-size: 14px;
+}
+
+#s2-mini-card-body {
+  padding: 15px 25px;
+}
+
+@media only screen and (max-width: 750px) {
+  .s2-card {
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+    top: auto;
+    width: 100%;
+    min-height: 100px;
+    max-height: 50vh;
+    border-radius: 0px;
+  }
+}

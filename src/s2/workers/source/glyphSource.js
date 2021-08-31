@@ -3,6 +3,8 @@ import Source from './source'
 
 type Unicode = number
 
+export type IconRequest = Array<string> // [iconName, iconName, iconName, ...]
+
 export type GlyphRequest = Uint16Array // Array<Unicode>
 
 // export type GlyphResponse = {
@@ -32,7 +34,13 @@ export type Glyph = {
   advanceWidth: number // how far to move the cursor
 }
 
-type IconMap = { [string]: Unicode } // ex: ['airport']: [0, 1, 2, 5, 7] (name maps reference a list of unicodes)
+export type IconMap = { [string]: Array<{ glyphID: Unicode, colorID: number }> } // ex: ['airport']: [0, 1, 2, 5, 7] (name maps reference a list of unicodes)
+
+export type Color = [number, number, number, number]
+
+export type Colors = Array<Color>
+
+export type ColorMap = { [number | string]: Color }
 
 const zagzig = (num: number): number => {
   return (num >> 1) ^ (-(num & 1))
@@ -45,6 +53,7 @@ const base36 = (num: number): number => {
 const genID = (): string => { return Math.random().toString(16).replace('0.', '') }
 
 export default class GlyphSource {
+  ready: boolean = false
   version: number
   extent: number
   name: string
@@ -54,11 +63,12 @@ export default class GlyphSource {
   maxHeight: number
   range: number
   texturePack: TexturePack
-  colors: Array<[number, number, number, number]>
+  colors: Colors
   iconMap: IconMap
   glyphMap: Map<Unicode, { pos: number, length: number }> = new Map() // existing glyphs
   glyphWaitlist: Map<Unicode, Promise> = new Map()
   glyphCache: Map<Glyph> = new Map() // glyphs we have built already
+  requestCache: Array<[string, IconRequest | GlyphRequest, string, string, MessageChannel.port2]> = [] // each element in array -> [glyphList, mapID, reqID, worker]
   constructor (name: string, path: string, fallback?: string, texturePack: TexturePack) {
     this.name = name
     this.path = path
@@ -76,11 +86,9 @@ export default class GlyphSource {
     } else { await self._buildMetadata(metadata) }
   }
 
-  async _buildMetadata (metadata) {
+  async _buildMetadata (metadata: ArrayBuffer) {
     const { glyphMap } = this
     const meta = new DataView(metadata)
-    // this.colors = colors
-    // this.iconMap = iconMap
     // build the metadata
     this.version = meta.getUint16(2, true)
     this.extent = meta.getUint16(4, true)
@@ -106,6 +114,8 @@ export default class GlyphSource {
       this._buildIconMap(iconMapSize, new DataView(metadataBuf, glyphMapSize, iconMapSize))
       this._buildColorMap(colorBufSize, new DataView(metadataBuf, glyphMapSize + iconMapSize, colorBufSize))
     }
+    this.ready = true
+    this._checkCache()
   }
 
   _buildIconMap (iconMapSize, dv: DataView) {
@@ -135,7 +145,47 @@ export default class GlyphSource {
     }
   }
 
-  glyphRequest (glyphList: GlyphRequest, mapID: string, reqID: string, worker: MessageChannel.port2) {
+  _checkCache () {
+    while (this.requestCache.length) {
+      const [type, list, mapID, reqID, worker] = this.requestCache.pop()
+      if (type === 'icon') this.iconRequest(list, mapID, reqID, worker)
+      else this.glyphRequest(list, mapID, reqID, worker)
+    }
+  }
+
+  iconRequest (iconList: IconRequest, mapID: string, reqID: string, worker: MessageChannel.port2) {
+    if (!this.ready) {
+      this.requestCache.push(['icon', iconList, mapID, reqID, worker])
+      return
+    }
+    const { iconMap, colors } = this
+    const icons: IconMap = {}
+    const colorMap: ColorMap = {} // [colorID]: Color
+    // 1) build a list of glyphs to request
+    const glyphList = new Set()
+    for (const iconReq of iconList) {
+      // pull out the icon and store said icon for the worker to have the
+      const icon = iconMap[iconReq]
+      if (icon) {
+        icons[iconReq] = icon
+        // store the glyphIDs and store colors used in a map for the worker to have knowledge
+        for (const { glyphID, colorID} of icon) {
+          glyphList.add(glyphID)
+          colorMap[colorID] = colors[colorID]
+        }
+      } else {
+        icons[iconReq] = []
+      }
+    }
+    // 2) request the glyphs
+    this.glyphRequest([...glyphList], mapID, reqID, worker, icons, colorMap)
+  }
+
+  glyphRequest (glyphList: GlyphRequest, mapID: string, reqID: string, worker: MessageChannel.port2, icons?: IconMap, colors?: ColorMap) {
+    if (!this.ready) {
+      this.requestCache.push(['glyph', glyphList, mapID, reqID, worker])
+      return
+    }
     const self = this
     const { glyphCache, glyphMap, fallback, glyphWaitlist, defaultAdvance, name } = self
 
@@ -152,7 +202,7 @@ export default class GlyphSource {
         waitlistPromiseMap.set(promise.id, promise)
       } else if (glyphMap.has(unicode)) { // 3) this glyphset has it
         requestList.push(unicode)
-      } else if (fallback.glyphMap.has(unicode)) { // 4) the fallback glyphset has it
+      } else if (fallback && fallback.glyphMap.has(unicode)) { // 4) the fallback glyphset has it
         fallbackrequestList.push(unicode)
       } else { // 5) no one has it
         glyphCache.set(unicode, { texX: 0, texY: 0, texW: 0, texH: 0, xOffset: 0, yOffset: 0, width: 0, height: 0, advanceWidth: defaultAdvance })
@@ -189,7 +239,7 @@ export default class GlyphSource {
         }
       }
       const glyphMetadata = (new Float32Array(shipment)).buffer
-      worker.postMessage({ mapID, type: 'glyphresponse', reqID, glyphMetadata, familyName: name }, [glyphMetadata])
+      worker.postMessage({ mapID, type: 'glyphresponse', reqID, glyphMetadata, familyName: name, icons, colors }, [glyphMetadata])
     })
   }
 

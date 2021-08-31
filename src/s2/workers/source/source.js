@@ -39,6 +39,8 @@ export type ParentLayers = {
 }
 
 export default class Source {
+  ready: boolean = false
+  active: boolean = true
   name: string
   path: string
   type: 'vector' | 'raster' | 'rasterDEM' | 'rasterData' = 'vector' // how to process the result
@@ -47,30 +49,32 @@ export default class Source {
   attributions: { [string]: string } = {}
   styleLayers: Array<Layer>
   layers: LayerMetaData
-  active: boolean = true
   minzoom: number = 0
   maxzoom: number = 20
   faces: Set<Face>
   facesbounds: FaceBounds
   needsToken: boolean = false
-  constructor (name: string, layers: Array<Layer>, path?: string, needsToken: boolean) {
+  session: Session
+  requestCache: Array<[string, TileRequest]> = [] // each element in array -> [mapID, TileRequest]
+  constructor (name: string, layers: Array<Layer>, path?: string, needsToken: boolean, session: Session) {
     this.name = name
     this.styleLayers = layers
     this.path = path
     this.needsToken = needsToken
+    this.session = session
   }
 
   // if this function runs, we assume default tile source
-  async build (token: string) {
+  async build (mapID) {
     const self = this
-    const metadata = await this._fetch(`${this.path}/metadata.json`, true, token)
+    const metadata = await this._fetch(`${this.path}/metadata.json`, mapID, true)
     if (!metadata) {
       self.active = false
       console.log(`FAILED TO extrapolate ${this.path} metadata`)
-    } else { self._buildMetadata(metadata) }
+    } else { self._buildMetadata(metadata, mapID) }
   }
 
-  _buildMetadata (metadata: Metadata) {
+  _buildMetadata (metadata: Metadata, mapID: string) {
     this.active = true // incase we use a "broken" aproach for metadata and insert later
     if (metadata.minzoom) this.minzoom = metadata.minzoom
     if (metadata.maxzoom) this.maxzoom = Math.min(metadata.maxzoom, this.maxzoom)
@@ -86,13 +90,32 @@ export default class Source {
       for (const layer of Object.values(layers)) delete layer.fields
       this.layers = layers
     }
+    // once the metadata is complete, we should check if any tiles were queued
+    this.ready = true
+    this._checkCache()
+    // if attributions, we send them off
+    const attributions = {}
+    for (const [name, link] of Object.entries(this.attributions)) attributions[name] = link
+    if (Object.keys(attributions).length) postMessage({ mapID, type: 'attributions', attributions })
+  }
+
+  _checkCache () {
+    while (this.requestCache.length) {
+      const [mapID, tile] = this.requestCache.pop()
+      this.tileRequest(mapID, tile)
+    }
   }
 
   // all tile requests undergo a basic check on whether that data exists within the metadata boundaries
-  async tileRequest (mapID: string, token: string, tile: TileRequest, worker: Worker) {
+  tileRequest (mapID: string, tile: TileRequest) {
+    // if the source isn't ready yet, we store in cache
+    if (!this.ready) {
+      this.requestCache.push([mapID, tile])
+      return
+    }
+    // pull out data, check if data exists in bounds, then request
     const { active, minzoom, maxzoom, faces, facesbounds, name } = this
     const { hash, face, zoom, x, y } = tile
-    // ensure we don't pass in an Authorization header if not necessary
     if ( // massive quality check to not over burden servers / lambdas with duds
       active && // we have the correct properties to make proper requests
       minzoom <= zoom && maxzoom >= zoom && // check zoom bounds
@@ -107,14 +130,13 @@ export default class Source {
         )
       )
     ) {
-      this._tileRequest(mapID, token, tile, worker, name, false)
+      this._tileRequest(mapID, tile, name, false)
     } else { this._flush(mapID, hash, name) }
     // now make requests for parent data as necessary
-    this._getParentData(mapID, token, tile, worker)
+    this._getParentData(mapID, tile)
   }
 
-  // incase
-  _getParentData (mapID: string, token: string, tile: TileRequest, worker: Worker) {
+  _getParentData (mapID: string, tile: TileRequest) {
     const { layers, styleLayers, name } = this
     // pull out data
     const { face, zoom, x, y } = tile
@@ -146,23 +168,23 @@ export default class Source {
     // if we stored any parent layers, make the necessary requests
     if (Object.keys(parentLayers).length) {
       for (const [hash, parent] of Object.entries(parentLayers)) {
-        this._tileRequest(mapID, token, tile, worker, `${name}:${hash}`, parent)
+        this._tileRequest(mapID, tile, `${name}:${hash}`, parent)
       }
     }
   }
 
   // if this function runs, we assume default tile source.
   // in the default case, we want the worker to process the data
-  async _tileRequest (mapID: string, token: string, tile: TileRequest, worker: Worker,
+  async _tileRequest (mapID: string, tile: TileRequest,
     sourceName: string, parent: boolean | ParentLayer) {
-    const { name, path } = this
+    const { name, path, session } = this
     const { face, zoom, x, y, hash } = parent ? parent : tile
 
-    const data = await this._fetch(`${path}/${face}/${zoom}/${x}/${y}.${this.extension}`, false, token)
+    const data = await this._fetch(`${path}/${face}/${zoom}/${x}/${y}.${this.extension}`, mapID, false)
     const type = (this.extension.includes('pbf')) ? 'pbfdata' : 'rasterdata'
     if (data) {
+      const worker = session.requestWorker()
       worker.postMessage({ mapID, type, tile, sourceName, parent, data }, [data])
-      // postMessage({ mapID, type: 'addsource', hash, sourceName })
     } else { this._flush(mapID, hash, sourceName) }
   }
 
@@ -173,9 +195,11 @@ export default class Source {
     })
   }
 
-  async _fetch (path: string, json?: boolean = false, Authorization?: string) {
-    if (!this.needsToken) Authorization = null
-    const res = await fetch(path, { headers: { Authorization } })
+  async _fetch (path: string, mapID: string, json?: boolean = false) {
+    const headers = {}
+    const Authorization = await this.session.requestSessionToken(mapID)
+    if (this.needsToken && Authorization) headers.Authorization = Authorization
+    const res = await fetch(path, { headers })
     if (res.status !== 200 && res.status !== 206) return null
     if (!json) return res.arrayBuffer()
     else return res.json()

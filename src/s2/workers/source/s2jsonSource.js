@@ -4,18 +4,20 @@ import Source from './source'
 
 export default class S2JSONSource extends Source {
   s2json: S2JsonVt
-  async build (token: string) {
+  async build (mapID: string) {
     const self = this
-    const json = await this._fetch(`${this.path}`, true, token)
+    const json = await this._fetch(`${this.path}`, mapID, true)
     if (!json) {
       self.active = false
       console.log(`FAILED TO extrapolate ${this.path} json data`)
-    } else { self.s2json = new S2JsonVT(json) }
+    } else {
+      self.s2json = new S2JsonVT(json)
+      this._buildMetadata({ type: 'vector' }, mapID)
+    }
   }
 
-  // ask for the
-  async _tileRequest (mapID: string, token: string, tile: TileRequest, worker: Worker) {
-    const { name, s2json } = this
+  _tileRequest (mapID: string, tile: TileRequest) {
+    const { name, s2json, session } = this
     const { face, zoom, x, y, hash } = tile
 
     if (s2json.faces.has(face)) {
@@ -25,8 +27,10 @@ export default class S2JSONSource extends Source {
       // compress
       data = (new TextEncoder('utf-8').encode(JSON.stringify(data))).buffer
       // send off
+      const worker = session.requestWorker()
       worker.postMessage({ mapID, type: 'jsondata', tile, sourceName: name, data }, [data])
-      // postMessage({ mapID, type: 'addsource', hash, sourceName: name })
     }
   }
+
+  _getParentData () {}
 }

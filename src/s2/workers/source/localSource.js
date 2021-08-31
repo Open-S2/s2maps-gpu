@@ -1,11 +1,8 @@
 // @flow
-import Source from './source'
+export default class LocalSource {
+  build () {}
 
-export default class LocalSource extends Source {
-  // in the default case, the path and sesion key are useless
-  async build () { this.type = 'vector' }
-
-  async _tileRequest (tile: TileRequest) {
+  tileRequest (mapID: string, tile: TileRequest) {
     const { hash, face, zoom, x, y } = tile
 
     return {
@@ -34,6 +31,5 @@ export default class LocalSource extends Source {
         }
       }
     }
-
   }
 }

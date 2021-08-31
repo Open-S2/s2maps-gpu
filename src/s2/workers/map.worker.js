@@ -13,7 +13,7 @@ export default class MapWorker implements Worker {
     else if (type === 'resize') this.map.resize(data.width, data.height)
     else if (type === 'scroll') this.map._onZoom(data.deltaY, data.clientX - data.rect.left, data.clientY - data.rect.top)
     else if (type === 'mousedown') this.map.dragPan.onMouseDown()
-    else if (type === 'mouseup') this.map.dragPan.onMouseUp()
+    else if (type === 'mouseup') this.map.dragPan.onMouseUp(data.clientX - data.rect.left - (data.rect.width / 2), (data.rect.height / 2) - data.clientY - data.rect.top)
     else if (type === 'mousemove') this.map.dragPan.onMouseMove(data.movementX, data.movementY)
     else if (type === 'canvasmousemove') this.map.onCanvasMouseMove(data.x, data.y)
     else if (type === 'touchstart') this.map.onTouchStart(data.touchEvent)
@@ -25,6 +25,8 @@ export default class MapWorker implements Worker {
     else if (type === 'moveState') this.map.canMove = !!data.state
     else if (type === 'zoomState') this.map.canZoom = !!data.state
     else if (type === 'screenshot') this.map.screenshot()
+    else if (type === 'resetSource') this.map.resetSource(data.sourceNames, data.keepCache, data.awaitReplace)
+    else if (type === 'clearSource') this.map.clearSource(data.sourceNames)
     else if (type === 'delete') this.map.delete()
     else this.map.injectData(data)
   }

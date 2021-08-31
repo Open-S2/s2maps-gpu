@@ -90,7 +90,7 @@ export default class Map extends Camera {
     // ensure we don't draw for a sec
     this._canDraw = false
     // incase style was imported, clear cache
-    this.clearCache()
+    this.tileCache.deleteAll()
     // build style for the map, painter, and webworkers
     this.style.buildStyle(style)
     // ready to start drawing
@@ -98,6 +98,47 @@ export default class Map extends Camera {
     // inject minzoom and maxzoom
     this.projection.setStyleParameters(this.style, ignorePosition)
     // render our first pass
+    this.render()
+  }
+
+  clearSource (sourceNames: Array<string>) {
+    // delete source data from all tiles
+    this.tileCache.forEach(tile => { tile.deleteSources(sourceNames) })
+    // remove source from style
+    this.style.deleteSources(sourceNames)
+    // let the renderer know the painter is "dirty"
+    this.painter.dirty = true
+    // rerender
+    this.render()
+  }
+
+  // keepCache => don't delete any tiles, request replacements for all (for s2json since it's locally cached and fast)
+  // awaitReplace => to avoid flickering for adding/removing markers, we can wait for an update (from source+tile workers) on how the tile should look
+  resetSource (sourceNames: Array<string>, keepCache: boolean = false, awaitReplace: boolean = false) {
+    // get tiles in view, prep request for said tiles
+    const tilesInView = this._getTiles().map(t => t.id)
+    const tileRequests: Array<TileRequest> = []
+    // delete all tiles not in view, add to tileRequests for those that are,
+    // and delete source data from tile
+    this.tileCache.forEach((tile, key) => {
+      if (!keepCache && !tilesInView.includes(key)) { // just remove the tile for simplicity
+        this.tileCache.delete(key)
+      } else { // add to tileRequests
+        const { id, face, zoom, x, y, bbox, division, size } = tile
+        tileRequests.push({ hash: id, face, zoom, x, y, bbox, division, size })
+        if (!awaitReplace) tile.deleteSources(sourceNames)
+      }
+    })
+    // Send off the tile request (by including sourceNames we are letting the
+    // source worker know we only need to update THIS source)
+    if (this.webworker) { // $FlowIgnore
+      postMessage({ mapID: this.id, type: 'tilerequest', tiles: tileRequests, sourceNames })
+    } else {
+      window.S2WorkerPool.tileRequest(this.id, tileRequests, sourceNames)
+    }
+    // let the renderer know the painter is "dirty"
+    this.painter.dirty = true
+    // rerender
     this.render()
   }
 
@@ -196,7 +237,6 @@ export default class Map extends Camera {
       postMessage({ type: 'mouseenter', feature: newFeature })
     } else {
       if (newFeature) {
-        console.log(newFeature)
         this.parent.dispatchEvent(new CustomEvent('mouseenter', { detail: newFeature }))
         this._canvas.style.cursor = newFeature.__cursor || 'default'
       }
@@ -280,14 +320,20 @@ export default class Map extends Camera {
     const { abs } = Math
     const { dragPan, projection } = this
     const [newMovementX, newMovementY, time] = dragPan.getNextSwipeFrame(curTime * 0.001)
-    if (time && (abs(newMovementX) > 0.5 || abs(newMovementY) > 0.5)) {
+    const noMovement = (abs(newMovementX) > 0.5 || abs(newMovementY) > 0.5)
+    if (time && noMovement) {
       // adjust position
       projection.onMove(newMovementX, newMovementY, 6, 6)
       // ensure new render is queued
       this.render()
       // set next animation
       this.currAnimFunction = (now) => this.swipeAnimation(now)
-    } else { dragPan.wasActive = false }
+    } else {
+      // a timeout shouldn't kill wasActive, but no more movement should.
+      // (stopping swipe animation with a mousedown kills time, so we avoid confusing the engine that this is a click)
+      if (time && !noMovement) this.dragPan.wasActive = false
+      this.currAnimFunction = null
+    }
   }
 
   zoomAnimation (startZoom: number, deltaZoom: number, startTime: number, curTime?: number) {
@@ -304,12 +350,17 @@ export default class Map extends Camera {
     }
   }
 
-  _onClick () {
-    const { currFeature } = this
+  _onClick ({ detail }) {
+    const { projection, currFeature, parent } = this
+    // get lon lat of cursor
+    const { posX, posY } = detail
+    const [lon, lat] = projection.cursorToLonLat(posX, posY)
+    // send off the information
     if (this.webworker) {
-      postMessage({ type: 'click', feature: currFeature })
+      postMessage({ type: 'click', feature: currFeature, lon, lat })
     } else {
-      this.parent.dispatchEvent(new CustomEvent('click', { detail: currFeature }))
+      if (parent.info) parent.info.click(currFeature, lon, lat)
+      parent.dispatchEvent(new CustomEvent('click', { detail: { feature: currFeature, lon, lat } }))
     }
   }
 
@@ -337,9 +388,11 @@ export default class Map extends Camera {
     })
   }
 
-  // tile data is stored in the map, waiting for the render to
+  // some cases we can just do the work immediately, otherwise we do one job per frame
+  // to improve performance. Data is stored in the injection queue while it waits for it's frame.
   injectData (data) {
-    this.injectionQueue.push(data)
+    if (data.type === 'flush') this._injectData(data)
+    else this.injectionQueue.push(data)
     this.render()
   }
 

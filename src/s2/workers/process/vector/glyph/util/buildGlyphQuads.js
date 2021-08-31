@@ -1,4 +1,6 @@
 // @flow
+import type { GlyphMap } from '../'
+
 // [s, t, xOffset, yOffset, xPos, yPos, texX, texY, texWidth, texHeight, id]
 export type Quad = [number, number, number, number, number, number, number, number, number]
 // the xPos and yPos are for the 0->1 ratio placement. This is computed internally with size
@@ -17,7 +19,7 @@ export type Alignment = 'center' | 'left' | 'right'
 // multiplied by "size"
 // NOTE: Just put the glyph offsets + word-wrap-y offset provided at first,
 // add in the excess anchor offset AFTER we know the bbox size
-export default function buildGlyphQuads (feature: GlyphObject, glyphMap: GlyphSet) {
+export default function buildGlyphQuads (feature: GlyphObject, glyphMap: GlyphMap) {
   const { max } = Math
   const {
     s, t, id, size, offset, padding, field, family,
@@ -38,7 +40,7 @@ export default function buildGlyphQuads (feature: GlyphObject, glyphMap: GlyphSe
     // word-wrap if line break or length exceeds max allowed.
     if (
       type === 0 && // is text
-      unicode === 10 || unicode === 13 || (unicode === 32 && wordWrap && cursorX >= wordWrap)
+      (unicode === 10 || unicode === 13 || (unicode === 32 && wordWrap && cursorX >= wordWrap))
     ) {
       cursorX = 0
       const heightAdjust = rowCount ? rowHeight + lineHeight : 0
