@@ -22,7 +22,7 @@
     }
   },
   "icons": {
-    "street-icons": "http://localhost:8000/glyphs/streets/streets.icon"
+    "street-icons": "https://data.s2maps.io/glyphs/streets/streets.icon"
   },
   "wallpaper": {
     "background-color": "#030a2d",
