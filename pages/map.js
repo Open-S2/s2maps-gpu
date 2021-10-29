@@ -35,7 +35,7 @@ function Map (props) {
 
   return (
     <div className='App'>
-      <div id='mapContainer' style={{ height }} ref={node => s2mapContainer.current = node} />
+      <div id='mapContainer' style={{ height }} ref={node => { s2mapContainer.current = node }} />
     </div>
   )
 }
