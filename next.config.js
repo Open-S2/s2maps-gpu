@@ -1,4 +1,5 @@
 module.exports = {
+  distDir: 'build',
   swcMinify: false,
   reactStrictMode: false,
   images: {
