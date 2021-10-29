@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "export SET NODE_OPTIONS=--openssl-legacy-provider && next build",
-    "build-amplify": "export SET NODE_OPTIONS=--openssl-legacy-provider && next build && next export",
+    "build": "next build",
+    "build-amplify": "next build && next export",
     "buildS2": "node configS2/build.js",
     "standardFix": "standard --fix ./public/s2/**/*.js",
     "start": "next start",
