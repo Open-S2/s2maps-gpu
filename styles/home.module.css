@@ -1,0 +1,94 @@
+.container {
+  min-height: 100vh;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.code {
+  background: #fafafa;
+  border-radius: 5px;
+  padding: 0.75rem;
+  font-size: 1.1rem;
+  font-family: Menlo, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono,
+    Bitstream Vera Sans Mono, Courier New, monospace;
+}
+
+.grid {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  max-width: 800px;
+  margin-top: 3rem;
+}
+
+/* INLINE CODE STYLING */
+
+.Home {
+  /* width: 100%;
+  height: 100%; */
+}
+
+.banner {
+  width: 100vw;
+  height: 350px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #333333;
+}
+
+#s2Logo {
+
+}
+
+.navigationContainer {
+  padding: 50px 0px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.linkContainer {
+  position: relative;
+  margin: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  border-radius: 12.5px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+  transition: box-shadow .6s cubic-bezier(0.165, 0.84, 0.44, 1);
+  overflow: hidden;
+  cursor: pointer;
+}
+.linkContainer:hover {
+  box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+}
+
+.linkName {
+  padding: 8px;
+  font-size: 20px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #0a2540;
+}
+
+@media (max-width: 600px) {
+  .grid {
+    width: 100%;
+    flex-direction: column;
+  }
+}

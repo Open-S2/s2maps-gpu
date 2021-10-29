@@ -1,0 +1,128 @@
+#legendContainer {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  border-radius: 15px;
+  background-color: #fff;
+  padding: 10px 20px;
+}
+
+#legendHeader {
+  max-width: 150px;
+  font-weight: bold;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+#legendChoropleth {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.choroplethContainer {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  flex-direction: row;
+  padding: 3px 0;
+}
+
+.choroplethColor {
+  width: 15px;
+  height: 15px;
+  margin-right: 7px;
+  background-color: black;
+  border-radius: 3px;
+}
+
+.choroplethExplain {
+
+}
+
+
+#legendChoropleth div:nth-child(1) .choroplethColor {
+  background-color: #fee14f;
+}
+#legendChoropleth div:nth-child(2) .choroplethColor {
+  background-color: #f78137;
+}
+#legendChoropleth div:nth-child(3) .choroplethColor {
+  background-color: #fe1b38;
+}
+
+#circleContainer {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+}
+
+.circle {
+  background-color: rgba(255, 225, 255, .25);
+  border-style: solid;
+  border-color: #111;
+  border-width: 1px;
+  border-radius: 50%;
+  display: inline-block;
+  margin: 0 5px;
+}
+
+#circle1 {
+  width: 7.5px;
+  height: 7.5px;
+}
+#circle2 {
+  width: 10px;
+  height: 10px;
+}
+#circle3 {
+  width: 15px;
+  height: 15px;
+}
+#circle4 {
+  width: 20px;
+  height: 20px;
+}
+#circle5 {
+  width: 25px;
+  height: 25px;
+}
+#circle6 {
+  width: 30px;
+  height: 30px;
+}
+
+@media only screen and (max-width: 800px) {
+  #legendContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    border-radius: 0;
+    padding: 5px;
+  }
+
+  #legendHeader {
+    max-width: 500px;
+    margin-top: 7px;
+    margin-bottom: 7px;
+  }
+
+  #legendChoropleth {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: row;
+    justify-content: center;
+  }
+
+  .choroplethContainer {
+    justify-content: center;
+    align-items: center;
+    flex-direction: row;
+    padding: 5px;
+  }
+}

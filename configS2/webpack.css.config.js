@@ -1,5 +1,6 @@
-const webpack = require('webpack-latest')
+const webpack = require('webpack')
 
+const CompressionPlugin = require('compression-webpack-plugin')
 const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin')
 
@@ -9,7 +10,7 @@ module.exports = {
   mode: 'production',
   // These are the 'entry points' to our application.
   // This means they will be the 'root' imports that are included in JS bundle.
-  entry: __dirname + '/../src/s2maps.css',
+  entry: __dirname + '/../styles/s2maps.css',
   output: {
     path: __dirname + '/../buildS2',
     filename: `css.tmp`
@@ -34,6 +35,23 @@ module.exports = {
   plugins: [
     new MiniCssExtractPlugin({
       filename: `s2maps-gl.min.css`
+    }),
+    new CompressionPlugin({
+      filename: `[path]s2maps-gl.min.css.gz`,
+      algorithm: 'gzip',
+      test: /\.css/,
+      threshold: 0,
+      minRatio: 1
+    }),
+    new CompressionPlugin({
+      filename: `[path]s2maps-gl.min.css.br`,
+      algorithm: 'brotliCompress',
+      test: /\.css/,
+      compressionOptions: {
+        level: 11,
+      },
+      threshold: 0,
+      minRatio: 1
     })
   ],
   optimization: {

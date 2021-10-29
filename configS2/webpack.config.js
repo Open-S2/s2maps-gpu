@@ -9,10 +9,10 @@ module.exports = {
   mode: 'production',
   // These are the 'entry points' to our application.
   // This means they will be the 'root' imports that are included in JS bundle.
-  entry: __dirname + '/../src/s2/index.js',
+  entry: { 's2maps-gl': __dirname + '/../public/s2/index.js' },
   output: {
     path: __dirname + '/../buildS2',
-    filename: `s2maps-gl.min.js`,
+    filename: `[name].min.js`,
     // this defaults to 'window', but by setting it to 'this' then
     // module chunks which are built will work in web workers as well.
     globalObject: 'this'
@@ -21,16 +21,8 @@ module.exports = {
     rules: [
       {
         test: /\.glsl$/,
-        use: 'webpack-glsl-minify'
-      },
-      {
-        test: /\.worker\.js$/,
-        use: [
-          {
-            loader: require.resolve('worker-loader'),
-            options: { inline: 'no-fallback' }
-          }
-        ]
+        loader: require.resolve('../config/glsl-loader')
+        // use: 'webpack-glsl-minify'
       },
       {
         test: /\.(js|mjs)$/,
@@ -45,7 +37,14 @@ module.exports = {
             '@babel/preset-env'
           ],
           plugins: [
-            '@babel/plugin-proposal-class-properties'
+            '@babel/plugin-proposal-class-properties',
+            // [
+            //   'transform-runtime',
+            //   {
+            //     helpers: true,
+            //     regenerator: true
+            //   }
+            // ]
           ],
           cacheDirectory: true,
           // See #6846 for context on why cacheCompression is disabled
@@ -62,28 +61,23 @@ module.exports = {
   },
   plugins: [
     new webpack.ProgressPlugin(),
-    // new CompressionPlugin({
-    //   filename: `[path]s2maps-gl.min.js.gz`,
-    //   algorithm: 'gzip',
-    //   test: /\.js$/,
-    //   threshold: 0,
-    //   minRatio: 1
-    // }),
-    // new CompressionPlugin({
-    //   filename: `[path]s2maps-gl.min.js.br`,
-    //   algorithm: 'brotliCompress',
-    //   test: /\.js$/,
-    //   compressionOptions: {
-    //     level: 11,
-    //   },
-    //   threshold: 0,
-    //   minRatio: 1
-    // }),
+    new CompressionPlugin({
+      filename: `[path][name].js.gz`,
+      algorithm: 'gzip',
+      test: /\.js$/,
+      threshold: 0,
+      minRatio: 1
+    }),
+    new CompressionPlugin({
+      filename: `[path][name].js.br`,
+      algorithm: 'brotliCompress',
+      test: /\.js$/,
+      compressionOptions: {
+        level: 11,
+      },
+      threshold: 0,
+      minRatio: 1
+    }),
     new BundleAnalyzerPlugin({ analyzerMode: 'static', generateStatsFile: true, statsFilename: 'bundle-stat.json' })
-  ],
-  // resolve: {
-  //   fallback: {
-  //     zlib: false
-  //   }
-  // }
+  ]
 }
