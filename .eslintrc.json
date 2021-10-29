@@ -10,5 +10,8 @@
     "node": true
   },
   "parser": "@babel/eslint-parser",
-  "plugins": ["flowtype"]
+  "plugins": ["flowtype"],
+  "rules": {
+    "@next/next/no-img-element": "off"
+  }
 }
