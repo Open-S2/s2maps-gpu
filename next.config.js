@@ -2,9 +2,9 @@ module.exports = {
   distDir: 'build',
   swcMinify: false,
   reactStrictMode: false,
-  images: {
-    formats: ['image/avif', 'image/webp']
-  },
+  // images: {
+  //   formats: ['image/avif', 'image/webp']
+  // },
   webpack: (config, options) => {
     config.module.rules.push({
       test: /\.glsl$/,
