@@ -35,6 +35,7 @@ export default class Context {
     // lastly grab the renderers id
     const debugRendererInfo = context.getExtension('WEBGL_debug_renderer_info')
     if (debugRendererInfo) this.renderer = cleanRenderer(context.getParameter(debugRendererInfo.UNMASKED_RENDERER_WEBGL))
+    else this.renderer = context.getParameter(context.RENDERER)
   }
 
   // SETUP INTERACTIVE BUFFER
