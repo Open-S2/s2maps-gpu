@@ -1,4 +1,5 @@
 /* eslint camelcase: "off" */
+/* eslint-disable */
 /* STYLESHEETS */
 import styles from '../../styles/interact.module.css'
 
