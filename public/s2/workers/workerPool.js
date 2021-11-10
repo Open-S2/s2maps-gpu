@@ -2,6 +2,8 @@
 /* eslint-env browser */
 // These worker scripts are pre-interpreted by the worker plugin and a string
 // with the location of said worker is passed
+import Worker from '../util/corsWorker'
+
 import type S2Map from '../s2Map'
 import type { Face, StylePackage } from '../style/styleSpec'
 import type { Marker } from './source/MarkerSource'

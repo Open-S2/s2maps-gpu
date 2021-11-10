@@ -1,4 +1,4 @@
-const fsPromise = require('fs').promises
+// const fsPromise = require('fs').promises
 const parse = require('./parse')
 
 // const { loader } = require('webpack')

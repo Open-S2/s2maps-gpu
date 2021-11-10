@@ -1,7 +1,8 @@
 {
   "name": "s2maps-gl",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
+  "main": "buildS2/s2maps-gl.min.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -10,7 +11,8 @@
     "standardFix": "standard --fix ./public/s2/**/*.js",
     "start": "next start",
     "flow": "flow ./public/s2/",
-    "lint": "next lint"
+    "lint": "next lint",
+    "prepublish": "pnpm buildS2"
   },
   "dependencies": {
     "earclip": "^0.9.3",
@@ -19,16 +21,20 @@
     "react": "17.0.2",
     "react-dom": "17.0.2",
     "s2-vector-tile": "^1.7.4",
-    "s2projection": "^1.9.2",
-    "sharp": "^0.29.1"
+    "s2projection": "^1.9.2"
   },
   "devDependencies": {
+    "@actions/core": "^1.6.0",
+    "@actions/github": "^5.0.0",
     "@babel/core": "^7.15.8",
     "@babel/eslint-parser": "^7.15.8",
     "@babel/plugin-proposal-class-properties": "^7.14.5",
+    "@babel/plugin-transform-runtime": "^7.16.0",
     "@babel/preset-env": "^7.15.8",
     "@babel/preset-flow": "^7.14.5",
-    "babel-eslint": "^10.1.0",
+    "@babel/runtime": "^7.16.0",
+    "@babel/runtime-corejs3": "^7.16.0",
+    "aws-sdk": "^2.1025.0",
     "babel-loader": "^8.2.2",
     "compression-webpack-plugin": "^9.0.0",
     "css-loader": "^6.4.0",
@@ -40,8 +46,12 @@
     "eslint-plugin-import": "^2.25.2",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^5.1.1",
+    "filesize": "^8.0.6",
     "flow-bin": "^0.162.0",
     "mini-css-extract-plugin": "^2.4.2",
+    "picocolors": "^1.0.0",
+    "regenerator-runtime": "^0.13.9",
+    "sharp": "^0.29.2",
     "standard": "*",
     "webpack": "^5.58.2",
     "webpack-bundle-analyzer": "^4.5.0"
@@ -50,6 +60,6 @@
     "plugins": [
       "flowtype"
     ],
-    "parser": "babel-eslint"
+    "parser": "@babel/eslint-parser"
   }
 }

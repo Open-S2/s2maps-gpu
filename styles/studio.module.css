@@ -1,0 +1,218 @@
+@font-face {
+  font-family: DINMedium;
+  src: url("../public/fonts/DIN_Next_Medium.ttf") format("opentype");
+  font-display: swap;
+}
+@font-face {
+  font-family: DINRegular;
+  src: url("../public/fonts/DIN_Next_Regular.ttf") format("opentype");
+  font-display: swap;
+}
+
+#studio {
+  display: flex;
+  justify-content: space-between;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  background-color: #ebeff3;
+  color: #23374d;
+  font-family: DINRegular;
+  /* color: #bbbcc6 ; #474948 ; #000 */
+}
+
+/** HEADER **/
+
+#studioHeader {
+  display: flex;
+  width: 100vw;
+  height: 50px;
+  background-color: #fdffff;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+}
+
+#studioHeaderContainer {
+  display: flex;
+  justify-content: space-between;
+  flex-direction: row;
+  align-items: center;
+  flex: 1;
+  padding: 0 25px;
+  z-index: 1;
+}
+
+#studioHeaderLeft {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+#studioHeaderJollyRoger {
+  width: 28px;
+  height: 28px;
+  background-image: url('../public/images/studio/icons/s2.svg');
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+#studioHeaderBack {
+  display: flex;
+  justify-content: center;
+  align-content: center;
+  flex-direction: column;
+  font-weight: bold;
+  padding-top: 4px;
+  padding-left: 10px;
+  font-size: 22px;
+}
+
+#studioHeaderMid {
+  padding-top: 3px;
+}
+
+#studioHeaderMidZoom {
+  font-family: DINMedium;
+}
+
+#studioHeaderRight {
+  display: flex;
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+#studioHeaderPublish {
+  display: flex;
+  position: relative;
+  cursor: pointer;
+  font-family: DINMedium;
+  font-size: 16px;
+  padding: 5px 14px;
+  background-color: #f4f7fb;
+  color: #405973;
+  user-select: none;
+  /* border: solid 1px #405973; */
+  border: none;
+  outline: none;
+  border-radius: 6px;
+  transition: 0.36s;
+}
+#studioHeaderPublish:active {
+  background-color: #e5ebf3;
+}
+#studioHeaderPublish:before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  height: calc(100% + 4px);
+  width: calc(100% + 4px);
+  /* background: linear-gradient(60deg, #f79533, #f37055, #ef4e7b, #a166ab, #5073b8, #1098ad, #07b39b, #6fba82); */
+  background: linear-gradient(45deg, #ffe57f, #ffa176, #ef4e7b, #a166ab, #5073b8, #1098ad, #07b39b, #6fba82);
+  border-radius: 8px;
+  z-index: -1;
+  background-size: 400% 400%;
+  background-position: 75% 50%;
+  transition: 0.85s ease;
+}
+#studioHeaderPublish:hover:before {
+  background-position: 0% 50%;
+}
+
+#studioHeaderSettings {
+  cursor: pointer;
+  user-select: none;
+  height: 20px;
+  width: 20px;
+  margin-right: 10px;
+  margin-left: 20px;
+  background-image: url('../public/images/studio/icons/cog.svg');
+  background-repeat: no-repeat;
+  background-position: center;
+  transition: transform 0.65s ease;
+}
+#studioHeaderSettings:hover {
+  transform: rotate(270deg);
+}
+
+/** BODY **/
+
+#studioBody {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  flex: 1;
+  margin: 25px;
+}
+
+#studioBodyEditor {
+  width: 375px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background-color: #fdffff;
+  border-radius: 10px;
+  box-shadow: 4px 5px 20px 0px rgba(0,0,0,0.25);
+}
+
+#studioBodySpacer {
+  width: 25px;
+  height: 100%;
+}
+
+#mapContainer {
+  position: relative;
+  display: flex;
+  flex: 1;
+  border-radius: 25px;
+  overflow: hidden;
+  box-shadow: 8px 10px 27px 0px rgba(0,0,0,0.35);
+  flex-direction: row;
+}
+
+/* MAP */
+
+#studioBodyMapContainer {
+  position: relative;
+  flex: 1;
+}
+
+#sudioMapContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+#beforeMap {
+  clip-path: polygon(0 0, 50% 0, 50% 100%, 0% 100%);
+}
+
+/** FOOTER **/
+
+#studioFooter {
+  display: flex;
+  justify-content: space-between;
+  flex-direction: row;
+  align-items: center;
+  margin: 0;
+  width: 100vw;
+  height: 40px;
+  background-color: #fdffff;
+}
+
+#studioFooterLogs {
+
+}
+
+#studioFooterS2Explain {
+  margin-right: 23px;
+  font-size: 15px;
+  user-select: none;
+}

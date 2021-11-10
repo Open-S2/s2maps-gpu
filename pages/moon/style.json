@@ -7,7 +7,7 @@
   "maxzoom": 9.99,
   "zoom-offset": 0.5,
   "sources": {
-    "moon-poi": "s2maps://data/s2maps/moon-poi-v1.s2tiles",
+    "moon-poi": "s2maps://data/s2maps/moon-poi-v2.s2tiles",
     "moon": "s2maps://data/s2maps/moon-v1.s2tiles"
   },
   "fonts": {

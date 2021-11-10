@@ -6,7 +6,7 @@
   "minzoom": -1,
   "maxzoom": 18.99,
   "sources": {
-    "streets": "s2maps://data/s2maps/streets-v3.s2tiles"
+    "streets": "s2maps://data/s2maps/streets-v4.s2tiles"
   },
   "fonts": {
     "noto-sans-regular": "https://data.s2maps.io/glyphs/Noto/NotoSansRegular.font",

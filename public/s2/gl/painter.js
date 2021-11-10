@@ -24,7 +24,6 @@ import type { Projection } from '../ui/camera/projections'
 import type { FeatureGuide } from '../source/tile'
 import type { ProgramType } from './programs/program'
 import type { GlyphImages } from '../workers/source/glyphSource'
-import { getDomainLocale } from 'next/dist/shared/lib/router/router'
 
 type ProgramGL = FillProgram | GlyphFilterProgram | GlyphProgram | HeatmapProgram | LineProgram | PointProgram | RasterProgram | ShadeProgram | SkyboxProgram | WallpaperProgram
 

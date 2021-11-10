@@ -135,11 +135,13 @@ function parse (id, contents, res = { source: '', uniforms: {}, attributes: {}, 
   let shaderName = id.split('/').pop()
   shaderName = shaderName.split('.')[0]
 
-  if (!sourceMaps[shaderName]) sourceMaps[shaderName] = {
-    uniformMap: new Map(),
-    attributeMap: new Map(),
-    varMap: new Map(),
-    charPos: 0
+  if (!sourceMaps[shaderName]) {
+    sourceMaps[shaderName] = {
+      uniformMap: new Map(),
+      attributeMap: new Map(),
+      varMap: new Map(),
+      charPos: 0
+    }
   }
 
   _parse(contents, path, res, shaderName)

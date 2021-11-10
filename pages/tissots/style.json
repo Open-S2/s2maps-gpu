@@ -6,8 +6,8 @@
   "minzoom": -0.5,
   "maxzoom": 8,
   "sources": {
-    "streets": "s2maps://data/s2maps/streets-v3.s2tiles",
-    "terrain": "s2maps://data/s2maps/terrain-v1.s2tiles",
+    "streets": "s2maps://data/s2maps/streets-v4.s2tiles",
+    "terrain": "s2maps://data/s2maps/terrain-v2.s2tiles",
     "tissots": "https://data.s2maps.io/public/demos/s2json/tissotsIndicatrix.s2json"
   },
   "fonts": {},

@@ -1,5 +1,6 @@
 // @flow
 /* eslint-env browser */
+import Worker from './util/corsWorker'
 import Info from './ui/info'
 
 import type { MapOptions } from './ui/map'
