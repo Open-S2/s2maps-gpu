@@ -1,5 +1,5 @@
 /* MODULES */
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 /* GRAB THE API KEY */
 const { NEXT_PUBLIC_API_KEY } = process.env
 
@@ -20,7 +20,7 @@ export default function Map ({ style, opts }) {
 
   return (
     <div className='App'>
-      <div id='mapContainer' style={{ height }} ref={node => s2mapContainer.current = node} />
+      <div id='mapContainer' ref={node => { s2mapContainer.current = node }} />
     </div>
   )
 }
