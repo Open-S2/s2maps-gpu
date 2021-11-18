@@ -1,8 +1,9 @@
 {
   "name": "s2maps-gl",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "private": false,
   "main": "buildS2NPM/s2maps-gl.min.js",
+  "license": "SEE LICENSE FILE",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
