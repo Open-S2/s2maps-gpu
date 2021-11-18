@@ -1,3 +1,9 @@
+#map {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
 #rasterDropdownContainer {
   position: absolute;
   padding: 6px 10px;

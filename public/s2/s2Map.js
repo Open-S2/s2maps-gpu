@@ -45,13 +45,15 @@ export default class S2Map extends EventTarget {
   }
 
   delete () {
-    const { _offscreen, map, _canvas } = this
+    const { _offscreen, map, _canvas, _container } = this
     if (_offscreen && map) map.postMessage({ type: 'delete' }) // $FlowIgnore
     else if (map) map.delete()
     // reset the worker pool
     window.S2WorkerPool.delete()
-    // lastly, remove all canvas listeners via cloning
+    // remove all canvas listeners via cloning
     _canvas.replaceWith(_canvas.cloneNode(true))
+    // cleanup the html
+    while (_container.lastChild) _container.removeChild(_container.lastChild)
   }
 
   _setupContainer (options: MapOptions): HTMLCanvasElement {
@@ -80,6 +82,9 @@ export default class S2Map extends EventTarget {
   async _setupCanvas (canvas: HTMLCanvasElement, options: MapOptions) {
     const self = this
     const { _canvasContainer } = self
+    // prep the ready function should it exist
+    const { ready } = options
+    delete options.ready
     // if browser supports it, create an instance of the mapWorker
     if (!navigator.gpu && canvas.transferControlToOffscreen) { // $FlowIgnore
       // TODO: MORE THAN LIKELY A RACE CONDITION HERE IF WAITING FOR A "READY" EVENT
@@ -106,17 +111,17 @@ export default class S2Map extends EventTarget {
       _canvasContainer.addEventListener('touchmove', (e: TouchEvent) => self._onTouch(e, 'touchmove'))
     }
     // let map know to finish the setup
-    self._onCanvasReady()
+    self._onCanvasReady(ready)
   }
 
-  _onCanvasReady () {
+  _onCanvasReady (ready: null | Function) {
     // now that canvas is setup, support resizing // $FlowIgnore
     if ('ResizeObserver' in window) new ResizeObserver(this._resize.bind(this)).observe(this._container)
     else window.addEventListener('resize', this._resize.bind(this))
     // let the S2WorkerPool know of this maps existance
     window.S2WorkerPool.addMap(this)
     // lastly emit that the map is ready for commands
-    this.dispatchEvent(new Event('ready'))
+    if (typeof ready === 'function') ready(this)
   }
 
   _setupControlContainer (options: MapOptions) {

@@ -62,7 +62,7 @@ function Map ({ setPosition }) {
     return () => {
       if (s2map.current) { s2map.current.delete(); s2map.current = null }
     }
-  }, [])
+  }, [setPosition])
 
   return <div id={styles.mapContainer} ref={node => { s2mapContainer.current = node }} />
 }

@@ -1,6 +1,6 @@
 {
   "name": "s2maps-gl",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "private": false,
   "main": "buildS2NPM/s2maps-gl.min.js",
   "scripts": {
@@ -10,6 +10,7 @@
     "buildS2": "node configS2/build.js",
     "buildS2Action": "node configS2Action/build.js",
     "buildS2NPM": "node configS2NPM/build.js",
+    "npmPublish": "pnpm buildS2NPM && npm publish",
     "standardFix": "standard --fix ./public/s2/**/*.js",
     "start": "next start",
     "flow": "flow ./public/s2/",
@@ -17,7 +18,7 @@
   },
   "dependencies": {
     "next": "12.0.3",
-    "react": "^17.0.2",
+    "react": "^18.0.0-beta-fdc1d617a-20211118",
     "react-dom": "^17.0.2",
     "s2-vector-tile": "^1.7.4"
   },
