@@ -50,7 +50,7 @@ function removeDir (path) {
         } else { fs.unlinkSync(dirPath + '/' + filename) }
       })
     } else { console.log('No files found in the directory.') }
-  } else { console.log('Directory path not found.') }
+  }
 }
 
 function getFileSizes () {
@@ -68,7 +68,6 @@ function getFileSizes () {
     res.css[name][fileType] = filesize(size)
     res[`cssTotal${fileType}`] += size
   }
-  console.log('res', res)
   res.cssTotalmin = filesize(res.cssTotalmin)
   res.cssTotalgz = filesize(res.cssTotalgz)
   res.cssTotalbr = filesize(res.cssTotalbr)

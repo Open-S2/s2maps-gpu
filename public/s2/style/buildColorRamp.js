@@ -11,8 +11,8 @@ export default function buildColorRamp (ramp: Array<number | string>): Uint8Clam
   const getColor = (t) => {
     let i = 0
     while (t > ramp[i]) i += 2
-    if (t === ramp[i]) return ramp[i + 1].copy().getRGB(false, false)
-    return Color.interpolate(ramp[i - 1], ramp[i + 1], (t - ramp[i - 2]) / (ramp[i] - ramp[i - 2])).getRGB(false, false)
+    if (t === ramp[i]) return ramp[i + 1].copy().getRGB(false)
+    return Color.interpolate(ramp[i - 1], ramp[i + 1], (t - ramp[i - 2]) / (ramp[i] - ramp[i - 2])).getRGB(false)
   }
   // build the ramp
   for (let i = 0; i < 256; i++) {

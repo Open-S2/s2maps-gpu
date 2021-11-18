@@ -1,6 +1,6 @@
 // @flow
 import * as mat4 from '../../../util/mat4'
-import { S2Point, tileXYFromSTZoom, bboxST, updateFace, tileHash } from 's2projection'
+import { S2Point, tileXYFromSTZoom, bboxST, updateFace, tileHash } from '../../../projection'
 
 import type { TileDefinitions } from './'
 

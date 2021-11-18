@@ -30,7 +30,6 @@
     "fade-2": "rgb(217, 255, 255)",
     "halo": "rgb(230, 255, 255)"
   },
-  "colorBlind": false,
   "layers": [
     {
       "name": "background",

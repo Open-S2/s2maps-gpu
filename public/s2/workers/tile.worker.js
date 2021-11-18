@@ -3,15 +3,11 @@
 import { VectorTile } from 's2-vector-tile'
 import { parseLayers } from '../style/conditionals'
 import { VectorManager, processRaster } from './process'
-// import { tileHash } from 's2projection'
 
-import type { Face } from 's2projection'
+import type { Face } from '../projection'
 import type { TileRequest } from './workerPool'
 import type { StylePackage, Layer } from '../style/styleSpec'
 import type { IconMap, ColorMap } from './process/vector/glyph'
-
-// const { userAgent } = navigator
-// const IS_CHROME: boolean = userAgent.indexOf('Chrome') > -1
 
 export type CancelTileRequest = Array<number> // hashe IDs of tiles e.g. ['204', '1003', '1245', ...]
 

@@ -4,10 +4,9 @@
 import { Context } from '../gl/contexts'
 import buildSource from './buildSource'
 import * as mat4 from '../util/mat4'
-import { S2Point, bboxST } from 's2projection' // https://github.com/Regia-Corporation/s2projection
+import { S2Point, bboxST } from '../projection'
 
-import type { Face } from 's2projection' // https://github.com/Regia-Corporation/s2projection/blob/master/src/S2Projection.js#L4
-import type { Layer, Mask } from '../style/styleSpec'
+import type { Face, Layer, Mask } from '../style/styleSpec'
 import type { ProgramType } from '../gl/programs/program'
 
 export type VectorTileSource = {

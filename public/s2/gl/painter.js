@@ -370,6 +370,19 @@ export default class Painter {
     const { glyph } = this.programs
     glyph.injectImages(maxHeight, images)
   }
+
+  setColorMode (mode: 0 | 1 | 2 | 3) {
+    this.dirty = true
+    // tell all the programs
+    const { programs } = this
+    for (const programName in programs) programs[programName].updateColorBlindMode = (mode === 0)
+      ? 'none'
+      : (mode === 1)
+        ? 'protanopia'
+        : (mode === 2)
+          ? 'deutranopia'
+          : 'tritanopia'
+  }
 }
 
 function featureSort (a: FeatureGuide, b: FeatureGuide): number {

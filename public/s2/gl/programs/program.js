@@ -4,6 +4,7 @@ import loadShader from './loadShader'
 import type { Context } from '../contexts'
 import type { FeatureGuide } from '../../source/tile'
 export type ProgramType = 'mask' | 'fill' | 'line' | 'raster' | 'shade' | 'glyph' | 'glyphFill' | 'glyphFilter' | 'wallpaper' | 'skybox' | 'fill3D' | 'line3D'
+export type ColorBlindAdjust = 'none' | 'protanopia' | 'deutranopia' | 'tritanopia'
 
 type uniformSource = { variableName: string, variableType: string }
 type shaderSource = { sourceCode: string, uniforms: { [string]: uniformSource } }
@@ -28,12 +29,14 @@ export default class Program {
   uLayerCode: WebGLUniformLocation
   uFeatureCode: WebGLUniformLocation
   uDevicePixelRatio: WebGLUniformLocation
+  updateColorBlindMode: null | ColorBlindAdjust = 'none'
   updateMatrix: null | Float32Array = null // pointer
   updateInputs: null | Float32Array = null // pointer
   updateAspect: null | Float32Array = null // pointer
   curMode: number = -1
   threeD: boolean
   LCH: boolean
+  colorBlind: boolean
   interactive: boolean
   constructor (context: Context) {
     // set context
@@ -105,6 +108,7 @@ export default class Program {
   }
 
   flush () {
+    if (this.updateColorBlindMode) this.setColorBlindMode(this.updateColorBlindMode)
     if (this.updateMatrix) this.setMatrix(this.updateMatrix)
     if (this.updateInputs) this.setInputs(this.updateInputs)
     if (this.updateAspect) this.setAspect(this.updateAspect)
@@ -112,6 +116,12 @@ export default class Program {
 
   setDevicePixelRatio (ratio: number) {
     this.gl.uniform1f(this.uDevicePixelRatio, ratio)
+  }
+
+  setColorBlindMode (colorMode?: ColorBlindAdjust) {
+    this.gl.uniform1f(this.uColorBlind, colorMode === 'protanopia' ? 1 : colorMode === 'deutranopia' ? 2 : colorMode === 'tritanopia' ? 3 : 0)
+    // flush update pointers
+    this.updateColorBlindMode = null
   }
 
   setMatrix (matrix: Float32Array) {

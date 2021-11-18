@@ -1,5 +1,5 @@
 // @flow
-import { earclip, tesselate, flatten } from 'earclip'
+import { earclip, tesselate, flatten } from './earclip'
 
 type Point = [number, number]
 

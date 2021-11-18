@@ -1,6 +1,6 @@
 // @flow
 /* eslint-env worker */
-import { tileHash } from 's2projection'
+import { tileHash } from '../../projection'
 
 import type { Session } from './'
 import type { TileRequest } from '../workerPool'

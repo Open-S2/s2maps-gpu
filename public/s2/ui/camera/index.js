@@ -6,7 +6,7 @@ import Style from '../../style'
 import type { Painter } from '../../gl'
 import type { MapOptions } from '../map'
 /** PROJECTIONS **/
-import { tileHash } from 's2projection' // https://github.com/Regia-Corporation/s2projection
+import { tileHash } from '../../projection'
 import Projector from './projections'
 /** SOURCES **/
 import { Tile } from '../../source'
@@ -47,6 +47,10 @@ export default class Camera {
   }
 
   resizeCamera (width: number, height: number) {
+    // ensure minimum is 1px for both
+    width = Math.max(width, 1)
+    height = Math.max(height, 1)
+    // update the projector and painter
     this.projection.resize(width, height)
     if (this.painter) this.painter.resize()
   }

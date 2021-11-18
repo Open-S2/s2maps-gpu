@@ -1,6 +1,6 @@
 // @flow
 import * as mat4 from '../../../util/mat4'
-// import { S2Point } from 's2projection'
+// import { S2Point } from '../../../projection'
 
 export type BlendConfig = {
   translation?: [number, number, number],

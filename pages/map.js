@@ -48,6 +48,7 @@ function prepCanvas (container, s2map, style, opts = {}, click, ready, info) {
       apiKey: NEXT_PUBLIC_API_KEY,
       container,
       projection: 'blend',
+      colorBlindController: (typeof opts.zoomController === 'boolean') ? opts.zoomController : true,
       zoomController: (typeof opts.zoomController === 'boolean') ? opts.zoomController : true
     })
 
@@ -67,6 +68,9 @@ function prepCanvas (container, s2map, style, opts = {}, click, ready, info) {
       })
     }
 
+    // s2map.current.addEventListener('ready', () => {
+    //   console.log('READY')
+    // })
     // s2map.current.addEventListener('mouseenter', (data) => {
     //   console.log('mouseenter', data.detail)
     // })

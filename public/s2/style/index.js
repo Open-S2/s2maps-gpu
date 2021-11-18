@@ -35,7 +35,6 @@ export default class Style {
   icons: Sources = {}
   layers: Array<Layer> = []
   mask: Mask
-  colorBlind: boolean = false
   rasterLayers: { [string]: Layer } = {} // rasterLayers[sourceName]: Layer
   wallpaper: typeof undefined | Wallpaper | Skybox
   wallpaperStyle: typeof undefined | WallpaperStyle
@@ -89,7 +88,6 @@ export default class Style {
     if (style.sources) self.sources = style.sources
     if (style.fonts) self.fonts = style.fonts
     if (style.icons) self.icons = style.icons
-    if (style.colorBlind) self.colorBlind = style.colorBlind
     // build wallpaper and sphere background if applicable
     if (style.wallpaper) self._buildWallpaper(style.wallpaper)
     // build the layers
@@ -166,7 +164,6 @@ export default class Style {
   // 1) ensure "bad" layers are removed (missing important keys or subkeys)
   // 2) ensure the order is correct for when WebGL eventually parses the encodings
   _buildLayers () {
-    const { colorBlind } = this
     let depthPos = 1
     // now we build our program set simultaneous to encoding our layers
     const programs = new Set([(this.wallpaper && this.wallpaper.skybox) ? 'skybox' : (this.wallpaper) ? 'wallpaper' : null, 'fill'])
@@ -189,10 +186,10 @@ export default class Style {
         }
         // PAINTS
         for (const key in layer.paint) {
-          code.push(...encodeLayerAttribute(layer.paint[key], layer.lch, colorBlind))
+          code.push(...encodeLayerAttribute(layer.paint[key], layer.lch))
         }
         if (code.length) layer.code = new Float32Array(code)
-        if (layer.iconPaint) layer.iconCode = new Float32Array(encodeLayerAttribute(layer.iconPaint['icon-size'], layer.lch, colorBlind))
+        if (layer.iconPaint) layer.iconCode = new Float32Array(encodeLayerAttribute(layer.iconPaint['icon-size'], layer.lch))
       } else if (this.glType === 1 && layer.source === 'mask') {
         for (const l in layer.layout) layer.layout[l] = parseFeatureFunction(layer.layout[l], l)
         for (const p in layer.paint) layer.paint[p] = parseFeatureFunction(layer.paint[p], p)

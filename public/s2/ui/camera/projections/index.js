@@ -2,7 +2,7 @@
 import * as mat4 from '../../../util/mat4'
 import { default as getTiles } from './getTilesInView'
 import { default as _cursorToLonLat } from './cursorToLonLat'
-import { S2Point } from 's2projection'
+import { S2Point } from '../../../projection'
 
 export type ProjectionConfig = {
   eye?: [number, number, number],

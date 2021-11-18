@@ -20,6 +20,7 @@ export default class S2Map extends EventTarget {
   _canvas: HTMLCanvasElement
   _attributionPopup: HTMLCanvasElement
   _attributions: Attributions = {}
+  colorMode: 0 | 1 | 2 | 3 = 0 // 0: none - 1: protanopia - 2: deutranopia - 3: tritanopia
   map: Map | Worker
   info: Info
   id: string = Math.random().toString(36).replace('0.', '')
@@ -81,6 +82,7 @@ export default class S2Map extends EventTarget {
     const { _canvasContainer } = self
     // if browser supports it, create an instance of the mapWorker
     if (!navigator.gpu && canvas.transferControlToOffscreen) { // $FlowIgnore
+      // TODO: MORE THAN LIKELY A RACE CONDITION HERE IF WAITING FOR A "READY" EVENT
       const offscreen = canvas.transferControlToOffscreen()
       self._offscreen = true
       const mapWorker = self.map = new Worker(new URL('./workers/map.worker.js', import.meta.url), { name: 'map-worker', type: 'module' })
@@ -119,28 +121,32 @@ export default class S2Map extends EventTarget {
 
   _setupControlContainer (options: MapOptions) {
     const { _container, _attributions } = this
-    const { attributions, zoomController, darkMode } = options
+    const { attributions, zoomController, colorBlindController, darkMode, attributionOff } = options
     // add info bar with our jollyRoger
-    const attribution = window.document.createElement('div')
-    attribution.id = 's2-attribution'
-    const info = window.document.createElement('div')
-    info.id = 's2-info'
-    info.onclick = function () { attribution.classList.toggle('show') }
-    const popup = this._attributionPopup = window.document.createElement('div')
-    popup.className = 's2-popup-container'
-    popup.innerHTML = '<div>Rendered with ❤ by</div><a href="https://s2maps.io" target="popup"><div class="s2-jolly-roger"></div></a>'
-    // add attributions
-    if (attributions) {
-      for (const name in attributions) {
-        if (!_attributions[name]) {
-          _attributions[name] = attributions[name]
-          popup.innerHTML += `<div><a href="${attributions[name]}" target="popup">${name}</a></div>`
+    if (!attributionOff) {
+      const attribution = window.document.createElement('div')
+      attribution.id = 's2-attribution'
+      const info = window.document.createElement('div')
+      info.className = info.id = 's2-info'
+      if (darkMode) info.classList.add('s2-info-dark')
+      info.onclick = function () { attribution.classList.toggle('show') }
+      const popup = this._attributionPopup = window.document.createElement('div')
+      popup.className = 's2-popup-container'
+      if (darkMode) popup.classList.add('s2-popup-container-dark')
+      popup.innerHTML = '<div>Rendered with ❤ by</div><a href="https://s2maps.io" target="popup"><div class="s2-jolly-roger"></div></a>'
+      // add attributions
+      if (attributions) {
+        for (const name in attributions) {
+          if (!_attributions[name]) {
+            _attributions[name] = attributions[name]
+            popup.innerHTML += `<div><a href="${attributions[name]}" target="popup">${name}</a></div>`
+          }
         }
       }
+      attribution.appendChild(info)
+      attribution.appendChild(popup)
+      _container.appendChild(attribution)
     }
-    attribution.appendChild(info)
-    attribution.appendChild(popup)
-    _container.appendChild(attribution)
     // if zoom or compass controllers, add
     if (zoomController) {
       // first create the container
@@ -151,7 +157,7 @@ export default class S2Map extends EventTarget {
       if (zoomController) {
         // plus
         const zoomPlus = window.document.createElement('button')
-        zoomPlus.className = 's2-zoom-button s2-zoom-plus'
+        zoomPlus.className = 's2-control-button s2-zoom-plus'
         zoomPlus.setAttribute('aria-hidden', true)
         zoomPlus.tabIndex = -1
         navigationContainer.appendChild(zoomPlus)
@@ -162,21 +168,38 @@ export default class S2Map extends EventTarget {
         navigationContainer.appendChild(navSep)
         // minus
         const zoomMinus = window.document.createElement('button')
-        zoomMinus.className = 's2-zoom-button s2-zoom-minus'
+        zoomMinus.className = 's2-control-button s2-zoom-minus'
         zoomMinus.setAttribute('aria-hidden', true)
         zoomMinus.tabIndex = -1
         navigationContainer.appendChild(zoomMinus)
         zoomMinus.addEventListener('click', () => this._navEvent('zoomOut'))
+      }
+      if (colorBlindController) {
+        // add seperator if colorBlind was added
+        if (zoomController) {
+          // seperator
+          const navSep = window.document.createElement('div')
+          navSep.className = 's2-nav-sep' + (darkMode ? '-dark' : '')
+          navigationContainer.appendChild(navSep)
+        }
+        const colorBlind = window.document.createElement('button')
+        colorBlind.className = 's2-control-button s2-colorblind-button'
+        colorBlind.setAttribute('aria-hidden', true)
+        colorBlind.tabIndex = -1
+        navigationContainer.appendChild(colorBlind)
+        colorBlind.addEventListener('click', () => this._setColorMode())
       }
     }
   }
 
   _addAttributions (attributions: Attributions = {}) {
     const { _attributionPopup, _attributions } = this
-    for (const name in attributions) {
-      if (!_attributions[name]) {
-        _attributions[name] = attributions[name]
-        _attributionPopup.innerHTML += `<div><a href="${attributions[name]}" target="popup">${name}</a></div>`
+    if (_attributionPopup) {
+      for (const name in attributions) {
+        if (!_attributions[name]) {
+          _attributions[name] = attributions[name]
+          _attributionPopup.innerHTML += `<div><a href="${attributions[name]}" target="popup">${name}</a></div>`
+        }
       }
     }
   }
@@ -311,6 +334,14 @@ export default class S2Map extends EventTarget {
     const { map, _offscreen } = this
     if (_offscreen && map) map.postMessage({ type: 'nav', ctrl })
     else if (map) map.navEvent(ctrl)
+  }
+
+  _setColorMode () {
+    const { map, _offscreen } = this
+    this.colorMode++
+    if (this.colorMode > 3) this.colorMode = 0
+    if (_offscreen && map) map.postMessage({ type: 'colorMode', mode: this.colorMode })
+    else if (map) map.colorMode(this.colorMode)
   }
 
   injectData (data) {

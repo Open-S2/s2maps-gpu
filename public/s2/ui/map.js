@@ -19,6 +19,7 @@ export type MapOptions = {
   canvasMultiplier?: number,
   jollyRoger?: false | 'default' | 'light' | 'dark', // wether to load the logo or not, defaults to true
   zoomController?: boolean,
+  colorBlindController?: boolean,
   canZoom?: boolean,
   canMove?: boolean,
   darkMode?: boolean,
@@ -226,7 +227,7 @@ export default class Map extends Camera {
 
   // for interaction with features on the screen
   onCanvasMouseMove (x: number, y: number) {
-    if (!this.style.interactive || this.projection.dirty) return
+    if (!this.style || !this.style.interactive || this.projection.dirty) return
     this.mousePosition[0] = x
     this.mousePosition[1] = y
     this.mouseMoved = true
@@ -355,6 +356,12 @@ export default class Map extends Camera {
       // render
       this.render()
     }
+  }
+
+  colorMode (mode: 0 | 1 | 2 | 3) {
+    this.painter.setColorMode(mode)
+    // force a re-render
+    this.render()
   }
 
   swipeAnimation (curTime: number) {

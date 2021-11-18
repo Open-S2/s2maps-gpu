@@ -1,11 +1,16 @@
 // @flow
 import colorParser from './colorParser'
-import colorBlindAdjust from './colorBlindAdjust'
 
-// for color interpolation, we should use the LCH color space
+export type ColorBlindAdjust = 'none' | 'protanopia' | 'deutranopia' | 'tritanopia'
+
+// COLOR INTERPOLATION: we should use the LCH color space
 // https://www.alanzucconi.com/2016/01/06/colour-interpolation/4/
 // use https://github.com/gka/chroma.js as a guide to create best interpolation
 // hsv is a good secondary. Saved for posterity.
+// COLOR BLIND ADJUST:
+// https://www.nature.com/articles/nmeth.1618
+// http://www.daltonize.org/
+// https://galactic.ink/labs/Color-Vision/Javascript/Color.Vision.Daltonize.js
 
 // color is designed to parse varying inputs
 export default class Color {
@@ -26,31 +31,17 @@ export default class Color {
     return new Color(...this.val, this.type)
   }
 
-  getRGB (colorBlind: boolean = false, normalize: boolean = true): [number, number, number, number] {
-    if (colorBlind) colorBlindAdjust(this)
-    else this.toRGB()
+  getRGB (normalize: boolean = true): [number, number, number, number] {
+    this.toRGB()
     if (normalize) return [this.val[0] / 255, this.val[1] / 255, this.val[2] / 255, this.val[3]]
     return this.val
   }
 
-  getLCH (colorBlind: boolean = false): [number, number, number, number] {
-    // must be RGB to convert
-    if (colorBlind) colorBlindAdjust(this)
+  getLCH (): [number, number, number, number] {
     // now convert to lch
     this.toLCH()
 
     return this.val
-  }
-
-  toHSV (): Color {
-    if (this.type === 'hsv') return this
-    // potentially swing back
-    if (this.type === 'lch') this.LCH2LAB()
-    if (this.type === 'lab') this.LAB2RGB()
-    // now ready for convert
-    if (this.type === 'rgb') this.RGB2HSV()
-
-    return this
   }
 
   toRGB (): Color {
@@ -61,6 +52,19 @@ export default class Color {
     if (this.type === 'lch') this.LCH2LAB()
     // lab goes straight to rgb
     if (this.type === 'lab') this.LAB2RGB()
+    // cmky goes straight to rgb
+    if (this.type === 'cmyk') this.CMYK2RGB()
+
+    return this
+  }
+
+  toHSV (): Color {
+    if (this.type === 'hsv') return this
+    // potentially swing back
+    if (this.type === 'lch') this.LCH2LAB()
+    if (this.type === 'lab') this.LAB2RGB()
+    // now ready for convert
+    if (this.type === 'rgb') this.RGB2HSV()
 
     return this
   }
@@ -77,31 +81,42 @@ export default class Color {
     return this
   }
 
+  toCMYK (): Color {
+    if (this.type === 'lch') return this
+    // start at rgb
+    this.toRGB()
+    // now ready for convert
+    this.RGB2CMYK()
+
+    return this
+  }
+
   RGB2LAB () {
+    this.type = 'lab'
     const [r, g, b, a] = this.val
     const [x, y, z] = rgb2xyz(r, g, b)
     const l = 116 * y - 16
     this.val = [l < 0 ? 0 : l, 500 * (x - y), 200 * (y - z), a]
-    this.type = 'lab'
   }
 
   LAB2LCH () {
+    this.type = 'lch'
     const [l, a, b, alpha] = this.val
     const c = Math.sqrt(a * a + b * b)
     let h = (Math.atan2(b, a) * (180 / Math.PI) + 360) % 360
     if (Math.round(c * 10000) === 0) h = 0
     this.val = [l, c, h, alpha]
-    this.type = 'lch'
   }
 
   LCH2LAB () {
+    this.type = 'lab'
     let [l, c, h, alpha] = this.val
     h = h * (Math.PI / 180)
     this.val = [l, Math.cos(h) * c, Math.sin(h) * c, alpha]
-    this.type = 'lab'
   }
 
   LAB2RGB () {
+    this.type = 'rgb'
     const [l, a, b, alpha] = this.val
     let x, y, z, r, g, b_
     // prep move to xyz
@@ -125,10 +140,10 @@ export default class Color {
     else if (b_ > 255) b_ = 255
     // set new value
     this.val = [r, g, b_, alpha]
-    this.type = 'rgb'
   }
 
   RGB2HSV () {
+    this.type = 'hsv'
     const [r, g, b, a] = this.val
     const min = Math.min(r, g, b)
     const max = Math.max(r, g, b)
@@ -152,10 +167,10 @@ export default class Color {
       }
     }
     this.val = [h, s, v, a]
-    this.type = 'hsv'
   }
 
   HSV2RGB () {
+    this.type = 'rgb'
     let [h, s, v, a] = this.val
     v *= 255
     if (s === 0) {
@@ -182,7 +197,40 @@ export default class Color {
         default: this.val = [v, t, p, a]; break
       }
     }
+  }
+
+  CMYK2RGB () {
     this.type = 'rgb'
+    const [c, m, y, k] = this.val
+    const alpha = (this.val.length > 4) ? this.val[4] : 1
+    if (k === 1) return this.val = [0, 0, 0, alpha]
+    this.val = [
+      c >= 1 ? 0 : 255 * (1 - c) * (1 - k), // r
+      m >= 1 ? 0 : 255 * (1 - m) * (1 - k), // g
+      y >= 1 ? 0 : 255 * (1 - y) * (1 - k), // b
+      alpha
+    ]
+  }
+
+  RGB2CMYK () {
+    const { max } = Math
+    this.type = 'cmky'
+    let [r, g, b, a] = this.val
+    // adjust color to 0->1
+    r = r / 255
+    g = g / 255
+    b = b / 255
+    // convert
+    const k = 1 - max(r,max(g,b))
+    const f = k < 1 ? 1 / (1-k) : 0
+
+    this.val = [
+      (1-r-k) * f, // c
+      (1-g-k) * f, // m
+      (1-b-k) * f, // y
+      k,
+      a
+    ]
   }
 
   // take two hsv OR values and return an rgb Color

@@ -1,5 +1,5 @@
-name: 'Build and upload project to '
-description: 'If master branch, check files do not already exist, otherwise S3 folder is the package JSON version number; If not master branch, store build in folder as hash'
+name: 'Build and upload project to AWS cloud for CDN support.'
+description: 'If master branch, check files do not already exist, otherwise S3 folder is the package JSON version number; If not master branch, store build in folder as hash.'
 author: 's2-maps'
 branding:
   icon: 'upload-cloud'

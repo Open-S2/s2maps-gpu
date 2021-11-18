@@ -32,8 +32,7 @@ import Color from '../color'
 // This functionality is built for webgl to parse for drawing
 // The Style object will parse all layers' attributes like "color", "fill", "width", etc.
 // The code will be placed into "LayerCode" for the GPU shader to parse as necessary.
-export default function encodeLayerAttribute (input: Array<any>,
-  lch: boolean = false, colorBlind: boolean = false): Float32Array {
+export default function encodeLayerAttribute (input: Array<any>, lch: boolean = false): Float32Array {
   const encodings = []
   encodings.push(0) // store a null no matter what
   if (Array.isArray(input)) { // conditional
@@ -42,7 +41,7 @@ export default function encodeLayerAttribute (input: Array<any>,
       // set the condition bits as data-condition
       encodings[0] += (2 << 4)
       // encode the condition type
-      encodings.push(...encodeDataCondition(input, lch, colorBlind))
+      encodings.push(...encodeDataCondition(input, lch))
     } else if (conditionType === 'data-range') {
       // set the condition bits as data-range
       encodings[0] += (4 << 4)
@@ -56,7 +55,7 @@ export default function encodeLayerAttribute (input: Array<any>,
       // remove data type
       input.shift()
       // encode range data and store
-      encodings.push(...encodeRange(input, lch, colorBlind))
+      encodings.push(...encodeRange(input, lch))
     } else if (conditionType === 'input-range') {
       // set the condition bits as input-range
       encodings[0] += (5 << 4)
@@ -76,19 +75,19 @@ export default function encodeLayerAttribute (input: Array<any>,
         encodings.push(input.shift())
       }
       // encode range data and store
-      encodings.push(...encodeRange(input, lch, colorBlind))
+      encodings.push(...encodeRange(input, lch))
     } else if (conditionType === 'feature-state') {
       // set the condition bits as feature-state
       encodings[0] += (6 << 4)
       // encode the feature-states and store
-      encodings.push(...encodeFeatureStates(input, lch, colorBlind))
+      encodings.push(...encodeFeatureStates(input, lch))
     } else throw Error('unknown condition type')
   } else if (input || input === 0) { // assuming data exists, than it's just a value type
     // value
     if (isNaN(input)) {
       const color = new Color(input) // build the color as RGB or LCH
       encodings[0] += (1 << 4) // set the condition bits as 1 (value)
-      encodings.push(...((lch) ? color.getLCH(colorBlind) : color.getRGB(colorBlind))) // store that it is a value and than the values
+      encodings.push(...((lch) ? color.getLCH() : color.getRGB())) // store that it is a value and than the values
     } else {
       encodings[0] += (1 << 4) // set the condition bits as 1 (value)
       encodings.push(input) // store true as 1 and false as 0, otherwise it's a number
@@ -99,7 +98,7 @@ export default function encodeLayerAttribute (input: Array<any>,
   return new Float32Array(encodings)
 }
 
-function encodeDataCondition (input: Array<any>, lch: boolean, colorBlind: boolean): Array<number> {
+function encodeDataCondition (input: Array<any>, lch: boolean): Array<number> {
   const encoding = []
   let i = 1
 
@@ -107,9 +106,9 @@ function encodeDataCondition (input: Array<any>, lch: boolean, colorBlind: boole
     const condition = input.shift()
     const value = input.shift()
     if (Array.isArray(condition)) {
-      encoding.push(i, ...encodeLayerAttribute(value, lch, colorBlind))
+      encoding.push(i, ...encodeLayerAttribute(value, lch))
     } else if (condition === 'default') {
-      encoding.push(0, ...encodeLayerAttribute(value, lch, colorBlind))
+      encoding.push(0, ...encodeLayerAttribute(value, lch))
     } else { throw new Error('unkown condition type') }
     i++
   }
@@ -117,19 +116,19 @@ function encodeDataCondition (input: Array<any>, lch: boolean, colorBlind: boole
   return encoding
 }
 
-function encodeRange (input: Array<any>, lch: boolean, colorBlind: boolean): Array<number> {
+function encodeRange (input: Array<any>, lch: boolean): Array<number> {
   const encoding = []
 
   while (input.length) {
     const condition = input.shift()
     const value = input.shift()
-    encoding.push(condition, ...encodeLayerAttribute(value, lch, colorBlind))
+    encoding.push(condition, ...encodeLayerAttribute(value, lch))
   }
 
   return encoding
 }
 
-function encodeFeatureStates (input: Array<any>, lch: boolean, colorBlind: boolean): Array<number> {
+function encodeFeatureStates (input: Array<any>, lch: boolean): Array<number> {
   const encoding = []
 
   while (input.length) {
@@ -141,7 +140,7 @@ function encodeFeatureStates (input: Array<any>, lch: boolean, colorBlind: boole
           : 0 // default / inactive
     // get condition
     const value = input.shift()
-    encoding.push(conditionCode, ...encodeLayerAttribute(value, lch, colorBlind))
+    encoding.push(conditionCode, ...encodeLayerAttribute(value, lch))
   }
 
   return encoding

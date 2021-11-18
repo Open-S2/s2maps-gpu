@@ -1,6 +1,6 @@
 // @flow
 /* eslint-env worker */
-import { S2Point, bboxST } from 's2projection'
+import { S2Point, bboxST } from '../../projection'
 
 import type { Session, Point } from './'
 import type { TileRequest } from '../workerPool'

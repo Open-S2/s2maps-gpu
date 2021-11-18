@@ -86,6 +86,6 @@ module.exports = {
       threshold: 0,
       minRatio: 1
     }),
-    // new BundleAnalyzerPlugin({ analyzerMode: 'static', generateStatsFile: true, statsFilename: 'bundle-stat.json' })
+    new BundleAnalyzerPlugin({ analyzerMode: 'static', generateStatsFile: true, statsFilename: 'bundle-stat.json' })
   ]
 }

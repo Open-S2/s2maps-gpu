@@ -1,5 +1,5 @@
 // @flow
-import { drawLine } from 'line-gl'
+import drawLine from './drawLine'
 
 type Point = [number, number]
 

@@ -1,3 +1,5 @@
+// pull from env action
+require('dotenv').config({ path: '../.env.action' })
 // setup env variables
 process.env.BABEL_ENV = 'production'
 process.env.NODE_ENV = 'production'
@@ -8,9 +10,19 @@ const path = require('path')
 const webpack = require('webpack')
 const configuration = require('./webpack.config.js')
 const configurationCSS = require('./webpack.css.config.js')
+const { version } = require('../package.json')
 const { S3 } = require('aws-sdk')
-const { getInput, info, setFailed, setOutput } = require('@actions/core')
-const { makeKey } = require('./makekey')
+// const { getInput, info, error, setFailed } = require('@actions/core')
+
+const { ACCESS_KEY_ID, SECRET_ACCESS_KEY, BUCKET, ROOT_LOCATION } = process.env
+
+// setup version
+// const branch = BRANCH
+const VERSION = `v${version}`
+
+// setup S3
+const s3 = new S3({ accessKeyId: ACCESS_KEY_ID, secretAccessKey: SECRET_ACCESS_KEY, region: 'us-east-1', signatureVersion: 'v4' })
+const Bucket = BUCKET
 
 // CLEAN UP FROM OLD BUILD
 const dirPath = path.join(__dirname, '../buildS2Action')
@@ -22,24 +34,36 @@ const jsCompiler = webpack(configuration)
 
 // COMPILE
 function build (compiler) {
-  return new Promise(resolve => {
+  return new Promise((resolve, reject) => {
     compiler.run((err, stats) => {
-      if (err) console.error(err)
-      if (stats.compilation.errors) for (const error of stats.compilation.errors) console.error(error)
-      if (stats.compilation.warning) for (const error of stats.compilation.warning) console.error(error)
+      if (err) reject(err)
+      if (stats.compilation.errors) for (const error of stats.compilation.errors) reject(error)
+      if (stats.compilation.warning) for (const error of stats.compilation.warning) reject(error)
       resolve()
     })
   })
 }
 
-Promise.all([
-  build(cssCompiler),
-  build(jsCompiler)
-])
+checkIfExists()
+  .then(exists => {
+    if (!exists) {
+      return Promise.all([
+        build(cssCompiler),
+        build(jsCompiler)
+      ])
+    } else {
+      console.log('No need to upload')
+    }
+  })
   .then(res => {
     // upload
+    console.log('uploading')
     uploadData()
   })
+  .then(res => {
+    console.log('COMPLETE')
+  })
+  .catch(err => { console.error(err) })
 
 function removeDir (path) {
   if (fs.existsSync(dirPath)) {
@@ -52,42 +76,50 @@ function removeDir (path) {
         } else { fs.unlinkSync(dirPath + '/' + filename) }
       })
     } else { console.log('No files found in the directory.') }
-  } else { console.log('Directory path not found.') }
+  }
 }
 
 function uploadData () {
-  try {
-    const accessKeyId = getInput('access_key_id')
-    const secretAccessKey = getInput('secret_access_key')
+  // buildS2Action
+  const files = fs.readdirSync(dirPath).filter(f => !f.includes('.txt') && !f.includes('.tmp'))
+  if (files.length) console.log('uploading...')
+  // prep promises
+  const promises = []
+  // upload
+  for (const file of files) {
+    // pull in file data
+    const data = fs.readFileSync(`${dirPath}/${file}`)
+    // check if css or js
+    const contentType = file.includes('.css') ? 'text/css' : 'application/javascript'
+    // upload
+    promises.push(storeFile(data, file, contentType))
+  }
 
-    const s3 = new S3({ accessKeyId, secretAccessKey })
-
-    const fileName = getInput('path')
-    const bucket = getInput('bucket')
-    const key = makeKey({
-      key: getInput('key'),
-      root: getInput('bucket_root')
-    })
-
-    uploadFile({ s3, fileName, bucket, key })
-  } catch ({ message }) { setFailed(message) }
+  return Promise.all(promises)
 }
 
-function uploadFile (s3, fileName, bucket, key) {
-  const fileContent = fs.readFileSync(fileName)
-  const params = { Bucket: bucket, Key: key, Body: fileContent }
+function checkIfExists () {
+  return new Promise(resolve => {
+    s3.listObjects({ Bucket, Prefix: `${ROOT_LOCATION}/${VERSION}` }, (err, data) => {
+      if (err) return resolve(true)
+      if (data.Contents.length) return resolve(true)
+      resolve(false)
+    })
+  })
+}
 
-  return new Promise((resolve, reject) => {
-    try {
-      s3.upload(params, (err, data) => {
-        if (err) {
-          throw err
-        }
-        info(`Uploaded ${fileName} to ${data.Location}`)
-        setOutput('object_path', data.Location)
-      })
-    } catch ({ message }) {
-      setFailed(message)
+function storeFile (Body, name, ContentType) {
+  return new Promise(resolve => {
+    const obj = {
+      Bucket,
+      Body,
+      Key: `${ROOT_LOCATION}/${VERSION}/${name}`,
+      ContentType,
+      CacheControl: 'max-age=31536000,s-maxage=31536000'
     }
+    s3.putObject(obj, err => {
+      if (err) resolve(false)
+      else resolve(true)
+    })
   })
 }

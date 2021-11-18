@@ -1,6 +1,7 @@
 uniform float uInputs[16]; // [zoom, lon, lat, angle, pitch, time, featureState, curFeature, ...extensions]
 uniform float uLayerCode[128];
 uniform float uFeatureCode[64];
+uniform float uColorBlind;
 uniform bool uLCH;
 
 @import "./color.glsl"
@@ -189,7 +190,10 @@ vec4 decodeFeature (bool color, inout int index, inout int featureIndex) {
   // update index to the next Layer property
   index = featureSize + decodeOffset;
 
-  // convert if lch
+  // if lch: convert back to rgb
   if (color && uLCH) res = LCH2RGB(res);
+  // assuming user has selected a colorblind state, adjust accordingly
+  if (color && uColorBlind != 0.) res = colorBlindAdjust(res, uColorBlind);
+
   return res;
 }

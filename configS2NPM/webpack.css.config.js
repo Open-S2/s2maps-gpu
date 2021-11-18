@@ -12,7 +12,7 @@ module.exports = {
   // This means they will be the 'root' imports that are included in JS bundle.
   entry: path.join(__dirname, '/../styles/s2maps.css'),
   output: {
-    path: path.join(__dirname, '/../buildS2Action'),
+    path: path.join(__dirname, '/../buildS2NPM'),
     filename: 'css.tmp'
   },
   module: {
