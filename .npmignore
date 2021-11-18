@@ -30,3 +30,4 @@ buildS2NPM/build-stat.json
 buildS2NPM/bundle-stat.json
 pnpm-lock.yaml
 .secrets
+.github
