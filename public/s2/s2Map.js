@@ -521,7 +521,6 @@ if (window) window.S2Map = S2Map
 // flyTo
 // terminate map worker if exists
 // improve how attributes work
-// fix main website
 // migrate old S2Tiles to new S2DB + zooms with division should be pre-divided (first 7 zooms)
 // s2maps-gl S2DB
 
@@ -543,7 +542,6 @@ if (window) window.S2Map = S2Map
 // 8) hillshade and line data fixes
 // 9) redo roads -> working for road signs
 // 10) screenshot
-// 11) flyTo
 
 // S2MAPS BUGS:
 // * zoom too fast at low zoom renders the wrong tile
