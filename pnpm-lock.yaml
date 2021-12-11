@@ -32,6 +32,7 @@ specifiers:
   react: ^17.0.2
   react-beautiful-dnd: ^13.1.0
   react-dom: ^17.0.2
+  react-sortablejs: ^6.0.0
   regenerator-runtime: ^0.13.9
   s2-vector-tile: ^1.7.4
   sortablejs: ^1.14.0
@@ -44,6 +45,7 @@ dependencies:
   react: 17.0.2
   react-beautiful-dnd: 13.1.0_react-dom@17.0.2+react@17.0.2
   react-dom: 17.0.2_react@17.0.2
+  react-sortablejs: 6.0.0_bc0a571785301e9f195361907f2c0393
   s2-vector-tile: 1.7.4
   sortablejs: 1.14.0
 
@@ -5532,6 +5534,21 @@ packages:
   /react-refresh/0.8.3:
     resolution: {integrity: sha512-X8jZHc7nCMjaCqoU+V2I0cOhNW+QMBwSUkeXnTi8IPe6zaRWfn60ZzvFDZqWPfmSJfjub7dDW1SP0jaHWLu/hg==}
     engines: {node: '>=0.10.0'}
+    dev: false
+
+  /react-sortablejs/6.0.0_bc0a571785301e9f195361907f2c0393:
+    resolution: {integrity: sha512-vzi+TWOnofcYg+dYnC/Iz/ZZkBGG76uM6KaLwuAqBk0349JQxIy3PZizbK0TJdLlK6NnLt4CiEyyQXSSnVYvEw==}
+    peerDependencies:
+      '@types/sortablejs': ^1.10.0
+      react: ^16.9.0
+      react-dom: ^16.9.0
+      sortablejs: ^1.10.0
+    dependencies:
+      classnames: 2.2.6
+      react: 17.0.2
+      react-dom: 17.0.2_react@17.0.2
+      sortablejs: 1.14.0
+      tiny-invariant: 1.2.0
     dev: false
 
   /react/17.0.2:

@@ -521,7 +521,6 @@ if (window) window.S2Map = S2Map
 // flyTo
 // terminate map worker if exists
 // improve how attributes work
-// upload the new version
 // fix main website
 // migrate old S2Tiles to new S2DB + zooms with division should be pre-divided (first 7 zooms)
 // s2maps-gl S2DB
