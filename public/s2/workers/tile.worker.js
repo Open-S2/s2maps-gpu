@@ -9,7 +9,7 @@ import type { TileRequest } from './workerPool'
 import type { StylePackage, Layer } from '../style/styleSpec'
 import type { IconMap, ColorMap } from './process/vector/glyph'
 
-export type CancelTileRequest = Array<number> // hashe IDs of tiles e.g. ['204', '1003', '1245', ...]
+export type CancelTileRequest = Array<number> // S2CellIDs of tiles e.g. ['204', '1003', '1245', ...]
 
 export type ParentLayer = {
   face: Face,
@@ -63,6 +63,9 @@ export default class TileWorker {
     else if (type === 'rasterdata') this._processRaster(mapID, data.tile, data.sourceName, data.parent, data.data)
     else if (type === 'jsondata') this._processJSONData(mapID, data.tile, data.sourceName, data.data)
     else if (type === 'glyphresponse') this._processGlyphResponse(mapID, data.reqID, data.glyphMetadata, data.familyName, data.icons, data.colors)
+    else if (type === 'addLayer') this._addLayer(mapID, data.layer, data.index)
+    else if (type === 'removeLayer') this._removeLayer(mapID, data.index)
+    else if (type === 'reorderLayers') this._reorderLayers(mapID, data.layerChanges)
   }
 
   _loadWorkerPort (messagePort: MessageChannel.port1, postPort: MessageChannel.port2,
@@ -96,6 +99,40 @@ export default class TileWorker {
     parseLayers(layers, glType)
     this.maps[mapID] = layers
     this.vectorManager.webgl1 = this.webgl1 = glType === 1
+  }
+
+  _addLayer (mapID: string, index: number) {
+    const layers = this.maps[mapID]
+    layers.splice(index, 0, layer)
+    for (let i = index + 1, ll = layers.length; i < ll; i++) {
+      const layer = layers[i]
+      layer.layerIndex++
+      layer.depthPos++
+    }
+  }
+
+  _removeLayer (mapID: string, index: number) {
+    const layers = this.maps[mapID]
+    layers.splice(index, 1)
+    for (let i = index, ll = layers.length; i < ll; i++) {
+      const layer = layers[i]
+      layer.layerIndex--
+      layer.depthPos--
+    }
+  }
+
+  _reorderLayers (mapID: string, layerChanges: { [string | number]: number }) {
+    const layers = this.maps[mapID]
+    const newLayers = []
+    // move the layer to its new position
+    for (const [from, to] of Object.entries(entries)) {
+      const layer = layers[+from]
+      layer.layerIndex = to
+      layer.depthPos = to + 1
+      newLayers[to] = layer
+    }
+    // because other classes depend upon the current array, we just update array items
+    for (let i = 0; i < layers.length; i++) layers[i] = newLayers[i]
   }
 
   _processPBF (mapID: string, tile: TileRequest, sourceName: string,

@@ -2,7 +2,8 @@
 import * as mat4 from '../../../util/mat4'
 import { default as getTiles } from './getTilesInView'
 import { default as _cursorToLonLat } from './cursorToLonLat'
-import { S2Point } from '../../../projection'
+import { fromLonLatGL, normalize, mul } from '../../../projection/S2Point'
+import { degToRad } from '../../../projection/util'
 
 export type ProjectionConfig = {
   eye?: [number, number, number],
@@ -19,8 +20,7 @@ export type ProjectionConfig = {
   canvasMultiplier: number
 }
 
-export type TileDefinition = [number, number, number, number, number]
-export type TileDefinitions = Array<TileDefinition>
+export type TileDefinitions = Array<[Face, number, number, number, BigInt]> // [face, zoom, i, j, id]
 
 export type MatrixType = 'm' | 'km' // meters of kilometers
 
@@ -33,7 +33,7 @@ export default class Projector {
   zTranslateEnd: number = 1.001
   zoomEnd: number = 5
   positionalZoom: boolean = true
-  view: Float32Array = new Float32Array(16) // [zoom, lon, lat, angle, pitch, time, featureState, currFeature, ...extensions]
+  view: Float32Array = new Float32Array(16) // [zoom, lon, lat, bearing, pitch, time, featureState, currFeature, ...extensions]
   aspect: Float32Array = new Float32Array([400, 300]) // default canvas width x height
   matrices: { [MatrixType]: Float32Array } = {}
   eye: [number, number, number] = [0, 0, 0] // [x, y, z] only z should change for visual effects
@@ -45,6 +45,7 @@ export default class Projector {
   zoomOffset: number = 0
   lon: number = -1
   lat: number = -1
+  bearing: number = 0
   pitch: number = 0
   zNear: number = 0.5 // static; just for draw calls
   zFar: number = 100_000_000 // static; just for draw calls
@@ -57,6 +58,8 @@ export default class Projector {
     const zoom = style.zoom | 0
     const center = (style.center && Array.isArray(style.center)) ? style.center : [0, 0]
     this.setPosition(...center, zoom)
+    if (!isNaN(style.bearing)) this.bearing = style.bearing
+    if (!isNaN(style.pitch)) this.pitch = style.pitch
     if (style.zNear) this.zNear = style.zNear
     if (style.zFar) this.zFar = style.zFar
     if (config.canvasMultiplier) this.multiplier = config.canvasMultiplier
@@ -71,6 +74,7 @@ export default class Projector {
     this.view[7] = id
   }
 
+  // TODO: Adjust zoom if minzoom and maxzoom changed, but ignore lon and lat if ignorePosition
   setStyleParameters (style, ignorePosition: boolean) {
     const { minzoom, maxzoom, zoom, lon, lat } = style
     // clamp values and ensure minzoom is less than maxzoom
@@ -78,8 +82,7 @@ export default class Projector {
     this.maxzoom = (maxzoom > 20) ? 20 : (maxzoom < this.minzoom) ? this.minzoom + 1 : maxzoom
     this.zoomOffset = style.zoomOffset
     // set position
-    if (!ignorePosition) this.setPosition(lon, lat, zoom)
-    else { this.matrices = {}; this.dirty = true } // ensure this projector is dirty (incase of ignorePosition === true)
+    this.setPosition((!ignorePosition) ? lon : this.lon, (!ignorePosition) ? lat : this.lat, zoom)
   }
 
   setPosition (lon: number, lat: number, zoom: number) {
@@ -170,7 +173,7 @@ export default class Projector {
     // update view
     this.view[1] = this.lon
     this.view[2] = this.lat
-    // if we hit 360, just swing back to 0
+    // if we hit greater than 180, just swing back to 0
     while (this.lon >= 180) { this.lon -= 360 }
     while (this.lon < -180) { this.lon += 360 }
     // cleanup
@@ -197,6 +200,20 @@ export default class Projector {
     }
   }
 
+  addBearing (num: number) {
+    this.setBearing(this.bearing + num)
+  }
+
+  setBearing (bearing: number) {
+    this.bearing = bearing
+    // if we hit greater than 180, just swing back to 0
+    while (this.bearing >= 180) { this.bearing -= 360 }
+    while (this.bearing < -180) { this.bearing += 360 }
+    // cleanup
+    this.matrices = {}
+    this.dirty = true
+  }
+
   getMatrix (type: MatrixType): Float32Array {
     if (this.matrices[type]) return mat4.clone(this.matrices[type])
     // update eye
@@ -205,6 +222,7 @@ export default class Projector {
     let matrix = this._getProjectionMatrix(type)
     // create view matrix
     const view = mat4.lookAt(this.eye, [0, 1, 0])
+    // if (this.bearing) mat4.rotateZ(matrix, degToRad(this.bearing))
     // if km we "remove" the eye
     if (type === 'km') { view[12] = 0; view[13] = 0; view[14] = 0 }
     // multiply perspective matrix by view matrix
@@ -223,9 +241,7 @@ export default class Projector {
       zTranslateEnd
     ) * radius
     // create xyz point for eye
-    const s2Point = S2Point.fromLonLatGL(lon, lat).normalize().mul(radialMultiplier)
-    // set the eye
-    this.eye = [s2Point.x, s2Point.y, s2Point.z]
+    this.eye = mul(normalize(fromLonLatGL(lon, lat)), radialMultiplier)
   }
 
   _getProjectionMatrix (type: MatrixType): Float32Array {
@@ -251,7 +267,7 @@ export default class Projector {
     return _cursorToLonLat(lon, lat, x, y, (tileSize * Math.pow(2, zoom)) / 2)
   }
 
-  getTilesInView (): TileDefinitions { // [face, zoom, x, y, hash]
+  getTilesInView (): TileDefinitions { // Array<BigInt> (S2CellIDs)
     let { radius, zoom, zoomOffset, lon, lat } = this
     const matrix = this.getMatrix('m')
     return getTiles(zoom + zoomOffset, matrix, lon, lat, radius)

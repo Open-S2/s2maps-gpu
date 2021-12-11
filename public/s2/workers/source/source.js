@@ -1,6 +1,6 @@
 // @flow
 /* eslint-env worker */
-import { tileHash } from '../../projection'
+import { fromIJ, parent as parentID } from '../../projection/S2CellID'
 
 import type { Session } from './'
 import type { TileRequest } from '../workerPool'
@@ -24,7 +24,6 @@ type Metadata = {
   minzoom: number,
   maxzoom: number,
   faces: Set<Face>,
-  facesbounds: FaceBounds,
   layers: LayerMetaData
 }
 
@@ -54,7 +53,6 @@ export default class Source {
   minzoom: number = 0
   maxzoom: number = 20
   faces: Set<Face>
-  facesbounds: FaceBounds
   needsToken: boolean = false
   session: Session
   requestCache: Array<[string, TileRequest]> = [] // each element in array -> [mapID, TileRequest]
@@ -81,7 +79,6 @@ export default class Source {
     if (metadata.minzoom) this.minzoom = metadata.minzoom
     if (metadata.maxzoom) this.maxzoom = Math.min(metadata.maxzoom, this.maxzoom)
     if (metadata.faces) this.faces = new Set(metadata.faces)
-    if (metadata.facesbounds) this.facesbounds = metadata.facesbounds
     if (metadata.extension) this.extension = metadata.extension
     if (metadata.attributions) this.attributions = metadata.attributions
     if (metadata.type) this.type = metadata.type
@@ -109,39 +106,30 @@ export default class Source {
   }
 
   // all tile requests undergo a basic check on whether that data exists within the metadata boundaries
-  tileRequest (mapID: string, tile: TileRequest) {
+  tileRequest (mapID: string, tile: TileRequest, layerIndexes?: Array<number>) {
     // if the source isn't ready yet, we store in cache
     if (!this.ready) {
       this.requestCache.push([mapID, tile])
       return
     }
     // pull out data, check if data exists in bounds, then request
-    const { active, minzoom, maxzoom, faces, facesbounds, name } = this
-    const { hash, face, zoom, x, y } = tile
+    const { active, minzoom, maxzoom, faces, name } = this
+    const { face, zoom, id } = tile
     if ( // massive quality check to not over burden servers / lambdas with duds
       active && // we have the correct properties to make proper requests
       minzoom <= zoom && maxzoom >= zoom && // check zoom bounds
-      (!faces || faces.has(face)) && // check the face exists
-      ( // check facesbounds usins the face, zoom, and x-y boundaries for validation
-        !facesbounds ||
-        (
-          facesbounds[face] && // check face exists
-          facesbounds[face][zoom] && // check zoom exists
-          facesbounds[face][zoom][0] <= x && facesbounds[face][zoom][2] >= x && // check x is within bounds
-          facesbounds[face][zoom][1] <= y && facesbounds[face][zoom][3] >= y // check y is within bounds
-        )
-      )
+      (!faces || faces.has(face)) // check the face exists
     ) {
-      this._tileRequest(mapID, tile, name, false)
-    } else { this._flush(mapID, hash, name) }
+      this._tileRequest(mapID, tile, name, false, layerIndexes)
+    } else { this._flush(mapID, id, name) }
     // now make requests for parent data as necessary
-    this._getParentData(mapID, tile)
+    this._getParentData(mapID, tile, layerIndexes)
   }
 
-  _getParentData (mapID: string, tile: TileRequest) {
+  _getParentData (mapID: string, tile: TileRequest, layerIndexes?: Array<number>) {
     const { layers, styleLayers, name } = this
     // pull out data
-    const { face, zoom, x, y } = tile
+    const { face, zoom, id } = tile
     // setup parentLayers
     const parentLayers: ParentLayers = {}
     // iterate over layers and found any data doesn't exist at current zoom but the style asks for
@@ -154,23 +142,20 @@ export default class Source {
         // processing the data more than once, we reference where to look for the layer
         const sourceLayerMaxZoom = sourceLayer.maxzoom
         let pZoom = zoom
-        let pX = x
-        let pY = y
+        let newID = id
         while (pZoom > sourceLayerMaxZoom) {
           pZoom--
-          pX = pX >> 1
-          pY = pY >> 1
+          newID = parentID(newID)
         }
-        const hash = tileHash(face, pZoom, pX, pY)
         // store parent reference
-        if (!parentLayers[hash]) parentLayers[hash] = { face, hash, zoom: pZoom, x: pX, y: pY, layers: [] }
-        parentLayers[hash].layers.push(layer.layerIndex)
+        if (!parentLayers[newID]) parentLayers[newID] = { face, id: newID, zoom: pZoom, layers: [] }
+        parentLayers[newID].layers.push(layer.layerIndex)
       }
     }
     // if we stored any parent layers, make the necessary requests
     if (Object.keys(parentLayers).length) {
-      for (const [hash, parent] of Object.entries(parentLayers)) {
-        this._tileRequest(mapID, tile, `${name}:${hash}`, parent)
+      for (const [id, parent] of Object.entries(parentLayers)) {
+        this._tileRequest(mapID, tile, `${name}:${id}`, parent, layerIndexes)
       }
     }
   }
@@ -178,19 +163,19 @@ export default class Source {
   // if this function runs, we assume default tile source.
   // in the default case, we want the worker to process the data
   async _tileRequest (mapID: string, tile: TileRequest,
-    sourceName: string, parent: boolean | ParentLayer) {
+    sourceName: string, parent: boolean | ParentLayer, layerIndexes?: Array<number>) {
     const { path, session } = this
-    const { face, zoom, x, y, hash } = parent || tile
+    const { id } = parent || tile
 
-    const data = await this._fetch(`${path}/${face}/${zoom}/${x}/${y}.${this.extension}`, mapID, false)
+    const data = await this._fetch(`${path}/${id}.${this.extension}`, mapID, false)
     const type = (this.extension.includes('pbf')) ? 'pbfdata' : 'rasterdata'
     if (data) {
       const worker = session.requestWorker()
-      worker.postMessage({ mapID, type, tile, sourceName, parent, data }, [data])
-    } else { this._flush(mapID, hash, sourceName) }
+      worker.postMessage({ mapID, type, tile, sourceName, parent, data, layerIndexes }, [data])
+    } else { this._flush(mapID, id, sourceName) }
   }
 
-  _flush (mapID, tileID, source) {
+  _flush (mapID: string, tileID: BigInt, source: string) {
     postMessage({
       mapID,
       tileID,

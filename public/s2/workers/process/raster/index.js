@@ -1,7 +1,7 @@
 // @flow
 export default async function processRaster (mapID: string, tile: TileRequest,
   sourceName: string, parent: boolean, data: ArrayBuffer, postMessage: Function) {
-  const { hash } = tile
+  const { id } = tile
   // https://bugzilla.mozilla.org/show_bug.cgi?id=1335594
   let built = true
   const getImage = (typeof createImageBitmap === 'function')
@@ -10,5 +10,5 @@ export default async function processRaster (mapID: string, tile: TileRequest,
   // build
   const image = await getImage
   // send off
-  if (image) postMessage({ mapID, type: 'rasterdata', built, source: sourceName, tileID: hash, image }, [image])
+  if (image) postMessage({ mapID, type: 'rasterdata', built, source: sourceName, tileID: id, image }, [image])
 }

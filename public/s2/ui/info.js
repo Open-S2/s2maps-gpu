@@ -49,7 +49,7 @@ export default class Info {
     if (!feature) {
       if (this.state !== 'null') {
         this._clear()
-      } else { // create a marker
+      } else if (lon !== null && lat !== null) { // create a marker
         this.state = 'markers'
         s2map.addMarker({ lon, lat })
         this._createMarkerCard(lon, lat)

@@ -7,7 +7,7 @@ import type { TileRequest, ParentLayer } from '../tile.worker.js'
 export default function scaleShiftClip (geometry: Array<any>, type: number,
   extent: number, tile: TileRequest, parent: ParentLayer) {
   const parentZoom = parent.zoom
-  let { x, y, zoom } = tile
+  let { i, j, zoom } = tile
   // get the scale
   const scale = 1 << (zoom - parentZoom)
   // get x and y shift
@@ -15,11 +15,11 @@ export default function scaleShiftClip (geometry: Array<any>, type: number,
   let yShift = 0
   while (zoom > parentZoom) {
     const div = 1 << (zoom - parentZoom)
-    if (x % 2 !== 0) xShift += extent / div
-    if (y % 2 !== 0) yShift += extent / div
+    if (i % 2 !== 0) xShift += extent / div
+    if (j % 2 !== 0) yShift += extent / div
     // decrement
-    x = x >> 1
-    y = y >> 1
+    i = i >> 1
+    j = j >> 1
     zoom--
   }
   // build

@@ -1,22 +1,7 @@
 // @flow
-export { default as S2Cell } from './S2Cell'
-export { default as S2LonLat } from './S2LonLat'
-export { default as S2Point } from './S2Point'
-export {
-  tileHash,
-  radToDeg,
-  degToRad,
-  doubleToFloats,
-  EARTH_RADIUS,
-  EARTH_RADIUS_EQUATORIAL,
-  EARTH_RADIUS_POLAR,
-  MARS_RADIUS,
-  MARS_RADIUS_EQUATORIAL,
-  MARS_RADIUS_POLAR
-} from './util'
-
-import S2Point from './S2Point'
 import { radToDeg, degToRad } from './util'
+
+import type { XYZ } from './S2Point'
 
 export const kLimitIJ = 1 << 30
 
@@ -51,22 +36,27 @@ export function quadraticUVtoST (u: number) {
 }
 
 export function STtoIJ (s: number): number {
-  return Math.max(0, Math.min(kLimitIJ - 1, Math.floor(kLimitIJ * s)))
+  const { max, min, floor } = Math
+  return max(0, min(kLimitIJ - 1, floor(kLimitIJ * s)))
 }
 
 export function IJtoST (i: number): number {
   return i / kLimitIJ
 }
 
+export function SiTiToST (si) {
+  return (1 / 2147483648) * si
+}
+
 // left hand rule
-export function faceUVtoXYZ (face: Face, u: number, v: number): S2Point {
+export function faceUVtoXYZ (face: Face, u: number, v: number): [number, number, number] {
   switch (face) {
-    case 0: return new S2Point(1, u, v)
-    case 1: return new S2Point(-u, 1, v)
-    case 2: return new S2Point(-u, -v, 1)
-    case 3: return new S2Point(-1, -v, -u)
-    case 4: return new S2Point(v, -1, -u)
-    default: return new S2Point(v, u, -1)
+    case 0: return [1, u, v]
+    case 1: return [-u, 1, v]
+    case 2: return [-u, -v, 1]
+    case 3: return [-1, -v, -u]
+    case 4: return [v, -1, -u]
+    default: return [v, u, -1]
   }
 }
 
@@ -74,17 +64,19 @@ export function faceUVtoXYZ (face: Face, u: number, v: number): S2Point {
 export function faceUVtoXYZGL (face: Face, u: number, v: number): S2Point {
 
   switch (face) {
-    case 0: return new S2Point(u, v, 1)
-    case 1: return new S2Point(1, v, -u)
-    case 2: return new S2Point(-v, 1, -u)
-    case 3: return new S2Point(-v, -u, -1)
-    case 4: return new S2Point(-1, -u, v)
-    default: return new S2Point(u, -1, v)
+    case 0: return [u, v, 1]
+    case 1: return [1, v, -u]
+    case 2: return [-v, 1, -u]
+    case 3: return [-v, -u, -1]
+    case 4: return [-1, -u, v]
+    default: return [u, -1, v]
   }
 }
 
 // left hand rule
-export function faceXYZtoUV (face: Face, x: number, y: number, z: number): [number, number] {
+export function faceXYZtoUV (face: Face, xyz: XYZ): [number, number] {
+  const [x, y, z] = xyz
+
   switch (face) {
     case 0: return [y / x, z / x]
     case 1: return [-x / y, z / y]
@@ -95,8 +87,27 @@ export function faceXYZtoUV (face: Face, x: number, y: number, z: number): [numb
   }
 }
 
+export function XYZtoFace (xyz: XYZ): [Face, number, number] {
+  let temp = xyz.map(n => Math.abs(n))
+
+  let face = (temp[0] > temp[1])
+    ? (temp[0] > temp[2]) ? 0 : 2
+    : (temp[1] > temp[2]) ? 1 : 2
+
+  if (xyz[face] < 0) face += 3
+
+  return face
+}
+
+export function XYZtoFaceUV (xyz: XYZ): [Face, number, number] {
+  const face = XYZtoFace(xyz)
+  return [face, ...faceXYZtoUV(face, xyz)]
+}
+
 // TODO: right hand rule
-export function faceXYZGLtoUV (face: Face, x: number, y: number, z: number): [number, number] {
+export function faceXYZGLtoUV (face: Face, xyz: XYZ): [number, number] {
+  const [x, y, z] = xyz
+
   switch (face) {
     case 0: return [x / z, y / z]
     case 1: return [-z / x, y / x]
@@ -107,7 +118,9 @@ export function faceXYZGLtoUV (face: Face, x: number, y: number, z: number): [nu
   }
 }
 
-export function xyzToLonLat (x: number, y: number, z: number, radius?: number = 1): [number, number] {
+export function xyzToLonLat (xyz: XYZ): [number, number] {
+  const [x, y, z] = xyz
+
   return [
     radToDeg(Math.atan2(y, x)),
     radToDeg(Math.atan2(z, Math.sqrt(x * x + y * y)))
@@ -120,7 +133,17 @@ export function lonLatToXYZ (lon: number, lat: number): [number, number, number]
   return [
     Math.cos(lat) * Math.cos(lon), // x
     Math.cos(lat) * Math.sin(lon), // y
+    Math.sin(lat) // z
+  ]
+}
+
+export function lonLatToXYZGL (lon: number, lat: number): [number, number, number] {
+  lon = degToRad(lon)
+  lat = degToRad(lat)
+  return [
+    Math.cos(lat) * Math.sin(lon), // y
     Math.sin(lat), // z
+    Math.cos(lat) * Math.cos(lon) // x
   ]
 }
 
@@ -157,6 +180,39 @@ export function bboxST (x: number, y: number, zoom: number): BBox {
     divisionFactor * (x + 1),
     divisionFactor * (y + 1)
   ]
+}
+
+export function neighborsIJ (face: Face, i: number, j: number, level?: number = 30): Array<[Face, number, number]> {
+  const size = 1 << (30 - level)
+
+  if (level !== 30) {
+    i = i << (30 - level)
+    j = j << (30 - level)
+  }
+
+  return [
+    fromIJWrap(face, i, j - size, level, j - size >= 0),
+    fromIJWrap(face, i + size, j, level, i + size < size),
+    fromIJWrap(face, i, j + size, level, j + size < size),
+    fromIJWrap(face, i - size, j, level, i - size >= 0)
+  ]
+}
+
+function fromIJWrap (face: Face, i: number, j: number, level: number, sameFace?: boolean): BigInt {
+  if (sameFace) return [face, i >> (30 - level), j >> (30 - level)]
+  const { max, min } = Math
+  const kMaxSize = 1073741824
+
+  i = max(-1, min(kMaxSize, i))
+  j = max(-1, min(kMaxSize, j))
+
+  const kScale = 1 / kMaxSize
+  const kLimit = 1 + 2.2204460492503131e-16
+  const u = max(-kLimit, min(kLimit, kScale * (2 * (i - kMaxSize / 2) + 1)))
+  const v = max(-kLimit, min(kLimit, kScale * (2 * (j - kMaxSize / 2) + 1)))
+
+  const [nFace, nU, nV] = XYZtoFaceUV(faceUVtoXYZ(face, u, v))
+  return [nFace, STtoIJ(0.5 * (nU + 1)) >> (30 - level), STtoIJ(0.5 * (nV + 1)) >> (30 - level)]
 }
 
 export function updateFace (face: Face, s: number, t: number, size: number = 1) {

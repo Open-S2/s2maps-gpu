@@ -63,7 +63,7 @@ export default class Style {
     }
   }
 
-  buildStyle (style: string | Object) {
+  async buildStyle (style: string | Object) {
     const self = this
     self.dirty = true
     style = JSON.parse(JSON.stringify(style))
@@ -92,7 +92,7 @@ export default class Style {
     if (style.wallpaper) self._buildWallpaper(style.wallpaper)
     // build the layers
     if (style.layers) self.layers = style.layers
-    self._buildLayers()
+    await self._buildLayers()
   }
 
   deleteSources (sourceNames: Array<string>) {
@@ -100,16 +100,10 @@ export default class Style {
   }
 
   _prebuildStyle (style: Object) {
+    // reset maskLayers
+    this.maskLayers = []
     // ensure certain default layer values exist. If it is a raster layer: seggregate
-    for (let i = 0, sl = style.layers.length; i < sl; i++) {
-      const layer = style.layers[i]
-      layer.layerIndex = i
-      if (!layer.minzoom) layer.minzoom = 0
-      if (!layer.maxzoom) layer.maxzoom = 20
-      if (!layer.layer) layer.layer = 'default'
-      if (layer.source === 'mask') this.maskLayers.push(layer)
-      if (layer.interactive) this.interactive = true
-    }
+    for (let i = 0, sl = style.layers.length; i < sl; i++) this._prebuildLayer(style.layers[i], i)
     // ensure if wallpaper, we have proper default values
     if (style.background) {
       if (style.background.skybox) {
@@ -125,6 +119,15 @@ export default class Style {
     // create mask if it doesn't exist (just incase)
     if (!style.mask) style.mask = {}
     if (!style.mask.exaggeration) style.mask.exaggeration = 1
+  }
+
+  _prebuildLayer (layer: Layer, index: number) {
+    if (!layer.minzoom) layer.minzoom = 0
+    if (!layer.maxzoom) layer.maxzoom = 20
+    if (!layer.layer) layer.layer = 'default'
+    if (layer.source === 'mask') this.maskLayers.push(layer)
+    if (layer.interactive) this.interactive = true
+    layer.layerIndex = index
   }
 
   _sendStyleDataToWorkers (style: Object) {
@@ -163,44 +166,12 @@ export default class Style {
 
   // 1) ensure "bad" layers are removed (missing important keys or subkeys)
   // 2) ensure the order is correct for when WebGL eventually parses the encodings
-  _buildLayers () {
-    let depthPos = 1
+  async _buildLayers () {
     // now we build our program set simultaneous to encoding our layers
     const programs = new Set([(this.wallpaper && this.wallpaper.skybox) ? 'skybox' : (this.wallpaper) ? 'wallpaper' : null, 'fill'])
-    for (let i = 0, ll = this.layers.length; i < ll; i++) {
-      const layer: Layer = this.layers[i]
-      const { type } = layer
-      // TODO: if bad layer, remove
-      programs.add(layer.type)
-      // add depth position
-      layer.depthPos = depthPos++
-      // order layers for GPU
-      orderLayer(layer)
-      // if webgl2 or greater, we build layerCode
-      if (this.glType > 1) {
-        const code = []
-        // LAYOUTS
-        for (const key in layer.layout) {
-          if (key === 'cap' || key === 'join') continue
-          code.push(...encodeLayerAttribute(layer.layout[key]))
-        }
-        // PAINTS
-        for (const key in layer.paint) {
-          code.push(...encodeLayerAttribute(layer.paint[key], layer.lch))
-        }
-        if (code.length) layer.code = new Float32Array(code)
-        if (layer.iconPaint) layer.iconCode = new Float32Array(encodeLayerAttribute(layer.iconPaint['icon-size'], layer.lch))
-      } else if (this.glType === 1 && layer.source === 'mask') {
-        for (const l in layer.layout) layer.layout[l] = parseFeatureFunction(layer.layout[l], l)
-        for (const p in layer.paint) layer.paint[p] = parseFeatureFunction(layer.paint[p], p)
-      }
-      // build color ramp image if applicable
-      if (type === 'heatmap' && layer.colorRamp) {
-        layer.colorRamp = this.map.painter.context.buildTexture(buildColorRamp(layer.colorRamp), 256, 1)
-      }
-    }
+    for (let i = 0, ll = this.layers.length; i < ll; i++) this._buildLayer(this.layers[i], i + 1, programs)
     // tell the painter what we are using
-    this.map.painter.buildPrograms(programs)
+    await this.map.painter.buildPrograms(programs)
     // prebuild wallpaper
     if (this.wallpaper) {
       const { skybox } = this.wallpaper
@@ -209,14 +180,113 @@ export default class Style {
     }
   }
 
+  _buildLayer (layer: Layer, depthPos: number, programs: Set<string>) {
+    const { type } = layer
+    // TODO: if bad layer, remove
+    programs.add(layer.type)
+    // add depth position
+    layer.depthPos = depthPos
+    // order layers for GPU
+    orderLayer(layer)
+    // if webgl2 or greater, we build layerCode
+    if (this.glType > 1) {
+      const code = []
+      // LAYOUTS
+      for (const key in layer.layout) {
+        if (key === 'cap' || key === 'join') continue
+        code.push(...encodeLayerAttribute(layer.layout[key]))
+      }
+      // PAINTS
+      for (const key in layer.paint) {
+        code.push(...encodeLayerAttribute(layer.paint[key], layer.lch))
+      }
+      if (code.length) layer.code = new Float32Array(code)
+      if (layer.iconPaint) layer.iconCode = new Float32Array(encodeLayerAttribute(layer.iconPaint['icon-size'], layer.lch))
+    } else if (this.glType === 1 && layer.source === 'mask') {
+      for (const l in layer.layout) layer.layout[l] = parseFeatureFunction(layer.layout[l], l)
+      for (const p in layer.paint) layer.paint[p] = parseFeatureFunction(layer.paint[p], p)
+    }
+    // build color ramp image if applicable
+    if (type === 'heatmap' && layer.colorRamp) {
+      layer.colorRamp = this.map.painter.context.buildTexture(buildColorRamp(layer.colorRamp), 256, 1)
+    }
+  }
+
+  addLayer (layer: Layer, nameIndex?: number | string, tileRequests: Array<TileRequest>) {
+    const { id, painter } = this.map
+    const programs = new Set()
+    // prebuild & convert nameIndex to index
+    this._prebuildLayer(layer, index)
+    const index = this._findLayerIndex(nameIndex)
+    // let the workers know
+    if (this.webworker) { // $FlowIgnore
+      postMessage({ mapID: this.map.id, type: 'addLayer', layer, index, tileRequests })
+    } else {
+      window.S2WorkerPool.addLayer(this.map.id, layer, index, tileRequest)
+    }
+    // insert layer into layers, updating positions of other layers as necessary
+    const { layers } = this
+    layers.splice(index, 0, layer)
+    for (let i = index + 1, ll = layers.length; i < ll; i++) {
+      const layer = layers[i]
+      layer.layerIndex++
+      layer.depthPos++
+    }
+    // build layer
+    this._buildLayer(layer, index + 1, programs)
+    // tell the painter that we might be using a new program
+    painter.buildPrograms(programs)
+  }
+
+  removeLayer (nameIndex?: number | string): number {
+    // grab the index
+    const index = this._findLayerIndex(nameIndex)
+    // let the workers know
+    if (this.webworker) { // $FlowIgnore
+      postMessage({ mapID: this.map.id, type: 'removeLayer', index })
+    } else {
+      window.S2WorkerPool.removeLayer(this.map.id, index)
+    }
+    // remove index from layers and update layerIndex & depthPos
+    const { layers } = this
+    layers.splice(index, 1)
+    for (let i = index, ll = layers.length; i < ll; i++) {
+      const layer = layers[i]
+      layer.layerIndex--
+      layer.depthPos--
+    }
+
+    return index
+  }
+
+  reorderLayers (layerChanges: { [string | number]: number }) {
+    const { layers } = this
+    const newLayers = []
+    // move the layer to its new position
+    for (const [from, to] of Object.entries(entries)) {
+      const layer = layers[+from]
+      layer.layerIndex = to
+      layer.depthPos = to + 1
+      newLayers[to] = layer
+    }
+    // store the new layers
+    this.layers = newLayers
+    // let the webworkers know about the reorder
+    if (this.webworker) { // $FlowIgnore
+      postMessage({ mapID: this.map.id, type: 'reorderLayers', layerChanges })
+    } else {
+      window.S2WorkerPool.reorderLayers(this.map.id, layerChanges)
+    }
+  }
+
   requestTiles (tiles: Array<Tile>) {
     if (!tiles) return
     const tileRequests: Array<TileRequest> = []
     tiles.forEach(tile => {
       // grab request values
-      const { id, face, zoom, x, y, bbox, division, size } = tile
+      const { id, face, i, j, zoom, bbox, division, size } = tile
       // build tileRequests
-      tileRequests.push({ hash: id, face, zoom, x, y, bbox, division, size })
+      tileRequests.push({ id, face, i, j, zoom, bbox, division, size })
     })
     // send the tiles over to the worker pool manager to split the workload
     if (this.webworker) { // $FlowIgnore
@@ -224,5 +294,21 @@ export default class Style {
     } else {
       window.S2WorkerPool.tileRequest(this.map.id, tileRequests)
     }
+  }
+
+  _findLayerIndex (nameIndex: number | string) {
+    const length = this.layers.length
+    if (typeof nameIndex === 'number') {
+      return nameIndex
+    } else if (typeof nameIndex === 'string') {
+      for (let i = 0; i < length; i++) {
+        const layer = this.layers[i]
+        if (layer.name === nameIndex) {
+          return i
+        }
+      }
+    }
+
+    return length
   }
 }

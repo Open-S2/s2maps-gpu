@@ -10,8 +10,8 @@ type Sections = Array< Array<any> >
 
 export default function clip (features: Array<FeatureVector>, tile: Tile, s2json: S2JsonVT): Sections {
   const sections: Sections = [[], [], [], []] // [bl, br, tl, tr]
-  const { x, y, z, minS, minT, maxS, maxT } = tile
-  const scale = 1 << z
+  const { i, j, zoom, minS, minT, maxS, maxT } = tile
+  const scale = 1 << zoom
   const k1 = 0.5 / s2json.extent
   const k2 = 0.5 - k1
   const k3 = 0.5 + k1
@@ -22,21 +22,21 @@ export default function clip (features: Array<FeatureVector>, tile: Tile, s2json
   let tr = null
   let br = null
 
-  let left = _clip(features, scale, x - k1, x + k3, 0, minS, maxS, s2json)
-  let right = _clip(features, scale, x + k2, x + k4, 0, minS, maxS, s2json)
+  let left = _clip(features, scale, i - k1, i + k3, 0, minS, maxS, s2json)
+  let right = _clip(features, scale, i + k2, i + k4, 0, minS, maxS, s2json)
   features = null
 
   if (left) {
-    bl = _clip(left, scale, y - k1, y + k3, 1, minT, maxT, s2json)
-    tl = _clip(left, scale, y + k2, y + k4, 1, minT, maxT, s2json)
+    bl = _clip(left, scale, j - k1, j + k3, 1, minT, maxT, s2json)
+    tl = _clip(left, scale, j + k2, j + k4, 1, minT, maxT, s2json)
     if (bl) sections[0].push(...bl)
     if (tl) sections[2].push(...tl)
     left = null
   }
 
   if (right) {
-    br = _clip(right, scale, y - k1, y + k3, 1, minT, maxT, s2json)
-    tr = _clip(right, scale, y + k2, y + k4, 1, minT, maxT, s2json)
+    br = _clip(right, scale, j - k1, j + k3, 1, minT, maxT, s2json)
+    tr = _clip(right, scale, j + k2, j + k4, 1, minT, maxT, s2json)
     if (br) sections[1].push(...br)
     if (tr) sections[3].push(...tr)
     right = null

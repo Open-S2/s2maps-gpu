@@ -4,199 +4,173 @@ import {
   quadraticSTtoUV as STtoUV,
   quadraticUVtoST as UVtoST,
   STtoIJ,
+  IJtoST,
   faceUVtoXYZ,
-  faceXYZtoUV,
+  XYZtoFaceUV,
   faceUVtoXYZGL,
   lonLatToXYZ,
+  lonLatToXYZGL,
   xyzToLonLat
 } from './'
-import S2LonLat from './S2LonLat'
-import { doubleToFloats } from './util'
+import * as S2CellID from './S2CellID'
+import { EARTH_RADIUS_EQUATORIAL, EARTH_RADIUS_POLAR } from './util'
 
 /** TYPES **/
 import type { Face } from './'
 
-export default class S2Point {
-  x: number
-  y: number
-  z: number
-  constructor (x: number, y: number, z: number) {
-    this.x = x
-    this.y = y
-    this.z = z
+export type XYZ = [number, number, number]
+
+export function fromLonLat (lon: number, lat: number): XYZ {
+  return lonLatToXYZ(lon, lat)
+}
+
+export function fromLonLatGL (lon: number, lat: number): XYZ {
+  return lonLatToXYZGL(lon, lat)
+}
+
+export function fromUV (face: Face, u: number, v: number): XYZ {
+  return faceUVtoXYZ(face, u, v)
+}
+
+export function fromST (face: Face, s: number, t: number): XYZ {
+  const [u, v] = [STtoUV(s), STtoUV(t)]
+
+  return fromUV(face, u, v)
+}
+
+export function fromIJ (face: Face, i: number, j: number): XYZ {
+  const [s, t] = [IJtoST(i), IJtoST(j)]
+
+  return fromST(face, i, j)
+}
+
+export function fromS2CellID (id: BigInt): XYZ {
+  const [face, u, v] = S2CellID.toUV(id)
+
+  return fromUV(face, u, v)
+}
+
+export function fromUVGL (face: Face, u: number, v: number): XYZ {
+  return faceUVtoXYZGL(face, u, v)
+}
+
+export function fromSTGL (face: Face, s: number, t: number) {
+  const [u, v] = [STtoUV(s), STtoUV(t)]
+
+  return fromUVGL(face, u, v)
+}
+
+export function toUV (xyz: XYZ): [Face, number, number] {
+  return XYZtoFaceUV(xyz)
+}
+
+export function toST (xyz: XYZ): [Face, number, number] {
+  const [face, u, v] = toUV(xyz)
+
+  return [face, UVtoST(u), UVtoST(v)]
+}
+
+export function toIJ (xyz: XYZ, level?: number): [Face, number, number] {
+  const [face, s, t] = toST(xyz)
+  let i = STtoIJ(s)
+  let j = STtoIJ(t)
+
+  if (level) {
+    i = i >> (30 - level)
+    j = j >> (30 - level)
   }
 
-  clone () {
-    return new S2Point(this.x, this.y, this.z)
-  }
+  return [face, i, j]
+}
 
-  toFloats (): [[number, number, number], [number, number, number]] { // [highVec3, lowVec3]
-    const floatsX = doubleToFloats(this.x)
-    const floatsY = doubleToFloats(this.y)
-    const floatsZ = doubleToFloats(this.z)
+export function toLonLat (xyz: XYZ): [number, number] {
+  return xyzToLonLat(xyz)
+}
 
-    return [floatsX[0], floatsY[0], floatsZ[0], floatsX[1], floatsY[1], floatsZ[1]]
-  }
+export function toS2CellID (xyz: XYZ): BigInt {
+  return S2CellID.fromS2Point(face, i, j)
+}
 
-  toArray (): [number, number, number] {
-    return [this.x, this.y, this.z]
-  }
+export function add (xyz: XYZ, n: number) {
+  xyz[0] += n
+  xyz[1] += n
+  xyz[2] += n
 
-  add (n: number) {
-    this.x += n
-    this.y += n
-    this.z += n
+  return xyz
+}
 
-    return this
-  }
+export function addScalar (xyz: XYZ, point: XYZ) {
+  xyz[0] += point[0]
+  xyz[1] += point[1]
+  xyz[2] += point[2]
 
-  addScalar (arr: [number, number, number]) {
-    this.x += arr[0]
-    this.y += arr[1]
-    this.z += arr[2]
+  return xyz
+}
 
-    return this
-  }
+export function sub (xyz: XYZ, n: number) {
+  xyz[0] -= n
+  xyz[1] -= n
+  xyz[2] -= n
 
-  addScalarS2 (point: S2Point) {
-    this.x += point.x
-    this.y += point.y
-    this.z += point.z
+  return xyz
+}
 
-    return this
-  }
+export function subScalar (xyz: XYZ, point: XYZ) {
+  xyz[0] -= point[0]
+  xyz[1] -= point[1]
+  xyz[2] -= point[2]
 
-  sub (n: number) {
-    this.x -= n
-    this.y -= n
-    this.z -= n
+  return xyz
+}
 
-    return this
-  }
+export function mul (xyz: XYZ, n: number) {
+  xyz[0] *= n
+  xyz[1] *= n
+  xyz[2] *= n
 
-  subScalar (arr: [number, number, number]) {
-    this.x -= arr[0]
-    this.y -= arr[1]
-    this.z -= arr[2]
+  return xyz
+}
 
-    return this
-  }
+export function mulScalar (xyz: XYZ, point: XYZ) {
+  xyz[0] *= point[0]
+  xyz[1] *= point[1]
+  xyz[2] *= point[2]
 
-  subScalarS2 (point: S2Point) {
-    this.x -= point.x
-    this.y -= point.y
-    this.z -= point.z
+  return xyz
+}
 
-    return this
-  }
+export function normalize (xyz: XYZ) {
+  const [x, y, z] = xyz
+  const len = length(xyz)
+  xyz[0] /= len
+  xyz[1] /= len
+  xyz[2] /= len
 
-  mul (n: number) {
-    this.x *= n
-    this.y *= n
-    this.z *= n
+  return xyz
+}
 
-    return this
-  }
+export function length (xyz: XYZ) {
+  const [x, y, z] = xyz
+  return Math.sqrt(x * x + y * y + z * z)
+}
 
-  mulArr (arr: [number, number, number]) {
-    this.x *= arr[0]
-    this.y *= arr[1]
-    this.z *= arr[2]
+export function distanceEarth (a: XYZ, b: XYZ) {
+  a.x *= EARTH_RADIUS_EQUATORIAL
+  b.x *= EARTH_RADIUS_EQUATORIAL
+  a.y *= EARTH_RADIUS_EQUATORIAL
+  b.y *= EARTH_RADIUS_EQUATORIAL
+  a.z *= EARTH_RADIUS_POLAR
+  b.z *= EARTH_RADIUS_POLAR
 
-    return this
-  }
+  return distance(a, b)
+}
 
-  normalize () {
-    const length = this.length()
-    this.x /= length
-    this.y /= length
-    this.z /= length
+export function distance (a: XYZ, b: XYZ) {
+  const { sqrt, pow, abs } = Math
 
-    return this
-  }
+  return Math.sqrt(pow(abs(b.x - a.x), 2) + pow(abs(b.y - a.y), 2) + pow(abs(b.z - a.z), 2))
+}
 
-  length () {
-    return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z)
-  }
-
-  toUV (): [Face, number, number] {
-    // get the face from the x, y, z
-    const face: Face = this.getFace()
-    let [u, v] = faceXYZtoUV(face, this.x, this.y, this.z)
-
-    return [face, u, v]
-  }
-
-  toST (): [Face, number, number] {
-    const [face, u, v] = this.toUV()
-
-    return [face, UVtoST(u), UVtoST(v)]
-  }
-
-  toIJ (): [Face, number, number] {
-    const [face, s, t] = this.toST()
-
-    return [face, STtoIJ(s), STtoIJ(t)]
-  }
-
-  toLonLat (): [number, number] {
-    return xyzToLonLat(this.x, this.y, this.z)
-  }
-
-  getFace (): Face {
-    let face = this._largestAbsComponent()
-    const temp = [this.x, this.y, this.z]
-    if (temp[face] < 0) face += 3
-    // $FlowIgnoreLine
-    return face
-  }
-
-  _largestAbsComponent (): Face {
-    let temp = [Math.abs(this.x), Math.abs(this.y), Math.abs(this.z)]
-
-    return (temp[0] > temp[1])
-      ? (temp[0] > temp[2]) ? 0 : 2
-      : (temp[1] > temp[2]) ? 1 : 2
-  }
-
-  static fromS2LonLat (lonlat: S2LonLat): S2Point {
-    // convert to x, y, z
-    const [x, y, z] = lonLatToXYZ(lonlat.lon, lonlat.lat)
-    // create the point
-    return new S2Point(x, y, z)
-  }
-
-  static fromLonLat (lon: number, lat: number): S2Point {
-    // convert to x, y, z
-    const [x, y, z] = lonLatToXYZ(lon, lat)
-    // create the point
-    return new S2Point(x, y, z)
-  }
-
-  static fromLonLatGL (lon: number, lat: number): S2Point {
-    // convert to x, y, z
-    const [x, y, z] = lonLatToXYZ(lon, lat)
-    // create the point
-    return new S2Point(y, z, x)
-  }
-
-  static fromUV (face: Face, u: number, v: number): S2Point {
-    return faceUVtoXYZ(face, u, v)
-  }
-
-  static fromST (face: Face, s: number, t: number): S2Point {
-    const [u, v] = [STtoUV(s), STtoUV(t)]
-
-    return this.fromUV(face, u, v)
-  }
-
-  static fromUVGL (face: Face, u: number, v: number): S2Point {
-    return faceUVtoXYZGL(face, u, v)
-  }
-
-  static fromSTGL (face: Face, s: number, t: number) {
-    const [u, v] = [STtoUV(s), STtoUV(t)]
-
-    return this.fromUVGL(face, u, v)
-  }
+export function getFace (xyz: XYZ) {
+  return XYZtoFace(xyz)
 }

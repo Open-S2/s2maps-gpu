@@ -5,9 +5,9 @@ import type { Tile } from './tile'
 // uv-projected space into (extent x extent) tile space.
 export default function transformTile (tile: Tile, extent: number): Tile {
   if (!tile.transformed) {
-    const zoom = 1 << tile.z
-    const tx = tile.x
-    const ty = tile.y
+    const zoom = 1 << tile.zoom
+    const ti = tile.i
+    const tj = tile.j
 
     for (const layer in tile.layers) {
       for (const feature of tile.layers[layer].features) {
@@ -17,7 +17,7 @@ export default function transformTile (tile: Tile, extent: number): Tile {
 
         if (type === 1) { // point or MultiPoint
           for (let j = 0; j < geometry.length; j += 2) {
-            newGeometry.push(transformPoint(geometry[j], geometry[j + 1], extent, zoom, tx, ty))
+            newGeometry.push(transformPoint(geometry[j], geometry[j + 1], extent, zoom, ti, tj))
           }
         } else if (type === 4) { // MultiPolygon
           for (let p = 0, gl = geometry.length; p < gl; p++) {
@@ -26,7 +26,7 @@ export default function transformTile (tile: Tile, extent: number): Tile {
             for (let j = 0, pl = polygon.length; j < pl; j++) {
               const ring = []
               for (let k = 0; k < polygon[j].length; k += 2) {
-                ring.push(transformPoint(polygon[j][k], polygon[j][k + 1], extent, zoom, tx, ty))
+                ring.push(transformPoint(polygon[j][k], polygon[j][k + 1], extent, zoom, ti, tj))
               }
               if (j === 0 || (j > 0 && ring.length >= 4)) newPoly.push(ring)
             }
@@ -36,7 +36,7 @@ export default function transformTile (tile: Tile, extent: number): Tile {
           for (let j = 0, gl = geometry.length; j < gl; j++) {
             const ring = []
             for (let k = 0, rl = geometry[j].length; k < rl; k += 2) {
-              ring.push(transformPoint(geometry[j][k], geometry[j][k + 1], extent, zoom, tx, ty))
+              ring.push(transformPoint(geometry[j][k], geometry[j][k + 1], extent, zoom, ti, tj))
             }
             newGeometry.push(ring)
           }
@@ -50,14 +50,14 @@ export default function transformTile (tile: Tile, extent: number): Tile {
     tile.transformed = true
   }
 
-  const { face, z, x, y, layers } = tile
-  return { face, zoom: z, x, y, layers, extent }
+  const { zoom, i, j, layers } = tile
+  return { zoom, i, j, layers, extent }
 }
 
-function transformPoint (x: number, y: number, extent: number, zoom: number,
-  tx: number, ty: number): [number, number] {
+function transformPoint (i: number, j: number, extent: number, zoom: number,
+  ti: number, tj: number): [number, number] {
   return [
-    Math.round(extent * (x * zoom - tx)),
-    Math.round(extent * (y * zoom - ty))
+    Math.round(extent * (i * zoom - ti)),
+    Math.round(extent * (j * zoom - tj))
   ]
 }

@@ -1,5 +1,6 @@
 // @flow
 /** MODULES **/
+import { fromFace, isFace, level, face as getFace, parent as parentID, childrenIJ, contains } from '../../../projection/S2CellID'
 import convert from './convert' // GeoJSON conversion and preprocessing
 import clip from './clip'
 import transformTile from './transform' // coordinate transformation
@@ -43,7 +44,7 @@ export type FeatureCollection = {
 }
 
 export type Tiles = {
-  [number]: Tile
+  [BigInt]: Tile
 }
 
 export default class S2JsonVT {
@@ -73,78 +74,60 @@ export default class S2JsonVT {
     for (let i = 0; i < 6; i++) {
       if (faces[i].length) {
         this.faces.add(i)
-        this.splitTile(faces[i], i, 0, 0, 0)
+        this.splitTile(faces[i], fromFace(i))
       }
     }
   }
 
-  splitTile (features: Array<FeatureVector>, face: Face, z: number, x: number,
-    y: number, cz?: number, cx?: number, cy?: number) {
-    const stack: Array<any> = [features, z, x, y]
+  splitTile (features: Array<FeatureVector>, id: BigInt, endID?: BigInt, endZoom?: number) {
+    const stack: Array<any> = [features, id]
     // avoid recxrsion by using a processing queue
     while (stack.length) {
-      y = stack.pop()
-      x = stack.pop()
-      z = stack.pop()
+      const id = stack.pop()
       features = stack.pop()
       // prep variables
-      const id = this.hash(face, z, x, y)
       let tile = this.tiles[id]
       // if the tile we need does not exist, we create it
-      if (!tile) tile = this.tiles[id] = createTile(features, face, z, x, y, this)
-      // stop tiling if it's the first-pass tiling, and we either reached max zoom or the tile is too simple
-      if (!cz && (z === this.indexMaxZoom || tile.numPoints <= this.indexMaxPoints)) {
-        continue
-      } else if (z === this.maxZoom) { // stop tiling if we reached base zoom
-        continue
-      } else if (cz) {
-        if (z === cz) continue // stop tiling if we reach our target tile zoom
-        const m = 1 << (cz - z) // $FlowIgnore
-        if (x !== Math.floor(cx / m) || y !== Math.floor(cy / m)) continue // stop tiling if it's not an ancestor of the target tile
-      }
+      if (!tile) tile = this.tiles[id] = createTile(features, id, this)
+      // 1: stop tiling if it's the first-pass tiling, and we either reached max zoom or the tile is too simple
+      // 2: getTile splitTile; stop at currently needed maxzoom OR current tile does not include child
+      // 3: OR stop tiling if we reached base zoom
+      if (
+        (!endID && (tile.zoom === this.indexMaxZoom || tile.numPoints <= this.indexMaxPoints)) || // 1
+        (endID && (tile.zoom === endZoom || !contains(id, endID))) || // 2
+        tile.zoom === this.maxZoom // 3
+      ) continue
       // if we slice further down, no need to keep source geometry
       tile.source = null
       // dummy check: no features to clip
       if (features.length === 0) continue
-      // acquire the new four tiles
+      // acquire the new four tiles and four children
       const [bl, br, tl, tr] = clip(features, tile, this)
+      const [blID, brID, tlID, trID] = childrenIJ(getFace(id), tile.zoom, tile.i, tile.j)
       // push the new features to the stack
-      stack.push(bl, z + 1, x * 2, y * 2)
-      stack.push(tl, z + 1, x * 2, y * 2 + 1)
-      stack.push(br, z + 1, x * 2 + 1, y * 2)
-      stack.push(tr, z + 1, x * 2 + 1, y * 2 + 1)
+      stack.push(bl, blID)
+      stack.push(br, brID)
+      stack.push(tl, tlID)
+      stack.push(tr, trID)
     }
   }
 
-  getTile (face: Face, z: number, x: number, y: number): Tile {
-    if (z < 0 || z > 24) return null
-
-    const id = this.hash(face, z, x, y)
+  getTile (id: BigInt): Tile {
+    const zoom = level(id)
+    if (zoom < 0 || zoom > 24 || !this.faces.has(getFace(id))) return null
     if (this.tiles[id]) return transformTile(this.tiles[id], this.extent)
 
-    let z0 = z
-    let x0 = x
-    let y0 = y
+    let pID = id
     let parent
-
-    while (!parent && z0 > 0) {
-      z0--
-      x0 = x0 >> 1
-      y0 = y0 >> 1
-      parent = this.tiles[this.hash(face, z0, x0, y0)]
+    while (!parent && !isFace(pID)) {
+      pID = parentID(pID)
+      parent = this.tiles[pID]
     }
 
     if (!parent || !parent.source) return null
 
-    this.splitTile(parent.source, face, z0, x0, y0, z, x, y)
+    this.splitTile(parent.source, pID, id, zoom)
 
     return this.tiles[id] ? transformTile(this.tiles[id], this.extent) : null
-  }
-
-  hash (f: Face, z: number, x: number, y: number): number {
-    const tileLength = (1 << z)
-    const tileSize = tileLength * tileLength
-    const xyz = tileLength * (tileLength + x) + y
-    return f * (tileSize) + tileSize + xyz
   }
 }

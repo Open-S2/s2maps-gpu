@@ -1,110 +1,103 @@
 // @flow
-import * as mat4 from '../../../util/mat4'
-import { S2Point, tileXYFromSTZoom, bboxST, updateFace, tileHash } from '../../../projection'
+import { project } from '../../../util/mat4'
+import { bboxST, neighborsIJ } from '../../../projection'
+import { mul, normalize, fromSTGL, toIJ, fromLonLat } from '../../../projection/S2Point'
+import { parent, fromFace, fromIJ, neighbors } from '../../../projection/S2CellID'
 
 import type { TileDefinitions } from './'
 
+const ZERO_TILES = [fromFace(0), fromFace(1), fromFace(2), fromFace(3), fromFace(4), fromFace(5)]
+
 export default function getTilesInView (zoom: number, matrix: Float32Array,
   lon: number, lat: number, radius?: number = 1): TileDefinitions {
-  if (zoom < 1) return [[0, 0, 0, 0, 2], [1, 0, 0, 0, 3], [2, 0, 0, 0, 4], [3, 0, 0, 0, 5], [4, 0, 0, 0, 6], [5, 0, 0, 0, 7]]
-  // if (true) return [[4, 0, 0, 0, 6]]
-  const tiles = []
-  const checkList = []
-  const checkedTiles = new Set()
-  const zoomLevel = zoom << 0
-  const tileSize = 1 << zoomLevel
+  if (zoom < 1) return ZERO_TILES
+  const tiles: TileDefinitions = []
+  const checkList: Array<BigInt> = []
+  const checkedTiles: Set<string> = new Set()
+  zoom = zoom << 0 // move to whole number
+  let stBbox, tLProj, tRProj, bLProj, bRProj
 
-  // grab the first tile while we prep
-  let point = S2Point.fromLonLat(lon, lat)
-  let [face, s, t] = point.toST()
-  if (s < 0 || s === 1 || t < 0 || t === 1) [face, s, t] = updateFace(face, s, t)
-  let [x, y] = tileXYFromSTZoom(s, t, zoomLevel)
-  let stBbox = bboxST(x, y, zoomLevel)
-  let hash = tileHash(face, zoomLevel, x, y)
-  checkedTiles.add(hash)
-  tiles.push([face, zoomLevel, x, y, hash])
-  // add the surounding tiles
-  addSuroundingTiles(face, zoomLevel, x, y, tileSize, checkList, checkedTiles)
+  // grab the first tile and prep neighbors for checks
+  const [face, i, j] = toIJ(fromLonLat(lon, lat), zoom)
+  tiles.push(parent(fromIJ(face, i, j, zoom), zoom))
+  checkedTiles.add(`${face}-${i}-${j}`)
+  addNeighbors(face, zoom, i, j, checkedTiles, checkList)
+  const zero = project(matrix, [0, 0, 0])[2]
 
   do {
-    // from current face, zoomLevel, x, y: grab the surrounding 8 tiles, refine to actual face boundaries, than adding to checked as we go
-    [face, x, y, hash] = checkList.pop()
-    // grab the bbox from the tile
-    stBbox = bboxST(x, y, zoomLevel)
+    // grab a tile to check and get its face and bounds
+    const [face, i, j] = checkList.pop()
+    stBbox = bboxST(i, j, zoom)
     // grab the four points from the bbox and project them
-    const topLeft = S2Point.fromSTGL(face, stBbox[0], stBbox[3])
-    topLeft.normalize()
-    topLeft.mul(radius)
-    const topLeftProjected = mat4.project(matrix, [topLeft.x, topLeft.y, topLeft.z])
-    const topRight = S2Point.fromSTGL(face, stBbox[2], stBbox[3])
-    topRight.normalize()
-    topRight.mul(radius)
-    const topRightProjected = mat4.project(matrix, [topRight.x, topRight.y, topRight.z])
-    const bottomLeft = S2Point.fromSTGL(face, stBbox[0], stBbox[1])
-    bottomLeft.normalize()
-    bottomLeft.mul(radius)
-    const bottomLeftProjected = mat4.project(matrix, [bottomLeft.x, bottomLeft.y, bottomLeft.z])
-    const bottomRight = S2Point.fromSTGL(face, stBbox[2], stBbox[1])
-    bottomRight.normalize()
-    bottomRight.mul(radius)
-    const bottomRightProjected = mat4.project(matrix, [bottomRight.x, bottomRight.y, bottomRight.z])
+    tLProj = project(matrix, mul(normalize(fromSTGL(face, stBbox[0], stBbox[3])), radius))
+    tRProj = project(matrix, mul(normalize(fromSTGL(face, stBbox[2], stBbox[3])), radius))
+    bLProj = project(matrix, mul(normalize(fromSTGL(face, stBbox[0], stBbox[1])), radius))
+    bRProj = project(matrix, mul(normalize(fromSTGL(face, stBbox[2], stBbox[1])), radius))
     // check if any of the 4 edge points or lines interact with a -1 to 1 x and y projection plane
     // if tile is part of the view, we add to tiles and tileSet and add all surounding tiles
     if (
-      (topLeftProjected[0] <= 1 && topLeftProjected[0] >= -1 && topLeftProjected[1] <= 1 && topLeftProjected[1] >= -1) ||
-      (topRightProjected[0] <= 1 && topRightProjected[0] >= -1 && topRightProjected[1] <= 1 && topRightProjected[1] >= -1) ||
-      (bottomLeftProjected[0] <= 1 && bottomLeftProjected[0] >= -1 && bottomLeftProjected[1] <= 1 && bottomLeftProjected[1] >= -1) ||
-      (bottomRightProjected[0] <= 1 && bottomRightProjected[0] >= -1 && bottomRightProjected[1] <= 1 && bottomRightProjected[1] >= -1) ||
-      boxIntersect(topLeftProjected[0], topLeftProjected[1], bottomLeftProjected[0], bottomLeftProjected[1]) || // leftLine
-      boxIntersect(bottomRightProjected[0], bottomRightProjected[1], topRightProjected[0], topRightProjected[1]) || // rightLine
-      boxIntersect(bottomLeftProjected[0], bottomLeftProjected[1], bottomRightProjected[0], bottomRightProjected[1]) || // bottomLine
-      boxIntersect(topRightProjected[0], topRightProjected[1], topLeftProjected[0], topLeftProjected[1]) // topLine
+      lessThanZero(zero, bLProj[2], bRProj[2], tLProj[2], tRProj[2]) &&
+      (
+        pointBoundaries(bLProj, bRProj, tLProj, tRProj) ||
+        boxIntersects(bLProj, bRProj, tLProj, tRProj)
+      )
     ) {
-      tiles.push([face, zoomLevel, x, y, hash])
-      addSuroundingTiles(face, zoomLevel, x, y, tileSize, checkList, checkedTiles)
+      tiles.push(parent(fromIJ(face, i, j, zoom), zoom))
+      addNeighbors(face, zoom, i, j, checkedTiles, checkList)
     }
   } while (checkList.length)
 
-  // console.log('tiles', tiles)
-  // console.log('zoom', zoomLevel)
   // we sort by id to avoid text filtering to awkwardly swap back and forth
-  return tiles.sort((a, b) => { return a[4] - b[4] })
+  return tiles.sort((a, b) => {
+    if (a > b) return 1
+    else if (a < b) return -1
+    else return 0
+  })
 }
 
-// check all 8 tiles around the current tile
-function addSuroundingTiles (face, zoomLevel, x, y, tileSize, checkList, checkedTiles) {
-  findTile(face, zoomLevel, x - 1, y + 1, tileSize, checkList, checkedTiles) // topLeft
-  findTile(face, zoomLevel, x, y + 1, tileSize, checkList, checkedTiles) // top
-  findTile(face, zoomLevel, x + 1, y + 1, tileSize, checkList, checkedTiles) // topRight
-  findTile(face, zoomLevel, x + 1, y, tileSize, checkList, checkedTiles) // right
-  findTile(face, zoomLevel, x + 1, y - 1, tileSize, checkList, checkedTiles) // bottomRight
-  findTile(face, zoomLevel, x, y - 1, tileSize, checkList, checkedTiles) // bottom
-  findTile(face, zoomLevel, x - 1, y - 1, tileSize, checkList, checkedTiles) // bottomLeft
-  findTile(face, zoomLevel, x - 1, y, tileSize, checkList, checkedTiles) // left
-}
-
-// first check the face, x, y are correct.. update them if out of bounds
-// if the we have not checked the tile yet, we add it to checked tiles and the checkList
-function findTile (face, zoom, x, y, tileSize, checkList, checkedTiles) {
-  while (x < 0 || x === tileSize || y < 0 || y === tileSize) [face, x, y] = updateFace(face, x, y, tileSize)
-  const hash = tileHash(face, zoom, x, y)
-  if (!checkedTiles.has(hash)) {
-    checkedTiles.add(hash)
-    checkList.push([face, x, y, hash])
+function addNeighbors (face: Face, zoom: number, i: number, j: number,
+  checkedTiles: Set<BigInt>, checkList: Array<BigInt>) {
+  // add the surounding tiles we have not checked
+  for (let [nFace, nI, nJ] of neighborsIJ(face, i, j, zoom)) {
+    const fij = `${nFace}-${nI}-${nJ}`
+    if (!checkedTiles.has(fij)) {
+      checkedTiles.add(fij)
+      checkList.push([nFace, nI, nJ])
+    }
   }
 }
 
-function boxIntersect (x1, y1, x2, y2) {
+function lessThanZero (zero: number, bl: number, br: number, tl: number, tr: number): boolean {
+  if (bl < zero || br < zero || tl < zero || tr < zero) return true
+  return false
+}
+
+function pointBoundaries (bl: XYZ, br: XYZ, tl: XYZ, tr: XYZ): boolean {
+  return (tl[0] <= 1 && tl[0] >= -1 && tl[1] <= 1 && tl[1] >= -1) ||
+    (tr[0] <= 1 && tr[0] >= -1 && tr[1] <= 1 && tr[1] >= -1) ||
+    (bl[0] <= 1 && bl[0] >= -1 && bl[1] <= 1 && bl[1] >= -1) ||
+    (br[0] <= 1 && br[0] >= -1 && br[1] <= 1 && br[1] >= -1)
+}
+
+function boxIntersects (bl: XYZ, br: XYZ, tl: XYZ, tr: XYZ): boolean {
+  return boxIntersect(tl, bl) || // leftLine
+    boxIntersect(br, tr) || // rightLine
+    boxIntersect(bl, br) || // bottomLine
+    boxIntersect(tr, tl) // topLine
+}
+
+function boxIntersect (p1: XYZ, p2: XYZ): boolean {
   if (
-    lineIntersect(x1, y1, x2, y2, -1, -1, -1, 1) || // leftLineBox
-    lineIntersect(x1, y1, x2, y2, 1, -1, 1, 1) || // rightLineBox
-    lineIntersect(x1, y1, x2, y2, -1, -1, 1, -1) || // bottomLineBox
-    lineIntersect(x1, y1, x2, y2, -1, 1, 1, 1) // topLineBox
+    lineIntersect(p1[0], p1[1], p2[0], p2[1], -1, -1, -1, 1) || // leftLineBox
+    lineIntersect(p1[0], p1[1], p2[0], p2[1], 1, -1, 1, 1) || // rightLineBox
+    lineIntersect(p1[0], p1[1], p2[0], p2[1], -1, -1, 1, -1) || // bottomLineBox
+    lineIntersect(p1[0], p1[1], p2[0], p2[1], -1, 1, 1, 1) // topLineBox
   ) return true
   return false
 }
 
-function lineIntersect (x1, y1, x2, y2, x3, y3, x4, y4) {
+function lineIntersect (x1: number, y1: number, x2: number, y2: number,
+  x3: number, y3: number, x4: number, y4: number): boolean {
   const denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)
   if (!denom) return false
   const lambda = ((y4 - y3) * (x4 - x1) + (x3 - x4) * (y4 - y1)) / denom

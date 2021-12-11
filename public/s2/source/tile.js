@@ -4,10 +4,13 @@
 import { Context } from '../gl/contexts'
 import buildSource from './buildSource'
 import * as mat4 from '../util/mat4'
-import { S2Point, bboxST } from '../projection'
+import { bboxST } from '../projection'
+import { fromSTGL, normalize, mul } from '../projection/S2Point'
+import { toIJ, level, boundsST } from '../projection/S2CellID'
 
 import type { Face, Layer, Mask } from '../style/styleSpec'
 import type { ProgramType } from '../gl/programs/program'
+import type { XYZ } from '../projection/S2Point'
 
 export type VectorTileSource = {
   type: 'vector',
@@ -79,10 +82,10 @@ export type FeatureGuide = { // eslint-disable-next-line
 export type SourceData = { [string | number]: RasterTileSource | VectorTileSource | GlyphTileSource }
 
 export type Corners = {
-  topLeft: S2Point,
-  topRight: S2Point,
-  bottomLeft: S2Point,
-  bottomRight: S2Point
+  topLeft: XYZ,
+  topRight: XYZ,
+  bottomLeft: XYZ,
+  bottomRight: XYZ
 }
 
 // tiles are designed to create mask geometry and store prebuilt layer data handed off by the worker pool
@@ -90,11 +93,11 @@ export type Corners = {
 // before managing sources asyncronously, a tile needs to synchronously build spherical background
 // data to ensure we get no awkward visuals.
 export default class Tile {
-  id: number
+  id: BigInt
   face: Face
+  i: number
+  j: number
   zoom: number
-  x: number
-  y: number
   size: number
   tmpMaskID: number
   bbox: [number, number, number, number]
@@ -108,16 +111,16 @@ export default class Tile {
   context: Context
   interactiveGuide: Map<number, Object> = new Map()
   rendered: boolean = false
-  constructor (context: Context, face: number, zoom: number,
-    x: number, y: number, hash: number, size?: number = 512) {
+  constructor (context: Context, id: BigInt, size?: number = 512) {
+    const zoom = this.zoom = level(id)
+    const [face, i, j] = toIJ(id, zoom)
     this.context = context
+    this.id = id
     this.face = face
-    this.zoom = zoom
-    this.x = x
-    this.y = y
-    this.id = hash
+    this.i = i
+    this.j = j
     this.size = size
-    const bbox = this.bbox = bboxST(x, y, zoom)
+    const bbox = this.bbox = bboxST(i, j, zoom)
     this.faceST = new Float32Array([face, zoom, bbox[2] - bbox[0], bbox[0], bbox[3] - bbox[1], bbox[1]])
     if (zoom >= 12) this._buildCorners()
     this._getMaskSource()
@@ -154,35 +157,35 @@ export default class Tile {
   // the glyphs will be rendered 4 or even more times. To alleviate this, we can set boundaries
   // of what points will be considered
   _buildBounds (parent: Tile) {
-    let { x, y, zoom } = this
+    let { i, j, zoom } = this
     const parentZoom = parent.zoom
     // get the scale
     const scale = 1 << (zoom - parentZoom)
-    // get x and y shift
-    let xShift = 0
-    let yShift = 0
+    // get i and j shift
+    let iShift = 0
+    let jShift = 0
     while (zoom > parentZoom) {
       const div = 1 << (zoom - parentZoom)
-      if (x % 2 !== 0) xShift += 8192 / div
-      if (y % 2 !== 0) yShift += 8192 / div
+      if (i % 2 !== 0) iShift += 8192 / div
+      if (j % 2 !== 0) jShift += 8192 / div
       // decrement
-      x = x >> 1
-      y = y >> 1
+      i = i >> 1
+      j = j >> 1
       zoom--
     }
 
     // build the bounds bbox
-    return [0 + xShift, 0 + yShift, 8192 / scale + xShift, 8192 / scale + yShift]
+    return [0 + iShift, 0 + jShift, 8192 / scale + iShift, 8192 / scale + jShift]
   }
 
   _buildCorners () {
     const { face, bbox } = this
 
     this.corners = {
-      topLeft: S2Point.fromSTGL(face, bbox[0], bbox[3]).normalize().mul(6371008.8),
-      topRight: S2Point.fromSTGL(face, bbox[2], bbox[3]).normalize().mul(6371008.8),
-      bottomLeft: S2Point.fromSTGL(face, bbox[0], bbox[1]).normalize().mul(6371008.8),
-      bottomRight: S2Point.fromSTGL(face, bbox[2], bbox[1]).normalize().mul(6371008.8)
+      topLeft: mul(normalize(fromSTGL(face, bbox[0], bbox[3])), 6371008.8),
+      topRight: mul(normalize(fromSTGL(face, bbox[2], bbox[3])), 6371008.8),
+      bottomLeft: mul(normalize(fromSTGL(face, bbox[0], bbox[1])), 6371008.8),
+      bottomRight: mul(normalize(fromSTGL(face, bbox[2], bbox[1])), 6371008.8)
     }
     // setup bottom and top
     this.bottom = new Float32Array(4)
@@ -193,15 +196,15 @@ export default class Tile {
   setScreenPositions (projection) {
     if (this.corners) {
       const { eye } = projection
-      const [eyeX, eyeY, eyeZ] = eye.map(e => e * 1000)
+      const eyeKM = eye.map(e => e * 1000)
       const matrix = projection.getMatrix('km')
       // pull out the S2Points
       const { bottomLeft, bottomRight, topLeft, topRight } = this.corners
       // project points and grab their x-y positions
-      const [blX, blY] = mat4.project(matrix, [bottomLeft.x - eyeX, bottomLeft.y - eyeY, bottomLeft.z - eyeZ])
-      const [brX, brY] = mat4.project(matrix, [bottomRight.x - eyeX, bottomRight.y - eyeY, bottomRight.z - eyeZ])
-      const [tlX, tlY] = mat4.project(matrix, [topLeft.x - eyeX, topLeft.y - eyeY, topLeft.z - eyeZ])
-      const [trX, trY] = mat4.project(matrix, [topRight.x - eyeX, topRight.y - eyeY, topRight.z - eyeZ])
+      const [blX, blY] = mat4.project(matrix, bottomLeft.map((n, i) => n - eyeKM[i]))
+      const [brX, brY] = mat4.project(matrix, bottomRight.map((n, i) => n - eyeKM[i]))
+      const [tlX, tlY] = mat4.project(matrix, topLeft.map((n, i) => n - eyeKM[i]))
+      const [trX, trY] = mat4.project(matrix, topRight.map((n, i) => n - eyeKM[i]))
       // store for eventual uniform "upload"
       this.bottom[0] = blX
       this.bottom[1] = blY
@@ -240,6 +243,23 @@ export default class Tile {
     const level = 1 << Math.max(Math.min(Math.floor(zoom / 2), 4), 0) // max 4 as its level is 16
     const division = this.division = 16 / level
     this.sourceData.mask = context.getMask(level, division)
+  }
+
+  removeLayer (index: number) {
+    // remove any references to layerIndex
+    this.features = this.features.filter(f => f.layerIndex !== index)
+    // all layerIndexes greater than index should be decremented once
+    for (const feature of this.features) {
+      feature.layerIndex--
+      feature.depthPos--
+    }
+  }
+
+  reorderLayers (layerChanges: { [string | number]: number }) {
+    for (const feature of this.features) {
+      feature.layerIndex = layerChanges[feature.layerIndex]
+      feature.depthPos = feature.layerIndex + 1
+    }
   }
 
   injectMaskLayers (layers: Array<Layer>) {
@@ -291,33 +311,29 @@ export default class Tile {
 
   injectRasterData (sourceName: string, layerIndexes: Array<number>, image: Image,
     layers: Array<Layer>) {
+    // filter parent data if applicable
+    this.featureGuide = this.featureGuide.filter(fg => fg.rasterSource !== sourceName)
     const { size } = this
     // prep the source
-    let rasterSource = this.sourceData[sourceName]
-    // prep phase (should the source not exist)
-    if (!rasterSource) {
-      rasterSource = this.sourceData[sourceName] = { type: 'raster', size, image }
-      buildSource(this.context, rasterSource)
-      // store texture information to featureGuide
-      for (const layerIndex of layerIndexes) {
-        const { depthPos } = layers[layerIndex]
-        const guide = {
-          tile: this,
-          faceST: this.faceST,
-          layerIndex,
-          depthPos,
-          source: this.sourceData.mask,
-          sourceName: 'mask',
-          subType: 'fill',
-          type: 'raster',
-          featureCode: [0],
-          texture: rasterSource.texture
-        }
-        this.featureGuide.push(guide)
-      }
+    const rasterSource = this.sourceData[sourceName] = { type: 'raster', size, image }
+    buildSource(this.context, rasterSource)
+    // store texture information to featureGuide
+    for (const layerIndex of layerIndexes) {
+      const { depthPos } = layers[layerIndex]
+      this.featureGuide.push({
+        tile: this,
+        faceST: this.faceST,
+        layerIndex,
+        depthPos,
+        source: this.sourceData.mask,
+        rasterSource: sourceName,
+        sourceName: 'mask',
+        subType: 'fill',
+        type: 'raster',
+        featureCode: [0],
+        texture: rasterSource.texture
+      })
     }
-    // Since a parent may have been injected, we need to remove any instances of the said source data.
-    this.featureGuide = this.featureGuide.filter(fg => !(layerIndexes.includes(fg.layerIndex) && fg.parent))
   }
 
   injectVectorSourceData (sourceName: string, vertexArray: Int16Array, indexArray?: Uint32Array,
@@ -430,7 +446,6 @@ export default class Tile {
       const [layerIndex, type, filterOffset, filterCount, offset, count, encodingSize] = featureGuideBuffer.slice(i, i + 7)
       i += 7
       // grab the layers type and code
-      if (!layers[layerIndex]) console.log(layerIndex, featureGuideBuffer)
       const { overdraw, depthPos, code, iconCode, lch, interactive } = layers[layerIndex]
       // create and store the featureGuide
       const feature = {

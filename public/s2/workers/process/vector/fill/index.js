@@ -8,9 +8,9 @@ import type { Layer } from '../../../../style/styleSpec'
 
 export default function processFill (mapID: string, tile: TileRequest,
   sourceName: string, features: Array<Feature>, postMessage: Function) {
-  const { division, hash } = tile
+  const { division, id } = tile
 
   for (const feature of features) preprocessFill(feature, division)
 
-  postprocessFill(mapID, `${sourceName}:fill`, hash, features, postMessage)
+  postprocessFill(mapID, `${sourceName}:fill`, id, features, postMessage)
 }

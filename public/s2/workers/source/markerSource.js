@@ -1,6 +1,7 @@
 // @flow
 /* eslint-env worker */
-import { S2Point, bboxST } from '../../projection'
+import { bboxST } from '../../projection'
+import { toST, fromLonLat } from '../../projection/S2Point'
 
 import type { Session, Point } from './'
 import type { TileRequest } from '../workerPool'
@@ -34,9 +35,9 @@ export default class MarkerSource {
       let { id, properties, lon, lat } = marker
       if (!properties) properties = {}
       // corner case: no lon, lat
-      if (!lon || !lat) continue
+      if (isNaN(lon) || isNaN(lat)) continue
       // build face, s, t
-      const [face, s, t] = S2Point.fromLonLat(lon, lat).toST()
+      const [face, s, t] = toST(fromLonLat(lon, lat))
       // if no id, let's create one
       if (!id) {
         while (this[face].has(this.idGen)) this.idGen++
@@ -60,23 +61,23 @@ export default class MarkerSource {
   }
 
   tileRequest (mapID: string, tile: TileRequest) {
-    const { face, zoom, x, y, hash } = tile
+    const { id, face, zoom, bbox, i, j } = tile
     const tileZoom = 1 << zoom
     const features = []
     // get bounds of tile
-    const [minS, minT, maxS, maxT] = bboxST(x, y, zoom)
+    const [minS, minT, maxS, maxT] = bbox
     // find all markers in st bounds
     for (const [, marker] of this[face]) {
       const { properties, geometry } = marker
       const [s, t] = geometry
       if (s >= minS && s < maxS && t >= minT && t < maxT) {
-        features.push({ type: 1, properties, geometry: [transformPoint(s, t, 8192, tileZoom, x, y)] })
+        features.push({ type: 1, properties, geometry: [transformPoint(s, t, 8192, tileZoom, i, j)] })
       }
     }
     // if markers fit within bounds, create a tile
     if (features.length) {
       // build data object
-      let data = { extent: 8192, face, zoom, x, y, layers: { default: { extent: 8192, features, length: features.length } } }
+      let data = { extent: 8192, face, zoom, i, j, layers: { default: { extent: 8192, features, length: features.length } } }
       // encode for transfer
       data = (new TextEncoder('utf-8').encode(JSON.stringify(data))).buffer
       // request a worker and post
@@ -85,7 +86,7 @@ export default class MarkerSource {
     } else { // if no data, flush
       postMessage({
         mapID,
-        tileID: hash,
+        tileID: id,
         source: '_markers',
         type: 'flush',
         fill: false,
@@ -98,10 +99,11 @@ export default class MarkerSource {
   }
 }
 
-function transformPoint (x: number, y: number, extent: number, zoom: number,
-  tx: number, ty: number): [number, number] {
+function transformPoint (i: number, j: number, extent: number, zoom: number,
+  ti: number, tj: number): [number, number] {
+  const { round } = Math
   return [
-    Math.round(extent * (x * zoom - tx)),
-    Math.round(extent * (y * zoom - ty))
+    round(extent * (i * zoom - ti)),
+    round(extent * (j * zoom - tj))
   ]
 }

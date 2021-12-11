@@ -2,9 +2,8 @@
 	import { onMount } from 'svelte'
 
 	let container
-
 	// create access token
-	const accessToken = 'eyJ1IjoidGVzdHVzZXIiLCJpIjoiTFZwaWFSWUlyRnFKbndRTDlpR3RYIn0.QKwZXimsJ0ivyhlJBEutX5QHiPhbd6fpt9YafOYcmaZPnba0yO5ndnHUzjIRtCDTPGJRs8QdOzMOvuFHxtkZMg'
+	const apiKey = 'eyJ1IjoidGVzdHVzZXIiLCJpIjoiTFZwaWFSWUlyRnFKbndRTDlpR3RYIn0.QKwZXimsJ0ivyhlJBEutX5QHiPhbd6fpt9YafOYcmaZPnba0yO5ndnHUzjIRtCDTPGJRs8QdOzMOvuFHxtkZMg'
 	// setup map style
 	const style = {
 		"version": 1,
@@ -48,13 +47,7 @@
 	}
 
 	onMount(() => {
-		// create the map
-		new S2Map({
-			style,
-			apiKey: accessToken,
-			container,
-			zoomController: true
-		})
+		new S2Map({ style, apiKey, container, zoomController: true })
 	})
 </script>
 

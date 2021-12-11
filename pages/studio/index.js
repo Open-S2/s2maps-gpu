@@ -1,5 +1,6 @@
 /* MODULES */
 import { useState, useEffect, useRef } from 'react'
+import Layers from '../../components/layers'
 /* JSON */
 import style from './style.json'
 /* STYLESHEET */
@@ -8,7 +9,9 @@ import styles from '../../styles/studio.module.css'
 const { NEXT_PUBLIC_API_KEY } = process.env
 
 export default function Studio () {
+  const s2map = useRef()
   const [position, setPosition] = useState({ zoom: 0, lon: 0, lat: 0 })
+  const [studioStyle, setStudioStyle] = useState(prepStyle(style))
 
   // cleanup positional data
   let { zoom, lon, lat } = position
@@ -36,9 +39,12 @@ export default function Studio () {
       </div>
 
       <div id={styles.studioBody}>
-        <div id={styles.studioBodyEditor} />
+        <div id={styles.studioBodyEditor}>
+          {style && <Layers style={studioStyle} setStyle={setStudioStyle} s2map={s2map} />}
+          <div id={styles.editorController} />
+        </div>
         <div id={styles.studioBodySpacer} />
-        <Map setPosition={setPosition} />
+        <Map setPosition={setPosition} s2map={s2map} />
       </div>
 
       <div id={styles.studioFooter}>
@@ -49,8 +55,7 @@ export default function Studio () {
   )
 }
 
-function Map ({ setPosition }) {
-  const s2map = useRef()
+function Map ({ setPosition, s2map }) {
   const s2mapContainer = useRef()
 
   useEffect(() => {
@@ -62,7 +67,7 @@ function Map ({ setPosition }) {
     return () => {
       if (s2map.current) { s2map.current.delete(); s2map.current = null }
     }
-  }, [setPosition])
+  }, [s2map, setPosition])
 
   return <div id={styles.mapContainer} ref={node => { s2mapContainer.current = node }} />
 }
@@ -82,4 +87,60 @@ function prepCanvas (container, s2map, setPosition) {
       })
     }
   })
+}
+
+function prepStyle (style) {
+  // layers
+  if (!style.layers) style.layers = []
+  // name
+  if (!style.name) style.name = 's2maps-new-v1'
+  // center
+  if (!style.center) style.center = [0, 0]
+  // zoom
+  if (!style.zoom) style.zoom = 0
+  // minzoom
+  if (!style.minzoom) style.minzoom = -1
+  // maxzoom
+  if (!style.maxzoom) style.maxzoom = 18.99
+  // maxLatRotation
+  if (!style.maxLatRotation) style.maxLatRotation = 85
+  // colorBlind
+  if (!style.colorBlind) style.colorBlind = false
+  // zoomController
+  if (!style.zoomController) style.zoomController = true
+  // interactive
+  if (!style.interactive) style.interactive = true
+  // scrollZoom
+  if (!style.scrollZoom) style.scrollZoom = true
+  // canMove
+  if (!style.canMove) style.canMove = true
+  // canZoom
+  if (!style.canZoom) style.canZoom = true
+  // attributions
+  if (!style.attributions) style.attributions = []
+  // studio groups
+  if (!style.groups) style.groups = {}
+
+  return prepStudio(JSON.parse(JSON.stringify(style)))
+}
+
+function prepStudio (style) {
+  // prep styling
+  style.layers.forEach((layer, index) => {
+    const { name, type, source, paint } = layer
+    // setup color
+    if (paint && paint.color && typeof paint.color === 'string') layer._color = paint.color
+    // setup type
+    if (type === 'fill' && source === 'mask') layer._type = 'mask'
+    else layer._type = type
+    // setup name
+    layer._name = name || `[${index}] - (${type})`
+    // setup index
+    layer._index = index
+    layer._indexOld = index
+  })
+
+  // TODO: setup groups
+
+  return style
 }

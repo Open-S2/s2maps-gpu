@@ -16,6 +16,7 @@ module.exports = {
     path: path.join(__dirname, '/../buildS2'),
     filename: 'css.tmp'
   },
+  context: path.join(__dirname, '/../public'),
   module: {
     rules: [
       {
@@ -29,7 +30,7 @@ module.exports = {
       {
         test: /\.(png|jpe?g|gif|svg|eot|ttf|woff|woff2)$/i,
         // More information here https://webpack.js.org/guides/asset-modules/
-        type: 'asset'
+        type: 'asset/inline'
       }
     ]
   },

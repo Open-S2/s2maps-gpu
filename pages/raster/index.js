@@ -43,8 +43,7 @@ export default function Raster () {
               onClick={() => {
                 if (num !== month) {
                   setMonth(num)
-                  style.sources.satellite = `s2maps://data/s2maps/modis-v1/${num}.s2tiles`
-                  s2map.current.setStyle(style)
+                  s2map.current.updateSource('satellite', `s2maps://data/s2maps/modis-v1/${num}.s2tiles`, false, true)
                 }
               }}
             >

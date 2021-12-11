@@ -9,12 +9,12 @@ import type { Face, StylePackage } from '../style/styleSpec'
 import type { Marker } from './source/MarkerSource'
 
 export type TileRequest = {
-  hash: number,
-  face: Face,
+  id: BigInt,
+  face: number,
   zoom: number,
+  i: number,
+  j: number,
   bbox: [number, number, number, number],
-  x: number,
-  y: number,
   division: number,
   size: number
 }
@@ -72,8 +72,8 @@ class WorkerPool {
   //   this.sourceWorker.postMessage({ mapID, type: 'delete' })
   // }
 
-  tileRequest (mapID: string, tiles: Array<TileRequest>, sourceNames: Array<string>) {
-    this.sourceWorker.postMessage({ mapID, type: 'tilerequest', tiles, sourceNames })
+  tileRequest (mapID: string, tiles: Array<TileRequest>, sources: Array<[string, string]>) {
+    this.sourceWorker.postMessage({ mapID, type: 'tilerequest', tiles, sources })
   }
 
   getInfo (mapID: string, featureID: number) {
@@ -90,6 +90,21 @@ class WorkerPool {
 
   deleteSource (mapID: string, sourceNames: Array<string>) {
     this.sourceWorker.postMessage({ mapID, type: 'deleteSource', sourceNames })
+  }
+
+  addLayer (mapID: string, layer: Layer, index: number) {
+    this.sourceWorker.postMessage({ mapID, type: 'addLayer', layer, index })
+    for (const worker of this.workers) worker.postMessage({ mapID, type: 'addLayer', layer, index })
+  }
+
+  removeLayer (mapID: string, index: number) {
+    this.sourceWorker.postMessage({ mapID, type: 'removeLayer', index })
+    for (const worker of this.workers) worker.postMessage({ mapID, type: 'removeLayer', index })
+  }
+
+  reorderLayers (mapID: string, layerChanges: { [string | number]: number }) {
+    this.sourceWorker.postMessage({ mapID, type: 'reorderLayers', layerChanges })
+    for (const worker of this.workers) worker.postMessage({ mapID, type: 'reorderLayers', layerChanges })
   }
 }
 

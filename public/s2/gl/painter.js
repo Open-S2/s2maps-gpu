@@ -2,27 +2,13 @@
 import Style from '../style'
 /** CONTEXTS **/
 import { WebGL2Context, WebGLContext } from './contexts'
-/** PROGRAMS **/
-import {
-  Program,
-  FillProgram,
-  GlyphFilterProgram,
-  GlyphProgram,
-  HeatmapProgram,
-  LineProgram,
-  PointProgram,
-  RasterProgram,
-  ShadeProgram,
-  SkyboxProgram,
-  WallpaperProgram
-} from './programs'
 /** SOURCES **/
 import { Tile } from '../source'
 
 import type { MapOptions } from '../ui/map'
 import type { Projection } from '../ui/camera/projections'
 import type { FeatureGuide } from '../source/tile'
-import type { ProgramType } from './programs/program'
+import type { Program, ProgramType } from './programs/program'
 import type { GlyphImages } from '../workers/source/glyphSource'
 
 type ProgramGL = FillProgram | GlyphFilterProgram | GlyphProgram | HeatmapProgram | LineProgram | PointProgram | RasterProgram | ShadeProgram | SkyboxProgram | WallpaperProgram
@@ -46,37 +32,38 @@ export default class Painter {
     context.delete()
   }
 
-  buildPrograms (buildSet: Set<ProgramType>) {
+  async buildPrograms (buildSet: Set<ProgramType>) {
     const { programs, context } = this
     for (const program of buildSet) {
       switch (program) {
         case 'raster':
-          programs.raster = new RasterProgram(context)
+          programs.raster = await import('./programs/rasterProgram').then(P => { return new P.default(context) })
           break
         case 'fill':
-          programs.fill = new FillProgram(context)
+          // programs.fill = new FillProgram(context)
+          programs.fill = await import('./programs/fillProgram').then(P => { return new P.default(context) })
           break
         case 'line':
-          programs.line = new LineProgram(context)
+          programs.line = await import('./programs/lineProgram').then(P => { return new P.default(context) })
           break
         case 'point':
-          programs.point = new PointProgram(context)
+          programs.point = await import('./programs/pointProgram').then(P => { return new P.default(context) })
           break
         case 'heatmap':
-          programs.heatmap = new HeatmapProgram(context)
+          programs.heatmap = await import('./programs/heatmapProgram').then(P => { return new P.default(context) })
           break
         case 'shade':
-          programs.shade = new ShadeProgram(context)
+          programs.shade = await import('./programs/shadeProgram').then(P => { return new P.default(context) })
           break
         case 'glyph':
-          programs.glyphFilter = new GlyphFilterProgram(context)
-          programs.glyph = new GlyphProgram(context, programs.glyphFilter)
+          programs.glyphFilter = await import('./programs/glyphFilterProgram').then(P => { return new P.default(context) })
+          programs.glyph = await import('./programs/glyphProgram').then(P => { return new P.default(context, programs.glyphFilter) })
           break
         case 'wallpaper':
-          programs.wallpaper = new WallpaperProgram(context)
+          programs.wallpaper = await import('./programs/wallpaperProgram').then(P => { return new P.default(context) })
           break
         case 'skybox':
-          programs.skybox = new SkyboxProgram(context)
+          programs.skybox = await import('./programs/skyboxProgram').then(P => { return new P.default(context) })
           break
         default: break
       }

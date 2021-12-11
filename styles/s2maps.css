@@ -2,15 +2,15 @@
   position: relative;
   width: 100%;
   height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Roboto", "Segoe UI", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
 }
 
 .s2-canvas-container {
   position: relative;
   height: 100%;
   width: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, "Roboto", "Segoe UI", "Oxygen",
-    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-    sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -53,15 +53,26 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background-image: url('../public/s2/svg/color-blind.svg');
+}
+#s2-colorblind-default {
+  background-image: url('/s2/svg/color-blind.svg');
+}
+#s2-colorblind-proto {
+  background-image: url('/s2/svg/protanopia.svg');
+}
+#s2-colorblind-deut {
+  background-image: url('/s2/svg/deutranopia.svg');
+}
+#s2-colorblind-trit {
+  background-image: url('/s2/svg/tritanopia.svg');
 }
 
 .s2-zoom-plus {
-  background-image: url('../public/s2/svg/zoom-plus.svg');
+  background-image: url('/s2/svg/zoom-plus.svg');
 }
 
 .s2-zoom-minus {
-  background-image: url('../public/s2/svg/zoom-minus.svg');
+  background-image: url('/s2/svg/zoom-minus.svg');
 }
 
 .s2-nav-sep {
@@ -92,7 +103,7 @@
   width: 24px;
   height: 24px;
   cursor: pointer;
-  background-image: url('../public/s2/svg/info.svg');
+  background-image: url('/s2/svg/info.svg');
   border-radius: 100%;
   box-shadow: 0px 1px 4px rgb(0 0 0 / 35%);
 }
@@ -152,7 +163,7 @@
   background-repeat: no-repeat;
   margin: 0 0 0 12.5px;
   pointer-events: none;
-  background-image: url('../public/s2/svg/s2-jolly-roger.svg');
+  background-image: url('/s2/svg/s2-jolly-roger.svg');
   background-position: center center;
 }
 

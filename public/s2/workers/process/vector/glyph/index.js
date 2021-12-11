@@ -51,7 +51,8 @@ export default class GlyphManager {
 
   processGlyphs (mapID: string, tile: TileRequest, sourceName: string, features: Array<Feature>) {
     const { id, glyphMap, iconMap, glyphStore, sourceThread } = this
-    const { hash, zoom } = tile
+    const { zoom } = tile
+    const tileID = tile.id
     // prep variables
     const glyphList: GlyphList = { _total: 0 }
     const iconList: IconList = { _total: 0 }
@@ -61,7 +62,7 @@ export default class GlyphManager {
     if (glyphList._total || iconList._total) {
       delete glyphList._total // remove the total so we can add a transfer array
       delete iconList._total
-      const reqID = `${mapID}:${hash}:${sourceName}`
+      const reqID = `${mapID}:${tileID}:${sourceName}`
       // prep glyphList for transfer
       for (const glyphFamily in glyphList) {
         const list = [...glyphList[glyphFamily]].sort((a, b) => a - b)
@@ -74,14 +75,14 @@ export default class GlyphManager {
       // send off and prep for response
       sourceThread.postMessage({ type: 'glyphrequest', mapID, id, reqID, glyphList, iconList }, Object.values(glyphList))
       glyphStore.set(reqID, { builtFeatures, glyphFamilyCount, processed: 0 })
-    } else { this.buildGlyphs(mapID, hash, sourceName, builtFeatures) }
+    } else { this.buildGlyphs(mapID, tileID, sourceName, builtFeatures) }
   }
 
   // the source worker completed the request, here are the unicode properties
   processGlyphResponse (reqID: string, glyphMetadata: ArrayBuffer, familyName: string,
     icons: IconMap, colors: ColorMap) {
-    let [mapID, hash, sourceName] = reqID.split(':')
-    hash = +hash
+    let [mapID, tileID, sourceName] = reqID.split(':')
+    tileID = BigInt(tileID)
     // pull in the features and delete the reference
     const store = this.glyphStore.get(reqID)
     store.processed++
@@ -96,7 +97,7 @@ export default class GlyphManager {
       const { builtFeatures } = store
       this._remapIcons(builtFeatures)
       // build
-      this.buildGlyphs(mapID, hash, sourceName, builtFeatures)
+      this.buildGlyphs(mapID, tileID, sourceName, builtFeatures)
     }
   }
 
@@ -151,7 +152,7 @@ export default class GlyphManager {
     }
   }
 
-  buildGlyphs (mapID: string, hash: number, sourceName: string, features: Array<GlyphObject>) {
+  buildGlyphs (mapID: string, tileID: BigInt, sourceName: string, features: Array<GlyphObject>) {
     // prepare
     const { rtree, mainThread, glyphMap, iconMap } = this
     rtree.clear()
@@ -166,6 +167,6 @@ export default class GlyphManager {
       if (feature.overdraw || !rtree.collides(feature)) res.push(feature)
     }
     // post process -> compile all the work and ship it out to the main thread
-    if (res.length) postProcessGlyphs(mapID, `${sourceName}:glyph`, hash, res, mainThread)
+    if (res.length) postProcessGlyphs(mapID, `${sourceName}:glyph`, tileID, res, mainThread)
   }
 }
