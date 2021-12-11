@@ -1,5 +1,6 @@
 // @flow
 /** MODULES **/
+import { toIJ, level } from '../../../projection/S2CellID'
 import S2JsonVT from './'
 /** TYPES **/
 import type { Feature } from './'
@@ -26,10 +27,11 @@ export type Tile = {
   numSimplified: number,
   numFeatures: number,
   source: null | Array<Feature>,
-  face: number,
-  x: number,
-  y: number,
-  z: number,
+  id: BigInt,
+  zoom: number,
+  i: number,
+  j: number,
+  ori: number,
   transformed: boolean,
   minS: number,
   minT: number,
@@ -37,9 +39,10 @@ export type Tile = {
   maxT: number
 }
 
-export default function createTile (features: Array<Feature>, face: number, z: number,
-  x: number, y: number, s2jsonVT: S2JsonVT): Tile {
-  const tolerance = (z === s2jsonVT.maxZoom) ? 0 : s2jsonVT.tolerance / ((1 << z) * s2jsonVT.extent)
+export default function createTile (features: Array<Feature>, id: BigInt, s2jsonVT: S2JsonVT): Tile {
+  const zoom = level(id)
+  const [_, i, j, ori] = toIJ(id, zoom)
+  const tolerance = (zoom === s2jsonVT.maxZoom) ? 0 : s2jsonVT.tolerance / ((1 << zoom) * s2jsonVT.extent)
   const tile: Tile = {
     extent: s2jsonVT.extent,
     layers: {},
@@ -47,10 +50,11 @@ export default function createTile (features: Array<Feature>, face: number, z: n
     numSimplified: 0,
     numFeatures: 0,
     source: features,
-    face,
-    x,
-    y,
-    z,
+    id,
+    zoom,
+    i,
+    j,
+    ori,
     transformed: false,
     minS: 2,
     minT: 2,
@@ -113,7 +117,6 @@ function addFeature (tile: Tile, feature: Feature, tolerance: number) {
             ? 2
             : 1,
       properties: feature.properties
-      // loadGeometry: 'function(){return this.geometry}'
     }
     const layerName = feature.properties._layer || 'default'
     if (!tile.layers[layerName]) {
@@ -121,7 +124,6 @@ function addFeature (tile: Tile, feature: Feature, tolerance: number) {
         extent: tile.extent,
         features: [],
         length: 0
-      // feature: 'function(i){return this.features[i]}'
       }
     }
     const layer = tile.layers[layerName]

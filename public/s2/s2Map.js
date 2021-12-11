@@ -19,6 +19,7 @@ export default class S2Map extends EventTarget {
   _offscreen: boolean = false
   _canvas: HTMLCanvasElement
   _attributionPopup: HTMLCanvasElement
+  _colorBlind: HTMLElement
   _attributions: Attributions = {}
   colorMode: 0 | 1 | 2 | 3 = 0 // 0: none - 1: protanopia - 2: deutranopia - 3: tritanopia
   map: Map | Worker
@@ -153,42 +154,39 @@ export default class S2Map extends EventTarget {
       _container.appendChild(attribution)
     }
     // if zoom or compass controllers, add
-    if (zoomController) {
+    if (zoomController !== false) {
       // first create the container
       const navigationContainer = this._navigationContainer = window.document.createElement('div')
       navigationContainer.className = 's2-nav-container'
       if (darkMode) navigationContainer.classList.add('s2-nav-dark')
       _container.appendChild(navigationContainer)
-      if (zoomController) {
-        // plus
-        const zoomPlus = window.document.createElement('button')
-        zoomPlus.className = 's2-control-button s2-zoom-plus'
-        zoomPlus.setAttribute('aria-hidden', true)
-        zoomPlus.tabIndex = -1
-        navigationContainer.appendChild(zoomPlus)
-        zoomPlus.addEventListener('click', () => this._navEvent('zoomIn'))
+      // plus
+      const zoomPlus = window.document.createElement('button')
+      zoomPlus.className = 's2-control-button s2-zoom-plus'
+      zoomPlus.setAttribute('aria-hidden', true)
+      zoomPlus.tabIndex = -1
+      navigationContainer.appendChild(zoomPlus)
+      zoomPlus.addEventListener('click', () => this._navEvent('zoomIn'))
+      // seperator
+      const navSep = window.document.createElement('div')
+      navSep.className = 's2-nav-sep' + (darkMode ? '-dark' : '')
+      navigationContainer.appendChild(navSep)
+      // minus
+      const zoomMinus = window.document.createElement('button')
+      zoomMinus.className = 's2-control-button s2-zoom-minus'
+      zoomMinus.setAttribute('aria-hidden', true)
+      zoomMinus.tabIndex = -1
+      navigationContainer.appendChild(zoomMinus)
+      zoomMinus.addEventListener('click', () => this._navEvent('zoomOut'))
+      if (colorBlindController !== false) {
+        // add seperator if colorBlind was added
         // seperator
         const navSep = window.document.createElement('div')
         navSep.className = 's2-nav-sep' + (darkMode ? '-dark' : '')
         navigationContainer.appendChild(navSep)
-        // minus
-        const zoomMinus = window.document.createElement('button')
-        zoomMinus.className = 's2-control-button s2-zoom-minus'
-        zoomMinus.setAttribute('aria-hidden', true)
-        zoomMinus.tabIndex = -1
-        navigationContainer.appendChild(zoomMinus)
-        zoomMinus.addEventListener('click', () => this._navEvent('zoomOut'))
-      }
-      if (colorBlindController) {
-        // add seperator if colorBlind was added
-        if (zoomController) {
-          // seperator
-          const navSep = window.document.createElement('div')
-          navSep.className = 's2-nav-sep' + (darkMode ? '-dark' : '')
-          navigationContainer.appendChild(navSep)
-        }
-        const colorBlind = window.document.createElement('button')
+        const colorBlind = this._colorBlind = window.document.createElement('button')
         colorBlind.className = 's2-control-button s2-colorblind-button'
+        colorBlind.id = 's2-colorblind-default'
         colorBlind.setAttribute('aria-hidden', true)
         colorBlind.tabIndex = -1
         navigationContainer.appendChild(colorBlind)
@@ -285,9 +283,7 @@ export default class S2Map extends EventTarget {
   _mapMessage ({ data }) {
     const { mapID, type } = data
     if (type === 'tilerequest') {
-      window.S2WorkerPool.tileRequest(mapID, data.tiles, data.sourceNames)
-    } else if (type === 'style') {
-      window.S2WorkerPool.injectStyle(mapID, data.style)
+      window.S2WorkerPool.tileRequest(mapID, data.tiles, data.sources)
     } else if (type === 'mouseenter') {
       const { feature } = data
       if (feature) {
@@ -305,6 +301,14 @@ export default class S2Map extends EventTarget {
     } else if (type === 'pos') {
       const { zoom, lon, lat } = data
       this.dispatchEvent(new CustomEvent('pos', { detail: { zoom, lon, lat } }))
+    } else if (type === 'style') {
+      window.S2WorkerPool.injectStyle(mapID, data.style)
+    } else if (type === 'addLayer') {
+      window.S2WorkerPool.addLayer(this.map.id, data.layer, data.index, data.tileRequest)
+    } else if (type === 'removeLayer') {
+      window.S2WorkerPool.removeLayer(this.map.id, data.index)
+    } else if (type === 'reorderLayers') {
+      window.S2WorkerPool.reorderLayers(this.map.id, data.layerChanges)
     } else if (type === 'screenshot') {
       this.dispatchEvent(new CustomEvent('screenshot', { detail: data.screen }))
     }
@@ -342,11 +346,15 @@ export default class S2Map extends EventTarget {
   }
 
   _setColorMode () {
-    const { map, _offscreen } = this
+    const { map, _offscreen, _colorBlind } = this
     this.colorMode++
     if (this.colorMode > 3) this.colorMode = 0
-    if (_offscreen && map) map.postMessage({ type: 'colorMode', mode: this.colorMode })
-    else if (map) map.colorMode(this.colorMode)
+    // update the icon
+    const cM = this.colorMode
+    _colorBlind.id = `s2-colorblind${(cM === 0) ? '-default' : (cM === 1) ? '-proto' : (cM === 2) ? '-deut' : '-trit'}`
+    // tell the map to update
+    if (_offscreen && map) map.postMessage({ type: 'colorMode', mode: cM })
+    else if (map) map.colorMode(cM)
   }
 
   injectData (data) {
@@ -372,10 +380,18 @@ export default class S2Map extends EventTarget {
   }
 
   /** API **/
+  // in this case, reset the style from scratch
   setStyle (style: Object, ignorePosition: boolean = true) { // $FlowIgnore
     const { _offscreen, map } = this
     if (_offscreen && map) map.postMessage({ type: 'setStyle', style, ignorePosition }) // $FlowIgnore
     else if (map) map.setStyle(style, ignorePosition)
+  }
+
+  // in this case, check for changes and update accordingly
+  updateStyle (style: Object) {
+    const { _offscreen, map } = this
+    if (_offscreen && map) map.postMessage({ type: 'updateStyle', style }) // $FlowIgnore
+    else if (map) map.updateStyle(style)
   }
 
   setMoveState (state: boolean) { // $FlowIgnore
@@ -396,8 +412,10 @@ export default class S2Map extends EventTarget {
     else if (map) map.jumpTo(lon, lat, zoom)
   }
 
-  flyTo (lon: number, lat: number, zoom: number) {
-
+  flyTo (lon: number, lat: number, zoom: number, duration?: number) {
+    const { _offscreen, map } = this
+    if (_offscreen && map) map.postMessage({ type: 'flyTo', lon, lat, zoom, duration }) // $FlowIgnore
+    else if (map) map.flyTo(lon, lat, zoom, duration)
   }
 
   getInfo (featureID: number) {
@@ -405,22 +423,29 @@ export default class S2Map extends EventTarget {
     // 1) tell worker pool we need info data
     window.S2WorkerPool.getInfo(this.id, featureID)
     // 2) clear old info s2json data should it exist
-    const sourceNames = ['_info']
-    if (_offscreen && map) map.postMessage({ type: 'resetSource', sourceNames, keepCache: true }) // $FlowIgnore
-    else if (map) map.resetSource(sourceNames, true)
+    this.resetSource('_info', true)
   }
 
-  resetSource (sourceNames: string | Array<string>, keepCache?: boolean = false, awaitReplace?: boolean = false) {
+  addSource (sourceName: string, href: string) {
+    this.updateSource(sourceName, href, false, false)
+  }
+
+  updateSource (sourceName: string, href: string, keepCache?: boolean = true,
+    awaitReplace?: boolean = true) {
+    this.resetSource([sourceName, href], keepCache, awaitReplace)
+  }
+
+  resetSource (sourceNames: string | Array<string> | Array<[string, string | null]>,
+    keepCache?: boolean = false, awaitReplace?: boolean = false) {
     const { _offscreen, map } = this
     if (!Array.isArray(sourceNames)) sourceNames = [sourceNames]
-    // 1) tell worker pool we dont need info data anymore
-    window.S2WorkerPool.deleteSource(this.id, sourceNames)
-    // 2) clear old info s2json data should it exist
+    if (!Array.isArray(sourceNames[0])) sourceNames = [sourceNames]
+    // clear old info s2json data should it exist
     if (_offscreen && map) map.postMessage({ type: 'resetSource', sourceNames }) // $FlowIgnore
     else if (map) map.resetSource(sourceNames, keepCache, awaitReplace)
   }
 
-  deleteSource (sourceNames: string | Array<string>) {
+  deleteSource (sourceNames: string | Array<string> | Array<[string, string | null]>) {
     const { _offscreen, map } = this
     if (!Array.isArray(sourceNames)) sourceNames = [sourceNames]
     // 1) tell worker pool we dont need info data anymore
@@ -430,14 +455,43 @@ export default class S2Map extends EventTarget {
     else if (map) map.clearSource(sourceNames)
   }
 
+  // nameIndex -> if name it goes BEFORE the layer name specified. If layer name not found, it goes at the end
+  // if no nameIndex, it goes at the end
+  addLayer (layer: Layer, nameIndex?: number | string) {
+    const { _offscreen, map } = this
+    if (_offscreen && map) map.postMessage({ type: 'addLayer', layer, nameIndex }) // $FlowIgnore
+    else if (map) map.addLayer(layer, nameIndex)
+  }
+
+  // fullUpdate -> if false, don't ask webworkers to reupdate
+  // nameIndex -> if name it finds the layer name to update, otherwise gives up
+  updateLayer (layer: Layer, nameIndex?: number | string, fullUpdate?: boolean = true) {
+    const { _offscreen, map } = this
+    if (_offscreen && map) map.postMessage({ type: 'updateLayer', layer, nameIndex, fullUpdate }) // $FlowIgnore
+    else if (map) map.updateLayer(layer, nameIndex, fullUpdate)
+  }
+
+  // nameIndex -> if name it finds the layer name to update, otherwise gives up
+  removeLayer (nameIndex: number | string): boolean {
+    const { _offscreen, map } = this
+    if (_offscreen && map) map.postMessage({ type: 'removeLayer', nameIndex }) // $FlowIgnore
+    else if (map) map.removeLayer(nameIndex)
+  }
+
+  // { [+from]: +to }
+  reorderLayers (layerChanges: { [string | number]: number }) {
+    const { _offscreen, map } = this
+    if (_offscreen && map) map.postMessage({ type: 'reorderLayers', layerChanges }) // $FlowIgnore
+    else if (map) map.reorderLayers(layerChanges)
+  }
+
   addMarker (markers: Marker | Array<Marker>, sourceName?: string = '_markers') {
     const { _offscreen, map } = this
     if (!Array.isArray(markers)) markers = [markers]
     // 1) let the worker pool know we have new marker(s)
     window.S2WorkerPool.addMarkers(this.id, markers, sourceName)
     // 2) tell the map that (a) new marker(s) has/have been added
-    if (_offscreen && map) map.postMessage({ type: 'resetSource', sourceNames: [sourceName], keepCache: true, awaitReplace: true }) // $FlowIgnore
-    else if (map) map.resetSource(sourceName, true, true)
+    this.resetSource(sourceName, true, true)
   }
 
   removeMarker (ids: number | Array<number>, sourceName?: string = '_markers') {
@@ -446,22 +500,40 @@ export default class S2Map extends EventTarget {
     // 1) let the worker pool know we need to remove marker(s)
     window.S2WorkerPool.removeMarkers(this.id, ids, sourceName)
     // 2) tell the map that (a) marker(s) has/have to be removed
-    if (_offscreen && map) map.postMessage({ type: 'resetSource', sourceNames: [sourceName], keepCache: true, awaitReplace: true }) // $FlowIgnore
-    else if (map) map.resetSource(sourceName, true, true)
+    this.resetSource(sourceName, true, true)
   }
 
   screenshot () {
-    const { _offscreen, map } = this
-    if (_offscreen && map) map.postMessage({ type: 'screenshot' }) // $FlowIgnore
-    else if (map) map.screenshot()
+    const self = this
+    const { _offscreen, map } = self
     return new Promise(resolve => {
-      this.addEventListener('screenshot', (data) => { resolve(data) }, { once: true })
+      self.addEventListener('screenshot', (data) => { resolve(data) }, { once: true })
+      if (_offscreen && map) map.postMessage({ type: 'screenshot' }) // $FlowIgnore
+      else if (map) map.screenshot()
     })
   }
 }
 
 if (window) window.S2Map = S2Map
 
+// TODO ORDER:
+// create projection examples
+// flyTo
+// terminate map worker if exists
+// improve how attributes work
+// upload the new version
+// fix main website
+// migrate old S2Tiles to new S2DB + zooms with division should be pre-divided (first 7 zooms)
+// s2maps-gl S2DB
+
+// studio
+// website
+// s2maps-cli
+// S2MAPS BETA
+// places
+// isochrones
+
+// S2MAPS BETA:
 // 1) markers/popups with html
 // 2) fix glyph filter overlap / interact should be the same as filter overlap
 // 3) glyph icon + text pairs (required checking if same id overlap)
@@ -469,19 +541,72 @@ if (window) window.S2Map = S2Map
 // 5) road signs
 // 6) dashed lines + rounded joins
 // 7) interact with points, lines, and fills
+// 8) hillshade and line data fixes
+// 9) redo roads -> working for road signs
+// 10) screenshot
+// 11) flyTo
 
-// 3D points
-// 3D buildings (shapes)
-// hillshade fixes
-// webgpu
-// view at angle + camera system upgrade
-// 3D terrain
-// geocoding
-// isochrones
+// S2MAPS BUGS:
+// * zoom too fast at low zoom renders the wrong tile
+// * smooth transitions to parent tiles sometimes loses some features (buildings as an example)
+// * overlap of text rarely (salt lake city as an ex)
+// * colorblind support is missing for some renderings (heatmap)
+// * heatmap doesn't work well in webgl1
+// * icons don't render with text (overlap issues)
 
-// olympus
-// * new point + line + poly algorithm
-// * improve joining algorthim (use same as msdf)
-// * redo fills (also low zooms shouldn't have to split on front end)
-// * redo roads -> working for road signs
-// * redo terrain
+// S2MAPS (FUTURE)
+// * merge (cluster) points
+// * webgpu
+// * 3D points
+// * 3D buildings (shapes)
+// * 3D terrain
+// * view at angle + camera system upgrade
+// * geocoding
+// * isochrones
+
+// S2MAPS-CLI
+// * points include a merging (clustering) system
+// * improve poly "merge" algorithm (use same as msdf) (https://github.com/doodlewind/skia-rs)
+// * adjust fills so low zoom (0-7) so front-end doesn't have to split
+// * update to s2-vector-tile v2
+// * sometimes poly around the pole has the wrong rotation
+
+// WEBSITE:
+// 1) cover page
+// 2) maps + styles page
+// 3) login/register
+// 4) TOS / Privacy / Data
+// 5) blog + first blog post
+// 6) projection page (about projection)
+// 7) s2maps about
+// 8) contact
+// 9) account
+// 10) cli
+// 11) studio
+// 12) tiles
+// 13) places
+// 14) search
+// 15) isochrones
+// 16) elevation
+// 17) s2maps (about)
+// 18) careers
+// 19) contact
+// 20) pricing
+// 21) press
+// 22) documentation (getting started / tutorials / examples / support / etc.)
+
+// STUDIO:
+// MAP: updateLayer
+// reorder layers
+// add layer -> filter & select source & select layer from source
+// remove layer
+// click layer -> edit -> fill/line/glyph/backgroundFill/point/shade
+// click layer -> readjust layer (during the add layer phase)
+// edit wallpaper -> vector / wallpaper
+// meta details
+// see before/after
+
+// PLACES:
+// 1) build dynamoDB system using S2Cells
+// 2) build places + POI data + starter address data + starter parcel data (track timelines of when I pull from OSM)
+// 3) create API system for fetching (and properly catagorize everything)

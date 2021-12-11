@@ -15,7 +15,7 @@
 <div id="map"></div>
 <script>
 	// create access token
-	const accessToken = 'eyJ1IjoidGVzdHVzZXIiLCJpIjoiTFZwaWFSWUlyRnFKbndRTDlpR3RYIn0.QKwZXimsJ0ivyhlJBEutX5QHiPhbd6fpt9YafOYcmaZPnba0yO5ndnHUzjIRtCDTPGJRs8QdOzMOvuFHxtkZMg'
+	const apiKey = 'eyJ1IjoidGVzdHVzZXIiLCJpIjoiTFZwaWFSWUlyRnFKbndRTDlpR3RYIn0.QKwZXimsJ0ivyhlJBEutX5QHiPhbd6fpt9YafOYcmaZPnba0yO5ndnHUzjIRtCDTPGJRs8QdOzMOvuFHxtkZMg'
 	// grab container div
 	const container = document.getElementById('map')
 	// setup map style
@@ -60,12 +60,7 @@
 	  ]
 	}
 	// create the map
-	new S2Map({
-    style,
-    apiKey: accessToken,
-    container,
-    zoomController: true
-  })
+	new S2Map({ style, apiKey, container, zoomController: true })
 </script>
 
 </body>

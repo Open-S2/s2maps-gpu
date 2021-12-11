@@ -3,7 +3,7 @@ export default class LocalSource {
   build () {}
 
   tileRequest (mapID: string, tile: TileRequest) {
-    const { hash, face, zoom, x, y } = tile
+    const { id, face, zoom, i, j } = tile
 
     return {
       layers: {
@@ -12,7 +12,7 @@ export default class LocalSource {
           length: 1,
           feature: () => {
             return {
-              properties: { hash, face, zoom, x, y },
+              properties: { id, face, zoom, i, j },
               type: 3, // Polygon
               loadGeometry: () => { return [[[0, 0], [8192, 0], [8192, 8192], [0, 8192], [0, 0]]] }
             }
@@ -23,7 +23,7 @@ export default class LocalSource {
           length: 1,
           feature: () => {
             return {
-              properties: { hash, face, zoom, x, y },
+              properties: { id, face, zoom, i, j },
               type: 1, // Point
               loadGeometry: () => { return [[0, 8192]] }
             }

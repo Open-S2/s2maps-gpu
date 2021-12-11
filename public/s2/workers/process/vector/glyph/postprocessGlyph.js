@@ -2,7 +2,7 @@
 import type { GlyphObject } from './glyph'
 
 export default function postprocessGlyph (mapID: string, sourceName: string,
-  tileID: string, features: Array<GlyphObject>, postMessage: Function) {
+  tileID: BigInt, features: Array<GlyphObject>, postMessage: Function) {
   // setup draw thread variables
   const glyphFilterVertices = []
   const glyphQuads = []

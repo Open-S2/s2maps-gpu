@@ -6,7 +6,7 @@ import Style from '../../style'
 import type { Painter } from '../../gl'
 import type { MapOptions } from '../map'
 /** PROJECTIONS **/
-import { tileHash } from '../../projection'
+import { parent as parentID, isFace } from '../../projection/S2CellID'
 import Projector from './projections'
 /** SOURCES **/
 import { Tile } from '../../source'
@@ -27,7 +27,7 @@ export default class Camera {
   painter: Painter
   projection: Projector
   tileCache: TileCache
-  tilesInView: Array<Tile> = [] // hash id's of the tiles
+  tilesInView: Array<Tile> = [] // S2CellIDs of the tiles
   lastTileViewState: Array<number> = []
   requestQueue: Array<Tile> = []
   zooming: void | SetTimeout
@@ -53,29 +53,6 @@ export default class Camera {
     // update the projector and painter
     this.projection.resize(width, height)
     if (this.painter) this.painter.resize()
-  }
-
-  _createTile (face: Face, zoom: number, x: number, y: number, hash: number): Tile {
-    const { style } = this
-    // create tile
-    const tile = new Tile(this.painter.context, face, zoom, x, y, hash)
-    // should our style have default layers, let's add them
-    if (style.maskLayers.length) tile.injectMaskLayers(style.maskLayers)
-    // inject parent should one exist
-    if (tile.zoom !== 0) {
-      // get closest parent hash. If actively zooming, the parent tile will pass along
-      // it's parent tile (and so forth) if its own data has not been processed yet.
-      const parentHash = tileHash(tile.face, tile.zoom - 1, Math.floor(tile.x / 2), Math.floor(tile.y / 2))
-      // check if parent tile exists, if so inject
-      if (this.tileCache.has(parentHash)) {
-        const parent = this.tileCache.get(parentHash)
-        tile.injectParentTile(parent, this.style.layers)
-      }
-    }
-    // store the tile
-    this.tileCache.set(hash, tile)
-
-    return tile
   }
 
   _injectData (data) {
@@ -162,11 +139,10 @@ export default class Camera {
       // update tiles in view
       tilesInView = this.projection.getTilesInView()
       // check if any of the tiles don't exist in the cache. If they don't create a new tile
-      for (const tile of tilesInView) {
-        const [face, zoom, x, y, hash] = tile
-        if (!this.tileCache.has(hash)) {
+      for (const id of tilesInView) {
+        if (!this.tileCache.has(id)) {
           // tile not found, so we create it
-          const newTile = this._createTile(face, zoom, x, y, hash)
+          const newTile = this._createTile(id)
           // store reference for the style to request from webworker(s)
           newTiles.push(newTile)
         }
@@ -176,11 +152,34 @@ export default class Camera {
         this.painter.dirty = true
         this.style.requestTiles(newTiles)
       }
-      // given the tile hashes, find them in cache and return them
-      this.tilesInView = this.tileCache.getBatch(tilesInView.map(t => t[4]))
+      // given the S2CellID, find them in cache and return them
+      this.tilesInView = this.tileCache.getBatch(tilesInView)
 
       return this.tilesInView
     } else { return this.tilesInView }
+  }
+
+  _createTile (id: BigInt): Tile {
+    const { style } = this
+    // create tile
+    const tile = new Tile(this.painter.context, id)
+    // should our style have default layers, let's add them
+    if (style.maskLayers.length) tile.injectMaskLayers(style.maskLayers)
+    // inject parent should one exist
+    if (!isFace(id)) {
+      // get closest parent S2CellID. If actively zooming, the parent tile will pass along
+      // it's parent tile (and so forth) if its own data has not been processed yet.
+      const pID = parentID(id)
+      // check if parent tile exists, if so inject
+      if (this.tileCache.has(pID)) {
+        const parent = this.tileCache.get(pID)
+        tile.injectParentTile(parent, this.style.layers)
+      }
+    }
+    // store the tile
+    this.tileCache.set(id, tile)
+
+    return tile
   }
 
   _fullyRenderedScreen (): boolean {
@@ -199,12 +198,10 @@ export default class Camera {
     const { style, painter, projection } = this
     // prep tiles
     const tiles = this._getTiles()
-    // get state of scene
-    const dirty = style.dirty || painter.dirty || projection.dirty
     // if any changes, we paint new scene
-    if (dirty) {
+    if (style.dirty || painter.dirty || projection.dirty) {
       // store for future draw that it was a "dirty" frame
-      this.wasDirtyLastFrame = dirty
+      this.wasDirtyLastFrame = true
       // paint scene
       painter.paint(projection, style, tiles)
     }

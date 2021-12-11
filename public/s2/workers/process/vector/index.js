@@ -28,13 +28,15 @@ export default class VectorManager {
   }
 
   processVector (mapID: string, tile: TileRequest, sourceName: string,
-    vectorTile: VectorTile, layers: Array<Layer>, parent?: boolean | ParentLayer = false) {
+    vectorTile: VectorTile, layers: Array<Layer>,
+    parent?: boolean | ParentLayer = false, layerIndexes?: Array<number>) {
     const { webgl1, glyphManager, mainThread, idGen } = this
-    const { hash, zoom } = tile
+    const { zoom } = tile
+    const tileID = tile.id
     // sometimes the sourcename includes "${sourceName}:PARENT_HASH" so we need to remove parent for comparison
     const subSourceName = sourceName.split(':')[0]
     // filter layers to source
-    const sourceLayers = layers.filter(layer => layer.source === subSourceName)
+    const sourceLayers = layers.filter(layer => layer.source === subSourceName && (layerIndexes ? layerIndexes.includes(layer.layerIndex) : true))
     // prep an interactive map
     const interactiveMap = new Map()
 
@@ -100,7 +102,7 @@ export default class VectorManager {
     // build for any feature type that we have features in
     mainThread({
       mapID,
-      tileID: hash,
+      tileID,
       source: sourceName,
       type: 'flush',
       fill: featureStore.fill.length !== 0,
@@ -114,7 +116,7 @@ export default class VectorManager {
     if (featureStore.point.length) processPoint(mapID, tile, sourceName, featureStore.point, mainThread)
     if (featureStore.heatmap.length) processPoint(mapID, tile, sourceName, featureStore.heatmap, mainThread)
     if (featureStore.glyph.length) glyphManager.processGlyphs(mapID, tile, sourceName, featureStore.glyph)
-    if (interactiveMap.size) postInteractiveData(mapID, sourceName, hash, interactiveMap, mainThread)
+    if (interactiveMap.size) postInteractiveData(mapID, sourceName, tileID, interactiveMap, mainThread)
   }
 }
 

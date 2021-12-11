@@ -8,9 +8,9 @@ import type { Layer } from '../../../../style/styleSpec'
 
 export default function processLine (mapID: string, tile: TileRequest,
   sourceName: string, features: Array<Feature>, postMessage: Function) {
-  const { division, hash, zoom } = tile
+  const { division, id, zoom } = tile
 
   for (const feature of features) preprocessLine(feature, division, zoom)
 
-  postprocessLine(mapID, `${sourceName}:line`, hash, features, postMessage)
+  postprocessLine(mapID, `${sourceName}:line`, id, features, postMessage)
 }

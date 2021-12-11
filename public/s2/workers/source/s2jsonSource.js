@@ -18,12 +18,12 @@ export default class S2JSONSource extends Source {
 
   _tileRequest (mapID: string, tile: TileRequest) {
     const { name, s2json, session } = this
-    const { face, zoom, x, y, hash } = tile
+    const { id, face } = tile
 
     if (s2json.faces.has(face)) {
       // grab the data
-      let data = s2json.getTile(face, zoom, x, y)
-      if (!data || !data.layers || !data.layers.default) return this._flush(mapID, hash, name)
+      let data = s2json.getTile(id)
+      if (!data || !data.layers || !data.layers.default) return this._flush(mapID, id, name)
       // compress
       data = (new TextEncoder('utf-8').encode(JSON.stringify(data))).buffer
       // send off

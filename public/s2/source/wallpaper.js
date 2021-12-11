@@ -1,7 +1,7 @@
 // @flow
 import Style from '../style'
 import Projection from '../ui/camera/projections'
-import { degToRad } from '../projection'
+import { degToRad } from '../projection/util'
 import * as mat4 from '../util/mat4'
 
 import type { WallpaperImageType, WallpaperStyle } from '../style/styleSpec'

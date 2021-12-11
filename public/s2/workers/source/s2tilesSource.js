@@ -1,6 +1,7 @@
 // @flow
 /* eslint-env browser */
 import Source from './source'
+import { toIJ } from '../../projection/S2CellID'
 
 import type { TileRequest } from '../workerPool'
 
@@ -57,9 +58,10 @@ export default class S2TilesSource extends Source {
 
   // Here, we use the memory mapped file directory tree system to find our data
   async _tileRequest (mapID: string, tile: TileRequest,
-    sourceName: string, parent: false | Object) {
+    sourceName: string, parent: false | Object, layerIndexes?: Array<number>) {
     const { type, encoding, session } = this
-    let { face, zoom, x, y, hash } = parent || tile
+    let { face, zoom, id } = parent || tile
+    let [_, x, y] = toIJ(id, zoom)
 
     // pull in the correct face's directory
     let dir = this.rootDir[face]
@@ -68,18 +70,18 @@ export default class S2TilesSource extends Source {
     for (const leaf of path) {
       if (leaf[0] === 6) dir = await this._walkPath(dir, leaf, mapID)
       else { zoom = leaf[0]; x = leaf[1]; y = leaf[2] }
-      if (!dir) return this._flush(mapID, hash, sourceName)
+      if (!dir) return this._flush(mapID, id, sourceName)
     }
     // if we made it here, we need to pull out the node and read its [offset, length]
     const node = this._readNode(dir, zoom, x, y)
-    if (!node) return this._flush(mapID, hash, sourceName)
+    if (!node) return this._flush(mapID, id, sourceName)
 
     // we found the vector file, let's send the details off to the tile worker
     const data = await this.getRange(`${this.path}?type=tile&subtype=${type}&enc=${encoding}`, node[0], node[1], mapID)
     if (data) {
       const worker = session.requestWorker()
-      worker.postMessage({ mapID, type: type === 'vector' ? 'pbfdata' : 'rasterdata', tile, sourceName, parent, data }, [data])
-    } else { return this._flush(mapID, hash, sourceName) }
+      worker.postMessage({ mapID, type: type === 'vector' ? 'pbfdata' : 'rasterdata', tile, sourceName, parent, data, layerIndexes }, [data])
+    } else { return this._flush(mapID, id, sourceName) }
   }
 
   // from a starting directory and leaf identifier, move to the next leaf directory

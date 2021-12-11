@@ -30,7 +30,6 @@
     "fade-2": "rgb(217, 255, 255)",
     "halo": "rgb(230, 255, 255)"
   },
-  "colorBlind": false,
   "layers": [
     {
       "name": "background",
@@ -1416,7 +1415,7 @@
       }
     },
     {
-      "id": "boundaries",
+      "name": "boundaries",
       "source": "streets",
       "layer": "boundary",
       "filter": ["and", ["adminLevel", "has", [2, 4]], ["maritime", "==", false]],

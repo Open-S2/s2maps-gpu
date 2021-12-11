@@ -77,7 +77,7 @@ export default class Map extends Camera {
       // style will tell the painter what programs/pipelines it will be using
       this.style = new Style(options, this)
       // build style
-      this.setStyle(style, false)
+      await this.setStyle(style, false)
     }
   }
 
@@ -127,19 +127,36 @@ export default class Map extends Camera {
     this.painter.delete()
   }
 
-  setStyle (style: string | Object, ignorePosition: boolean) {
+  async setStyle (style: string | Object, ignorePosition: boolean) {
     // ensure we don't draw for a sec
     this._canDraw = false
     // incase style was imported, clear cache
     this.tileCache.deleteAll()
     // build style for the map, painter, and webworkers
-    this.style.buildStyle(style)
+    await this.style.buildStyle(style)
     // ready to start drawing
     this._canDraw = true
     // inject minzoom and maxzoom
     this.projection.setStyleParameters(this.style, ignorePosition)
     // render our first pass
     this.render()
+  }
+
+  // 1) updateStyle from the style object. return a list of "from->to" for tiles and "layerIDs" for webworkers
+  // 2) remove tiles from tileCache not in view
+  // 3) update the tileCache tiles using "from->to"
+  // 4) if a layer "source", "layer", or "filter" change it will be in "webworkers". Tell webworkers to rebuild
+  updateStyle (style: Object) {
+    // // build style for the map, painter, and webworkers
+    // this.style.updateStyle(style)
+    // remove any tiles outside of view
+    // this._resetTileCache([], false, true)
+    // // update tileCache
+    // this.tileCache.forEach(tile => { tile.updateStyle(this.style) })
+    // // inject minzoom and maxzoom
+    // this.projection.setStyleParameters(this.style, true)
+    // // render our first pass
+    // this.render()
   }
 
   clearSource (sourceNames: Array<string>) {
@@ -153,29 +170,17 @@ export default class Map extends Camera {
     this.render()
   }
 
-  // keepCache => don't delete any tiles, request replacements for all (for s2json since it's locally cached and fast)
-  // awaitReplace => to avoid flickering for adding/removing markers, we can wait for an update (from source+tile workers) on how the tile should look
-  resetSource (sourceNames: Array<string>, keepCache: boolean = false, awaitReplace: boolean = false) {
-    // get tiles in view, prep request for said tiles
-    const tilesInView = this._getTiles().map(t => t.id)
-    const tileRequests: Array<TileRequest> = []
-    // delete all tiles not in view, add to tileRequests for those that are,
-    // and delete source data from tile
-    this.tileCache.forEach((tile, key) => {
-      if (!keepCache && !tilesInView.includes(key)) { // just remove the tile for simplicity
-        this.tileCache.delete(key)
-      } else { // add to tileRequests
-        const { id, face, zoom, x, y, bbox, division, size } = tile
-        tileRequests.push({ hash: id, face, zoom, x, y, bbox, division, size })
-        if (!awaitReplace) tile.deleteSources(sourceNames)
-      }
-    })
+  // sources: Array<[sourceName, href]>
+  resetSource (sources: Array<[string, string]>, keepCache: boolean = false, awaitReplace: boolean = false) {
+    const tileRequests = this._resetTileCache(sources.map(s => s[0]), keepCache, awaitReplace)
     // Send off the tile request (by including sourceNames we are letting the
     // source worker know we only need to update THIS source)
-    if (this.webworker) { // $FlowIgnore
-      postMessage({ mapID: this.id, type: 'tilerequest', tiles: tileRequests, sourceNames })
-    } else {
-      window.S2WorkerPool.tileRequest(this.id, tileRequests, sourceNames)
+    if (tileRequests.length) {
+      if (this.webworker) { // $FlowIgnore
+        postMessage({ mapID: this.id, type: 'tilerequest', tiles: tileRequests, sources })
+      } else {
+        window.S2WorkerPool.tileRequest(this.id, tileRequests, sources)
+      }
     }
     // let the renderer know the painter is "dirty"
     this.painter.dirty = true
@@ -183,11 +188,67 @@ export default class Map extends Camera {
     this.render()
   }
 
+  addLayer (layer: Layer, nameIndex?: number | string) {
+    // remove all tiles outside of view
+    const tileRequests = this._resetTileCache(null, false, true)
+    // style needs to be updated on the change
+    this.style.addLayer(layer, nameIndex, tileRequests)
+    // rerender
+    this.render()
+  }
+
+  removeLayer (nameIndex: number | string) {
+    // style needs to be updated on the change
+    const index = this.style.removeLayer(nameIndex)
+    // remove all instances of the layer in each tile
+    this.tileCache.forEach(tile => { tile.removeLayer(index) })
+    // rerender
+    this.render()
+  }
+
+  reorderLayers (layerChanges: { [string | number]: number }) {
+    // style needs to updated on the change
+    this.style.reorderLayers(layerChanges)
+    // update every tile
+    this.tileCache.forEach(tile => { tile.reorderLayers(layerChanges) })
+    // rerender
+    this.render()
+  }
+
+  // keepCache => don't delete any tiles, request replacements for all (for s2json since it's locally cached and fast)
+  // awaitReplace => to avoid flickering (i.e. adding/removing markers), we can wait for an update (from source+tile workers) on how the tile should look
+  _resetTileCache (sourceNames?: Array<string>, keepCache: boolean, awaitReplace: boolean): Array<TileRequest> {
+    // get tiles in view, prep request for said tiles
+    const tilesInView = this._getTiles().map(tile => tile.id)
+    const tileRequests: Array<TileRequest> = []
+    // delete all tiles not in view, add to tileRequests for those that are,
+    // and delete source data from tile
+    this.tileCache.forEach((tile, key) => {
+      if (!keepCache && !tilesInView.includes(key)) { // just remove the tile for simplicity
+        this.tileCache.delete(key)
+      } else { // add to tileRequests
+        const { id, face, zoom, i, j, bbox, division, size } = tile
+        tileRequests.push({ id, face, zoom, i, j, bbox, division, size })
+        if (!awaitReplace && sourceNames) tile.deleteSources(sourceNames)
+      }
+    })
+
+    return tileRequests
+  }
+
   jumpTo (lon: number, lat: number, zoom: number) {
     // update the projectors position
     this.projection.setPosition(lon, lat, zoom)
     // render it out
     this.render()
+  }
+
+  flyTo (lon: number, lat: number, zoom: number, duration?: number) {
+
+  }
+
+  _flyTo () {
+
   }
 
   _setupCanvas () {

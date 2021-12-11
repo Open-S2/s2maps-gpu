@@ -23,12 +23,18 @@ export default class MapWorker implements Worker {
     else if (type === 'nav') this.map.navEvent(data.ctrl)
     else if (type === 'colorMode') this.map.colorMode(data.mode)
     else if (type === 'setStyle') this.map.setStyle(data.style, data.ignorePosition)
+    else if (type === 'updateStyle') this.map.updateStyle(data.style)
     else if (type === 'jumpTo') this.map.jumpTo(data.lon, data.lat, data.zoom)
+    else if (type === 'flyTo') this.map.flyTo(data.lon, data.lat, data.zoom, data.duration)
     else if (type === 'moveState') this.map.canMove = !!data.state
     else if (type === 'zoomState') this.map.canZoom = !!data.state
     else if (type === 'screenshot') this.map.screenshot()
     else if (type === 'resetSource') this.map.resetSource(data.sourceNames, data.keepCache, data.awaitReplace)
     else if (type === 'clearSource') this.map.clearSource(data.sourceNames)
+    else if (type === 'addLayer') this.map.addLayer(data.layer, data.nameIndex)
+    else if (type === 'updateLayer') this.map.updateLayer(data.layer, data.nameIndex, data.fullUpdate)
+    else if (type === 'removeLayer') this.map.removeLayer(data.nameIndex)
+    else if (type === 'reorderLayers') this.map.reorderLayers(data.layerChanges)
     else if (type === 'delete') this.map.delete()
     else this.map.injectData(data)
   }
