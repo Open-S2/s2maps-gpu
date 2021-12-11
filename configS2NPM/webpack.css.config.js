@@ -15,6 +15,7 @@ module.exports = {
     path: path.join(__dirname, '/../buildS2NPM'),
     filename: 'css.tmp'
   },
+  context: path.join(__dirname, '/../public'),
   module: {
     rules: [
       {
