@@ -8,8 +8,8 @@ export default function postInteractiveData (mapID: string, source: string,
 
   let offset = 0
   for (const [id, properties] of interactiveMap) {
-    let uint8Array = textEncoder.encode(JSON.stringify(properties))
-    let length = uint8Array.length
+    const uint8Array = textEncoder.encode(JSON.stringify(properties))
+    const length = uint8Array.length
     interactiveGuide.push(id, offset, offset + length)
     for (const byte of uint8Array) interactiveData.push(byte)
     offset += length

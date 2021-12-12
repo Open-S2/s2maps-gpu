@@ -1,7 +1,8 @@
 // @flow
+/* eslint-env browser */
 import Style from '../style'
-import Projection from '../ui/camera/projections'
-import { degToRad } from '../projection/util'
+import Projector from '../ui/camera/projector'
+import { degToRad } from '../geo/util'
 import * as mat4 from '../util/mat4'
 
 import type { WallpaperImageType, WallpaperStyle } from '../style/styleSpec'
@@ -16,7 +17,7 @@ export type WallpaperUniforms = {
 
 export class Wallpaper {
   style: Style // reference to the style objects colors
-  projection: Projection
+  projector: Projector
   tileSize: number
   uniforms: WallpaperUniforms = {
     uScale: new Float32Array(2),
@@ -27,15 +28,15 @@ export class Wallpaper {
   }
 
   skybox: boolean = false
-  constructor (style: Style, projection: Projection, tileSize?: number = 512) {
+  constructor (style: Style, projector: Projector, tileSize?: number = 512) {
     this.style = style
-    this.projection = projection
+    this.projector = projector
     this.tileSize = tileSize
   }
 
   getUniforms (): void | WallpaperUniforms {
     let dirty = false
-    if (this.projection.dirty) {
+    if (this.projector.dirty) {
       this._updateScale()
       dirty = true
     }
@@ -48,8 +49,8 @@ export class Wallpaper {
   }
 
   _updateScale () {
-    const { projection, tileSize } = this
-    const { zoom, aspect, multiplier } = projection
+    const { projector, tileSize } = this
+    const { zoom, aspect, multiplier } = projector
     const radius = tileSize * Math.min(Math.pow(2, zoom), 32768)
     this.uniforms.uScale[0] = radius / (aspect[0] / multiplier * 2)
     this.uniforms.uScale[1] = radius / (aspect[1] / multiplier * 2)
@@ -66,7 +67,7 @@ export class Wallpaper {
 }
 
 export class Skybox {
-  projection: Projection
+  projector: Projector
   path: string
   type: WallpaperImageType
   size: number = 1024
@@ -74,17 +75,17 @@ export class Skybox {
   angle: number = degToRad(40)
   matrix: Float32Array
   skybox: boolean = true
-  constructor (style: WallpaperStyle, projection: Projection) {
+  constructor (style: WallpaperStyle, projector: Projector) {
     const { skybox, type, size } = style
     this.path = skybox
     this.type = type
     if (size) this.size = size
-    this.projection = projection
+    this.projector = projector
   }
 
   getMatrix (): null | Float32Array {
-    if (!this.matrix || this.projection.dirty) {
-      const { aspect, lon, lat } = this.projection
+    if (!this.matrix || this.projector.dirty) {
+      const { aspect, lon, lat } = this.projector
       const matrix = mat4.create()
       // create a perspective matrix
       mat4.perspective(matrix, this.fov, aspect[0] / aspect[1], 1, 10000)
@@ -93,7 +94,7 @@ export class Skybox {
       // this is a simplified "lookat", since we maintain a set camera position
       mat4.multiply(matrix, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1])
       // invert view
-      mat4.invert(matrix, matrix)
+      mat4.invert(matrix)
       // set the current matrix
       this.matrix = new Float32Array(matrix)
     }

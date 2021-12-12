@@ -1,7 +1,6 @@
 // @flow
 /* eslint-env worker */
-import { bboxST } from '../../projection'
-import { toST, fromLonLat } from '../../projection/S2Point'
+import { toST, fromLonLat } from '../../geo/S2Point'
 
 import type { Session, Point } from './'
 import type { TileRequest } from '../workerPool'

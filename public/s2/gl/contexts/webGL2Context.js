@@ -1,4 +1,5 @@
 // @flow
+/* eslint-env browser */
 import Context from './context'
 
 import type { MapOptions } from '../../ui/map'

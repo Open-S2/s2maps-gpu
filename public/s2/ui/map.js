@@ -1,32 +1,34 @@
 // @flow
-/* eslint-env browser */
+/* eslint-env browser worker */
 import Camera from './camera'
 import DragPan from './camera/dragPan'
+import Animator from './camera/animator'
 import Style from '../style'
 
-import type { S2Map } from '../s2Map'
-import type { ProjectionType } from './camera/projections'
+import type S2Map from '../s2Map'
+import type { Layer } from '../style/styleSpec'
+import type { AnimationType, AnimationDirections } from './camera/animator'
 import type { TileRequest } from '../workers/workerPool'
 
 export type MapOptions = {
-  container: HTMLElement,
-  interactive: boolean,
+  container?: HTMLElement,
+  interactive?: boolean,
   apiKey: string,
   style: Object | string,
-  projection?: ProjectionType,
   scrollZoom?: boolean,
   updateWhileZooming?: boolean,
   canvasMultiplier?: number,
+  attributions?: { [string]: string },
   jollyRoger?: false | 'default' | 'light' | 'dark', // wether to load the logo or not, defaults to true
   zoomController?: boolean,
+  infoLayers?: Array<string>,
   colorBlindController?: boolean,
+  attributionOff?: boolean,
   canZoom?: boolean,
   canMove?: boolean,
   darkMode?: boolean,
   webworker?: boolean
 }
-
-// type ScrollEvent = SyntheticEvent<Object>
 
 type ResizeDimensions = { width: number, height: number }
 
@@ -83,7 +85,7 @@ export default class Map extends Camera {
 
   // we figure out which context we can use before pulling in GL or GPU
   // After we have the appropriate context, we build the painter and then the
-  async _createPainter (options: MapOptions): boolean {
+  async _createPainter (options: MapOptions): Promise<boolean> {
     let context
     let type = 0
     // first try webGPU
@@ -108,13 +110,15 @@ export default class Map extends Camera {
     } else if (type === 3) { // WebGPU
       const Painter = await import('../gpu').then(m => m.Painter)
       this.painter = new Painter()
-      await this.painter.createContext(context, options)
+      // await this.painter.createContext(context, options)
     } else { // WebGL 1 or 2
       const Painter = await import('../gl').then(m => m.Painter)
       this.painter = new Painter(context, type, options)
     }
     return true
   }
+
+  /* API */
 
   delete () {
     // delete all tiles
@@ -127,6 +131,24 @@ export default class Map extends Camera {
     this.painter.delete()
   }
 
+  jumpTo (lon: number, lat: number, zoom?: number) {
+    // update the projectors position
+    this.projector.setPosition(lon, lat, zoom)
+    // render it out
+    this.render()
+  }
+
+  animateTo (type: AnimationType, directions?: AnimationDirections) {
+    // build animator
+    const animator = new Animator(this.projector, directions)
+    if (type === 'flyTo') animator.flyTo()
+    else animator.easeTo()
+    // set an animation fuction
+    this.currAnimFunction = (now) => this._animate(animator, now * 0.001)
+    // render it out
+    this.render()
+  }
+
   async setStyle (style: string | Object, ignorePosition: boolean) {
     // ensure we don't draw for a sec
     this._canDraw = false
@@ -137,7 +159,7 @@ export default class Map extends Camera {
     // ready to start drawing
     this._canDraw = true
     // inject minzoom and maxzoom
-    this.projection.setStyleParameters(this.style, ignorePosition)
+    this.projector.setStyleParameters(this.style, ignorePosition)
     // render our first pass
     this.render()
   }
@@ -154,7 +176,7 @@ export default class Map extends Camera {
     // // update tileCache
     // this.tileCache.forEach(tile => { tile.updateStyle(this.style) })
     // // inject minzoom and maxzoom
-    // this.projection.setStyleParameters(this.style, true)
+    // this.projector.setStyleParameters(this.style, true)
     // // render our first pass
     // this.render()
   }
@@ -215,6 +237,95 @@ export default class Map extends Camera {
     this.render()
   }
 
+  setMoveState (state: boolean) {
+    this.canMove = !!state
+  }
+
+  setZoomState (state: boolean) {
+    this.canZoom = !!state
+  }
+
+  resize (width: number, height: number) {
+    this.resizeQueued = { width, height }
+    this.render()
+  }
+
+  screenshot () {
+    requestAnimationFrame(() => {
+      if (this._fullyRenderedScreen()) {
+        // assuming the screen is ready for a screen shot we ask for a draw
+        const screen = this.painter.getScreen()
+        if (this.webworker) {
+          postMessage({ type: 'screenshot', screen })
+        } else {
+          this.parent.dispatchEvent(new CustomEvent('screenshot', { detail: screen }))
+        }
+      } else { this.screenshot() }
+    })
+  }
+
+  // some cases we can just do the work immediately, otherwise we do one job per frame
+  // to improve performance. Data is stored in the injection queue while it waits for it's frame.
+  injectData (data) {
+    if (data.type === 'flush') this._injectData(data)
+    else this.injectionQueue.push(data)
+    this.render()
+  }
+
+  /* INPUT EVENTS */
+
+  colorMode (mode: 0 | 1 | 2 | 3) {
+    this.painter.setColorMode(mode)
+    // force a re-render
+    this.render()
+  }
+
+  // for interaction with features on the screen
+  onCanvasMouseMove (x: number, y: number) {
+    if (!this.style || !this.style.interactive || this.projector.dirty) return
+    this.mousePosition[0] = x
+    this.mousePosition[1] = y
+    this.mouseMoved = true
+    this.render()
+  }
+
+  onTouchStart (touches) {
+    this.dragPan.onTouchStart(touches)
+    if (!this.style.interactive || this.projector.dirty || touches.length > 1) return
+    const { x, y } = touches[0]
+    this.mousePosition[0] = x
+    this.mousePosition[1] = y
+    this.mouseMoved = true
+    this.render()
+  }
+
+  // builtin navigation controller inputs
+  navEvent (ctrl: 'zoomIn' | 'zoomOut') {
+    const { projector } = this
+    const startZoom = projector.zoom
+    const endZoom = startZoom + ((ctrl === 'zoomIn') ? 1 : -1)
+    // preload end position tiles, reset for next frame
+    projector.setZoom(endZoom)
+    this._getTiles()
+    projector.setZoom(startZoom)
+    // build animation
+    const animator = new Animator(this.projector, { duration: 1.5, zoom: endZoom })
+    animator.zoomTo()
+    this.currAnimFunction = (now) => this._animate(animator, now * 0.001)
+    // render
+    this.render()
+  }
+
+  /* INTERNAL FUNCTIONS */
+
+  _contextLost () {
+    // console.log('context lost')
+  }
+
+  _contextRestored () {
+    // console.log('context restored')
+  }
+
   // keepCache => don't delete any tiles, request replacements for all (for s2json since it's locally cached and fast)
   // awaitReplace => to avoid flickering (i.e. adding/removing markers), we can wait for an update (from source+tile workers) on how the tile should look
   _resetTileCache (sourceNames?: Array<string>, keepCache: boolean, awaitReplace: boolean): Array<TileRequest> {
@@ -236,21 +347,6 @@ export default class Map extends Camera {
     return tileRequests
   }
 
-  jumpTo (lon: number, lat: number, zoom: number) {
-    // update the projectors position
-    this.projection.setPosition(lon, lat, zoom)
-    // render it out
-    this.render()
-  }
-
-  flyTo (lon: number, lat: number, zoom: number, duration?: number) {
-
-  }
-
-  _flyTo () {
-
-  }
-
   _setupCanvas () {
     const self = this
     const { _canvas, _interactive, _scrollZoom } = self
@@ -270,58 +366,7 @@ export default class Map extends Camera {
       dragPan.addEventListener('click', self._onClick.bind(self))
     }
     // setup camera
-    self.resizeCamera(_canvas.width, _canvas.height)
-  }
-
-  setMoveState (state: boolean) {
-    this.canMove = !!state
-  }
-
-  setZoomState (state: boolean) {
-    this.canZoom = !!state
-  }
-
-  resize (width: number, height: number) {
-    this.resizeQueued = { width, height }
-    this.render()
-  }
-
-  // for interaction with features on the screen
-  onCanvasMouseMove (x: number, y: number) {
-    if (!this.style || !this.style.interactive || this.projection.dirty) return
-    this.mousePosition[0] = x
-    this.mousePosition[1] = y
-    this.mouseMoved = true
-    this.render()
-  }
-
-  _onCanvasMouseMove () {
-    const featureID = this.painter.context.getFeatureAtMousePosition(...this.mousePosition)
-    // if we found an ID and said feature is not the same as the current, we dive down
-    if (!featureID && this.currFeature) {
-      this._handleFeatureChange(null)
-    } else if (featureID && (!this.currFeature || this.currFeature.__id !== featureID)) {
-      let found = false
-      for (const tile of this.tilesInView) {
-        const feature = tile.findInteractiveFeature(featureID)
-        if (feature) {
-          this._handleFeatureChange(feature)
-          found = true
-          break
-        }
-      }
-      if (!found && this.currFeature) this._handleFeatureChange(null)
-    }
-  }
-
-  onTouchStart (touches) {
-    this.dragPan.onTouchStart(touches)
-    if (!this.style.interactive || this.projection.dirty || touches.length > 1) return
-    const { x, y } = touches[0]
-    this.mousePosition[0] = x
-    this.mousePosition[1] = y
-    this.mouseMoved = true
-    this.render()
+    self._resizeCamera(_canvas.width, _canvas.height)
   }
 
   _handleFeatureChange (newFeature: null | Object) {
@@ -357,113 +402,16 @@ export default class Map extends Camera {
       const { width, height } = resizeQueued
       _canvas.width = width
       _canvas.height = height
-      this.resizeCamera(width, height)
+      this._resizeCamera(width, height)
       this.resizeQueued = null
     }
   }
 
-  _onZoom (deltaZ: number, deltaX?: number = 0, deltaY?: number = 0) {
-    this.dragPan.clear()
-    if (!this.canZoom) return
-    // remove any prexisting animations
-    this.currAnimFunction = null
-    // update projection
-    const update = this.projection.onZoom(deltaZ, deltaX, deltaY)
-    // if the projection sees a zoom change, we need to render, but don't request new tiles until
-    // done zooming if the updateWhileZooming flag is set to false
-    if (update) {
-      this.painter.dirty = true
-      this.render()
-    }
-  }
-
-  _contextLost () {
-    // console.log('context lost')
-  }
-
-  _contextRestored () {
-    // console.log('context restored')
-  }
-
-  _onMovement (e: Event) {
-    if (!this.canMove) return
-    const { movementX, movementY } = this.dragPan
-    // remove any prexisting animations
-    this.currAnimFunction = null
-    // update projection
-    this.projection.onMove(movementX, movementY)
-    this.render()
-  }
-
-  _onSwipe (e: Event) {
-    if (!this.canMove) return
-    this.currAnimFunction = (now) => this.swipeAnimation(now)
-    this.render()
-  }
-
-  // builtin navigation controller inputs
-  navEvent (ctrl: 'zoomIn' | 'zoomOut') {
-    const { projection } = this
-    const { zoom, minzoom, maxzoom } = projection
-    const startZoom = zoom
-    const deltaZoom = Math.max(Math.min((ctrl === 'zoomIn') ? startZoom + 1 : startZoom - 1, maxzoom), minzoom) - startZoom
-    if (deltaZoom) { // assuming we have a new end position we animate
-      // preload end position tiles, reset for next frame
-      projection.setZoom(startZoom + deltaZoom)
-      this._getTiles()
-      projection.setZoom(startZoom)
-      // build animation function
-      this.currAnimFunction = (now) => this.zoomAnimation(startZoom, deltaZoom, now * 0.001)
-      // render
-      this.render()
-    }
-  }
-
-  colorMode (mode: 0 | 1 | 2 | 3) {
-    this.painter.setColorMode(mode)
-    // force a re-render
-    this.render()
-  }
-
-  swipeAnimation (curTime: number) {
-    const { abs } = Math
-    const { dragPan, projection } = this
-    const [newMovementX, newMovementY, time] = dragPan.getNextSwipeFrame(curTime * 0.001)
-    const noMovement = (abs(newMovementX) > 0.5 || abs(newMovementY) > 0.5)
-    if (time && noMovement) {
-      // adjust position
-      projection.onMove(newMovementX, newMovementY, 6, 6)
-      // ensure new render is queued
-      this.render()
-      // set next animation
-      this.currAnimFunction = (now) => this.swipeAnimation(now)
-    } else {
-      // a timeout shouldn't kill wasActive, but no more movement should.
-      // (stopping swipe animation with a mousedown kills time, so we avoid confusing the engine that this is a click)
-      if (time && !noMovement) this.dragPan.wasActive = false
-      this.currAnimFunction = null
-    }
-  }
-
-  zoomAnimation (startZoom: number, deltaZoom: number, startTime: number, curTime?: number) {
-    const { dragPan, projection } = this
-    if (!curTime) curTime = dragPan.time = startTime
-    const multiplier = dragPan.getNextZoomFrame(curTime)
-    // ensure new render is queued
-    this.render()
-    if (multiplier >= 1) {
-      projection.setZoom(startZoom + deltaZoom)
-    } else {
-      projection.setZoom(startZoom + (multiplier * deltaZoom))
-      this.currAnimFunction = (now) => this.zoomAnimation(startZoom, deltaZoom, startTime, now * 0.001)
-    }
-  }
-
   _onClick ({ detail }) {
-    const { projection, currFeature, parent } = this
+    const { projector, currFeature, parent } = this
     // get lon lat of cursor
     const { posX, posY } = detail
-    const [lon, lat] = projection.cursorToLonLat(posX, posY)
+    const [lon, lat] = projector.cursorToLonLat(posX, posY)
     // send off the information
     if (this.webworker) {
       postMessage({ type: 'click', feature: currFeature, lon, lat })
@@ -474,8 +422,8 @@ export default class Map extends Camera {
   }
 
   _onPositionUpdate () {
-    const { projection } = this
-    const { zoom, lon, lat } = projection
+    const { projector } = this
+    const { zoom, lon, lat } = projector
     if (this.webworker) {
       postMessage({ type: 'pos', zoom, lon, lat })
     } else {
@@ -483,27 +431,73 @@ export default class Map extends Camera {
     }
   }
 
-  screenshot () {
-    requestAnimationFrame(() => {
-      if (this._fullyRenderedScreen()) {
-        // assuming the screen is ready for a screen shot we ask for a draw
-        const screen = this.painter.getScreen()
-        if (this.webworker) {
-          postMessage({ type: 'screenshot', screen })
-        } else {
-          this.parent.dispatchEvent(new CustomEvent('screenshot', { detail: screen }))
+  _onCanvasMouseMove () {
+    const featureID = this.painter.context.getFeatureAtMousePosition(...this.mousePosition)
+    // if we found an ID and said feature is not the same as the current, we dive down
+    if (!featureID && this.currFeature) {
+      this._handleFeatureChange(null)
+    } else if (featureID && (!this.currFeature || this.currFeature.__id !== featureID)) {
+      let found = false
+      for (const tile of this.tilesInView) {
+        const feature = tile.findInteractiveFeature(featureID)
+        if (feature) {
+          this._handleFeatureChange(feature)
+          found = true
+          break
         }
-      } else { this.screenshot() }
-    })
+      }
+      if (!found && this.currFeature) this._handleFeatureChange(null)
+    }
   }
 
-  // some cases we can just do the work immediately, otherwise we do one job per frame
-  // to improve performance. Data is stored in the injection queue while it waits for it's frame.
-  injectData (data) {
-    if (data.type === 'flush') this._injectData(data)
-    else this.injectionQueue.push(data)
+  _onZoom (deltaZ: number, deltaX?: number = 0, deltaY?: number = 0) {
+    this.dragPan.clear()
+    if (!this.canZoom) return
+    // remove any prexisting animations
+    this.currAnimFunction = null
+    // update projector
+    const update = this.projector.onZoom(deltaZ, deltaX, deltaY)
+    // if the projector sees a zoom change, we need to render, but don't request new tiles until
+    // done zooming if the updateWhileZooming flag is set to false
+    if (update) {
+      this.painter.dirty = true
+      this.render()
+    }
+  }
+
+  _onMovement (e: Event) {
+    if (!this.canMove) return
+    const { projector, dragPan } = this
+    const { movementX, movementY } = dragPan
+    // update projector
+    projector.onMove(movementX, movementY)
     this.render()
   }
+
+  _onSwipe (e: Event) {
+    if (!this.canMove) return
+    const { projector, dragPan } = this
+    const { lon, lat } = projector
+    const { movementX, movementY } = dragPan
+    // build animation
+    const animator = new Animator(projector, { duration: 1.75 })
+    animator.swipeTo(movementX, movementY)
+    this.currAnimFunction = (now) => this._animate(animator, now * 0.001)
+    // render
+    this.render()
+  }
+
+  _animate (animator: Animator, curTime: number) {
+    const { mouseActive } = this.dragPan
+    // ensure new render is queued
+    this.render()
+    // tell the animator to increment frame
+    const done = animator.increment(curTime)
+    // continue animation if not done and no mouse/touch events
+    if (done || mouseActive) this.currAnimFunction = null
+  }
+
+  /* DRAW */
 
   // we don't want to over request rendering, so we render with a limiter to
   // safely call render as many times as we like
@@ -528,16 +522,16 @@ export default class Map extends Camera {
         self.render()
       }
       // get state of scene
-      const projectionDirty = self.projection.dirty
-      // if the projection was dirty (zoom or movement) we run render again just incase
-      if (projectionDirty) {
+      const projectorDirty = self.projector.dirty
+      // if the projector was dirty (zoom or movement) we run render again just incase
+      if (projectorDirty) {
         self.render()
         self._onPositionUpdate()
       }
       // run a draw, it will repaint framebuffers as necessary
       self._draw()
       // if mouse movement, check feature at position
-      if (self.mouseMoved && !projectionDirty) {
+      if (self.mouseMoved && !projectorDirty) {
         self.mouseMoved = false
         self._onCanvasMouseMove()
       }

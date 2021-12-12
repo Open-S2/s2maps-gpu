@@ -2,8 +2,8 @@
 
 // https://github.com/proj4js/proj4js/blob/master/lib/projections/ortho.js
 const EPSLN = 1.0e-10
-const D2R = 0.01745329251994329577
-const R2D = 57.29577951308232088
+const D2R = 0.01745329251994329577 // eslint-disable-line
+const R2D = 57.29577951308232088 // eslint-disable-line
 
 // centerLon and centerlat is where the center of the sphere is currently located
 // x is the distance from center
@@ -18,8 +18,8 @@ export default function cursorToLonLat (centerLon: number, centerLat: number,
   // corner case, the x+y is too far
   if (rh > radius) return [null, null]
   const z = asinz(rh / radius)
-  const sin_p14 = sin(centerLat)
-  const cos_p14 = cos(centerLat)
+  const sinP14 = sin(centerLat)
+  const cosP14 = cos(centerLat)
   const sinz = sin(z)
   const cosz = cos(z)
   let lon = centerLon
@@ -28,13 +28,13 @@ export default function cursorToLonLat (centerLon: number, centerLat: number,
   // corner case: basically on the dot center
   if (abs(rh) <= EPSLN) return [lon * R2D, lat * R2D]
   // build lat
-  lat = asinz(cosz * sin_p14 + (y * sinz * cos_p14) / rh)
+  lat = asinz(cosz * sinP14 + (y * sinz * cosP14) / rh)
   // negative angles
   if (abs(con) <= EPSLN) {
     if (centerLat >= 0) lon = adjustLon(centerLon + atan2(x, -y))
     else lon = adjustLon(centerLon - atan2(-x, y))
   } else { // positive angles
-    lon = adjustLon(centerLon + atan2((x * sinz), rh * cos_p14 * cosz - y * sin_p14 * sinz))
+    lon = adjustLon(centerLon + atan2((x * sinz), rh * cosP14 * cosz - y * sinP14 * sinz))
   }
   return [lon * R2D, lat * R2D]
 }

@@ -1,7 +1,6 @@
 // @flow
 import { earclip, tesselate, flatten } from './earclip'
-
-type Point = [number, number]
+import type { Feature } from '../../../tile.worker'
 
 // geometry: Array<Array<Point>> | Array<Point>
 export default function preprocessFill (feature: Feature, division: number) {
@@ -31,7 +30,7 @@ export default function preprocessFill (feature: Feature, division: number) {
   } else {
     for (const poly of polys) {
       // create triangle mesh
-      let data = earclip(poly, extent / division, vertices.length / 2)
+      const data = earclip(poly, extent / division, vertices.length / 2)
       // store vertices
       for (let i = 0, vl = data.vertices.length; i < vl; i++) vertices.push(round(data.vertices[i] * multiplier))
       // store indices

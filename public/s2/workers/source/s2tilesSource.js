@@ -1,7 +1,7 @@
 // @flow
 /* eslint-env browser */
 import Source from './source'
-import { toIJ } from '../../projection/S2CellID'
+import { toIJ } from '../../geo/S2CellID'
 
 import type { TileRequest } from '../workerPool'
 
@@ -61,7 +61,7 @@ export default class S2TilesSource extends Source {
     sourceName: string, parent: false | Object, layerIndexes?: Array<number>) {
     const { type, encoding, session } = this
     let { face, zoom, id } = parent || tile
-    let [_, x, y] = toIJ(id, zoom)
+    let [, x, y] = toIJ(id, zoom)
 
     // pull in the correct face's directory
     let dir = this.rootDir[face]

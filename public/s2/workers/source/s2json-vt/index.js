@@ -1,6 +1,6 @@
 // @flow
 /** MODULES **/
-import { fromFace, isFace, level, face as getFace, parent as parentID, childrenIJ, contains } from '../../../projection/S2CellID'
+import { fromFace, isFace, level, face as getFace, parent as parentID, childrenIJ, contains } from '../../../geo/S2CellID'
 import convert from './convert' // GeoJSON conversion and preprocessing
 import clip from './clip'
 import transformTile from './transform' // coordinate transformation
@@ -60,13 +60,13 @@ export default class S2JsonVT {
   generateId: boolean = false
   tiles: Tiles = {}
   constructor (data: Feature | FeatureCollection, options: Options) {
-    // prep all values $FlowIgnore
-    for (let key in options) this[key] = options[key]
+    // prep all values
+    for (const key in options) this[key] = options[key]
     // sanity check
     if (this.maxZoom < 0 || this.maxZoom > 20) throw new Error('maxZoom should be in the 0-24 range')
     if (this.promoteId && this.generateId) throw new Error('promoteId and generateId cannot be used together.')
     // convert features
-    let features: Array<FeatureVector> = convert(data, this)
+    const features: Array<FeatureVector> = convert(data, this)
     // organize features to faces
     const faces = [[], [], [], [], [], []]
     features.forEach(feature => faces[feature.face].push(feature))

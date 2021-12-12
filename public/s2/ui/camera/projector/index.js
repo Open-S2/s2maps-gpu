@@ -1,9 +1,11 @@
 // @flow
 import * as mat4 from '../../../util/mat4'
-import { default as getTiles } from './getTilesInView'
-import { default as _cursorToLonLat } from './cursorToLonLat'
-import { fromLonLatGL, normalize, mul } from '../../../projection/S2Point'
-import { degToRad } from '../../../projection/util'
+import getTiles from './getTilesInView'
+import _cursorToLonLat from './cursorToLonLat'
+import { fromLonLatGL, normalize, mul } from '../../../geo/S2Point'
+
+import type { Face } from '../../../style/styleSpec'
+import type { MapOptions } from '../../map'
 
 export type ProjectionConfig = {
   eye?: [number, number, number],
@@ -24,7 +26,7 @@ export type TileDefinitions = Array<[Face, number, number, number, BigInt]> // [
 
 export type MatrixType = 'm' | 'km' // meters of kilometers
 
-// const EARTH_RADIUS = 6_371_008.8 // meters
+// haversine / great circle distance -> http://www.movable-type.co.uk/scripts/latlong.html
 
 export default class Projector {
   radius: number = 6_371.0088
@@ -66,6 +68,8 @@ export default class Projector {
     if (config.positionalZoom === false) this.positionalZoom = false
   }
 
+  /* API */
+
   setFeatureState (state: 0 | 1 | 2) {
     this.view[6] = state
   }
@@ -74,7 +78,6 @@ export default class Projector {
     this.view[7] = id
   }
 
-  // TODO: Adjust zoom if minzoom and maxzoom changed, but ignore lon and lat if ignorePosition
   setStyleParameters (style, ignorePosition: boolean) {
     const { minzoom, maxzoom, zoom, lon, lat } = style
     // clamp values and ensure minzoom is less than maxzoom
@@ -85,17 +88,58 @@ export default class Projector {
     this.setPosition((!ignorePosition) ? lon : this.lon, (!ignorePosition) ? lat : this.lat, zoom)
   }
 
-  setPosition (lon: number, lat: number, zoom: number) {
+  setPosition (lon: number, lat: number, zoom?: number, bearing?: number, pitch?: number) {
     // set lon lat
     this.setLonLat(lon, lat)
     // set zoom
-    this.setZoom(zoom)
+    if (!isNaN(zoom)) this.setZoom(zoom)
+    // set bearing
+    if (!isNaN(bearing)) this.setBearing(bearing)
+    // set pitch
+    if (!isNaN(pitch)) this.setPitch(pitch)
+  }
+
+  setLonLat (lon: number, lat: number) {
+    if (this.lon !== lon || this.lat !== lat) {
+      this.lon = lon
+      this.lat = lat
+      this._adjustLonLat()
+    }
+  }
+
+  addBearing (num: number) {
+    this.setBearing(this.bearing + num)
+  }
+
+  setBearing (bearing: number) {
+    if (this.bearing !== bearing) {
+      this.bearing = bearing
+      // if we hit greater than 180, just swing back to 0
+      while (this.bearing >= 180) { this.bearing -= 360 }
+      while (this.bearing < -180) { this.bearing += 360 }
+      // cleanup
+      this.matrices = {}
+      this.dirty = true
+    }
+  }
+
+  setPitch (pitch: number) {
+    if (this.pitch !== pitch) {
+      this.pitch = pitch
+      // cleanup
+      this.matrices = {}
+      this.dirty = true
+    }
   }
 
   zoomChange (): number {
     const { zoom, prevZoom } = this
     const { floor } = Math
     return floor(zoom) - floor(prevZoom)
+  }
+
+  zoomScale (zoom: number): number {
+    return Math.pow(2, zoom)
   }
 
   resize (width: number, height: number) {
@@ -111,6 +155,11 @@ export default class Projector {
       this.view[0] = this.zoom
       this.onZoom()
     }
+  }
+
+  clampZoom (input: number) {
+    const { minzoom, maxzoom } = this
+    return Math.max(Math.min(input, maxzoom), minzoom)
   }
 
   onZoom (zoomInput?: number = 0, canvasX?: number = 0, canvasY?: number = 0): boolean {
@@ -139,17 +188,17 @@ export default class Projector {
       const posY = (height / multiplier / 2) - canvasY
       // STEP 2: find the distance POST-zoom adjustment. In other words,
       // multiply the previous position by the scale change
-      const zoomScale = 1 + (this.zoom - this.prevZoom)
-      const posDeltaX = posX * zoomScale - posX
-      const posDeltaY = posY * zoomScale - posY
+      const zoomAdjust = 1 + (this.zoom - this.prevZoom)
+      const posDeltaX = posX * zoomAdjust - posX
+      const posDeltaY = posY * zoomAdjust - posY
       // STEP 3: The deltas need to be converted to deg change
-      const zoomMultiplier = pow(2, max(this.zoom, 0))
+      const zScale = pow(2, max(this.zoom, 0)) // we don't use the same zoom scale because less than 0 zoom should stay the same here
       const lonMultiplier = min(30, 1 / cos(abs(this.lat) * PI / 180))
-      this.lon += posDeltaX / (3072 * zoomMultiplier) * 360 * lonMultiplier
-      this.lat += posDeltaY / (1536 * zoomMultiplier) * 180
+      this.lon += posDeltaX / (3072 * zScale) * 360 * lonMultiplier
+      this.lat += posDeltaY / (1536 * zScale) * 180
     }
     // adjust latitude accordingly
-    this._adjustLat()
+    this._adjustLonLat()
     // update view
     this.view[0] = this.zoom
     this.view[1] = this.lon
@@ -169,46 +218,10 @@ export default class Projector {
     if (movementX) this.lon -= movementX * lonMultiplier / (multiplierX * zoomMultiplier)
     if (movementY) this.lat += movementY / (multiplierY * zoomMultiplier)
     // adjust latitude accordingly
-    this._adjustLat()
+    this._adjustLonLat()
     // update view
     this.view[1] = this.lon
     this.view[2] = this.lat
-    // if we hit greater than 180, just swing back to 0
-    while (this.lon >= 180) { this.lon -= 360 }
-    while (this.lon < -180) { this.lon += 360 }
-    // cleanup
-    this.matrices = {}
-    this.dirty = true
-  }
-
-  _adjustLat () {
-    const { zoom, maxLatRotation } = this
-    const { min } = Math
-    // ensure we hit a limit on latitude so we don't flip movement
-    const curMaxLat = min(75 + min(14.999999, (14.999999 / 5) * zoom), maxLatRotation)
-    if (this.lat > curMaxLat) this.lat = curMaxLat
-    else if (this.lat < -curMaxLat) this.lat = -curMaxLat
-  }
-
-  setLonLat (lon: number, lat: number) {
-    while (lon >= 180) { lon -= 360 }
-    while (lon < -180) { lon += 360 }
-    if (this.lon !== lon && this.lat !== lat) {
-      this.lon = lon
-      this.lat = lat
-      this.onMove()
-    }
-  }
-
-  addBearing (num: number) {
-    this.setBearing(this.bearing + num)
-  }
-
-  setBearing (bearing: number) {
-    this.bearing = bearing
-    // if we hit greater than 180, just swing back to 0
-    while (this.bearing >= 180) { this.bearing -= 360 }
-    while (this.bearing < -180) { this.bearing += 360 }
     // cleanup
     this.matrices = {}
     this.dirty = true
@@ -233,6 +246,32 @@ export default class Projector {
     return mat4.clone(matrix)
   }
 
+  // x and y are the distances from the center of the screen
+  cursorToLonLat (x: number, y: number) {
+    const { lon, lat, zoom, tileSize } = this
+    return _cursorToLonLat(lon, lat, x, y, (tileSize * Math.pow(2, zoom)) / 2)
+  }
+
+  getTilesInView (): TileDefinitions { // Array<BigInt> (S2CellIDs)
+    const { radius, zoom, zoomOffset, lon, lat } = this
+    const matrix = this.getMatrix('m')
+    return getTiles(zoom + zoomOffset, matrix, lon, lat, radius)
+  }
+
+  /* INTERNAL FUNCTIONS */
+
+  _adjustLonLat () {
+    const { zoom, maxLatRotation } = this
+    const { min } = Math
+    // ensure we hit a limit on latitude so we don't flip movement
+    const curMaxLat = min(75 + min(14.999999, (14.999999 / 5) * zoom), maxLatRotation)
+    if (this.lat > curMaxLat) this.lat = curMaxLat
+    else if (this.lat < -curMaxLat) this.lat = -curMaxLat
+    // lon wrap fixes
+    while (this.lon >= 180) { this.lon -= 360 }
+    while (this.lon < -180) { this.lon += 360 }
+  }
+
   _updateEye () {
     const { lon, lat, zoom, radius, zTranslateEnd, zTranslateStart, zoomEnd } = this
     // find radial distance from core of ellipsoid
@@ -246,30 +285,16 @@ export default class Projector {
 
   _getProjectionMatrix (type: MatrixType): Float32Array {
     let { zoom, radius, aspect, tileSize, multiplier } = this
-    let multpl
     // prep a matrix
     const matrix = mat4.create()
 
     // BLEND LOOKS A BIT DIFF const multpl = -radius / multiplier / (tileSize * scale * radius * 5)
     if (type === 'km') radius *= 1000
-    multpl = radius / multiplier / (tileSize * Math.pow(2, zoom))
+    const multpl = radius / multiplier / (tileSize * Math.pow(2, zoom))
 
     // create projection
-    // mat4.blend(matrix, aspect[0] * multpl, aspect[1] * multpl, 0.5, zFar)
     mat4.ortho(matrix, aspect[0] * multpl, aspect[1] * multpl, 100_000)
 
     return matrix
-  }
-
-  // x and y are the distances from the center of the screen
-  cursorToLonLat (x: number, y: number) {
-    const { lon, lat, zoom, tileSize } = this
-    return _cursorToLonLat(lon, lat, x, y, (tileSize * Math.pow(2, zoom)) / 2)
-  }
-
-  getTilesInView (): TileDefinitions { // Array<BigInt> (S2CellIDs)
-    let { radius, zoom, zoomOffset, lon, lat } = this
-    const matrix = this.getMatrix('m')
-    return getTiles(zoom + zoomOffset, matrix, lon, lat, radius)
   }
 }

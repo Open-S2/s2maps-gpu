@@ -16,6 +16,9 @@ import { EARTH_RADIUS } from './util'
 
 import type { XYZ } from './S2Point'
 
+/** TYPES **/
+import type { Face } from './'
+
 /** CONSTANTS **/
 const LOOKUP_POS = []
 const LOOKUP_IJ = []
@@ -51,9 +54,6 @@ function initLookupCell (level, i, j, origOrientation, pos, orientation) {
     initLookupCell(level, i + (r[3] >> 1), j + (r[3] & 1), origOrientation, pos + 3, orientation ^ kPosToOriengation[3])
   }
 }
-
-/** TYPES **/
-import type { Face } from './'
 
 /** FUNCTIONS **/
 export function fromFace (face: Face): BigInt {
@@ -116,7 +116,7 @@ export function fromIJ (face: Face, i: number, j: number, level?: number): BigIn
     bits &= 3n
   }
 
-  let id = n * 2n + 1n
+  const id = n * 2n + 1n
 
   if (level) return parent(id, level)
   return id
@@ -179,7 +179,7 @@ export function toLonLat (id: BigInt): [number, number] {
   return xyzToLonLat(xyz)
 }
 
-export function toS2Point (id: BigInt): XYX {
+export function toS2Point (id: BigInt): XYZ {
   return fromS2CellID(id)
 }
 
@@ -213,14 +213,12 @@ export function child (id: BigInt, pos: 0n | 1n | 2n | 3n): BigInt {
 }
 
 export function children (id: BigInt, orientation: number = 0): [BigInt, BigInt, BigInt, BigInt] {
-  let childs = [child(id, 0n), child(id, 3n), child(id, 2n), child(id, 1n)]
+  const childs = [child(id, 0n), child(id, 3n), child(id, 2n), child(id, 1n)]
   if (orientation === 0) {
-    let tmp = childs[1]
+    const tmp = childs[1]
     childs[1] = childs[3]
     childs[3] = tmp
   }
-
-  return childs
 
   return childs
 }
@@ -287,7 +285,7 @@ export function isLeaf (id: BigInt): boolean {
 
 export function centerST (id: BigInt): [Face, number, number] {
   const [face, i, j] = toIJ(id)
-  const delta = (id & 1n) ? 1 : ((BigInt(i) ^ (id >> 2n)) & 1n) ? 2 : 0;
+  const delta = (id & 1n) ? 1 : ((BigInt(i) ^ (id >> 2n)) & 1n) ? 2 : 0
   // Note that (2 * {i,j} + delta) will never overflow a 32-bit integer.
   const si = 2 * i + delta
   const ti = 2 * j + delta
@@ -298,7 +296,7 @@ export function centerST (id: BigInt): [Face, number, number] {
 export function boundsST (id: BigInt, lev: number): [Face, number, number, number, number] {
   if (!lev) lev = level(id)
 
-  const [face, s, t] = centerST(id)
+  const [, s, t] = centerST(id)
   const halfSize = sizeST(lev) * 0.5
 
   return [
@@ -391,7 +389,7 @@ export function getLevelFromMeters (meters: number): number {
 // convert radians to level
 export function getLevelFromAngle (angle: number): number {
   const { round, log2, abs, max, min } = Math
-  let lev = round(log2(abs(0.9428090415820635 / angle)))
+  const lev = round(log2(abs(0.9428090415820635 / angle)))
 
   return max(0, min(30, lev))
 }

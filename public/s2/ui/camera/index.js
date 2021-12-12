@@ -6,14 +6,13 @@ import Style from '../../style'
 import type { Painter } from '../../gl'
 import type { MapOptions } from '../map'
 /** PROJECTIONS **/
-import { parent as parentID, isFace } from '../../projection/S2CellID'
-import Projector from './projections'
+import { parent as parentID, isFace } from '../../geo/S2CellID'
+import Projector from './projector'
 /** SOURCES **/
 import { Tile } from '../../source'
 import TileCache from './tileCache'
 
-import type { Face } from '../../style/styleSpec'
-import type { TileDefinitions } from './projections'
+import type { TileDefinitions } from './projector'
 
 // eslint-disable-next-line no-unused-vars
 declare class Timeout extends Number {
@@ -25,7 +24,7 @@ declare function SetTimeout (fn: Function, ms?: number): Timeout;
 export default class Camera {
   style: Style
   painter: Painter
-  projection: Projector
+  projector: Projector
   tileCache: TileCache
   tilesInView: Array<Tile> = [] // S2CellIDs of the tiles
   lastTileViewState: Array<number> = []
@@ -36,22 +35,18 @@ export default class Camera {
   wasDirtyLastFrame: boolean = false
   constructor (options: MapOptions) {
     this._updateWhileZooming = options.updateWhileZooming || true
-    // setup projection
-    this.createProjector(options)
+    // setup projector
+    this.projector = new Projector(options)
     // prep the tileCache for future tiles
     this.tileCache = new TileCache()
   }
 
-  createProjector (options: MapOptions) {
-    this.projection = new Projector(options)
-  }
-
-  resizeCamera (width: number, height: number) {
+  _resizeCamera (width: number, height: number) {
     // ensure minimum is 1px for both
     width = Math.max(width, 1)
     height = Math.max(height, 1)
     // update the projector and painter
-    this.projection.resize(width, height)
+    this.projector.resize(width, height)
     if (this.painter) this.painter.resize()
   }
 
@@ -132,12 +127,12 @@ export default class Camera {
   }
 
   _getTiles (): Array<Tile> {
-    if (this.projection.dirty) {
+    if (this.projector.dirty) {
       let tilesInView: TileDefinitions = []
       // no matter what we need to update what's in view
       const newTiles = []
       // update tiles in view
-      tilesInView = this.projection.getTilesInView()
+      tilesInView = this.projector.getTilesInView()
       // check if any of the tiles don't exist in the cache. If they don't create a new tile
       for (const id of tilesInView) {
         if (!this.tileCache.has(id)) {
@@ -194,25 +189,27 @@ export default class Camera {
     return fullyRendered
   }
 
+  /* DRAW */
+
   _draw () {
-    const { style, painter, projection } = this
+    const { style, painter, projector } = this
     // prep tiles
     const tiles = this._getTiles()
     // if any changes, we paint new scene
-    if (style.dirty || painter.dirty || projection.dirty) {
+    if (style.dirty || painter.dirty || projector.dirty) {
       // store for future draw that it was a "dirty" frame
       this.wasDirtyLastFrame = true
       // paint scene
-      painter.paint(projection, style, tiles)
+      painter.paint(projector, style, tiles)
     }
     // draw the interactive elements if there was no movement/zoom change
-    if (style.interactive && !projection.dirty && this.wasDirtyLastFrame) {
+    if (style.interactive && !projector.dirty && this.wasDirtyLastFrame) {
       this.wasDirtyLastFrame = false
       painter.paintInteractive(tiles)
     }
     // cleanup
     painter.dirty = false
     style.dirty = false
-    projection.dirty = false
+    projector.dirty = false
   }
 }

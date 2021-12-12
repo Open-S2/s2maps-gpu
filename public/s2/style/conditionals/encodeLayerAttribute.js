@@ -134,10 +134,13 @@ function encodeFeatureStates (input: Array<any>, lch: boolean): Array<number> {
   while (input.length) {
     // get condition name
     const condition = input.shift()
-    const conditionCode = (condition === 'default') ? 0 // (inactive)
-      : (condition === 'hover') ? 1
-        : (condition === 'active') ? 2
-          : 0 // default / inactive
+    const conditionCode = (condition === 'default')
+      ? 0 // (inactive)
+      : (condition === 'hover')
+          ? 1
+          : (condition === 'active')
+              ? 2
+              : 0 // default / inactive
     // get condition
     const value = input.shift()
     encoding.push(conditionCode, ...encodeLayerAttribute(value, lch))

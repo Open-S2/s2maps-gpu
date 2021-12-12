@@ -1,4 +1,6 @@
 // @flow
+/* eslint-env browser */
+/* global GLint */
 import Program from './program'
 
 // WEBGL1

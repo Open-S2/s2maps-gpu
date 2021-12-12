@@ -1,4 +1,7 @@
 // @flow
+/* eslint-env worker */
+import type { TileRequest } from '../workerPool'
+
 export default class LocalSource {
   build () {}
 
@@ -7,7 +10,7 @@ export default class LocalSource {
 
     return {
       layers: {
-        'boundary': {
+        boundary: {
           extent: 8192,
           length: 1,
           feature: () => {
@@ -18,7 +21,7 @@ export default class LocalSource {
             }
           }
         },
-        'name': {
+        name: {
           extent: 8192,
           length: 1,
           feature: () => {

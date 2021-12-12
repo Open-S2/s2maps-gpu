@@ -1,4 +1,5 @@
 // @flow
+/* eslint-env browser */
 import { WebGL2Context, WebGLContext } from '../gl/contexts'
 import type { RasterTileSource, VectorTileSource, GlyphTileSource } from './tile'
 

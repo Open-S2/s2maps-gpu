@@ -1,4 +1,5 @@
 // @flow
+/* eslint-env browser */
 import Program from './program'
 
 // WEBGL1
@@ -124,7 +125,7 @@ export default class HeatmapProgram extends Program {
     const { context, defaultBounds, uIntensity, uRadius, uOpacity, uBounds } = this
     const { gl, type } = context
     // get current source data
-    let { count, featureCode, intensity, radius, opacity, offset, mode, bounds } = featureGuide
+    const { count, featureCode, intensity, radius, opacity, offset, mode, bounds } = featureGuide
     // ensure proper blend state
     context.oneBlend()
     // ensure we are not stencil, cull, or depth testing
@@ -151,7 +152,7 @@ export default class HeatmapProgram extends Program {
     // grab the context
     const { gl, context } = this
     // get current featureGuide data
-    let { colorRamp, depthPos } = featureGuide
+    const { colorRamp, depthPos } = featureGuide
     // set context's full screen fbo
     gl.bindVertexArray(context.vao)
     // set colorRamp

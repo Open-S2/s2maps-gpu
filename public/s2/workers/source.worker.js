@@ -91,8 +91,8 @@ export default class SourceWorker {
       layer.depthPos++
     }
     // tell the correct source to request the tiles and build the layer of interest
-    const source = this.sources[mapID][layer.source]
-    for (const tile of tiles) source.tileRequest(mapID, tile, [index])
+    // const source = this.sources[mapID][layer.source]
+    // for (const tile of tiles) source.tileRequest(mapID, tile, [index])
   }
 
   _removeLayer (mapID: string, index: number) {
@@ -109,7 +109,7 @@ export default class SourceWorker {
     const layers = this.layers[mapID]
     const newLayers = []
     // move the layer to its new position
-    for (const [from, to] of Object.entries(entries)) {
+    for (const [from, to] of Object.entries(layerChanges)) {
       const layer = layers[+from]
       layer.layerIndex = to
       layer.depthPos = to + 1

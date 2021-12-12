@@ -1,4 +1,5 @@
 // @flow
+/* eslint-env browser */
 import loadShader from './loadShader'
 
 import type { Context } from '../contexts'

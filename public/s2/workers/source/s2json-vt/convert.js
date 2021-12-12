@@ -30,7 +30,7 @@ function convertFeature (features: Array<FeatureVector>, s2json: Feature,
   const coords = s2json.geometry.coordinates
   const { type } = s2json.geometry
   const tolerance = Math.pow(s2jsonVT.tolerance / ((1 << s2jsonVT.maxZoom) * s2jsonVT.extent), 2)
-  let geometry = []
+  const geometry = []
   let id: number = s2json.id || 0
   if (s2jsonVT.promoteId) {
     id = s2json.properties[s2jsonVT.promoteId]

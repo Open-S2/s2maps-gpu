@@ -36,7 +36,7 @@ function scaleShiftClipLines (geometry: Array<[number, number]>, type: number,
     for (const line of geometry) shiftScale(line, xShift, yShift, scale)
   }
   // clip
-  let newGeometry = []
+  const newGeometry = []
   if (type === 4) {
     for (const poly of geometry) {
       const newPoly = []
@@ -79,7 +79,7 @@ function shiftScale (points: Array<[number, number]>, xShift: number,
 // uses a buffer of 20 as default
 function clipLine (line: Array<[number, number]>, extent: number, isPolygon: boolean): Array<[number, number]> {
   const res = []
-  let vertical = []
+  const vertical = []
 
   // slice vertically
   _clipLine(line, vertical, -80, extent + 80, 1, isPolygon)

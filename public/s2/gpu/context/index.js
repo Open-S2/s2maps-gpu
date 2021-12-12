@@ -1,4 +1,6 @@
 // @flow
+/* eslint-env browser */
+/* global GPUCanvasContext */
 import type { MapOptions } from '../../ui/map'
 
 export default class WebGPUContext {

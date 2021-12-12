@@ -22,6 +22,7 @@ export default class RBTree {
   constructor () {
     this.root = this.sentinel = new Node(null, null, null)
   }
+
   insert (key: BigInt, value: any) {
     if (typeof key !== 'bigint') return
     const node = new Node(key, value, this.sentinel)
@@ -61,16 +62,14 @@ export default class RBTree {
           node.parent.parent.red = true
           this._rightRotate(node.parent.parent)
         }
-      }
-      else if (node.parent === node.parent.parent.right) {
+      } else if (node.parent === node.parent.parent.right) {
         const uncle = node.parent.parent.left
         if (uncle.red) {
           node.parent.red = false
           uncle.red = false
           node = node.parent.parent
           node.red = true
-        }
-        else {
+        } else {
           if (node === node.parent.left) {
             node = node.parent
             this._rightRotate(node)
@@ -85,7 +84,7 @@ export default class RBTree {
   }
 
   _leftRotate (node: Node) {
-    let y = node.right
+    const y = node.right
     node.right = y.left
     if (y.left.key !== null) y.left.parent = node
     y.parent = node.parent
@@ -97,7 +96,7 @@ export default class RBTree {
   }
 
   _rightRotate (node: Node) {
-    let y = node.left
+    const y = node.left
     node.left = y.right
     if (y.right.key !== null) y.right.parent = node
     y.parent = node.parent
@@ -167,8 +166,8 @@ export default class RBTree {
     node = (node.right.key)
       ? this.min(node.right)
       : (node.parent.key > node.key)
-        ? node.parent
-        : null
+          ? node.parent
+          : null
 
     if (!node || node.key === null) return null
     else return node

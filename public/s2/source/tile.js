@@ -1,16 +1,20 @@
 // @flow
 /* eslint-env browser */
 /* global GLenum */
-import { Context } from '../gl/contexts'
 import buildSource from './buildSource'
 import * as mat4 from '../util/mat4'
-import { bboxST } from '../projection'
-import { fromSTGL, normalize, mul } from '../projection/S2Point'
-import { toIJ, level, boundsST } from '../projection/S2CellID'
+import { bboxST } from '../geo'
+import { fromSTGL, normalize, mul } from '../geo/S2Point'
+import { toIJ, level } from '../geo/S2CellID'
 
+import type WebGLContext from '../gl/contexts/WebGLContext'
+import type WebGL2Context from '../gl/contexts/WebGL2Context'
+import type Projector from '../ui/camera/projector'
 import type { Face, Layer, Mask } from '../style/styleSpec'
 import type { ProgramType } from '../gl/programs/program'
-import type { XYZ } from '../projection/S2Point'
+import type { XYZ } from '../geo/S2Point'
+
+opaque type GLenum = number
 
 export type VectorTileSource = {
   type: 'vector',
@@ -33,7 +37,7 @@ export type VectorTileSource = {
 export type GlyphTileSource = {
   type: 'glyph',
   textureID: number,
-  height: number,
+  height?: number,
   glyphFilterVertices: Float32Array,
   glyphQuads: Float32Array,
   filterVAO?: WebGLVertexArrayObject,
@@ -56,16 +60,16 @@ export type RasterTileSource = {
 // All layers are merged into one VAO/indexBuffer/vertexBuffer/codeTypeBuffer set. This reduces complexity and improves draw speed.
 // To ensure we draw in order and know the index ranges exist per layer, we maintain a 'Layer Guide'.
 // the attributes object is for dataConditions and dataRanges.
-export type FeatureGuide = { // eslint-disable-next-line
-  tile: Tile,
-  maskLayer: boolean, // if maskLayer we won't be sharing the layer as it is added during tile build
-  parent: boolean,
+export type FeatureGuide = {
+  tile: Tile, // eslint-disable-line
+  maskLayer?: boolean, // if maskLayer we won't be sharing the layer as it is added during tile build
+  parent?: false | Tile, // eslint-disable-line
   layerIndex: number,
   source: VectorTileSource | GlyphTileSource | RasterTileSource,
   sourceName: string,
   faceST: Float32Array,
-  count: number,
-  offset: number,
+  count?: number,
+  offset?: number,
   filterOffset?: number, // glyph
   filterCount?: number, // glyph
   type: ProgramType,
@@ -73,7 +77,7 @@ export type FeatureGuide = { // eslint-disable-next-line
   depthPos?: number,
   featureCode: Float32Array,
   subFeatureCode?: Float32Array,
-  layerCode: Float32Array,
+  layerCode?: Float32Array,
   mode?: GLenum, // TRIANGLES | TRIANGLE_STRIP | TRIANGLE_FAN | etc
   lch?: boolean
 }
@@ -108,10 +112,10 @@ export default class Tile {
   division: number
   sourceData: SourceData = {}
   featureGuide: Array<FeatureGuide> = []
-  context: Context
+  context: WebGLContext | WebGL2Context
   interactiveGuide: Map<number, Object> = new Map()
   rendered: boolean = false
-  constructor (context: Context, id: BigInt, size?: number = 512) {
+  constructor (context: WebGLContext | WebGL2Context, id: BigInt, size?: number = 512) {
     const zoom = this.zoom = level(id)
     const [face, i, j] = toIJ(id, zoom)
     this.context = context
@@ -156,7 +160,7 @@ export default class Tile {
   // currently this is for glyphs, points, and heatmaps. By sharing glyph data with children,
   // the glyphs will be rendered 4 or even more times. To alleviate this, we can set boundaries
   // of what points will be considered
-  _buildBounds (parent: Tile) {
+  _buildBounds (parent: Tile): [number, number, number, number] {
     let { i, j, zoom } = this
     const parentZoom = parent.zoom
     // get the scale
@@ -193,11 +197,11 @@ export default class Tile {
   }
 
   // given a matrix, compute the corners screen positions
-  setScreenPositions (projection) {
+  setScreenPositions (projector: Projector) {
     if (this.corners) {
-      const { eye } = projection
+      const { eye } = projector
       const eyeKM = eye.map(e => e * 1000)
-      const matrix = projection.getMatrix('km')
+      const matrix = projector.getMatrix('km')
       // pull out the S2Points
       const { bottomLeft, bottomRight, topLeft, topRight } = this.corners
       // project points and grab their x-y positions
@@ -217,7 +221,7 @@ export default class Tile {
     }
   }
 
-  flush (data) {
+  flush (data: { source: string }) {
     const { source } = data
     // remove "left over" feature guide data from parent injection or old data that wont be replaced in the future
     this.featureGuide = this.featureGuide.filter(fg => {
@@ -247,16 +251,16 @@ export default class Tile {
 
   removeLayer (index: number) {
     // remove any references to layerIndex
-    this.features = this.features.filter(f => f.layerIndex !== index)
+    this.featureGuide = this.featureGuide.filter(f => f.layerIndex !== index)
     // all layerIndexes greater than index should be decremented once
-    for (const feature of this.features) {
+    for (const feature of this.featureGuide) {
       feature.layerIndex--
       feature.depthPos--
     }
   }
 
   reorderLayers (layerChanges: { [string | number]: number }) {
-    for (const feature of this.features) {
+    for (const feature of this.featureGuide) {
       feature.layerIndex = layerChanges[feature.layerIndex]
       feature.depthPos = feature.layerIndex + 1
     }
@@ -431,7 +435,7 @@ export default class Tile {
     // filter parent data if applicable
     this.featureGuide = this.featureGuide.filter(fg => fg.sourceName !== sourceName)
     const { context } = this
-    const glyphSource = this.sourceData[sourceName] = {
+    const glyphSource: GlyphTileSource = this.sourceData[sourceName] = {
       type: 'glyph',
       glyphFilterVertices,
       glyphQuads,
@@ -506,7 +510,7 @@ export default class Tile {
     }
   }
 
-  findInteractiveFeature (id: number) {
+  findInteractiveFeature (id: number): Object {
     if (this.interactiveGuide.has(id)) return this.interactiveGuide.get(id)
   }
 }

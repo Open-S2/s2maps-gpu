@@ -1,6 +1,4 @@
 // @flow
-import type { Face } from './'
-
 export const EARTH_RADIUS = 6_371_008.8 // meters
 export const EARTH_RADIUS_EQUATORIAL = 6_378_137 // meters
 export const EARTH_RADIUS_POLAR = 6_356_752.3 // meters

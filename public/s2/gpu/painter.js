@@ -1,4 +1,5 @@
 // @flow
+/* eslint-env browser */
 // import Style from '../style'
 // /** CONTEXTS **/
 // import Context from './context'
@@ -20,7 +21,7 @@
 // import { Tile } from '../source'
 
 // import type { MapOptions } from '../ui/map'
-// import type { Projection } from '../ui/camera/projections'
+// import type Projector from '../ui/camera/projector'
 // import type { FeatureGuide } from '../source/tile'
 // import type { PipelineType } from './pipelines/pipeline'
 
@@ -99,7 +100,7 @@ export default class Painter {
   //   // this.dirty = true
   // }
 
-  // paint (projection: Projection, style: Style, tiles: Array<Tile>) {
+  // paint (projector: Projector, style: Style, tiles: Array<Tile>) {
   // }
 
   // paintInteractive (tiles: Array<Tile>) {

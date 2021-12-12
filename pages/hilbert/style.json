@@ -3,7 +3,7 @@
   "name": "s2maps-hilbert",
   "center": [-90, 0],
   "zoom": -0.25,
-  "bearing": 45,
+  "bearing": 0,
   "minzoom": -1,
   "maxzoom": 2.5,
   "sources": {

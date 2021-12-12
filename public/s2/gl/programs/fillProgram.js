@@ -1,4 +1,5 @@
 // @flow
+/* eslint-env browser */
 import Program from './program'
 
 // WEBGL1
@@ -31,7 +32,7 @@ export default class FillProgram extends Program {
     const { context } = this
     const { gl, type } = context
     // get current source data
-    let { count, depthPos, featureCode, color, opacity, offset, mode } = featureGuide
+    const { count, depthPos, featureCode, color, opacity, offset, mode } = featureGuide
     // ensure proper blend state
     context.defaultBlend()
     // adjust to current depthPos

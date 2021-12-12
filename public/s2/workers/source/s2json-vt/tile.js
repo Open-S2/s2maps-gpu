@@ -1,6 +1,6 @@
 // @flow
 /** MODULES **/
-import { toIJ, level } from '../../../projection/S2CellID'
+import { toIJ, level } from '../../../geo/S2CellID'
 import S2JsonVT from './'
 /** TYPES **/
 import type { Feature } from './'
@@ -41,7 +41,7 @@ export type Tile = {
 
 export default function createTile (features: Array<Feature>, id: BigInt, s2jsonVT: S2JsonVT): Tile {
   const zoom = level(id)
-  const [_, i, j, ori] = toIJ(id, zoom)
+  const [, i, j, ori] = toIJ(id, zoom)
   const tolerance = (zoom === s2jsonVT.maxZoom) ? 0 : s2jsonVT.tolerance / ((1 << zoom) * s2jsonVT.extent)
   const tile: Tile = {
     extent: s2jsonVT.extent,
@@ -112,10 +112,10 @@ function addFeature (tile: Tile, feature: Feature, tolerance: number) {
       type: (type === 'MultiPolygon')
         ? 4
         : (type === 'Polygon')
-          ? 3
-          : type === 'LineString' || type === 'MultiLineString'
-            ? 2
-            : 1,
+            ? 3
+            : type === 'LineString' || type === 'MultiLineString'
+              ? 2
+              : 1,
       properties: feature.properties
     }
     const layerName = feature.properties._layer || 'default'

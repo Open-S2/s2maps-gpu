@@ -1,4 +1,5 @@
 // @flow
+/* env: browser */
 import { radToDeg, degToRad } from './util'
 
 import type { XYZ } from './S2Point'
@@ -9,28 +10,28 @@ export type Face = 0 | 1 | 2 | 3 | 4 | 5
 
 export type BBox = [number, number, number, number] // left, bottom, right, top
 
-export function linearSTtoUV (s: number) {
+export function linearSTtoUV (s: number): number {
   return 2 * s - 1
 }
 
-export function linearUVtoST (u: number) {
+export function linearUVtoST (u: number): number {
   return 0.5 * (u + 1)
 }
 
-export function tanSTtoUV (s: number) {
+export function tanSTtoUV (s: number): number {
   return Math.tan(Math.PI / 2 * s - Math.PI / 4)
 }
 
-export function tanUVtoST (u: number) {
+export function tanUVtoST (u: number): number {
   return (2 * (1 / Math.PI)) * (Math.atan(u) + Math.PI / 4)
 }
 
-export function quadraticSTtoUV (s: number) {
+export function quadraticSTtoUV (s: number): number {
   if (s >= 0.5) return (1 / 3) * (4 * s * s - 1)
   return (1 / 3) * (1 - 4 * (1 - s) * (1 - s))
 }
 
-export function quadraticUVtoST (u: number) {
+export function quadraticUVtoST (u: number): number {
   if (u >= 0) return 0.5 * Math.sqrt(1 + 3 * u)
   return 1 - 0.5 * Math.sqrt(1 - 3 * u)
 }
@@ -44,7 +45,7 @@ export function IJtoST (i: number): number {
   return i / kLimitIJ
 }
 
-export function SiTiToST (si) {
+export function SiTiToST (si: number): number {
   return (1 / 2147483648) * si
 }
 
@@ -61,8 +62,7 @@ export function faceUVtoXYZ (face: Face, u: number, v: number): [number, number,
 }
 
 // right hand rule
-export function faceUVtoXYZGL (face: Face, u: number, v: number): S2Point {
-
+export function faceUVtoXYZGL (face: Face, u: number, v: number): XYZ {
   switch (face) {
     case 0: return [u, v, 1]
     case 1: return [1, v, -u]
@@ -87,13 +87,13 @@ export function faceXYZtoUV (face: Face, xyz: XYZ): [number, number] {
   }
 }
 
-export function XYZtoFace (xyz: XYZ): [Face, number, number] {
-  let temp = xyz.map(n => Math.abs(n))
+export function XYZtoFace (xyz: XYZ): Face {
+  const temp = xyz.map(n => Math.abs(n))
 
-  let face = (temp[0] > temp[1])
+  let face: Face = (temp[0] > temp[1])
     ? (temp[0] > temp[2]) ? 0 : 2
     : (temp[1] > temp[2]) ? 1 : 2
-
+  // $FlowIgnore
   if (xyz[face] < 0) face += 3
 
   return face
@@ -215,7 +215,7 @@ function fromIJWrap (face: Face, i: number, j: number, level: number, sameFace?:
   return [nFace, STtoIJ(0.5 * (nU + 1)) >> (30 - level), STtoIJ(0.5 * (nV + 1)) >> (30 - level)]
 }
 
-export function updateFace (face: Face, s: number, t: number, size: number = 1) {
+export function updateFace (face: Face, s: number, t: number, size: number = 1): [Face, number, number] {
   const diff = (size === 1) ? size : size - 1
   if (face === 0) {
     if (s < 0) return [4, diff - t, size + s]
@@ -224,7 +224,7 @@ export function updateFace (face: Face, s: number, t: number, size: number = 1) 
     else if (t === size) return [2, 0, diff - s]
   } else if (face === 1) {
     if (s < 0) return [0, size + s, t]
-    else if (s == size) return [3, diff - t, 0]
+    else if (s === size) return [3, diff - t, 0]
     else if (t < 0) return [5, size + t, diff - s]
     else if (t === size) return [2, s, 0]
   } else if (face === 2) {

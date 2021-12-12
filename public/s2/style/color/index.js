@@ -148,8 +148,8 @@ export default class Color {
     const min = Math.min(r, g, b)
     const max = Math.max(r, g, b)
     const delta = max - min
-    let h, s, v
-    v = max / 255.0
+    let h, s
+    const v = max / 255.0
     if (max === 0) {
       h = 0
       s = 0
@@ -203,13 +203,16 @@ export default class Color {
     this.type = 'rgb'
     const [c, m, y, k] = this.val
     const alpha = (this.val.length > 4) ? this.val[4] : 1
-    if (k === 1) return this.val = [0, 0, 0, alpha]
-    this.val = [
-      c >= 1 ? 0 : 255 * (1 - c) * (1 - k), // r
-      m >= 1 ? 0 : 255 * (1 - m) * (1 - k), // g
-      y >= 1 ? 0 : 255 * (1 - y) * (1 - k), // b
-      alpha
-    ]
+    if (k === 1) {
+      this.val = [0, 0, 0, alpha]
+    } else {
+      this.val = [
+        c >= 1 ? 0 : 255 * (1 - c) * (1 - k), // r
+        m >= 1 ? 0 : 255 * (1 - m) * (1 - k), // g
+        y >= 1 ? 0 : 255 * (1 - y) * (1 - k), // b
+        alpha
+      ]
+    }
   }
 
   RGB2CMYK () {
@@ -221,13 +224,13 @@ export default class Color {
     g = g / 255
     b = b / 255
     // convert
-    const k = 1 - max(r,max(g,b))
-    const f = k < 1 ? 1 / (1-k) : 0
+    const k = 1 - max(r, max(g, b))
+    const f = k < 1 ? 1 / (1 - k) : 0
 
     this.val = [
-      (1-r-k) * f, // c
-      (1-g-k) * f, // m
-      (1-b-k) * f, // y
+      (1 - r - k) * f, // c
+      (1 - g - k) * f, // m
+      (1 - b - k) * f, // y
       k,
       a
     ]
@@ -237,9 +240,9 @@ export default class Color {
   static interpolate (color1: Color, color2: Color, t: number): Color {
     if (color1.type !== color2.type) return new Color(color1.val[0], color1.val[1], color1.val[2], color1.val[3], color1.type)
     // prep variables
-    let sat, hue, lbv, dh, alpha
-    let [hue0, sat0, lbv0, alpha0] = color1.val
-    let [hue1, sat1, lbv1, alpha1] = color2.val
+    let sat, hue, dh
+    const [hue0, sat0, lbv0, alpha0] = color1.val
+    const [hue1, sat1, lbv1, alpha1] = color2.val
     // first manage hue
     if (!isNaN(hue0) && !isNaN(hue1)) {
       if (hue1 > hue0 && hue1 - hue0 > 180) dh = hue1 - (hue0 + 360)
@@ -258,9 +261,9 @@ export default class Color {
     // saturation
     if (!sat) sat = sat0 + t * (sat1 - sat0)
     // luminosity
-    lbv = lbv0 + t * (lbv1 - lbv0)
+    const lbv = lbv0 + t * (lbv1 - lbv0)
     // alpha
-    alpha = alpha0 + t * (alpha1 - alpha0)
+    const alpha = alpha0 + t * (alpha1 - alpha0)
     // create the new color
     return new Color(hue, sat, lbv, alpha, color1.type)
   }
