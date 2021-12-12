@@ -69,7 +69,7 @@ function dataRangeFunction (input, attr) {
 
   // first ensure each result property is parsed:
   let c = 1
-  let il = input.length
+  const il = input.length
   while (c < il) {
     input[c] = parseFeatureFunction(input[c], attr)
     c += 2
@@ -106,7 +106,7 @@ function inputRangeFunction (input, attr) {
 
   // first ensure each result property is parsed:
   let c = 1
-  let il = input.length
+  const il = input.length
   while (c < il) {
     input[c] = parseFeatureFunction(input[c], attr)
     c += 2

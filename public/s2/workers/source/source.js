@@ -1,12 +1,12 @@
 // @flow
 /* eslint-env worker */
-import { fromIJ, parent as parentID } from '../../projection/S2CellID'
+import { parent as parentID } from '../../geo/S2CellID'
 
 import type { Session } from './'
 import type { TileRequest } from '../workerPool'
 import type { Face, Layer } from '../../style/styleSpec'
 
-type LayerMetaData = {
+export type LayerMetaData = {
   [string]: { // layer
     minzoom: number,
     maxzoom: number,
@@ -14,7 +14,7 @@ type LayerMetaData = {
   }
 }
 
-type FaceBounds = {
+export type FaceBounds = {
   [number | string]: { // face
     [number | string]: [number, number, number, number] // zoom: [minX, minY, maxX, maxY]
   }

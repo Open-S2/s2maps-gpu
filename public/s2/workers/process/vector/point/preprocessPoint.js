@@ -1,5 +1,5 @@
 // @flow
-type Point = [number, number]
+import type { Feature } from ''
 
 export default function preprocessPoint (feature: Feature, zoom: number) {
   const { extent, properties, geometry, vertices, indices, sourceLayer } = feature
@@ -9,11 +9,11 @@ export default function preprocessPoint (feature: Feature, zoom: number) {
   // if weight, then it is a heatmap and we add weight data
   const { round } = Math
   if (weight) {
-    for (let point of geometry) {
+    for (const point of geometry) {
       vertices.push(round(point[0] * multiplier), round(point[1] * multiplier))
       indices.push(weight)
     }
   } else {
-    for (let point of geometry) vertices.push(round(point[0] * multiplier), round(point[1] * multiplier))
+    for (const point of geometry) vertices.push(round(point[0] * multiplier), round(point[1] * multiplier))
   }
 }

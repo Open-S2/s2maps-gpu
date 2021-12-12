@@ -1,4 +1,8 @@
 // @flow
+/* eslint-env worker */
+/* global createImageBitmap */
+import type { TileRequest } from '../../workerPool'
+
 export default async function processRaster (mapID: string, tile: TileRequest,
   sourceName: string, parent: boolean, data: ArrayBuffer, postMessage: Function) {
   const { id } = tile

@@ -1,4 +1,5 @@
 // @flow
+/* eslint-env browser */
 import Program from './program'
 
 import vert1 from '../shaders/shade1.vertex.glsl'
@@ -31,7 +32,7 @@ export default class ShadeProgram extends Program {
     // grab context
     const { gl, context } = this
     // get current source data
-    let { count, offset, mode } = featureGuide
+    const { count, offset, mode } = featureGuide
     // ensure culling
     context.enableCullFace()
     // set blend type

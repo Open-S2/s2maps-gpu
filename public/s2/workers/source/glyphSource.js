@@ -1,5 +1,6 @@
 // @flow
-import Source from './source'
+/* eslint-env worker */
+import type { TexturePack } from './texturePack'
 
 type Unicode = number
 
@@ -20,7 +21,7 @@ type GlyphImage = {
   data: ImageData
 }
 
-type GlyphImages = Array<GlyphImage>
+export type GlyphImages = Array<GlyphImage>
 
 export type Glyph = {
   texX: number, // x position on glyph texture sheet
@@ -229,9 +230,11 @@ export default class GlyphSource {
       // convert glyphList into a Float32Array of unicode data and ship it out
       const shipment = []
       for (const unicode of glyphList) {
-        let glyph = (glyphCache.has(unicode)) ? glyphCache.get(unicode)
-          : (fallback.glyphCache.has(unicode)) ? fallback.glyphCache.get(unicode)
-            : null
+        const glyph = (glyphCache.has(unicode))
+          ? glyphCache.get(unicode)
+          : (fallback.glyphCache.has(unicode))
+              ? fallback.glyphCache.get(unicode)
+              : null
 
         if (glyph) {
           const { texX, texY, texW, texH, xOffset, yOffset, width, height, advanceWidth } = glyph

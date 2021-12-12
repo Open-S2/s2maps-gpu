@@ -1,13 +1,15 @@
 // @flow
 import drawLine from './drawLine'
 
+import type { Feature } from '../'
+
 type Point = [number, number]
 
 type Cap = 'butt' | 'round' | 'square'
 
 export default function preprocessLine (feature: Feature, division: number, zoom: number) {
   const { extent, properties, type, sourceLayer, vertices } = feature
-  const cap = sourceLayer.layout.cap(null, properties, zoom)
+  const cap: Cap = sourceLayer.layout.cap(null, properties, zoom)
   feature.cap = cap
   const dashed = false
   // create multiplier

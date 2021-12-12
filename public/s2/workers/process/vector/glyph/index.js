@@ -1,10 +1,13 @@
 // @flow
+/* eslint-env worker */
 import featureSort from '../featureSort'
 import { buildGlyphQuads, RTree } from './util'
 import preprocessGlyphs from './preprocessGlyph'
 import postProcessGlyphs from './postprocessGlyph'
 
 import type { GlyphObject } from './glyphSpec'
+import type { Feature } from '../'
+import type { TileRequest } from '../../../workerPool'
 
 type Glyph = {
   texX: number, // x position on glyph texture sheet

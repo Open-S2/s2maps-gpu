@@ -1,4 +1,6 @@
 // @flow
+/* eslint-env browser */
+/* global GLint */
 import Program from './program'
 import Map from '../../ui/map'
 
@@ -53,8 +55,8 @@ export default class SkyboxProgram extends Program {
                   gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
                   gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
                   this.renderable = true
-                  // set the projection as dirty to ensure a proper initial render
-                  map.projection.dirty = true
+                  // set the projector as dirty to ensure a proper initial render
+                  map.projector.dirty = true
                   // call the full re-render
                   map.render()
                 }

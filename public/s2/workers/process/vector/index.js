@@ -1,4 +1,5 @@
 // @flow
+/* eslint-env worker */
 import { VectorTile } from 's2-vector-tile'
 import processFill from './fill'
 import GlyphManager from './glyph'
@@ -7,6 +8,7 @@ import processPoint from './point'
 import postInteractiveData from './postInteractive'
 import scaleShiftClip from './scaleShiftClip'
 
+import type { IDGen, ParentLayer } from '../../tile.worker'
 import type { TileRequest } from '../../workerPool'
 import type { Layer } from '../../../style/styleSpec'
 

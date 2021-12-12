@@ -1,4 +1,5 @@
 // @flow
+/* eslint-env browser */
 import Program from './program'
 
 // WEBGL1
@@ -29,8 +30,8 @@ export default class RasterProgram extends Program {
     const { gl, context } = this
 
     // get current source data
-    let { count, mode } = sourceData
-    let { texture, depthPos } = featureGuide
+    const { count, mode } = sourceData
+    const { texture, depthPos } = featureGuide
     // ensure proper blend state
     context.defaultBlend()
     // adjust to current depthPos

@@ -25,7 +25,7 @@ export default class MapWorker implements Worker {
     else if (type === 'setStyle') this.map.setStyle(data.style, data.ignorePosition)
     else if (type === 'updateStyle') this.map.updateStyle(data.style)
     else if (type === 'jumpTo') this.map.jumpTo(data.lon, data.lat, data.zoom)
-    else if (type === 'flyTo') this.map.flyTo(data.lon, data.lat, data.zoom, data.duration)
+    else if (type === 'easeTo' || type === 'flyTo') this.map.animateTo(type, data.directions)
     else if (type === 'moveState') this.map.canMove = !!data.state
     else if (type === 'zoomState') this.map.canZoom = !!data.state
     else if (type === 'screenshot') this.map.screenshot()

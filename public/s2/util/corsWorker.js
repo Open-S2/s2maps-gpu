@@ -2,7 +2,7 @@
 /* eslint-env browser */
 export default class CorsWorker extends Worker {
   constructor (url: URL, options?: { name: string, type: 'module' }) {
-    if (!!+process.env.NEXT_PUBLIC_DEV) {
+    if (+process.env.NEXT_PUBLIC_DEV) {
       super(url, options)
     } else {
       const webpackWorkerOrigin = `__webpack_worker_origin__ = ${JSON.stringify(

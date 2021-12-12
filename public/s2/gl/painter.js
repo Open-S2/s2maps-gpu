@@ -1,4 +1,5 @@
 // @flow
+/* eslint-env browser */
 import Style from '../style'
 /** CONTEXTS **/
 import { WebGL2Context, WebGLContext } from './contexts'
@@ -6,16 +7,28 @@ import { WebGL2Context, WebGLContext } from './contexts'
 import { Tile } from '../source'
 
 import type { MapOptions } from '../ui/map'
-import type { Projection } from '../ui/camera/projections'
+import type Projector from '../ui/camera/projector'
 import type { FeatureGuide } from '../source/tile'
-import type { Program, ProgramType } from './programs/program'
+import type { ProgramType } from './programs/program'
 import type { GlyphImages } from '../workers/source/glyphSource'
+import type {
+  FillProgram,
+  GlyphFilterProgram,
+  GlyphProgram,
+  HeatmapProgram,
+  LineProgram,
+  PointProgram,
+  RasterProgram,
+  ShadeProgram,
+  SkyboxProgram,
+  WallpaperProgram
+} from './programs'
 
 type ProgramGL = FillProgram | GlyphFilterProgram | GlyphProgram | HeatmapProgram | LineProgram | PointProgram | RasterProgram | ShadeProgram | SkyboxProgram | WallpaperProgram
 
 export default class Painter {
   context: WebGL2Context | WebGLContext
-  programs: { [string]: Program } = {}
+  programs: { [string]: ProgramGL } = {}
   currProgram: ProgramType
   dirty: boolean = true
   constructor (context: WebGL2Context | WebGLContext,
@@ -37,33 +50,33 @@ export default class Painter {
     for (const program of buildSet) {
       switch (program) {
         case 'raster':
-          programs.raster = await import('./programs/rasterProgram').then(P => { return new P.default(context) })
+          programs.raster = await import('./programs/rasterProgram').then(P => { return new P.default(context) }) // eslint-disable-line
           break
         case 'fill':
           // programs.fill = new FillProgram(context)
-          programs.fill = await import('./programs/fillProgram').then(P => { return new P.default(context) })
+          programs.fill = await import('./programs/fillProgram').then(P => { return new P.default(context) }) // eslint-disable-line
           break
         case 'line':
-          programs.line = await import('./programs/lineProgram').then(P => { return new P.default(context) })
+          programs.line = await import('./programs/lineProgram').then(P => { return new P.default(context) }) // eslint-disable-line
           break
         case 'point':
-          programs.point = await import('./programs/pointProgram').then(P => { return new P.default(context) })
+          programs.point = await import('./programs/pointProgram').then(P => { return new P.default(context) }) // eslint-disable-line
           break
         case 'heatmap':
-          programs.heatmap = await import('./programs/heatmapProgram').then(P => { return new P.default(context) })
+          programs.heatmap = await import('./programs/heatmapProgram').then(P => { return new P.default(context) }) // eslint-disable-line
           break
         case 'shade':
-          programs.shade = await import('./programs/shadeProgram').then(P => { return new P.default(context) })
+          programs.shade = await import('./programs/shadeProgram').then(P => { return new P.default(context) }) // eslint-disable-line
           break
         case 'glyph':
-          programs.glyphFilter = await import('./programs/glyphFilterProgram').then(P => { return new P.default(context) })
-          programs.glyph = await import('./programs/glyphProgram').then(P => { return new P.default(context, programs.glyphFilter) })
+          programs.glyphFilter = await import('./programs/glyphFilterProgram').then(P => { return new P.default(context) }) // eslint-disable-line
+          programs.glyph = await import('./programs/glyphProgram').then(P => { return new P.default(context, programs.glyphFilter) }) // eslint-disable-line
           break
         case 'wallpaper':
-          programs.wallpaper = await import('./programs/wallpaperProgram').then(P => { return new P.default(context) })
+          programs.wallpaper = await import('./programs/wallpaperProgram').then(P => { return new P.default(context) }) // eslint-disable-line
           break
         case 'skybox':
-          programs.skybox = await import('./programs/skyboxProgram').then(P => { return new P.default(context) })
+          programs.skybox = await import('./programs/skyboxProgram').then(P => { return new P.default(context) }) // eslint-disable-line
           break
         default: break
       }
@@ -100,12 +113,12 @@ export default class Painter {
     this.dirty = true
   }
 
-  paint (projection: Projection, style: Style, tiles: Array<Tile>) {
+  paint (projector: Projector, style: Style, tiles: Array<Tile>) {
     const { context } = this
     // PREPARE PHASE
     // prep frame uniforms
-    const { view, aspect } = projection
-    const matrix = projection.getMatrix('m')
+    const { view, aspect } = projector
+    const matrix = projector.getMatrix('m')
     this.injectFrameUniforms(matrix, view, aspect)
     // prep mask id's
     this._createTileMasksIDs(tiles)
@@ -119,7 +132,7 @@ export default class Painter {
     features.sort(featureSort)
     // corner case: all features tiles past zoom 12 must set screen positions
     const featureTiles = features.map(f => f.parent ? f.parent : f.tile)
-    for (const tile of featureTiles) tile.setScreenPositions(projection)
+    for (const tile of featureTiles) tile.setScreenPositions(projector)
     // prep glyph features for drawing box filters
     const glyphFeatures = features.filter(feature => feature.type === 'glyph' && !feature.overdraw)
     // use text boxes to filter out overlap
@@ -205,7 +218,7 @@ export default class Painter {
     // setup variables
     let curLayer: number = -1
     let inversion: number = null
-    let program: Program
+    let program: ProgramGL
     // run through the features, and upon tile, layer, or program change, adjust accordingly
     for (const feature of features) {
       const {
@@ -247,7 +260,7 @@ export default class Painter {
   }
 
   // run through tiles and draw the masks, inject depthPos and
-  flushInvert (tiles: Array<Tile>, program: Program, depthPos: number) {
+  flushInvert (tiles: Array<Tile>, program: ProgramGL, depthPos: number) {
     const { gl } = this.context
     // turn color back on
     gl.colorMask(true, true, true, true)
@@ -362,13 +375,15 @@ export default class Painter {
     this.dirty = true
     // tell all the programs
     const { programs } = this
-    for (const programName in programs) programs[programName].updateColorBlindMode = (mode === 0)
-      ? 'none'
-      : (mode === 1)
-        ? 'protanopia'
-        : (mode === 2)
-          ? 'deutranopia'
-          : 'tritanopia'
+    for (const programName in programs) {
+      programs[programName].updateColorBlindMode = (mode === 0)
+        ? 'none'
+        : (mode === 1)
+            ? 'protanopia'
+            : (mode === 2)
+                ? 'deutranopia'
+                : 'tritanopia'
+    }
   }
 }
 

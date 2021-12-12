@@ -1,6 +1,7 @@
 // @flow
 export default class PointCluser {
-  constructor (json: object) {
-
+  json: Object
+  constructor (json: Object) {
+    this.json = json
   }
 }

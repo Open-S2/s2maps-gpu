@@ -1,8 +1,8 @@
 // @flow
 import { coalesceField } from '../../../../style/conditionals'
 
-import type { GlyphObject } from './glyph'
 import type { Unicode, GlyphMap, IconMap, GlyphList, IconList } from './'
+import type { Feature } from '../../../tile.worker'
 
 export default function preprocessGlyphs (features: Feature, zoom: number,
   glyphMap: GlyphMap, iconMap: IconMap, glyphList: GlyphList, iconList: IconList) {

@@ -1,9 +1,12 @@
 // @flow
+/* eslint-env worker */
 import S2JsonVT from './s2json-vt'
 import Source from './source'
 
+import type { TileRequest } from '../workerPool'
+
 export default class S2JSONSource extends Source {
-  s2json: S2JsonVt
+  s2json: S2JsonVT
   async build (mapID: string) {
     const self = this
     const json = await this._fetch(`${this.path}`, mapID, true)

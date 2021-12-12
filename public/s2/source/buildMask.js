@@ -1,4 +1,5 @@
 // @flow
+/* eslint-env browser */
 import buildSource from './buildSource'
 import { WebGL2Context, WebGLContext } from '../gl/contexts'
 import type { VectorTileSource } from './tile'

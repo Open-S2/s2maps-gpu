@@ -1,4 +1,5 @@
 // @flow
+/* eslint-env browser */
 import Program from './program'
 
 // WEBGL1
@@ -9,7 +10,8 @@ import vert2 from '../shaders/glyph2.vertex.glsl'
 import frag2 from '../shaders/glyph2.fragment.glsl'
 
 import type { Context } from '../contexts'
-import type { GlyphTileSource } from '../../source/tile'
+import type { FeatureGuide, GlyphTileSource } from '../../source/tile'
+import type { GlyphImages } from '../../workers/source/glyphSource'
 
 type FBO = {
   width: number,

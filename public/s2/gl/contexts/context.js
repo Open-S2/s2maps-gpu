@@ -1,4 +1,6 @@
 // @flow
+/* eslint-env browser */
+/* global WebGLVertexArrayObject */
 import buildMask from '../../source/buildMask'
 import type { VectorTileSource } from '../../source/tile'
 
@@ -16,7 +18,7 @@ export default class Context {
   blendState: number = -1 // 0 -> default ; 1 ->
   zTestState: number = -1 // 0 -> always ; 1 -> less ; 2 -> lessThenOrEqual
   zLow: number = 0
-  zHigh: numbber = 1
+  zHigh: number = 1
   type: 1 | 2
   clearColorRGBA: [number, number, number, number] = [0, 0, 0, 0]
   featurePoint: Uint8Array = new Uint8Array(4)
@@ -210,7 +212,7 @@ export default class Context {
 
   /** TEXTURE **/
 
-  buildTexture (imageData, width, height) {
+  buildTexture (imageData: ImageData, width: number, height: number): WebGLTexture {
     const { gl } = this
     const texture = gl.createTexture()
     gl.bindTexture(gl.TEXTURE_2D, texture)

@@ -1,4 +1,5 @@
 // @flow
+/* eslint-env worker */
 import type { GlyphObject } from './glyph'
 
 export default function postprocessGlyph (mapID: string, sourceName: string,

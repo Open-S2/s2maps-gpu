@@ -150,10 +150,10 @@ export default class Style {
       const clearColor = this.clearColor = (new Color(background.loadingBackground)).getRGB()
       this.map.painter.context.setClearColor(clearColor)
       // grab wallpaper data
-      this.wallpaper = new Skybox(background, this.map.projection)
+      this.wallpaper = new Skybox(background, this.map.projector)
     } else if (background['background-color']) {
       // create the wallpaper
-      this.wallpaper = new Wallpaper(this, this.map.projection)
+      this.wallpaper = new Wallpaper(this, this.map.projector)
       // prep style
       this.wallpaperStyle = {
         uBackgroundColor: new Color(background['background-color']),
@@ -213,16 +213,16 @@ export default class Style {
   }
 
   addLayer (layer: Layer, nameIndex?: number | string, tileRequests: Array<TileRequest>) {
-    const { id, painter } = this.map
+    const { painter } = this.map
     const programs = new Set()
     // prebuild & convert nameIndex to index
-    this._prebuildLayer(layer, index)
     const index = this._findLayerIndex(nameIndex)
+    this._prebuildLayer(layer, index)
     // let the workers know
     if (this.webworker) { // $FlowIgnore
       postMessage({ mapID: this.map.id, type: 'addLayer', layer, index, tileRequests })
     } else {
-      window.S2WorkerPool.addLayer(this.map.id, layer, index, tileRequest)
+      window.S2WorkerPool.addLayer(this.map.id, layer, index, tileRequests)
     }
     // insert layer into layers, updating positions of other layers as necessary
     const { layers } = this
@@ -263,7 +263,7 @@ export default class Style {
     const { layers } = this
     const newLayers = []
     // move the layer to its new position
-    for (const [from, to] of Object.entries(entries)) {
+    for (const [from, to] of Object.entries(layerChanges)) {
       const layer = layers[+from]
       layer.layerIndex = to
       layer.depthPos = to + 1

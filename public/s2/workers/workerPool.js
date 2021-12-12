@@ -5,7 +5,7 @@
 import Worker from '../util/corsWorker'
 
 import type S2Map from '../s2Map'
-import type { Face, StylePackage } from '../style/styleSpec'
+import type { Layer, StylePackage } from '../style/styleSpec'
 import type { Marker } from './source/MarkerSource'
 
 export type TileRequest = {

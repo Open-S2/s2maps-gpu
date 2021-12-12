@@ -9,12 +9,12 @@ export default function getEasingFunction (easeType: EaseType, base: number = 1)
   const func = (easeType === 'lin')
     ? linear
     : (easeType === 'expo')
-      ? exponential
-      : (easeType === 'quad')
-        ? quad
-        : (easeType === 'cubic')
-          ? cubic
-          : step
+        ? exponential
+        : (easeType === 'quad')
+            ? quad
+            : (easeType === 'cubic')
+                ? cubic
+                : step
   return (zoom, start, end, startValue, endValue) => {
     const t = func(zoom, start, end, base)
     if (isNaN(startValue)) { // we are dealing with colors

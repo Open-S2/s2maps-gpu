@@ -1,10 +1,12 @@
 // @flow
 import { project } from '../../../util/mat4'
-import { bboxST, neighborsIJ } from '../../../projection'
-import { mul, normalize, fromSTGL, toIJ, fromLonLat } from '../../../projection/S2Point'
-import { parent, fromFace, fromIJ, neighbors } from '../../../projection/S2CellID'
+import { bboxST, neighborsIJ } from '../../../geo'
+import { mul, normalize, fromSTGL, toIJ, fromLonLat } from '../../../geo/S2Point'
+import { parent, fromFace, fromIJ } from '../../../geo/S2CellID'
 
 import type { TileDefinitions } from './'
+import type { Face } from '../../../style/styleSpec'
+import type { XYZ } from '../../../geo/S2Point'
 
 const ZERO_TILES = [fromFace(0), fromFace(1), fromFace(2), fromFace(3), fromFace(4), fromFace(5)]
 
@@ -58,7 +60,7 @@ export default function getTilesInView (zoom: number, matrix: Float32Array,
 function addNeighbors (face: Face, zoom: number, i: number, j: number,
   checkedTiles: Set<BigInt>, checkList: Array<BigInt>) {
   // add the surounding tiles we have not checked
-  for (let [nFace, nI, nJ] of neighborsIJ(face, i, j, zoom)) {
+  for (const [nFace, nI, nJ] of neighborsIJ(face, i, j, zoom)) {
     const fij = `${nFace}-${nI}-${nJ}`
     if (!checkedTiles.has(fij)) {
       checkedTiles.add(fij)

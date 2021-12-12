@@ -18,7 +18,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm i
+          npm install -g pnpm
+          pnpm i
 
       - name: Build
         run: node ./configS2Action/build.js

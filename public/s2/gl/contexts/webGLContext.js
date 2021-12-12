@@ -1,4 +1,5 @@
 // @flow
+/* eslint-env browser */
 import Context from './context'
 
 import type { MapOptions } from '../../ui/map'
@@ -35,9 +36,9 @@ export default class WebGLContext extends Context {
       // createVertexArray
       gl.createVertexArray = () => this.vertexArrayObject.createVertexArrayOES()
       // bindVertexArray
-      gl.bindVertexArray = (vao) => this.vertexArrayObject.bindVertexArrayOES(vao)
+      gl.bindVertexArray = (vao: WebGLVertexArrayObjectOES) => this.vertexArrayObject.bindVertexArrayOES(vao)
       // deleteVertexArray
-      gl.deleteVertexArray = (vao) => this.vertexArrayObject.deleteVertexArrayOES(vao)
+      gl.deleteVertexArray = (vao: WebGLVertexArrayObjectOES) => this.vertexArrayObject.deleteVertexArrayOES(vao)
     }
     // ANGLE_instanced_arrays
     if (this.angledInstancedArrays) {

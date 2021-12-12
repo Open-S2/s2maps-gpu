@@ -1,7 +1,7 @@
 // @flow
 /* eslint-env browser */
 
-type TouchEvent = {
+export type TouchEvent = {
   length: number,
   [number]: {
     clientX: number,
@@ -9,15 +9,9 @@ type TouchEvent = {
   }
 }
 
-// t: time | b: start value | c: change in value | d: duration
-function easeOutExp (delta: number, movement: number, animationLength: number): number {
-  return -movement * (-Math.pow(2, -10 * delta / animationLength) + 1) + movement
-}
-
 export default class DragPan extends EventTarget {
   zoomActive: boolean = false // allow two finger zooming
   mouseActive: boolean = false // when a user presses left click and moves during the press
-  wasActive: boolean = false // if a onMouseDown event comes up, we want to check if the map was previously active to avoid unecessary click events
   minMovementX: number = 1
   minMovementY: number = 0.5
   movementX: number = 0
@@ -28,14 +22,12 @@ export default class DragPan extends EventTarget {
   touchDeltaY: number = 0
   touchDeltaZ: number = 0
   zoom: number = 0
-  time: number = -1
   clear () {
     this.movementX = 0
     this.movementY = 0
     this.totalMovementX = 0
     this.totalMovementY = 0
     this.zoom = 0
-    this.time = -1
   }
 
   onTouchStart (touches: TouchEvent) {
@@ -76,16 +68,13 @@ export default class DragPan extends EventTarget {
 
   onMouseUp (posX: number, posY: number) {
     this.mouseActive = false
-    this.time = 0
     // if movement is greater than mins, animate swipe,
     // otherwise if total movement is less than mins it's considered a click
     if (Math.abs(this.movementX) > this.minMovementX || Math.abs(this.movementY) > this.minMovementY) {
-      this.wasActive = true
       this.dispatchEvent(new Event('swipe'))
     } else if (Math.abs(this.totalMovementX) < this.minMovementX && Math.abs(this.totalMovementY) < this.minMovementY) {
-      if (!this.wasActive) this.dispatchEvent(new CustomEvent('click', { detail: { posX, posY } }))
-      this.wasActive = false
-    } else { this.wasActive = false }
+      this.dispatchEvent(new CustomEvent('click', { detail: { posX, posY } }))
+    }
   }
 
   // tracks movement if the left click actively pressed
@@ -129,34 +118,5 @@ export default class DragPan extends EventTarget {
       this.touchDeltaY = clientY
       this.dispatchEvent(new Event('move'))
     }
-  }
-
-  getNextZoomFrame (now: number) {
-    this.wasActive = true
-    const delta = now - this.time
-    if (delta > 1) {
-      this.clear()
-      return 1
-    }
-    return 1 - easeOutExp(delta, 1, 1)
-  }
-
-  getNextSwipeFrame (now: number) {
-    this.wasActive = true
-    if (this.time === -1) {
-      return [0, 0, 0]
-    }
-    if (this.time === 0) this.time = now
-    const delta = now - this.time
-    if (delta > 1.75) {
-      this.time = 0
-      this.clear()
-    }
-    // find the velocity
-    return [
-      easeOutExp(delta, this.movementX, 1.75),
-      easeOutExp(delta, this.movementY, 1.75),
-      this.time
-    ]
   }
 }

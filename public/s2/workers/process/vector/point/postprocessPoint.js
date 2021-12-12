@@ -1,4 +1,5 @@
 // @flow
+/* eslint-env worker */
 import featureSort from '../featureSort'
 
 import type { Feature } from '../../tile.worker'
@@ -26,9 +27,9 @@ export default function postprocessPoint (mapID: string, source: string, tileID:
   // step 2: Run through all features and bundle into the fewest featureBatches. Caveats:
   // 1) don't store VAO set larger than index size (we use an extension for WebGL1, so we will probably never go over 1 << 32)
   // 2) don't store any feature code larger than MAX_FEATURE_BATCH_SIZE
-  let vertices: Array<number> = []
-  let weights: Array<number> = []
-  let featureGuide: Array<number> = []
+  const vertices: Array<number> = []
+  const weights: Array<number> = []
+  const featureGuide: Array<number> = []
   let encodings: Array<number> = features[0].code
   let subEncodings: Array<number> = features[0].featureCode
   let indexCount: number = 0

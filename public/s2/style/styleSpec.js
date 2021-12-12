@@ -85,6 +85,11 @@ export type GlyphPaint = {
 export type Layer = {
   id: string,
   layerIndex: number,
+  depthPos: number,
+  opaque?: boolean,
+  invert?: boolean,
+  overdraw?: boolean,
+  interactive?: boolean,
   source: string,
   layer: string,
   minzoom: number,
@@ -94,7 +99,8 @@ export type Layer = {
   layout: LineLayout | GlyphLayout,
   paint: FillPaint | PointPaint | LinePaint | GlyphPaint,
   iconPaint?: { 'icon-size': string | Array<any> },
-  lch: boolean,
+  colorRamp?: Uint8ClampedArray,
+  lch?: boolean,
   code?: Float32Array,
   iconCode?: Float32Array // special case for icon sizing
 }

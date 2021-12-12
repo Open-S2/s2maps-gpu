@@ -1,4 +1,5 @@
 // @flow
+/* eslint-env browser */
 import Program from './program'
 
 // WEBGL1
@@ -40,7 +41,7 @@ export default class PointProgram extends Program {
     const { gl, context, defaultBounds, uColor, uRadius, uStroke, uSWidth, uOpacity, uBounds } = this
     const { type } = context
     // get current source data
-    let { count, featureCode, depthPos, color, radius, stroke, strokeWidth, opacity, offset, mode, bounds } = featureGuide
+    const { count, featureCode, depthPos, color, radius, stroke, strokeWidth, opacity, offset, mode, bounds } = featureGuide
     // ensure proper blend state and depth testing is on
     context.defaultBlend()
     context.enableDepthTest()

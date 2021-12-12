@@ -4,32 +4,32 @@ import Worker from './util/corsWorker'
 import Info from './ui/info'
 
 import type { MapOptions } from './ui/map'
+import type { Layer } from './style/styleSpec'
 import type { Marker } from './workers/source/MarkerSource'
+import type { AnimationDirections } from './ui/camera/animator'
 
 type Attributions = { [string]: string }
 
-// This is a builder / api instance for the end user.
-// We want individual map instances in their own web worker thread. However,
-// we only want one instance of webWorkerPool to run for all map instances.
+// S2Map is called by the user and includes the API to interact with the mapping engine
 export default class S2Map extends EventTarget {
   _container: HTMLElement
   _canvasContainer: HTMLElement
   _navigationContainer: HTMLElement
   _canvasMultiplier: number
-  _offscreen: boolean = false
   _canvas: HTMLCanvasElement
   _attributionPopup: HTMLCanvasElement
   _colorBlind: HTMLElement
   _attributions: Attributions = {}
   colorMode: 0 | 1 | 2 | 3 = 0 // 0: none - 1: protanopia - 2: deutranopia - 3: tritanopia
-  map: Map | Worker
+  map: Map
+  offscreen: Worker
   info: Info
   id: string = Math.random().toString(36).replace('0.', '')
   constructor (options: MapOptions = {}) {
     super()
     // make sure certain options exist
     options = { canvasMultiplier: window.devicePixelRatio || 2, interactive: true, ...options }
-    options.canvasMultiplier = this._canvasMultiplier = Math.max(2, options.canvasMultiplier)
+    options.canvasMultiplier = this._canvasMultiplier = Math.max(2, options.canvasMultiplier || 2)
     // get the container
     if (typeof options.container === 'string') {
       this._container = window.document.getElementById(options.container)
@@ -45,17 +45,7 @@ export default class S2Map extends EventTarget {
     this._setupCanvas(canvas, options)
   }
 
-  delete () {
-    const { _offscreen, map, _canvas, _container } = this
-    if (_offscreen && map) map.postMessage({ type: 'delete' }) // $FlowIgnore
-    else if (map) map.delete()
-    // reset the worker pool
-    window.S2WorkerPool.delete()
-    // remove all canvas listeners via cloning
-    _canvas.replaceWith(_canvas.cloneNode(true))
-    // cleanup the html
-    while (_container.lastChild) _container.removeChild(_container.lastChild)
-  }
+  /* BUILD */
 
   _setupContainer (options: MapOptions): HTMLCanvasElement {
     const self = this
@@ -87,13 +77,12 @@ export default class S2Map extends EventTarget {
     const { ready } = options
     delete options.ready
     // if browser supports it, create an instance of the mapWorker
-    if (!navigator.gpu && canvas.transferControlToOffscreen) { // $FlowIgnore
+    if (!navigator.gpu && canvas.transferControlToOffscreen) {
       // TODO: MORE THAN LIKELY A RACE CONDITION HERE IF WAITING FOR A "READY" EVENT
-      const offscreen = canvas.transferControlToOffscreen()
-      self._offscreen = true
-      const mapWorker = self.map = new Worker(new URL('./workers/map.worker.js', import.meta.url), { name: 'map-worker', type: 'module' })
+      const offscreenCanvas = canvas.transferControlToOffscreen()
+      const mapWorker = self.offscreen = new Worker(new URL('./workers/map.worker.js', import.meta.url), { name: 'map-worker', type: 'module' })
       mapWorker.onmessage = self._mapMessage.bind(self)
-      mapWorker.postMessage({ type: 'canvas', options, canvas: offscreen, id: self.id }, [offscreen])
+      mapWorker.postMessage({ type: 'canvas', options, canvas: offscreenCanvas, id: self.id }, [offscreenCanvas])
     } else {
       const Map = await import('./ui/map').then(m => m.default)
       self.map = new Map(options, canvas, self.id, self)
@@ -113,16 +102,6 @@ export default class S2Map extends EventTarget {
     }
     // let map know to finish the setup
     self._onCanvasReady(ready)
-  }
-
-  _onCanvasReady (ready: null | Function) {
-    // now that canvas is setup, support resizing // $FlowIgnore
-    if ('ResizeObserver' in window) new ResizeObserver(this._resize.bind(this)).observe(this._container)
-    else window.addEventListener('resize', this._resize.bind(this))
-    // let the S2WorkerPool know of this maps existance
-    window.S2WorkerPool.addMap(this)
-    // lastly emit that the map is ready for commands
-    if (typeof ready === 'function') ready(this)
   }
 
   _setupControlContainer (options: MapOptions) {
@@ -195,89 +174,28 @@ export default class S2Map extends EventTarget {
     }
   }
 
-  _addAttributions (attributions: Attributions = {}) {
-    const { _attributionPopup, _attributions } = this
-    if (_attributionPopup) {
-      for (const name in attributions) {
-        if (!_attributions[name]) {
-          _attributions[name] = attributions[name]
-          _attributionPopup.innerHTML += `<div><a href="${attributions[name]}" target="popup">${name}</a></div>`
-        }
-      }
-    }
-  }
+  /* INTERNAL API */
 
-  _onTouch (e: TouchEvent, type: string) {
-    const { map, _offscreen, _canvasContainer, _canvasMultiplier } = this
-    e.preventDefault()
-    const { touches } = e
-    const { length } = touches
-    const touchEvent = { length }
-
-    for (let i = 0; i < length; i++) {
-      const { clientX, clientY, pageX, pageY } = touches[i]
-      const x = (pageX - _canvasContainer.offsetLeft) * _canvasMultiplier
-      const y = (pageY - _canvasContainer.offsetTop) * _canvasMultiplier
-      touchEvent[i] = { clientX, clientY, x, y }
-    }
-    if (_offscreen && map) {
-      map.postMessage({ type, touchEvent })
+  injectData (data) {
+    const { map, offscreen } = this
+    if (data.type === 'attributions') {
+      this._addAttributions(data.attributions)
+    } else if (data.type === 'info') {
+      if (this.info) this.info.injectInfo(data.json)
+    } else if (offscreen) {
+      const { type } = data
+      if (type === 'filldata') offscreen.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.codeTypeBuffer, data.featureGuideBuffer])
+      else if (type === 'linedata') offscreen.postMessage(data, [data.vertexBuffer, data.featureGuideBuffer])
+      else if (type === 'glyphdata') offscreen.postMessage(data, [data.glyphFilterBuffer, data.glyphQuadBuffer, data.glyphColorBuffer, data.featureGuideBuffer])
+      else if (type === 'glyphimages') offscreen.postMessage(data, data.images.map(i => i.data))
+      else if (type === 'rasterdata') offscreen.postMessage(data, [data.image])
+      else if (type === 'maskdata') offscreen.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.radiiBuffer])
+      else if (type === 'pointdata' || type === 'heatmapdata') offscreen.postMessage(data, [data.vertexBuffer, data.weightBuffer, data.featureGuideBuffer])
+      else if (type === 'interactivedata') offscreen.postMessage(data, [data.interactiveGuideBuffer, data.interactiveDataBuffer])
+      else offscreen.postMessage(data)
     } else if (map) {
-      if (type === 'touchstart') map.onTouchStart(touchEvent)
-      else if (type === 'touchend') map.dragPan.onTouchEnd(touchEvent)
-      else if (type === 'touchmove') map.dragPan.onTouchMove(touchEvent)
+      map.injectData(data)
     }
-  }
-
-  _onScroll (e: WheelEvent) {
-    e.preventDefault()
-    const { map, _offscreen } = this
-    const { clientX, clientY, deltaY } = e
-    const rect = this._canvas.getBoundingClientRect() // $FlowIgnore
-    if (_offscreen && map) {
-      map.postMessage({ type: 'scroll', rect, clientX, clientY, deltaY })
-    } else if (map) { map._onZoom(deltaY, clientX - rect.left, clientY - rect.top) }
-  }
-
-  _onMouseDown () {
-    const self = this
-    const { map, _offscreen } = self
-    // send off a mousedown
-    if (_offscreen && map) {
-      map.postMessage({ type: 'mousedown' })
-    } else if (map) { map.dragPan.onMouseDown() }
-    // build a listener to mousemovement
-    const mouseMoveFunc = self._onMouseMove.bind(self)
-    window.addEventListener('mousemove', mouseMoveFunc)
-    // upon eventual mouseup, let the map know
-    window.addEventListener('mouseup', (e) => {
-      const rect = self._canvas.getBoundingClientRect()
-      const { clientX, clientY } = e
-      window.removeEventListener('mousemove', mouseMoveFunc)
-      if (_offscreen && map) {
-        map.postMessage({ type: 'mouseup', clientX, clientY, rect })
-      } else if (map) { map.dragPan.onMouseUp(clientX - rect.left - (rect.width / 2), (rect.height / 2) - clientY - rect.top) }
-    }, { once: true })
-  }
-
-  _onMouseMove (e: MouseEvent) {
-    const { map, _offscreen } = this
-    const { movementX, movementY } = e // $FlowIgnore
-    if (_offscreen && map) {
-      map.postMessage({ type: 'mousemove', movementX, movementY })
-    } else if (map) { map.dragPan.onMouseMove(movementX, movementY) }
-  }
-
-  _onCanvasMouseMove (e: MouseEvent) {
-    const { map, _offscreen, _canvasContainer, _canvasMultiplier } = this
-    const { pageX, pageY } = e
-
-    const x = (pageX - _canvasContainer.offsetLeft) * _canvasMultiplier
-    const y = (pageY - _canvasContainer.offsetTop) * _canvasMultiplier
-
-    if (_offscreen && map) {
-      map.postMessage({ type: 'canvasmousemove', x, y })
-    } else if (map) { map.onCanvasMouseMove(x, y) }
   }
 
   _mapMessage ({ data }) {
@@ -304,19 +222,157 @@ export default class S2Map extends EventTarget {
     } else if (type === 'style') {
       window.S2WorkerPool.injectStyle(mapID, data.style)
     } else if (type === 'addLayer') {
-      window.S2WorkerPool.addLayer(this.map.id, data.layer, data.index, data.tileRequest)
+      window.S2WorkerPool.addLayer(mapID, data.layer, data.index, data.tileRequest)
     } else if (type === 'removeLayer') {
-      window.S2WorkerPool.removeLayer(this.map.id, data.index)
+      window.S2WorkerPool.removeLayer(mapID, data.index)
     } else if (type === 'reorderLayers') {
-      window.S2WorkerPool.reorderLayers(this.map.id, data.layerChanges)
+      window.S2WorkerPool.reorderLayers(mapID, data.layerChanges)
     } else if (type === 'screenshot') {
       this.dispatchEvent(new CustomEvent('screenshot', { detail: data.screen }))
     }
   }
 
-  _containerDimensions (): null | [number, number] {
-    if (this._container) return [this._container.clientWidth, this._container.clientHeight]
-    else return null
+  /* INTERNAL FUNCTIONS */
+
+  _onCanvasReady (ready: null | Function) {
+    // now that canvas is setup, support resizing
+    if ('ResizeObserver' in window) new ResizeObserver(this._resize.bind(this)).observe(this._container)
+    else window.addEventListener('resize', this._resize.bind(this))
+    // let the S2WorkerPool know of this maps existance
+    window.S2WorkerPool.addMap(this)
+    // lastly emit that the map is ready for commands
+    if (typeof ready === 'function') ready(this)
+  }
+
+  _addAttributions (attributions: Attributions = {}) {
+    const { _attributionPopup, _attributions } = this
+    if (_attributionPopup) {
+      for (const name in attributions) {
+        if (!_attributions[name]) {
+          _attributions[name] = attributions[name]
+          _attributionPopup.innerHTML += `<div><a href="${attributions[name]}" target="popup">${name}</a></div>`
+        }
+      }
+    }
+  }
+
+  _onTouch (e: TouchEvent, type: string) {
+    const { map, offscreen, _canvasContainer, _canvasMultiplier } = this
+    e.preventDefault()
+    const { touches } = e
+    const { length } = touches
+    const touchEvent = { length }
+
+    for (let i = 0; i < length; i++) {
+      const { clientX, clientY, pageX, pageY } = touches[i]
+      const x = (pageX - _canvasContainer.offsetLeft) * _canvasMultiplier
+      const y = (pageY - _canvasContainer.offsetTop) * _canvasMultiplier
+      touchEvent[i] = { clientX, clientY, x, y }
+    }
+    if (offscreen) {
+      offscreen.postMessage({ type, touchEvent })
+    } else if (map) {
+      if (type === 'touchstart') map.onTouchStart(touchEvent)
+      else if (type === 'touchend') map.dragPan.onTouchEnd(touchEvent)
+      else if (type === 'touchmove') map.dragPan.onTouchMove(touchEvent)
+    }
+  }
+
+  _onScroll (e: WheelEvent) {
+    e.preventDefault()
+    const { map, offscreen } = this
+    const { clientX, clientY, deltaY } = e
+    const rect = this._canvas.getBoundingClientRect()
+    if (offscreen) {
+      offscreen.postMessage({ type: 'scroll', rect, clientX, clientY, deltaY })
+    } else if (map) { map._onZoom(deltaY, clientX - rect.left, clientY - rect.top) }
+  }
+
+  _onMouseDown () {
+    const self = this
+    const { map, offscreen } = self
+    // send off a mousedown
+    if (offscreen) {
+      offscreen.postMessage({ type: 'mousedown' })
+    } else if (map) { map.dragPan.onMouseDown() }
+    // build a listener to mousemovement
+    const mouseMoveFunc = self._onMouseMove.bind(self)
+    window.addEventListener('mousemove', mouseMoveFunc)
+    // upon eventual mouseup, let the map know
+    window.addEventListener('mouseup', (e) => {
+      const rect = self._canvas.getBoundingClientRect()
+      const { clientX, clientY } = e
+      window.removeEventListener('mousemove', mouseMoveFunc)
+      if (offscreen) {
+        offscreen.postMessage({ type: 'mouseup', clientX, clientY, rect })
+      } else if (map) { map.dragPan.onMouseUp(clientX - rect.left - (rect.width / 2), (rect.height / 2) - clientY - rect.top) }
+    }, { once: true })
+  }
+
+  _onMouseMove (e: MouseEvent) {
+    const { map, offscreen } = this
+    const { movementX, movementY } = e
+    if (offscreen) {
+      offscreen.postMessage({ type: 'mousemove', movementX, movementY })
+    } else if (map) { map.dragPan.onMouseMove(movementX, movementY) }
+  }
+
+  _onCanvasMouseMove (e: MouseEvent) {
+    const { map, offscreen, _canvasContainer, _canvasMultiplier } = this
+    const { pageX, pageY } = e
+
+    const x = (pageX - _canvasContainer.offsetLeft) * _canvasMultiplier
+    const y = (pageY - _canvasContainer.offsetTop) * _canvasMultiplier
+
+    if (offscreen) {
+      offscreen.postMessage({ type: 'canvasmousemove', x, y })
+    } else if (map) { map.onCanvasMouseMove(x, y) }
+  }
+
+  _resize () {
+    const { map, offscreen, _container, _canvasMultiplier } = this
+    // rebuild the proper width and height using the container as a guide
+    if (offscreen) {
+      offscreen.postMessage({
+        type: 'resize',
+        width: _container.clientWidth * _canvasMultiplier,
+        height: _container.clientHeight * _canvasMultiplier
+      })
+    } else if (map) { map.resize(_container.clientWidth * _canvasMultiplier, _container.clientHeight * _canvasMultiplier) }
+  }
+
+  _navEvent (ctrl: 'zoomIn' | 'zoomOut') {
+    const { map, offscreen } = this
+    if (offscreen) offscreen.postMessage({ type: 'nav', ctrl })
+    else if (map) map.navEvent(ctrl)
+  }
+
+  _setColorMode () {
+    const { map, offscreen, _colorBlind } = this
+    this.colorMode++
+    if (this.colorMode > 3) this.colorMode = 0
+    // update the icon
+    const cM = this.colorMode
+    _colorBlind.id = `s2-colorblind${(cM === 0) ? '-default' : (cM === 1) ? '-proto' : (cM === 2) ? '-deut' : '-trit'}`
+    // tell the map to update
+    if (offscreen) offscreen.postMessage({ type: 'colorMode', mode: cM })
+    else if (map) map.colorMode(cM)
+  }
+
+  /* API */
+
+  delete () {
+    const { offscreen, map, _canvas, _container } = this
+    if (offscreen) {
+      offscreen.postMessage({ type: 'delete' })
+      offscreen.terminate()
+    } else if (map) { map.delete() }
+    // reset the worker pool
+    window.S2WorkerPool.delete()
+    // remove all canvas listeners via cloning
+    _canvas.replaceWith(_canvas.cloneNode(true))
+    // cleanup the html
+    while (_container.lastChild) _container.removeChild(_container.lastChild)
   }
 
   getContainer (): HTMLElement {
@@ -327,99 +383,56 @@ export default class S2Map extends EventTarget {
     return this._canvasContainer
   }
 
-  _resize () {
-    const { map, _offscreen, _container, _canvasMultiplier } = this
-    // rebuild the proper width and height using the container as a guide
-    if (_offscreen && map) { // $FlowIgnore
-      map.postMessage({
-        type: 'resize',
-        width: _container.clientWidth * _canvasMultiplier,
-        height: _container.clientHeight * _canvasMultiplier
-      }) // $FlowIgnore
-    } else if (map) { map.resize(_container.clientWidth * _canvasMultiplier, _container.clientHeight * _canvasMultiplier) }
+  getContainerDimensions (): null | [number, number] {
+    if (this._container) return [this._container.clientWidth, this._container.clientHeight]
+    else return null
   }
 
-  _navEvent (ctrl: 'zoomIn' | 'zoomOut') {
-    const { map, _offscreen } = this
-    if (_offscreen && map) map.postMessage({ type: 'nav', ctrl })
-    else if (map) map.navEvent(ctrl)
-  }
-
-  _setColorMode () {
-    const { map, _offscreen, _colorBlind } = this
-    this.colorMode++
-    if (this.colorMode > 3) this.colorMode = 0
-    // update the icon
-    const cM = this.colorMode
-    _colorBlind.id = `s2-colorblind${(cM === 0) ? '-default' : (cM === 1) ? '-proto' : (cM === 2) ? '-deut' : '-trit'}`
-    // tell the map to update
-    if (_offscreen && map) map.postMessage({ type: 'colorMode', mode: cM })
-    else if (map) map.colorMode(cM)
-  }
-
-  injectData (data) {
-    const { map, _offscreen } = this
-    if (data.type === 'attributions') {
-      this._addAttributions(data.attributions)
-    } else if (data.type === 'info') {
-      if (this.info) this.info.injectInfo(data.json)
-    } else if (_offscreen && map) {
-      const { type } = data // $FlowIgnore
-      if (type === 'filldata') map.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.codeTypeBuffer, data.featureGuideBuffer]) // $FlowIgnore
-      else if (type === 'linedata') map.postMessage(data, [data.vertexBuffer, data.featureGuideBuffer]) // $FlowIgnore
-      else if (type === 'glyphdata') map.postMessage(data, [data.glyphFilterBuffer, data.glyphQuadBuffer, data.glyphColorBuffer, data.featureGuideBuffer]) // $FlowIgnore
-      else if (type === 'glyphimages') map.postMessage(data, data.images.map(i => i.data))
-      else if (type === 'rasterdata') map.postMessage(data, [data.image]) // $FlowIgnore
-      else if (type === 'maskdata') map.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.radiiBuffer]) // $FlowIgnore
-      else if (type === 'pointdata' || type === 'heatmapdata') map.postMessage(data, [data.vertexBuffer, data.weightBuffer, data.featureGuideBuffer]) // $FlowIgnore
-      else if (type === 'interactivedata') map.postMessage(data, [data.interactiveGuideBuffer, data.interactiveDataBuffer])
-      else map.postMessage(data)
-    } else if (map) { // $FlowIgnore
-      map.injectData(data)
-    }
-  }
-
-  /** API **/
   // in this case, reset the style from scratch
-  setStyle (style: Object, ignorePosition: boolean = true) { // $FlowIgnore
-    const { _offscreen, map } = this
-    if (_offscreen && map) map.postMessage({ type: 'setStyle', style, ignorePosition }) // $FlowIgnore
+  setStyle (style: Object, ignorePosition: boolean = true) {
+    const { offscreen, map } = this
+    if (offscreen) offscreen.postMessage({ type: 'setStyle', style, ignorePosition })
     else if (map) map.setStyle(style, ignorePosition)
   }
 
   // in this case, check for changes and update accordingly
   updateStyle (style: Object) {
-    const { _offscreen, map } = this
-    if (_offscreen && map) map.postMessage({ type: 'updateStyle', style }) // $FlowIgnore
+    const { offscreen, map } = this
+    if (offscreen) offscreen.postMessage({ type: 'updateStyle', style })
     else if (map) map.updateStyle(style)
   }
 
-  setMoveState (state: boolean) { // $FlowIgnore
-    const { _offscreen, map } = this
-    if (_offscreen && map) map.postMessage({ type: 'moveState', state }) // $FlowIgnore
+  setMoveState (state: boolean) {
+    const { offscreen, map } = this
+    if (offscreen) offscreen.postMessage({ type: 'moveState', state })
     else if (map) map.setMoveState(state)
   }
 
-  setZoomState (state: boolean) { // $FlowIgnore
-    const { _offscreen, map } = this
-    if (_offscreen && map) map.postMessage({ type: 'zoomState', state }) // $FlowIgnore
+  setZoomState (state: boolean) {
+    const { offscreen, map } = this
+    if (offscreen) offscreen.postMessage({ type: 'zoomState', state })
     else if (map) map.setZoomState(state)
   }
 
-  jumpTo (lon: number, lat: number, zoom: number) {
-    const { _offscreen, map } = this
-    if (_offscreen && map) map.postMessage({ type: 'jumpTo', lon, lat, zoom }) // $FlowIgnore
+  jumpTo (lon: number, lat: number, zoom?: number) {
+    const { offscreen, map } = this
+    if (offscreen) offscreen.postMessage({ type: 'jumpTo', lon, lat, zoom })
     else if (map) map.jumpTo(lon, lat, zoom)
   }
 
-  flyTo (lon: number, lat: number, zoom: number, duration?: number) {
-    const { _offscreen, map } = this
-    if (_offscreen && map) map.postMessage({ type: 'flyTo', lon, lat, zoom, duration }) // $FlowIgnore
-    else if (map) map.flyTo(lon, lat, zoom, duration)
+  easeTo (directions?: AnimationDirections) {
+    const { offscreen, map } = this
+    if (offscreen) offscreen.postMessage({ type: 'easeTo', directions })
+    else if (map) map.animateTo('easeTo', directions)
+  }
+
+  flyTo (directions?: AnimationDirections) {
+    const { offscreen, map } = this
+    if (offscreen) offscreen.postMessage({ type: 'flyTo', directions })
+    else if (map) map.animateTo('flyTo', directions)
   }
 
   getInfo (featureID: number) {
-    const { _offscreen, map } = this
     // 1) tell worker pool we need info data
     window.S2WorkerPool.getInfo(this.id, featureID)
     // 2) clear old info s2json data should it exist
@@ -437,56 +450,55 @@ export default class S2Map extends EventTarget {
 
   resetSource (sourceNames: string | Array<string> | Array<[string, string | null]>,
     keepCache?: boolean = false, awaitReplace?: boolean = false) {
-    const { _offscreen, map } = this
+    const { offscreen, map } = this
     if (!Array.isArray(sourceNames)) sourceNames = [sourceNames]
     if (!Array.isArray(sourceNames[0])) sourceNames = [sourceNames]
     // clear old info s2json data should it exist
-    if (_offscreen && map) map.postMessage({ type: 'resetSource', sourceNames }) // $FlowIgnore
+    if (offscreen) offscreen.postMessage({ type: 'resetSource', sourceNames })
     else if (map) map.resetSource(sourceNames, keepCache, awaitReplace)
   }
 
   deleteSource (sourceNames: string | Array<string> | Array<[string, string | null]>) {
-    const { _offscreen, map } = this
+    const { offscreen, map } = this
     if (!Array.isArray(sourceNames)) sourceNames = [sourceNames]
     // 1) tell worker pool we dont need info data anymore
     window.S2WorkerPool.deleteSource(this.id, sourceNames)
     // 2) clear old info s2json data should it exist
-    if (_offscreen && map) map.postMessage({ type: 'clearSource', sourceNames }) // $FlowIgnore
+    if (offscreen) offscreen.postMessage({ type: 'clearSource', sourceNames })
     else if (map) map.clearSource(sourceNames)
   }
 
   // nameIndex -> if name it goes BEFORE the layer name specified. If layer name not found, it goes at the end
   // if no nameIndex, it goes at the end
   addLayer (layer: Layer, nameIndex?: number | string) {
-    const { _offscreen, map } = this
-    if (_offscreen && map) map.postMessage({ type: 'addLayer', layer, nameIndex }) // $FlowIgnore
+    const { offscreen, map } = this
+    if (offscreen) offscreen.postMessage({ type: 'addLayer', layer, nameIndex })
     else if (map) map.addLayer(layer, nameIndex)
   }
 
   // fullUpdate -> if false, don't ask webworkers to reupdate
   // nameIndex -> if name it finds the layer name to update, otherwise gives up
   updateLayer (layer: Layer, nameIndex?: number | string, fullUpdate?: boolean = true) {
-    const { _offscreen, map } = this
-    if (_offscreen && map) map.postMessage({ type: 'updateLayer', layer, nameIndex, fullUpdate }) // $FlowIgnore
+    const { offscreen, map } = this
+    if (offscreen) offscreen.postMessage({ type: 'updateLayer', layer, nameIndex, fullUpdate })
     else if (map) map.updateLayer(layer, nameIndex, fullUpdate)
   }
 
   // nameIndex -> if name it finds the layer name to update, otherwise gives up
-  removeLayer (nameIndex: number | string): boolean {
-    const { _offscreen, map } = this
-    if (_offscreen && map) map.postMessage({ type: 'removeLayer', nameIndex }) // $FlowIgnore
+  removeLayer (nameIndex: number | string) {
+    const { offscreen, map } = this
+    if (offscreen) offscreen.postMessage({ type: 'removeLayer', nameIndex })
     else if (map) map.removeLayer(nameIndex)
   }
 
   // { [+from]: +to }
   reorderLayers (layerChanges: { [string | number]: number }) {
-    const { _offscreen, map } = this
-    if (_offscreen && map) map.postMessage({ type: 'reorderLayers', layerChanges }) // $FlowIgnore
+    const { offscreen, map } = this
+    if (offscreen) offscreen.postMessage({ type: 'reorderLayers', layerChanges })
     else if (map) map.reorderLayers(layerChanges)
   }
 
   addMarker (markers: Marker | Array<Marker>, sourceName?: string = '_markers') {
-    const { _offscreen, map } = this
     if (!Array.isArray(markers)) markers = [markers]
     // 1) let the worker pool know we have new marker(s)
     window.S2WorkerPool.addMarkers(this.id, markers, sourceName)
@@ -495,7 +507,6 @@ export default class S2Map extends EventTarget {
   }
 
   removeMarker (ids: number | Array<number>, sourceName?: string = '_markers') {
-    const { _offscreen, map } = this
     if (!Array.isArray(ids)) ids = [ids]
     // 1) let the worker pool know we need to remove marker(s)
     window.S2WorkerPool.removeMarkers(this.id, ids, sourceName)
@@ -503,12 +514,12 @@ export default class S2Map extends EventTarget {
     this.resetSource(sourceName, true, true)
   }
 
-  screenshot () {
+  screenshot (): Promise<null | Uint8Array> {
     const self = this
-    const { _offscreen, map } = self
+    const { offscreen, map } = self
     return new Promise(resolve => {
-      self.addEventListener('screenshot', (data) => { resolve(data) }, { once: true })
-      if (_offscreen && map) map.postMessage({ type: 'screenshot' }) // $FlowIgnore
+      self.addEventListener('screenshot', (data: { detail: null | Uint8Array }) => { resolve(data.detail) }, { once: true })
+      if (offscreen) offscreen.postMessage({ type: 'screenshot' })
       else if (map) map.screenshot()
     })
   }
@@ -516,11 +527,10 @@ export default class S2Map extends EventTarget {
 
 if (window) window.S2Map = S2Map
 
-// TODO ORDER:
+// TODO NOW:
 // create projection examples
-// flyTo
-// terminate map worker if exists
-// improve how attributes work
+// animation preload tiles
+// zoom out button does NOT work sometimes...
 // migrate old S2Tiles to new S2DB + zooms with division should be pre-divided (first 7 zooms)
 // s2maps-gl S2DB
 
@@ -542,22 +552,26 @@ if (window) window.S2Map = S2Map
 // 8) hillshade and line data fixes
 // 9) redo roads -> working for road signs
 // 10) screenshot
+// 11) movement predictive tile caching
+// 12) bearing
+// 13) cluster points
 
 // S2MAPS BUGS:
+// * find shortest longitude for easeTo
 // * zoom too fast at low zoom renders the wrong tile
 // * smooth transitions to parent tiles sometimes loses some features (buildings as an example)
 // * overlap of text rarely (salt lake city as an ex)
 // * colorblind support is missing for some renderings (heatmap)
 // * heatmap doesn't work well in webgl1
 // * icons don't render with text (overlap issues)
+// * zooming into new tiles hover/interact over glyph doesn't work on different zoom (be sure to check parent as well essentially)
 
 // S2MAPS (FUTURE)
-// * merge (cluster) points
 // * webgpu
 // * 3D points
 // * 3D buildings (shapes)
 // * 3D terrain
-// * view at angle + camera system upgrade
+// * view at angle + camera system upgrade + pitch
 // * geocoding
 // * isochrones
 

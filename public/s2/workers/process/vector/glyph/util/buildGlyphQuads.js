@@ -1,5 +1,6 @@
 // @flow
 import type { GlyphMap } from '../'
+import type { GlyphObject } from '../glyphSpec'
 
 // [s, t, xOffset, yOffset, xPos, yPos, texX, texY, texWidth, texHeight, id]
 export type Quad = [number, number, number, number, number, number, number, number, number]
@@ -79,7 +80,7 @@ export default function buildGlyphQuads (feature: GlyphObject, glyphMap: GlyphMa
   const [anchorOffsetX, anchorOffsetY] = anchorOffset(anchor, maxWidth, maxHeight)
   updateoffset(quads, anchorOffsetX, anchorOffsetY)
   // build bbox given current size
-  const bbox = [anchorOffsetX, anchorOffsetY, maxWidth + anchorOffsetX, maxHeight + anchorOffsetY]
+  // const bbox = [anchorOffsetX, anchorOffsetY, maxWidth + anchorOffsetX, maxHeight + anchorOffsetY]
   // set minX, maxX, minY, maxY in the feature
   feature.minX = (s * 1024) + adjustX + (anchorOffsetX * size)
   feature.minY = (t * 1024) + adjustY + (anchorOffsetY * size)

@@ -4,7 +4,7 @@ import { VectorTile } from 's2-vector-tile'
 import { parseLayers } from '../style/conditionals'
 import { VectorManager, processRaster } from './process'
 
-import type { Face } from '../projection'
+import type { Face } from '../geo'
 import type { TileRequest } from './workerPool'
 import type { StylePackage, Layer } from '../style/styleSpec'
 import type { IconMap, ColorMap } from './process/vector/glyph'
@@ -101,7 +101,7 @@ export default class TileWorker {
     this.vectorManager.webgl1 = this.webgl1 = glType === 1
   }
 
-  _addLayer (mapID: string, index: number) {
+  _addLayer (mapID: string, layer: Layer, index: number) {
     const layers = this.maps[mapID]
     layers.splice(index, 0, layer)
     for (let i = index + 1, ll = layers.length; i < ll; i++) {
@@ -125,7 +125,8 @@ export default class TileWorker {
     const layers = this.maps[mapID]
     const newLayers = []
     // move the layer to its new position
-    for (const [from, to] of Object.entries(entries)) {
+    for (let [from, to] of Object.entries(layerChanges)) {
+      to = +to
       const layer = layers[+from]
       layer.layerIndex = to
       layer.depthPos = to + 1
