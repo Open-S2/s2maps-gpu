@@ -38,6 +38,9 @@ export default class Animator {
   speed: number
   duration: number = 2.5
   velocity: number
+  futureOffset: number = 0
+  futureTiles: { [string | number]: Array<BigInt> } // timeKey: [tileID]
+  futureKeys: Array<number> = []
   ease: Function
   _increment: Function
   projector: Projector
@@ -53,11 +56,11 @@ export default class Animator {
     if (directions.duration) this.duration = directions.duration
     if (directions.speed) this.speed = directions.speed
     // pull in varaibles
-    const lon = directions.lon || projector.lon
-    const lat = directions.lat || projector.lat
-    const zoom = projector.clampZoom(directions.zoom || projector.zoom)
-    const bearing = directions.bearing || projector.bearing
-    const pitch = directions.pitch || projector.pitch
+    const lon = (!isNaN(directions.lon)) ? directions.lon : projector.lon
+    const lat = (!isNaN(directions.lat)) ? directions.lat : projector.lat
+    const zoom = projector.clampZoom((!isNaN(directions.zoom)) ? directions.zoom : projector.zoom)
+    const bearing = (!isNaN(directions.bearing)) ? directions.bearing : projector.bearing
+    const pitch = (!isNaN(directions.pitch)) ? directions.pitch : projector.pitch
     // setup variables
     this.startLon = projector.lon
     this.startLat = projector.lat
@@ -85,12 +88,14 @@ export default class Animator {
 
   // Updates the position based upon time. returns whether complete or not.
   increment (time: number): boolean {
-    const { projector, endLon, endLat, endZoom, endBearing, endPitch, duration } = this
+    const { projector, futureOffset, futureKeys, duration } = this
     // setup time should it not exist yet
     if (!this.startTime) this.startTime = time
+    // if current time is greater than or equal to the latest futureKeys, send off a request to preload tiles
+    if (futureKeys.length && futureKeys[0] - futureOffset <= time) this._requestFutureTiles()
     // build the new lon, lat, zoom, bearing, pitch
     const pos = this._increment(time - this.startTime)
-    if (!pos) return false
+    if (!Array.isArray(pos)) return pos
     const [lon, lat, zoom, bearing, pitch] = pos
     // update the projector
     projector.setPosition(lon, lat, zoom, bearing, pitch)
@@ -100,28 +105,46 @@ export default class Animator {
   }
 
   zoomTo () {
-    const { startZoom, deltaZoom, endLon, endLat, endZoom, endBearing, endPitch, duration } = this
+    const { startLon, startLat, startZoom, deltaLon, deltaLat, deltaZoom, endLon, endLat, endZoom, endBearing, endPitch, duration } = this
     this._increment = function (time: number): [number, number, number, number, number] {
       if (time >= duration) return [endLon, endLat, endZoom, endBearing, endPitch]
       return [
-        endLon,
-        endLat,
+        easeOutExpo(time, startLon, deltaLon, duration),
+        easeOutExpo(time, startLat, deltaLat, duration),
         easeOutExpo(time, startZoom, deltaZoom, duration),
         endBearing,
         endPitch
       ]
     }
+    // build renderTile list
+    this._buildFutureTileList()
+  }
+
+  compassTo () {
+    const { startBearing, startCompass, deltaBearing, deltaCompass, endLon, endLat, endZoom, endBearing, endPitch, duration } = this
+    this._increment = function (time: number): [number, number, number, number, number] {
+      if (time >= duration) return [endLon, endLat, endZoom, endBearing, endPitch]
+      return [
+        endLon,
+        endLat,
+        endZoom,
+        easeOutExpo(time, startBearing, deltaBearing, duration),
+        easeOutExpo(time, startCompass, deltaCompass, duration)
+      ]
+    }
+    // build renderTile list
+    this._buildFutureTileList()
   }
 
   swipeTo (movementX: number, movementY: number) {
-    const { endZoom, endBearing, endPitch, projector, duration } = this
+    const { projector, duration } = this
     const { abs } = Math
-    this._increment = function (time: number): [number, number, number, number, number] {
+    this._increment = function (time: number): boolean | [number, number, number, number, number] {
       const newMovementX = easeInExpo(duration - time, 0, movementX, duration)
       const newMovementY = easeInExpo(duration - time, 0, movementY, duration)
-      if (abs(newMovementX) <= 0.5 && abs(newMovementY) <= 0.5) return
-      projector.onMove(newMovementX, newMovementY, 6, 6)
-      return [projector.lon, projector.lat, endZoom, endBearing, endPitch]
+      if (abs(newMovementX) <= 0.5 && abs(newMovementY) <= 0.5) return true
+      projector.onMove(newMovementX, newMovementY)
+      return false
     }
   }
 
@@ -149,6 +172,8 @@ export default class Animator {
         bearingPitchEase(time, startPitch, deltaPitch, duration)
       ]
     }
+    // build renderTile list
+    this._buildFutureTileList()
   }
 
   flyTo (): Function {
@@ -215,7 +240,7 @@ export default class Animator {
     // adjust duration if speed is provided
     if (this.speed) this.duration = S / this.speed
 
-    // finally setup animation function
+    // setup animation function
     this._increment = function (time: number): [number, number, number, number, number] {
       if (time >= duration) return [endLon, endLat, endZoom, endBearing, endPitch]
       const s = (time / duration) * S
@@ -229,6 +254,72 @@ export default class Animator {
         bearingPitchEase(time, startPitch, deltaPitch, duration)
       ]
     }
+
+    // build renderTile list
+    this._buildFutureTileList()
+  }
+
+  _buildFutureTileList () {
+    const { endLon, endLat, endZoom, endBearing, endPitch, projector, duration } = this
+    const tileSet = new Set(projector.map._getTiles().map(tile => tile.id))
+    const newTiles = {}
+    let tilesFound: boolean
+    const batch = [
+      0, duration, duration, projector.getTilesAtPosition(endLon, endLat, endZoom, endBearing, endPitch),
+      0, duration, duration / 2, projector.getTilesAtPosition(...this._increment(duration / 2))
+    ]
+    // keep diving / spliting while tested tiles are not equal to
+    do {
+      // reset checker
+      tilesFound = false
+      // pull in a batch check
+      const [low, high, pos, tiles] = batch.splice(0, 4)
+      // store any new tiles and track if any of them new
+      if (tiles) {
+        for (const tile of tiles) {
+          if (!tileSet.has(tile)) {
+            tileSet.add(tile)
+            if (!newTiles[pos]) newTiles[pos] = []
+            newTiles[pos].push(tile)
+            tilesFound = true
+          }
+        }
+      }
+      // if "tilesFound" than test midpoint positions
+      if (tilesFound && pos !== duration) {
+        const lowPosHalf = (low + pos) / 2
+        const posHighHalf = (pos + high) / 2
+        batch.push(
+          low, pos, lowPosHalf, projector.getTilesAtPosition(...this._increment(lowPosHalf)),
+          pos, high, posHighHalf, projector.getTilesAtPosition(...this._increment(posHighHalf))
+        )
+      }
+    } while (batch.length)
+    // store tiles
+    this.futureTiles = newTiles
+    // store keys
+    this.futureKeys = []
+    for (const key of Object.keys(newTiles)) this.futureKeys.push(+key)
+    this.futureKeys = this.futureKeys.sort((a, b) => a - b)
+    this.futureOffset = this.futureKeys[0]
+    // pre-request the first three tile sets
+    this._requestFutureTiles()
+    this._requestFutureTiles()
+    this._requestFutureTiles()
+  }
+
+  _requestFutureTiles () {
+    if (!this.futureKeys.length) return
+    const { futureKeys, futureTiles, projector } = this
+    const { map } = projector
+    // get a key
+    const key = futureKeys.shift()
+    // pull in the tiles
+    const tiles = futureTiles[key]
+    // make a request
+    map._createFutureTiles(tiles)
+    // cleanup now uneaded tile reference
+    delete futureTiles[key]
   }
 }
 

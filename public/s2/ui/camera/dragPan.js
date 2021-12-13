@@ -1,6 +1,8 @@
 // @flow
 /* eslint-env browser */
 
+const DOUBLE_CLICK_TIMEOUT = 175
+
 export type TouchEvent = {
   length: number,
   [number]: {
@@ -21,6 +23,7 @@ export default class DragPan extends EventTarget {
   touchDeltaX: number = 0
   touchDeltaY: number = 0
   touchDeltaZ: number = 0
+  clickEvent: null | setTimeout = null
   zoom: number = 0
   clear () {
     this.movementX = 0
@@ -38,7 +41,16 @@ export default class DragPan extends EventTarget {
   onTouchEnd (touches: TouchEvent) {
     this._setTouchDelta(touches)
     if (Math.abs(this.totalMovementX) < this.minMovementX && Math.abs(this.totalMovementY) < this.minMovementY) {
-      this.dispatchEvent(new Event('click'))
+      if (this.clickEvent) {
+        clearTimeout(this.clickEvent)
+        this.clickEvent = null
+        this.dispatchEvent(new Event('doubleClick'))
+      } else {
+        this.clickEvent = setTimeout(() => {
+          this.clickEvent = null
+          this.dispatchEvent(new Event('click'))
+        }, DOUBLE_CLICK_TIMEOUT)
+      }
     }
   }
 
@@ -73,7 +85,16 @@ export default class DragPan extends EventTarget {
     if (Math.abs(this.movementX) > this.minMovementX || Math.abs(this.movementY) > this.minMovementY) {
       this.dispatchEvent(new Event('swipe'))
     } else if (Math.abs(this.totalMovementX) < this.minMovementX && Math.abs(this.totalMovementY) < this.minMovementY) {
-      this.dispatchEvent(new CustomEvent('click', { detail: { posX, posY } }))
+      if (this.clickEvent) {
+        clearTimeout(this.clickEvent)
+        this.clickEvent = null
+        this.dispatchEvent(new CustomEvent('doubleClick', { detail: { posX, posY } }))
+      } else {
+        this.clickEvent = setTimeout(() => {
+          this.clickEvent = null
+          this.dispatchEvent(new CustomEvent('click', { detail: { posX, posY } }))
+        }, DOUBLE_CLICK_TIMEOUT)
+      }
     }
   }
 

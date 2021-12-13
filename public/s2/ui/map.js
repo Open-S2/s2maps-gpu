@@ -1,5 +1,5 @@
 // @flow
-/* eslint-env browser worker */
+/* eslint-env browser */
 import Camera from './camera'
 import DragPan from './camera/dragPan'
 import Animator from './camera/animator'
@@ -16,14 +16,13 @@ export type MapOptions = {
   apiKey: string,
   style: Object | string,
   scrollZoom?: boolean,
-  updateWhileZooming?: boolean,
   canvasMultiplier?: number,
   attributions?: { [string]: string },
-  jollyRoger?: false | 'default' | 'light' | 'dark', // wether to load the logo or not, defaults to true
-  zoomController?: boolean,
-  infoLayers?: Array<string>,
-  colorBlindController?: boolean,
   attributionOff?: boolean,
+  infoLayers?: Array<string>,
+  zoomController?: boolean,
+  compassController?: boolean,
+  colorBlindController?: boolean,
   canZoom?: boolean,
   canMove?: boolean,
   darkMode?: boolean,
@@ -63,8 +62,8 @@ export default class Map extends Camera {
     // check if we can interact with the map
     if (interactive) this._interactive = interactive
     if (scrollZoom) this._scrollZoom = scrollZoom
-    if (canMove !== undefined) this.canMove = canMove
-    if (canZoom !== undefined) this.canZoom = canZoom
+    if (canMove === false) this.canMove = false
+    if (canZoom === false) this.canZoom = false
     // build the painter and style
     this._buildPaint(options, style)
   }
@@ -245,6 +244,45 @@ export default class Map extends Camera {
     this.canZoom = !!state
   }
 
+  updateCompass (bearing?: number, pitch?: number) {
+    const { projector } = this
+    this.currAnimFunction = null
+    projector.setCompass(projector.bearing + (bearing | 0), projector.pitch + (pitch | 0))
+    this.render()
+  }
+
+  // snap to upside down if interested
+  mouseupCompass () {
+    const { projector } = this
+    const { bearing } = projector
+    if (!bearing) return
+    const newBearing = (bearing >= -10 && bearing <= 10)
+      ? 0
+      : (bearing <= -167.5)
+        ? -180
+        : (bearing >= 167.5)
+          ? 180
+          : undefined
+    if (!isNaN(newBearing)) {
+      const animator = new Animator(projector, { duration: 1, bearing: newBearing })
+      animator.compassTo()
+      this.currAnimFunction = (now) => this._animate(animator, now * 0.001)
+      this.render()
+    }
+  }
+
+  resetCompass () {
+    const { projector } = this
+    const { bearing, pitch } = projector
+    // create the animator
+    const duration = bearing ? ((bearing > 90) ? 1.75 : 1) : 1
+    const animator = new Animator(projector, { duration, bearing: 0, pitch: (!bearing) ? pitch | 0 : null })
+    animator.compassTo()
+    this.currAnimFunction = (now) => this._animate(animator, now * 0.001)
+    // send off a render
+    this.render()
+  }
+
   resize (width: number, height: number) {
     this.resizeQueued = { width, height }
     this.render()
@@ -300,16 +338,12 @@ export default class Map extends Camera {
   }
 
   // builtin navigation controller inputs
-  navEvent (ctrl: 'zoomIn' | 'zoomOut') {
+  navEvent (ctrl: 'zoomIn' | 'zoomOut', lon?: number, lat?: number) {
     const { projector } = this
     const startZoom = projector.zoom
     const endZoom = startZoom + ((ctrl === 'zoomIn') ? 1 : -1)
-    // preload end position tiles, reset for next frame
-    projector.setZoom(endZoom)
-    this._getTiles()
-    projector.setZoom(startZoom)
     // build animation
-    const animator = new Animator(this.projector, { duration: 1.5, zoom: endZoom })
+    const animator = new Animator(this.projector, { duration: 1.5, zoom: endZoom, lon, lat })
     animator.zoomTo()
     this.currAnimFunction = (now) => this._animate(animator, now * 0.001)
     // render
@@ -364,6 +398,7 @@ export default class Map extends Camera {
       dragPan.addEventListener('swipe', self._onSwipe.bind(self))
       dragPan.addEventListener('zoom', () => { self._onZoom(dragPan.zoom) })
       dragPan.addEventListener('click', self._onClick.bind(self))
+      dragPan.addEventListener('doubleClick', self._onDoubleClick.bind(self))
     }
     // setup camera
     self._resizeCamera(_canvas.width, _canvas.height)
@@ -421,6 +456,12 @@ export default class Map extends Camera {
     }
   }
 
+  _onDoubleClick ({ detail }) {
+    const { posX, posY } = detail
+    const [lon, lat] = this.projector.cursorToLonLat(posX, posY)
+    this.navEvent('zoomIn', lon, lat)
+  }
+
   _onPositionUpdate () {
     const { projector } = this
     const { zoom, lon, lat } = projector
@@ -456,13 +497,9 @@ export default class Map extends Camera {
     // remove any prexisting animations
     this.currAnimFunction = null
     // update projector
-    const update = this.projector.onZoom(deltaZ, deltaX, deltaY)
-    // if the projector sees a zoom change, we need to render, but don't request new tiles until
-    // done zooming if the updateWhileZooming flag is set to false
-    if (update) {
-      this.painter.dirty = true
-      this.render()
-    }
+    if (deltaZ) this.projector.onZoom(deltaZ, deltaX, deltaY)
+    // render
+    this.render()
   }
 
   _onMovement (e: Event) {
@@ -477,7 +514,6 @@ export default class Map extends Camera {
   _onSwipe (e: Event) {
     if (!this.canMove) return
     const { projector, dragPan } = this
-    const { lon, lat } = projector
     const { movementX, movementY } = dragPan
     // build animation
     const animator = new Animator(projector, { duration: 1.75 })

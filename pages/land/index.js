@@ -1,5 +1,5 @@
 /* REACT MODULES */
-import Map from '../map'
+import Map from '../../components/map'
 /* JSON */
 import style from './style.json'
 

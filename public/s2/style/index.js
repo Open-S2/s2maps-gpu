@@ -28,8 +28,14 @@ export default class Style {
   minzoom: number = 0
   maxzoom: number = 20
   zoomOffset: number = 0
+  minLatPosition: number = 70
+  maxLatRotation: number = 89.99999
   lon: number = 0
   lat: number = 0
+  bearing: number = 0
+  pitch: number = 0
+  zNear: number = 0.5
+  zFar: number = 100_000_000
   sources: Sources = {}
   fonts: Sources = {}
   icons: Sources = {}
@@ -65,6 +71,12 @@ export default class Style {
 
   async buildStyle (style: string | Object) {
     const self = this
+    if (typeof style === 'string') {
+      style = await fetch(style.replace('s2maps://', 'https://data.s2maps.io/'))
+        .then(res => res.json())
+        .catch(err => { console.error(`failed to fetch style json`, err) })
+    }
+    if (typeof style !== 'object') return
     self.dirty = true
     style = JSON.parse(JSON.stringify(style))
     // check style & fill default params
@@ -77,11 +89,17 @@ export default class Style {
       self.lat = style.center[1]
     }
     if (!isNaN(style.zoom)) self.zoom = style.zoom
+    if (!isNaN(style.zNear)) self.zNear = style.zNear
+    if (!isNaN(style.zFar)) self.zFar = style.zFar
+    if (!isNaN(style.minLatPosition)) self.minLatPosition = style.minLatPosition
+    if (!isNaN(style.maxLatRotation)) self.maxLatRotation = style.maxLatRotation
     if (!isNaN(style.minzoom) && style.minzoom >= -2) self.minzoom = style.minzoom
     if (!isNaN(style.maxzoom)) {
       if (style.maxzoom <= self.minzoom) self.maxzoom = self.minzoom + 1
       else if (style.maxzoom <= 20) self.maxzoom = style.maxzoom
     }
+    if (!isNaN(style.bearing)) self.bearing = style.bearing
+    if (!isNaN(style.pitch)) self.pitch = style.pitch
     // set zoom offset if applicable
     if (style['zoom-offset']) self.zoomOffset = style['zoom-offset']
     // extract sources

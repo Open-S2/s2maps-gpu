@@ -3,7 +3,7 @@
 import { useState } from 'react'
 /* REACT MODULES */
 import Card from './card'
-import Map from '../map'
+import Map from '../../components/map'
 /* JSON */
 import style from './style.json'
 
