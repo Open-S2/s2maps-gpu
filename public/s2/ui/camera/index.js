@@ -31,12 +31,10 @@ export default class Camera {
   requestQueue: Array<Tile> = []
   zooming: void | SetTimeout
   request: void | SetTimeout
-  _updateWhileZooming: boolean // this is a more cpu/gpu intensive redraw technique that will update tiles while the user is still zooming. This can cause overdrawing if the user is going to zoom from say 0 to 10 quickly.
   wasDirtyLastFrame: boolean = false
   constructor (options: MapOptions) {
-    this._updateWhileZooming = options.updateWhileZooming || true
     // setup projector
-    this.projector = new Projector(options)
+    this.projector = new Projector(options, this)
     // prep the tileCache for future tiles
     this.tileCache = new TileCache()
   }
@@ -152,6 +150,21 @@ export default class Camera {
 
       return this.tilesInView
     } else { return this.tilesInView }
+  }
+
+  _createFutureTiles (tiles: Array<BigInt>) {
+    const { tileCache, painter, style } = this
+    const newTiles = []
+    // create the tiles
+    for (const id of tiles) {
+      if (!tileCache.has(id)) {
+        const newTile = this._createTile(id)
+        newTiles.push(newTile)
+      }
+    }
+    // tell the style to make the requests
+    painter.dirty = true
+    style.requestTiles(newTiles)
   }
 
   _createTile (id: BigInt): Tile {

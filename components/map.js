@@ -24,8 +24,8 @@ function Map (props) {
       if (s2map.current) { s2map.current.delete(); s2map.current = null }
       window.removeEventListener('resize', resize, false, 0, true)
       window.removeEventListener('orientationchange', resize, false, 0, true)
-    }
-  }, [props])
+    } // eslint-disable-next-line
+  }, [])
 
   return (
     <div className='App'>

@@ -56,7 +56,7 @@ export default class SkyboxProgram extends Program {
                   gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
                   this.renderable = true
                   // set the projector as dirty to ensure a proper initial render
-                  map.projector.dirty = true
+                  map.projector.reset()
                   // call the full re-render
                   map.render()
                 }

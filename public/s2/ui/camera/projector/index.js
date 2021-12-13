@@ -1,15 +1,18 @@
 // @flow
+/* eslint-env browser */
 import * as mat4 from '../../../util/mat4'
 import getTiles from './getTilesInView'
 import _cursorToLonLat from './cursorToLonLat'
 import { fromLonLatGL, normalize, mul } from '../../../geo/S2Point'
+import { degToRad } from '../../../geo/util'
 
 import type { Face } from '../../../style/styleSpec'
 import type { MapOptions } from '../../map'
 
 export type ProjectionConfig = {
   eye?: [number, number, number],
-  maxLatRotation?: number,
+  minLatPosition?: number,
+  maxLatPosition?: number,
   zoom?: number,
   minzoom?: number,
   maxzoom?: number,
@@ -26,9 +29,8 @@ export type TileDefinitions = Array<[Face, number, number, number, BigInt]> // [
 
 export type MatrixType = 'm' | 'km' // meters of kilometers
 
-// haversine / great circle distance -> http://www.movable-type.co.uk/scripts/latlong.html
-
 export default class Projector {
+  map: Map
   radius: number = 6_371.0088
   radii: number = [6378137, 6356752.3, 6378137]
   zTranslateStart: number = 5
@@ -39,7 +41,8 @@ export default class Projector {
   aspect: Float32Array = new Float32Array([400, 300]) // default canvas width x height
   matrices: { [MatrixType]: Float32Array } = {}
   eye: [number, number, number] = [0, 0, 0] // [x, y, z] only z should change for visual effects
-  maxLatRotation: number = 89.99999 // deg
+  minLatPosition: number = 70
+  maxLatPosition: number = 89.99999 // deg
   prevZoom: number = 0
   zoom: number = -1
   minzoom: number = 0
@@ -54,21 +57,22 @@ export default class Projector {
   tileSize: number = 768
   multiplier: number = 1
   dirty: boolean = true
-  constructor (config: MapOptions) {
-    const { style } = config
-    if (!isNaN(style.maxLatRotation)) this.maxLatRotation = Math.min(style.maxLatRotation, this.maxLatRotation)
-    const zoom = style.zoom | 0
-    const center = (style.center && Array.isArray(style.center)) ? style.center : [0, 0]
-    this.setPosition(...center, zoom)
-    if (!isNaN(style.bearing)) this.bearing = style.bearing
-    if (!isNaN(style.pitch)) this.pitch = style.pitch
-    if (style.zNear) this.zNear = style.zNear
-    if (style.zFar) this.zFar = style.zFar
-    if (config.canvasMultiplier) this.multiplier = config.canvasMultiplier
-    if (config.positionalZoom === false) this.positionalZoom = false
+  constructor (config: MapOptions, map: Map) {
+    const { canvasMultiplier, positionalZoom, webworker } = config
+    if (canvasMultiplier) this.multiplier = canvasMultiplier
+    if (positionalZoom === false) this.positionalZoom = false
+    if (webworker) this.webworker = true
+    this.map = map
   }
 
   /* API */
+
+  reset () {
+    if (!this.dirty) {
+      this.dirty = true
+      this.matrices = {}
+    }
+  }
 
   setFeatureState (state: 0 | 1 | 2) {
     this.view[6] = state
@@ -79,56 +83,52 @@ export default class Projector {
   }
 
   setStyleParameters (style, ignorePosition: boolean) {
-    const { minzoom, maxzoom, zoom, lon, lat } = style
+    const { min, max } = Math
+    const {
+      minLatPosition, maxLatPosition, minzoom, maxzoom, zoomOffset,
+      zoom, lon, lat, bearing, pitch, zNear, zFar
+    } = style
     // clamp values and ensure minzoom is less than maxzoom
     this.minzoom = (minzoom < -2) ? -2 : (minzoom > maxzoom) ? maxzoom - 1 : (minzoom > 19) ? 19 : minzoom
     this.maxzoom = (maxzoom > 20) ? 20 : (maxzoom < this.minzoom) ? this.minzoom + 1 : maxzoom
-    this.zoomOffset = style.zoomOffset
+    if (!isNaN(zoomOffset)) this.zoomOffset = zoomOffset
+    if (!isNaN(maxLatPosition)) this.maxLatPosition = min(maxLatPosition, this.maxLatPosition)
+    if (!isNaN(minLatPosition)) this.minLatPosition = max(minLatPosition, this.minLatPosition)
+    this.setCompass(bearing, pitch)
+    if (zNear) this.zNear = zNear
+    if (zFar) this.zFar = zFar
     // set position
     this.setPosition((!ignorePosition) ? lon : this.lon, (!ignorePosition) ? lat : this.lat, zoom)
   }
 
   setPosition (lon: number, lat: number, zoom?: number, bearing?: number, pitch?: number) {
     // set lon lat
-    this.setLonLat(lon, lat)
+    this._setLonLat(lon, lat)
     // set zoom
-    if (!isNaN(zoom)) this.setZoom(zoom)
-    // set bearing
-    if (!isNaN(bearing)) this.setBearing(bearing)
-    // set pitch
-    if (!isNaN(pitch)) this.setPitch(pitch)
+    if (!isNaN(zoom)) this._setZoom(zoom)
+    // set bearing & pitch
+    this.setCompass(bearing, pitch)
   }
 
   setLonLat (lon: number, lat: number) {
-    if (this.lon !== lon || this.lat !== lat) {
-      this.lon = lon
-      this.lat = lat
-      this._adjustLonLat()
-    }
+    this._setLonLat(lon, lat)
   }
 
-  addBearing (num: number) {
-    this.setBearing(this.bearing + num)
+  setZoom (zoom: number) {
+    this._setZoom(zoom)
   }
 
-  setBearing (bearing: number) {
-    if (this.bearing !== bearing) {
-      this.bearing = bearing
-      // if we hit greater than 180, just swing back to 0
-      while (this.bearing >= 180) { this.bearing -= 360 }
-      while (this.bearing < -180) { this.bearing += 360 }
-      // cleanup
-      this.matrices = {}
-      this.dirty = true
-    }
-  }
-
-  setPitch (pitch: number) {
-    if (this.pitch !== pitch) {
-      this.pitch = pitch
-      // cleanup
-      this.matrices = {}
-      this.dirty = true
+  setCompass (bearing?: number, pitch?: number) {
+    let update = 0
+    // set bearing & pitch
+    if (!isNaN(bearing)) update |= this._setBearing(bearing)
+    // set pitch
+    if (!isNaN(pitch)) update |= this._setPitch(pitch)
+    // if update we let the map know
+    if (update) {
+      const { bearing, pitch } = this
+      if (this.webworker) postMessage({ type: 'updateCompass', bearing, pitch })
+      else this.map.parent._updateCompass(bearing, pitch)
     }
   }
 
@@ -139,22 +139,18 @@ export default class Projector {
   }
 
   zoomScale (zoom: number): number {
+    if (!zoom) zoom = this.zoom
     return Math.pow(2, zoom)
   }
 
-  resize (width: number, height: number) {
-    this.aspect[0] = width
-    this.aspect[1] = height
-    this.matrices = {}
-    this.dirty = true
-  }
-
-  setZoom (zoom: number) {
-    if (this.zoom !== zoom) {
-      this.zoom = zoom
-      this.view[0] = this.zoom
-      this.onZoom()
-    }
+  clampLat (input: number) {
+    const { maxLatPosition, minLatPosition, zoom } = this
+    const { min, max } = Math
+    // prep current boundaries
+    const latPosDiff = maxLatPosition - minLatPosition
+    const curMaxLat = min(minLatPosition + min(latPosDiff, (latPosDiff / 3) * zoom), maxLatPosition)
+    // clamp
+    return max(min(curMaxLat, input), -curMaxLat)
   }
 
   clampZoom (input: number) {
@@ -162,20 +158,25 @@ export default class Projector {
     return Math.max(Math.min(input, maxzoom), minzoom)
   }
 
-  onZoom (zoomInput?: number = 0, canvasX?: number = 0, canvasY?: number = 0): boolean {
+  clampDeg (input: number) {
+    while (input >= 180) { input -= 360 }
+    while (input < -180) { input += 360 }
+    return input
+  }
+
+  resize (width: number, height: number) {
+    this.aspect[0] = width
+    this.aspect[1] = height
+    // cleanup
+    this.reset()
+  }
+
+  // user scrolled
+  onZoom (zoomInput: number, canvasX?: number = 0, canvasY?: number = 0) {
     const { positionalZoom, multiplier, aspect } = this
-    const { abs, pow, max, min, cos, PI } = Math
-    // adjust the zoom
-    this.prevZoom = this.zoom
-    this.zoom -= 0.003 * zoomInput
-    const { prevZoom, minzoom, maxzoom } = this
-    if (this.zoom > maxzoom) {
-      this.zoom = maxzoom // if it overzooms but the previous zoom was not at maxzoom, we need to render one more time
-      if (prevZoom === maxzoom) return false
-    } else if (this.zoom < minzoom) {
-      this.zoom = minzoom // if it underzooms but the previous zoom was not at minzoom, we need to render one more time
-      if (prevZoom === minzoom) return false
-    }
+    // set zoom
+    this._setZoom(this.zoom - (0.003 * zoomInput))
+    if (this.prevZoom === this.zoom) return
     // if positionalZoom, we adjust the lon and lat according to the mouse position.
     // consider the distance between the lon-lat of our current "center" position and
     // the lon-lat of the cursor position PRE-zoom adjustment. After zooming, we
@@ -192,58 +193,29 @@ export default class Projector {
       const posDeltaX = posX * zoomAdjust - posX
       const posDeltaY = posY * zoomAdjust - posY
       // STEP 3: The deltas need to be converted to deg change
-      const zScale = pow(2, max(this.zoom, 0)) // we don't use the same zoom scale because less than 0 zoom should stay the same here
-      const lonMultiplier = min(30, 1 / cos(abs(this.lat) * PI / 180))
-      this.lon += posDeltaX / (3072 * zScale) * 360 * lonMultiplier
-      this.lat += posDeltaY / (1536 * zScale) * 180
+      this.onMove(-posDeltaX, posDeltaY, 3072, 1536)
     }
-    // adjust latitude accordingly
-    this._adjustLonLat()
-    // update view
-    this.view[0] = this.zoom
-    this.view[1] = this.lon
-    this.view[2] = this.lat
-    // cleanup
-    this.matrices = {}
-    this.dirty = true
-    return true
   }
 
-  onMove (movementX?: number = 0, movementY?: number = 0, multiplierX?: number = 3, multiplierY?: number = 3) {
-    const { lat, zoom } = this
-    const { abs, pow, max, min, cos, PI } = Math
-    const zoomMultiplier = 2 * pow(2, max(zoom, 0))
+  // user mouse/touch input (or swipe animation)
+  onMove (movementX?: number = 0, movementY?: number = 0, multiplierX?: number = 6.5 * 360, multiplierY?: number = 6.5 * 180) {
+    let { lon, lat, bearing } = this
+    const { abs, max, min, cos, sin, PI } = Math
+    const zScale = max(this.zoomScale(), 1)
     // https://math.stackexchange.com/questions/377445/given-a-latitude-how-many-miles-is-the-corresponding-longitude
-    const lonMultiplier = min(30, 1 / cos(abs(lat) * PI / 180))
-    if (movementX) this.lon -= movementX * lonMultiplier / (multiplierX * zoomMultiplier)
-    if (movementY) this.lat += movementY / (multiplierY * zoomMultiplier)
-    // adjust latitude accordingly
-    this._adjustLonLat()
-    // update view
-    this.view[1] = this.lon
-    this.view[2] = this.lat
-    // cleanup
-    this.matrices = {}
-    this.dirty = true
-  }
-
-  getMatrix (type: MatrixType): Float32Array {
-    if (this.matrices[type]) return mat4.clone(this.matrices[type])
-    // update eye
-    this._updateEye()
-    // get perspective matrix
-    let matrix = this._getProjectionMatrix(type)
-    // create view matrix
-    const view = mat4.lookAt(this.eye, [0, 1, 0])
-    // if (this.bearing) mat4.rotateZ(matrix, degToRad(this.bearing))
-    // if km we "remove" the eye
-    if (type === 'km') { view[12] = 0; view[13] = 0; view[14] = 0 }
-    // multiply perspective matrix by view matrix
-    matrix = mat4.multiply(matrix, view)
-    // updated matrix
-    this.matrices[type] = matrix
-
-    return mat4.clone(matrix)
+    const lonMultiplier = min(30, 1 / cos(abs(this.lat) * PI / 180))
+    // adjust movement vector if bearing
+    if (bearing) {
+      bearing = degToRad(bearing) // adjust to radians
+      const tmpY = movementX * sin(bearing) + movementY * cos(bearing)
+      movementX = movementX * cos(bearing) - movementY * sin(bearing)
+      movementY = tmpY
+    }
+    // set the new lon-lat
+    this._setLonLat(
+      lon - (movementX / (multiplierX * zScale) * 360 * lonMultiplier),
+      lat + (movementY / (multiplierY * zScale) * 180)
+    )
   }
 
   // x and y are the distances from the center of the screen
@@ -252,39 +224,117 @@ export default class Projector {
     return _cursorToLonLat(lon, lat, x, y, (tileSize * Math.pow(2, zoom)) / 2)
   }
 
+  getMatrix (type: MatrixType): Float32Array {
+    if (this.matrices[type]) return mat4.clone(this.matrices[type])
+    // updated matrix
+    const matrix = this.matrices[type] = this._getMatrix(type)
+
+    return mat4.clone(matrix)
+  }
+
   getTilesInView (): TileDefinitions { // Array<BigInt> (S2CellIDs)
     const { radius, zoom, zoomOffset, lon, lat } = this
     const matrix = this.getMatrix('m')
     return getTiles(zoom + zoomOffset, matrix, lon, lat, radius)
   }
 
-  /* INTERNAL FUNCTIONS */
-
-  _adjustLonLat () {
-    const { zoom, maxLatRotation } = this
-    const { min } = Math
-    // ensure we hit a limit on latitude so we don't flip movement
-    const curMaxLat = min(75 + min(14.999999, (14.999999 / 5) * zoom), maxLatRotation)
-    if (this.lat > curMaxLat) this.lat = curMaxLat
-    else if (this.lat < -curMaxLat) this.lat = -curMaxLat
-    // lon wrap fixes
-    while (this.lon >= 180) { this.lon -= 360 }
-    while (this.lon < -180) { this.lon += 360 }
+  getTilesAtPosition (lon: number, lat: number, zoom: number, bearing: number, pitch: number): TileDefinitions { // Array<BigInt> (S2CellIDs)
+    const { radius, zoomOffset } = this
+    const matrix = this._getMatrix('m', false, lon, lat, zoom, bearing, pitch)
+    return getTiles(zoom + zoomOffset, matrix, lon, lat, radius)
   }
 
-  _updateEye () {
-    const { lon, lat, zoom, radius, zTranslateEnd, zTranslateStart, zoomEnd } = this
+  /* INTERNAL FUNCTIONS */
+
+  _setLonLat (lon: number, lat: number) {
+    lon = this.clampDeg(lon)
+    lat = this.clampLat(lat)
+    if (this.lon !== lon || this.lat !== lat) {
+      this.lon = lon
+      this.lat = lat
+      // update view
+      this.view[1] = this.lon
+      this.view[2] = this.lat
+      // cleanup for next render
+      this.reset()
+    }
+  }
+
+  _setZoom (zoom: number) {
+    zoom = this.clampZoom(zoom)
+    if (this.zoom !== zoom || this.prevZoom !== zoom) {
+      // keep track of the old zoom
+      this.prevZoom = this.zoom
+      // adjust the zoom
+      this.zoom = zoom
+      // update view
+      this.view[0] = this.zoom
+      // cleanup for next render
+      this.reset()
+    }
+  }
+
+  _setBearing (bearing: number): boolean {
+    bearing = this.clampDeg(bearing)
+    if (this.bearing !== bearing) {
+      this.bearing = bearing
+      // cleanup for next render
+      this.reset()
+      return true
+    }
+    return false
+  }
+
+  _setPitch (pitch: number): boolean {
+    if (this.pitch !== pitch) {
+      this.pitch = pitch
+      // cleanup for next render
+      this.reset()
+      return true
+    }
+    return false
+  }
+
+  _getMatrix (type: MatrixType, updateEye?: boolean = true, lon?: number,
+    lat?: number, zoom?: number, bearing?: number, pitch?: number): Float32Array {
+    if (isNaN(lon)) lon = this.lon
+    if (isNaN(lat)) lat = this.lat
+    if (isNaN(zoom)) zoom = this.zoom
+    if (isNaN(bearing)) bearing = this.bearing
+    if (isNaN(pitch)) pitch = this.pitch
+    // update eye
+    const eye = this._updateEye(updateEye, lon, lat, zoom)
+    // get perspective matrix
+    let matrix = this._getProjectionMatrix(type, zoom)
+    // create view matrix
+    const view = mat4.lookAt(eye, [0, 1, 0])
+    // adjust by bearing
+    if (bearing) mat4.rotateZ(matrix, degToRad(bearing))
+    // if km we "remove" the eye
+    if (type === 'km') { view[12] = 0; view[13] = 0; view[14] = 0 }
+    // multiply perspective matrix by view matrix
+    matrix = mat4.multiply(matrix, view)
+
+    return matrix
+  }
+
+  _updateEye (update?: boolean = true, lon: number, lat: number, zoom: number): [number, number, number] {
+    const { radius, zTranslateEnd, zTranslateStart, zoomEnd } = this
     // find radial distance from core of ellipsoid
     const radialMultiplier = Math.max(
       (zTranslateEnd - zTranslateStart) / zoomEnd * zoom + zTranslateStart,
       zTranslateEnd
     ) * radius
     // create xyz point for eye
-    this.eye = mul(normalize(fromLonLatGL(lon, lat)), radialMultiplier)
+    const eye = mul(normalize(fromLonLatGL(lon, lat)), radialMultiplier)
+    if (update) this.eye = mul(normalize(fromLonLatGL(lon, lat)), radialMultiplier)
+
+    return eye
   }
 
-  _getProjectionMatrix (type: MatrixType): Float32Array {
-    let { zoom, radius, aspect, tileSize, multiplier } = this
+  _getProjectionMatrix (type: MatrixType, zoom?: number): Float32Array {
+    let { radius, aspect, tileSize, multiplier } = this
+    if (isNaN(zoom)) zoom = this.zoom
     // prep a matrix
     const matrix = mat4.create()
 

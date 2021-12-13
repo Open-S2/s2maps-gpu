@@ -35,6 +35,7 @@
 }
 
 .s2-control-button {
+  position: relative;
   width: 29px;
   height: 29px;
   background-color: inherit;
@@ -67,11 +68,24 @@
   background-image: url('/s2/svg/tritanopia.svg');
 }
 
+.s2-compass {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 29px;
+  height: 29px;
+  background-repeat: no-repeat;
+  transform: translate(-50%, -50%) rotate(0deg);
+  background-image: url('/s2/svg/compass.svg');
+}
+
 .s2-zoom-plus {
+  transform: scale(1.15);
   background-image: url('/s2/svg/zoom-plus.svg');
 }
 
 .s2-zoom-minus {
+  transform: scale(1.15);
   background-image: url('/s2/svg/zoom-minus.svg');
 }
 

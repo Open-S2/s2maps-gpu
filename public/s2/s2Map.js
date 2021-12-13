@@ -18,8 +18,11 @@ export default class S2Map extends EventTarget {
   _canvasMultiplier: number
   _canvas: HTMLCanvasElement
   _attributionPopup: HTMLCanvasElement
+  _compass: HTMLElement
   _colorBlind: HTMLElement
   _attributions: Attributions = {}
+  bearing: number = 0 // degrees
+  pitch: number = 0 // degrees
   colorMode: 0 | 1 | 2 | 3 = 0 // 0: none - 1: protanopia - 2: deutranopia - 3: tritanopia
   map: Map
   offscreen: Worker
@@ -94,6 +97,8 @@ export default class S2Map extends EventTarget {
     if (options.interactive === true) {
       _canvasContainer.classList.add('s2-interactive')
       _canvasContainer.addEventListener('mousemove', self._onCanvasMouseMove.bind(self))
+      _canvasContainer.addEventListener('contextmenu', self._onCompassMouseDown.bind(self))
+      // _canvasContainer.addEventListener('dblclick', () => { console.log('DOUBLE CLICK') })
       if (options.scrollZoom === undefined || options.scrollZoom === true) _canvasContainer.addEventListener('wheel', self._onScroll.bind(self))
       _canvasContainer.addEventListener('mousedown', self._onMouseDown.bind(self))
       _canvasContainer.addEventListener('touchstart', (e: TouchEvent) => self._onTouch(e, 'touchstart'))
@@ -106,7 +111,7 @@ export default class S2Map extends EventTarget {
 
   _setupControlContainer (options: MapOptions) {
     const { _container, _attributions } = this
-    const { attributions, zoomController, colorBlindController, darkMode, attributionOff } = options
+    const { attributions, zoomController, compassController, colorBlindController, darkMode, attributionOff } = options
     // add info bar with our jollyRoger
     if (!attributionOff) {
       const attribution = window.document.createElement('div')
@@ -147,7 +152,7 @@ export default class S2Map extends EventTarget {
       navigationContainer.appendChild(zoomPlus)
       zoomPlus.addEventListener('click', () => this._navEvent('zoomIn'))
       // seperator
-      const navSep = window.document.createElement('div')
+      let navSep = window.document.createElement('div')
       navSep.className = 's2-nav-sep' + (darkMode ? '-dark' : '')
       navigationContainer.appendChild(navSep)
       // minus
@@ -157,19 +162,37 @@ export default class S2Map extends EventTarget {
       zoomMinus.tabIndex = -1
       navigationContainer.appendChild(zoomMinus)
       zoomMinus.addEventListener('click', () => this._navEvent('zoomOut'))
-      if (colorBlindController !== false) {
-        // add seperator if colorBlind was added
+      if (compassController !== false) {
         // seperator
-        const navSep = window.document.createElement('div')
+        navSep = window.document.createElement('div')
         navSep.className = 's2-nav-sep' + (darkMode ? '-dark' : '')
         navigationContainer.appendChild(navSep)
+        // compass button
+        const compassContainer = window.document.createElement('button')
+        compassContainer.className = 's2-control-button'
+        compassContainer.setAttribute('aria-hidden', true)
+        compassContainer.tabIndex = -1
+        navigationContainer.appendChild(compassContainer)
+        const compass = this._compass = window.document.createElement('div')
+        compass.className = 's2-compass'
+        compass.setAttribute('aria-hidden', true)
+        compass.tabIndex = -1
+        compassContainer.appendChild(compass)
+        compassContainer.addEventListener('mousedown', this._onCompassMouseDown.bind(this))
+      }
+      if (colorBlindController !== false) {
+        // seperator
+        navSep = window.document.createElement('div')
+        navSep.className = 's2-nav-sep' + (darkMode ? '-dark' : '')
+        navigationContainer.appendChild(navSep)
+        // colorblind button
         const colorBlind = this._colorBlind = window.document.createElement('button')
         colorBlind.className = 's2-control-button s2-colorblind-button'
         colorBlind.id = 's2-colorblind-default'
         colorBlind.setAttribute('aria-hidden', true)
         colorBlind.tabIndex = -1
         navigationContainer.appendChild(colorBlind)
-        colorBlind.addEventListener('click', () => this._setColorMode())
+        colorBlind.addEventListener('click', this._setColorMode.bind(this))
       }
     }
   }
@@ -221,6 +244,8 @@ export default class S2Map extends EventTarget {
       this.dispatchEvent(new CustomEvent('pos', { detail: { zoom, lon, lat } }))
     } else if (type === 'style') {
       window.S2WorkerPool.injectStyle(mapID, data.style)
+    } else if (type === 'updateCompass') {
+      this._updateCompass(data.bearing, data.pitch)
     } else if (type === 'addLayer') {
       window.S2WorkerPool.addLayer(mapID, data.layer, data.index, data.tileRequest)
     } else if (type === 'removeLayer') {
@@ -288,7 +313,8 @@ export default class S2Map extends EventTarget {
     } else if (map) { map._onZoom(deltaY, clientX - rect.left, clientY - rect.top) }
   }
 
-  _onMouseDown () {
+  _onMouseDown (e: MouseEvent) {
+    if (e.button !== 0) return
     const self = this
     const { map, offscreen } = self
     // send off a mousedown
@@ -324,9 +350,48 @@ export default class S2Map extends EventTarget {
     const x = (pageX - _canvasContainer.offsetLeft) * _canvasMultiplier
     const y = (pageY - _canvasContainer.offsetTop) * _canvasMultiplier
 
-    if (offscreen) {
-      offscreen.postMessage({ type: 'canvasmousemove', x, y })
-    } else if (map) { map.onCanvasMouseMove(x, y) }
+    if (offscreen) offscreen.postMessage({ type: 'canvasmousemove', x, y })
+    else if (map) map.onCanvasMouseMove(x, y)
+  }
+
+  _updateCompass (bearing: number, pitch: number) {
+    this.bearing = -bearing
+    this.pitch = pitch
+    this._compass.style.transform = `translate(-50%, -50%) rotate(${this.bearing}deg)`
+  }
+
+  _onCompassMouseDown (e) {
+    e.preventDefault()
+    const self = this
+    const { map, offscreen } = self
+    const { abs } = Math
+    let totalMovementX = 0
+    let totalMovementY = 0
+    const mouseMoveFunc = function ({ movementX, movementY }) {
+      if (movementX !== 0) {
+        totalMovementX += abs(movementX)
+        totalMovementY += abs(movementY)
+        if (offscreen) offscreen.postMessage({ type: 'updateCompass', bearing: movementX })
+        else if (map) map.updateCompass(movementX)
+      }
+    }
+    window.addEventListener('mousemove', mouseMoveFunc)
+    window.addEventListener('mouseup', () => {
+      window.removeEventListener('mousemove', mouseMoveFunc)
+      if (!totalMovementX && !totalMovementY) {
+        if (offscreen) offscreen.postMessage({ type: 'resetCompass' })
+        else map.resetCompass()
+      } else {
+        if (offscreen) offscreen.postMessage({ type: 'mouseupCompass' })
+        else map.mouseupCompass()
+      }
+    }, { once: true })
+  }
+
+  _onCompassClick () {
+    const { map, offscreen } = this
+    if (offscreen) offscreen.postMessage({ type: 'resetCompass' })
+    else map.resetCompass()
   }
 
   _resize () {
@@ -527,10 +592,26 @@ export default class S2Map extends EventTarget {
 
 if (window) window.S2Map = S2Map
 
+// get money back from spectrum
+// fix google email / cleanup dead emails
+// clean room + vacuum
+// set all files in s3maps bucket to lifespan of 1 day
+
 // TODO NOW:
-// create projection examples
-// animation preload tiles
-// zoom out button does NOT work sometimes...
+// WEBSITE: create projection example
+// WEBSITE: write first blog post
+// WEBSITE: write projection explination
+// STUDIO: studio working
+// CLI: s2maps-cli working
+// WEBSITE: finish front page
+// WEBSITE: legal + data
+// WEBSITE: sign-in and sign-up
+// WEBSITE: maps + styles page
+// WEBSITE: account page working
+// WEBSITE: cli page
+// API: API working + safety from abuse
+// LETS GO
+
 // migrate old S2Tiles to new S2DB + zooms with division should be pre-divided (first 7 zooms)
 // s2maps-gl S2DB
 
@@ -555,6 +636,7 @@ if (window) window.S2Map = S2Map
 // 11) movement predictive tile caching
 // 12) bearing
 // 13) cluster points
+// 14) on mouse location + scroll (zoom) use projection.cursorToLonLat for movement instead of current implementation
 
 // S2MAPS BUGS:
 // * find shortest longitude for easeTo
@@ -572,15 +654,21 @@ if (window) window.S2Map = S2Map
 // * 3D buildings (shapes)
 // * 3D terrain
 // * view at angle + camera system upgrade + pitch
+// * keep children in view on zoom out if current tile does not exist and parent does not exist (IDEA: only show children for center tile to not completely lose visual position)
 // * geocoding
 // * isochrones
 
 // S2MAPS-CLI
+// * move over to s2maps-cli
+// * make sure s2tiles and s2json are working for basic set of examples
+// * get npm -g working
+// * make geojson/pbf/etc. are working as inputs
+// * sometimes poly around the pole has the wrong rotation
+
 // * points include a merging (clustering) system
 // * improve poly "merge" algorithm (use same as msdf) (https://github.com/doodlewind/skia-rs)
 // * adjust fills so low zoom (0-7) so front-end doesn't have to split
 // * update to s2-vector-tile v2
-// * sometimes poly around the pole has the wrong rotation
 
 // WEBSITE:
 // 1) cover page
@@ -605,6 +693,7 @@ if (window) window.S2Map = S2Map
 // 20) pricing
 // 21) press
 // 22) documentation (getting started / tutorials / examples / support / etc.)
+// 23) changelog
 
 // STUDIO:
 // MAP: updateLayer
