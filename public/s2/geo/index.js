@@ -1,5 +1,10 @@
 // @flow
 /* env: browser */
+// export { default as RBTree } from './rbTree'
+// export * as S2CellID from './S2CellID'
+// export * as S2LonLat from './S2LonLat'
+// export * as S2Point from './S2Point'
+// export * as util from './util'
 import { radToDeg, degToRad } from './util'
 
 import type { XYZ } from './S2Point'
@@ -213,39 +218,4 @@ function fromIJWrap (face: Face, i: number, j: number, level: number, sameFace?:
 
   const [nFace, nU, nV] = XYZtoFaceUV(faceUVtoXYZ(face, u, v))
   return [nFace, STtoIJ(0.5 * (nU + 1)) >> (30 - level), STtoIJ(0.5 * (nV + 1)) >> (30 - level)]
-}
-
-export function updateFace (face: Face, s: number, t: number, size: number = 1): [Face, number, number] {
-  const diff = (size === 1) ? size : size - 1
-  if (face === 0) {
-    if (s < 0) return [4, diff - t, size + s]
-    else if (s === size) return [1, 0, t]
-    else if (t < 0) return [5, s, size + t]
-    else if (t === size) return [2, 0, diff - s]
-  } else if (face === 1) {
-    if (s < 0) return [0, size + s, t]
-    else if (s === size) return [3, diff - t, 0]
-    else if (t < 0) return [5, size + t, diff - s]
-    else if (t === size) return [2, s, 0]
-  } else if (face === 2) {
-    if (s < 0) return [0, diff - t, size + s]
-    else if (s === size) return [3, 0, t]
-    else if (t < 0) return [1, s, size + t]
-    else if (t === size) return [4, 0, diff - s]
-  } else if (face === 3) {
-    if (s < 0) return [2, size + s, t]
-    else if (s === size) return [5, diff - t, 0]
-    else if (t < 0) return [1, size + t, diff - s]
-    else if (t === size) return [4, s, 0]
-  } else if (face === 4) {
-    if (s < 0) return [2, diff - t, size + s]
-    else if (s === size) return [5, 0, t]
-    else if (t < 0) return [3, s, size + t]
-    else if (t === size) return [0, 0, diff - s]
-  } else if (face === 5) {
-    if (s < 0) return [4, size + s, t]
-    else if (s === size) return [1, diff - t, 0]
-    else if (t < 0) return [3, size + t, diff - s]
-    else if (t === size) return [0, s, 0]
-  }
 }

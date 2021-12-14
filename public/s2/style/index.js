@@ -74,7 +74,7 @@ export default class Style {
     if (typeof style === 'string') {
       style = await fetch(style.replace('s2maps://', 'https://data.s2maps.io/'))
         .then(res => res.json())
-        .catch(err => { console.error(`failed to fetch style json`, err) })
+        .catch(err => { console.error('failed to fetch style json', err) })
     }
     if (typeof style !== 'object') return
     self.dirty = true

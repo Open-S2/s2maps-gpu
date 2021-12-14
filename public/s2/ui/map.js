@@ -20,9 +20,10 @@ export type MapOptions = {
   attributions?: { [string]: string },
   attributionOff?: boolean,
   infoLayers?: Array<string>,
+  controls?: boolean, // zoom, compass, and colorblind turned on or off
   zoomController?: boolean,
   compassController?: boolean,
-  colorBlindController?: boolean,
+  colorblindController?: boolean,
   canZoom?: boolean,
   canMove?: boolean,
   darkMode?: boolean,
@@ -259,10 +260,10 @@ export default class Map extends Camera {
     const newBearing = (bearing >= -10 && bearing <= 10)
       ? 0
       : (bearing <= -167.5)
-        ? -180
-        : (bearing >= 167.5)
-          ? 180
-          : undefined
+          ? -180
+          : (bearing >= 167.5)
+              ? 180
+              : undefined
     if (!isNaN(newBearing)) {
       const animator = new Animator(projector, { duration: 1, bearing: newBearing })
       animator.compassTo()
@@ -387,10 +388,10 @@ export default class Map extends Camera {
     // setup listeners
     _canvas.addEventListener('webglcontextlost', self._contextLost, false)
     _canvas.addEventListener('webglcontextrestored', self._contextRestored, false)
+    // create a dragPan
+    const dragPan = self.dragPan = new DragPan()
     // if we allow the user to interact with map, we add events
     if (_interactive) {
-      // create a dragPan
-      const dragPan = self.dragPan = new DragPan()
       // let dragPan know if we can zoom
       if (_scrollZoom) dragPan.zoomActive = true
       // listen to dragPans updates

@@ -88,6 +88,11 @@ export function fromST (face: Face, s: number, t: number): BigInt {
   return fromIJ(face, i, j)
 }
 
+export function fromDistance (distance: BigInt, level?: number = 30n): BigInt {
+  level = BigInt(2 * (30 - level))
+  return (distance << (level + 1n)) + (1n << level)
+}
+
 export function fromIJ (face: Face, i: number, j: number, level?: number): BigInt {
   const bigFace = BigInt(face)
   let bigI = BigInt(i)
@@ -205,6 +210,11 @@ export function level (id: BigInt): number {
   }
 
   return 30 - count
+}
+
+export function distance (id: BigInt, lev?: number): BigInt {
+  if (!lev) lev = level(id)
+  return id >> BigInt(2 * (30 - lev) + 1)
 }
 
 export function child (id: BigInt, pos: 0n | 1n | 2n | 3n): BigInt {

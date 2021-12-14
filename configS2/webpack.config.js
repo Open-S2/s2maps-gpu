@@ -24,6 +24,7 @@ module.exports = {
     globalObject: 'this'
   },
   context: path.join(__dirname, '/../public'),
+  devtool: 'source-map',
   module: {
     rules: [
       {

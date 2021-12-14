@@ -151,10 +151,12 @@ export default class Animator {
   easeTo () {
     const {
       startLon, startLat, startZoom, startBearing, startPitch,
-      deltaLon, deltaLat, deltaZoom, deltaBearing, deltaPitch,
+      deltaZoom, deltaBearing, deltaPitch,
       endLon, endLat, endZoom, endBearing, endPitch,
       duration, ease
     } = this
+    // setup orthodrome for lon and lat
+    const orthodrome = new Orthodrome(startLon, startLat, endLon, endLat)
     // zooming out should have an easeOut while zooming in should have an easeIn
     const zoomEase = (ease) || ((deltaZoom > 0) ? easeInExpo : easeOutExpo)
     // meanwhile lon, lat should have an easeOut while zooming in and easeIn while zooming out
@@ -165,8 +167,7 @@ export default class Animator {
     this._increment = function (time: number): [number, number, number, number, number] {
       if (time >= duration) return [endLon, endLat, endZoom, endBearing, endPitch]
       return [
-        lonLatEase(time, startLon, deltaLon, duration),
-        lonLatEase(time, startLat, deltaLat, duration),
+        ...orthodrome.intermediatePoint(lonLatEase(time, 0, 1, duration)),
         zoomEase(time, startZoom, deltaZoom, duration),
         bearingPitchEase(time, startBearing, deltaBearing, duration),
         bearingPitchEase(time, startPitch, deltaPitch, duration)
