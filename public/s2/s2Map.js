@@ -98,7 +98,6 @@ export default class S2Map extends EventTarget {
       _canvasContainer.classList.add('s2-interactive')
       _canvasContainer.addEventListener('mousemove', self._onCanvasMouseMove.bind(self))
       _canvasContainer.addEventListener('contextmenu', self._onCompassMouseDown.bind(self))
-      // _canvasContainer.addEventListener('dblclick', () => { console.log('DOUBLE CLICK') })
       if (options.scrollZoom === undefined || options.scrollZoom === true) _canvasContainer.addEventListener('wheel', self._onScroll.bind(self))
       _canvasContainer.addEventListener('mousedown', self._onMouseDown.bind(self))
       _canvasContainer.addEventListener('touchstart', (e: TouchEvent) => self._onTouch(e, 'touchstart'))
@@ -111,7 +110,7 @@ export default class S2Map extends EventTarget {
 
   _setupControlContainer (options: MapOptions) {
     const { _container, _attributions } = this
-    const { attributions, zoomController, compassController, colorBlindController, darkMode, attributionOff } = options
+    const { attributions, controls, zoomController, compassController, colorblindController, darkMode, attributionOff } = options
     // add info bar with our jollyRoger
     if (!attributionOff) {
       const attribution = window.document.createElement('div')
@@ -138,30 +137,33 @@ export default class S2Map extends EventTarget {
       _container.appendChild(attribution)
     }
     // if zoom or compass controllers, add
-    if (zoomController !== false) {
+    if (controls !== false) {
+      let navSep
       // first create the container
       const navigationContainer = this._navigationContainer = window.document.createElement('div')
       navigationContainer.className = 's2-nav-container'
       if (darkMode) navigationContainer.classList.add('s2-nav-dark')
       _container.appendChild(navigationContainer)
-      // plus
-      const zoomPlus = window.document.createElement('button')
-      zoomPlus.className = 's2-control-button s2-zoom-plus'
-      zoomPlus.setAttribute('aria-hidden', true)
-      zoomPlus.tabIndex = -1
-      navigationContainer.appendChild(zoomPlus)
-      zoomPlus.addEventListener('click', () => this._navEvent('zoomIn'))
-      // seperator
-      let navSep = window.document.createElement('div')
-      navSep.className = 's2-nav-sep' + (darkMode ? '-dark' : '')
-      navigationContainer.appendChild(navSep)
-      // minus
-      const zoomMinus = window.document.createElement('button')
-      zoomMinus.className = 's2-control-button s2-zoom-minus'
-      zoomMinus.setAttribute('aria-hidden', true)
-      zoomMinus.tabIndex = -1
-      navigationContainer.appendChild(zoomMinus)
-      zoomMinus.addEventListener('click', () => this._navEvent('zoomOut'))
+      if (zoomController !== false) {
+        // plus
+        const zoomPlus = window.document.createElement('button')
+        zoomPlus.className = 's2-control-button s2-zoom-plus'
+        zoomPlus.setAttribute('aria-hidden', true)
+        zoomPlus.tabIndex = -1
+        navigationContainer.appendChild(zoomPlus)
+        zoomPlus.addEventListener('click', () => this._navEvent('zoomIn'))
+        // seperator
+        navSep = window.document.createElement('div')
+        navSep.className = 's2-nav-sep' + (darkMode ? '-dark' : '')
+        navigationContainer.appendChild(navSep)
+        // minus
+        const zoomMinus = window.document.createElement('button')
+        zoomMinus.className = 's2-control-button s2-zoom-minus'
+        zoomMinus.setAttribute('aria-hidden', true)
+        zoomMinus.tabIndex = -1
+        navigationContainer.appendChild(zoomMinus)
+        zoomMinus.addEventListener('click', () => this._navEvent('zoomOut'))
+      }
       if (compassController !== false) {
         // seperator
         navSep = window.document.createElement('div')
@@ -180,7 +182,7 @@ export default class S2Map extends EventTarget {
         compassContainer.appendChild(compass)
         compassContainer.addEventListener('mousedown', this._onCompassMouseDown.bind(this))
       }
-      if (colorBlindController !== false) {
+      if (colorblindController !== false) {
         // seperator
         navSep = window.document.createElement('div')
         navSep.className = 's2-nav-sep' + (darkMode ? '-dark' : '')
@@ -591,122 +593,3 @@ export default class S2Map extends EventTarget {
 }
 
 if (window) window.S2Map = S2Map
-
-// get money back from spectrum
-// fix google email / cleanup dead emails
-// clean room + vacuum
-// set all files in s3maps bucket to lifespan of 1 day
-
-// TODO NOW:
-// WEBSITE: create projection example
-// WEBSITE: write first blog post
-// WEBSITE: write projection explination
-// STUDIO: studio working
-// CLI: s2maps-cli working
-// WEBSITE: finish front page
-// WEBSITE: legal + data
-// WEBSITE: sign-in and sign-up
-// WEBSITE: maps + styles page
-// WEBSITE: account page working
-// WEBSITE: cli page
-// API: API working + safety from abuse
-// LETS GO
-
-// migrate old S2Tiles to new S2DB + zooms with division should be pre-divided (first 7 zooms)
-// s2maps-gl S2DB
-
-// studio
-// website
-// s2maps-cli
-// S2MAPS BETA
-// places
-// isochrones
-
-// S2MAPS BETA:
-// 1) markers/popups with html
-// 2) fix glyph filter overlap / interact should be the same as filter overlap
-// 3) glyph icon + text pairs (required checking if same id overlap)
-// 4) text along path
-// 5) road signs
-// 6) dashed lines + rounded joins
-// 7) interact with points, lines, and fills
-// 8) hillshade and line data fixes
-// 9) redo roads -> working for road signs
-// 10) screenshot
-// 11) movement predictive tile caching
-// 12) bearing
-// 13) cluster points
-// 14) on mouse location + scroll (zoom) use projection.cursorToLonLat for movement instead of current implementation
-
-// S2MAPS BUGS:
-// * find shortest longitude for easeTo
-// * zoom too fast at low zoom renders the wrong tile
-// * smooth transitions to parent tiles sometimes loses some features (buildings as an example)
-// * overlap of text rarely (salt lake city as an ex)
-// * colorblind support is missing for some renderings (heatmap)
-// * heatmap doesn't work well in webgl1
-// * icons don't render with text (overlap issues)
-// * zooming into new tiles hover/interact over glyph doesn't work on different zoom (be sure to check parent as well essentially)
-
-// S2MAPS (FUTURE)
-// * webgpu
-// * 3D points
-// * 3D buildings (shapes)
-// * 3D terrain
-// * view at angle + camera system upgrade + pitch
-// * keep children in view on zoom out if current tile does not exist and parent does not exist (IDEA: only show children for center tile to not completely lose visual position)
-// * geocoding
-// * isochrones
-
-// S2MAPS-CLI
-// * move over to s2maps-cli
-// * make sure s2tiles and s2json are working for basic set of examples
-// * get npm -g working
-// * make geojson/pbf/etc. are working as inputs
-// * sometimes poly around the pole has the wrong rotation
-
-// * points include a merging (clustering) system
-// * improve poly "merge" algorithm (use same as msdf) (https://github.com/doodlewind/skia-rs)
-// * adjust fills so low zoom (0-7) so front-end doesn't have to split
-// * update to s2-vector-tile v2
-
-// WEBSITE:
-// 1) cover page
-// 2) maps + styles page
-// 3) login/register
-// 4) TOS / Privacy / Data
-// 5) blog + first blog post
-// 6) projection page (about projection)
-// 7) s2maps about
-// 8) contact
-// 9) account
-// 10) cli
-// 11) studio
-// 12) tiles
-// 13) places
-// 14) search
-// 15) isochrones
-// 16) elevation
-// 17) s2maps (about)
-// 18) careers
-// 19) contact
-// 20) pricing
-// 21) press
-// 22) documentation (getting started / tutorials / examples / support / etc.)
-// 23) changelog
-
-// STUDIO:
-// MAP: updateLayer
-// reorder layers
-// add layer -> filter & select source & select layer from source
-// remove layer
-// click layer -> edit -> fill/line/glyph/backgroundFill/point/shade
-// click layer -> readjust layer (during the add layer phase)
-// edit wallpaper -> vector / wallpaper
-// meta details
-// see before/after
-
-// PLACES:
-// 1) build dynamoDB system using S2Cells
-// 2) build places + POI data + starter address data + starter parcel data (track timelines of when I pull from OSM)
-// 3) create API system for fetching (and properly catagorize everything)

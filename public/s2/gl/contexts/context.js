@@ -33,7 +33,7 @@ export default class Context {
     this.gl = context
     this.devicePixelRatio = canvasMultiplier
     this.interactive = interactive
-    if (interactive) this._buildInteractFramebuffer()
+    this._buildInteractFramebuffer()
     // lastly grab the renderers id
     const debugRendererInfo = context.getExtension('WEBGL_debug_renderer_info')
     if (debugRendererInfo) this.renderer = cleanRenderer(context.getParameter(debugRendererInfo.UNMASKED_RENDERER_WEBGL))
@@ -63,20 +63,20 @@ export default class Context {
 
   resizeInteract () {
     const { gl, interactive } = this
-    if (interactive) {
-      // bind the pointTexture
-      gl.bindTexture(gl.TEXTURE_2D, this.interactTexture)
-      // update the texture's aspect
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.canvas.width, gl.canvas.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
-      // set filter system
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-      // update the depthBuffer's aspect
-      gl.bindRenderbuffer(gl.RENDERBUFFER, this.stencilBuffer)
-      gl.renderbufferStorage(gl.RENDERBUFFER, gl.STENCIL_INDEX8, gl.canvas.width, gl.canvas.height)
-    }
+    const width = interactive ? gl.canvas.width : 1
+    const height = interactive ? gl.canvas.height : 1
+    // bind the pointTexture
+    gl.bindTexture(gl.TEXTURE_2D, this.interactTexture)
+    // update the texture's aspect
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
+    // set filter system
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+    // update the depthBuffer's aspect
+    gl.bindRenderbuffer(gl.RENDERBUFFER, this.stencilBuffer)
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.STENCIL_INDEX8, width, height)
   }
 
   getFeatureAtMousePosition (x: number, y: number): null | Object {

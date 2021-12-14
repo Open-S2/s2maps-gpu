@@ -39,7 +39,7 @@ function build (compiler) {
       if (err) reject(err)
       if (stats.compilation.errors) for (const error of stats.compilation.errors) reject(error)
       if (stats.compilation.warning) for (const error of stats.compilation.warning) reject(error)
-      resolve()
+      resolve(true)
     })
   })
 }
@@ -53,12 +53,12 @@ checkIfExists()
       ])
     } else {
       console.log('No need to upload')
+      return null
     }
   })
   .then(res => {
     // upload
-    console.log('uploading')
-    uploadData()
+    if (res) uploadData()
   })
   .then(res => {
     console.log('COMPLETE')

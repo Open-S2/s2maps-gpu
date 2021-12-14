@@ -21,6 +21,8 @@ module.exports = {
     // module chunks which are built will work in web workers as well.
     globalObject: 'this'
   },
+  context: path.join(__dirname, '/../public'),
+  devtool: 'source-map',
   module: {
     rules: [
       {

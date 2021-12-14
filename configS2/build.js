@@ -72,7 +72,7 @@ function getFileSizes () {
   res.cssTotalgz = filesize(res.cssTotalgz)
   res.cssTotalbr = filesize(res.cssTotalbr)
 
-  const jsFiles = files.filter(f => f.includes('.min.js') && !f.includes('.txt'))
+  const jsFiles = files.filter(f => f.includes('.min.js') && !f.includes('.txt') && !f.includes('.map'))
   for (const file of jsFiles) {
     const name = file.includes('.gz') ? file.split('.gz')[0] : file.includes('.br') ? file.split('.br')[0] : file
     let fileType = file.split('.js').pop()
