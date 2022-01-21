@@ -32,7 +32,7 @@ export default class FillProgram extends Program {
     const { context } = this
     const { gl, type } = context
     // get current source data
-    const { count, depthPos, featureCode, color, opacity, offset, mode } = featureGuide
+    const { count, offset, depthPos, featureCode, color, opacity, mode } = featureGuide
     // ensure proper blend state
     context.defaultBlend()
     // adjust to current depthPos

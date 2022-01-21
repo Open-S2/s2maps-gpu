@@ -4,9 +4,8 @@ import { VectorTile } from 's2-vector-tile'
 import { parseLayers } from '../style/conditionals'
 import { VectorManager, processRaster } from './process'
 
-import type { Face } from '../geo'
+import type { Face, StylePackage, Layer } from '../style/styleSpec'
 import type { TileRequest } from './workerPool'
-import type { StylePackage, Layer } from '../style/styleSpec'
 import type { IconMap, ColorMap } from './process/vector/glyph'
 
 export type CancelTileRequest = Array<number> // S2CellIDs of tiles e.g. ['204', '1003', '1245', ...]

@@ -22,15 +22,12 @@
       "fallback": "noto-sans-medium"
     }
   },
-  "shade": false,
-  "colorBlind": false,
   "wallpaper": {
     "background-color": "#1f262d",
     "fade-1": "#172b3a",
     "fade-2": "#20436d",
     "halo": "#d29463"
   },
-  "colorBlind": false,
   "layers": [
     {
       "name": "background",

@@ -14,6 +14,9 @@ export type Sources = { [string]: Source }
 /** FACE **/
 export type Face = 0 | 1 | 2 | 3 | 4 | 5
 
+/** XYZ **/
+export type XYZ = [number, number, number]
+
 /** MASK **/
 export type Mask = {
   exaggeration: string | Array<any>
@@ -78,12 +81,13 @@ export type GlyphPaint = {
   'text-size': number | Array<any>,
   'text-fill': string | Array<any>,
   'text-stroke'?: number | Array<any>,
-  'text-stroke-width'?: string | Array<any>
+  'text-stroke-width'?: string | Array<any>,
+  'icon-size': number | Array<any>
 }
 
 /** Layer **/
 export type Layer = {
-  id: string,
+  name: string,
   layerIndex: number,
   depthPos: number,
   opaque?: boolean,

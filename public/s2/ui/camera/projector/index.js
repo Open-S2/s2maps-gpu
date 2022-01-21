@@ -3,8 +3,8 @@
 import * as mat4 from '../../../util/mat4'
 import getTiles from './getTilesInView'
 import _cursorToLonLat from './cursorToLonLat'
-import { fromLonLatGL, normalize, mul } from '../../../geo/S2Point'
-import { degToRad } from '../../../geo/util'
+import { fromLonLatGL, normalize, mul } from 's2projection/s2Point'
+import { degToRad } from 's2projection/util'
 
 import type { Face } from '../../../style/styleSpec'
 import type { MapOptions } from '../../map'

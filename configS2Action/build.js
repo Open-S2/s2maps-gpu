@@ -1,5 +1,5 @@
 // pull from env action
-require('dotenv').config({ path: '../.env.action' })
+require('dotenv').config()
 // setup env variables
 process.env.BABEL_ENV = 'production'
 process.env.NODE_ENV = 'production'
@@ -12,17 +12,26 @@ const configuration = require('./webpack.config.js')
 const configurationCSS = require('./webpack.css.config.js')
 const { version } = require('../package.json')
 const { S3 } = require('aws-sdk')
-// const { getInput, info, error, setFailed } = require('@actions/core')
 
-const { ACCESS_KEY_ID, SECRET_ACCESS_KEY, BUCKET, ROOT_LOCATION } = process.env
+const { ACCESS_KEY_ID, SECRET_ACCESS_KEY } = process.env
+
+const ROOT_LOCATION = 's2maps-gl'
+
+const REGIONS = [
+  'us-east-1',
+  'us-west-2',
+  'ca-central-1',
+  'ap-south-1',
+  'ap-northeast-1',
+  'ap-southeast-2',
+  'eu-central-1',
+  'eu-west-2',
+  'sa-east-1'
+]
 
 // setup version
 // const branch = BRANCH
 const VERSION = `v${version}`
-
-// setup S3
-const s3 = new S3({ accessKeyId: ACCESS_KEY_ID, secretAccessKey: SECRET_ACCESS_KEY, region: 'us-east-1', signatureVersion: 'v4' })
-const Bucket = BUCKET
 
 // CLEAN UP FROM OLD BUILD
 const dirPath = path.join(__dirname, '../buildS2Action')
@@ -44,26 +53,28 @@ function build (compiler) {
   })
 }
 
-checkIfExists()
-  .then(exists => {
-    if (!exists) {
-      return Promise.all([
-        build(cssCompiler),
-        build(jsCompiler)
-      ])
-    } else {
-      console.log('No need to upload')
-      return null
-    }
-  })
-  .then(res => {
-    // upload
-    if (res) uploadData()
-  })
-  .then(res => {
-    console.log('COMPLETE')
-  })
-  .catch(err => { console.error(err) })
+async function storeAll () {
+  // first build
+  await Promise.all([build(cssCompiler), build(jsCompiler)])
+  // store latest version in s2maps.io website if possible
+  if (fs.existsSync('../../web/s2maps.io/public/s2maps-gl')) {
+    // store the latest version
+    fs.writeFileSync('../../web/s2maps.io/public/s2maps-gl/latest.js', `export default '${VERSION}'`)
+  }
+  // store in the cloud
+  for (const region of REGIONS) await store(region)
+}
+
+async function store (region) {
+  console.log(`Uploading to region "${region}"`)
+  const Bucket = `s2mapsio-${region}`
+  // setup S3
+  const s3 = new S3({ accessKeyId: ACCESS_KEY_ID, secretAccessKey: SECRET_ACCESS_KEY, region, signatureVersion: 'v4' })
+  // check if exists already
+  const exists = await checkIfExists(s3, Bucket)
+  // upload
+  if (!exists) await uploadData(s3, Bucket)
+}
 
 function removeDir (path) {
   if (fs.existsSync(dirPath)) {
@@ -79,7 +90,7 @@ function removeDir (path) {
   }
 }
 
-function uploadData () {
+function uploadData (s3, Bucket) {
   // buildS2Action
   const files = fs.readdirSync(dirPath).filter(f => !f.includes('.txt') && !f.includes('.tmp'))
   if (files.length) console.log('uploading...')
@@ -92,23 +103,13 @@ function uploadData () {
     // check if css or js
     const contentType = file.includes('.css') ? 'text/css' : 'application/javascript'
     // upload
-    promises.push(storeFile(data, file, contentType))
+    promises.push(storeFile(s3, Bucket, data, file, contentType))
   }
 
   return Promise.all(promises)
 }
 
-function checkIfExists () {
-  return new Promise(resolve => {
-    s3.listObjects({ Bucket, Prefix: `${ROOT_LOCATION}/${VERSION}` }, (err, data) => {
-      if (err) return resolve(true)
-      if (data.Contents.length) return resolve(true)
-      resolve(false)
-    })
-  })
-}
-
-function storeFile (Body, name, ContentType) {
+function storeFile (s3, Bucket, Body, name, ContentType) {
   return new Promise(resolve => {
     const obj = {
       Bucket,
@@ -123,3 +124,15 @@ function storeFile (Body, name, ContentType) {
     })
   })
 }
+
+function checkIfExists (s3, Bucket) {
+  return new Promise(resolve => {
+    s3.listObjects({ Bucket, Prefix: `${ROOT_LOCATION}/${VERSION}` }, (err, data) => {
+      if (err) return resolve(true)
+      if (data.Contents.length) return resolve(true)
+      resolve(false)
+    })
+  })
+}
+
+storeAll().catch(err => { console.log(err) })

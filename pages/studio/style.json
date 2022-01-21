@@ -1008,7 +1008,15 @@
       "type": "line",
       "minzoom": 2,
       "layout": {
-        "cap": "butt",
+        "cap": [
+          "input-range",
+          "zoom",
+          "step",
+          0,
+          "butt",
+          10,
+          "round"
+        ],
         "join": "bevel"
       },
       "paint": {
@@ -1148,7 +1156,15 @@
       "type": "line",
       "minzoom": 2,
       "layout": {
-        "cap": "butt",
+        "cap": [
+          "input-range",
+          "zoom",
+          "step",
+          0,
+          "butt",
+          10,
+          "round"
+        ],
         "join": "bevel"
       },
       "paint": {
@@ -1288,7 +1304,15 @@
       "type": "line",
       "minzoom": 2,
       "layout": {
-        "cap": "butt",
+        "cap": [
+          "input-range",
+          "zoom",
+          "step",
+          0,
+          "butt",
+          10,
+          "round"
+        ],
         "join": "bevel"
       },
       "paint": {

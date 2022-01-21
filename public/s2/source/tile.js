@@ -1,60 +1,19 @@
 // @flow
 /* eslint-env browser */
 /* global GLenum */
-import buildSource from './buildSource'
 import * as mat4 from '../util/mat4'
-import { bboxST } from '../geo'
-import { fromSTGL, normalize, mul } from '../geo/S2Point'
-import { toIJ, level } from '../geo/S2CellID'
+import { bboxST } from 's2projection/s2Coords'
+import { fromSTGL, normalize, mul } from 's2projection/s2Point'
+import { toIJ, level } from 's2projection/s2CellID'
 
 import type WebGLContext from '../gl/contexts/WebGLContext'
 import type WebGL2Context from '../gl/contexts/WebGL2Context'
+import type { RasterTileSource, VectorTileSource, GlyphTileSource } from '../gl/contexts/context'
 import type Projector from '../ui/camera/projector'
-import type { Face, Layer, Mask } from '../style/styleSpec'
+import type { Face, Layer, Mask, XYZ } from '../style/styleSpec'
 import type { ProgramType } from '../gl/programs/program'
-import type { XYZ } from '../geo/S2Point'
 
 opaque type GLenum = number
-
-export type VectorTileSource = {
-  type: 'vector',
-  subType: 'fill' | 'line' | 'point' | 'heatmap',
-  vertexArray: Int16Array,
-  radiiArray?: Float32Array,
-  indexArray: Uint32Array,
-  codeTypeArray: Uint8Array,
-  typeArray?: Float32Array,
-  typeBuffer?: WebGLBuffer,
-  vertexBuffer?: WebGLBuffer,
-  radiiBuffer?: WebGLBuffer,
-  indexBuffer?: WebGLBuffer,
-  codeTypeBuffer?: WebGLBuffer,
-  threeD?: boolean,
-  vao?: WebGLVertexArrayObject,
-  mode?: GLenum // TRIANGLES | TRIANGLE_STRIP | TRIANGLE_FAN | etc
-}
-
-export type GlyphTileSource = {
-  type: 'glyph',
-  textureID: number,
-  height?: number,
-  glyphFilterVertices: Float32Array,
-  glyphQuads: Float32Array,
-  filterVAO?: WebGLVertexArrayObject,
-  vao?: WebGLVertexArrayObject, // quad vao
-  uvBuffer?: WebGLBuffer,
-  stepBuffer?: WebGLBuffer,
-  glyphFilterBuffer?: WebGLBuffer,
-  glyphIndexBuffer?: WebGLBuffer,
-  glyphQuadBuffer?: WebGLBuffer
-}
-
-export type RasterTileSource = {
-  type: 'raster',
-  size: number,
-  texture: WebGLTexture,
-  mode?: GLenum // TRIANGLES | TRIANGLE_STRIP | TRIANGLE_FAN | etc
-}
 
 // The layer guide helps identify how to properly draw from the vertexBuffer/vertexIndex stack.
 // All layers are merged into one VAO/indexBuffer/vertexBuffer/codeTypeBuffer set. This reduces complexity and improves draw speed.
@@ -78,6 +37,8 @@ export type FeatureGuide = {
   featureCode: Float32Array,
   subFeatureCode?: Float32Array,
   layerCode?: Float32Array,
+  color?: Float32Array,
+  opacity?: Float32Array,
   mode?: GLenum, // TRIANGLES | TRIANGLE_STRIP | TRIANGLE_FAN | etc
   lch?: boolean
 }
@@ -310,7 +271,7 @@ export default class Tile {
       threeD: true,
       mode: this.context.gl.TRIANGLES
     }
-    buildSource(this.context, mask)
+    this.context.buildSource(this.context, mask)
   }
 
   injectRasterData (sourceName: string, layerIndexes: Array<number>, image: Image,
@@ -320,7 +281,7 @@ export default class Tile {
     const { size } = this
     // prep the source
     const rasterSource = this.sourceData[sourceName] = { type: 'raster', size, image }
-    buildSource(this.context, rasterSource)
+    this.context.buildSource(rasterSource)
     // store texture information to featureGuide
     for (const layerIndex of layerIndexes) {
       const { depthPos } = layers[layerIndex]
@@ -426,7 +387,7 @@ export default class Tile {
       this.featureGuide.push(feature)
     }
     // build the VAO
-    buildSource(this.context, vectorSource)
+    this.context.buildSource(vectorSource)
   }
 
   injectGlyphSourceData (sourceName: string, glyphFilterVertices: Float32Array,
@@ -491,7 +452,7 @@ export default class Tile {
     }
 
     // build the VAO
-    buildSource(context, glyphSource)
+    this.context.buildSource(glyphSource)
   }
 
   // we don't parse the interactiveData immediately to save time

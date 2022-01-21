@@ -1,6 +1,6 @@
 // @flow
 /** MODULES **/
-import { fromFace, isFace, level, face as getFace, parent as parentID, childrenIJ, contains } from '../../../geo/S2CellID'
+import { fromFace, isFace, level, face as getFace, parent as parentID, childrenIJ, contains } from 's2projection/s2CellID'
 import convert from './convert' // GeoJSON conversion and preprocessing
 import clip from './clip'
 import transformTile from './transform' // coordinate transformation

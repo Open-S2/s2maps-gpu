@@ -2,7 +2,7 @@
 /* eslint-env browser */
 import Style from '../style'
 import Projector from '../ui/camera/projector'
-import { degToRad } from '../geo/util'
+import { degToRad } from 's2projection/util'
 import * as mat4 from '../util/mat4'
 
 import type { WallpaperImageType, WallpaperStyle } from '../style/styleSpec'

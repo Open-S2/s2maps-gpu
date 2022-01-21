@@ -1,0 +1,156 @@
+{
+  "version": 2,
+  "name": "s2maps-streets",
+  "center": [-122.4585607773497, 37.778443127730476],
+  "zoom": 0,
+  "minzoom": -1,
+  "maxzoom": 18.99,
+  "sources": {
+    "streets": "http://192.168.0.110:8000/s2db/streets.s2db",
+    "terrain": "http://192.168.0.110:8000/s2db/terrain.s2db"
+  },
+  "fonts": {
+    "noto-sans-regular": "https://data.s2maps.io/glyphs/Noto/NotoSansRegular.font",
+    "noto-sans-medium": "https://data.s2maps.io/glyphs/Noto/NotoSansMedium.font",
+    "roboto-regular": {
+      "path": "https://data.s2maps.io/glyphs/Roboto/RobotoRegular.font",
+      "fallback": "noto-sans-regular"
+    },
+    "roboto-medium": {
+      "path": "https://data.s2maps.io/glyphs/Roboto/RobotoMedium.font",
+      "fallback": "noto-sans-medium"
+    }
+  },
+  "icons": {
+    "street-icons": "https://data.s2maps.io/glyphs/streets/streets.icon"
+  },
+  "wallpaper": {
+    "background-color": "#030a2d",
+    "fade-1": "rgb(138, 204, 255)",
+    "fade-2": "rgb(217, 255, 255)",
+    "halo": "rgb(230, 255, 255)"
+  },
+  "layers": [
+    {
+      "name": "background",
+      "type": "fill",
+      "opaque": true,
+      "source": "mask",
+      "layout": {},
+      "paint": {
+        "color": [
+          "input-range",
+          "zoom",
+          "expo",
+          1.7,
+          2.75,
+          "#f9f7e7",
+          3,
+          "#f5f5f5",
+          6.5,
+          "#f0e9d7",
+          9,
+          "#f0e9d7",
+          13,
+          "#e8e8e8",
+          14,
+          "#f8f9fa"
+        ]
+      }
+    },
+    {
+      "name": "landcover",
+      "source": "terrain",
+      "layer": "landcover",
+      "type": "fill",
+      "minzoom": 0,
+      "maxzoom": 3,
+      "opaque": true,
+      "layout": {},
+      "paint": {
+        "color": [
+          "data-condition",
+          ["class", "==", "snow"],
+          "#ffffff",
+          ["class", "==", "wood"],
+          "#93d2a5",
+          ["class", "==", "tree"],
+          "#a8dab5",
+          ["class", "==", "crop"],
+          "#bbe2c6",
+          ["class", "==", "shrub"],
+          "#f1e9d7",
+          ["class", "==", "wasteland"],
+          "#e8e8e1",
+          "default",
+          "#93d2a5"
+        ]
+      }
+    },
+    {
+      "name": "water",
+      "source": "streets",
+      "filter": ["class", "!has", ["bay", "reef", "shoal"]],
+      "layer": "water",
+      "type": "fill",
+      "opaque": true,
+      "minzoom": 0,
+      "layout": {},
+      "paint": {
+        "color": "#86bff2"
+      }
+    },
+    {
+      "name": "boundaries",
+      "source": "streets",
+      "layer": "boundary",
+      "filter": ["and", ["adminLevel", "has", [2, 4]], ["maritime", "==", false]],
+      "type": "line",
+      "minzoom": 0,
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": [
+          "data-condition",
+          ["adminLevel", "==", 2],
+          "rgb(120, 120, 120)",
+          "default",
+          "rgb(160, 160, 160)"
+        ],
+        "width": [
+          "data-condition",
+          ["adminLevel", "==", 4],
+          1.25,
+          "default",
+          [
+            "input-range",
+            "zoom",
+            "lin",
+            1.25,
+            1,
+            2,
+            1.75
+          ]
+        ]
+      }
+    },
+    {
+      "name": "equator",
+      "source": "streets",
+      "layer": "equator",
+      "type": "line",
+      "minzoom": 0,
+      "maxzoom": 10,
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "rgba(125, 102, 97, 0.8)",
+        "width": 1.5
+      }
+    }
+  ]
+}

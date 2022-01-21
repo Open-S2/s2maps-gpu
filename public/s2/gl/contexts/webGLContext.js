@@ -47,7 +47,7 @@ export default class WebGLContext extends Context {
       // drawArraysInstanced
       this.gl.drawArraysInstanced = (mode, first, count, instanceCount) => this.angledInstancedArrays.drawArraysInstancedANGLE(mode, first, count, instanceCount)
       // drawElementsInstanced
-      // this.gl.drawElementsInstanced = (mode, count, type, offset, primcount) => this.angledInstancedArrays.drawElementsInstancedANGLE(mode, count, type, offset, primcount)
+      this.gl.drawElementsInstanced = (mode, count, type, offset, primcount) => this.angledInstancedArrays.drawElementsInstancedANGLE(mode, count, type, offset, primcount)
     }
     // min max blending
     if (this.blendMinMax) gl.MAX = this.blendMinMax.MAX_EXT

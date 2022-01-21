@@ -1,11 +1,56 @@
 // @flow
 /* eslint-env browser */
-/* global WebGLVertexArrayObject */
-import buildMask from '../../source/buildMask'
-import type { VectorTileSource } from '../../source/tile'
+/* global WebGLVertexArrayObject GLenum */
+import buildMask from './buildMask'
+import buildSource from './buildSource'
 
 import type { WebGLRenderingContext, WebGL2RenderingContext } from './'
 import type { MapOptions } from '../../ui/map'
+
+opaque type GLenum = number
+
+export type TileSource = {
+  vertexArray: Int16Array
+}
+
+export type VectorTileSource = {
+  type: 'vector',
+  subType: 'fill' | 'line' | 'point' | 'heatmap',
+  radiiArray?: Float32Array,
+  indexArray: Uint32Array,
+  codeTypeArray: Uint8Array,
+  typeArray?: Float32Array,
+  typeBuffer?: WebGLBuffer,
+  vertexBuffer: WebGLBuffer,
+  radiiBuffer?: WebGLBuffer,
+  indexBuffer?: WebGLBuffer,
+  codeTypeBuffer?: WebGLBuffer,
+  threeD?: boolean,
+  vao?: WebGLVertexArrayObject,
+  mode?: GLenum // TRIANGLES | TRIANGLE_STRIP | TRIANGLE_FAN | etc
+}
+
+export type GlyphTileSource = {
+  type: 'glyph',
+  textureID: number,
+  height?: number,
+  glyphFilterVertices: Float32Array,
+  glyphQuads: Float32Array,
+  filterVAO?: WebGLVertexArrayObject,
+  vao?: WebGLVertexArrayObject, // quad vao
+  uvBuffer?: WebGLBuffer,
+  stepBuffer?: WebGLBuffer,
+  glyphFilterBuffer?: WebGLBuffer,
+  glyphIndexBuffer?: WebGLBuffer,
+  glyphQuadBuffer?: WebGLBuffer
+}
+
+export type RasterTileSource = {
+  type: 'raster',
+  size: number,
+  texture: WebGLTexture,
+  mode?: GLenum // TRIANGLES | TRIANGLE_STRIP | TRIANGLE_FAN | etc
+}
 
 export default class Context {
   gl: WebGLRenderingContext | WebGL2RenderingContext
@@ -149,6 +194,10 @@ export default class Context {
     gl.bindVertexArray(this.vao)
     // draw a fan
     gl.drawArrays(gl.TRIANGLE_FAN, 0, 4)
+  }
+
+  buildSource (source: VectorTileSource | GlyphTileSource | RasterTileSource) {
+    return buildSource(this, source)
   }
 
   /** PREP PHASE **/

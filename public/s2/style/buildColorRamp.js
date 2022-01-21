@@ -8,7 +8,7 @@ export default function buildColorRamp (ramp: Array<number | string>): Uint8Clam
   // prep colors
   for (let i = 0, rl = ramp.length; i < rl; i += 2) ramp[i + 1] = (new Color(ramp[i + 1])).toLCH()
   // setup color output function
-  const getColor = (t) => {
+  const getColor = (t: number): [number, number, number, number] => {
     let i = 0
     while (t > ramp[i]) i += 2
     if (t === ramp[i]) return ramp[i + 1].copy().getRGB(false)

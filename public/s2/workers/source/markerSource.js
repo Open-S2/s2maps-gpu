@@ -1,6 +1,6 @@
 // @flow
 /* eslint-env worker */
-import { toST, fromLonLat } from '../../geo/S2Point'
+import { toST, fromLonLat } from 's2projection/s2Point'
 
 import type { Session, Point } from './'
 import type { TileRequest } from '../workerPool'

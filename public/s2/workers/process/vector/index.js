@@ -78,7 +78,8 @@ export default class VectorManager {
           for (const p in paint) paint[p](code, properties, zoom)
           for (const l in layout) layout[l](code, properties, zoom)
           // store
-          let geometry = feature.loadGeometry()
+          let geometry = (type === 'fill' && !parent) ? feature.loadGeometryFlat() : feature.loadGeometry()
+          const { indices } = feature
           if (parent) geometry = scaleShiftClip(geometry, feature.type, extent, tile, parent)
           // scale and filter as necessary
           if (!geometry || !geometry.length) continue
@@ -93,7 +94,7 @@ export default class VectorManager {
             type: feature.type,
             properties,
             vertices: [],
-            indices: (!parent && feature.indices) ? feature.indices : [],
+            indices,
             sourceLayer
           })
           // if the layer is interactive, store the id's property data

@@ -1,17 +1,19 @@
 {
   "extends": [
+    "next/babel",
     "next/core-web-vitals",
     "standard"
   ],
   "env": {
-    "browser": true,
-    "commonjs": true,
-    "es6": true,
-    "node": true
+    "browser": true
   },
   "parser": "@babel/eslint-parser",
-  "plugins": ["flowtype"],
+  "plugins": ["ft-flow"],
   "rules": {
     "@next/next/no-img-element": "off"
+  },
+  "standard": {
+    "plugins": ["ft-flow"],
+    "parser": "@babel/eslint-parser"
   }
 }

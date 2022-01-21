@@ -1,12 +1,11 @@
 // @flow
 import { project } from '../../../util/mat4'
-import { bboxST, neighborsIJ } from '../../../geo'
-import { mul, normalize, fromSTGL, toIJ, fromLonLat } from '../../../geo/S2Point'
-import { parent, fromFace, fromIJ } from '../../../geo/S2CellID'
+import { bboxST, neighborsIJ } from 's2projection/s2Coords'
+import { mul, normalize, fromSTGL, toIJ, fromLonLat } from 's2projection/s2Point'
+import { parent, fromFace, fromIJ } from 's2projection/s2CellID'
 
 import type { TileDefinitions } from './'
-import type { Face } from '../../../style/styleSpec'
-import type { XYZ } from '../../../geo/S2Point'
+import type { Face, XYZ } from '../../../style/styleSpec'
 
 const ZERO_TILES = [fromFace(0), fromFace(1), fromFace(2), fromFace(3), fromFace(4), fromFace(5)]
 
