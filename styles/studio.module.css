@@ -1,12 +1,17 @@
+/* OPEN SANS */
 @font-face {
-  font-family: DINMedium;
-  src: url("../public/fonts/DIN_Next_Medium.ttf") format("opentype");
+  font-family: DIN;
+  src:url("../public/fonts/DIN_Next_Regular.ttf") format("opentype");
   font-display: swap;
+  font-weight: 400;
+  font-style: normal;
 }
 @font-face {
-  font-family: DINRegular;
-  src: url("../public/fonts/DIN_Next_Regular.ttf") format("opentype");
+  font-family: DIN;
+  src:url("../public/fonts/DIN_Next_Medium.ttf") format("opentype");
   font-display: swap;
+  font-weight: 500;
+  font-style: normal;
 }
 
 #studio {
@@ -17,8 +22,7 @@
   height: 100vh;
   background-color: #ebeff3;
   color: #23374d;
-  font-family: DINRegular;
-  /* color: #bbbcc6 ; #474948 ; #000 */
+  font-family: DIN, Cera, 'Open Sans', sans-serif !important;
 }
 
 /** HEADER **/
@@ -30,6 +34,7 @@
   background-color: #fdffff;
   border-top-left-radius: 20px;
   border-top-right-radius: 20px;
+  font-family: DIN, Cera, 'Open Sans', sans-serif;
 }
 
 #studioHeaderContainer {
@@ -65,8 +70,8 @@
   justify-content: center;
   align-content: center;
   flex-direction: column;
-  font-weight: bold;
-  padding-top: 4px;
+  font-family: Cera;
+  font-weight: 600;
   padding-left: 10px;
   font-size: 22px;
 }
@@ -76,10 +81,11 @@
   left: 50%;
   transform: translateX(-50%);
   padding-top: 3px;
+  font-family: DIN, 'Open Sans';
 }
 
 #studioHeaderMidZoom {
-  font-family: DINMedium;
+  font-weight: 600;
 }
 
 #studioHeaderRight {
@@ -93,7 +99,8 @@
   display: flex;
   position: relative;
   cursor: pointer;
-  font-family: DINMedium;
+  font-family: DIN, 'Open Sans';
+  font-weight: 500;
   font-size: 16px;
   padding: 5px 14px;
   background-color: #f4f7fb;

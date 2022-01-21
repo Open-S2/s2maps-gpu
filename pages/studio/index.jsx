@@ -1,6 +1,7 @@
 /* MODULES */
 import { useState, useEffect, useRef } from 'react'
-import Layers from '../../components/layers'
+import Layers from '../../components/layers/index.jsx'
+import Layer from '../../components/layers/layer.jsx'
 /* JSON */
 import style from './style.json'
 /* STYLESHEET */
@@ -10,15 +11,23 @@ const { NEXT_PUBLIC_API_KEY } = process.env
 
 export default function Studio () {
   const s2map = useRef()
+  const studioStyle = useRef(prepStyle(style))
   const [position, setPosition] = useState({ zoom: 0, lon: 0, lat: 0 })
-  const [studioStyle, setStudioStyle] = useState(prepStyle(style))
+  const [editor, setEditor] = useState({ page: 'layers', layerIndex: null })
 
   // cleanup positional data
   let { zoom, lon, lat } = position
   zoom = zoom.toFixed(3)
-  while (lon > 180) lon -= 360
   lon = lon.toFixed(5)
   lat = lat.toFixed(5)
+
+  // set editor
+  const { page, layerIndex } = editor
+  const editorComponent = (page === 'layers' && style)
+    ? <Layers style={studioStyle} setEditor={setEditor} s2map={s2map} />
+    : (page === 'layer')
+        ? <Layer style={studioStyle} layerIndex={layerIndex} setEditor={setEditor} s2map={s2map} />
+        : null
 
   return (
     <div id={styles.studio}>
@@ -40,7 +49,7 @@ export default function Studio () {
 
       <div id={styles.studioBody}>
         <div id={styles.studioBodyEditor}>
-          {style && <Layers style={studioStyle} setStyle={setStudioStyle} s2map={s2map} />}
+          {editorComponent}
           <div id={styles.editorController} />
         </div>
         <div id={styles.studioBodySpacer} />
@@ -127,9 +136,7 @@ function prepStyle (style) {
 function prepStudio (style) {
   // prep styling
   style.layers.forEach((layer, index) => {
-    const { name, type, source, paint } = layer
-    // setup color
-    if (paint && paint.color && typeof paint.color === 'string') layer._color = paint.color
+    const { name, type, source } = layer
     // setup type
     if (type === 'fill' && source === 'mask') layer._type = 'mask'
     else layer._type = type
@@ -138,9 +145,46 @@ function prepStudio (style) {
     // setup index
     layer._index = index
     layer._indexOld = index
+    // add missing properties
+    if (isNaN(layer.minzoom)) layer.minzoom = 0
+    if (isNaN(layer.maxzoom)) layer.maxzoom = 20
+    if (
+      typeof layer.interactive === 'undefined' &&
+      (type === 'glyph')
+    ) layer.interactive = false
+    if (
+      typeof layer.invert === 'undefined' &&
+      (type === 'fill')
+    ) layer.invert = false
+    if (
+      typeof layer.overdraw === 'undefined' &&
+      (type === 'glyph')
+    ) layer.overdraw = false
+    if (
+      typeof layer.opaque === 'undefined' &&
+      (type === 'fill')
+    ) layer.opaque = false
+    if (
+      typeof layer.lch === 'undefined' &&
+      (type === 'fill' || type === 'line' || type === 'circle' || type === 'point' || type === 'glyph')
+    ) layer.lch = false
+    // add missing paints
+    if (type === 'fill') {
+      if (!layer.paint) layer.paint = {}
+      if (!layer.paint.color) layer.paint.color = '#000'
+      if (!layer.paint.opacity) layer.paint.opacity = 1
+    } else if (type === 'line') {
+      if (!layer.paint) layer.paint = {}
+      if (!layer.paint.color) layer.paint.color = '#000'
+      if (!layer.paint.opacity) layer.paint.opacity = 1
+      if (!layer.paint.width) layer.paint.width = 1
+      if (!layer.layout) layer.layout = {}
+      if (!layer.layout.cap) layer.layout.cap = 'butt'
+      if (!layer.layout.join) layer.layout.join = 'bevel'
+    }
+    // setup color
+    if (layer.paint && layer.paint.color && typeof layer.paint.color === 'string') layer._color = layer.paint.color
   })
-
-  // TODO: setup groups
 
   return style
 }

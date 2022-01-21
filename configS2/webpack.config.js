@@ -17,7 +17,7 @@ module.exports = {
   output: {
     path: path.join(__dirname, '../buildS2'),
     // publicPath: 'http://192.168.0.189:3000/',
-    publicPath: `https://data.s2maps.io/s2maps-gl/v${version}/`,
+    publicPath: `https://s2maps.io/s2maps-gl/v${version}/`,
     filename: '[name].min.js',
     // this defaults to 'window', but by setting it to 'this' then
     // module chunks which are built will work in web workers as well.

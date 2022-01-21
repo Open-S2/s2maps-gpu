@@ -1,7 +1,7 @@
 // @flow
 /* eslint-env browser */
-import { WebGL2Context, WebGLContext } from '../gl/contexts'
-import type { RasterTileSource, VectorTileSource, GlyphTileSource } from './tile'
+import { WebGL2Context, WebGLContext } from '.'
+import type { RasterTileSource, VectorTileSource, GlyphTileSource } from './context'
 
 // given
 export default function buildSource (context: WebGL2Context | WebGLContext, source: RasterTileSource | VectorTileSource | GlyphTileSource) {

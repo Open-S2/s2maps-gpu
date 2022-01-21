@@ -5,6 +5,7 @@ import Map from '../ui/map'
 import { Wallpaper, Skybox, Tile } from '../source'
 import buildColorRamp from './buildColorRamp'
 import { encodeLayerAttribute, parseFeatureFunction, orderLayer } from './conditionals'
+import s2mapsURL from '../util/s2mapsURL'
 
 import type { MapOptions } from '../ui/map'
 import type { Sources, Layer, Mask, WallpaperStyle } from './styleSpec'
@@ -17,7 +18,6 @@ export type Analytics = {
   width: number,
   height: number
 }
-
 export default class Style {
   map: Map
   glType: number
@@ -72,7 +72,7 @@ export default class Style {
   async buildStyle (style: string | Object) {
     const self = this
     if (typeof style === 'string') {
-      style = await fetch(style.replace('s2maps://', 'https://data.s2maps.io/'))
+      style = await fetch(s2mapsURL(style))
         .then(res => res.json())
         .catch(err => { console.error('failed to fetch style json', err) })
     }
@@ -140,8 +140,8 @@ export default class Style {
   }
 
   _prebuildLayer (layer: Layer, index: number) {
-    if (!layer.minzoom) layer.minzoom = 0
-    if (!layer.maxzoom) layer.maxzoom = 20
+    if (isNaN(layer.minzoom)) layer.minzoom = 0
+    if (isNaN(layer.maxzoom)) layer.maxzoom = 20
     if (!layer.layer) layer.layer = 'default'
     if (layer.source === 'mask') this.maskLayers.push(layer)
     if (layer.interactive) this.interactive = true
@@ -254,6 +254,8 @@ export default class Style {
     this._buildLayer(layer, index + 1, programs)
     // tell the painter that we might be using a new program
     painter.buildPrograms(programs)
+    // let the renderer know the style is dirty
+    this.dirty = true
   }
 
   removeLayer (nameIndex?: number | string): number {
@@ -273,6 +275,8 @@ export default class Style {
       layer.layerIndex--
       layer.depthPos--
     }
+    // let the renderer know the style is dirty
+    this.dirty = true
 
     return index
   }
@@ -295,6 +299,8 @@ export default class Style {
     } else {
       window.S2WorkerPool.reorderLayers(this.map.id, layerChanges)
     }
+    // let the renderer know the style is dirty
+    this.dirty = true
   }
 
   requestTiles (tiles: Array<Tile>) {

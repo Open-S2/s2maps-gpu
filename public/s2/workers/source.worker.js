@@ -1,6 +1,7 @@
 // @flow
 /* eslint-env worker */
-import { GlyphSource, LocalSource, MarkerSource, S2JSONSource, S2TilesSource, Source, TexturePack, Session } from './source'
+import { GlyphSource, LocalSource, MarkerSource, S2TilesSource, S2JSONSource, Source, TexturePack, Session } from './source'
+import s2mapsURL from '../util/s2mapsURL'
 
 import type { StylePackage, Layer } from '../style/styleSpec'
 import type { Marker } from './source/markerSource'
@@ -34,7 +35,7 @@ type Sources = { [string]: Source }
   * default -> assumed the location has a metadata. json at root with a "s2cellid.ext" file structure
 
   SESSION TOKEN
-  This is a pre-approved JWT token for any calls made to data.s2maps.io
+  This is a pre-approved JWT token for any calls made to api.s2maps.io
   when building requests, we take the current time, run a black box digest to hash, and return:
   { h: 'first-five-chars', t: '1620276149967' } // h -> hash ; t -> timestamp ('' + Date.now())
   (now - timestamp) / 1000 = seconds passed
@@ -148,9 +149,8 @@ export default class SourceWorker {
       input = input.path
     }
     const fileType = input.split('.').pop().toLowerCase()
-    const apiSource = input.includes('s2maps://data')
-    // const path = (apiSource) ? input.replace('s2maps://', `${process.env.NEXT_PUBLIC_API_URL}/`) : input
-    const path = (apiSource) ? input.replace('s2maps://', 'https://data.s2maps.io/') : input
+    const apiSource = input.includes('s2maps://')
+    const path = (apiSource) ? s2mapsURL(input) : input
     // create the proper source type
     let source
     if (fileType === 's2tiles') source = new S2TilesSource(name, layers, path, apiSource, session)
@@ -169,8 +169,8 @@ export default class SourceWorker {
   _createGlyphSource (mapID: string, name: string, input: string, fallback?: string) {
     const { texturePack } = this
     // prepare
-    const apiSource = input.includes('s2maps://data')
-    const path = (apiSource) ? input.replace('s2maps://', 'https://data.s2maps.io/') : input
+    const apiSource = input.includes('s2maps://')
+    const path = (apiSource) ? s2mapsURL(input) : input
     // check if already exists
     if (this.glyphs[name]) return
     const source = new GlyphSource(name, path, fallback, texturePack, apiSource)
@@ -215,7 +215,7 @@ export default class SourceWorker {
 
   _getInfo (mapID: string, featureID: number) {
     // 1) build the S2JSON should it exist
-    this._createSource(mapID, '_info', `s2maps://data/info/${featureID}.s2json`)
+    this._createSource(mapID, '_info', `s2maps://info/${featureID}.s2json`)
     // 2) request the JSON
     this.session.getInfo(mapID, featureID)
   }

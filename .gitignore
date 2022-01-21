@@ -17,6 +17,7 @@
 /buildS2
 /buildS2Action
 /buildS2NPM
+/lib
 
 # misc
 .DS_Store
@@ -30,6 +31,8 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
+.env
+.env*
 .env.action
 .env.local
 .env.development.local

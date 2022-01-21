@@ -13,7 +13,7 @@ export default class TileCache extends Map<BigInt, Tile> {
   set (key: BigInt, tile: Tile) {
     // place in front the new
     this.order.unshift(key)
-    while (this.order.length > this.maxCacheSize) this.delete(this.order.pop())
+    while (this.order.length > this.maxCacheSize) this.delete(this.order[this.order.length - 1])
     return super.set(key, tile)
   }
 

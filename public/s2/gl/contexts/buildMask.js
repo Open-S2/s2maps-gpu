@@ -1,8 +1,8 @@
 // @flow
 /* eslint-env browser */
 import buildSource from './buildSource'
-import { WebGL2Context, WebGLContext } from '../gl/contexts'
-import type { VectorTileSource } from './tile'
+import { WebGL2Context, WebGLContext } from '.'
+import type { VectorTileSource } from './context'
 
 export default function buildMask (division: number, context: WebGL2Context | WebGLContext): VectorTileSource {
   const vertices = []

@@ -141,8 +141,8 @@ export default class Map extends Camera {
   animateTo (type: AnimationType, directions?: AnimationDirections) {
     // build animator
     const animator = new Animator(this.projector, directions)
-    if (type === 'flyTo') animator.flyTo()
-    else animator.easeTo()
+    const render = (type === 'flyTo') ? animator.flyTo() : animator.easeTo()
+    if (!render) return
     // set an animation fuction
     this.currAnimFunction = (now) => this._animate(animator, now * 0.001)
     // render it out

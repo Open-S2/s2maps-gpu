@@ -298,15 +298,23 @@ export default class GlyphSource {
     const { path, glyphMap } = this
     const requests = []
     const chunks = []
+    // sort the list by unicode
+    list.sort((a, b) => a - b)
     // group into batches of 35
     for (let i = 0; i < list.length; i += 35) chunks.push(list.slice(i, i + 35))
     // group unicode numbers adjacent into the same range
     for (const chunk of chunks) {
-      const ranges = []
+      let ranges = []
+      // store all as [pos, length]
       for (const unicode of chunk) {
         const { pos, length } = glyphMap.get(unicode)
-        ranges.push(`${base36(pos)}-${base36(length)}`)
+        ranges.push([pos, length])
       }
+      // merge adjacent ranges
+      ranges = mergeRanges(ranges)
+      // shape the ranges into a base36 string
+      ranges = ranges.map(([pos, length]) => `${base36(pos)}-${base36(length)}`)
+      // merge the ranges into a single request
       requests.push(`${path}?bytes=${ranges.join(',')}`)
     }
 
@@ -318,4 +326,17 @@ export default class GlyphSource {
     if (res.status !== 200 && res.status !== 206) return null
     return res.arrayBuffer()
   }
+}
+
+function mergeRanges (ranges) {
+  return ranges.reduce((acc, cur) => {
+    if (acc.length === 0) return [cur]
+    const last = acc[acc.length - 1]
+    if (cur[0] === last[0] + last[1]) {
+      last[1] += cur[1]
+      return acc
+    }
+    acc.push(cur)
+    return acc
+  }, [])
 }

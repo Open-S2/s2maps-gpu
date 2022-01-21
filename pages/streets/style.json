@@ -6,23 +6,23 @@
   "minzoom": -1,
   "maxzoom": 18.99,
   "sources": {
-    "streets": "s2maps://data/s2maps/streets-v4.s2tiles",
-    "terrain": "s2maps://data/s2maps/terrain-v2.s2tiles"
+    "streets": "s2maps://s2tiles/s2maps/streets-v1.s2tiles",
+    "terrain": "s2maps://s2tiles/s2maps/terrain-v1.s2tiles"
   },
   "fonts": {
-    "noto-sans-regular": "https://data.s2maps.io/glyphs/Noto/NotoSansRegular.font",
-    "noto-sans-medium": "https://data.s2maps.io/glyphs/Noto/NotoSansMedium.font",
+    "noto-sans-regular": "s2maps://glyphs/Noto/NotoSansRegular.font",
+    "noto-sans-medium": "s2maps://glyphs/Noto/NotoSansMedium.font",
     "roboto-regular": {
-      "path": "https://data.s2maps.io/glyphs/Roboto/RobotoRegular.font",
+      "path": "s2maps://glyphs/Roboto/RobotoRegular.font",
       "fallback": "noto-sans-regular"
     },
     "roboto-medium": {
-      "path": "https://data.s2maps.io/glyphs/Roboto/RobotoMedium.font",
+      "path": "s2maps://glyphs/Roboto/RobotoMedium.font",
       "fallback": "noto-sans-medium"
     }
   },
   "icons": {
-    "street-icons": "https://data.s2maps.io/glyphs/streets/streets.icon"
+    "street-icons": "s2maps://glyphs/streets/streets.icon"
   },
   "wallpaper": {
     "background-color": "#030a2d",
@@ -64,8 +64,7 @@
       "layer": "landcover",
       "type": "fill",
       "minzoom": 0,
-      "maxzoom": 3,
-      "opaque": true,
+      "maxzoom": 5,
       "layout": {},
       "paint": {
         "color": [
@@ -84,6 +83,16 @@
           "#e8e8e1",
           "default",
           "#93d2a5"
+        ],
+        "opacity": [
+          "input-range",
+          "zoom",
+          "expo",
+          1.75,
+          4.5,
+          1,
+          5,
+          0
         ]
       }
     },

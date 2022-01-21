@@ -1,5 +1,5 @@
 // @flow
-import { Orthodrome } from '../../geo/S2LonLat'
+import { Orthodrome } from 's2projection/s2LonLat'
 
 import type Projector from './projector'
 
@@ -148,13 +148,14 @@ export default class Animator {
     }
   }
 
-  easeTo () {
+  easeTo (): boolean {
     const {
       startLon, startLat, startZoom, startBearing, startPitch,
       deltaZoom, deltaBearing, deltaPitch,
       endLon, endLat, endZoom, endBearing, endPitch,
       duration, ease
     } = this
+    if (startLat === endLat && startLon === endLon && startZoom === endZoom && startBearing === endBearing && startPitch === endPitch) return false
     // setup orthodrome for lon and lat
     const orthodrome = new Orthodrome(startLon, startLat, endLon, endLat)
     // zooming out should have an easeOut while zooming in should have an easeIn
@@ -175,9 +176,10 @@ export default class Animator {
     }
     // build renderTile list
     this._buildFutureTileList()
+    return true
   }
 
-  flyTo (): Function {
+  flyTo (): boolean {
     // Van Wijk, Jarke J.; Nuij, Wim A. A. “Smooth and efficient zooming and panning.” INFOVIS
     // ’03. pp. 15–22. <https://www.win.tue.nl/~vanwijk/zoompan.pdf#page=5>.
     const {
@@ -186,6 +188,7 @@ export default class Animator {
       endLon, endLat, endZoom, endBearing, endPitch,
       projector, duration, ease
     } = this
+    if (startLat === endLat && startLon === endLon && startZoom === endZoom && startBearing === endBearing && startPitch === endPitch) return false
     const { max, sqrt, log, exp, abs, LN2 } = Math
     // setup variables
     const orthodrome = new Orthodrome(startLon, startLat, endLon, endLat)
@@ -258,6 +261,7 @@ export default class Animator {
 
     // build renderTile list
     this._buildFutureTileList()
+    return true
   }
 
   _buildFutureTileList () {

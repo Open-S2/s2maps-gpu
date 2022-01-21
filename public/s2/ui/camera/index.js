@@ -6,7 +6,7 @@ import Style from '../../style'
 import type { Painter } from '../../gl'
 import type { MapOptions } from '../map'
 /** PROJECTIONS **/
-import { parent as parentID, isFace } from '../../geo/S2CellID'
+import { parent as parentID, isFace } from 's2projection/s2CellID'
 import Projector from './projector'
 /** SOURCES **/
 import { Tile } from '../../source'

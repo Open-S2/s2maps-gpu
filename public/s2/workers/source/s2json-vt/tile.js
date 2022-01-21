@@ -1,6 +1,6 @@
 // @flow
 /** MODULES **/
-import { toIJ, level } from '../../../geo/S2CellID'
+import { toIJ, level } from 's2projection/s2CellID'
 import S2JsonVT from './'
 /** TYPES **/
 import type { Feature } from './'

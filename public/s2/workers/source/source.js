@@ -1,6 +1,6 @@
 // @flow
 /* eslint-env worker */
-import { parent as parentID } from '../../geo/S2CellID'
+import { parent as parentID, toIJ } from 's2projection/s2CellID'
 
 import type { Session } from './'
 import type { TileRequest } from '../workerPool'
@@ -133,8 +133,8 @@ export default class Source {
     // setup parentLayers
     const parentLayers: ParentLayers = {}
     // iterate over layers and found any data doesn't exist at current zoom but the style asks for
-    for (let i = 0, ll = styleLayers.length; i < ll; i++) {
-      const layer = styleLayers[i]
+    for (let l = 0, ll = styleLayers.length; l < ll; l++) {
+      const layer = styleLayers[l]
       if (!layers) continue
       const sourceLayer = layers[layer.layer]
       if (layer.maxzoom > zoom && sourceLayer && sourceLayer.maxzoom < zoom) {
@@ -147,8 +147,10 @@ export default class Source {
           pZoom--
           newID = parentID(newID)
         }
+        // pull out i & j
+        const [, i, j] = toIJ(newID, pZoom)
         // store parent reference
-        if (!parentLayers[newID]) parentLayers[newID] = { face, id: newID, zoom: pZoom, layers: [] }
+        if (!parentLayers[newID]) parentLayers[newID] = { face, id: newID, zoom: pZoom, i, j, layers: [] }
         parentLayers[newID].layers.push(layer.layerIndex)
       }
     }
