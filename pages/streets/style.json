@@ -10,19 +10,19 @@
     "terrain": "s2maps://s2tiles/s2maps/terrain-v1.s2tiles"
   },
   "fonts": {
-    "noto-sans-regular": "s2maps://glyphs/Noto/NotoSansRegular.font",
-    "noto-sans-medium": "s2maps://glyphs/Noto/NotoSansMedium.font",
+    "noto-sans-regular": "s2maps://glyphs/s2maps/NotoSansRegular.font",
+    "noto-sans-medium": "s2maps://glyphs/s2maps/NotoSansMedium.font",
     "roboto-regular": {
-      "path": "s2maps://glyphs/Roboto/RobotoRegular.font",
+      "path": "s2maps://glyphs/s2maps/RobotoRegular.font",
       "fallback": "noto-sans-regular"
     },
     "roboto-medium": {
-      "path": "s2maps://glyphs/Roboto/RobotoMedium.font",
+      "path": "s2maps://glyphs/s2maps/RobotoMedium.font",
       "fallback": "noto-sans-medium"
     }
   },
   "icons": {
-    "street-icons": "s2maps://glyphs/streets/streets.icon"
+    "street-icons": "s2maps://glyphs/s2maps/streets.icon"
   },
   "wallpaper": {
     "background-color": "#030a2d",

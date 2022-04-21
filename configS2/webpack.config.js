@@ -70,7 +70,7 @@ module.exports = {
     extensions: ['*', '.js']
   },
   plugins: [
-    new webpack.EnvironmentPlugin(['NEXT_PUBLIC_DEV']),
+    new webpack.EnvironmentPlugin(['NEXT_PUBLIC_DEV', 'NEXT_PUBLIC_API_URL', 'NEXT_PUBLIC_API_KEY']),
     new webpack.ProgressPlugin(),
     new CorsWorkerPlugin(),
     new CompressionPlugin({

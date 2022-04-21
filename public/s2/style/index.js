@@ -5,7 +5,7 @@ import Map from '../ui/map'
 import { Wallpaper, Skybox, Tile } from '../source'
 import buildColorRamp from './buildColorRamp'
 import { encodeLayerAttribute, parseFeatureFunction, orderLayer } from './conditionals'
-import s2mapsURL from '../util/s2mapsURL'
+// import s2mapsURL from '../util/s2mapsURL'
 
 import type { MapOptions } from '../ui/map'
 import type { Sources, Layer, Mask, WallpaperStyle } from './styleSpec'
@@ -18,6 +18,16 @@ export type Analytics = {
   width: number,
   height: number
 }
+
+type StyleTimeSeries = {
+  'start-date': number | string, // date formatted string or unix timestamp
+  'end-date': 1631124000000, // date formatted string or unix timestamp
+  speed: 10800, // seconds in time series per second
+  'pause-duration': 3, // in seconds
+  'auto-play': true, // if true, start playing automatically
+  loop: true // if true, loop the animation
+}
+
 export default class Style {
   map: Map
   glType: number
@@ -71,16 +81,15 @@ export default class Style {
 
   async buildStyle (style: string | Object) {
     const self = this
-    if (typeof style === 'string') {
-      style = await fetch(s2mapsURL(style))
-        .then(res => res.json())
-        .catch(err => { console.error('failed to fetch style json', err) })
-    }
-    if (typeof style !== 'object') return
+
+    if (typeof style === 'string') return _requestStyle(style)
+    if (typeof style !== 'object') return console.error('style must be an object')
     self.dirty = true
-    style = JSON.parse(JSON.stringify(style))
+    style = JSON.parse(JSON.stringify(style)) // clone style for safety (we manipulate it)
     // check style & fill default params
     this._prebuildStyle(style)
+    // build time series data
+    if (style['time-series']) self._buildTimeSeries(style['time-series'])
     // Before manipulating the style, send it off to the worker pool manager
     this._sendStyleDataToWorkers(style)
     // extract starting values
@@ -93,6 +102,7 @@ export default class Style {
     if (!isNaN(style.zFar)) self.zFar = style.zFar
     if (!isNaN(style.minLatPosition)) self.minLatPosition = style.minLatPosition
     if (!isNaN(style.maxLatRotation)) self.maxLatRotation = style.maxLatRotation
+    if (style.noClamp === true) self.noClamp = true
     if (!isNaN(style.minzoom) && style.minzoom >= -2) self.minzoom = style.minzoom
     if (!isNaN(style.maxzoom)) {
       if (style.maxzoom <= self.minzoom) self.maxzoom = self.minzoom + 1
@@ -111,6 +121,16 @@ export default class Style {
     // build the layers
     if (style.layers) self.layers = style.layers
     await self._buildLayers()
+  }
+
+  _requestStyle (style: string) {
+    const { map, apiKey, analytics, webworker } = this
+
+    if (webworker) {
+      postMessage({ mapID: map.id, type: 'requestStyle', style, apiKey, analytics })
+    } else {
+      window.S2WorkerPool.requestStyle(map.id, style, apiKey, analytics)
+    }
   }
 
   deleteSources (sourceNames: Array<string>) {
@@ -145,6 +165,8 @@ export default class Style {
     if (!layer.layer) layer.layer = 'default'
     if (layer.source === 'mask') this.maskLayers.push(layer)
     if (layer.interactive) this.interactive = true
+    if (!layer.layout) layer.layout = {}
+    if (!layer.paint) layer.paint = {}
     layer.layerIndex = index
   }
 
@@ -162,16 +184,40 @@ export default class Style {
     }
   }
 
+  _buildTimeSeries (timeSeries: StyleTimeSeries) {
+    const res = {}
+    // setup date to beginning of current day
+    let date = new Date(Date.UTC())
+    date.setHours(0)
+    date.setMinutes(0)
+    date.setSeconds(0)
+    date.setMilliseconds(0)
+    date.set
+    date = date.getTime()
+    // build
+    res.startTime = parseDate(timeSeries['start-date'] || date)
+    res.endTime = parseDate(timeSeries['end-date'] || date + 162000) // 45 hour sequence (basically 2 tiles per face)
+    res.speed = timeSeries['speed'] || 1 // 1 hour per second (0 -> no animation)
+    res.pauseDuration = timeSeries['pause-duration'] || 0
+    res.loop = timeSeries['loop'] || false
+    res.autoPlay = timeSeries['auto-play'] || false
+    res.state = 'stop'
+    res.cursor = res.startTime
+    // tell the map about the time series
+    this.map._buildTimeCache(res)
+  }
+
   _buildWallpaper (background: WallpaperStyle) {
+    const { painter, projector } = this.map
     if (background.skybox) {
       // grab clear color and set inside painter
       const clearColor = this.clearColor = (new Color(background.loadingBackground)).getRGB()
-      this.map.painter.context.setClearColor(clearColor)
+      painter.context.setClearColor(clearColor)
       // grab wallpaper data
-      this.wallpaper = new Skybox(background, this.map.projector)
+      this.wallpaper = new Skybox(background, projector, painter)
     } else if (background['background-color']) {
       // create the wallpaper
-      this.wallpaper = new Wallpaper(this, this.map.projector)
+      this.wallpaper = new Wallpaper(this, projector, painter)
       // prep style
       this.wallpaperStyle = {
         uBackgroundColor: new Color(background['background-color']),
@@ -225,8 +271,8 @@ export default class Style {
       for (const p in layer.paint) layer.paint[p] = parseFeatureFunction(layer.paint[p], p)
     }
     // build color ramp image if applicable
-    if (type === 'heatmap' && layer.colorRamp) {
-      layer.colorRamp = this.map.painter.context.buildTexture(buildColorRamp(layer.colorRamp), 256, 1)
+    if (layer.colorRamp) {
+      layer.colorRamp = this.map.painter.context.buildTexture(buildColorRamp(layer.colorRamp, layer.lch), 256, 1)
     }
   }
 
@@ -335,4 +381,9 @@ export default class Style {
 
     return length
   }
+}
+
+function parseDate (d) {
+  const date = new Date(d)
+  return parseInt(date.getTime() / 1000)
 }

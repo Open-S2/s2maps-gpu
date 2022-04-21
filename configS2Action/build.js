@@ -58,11 +58,24 @@ async function storeAll () {
   await Promise.all([build(cssCompiler), build(jsCompiler)])
   // store latest version in s2maps.io website if possible
   if (fs.existsSync('../../web/s2maps.io/public/s2maps-gl')) {
+    // if folder does not exist, create it
+    // if (!fs.existsSync(`../../web/s2maps.io/public/s2maps-gl/${VERSION}`)) {
+    if (true) {
+      // fs.mkdirSync(`../../web/s2maps.io/public/s2maps-gl/${VERSION}`)
+      const files = fs.readdirSync('./buildS2Action')
+      for (const file of files) {
+        if (file.endsWith('.min.css') || file.endsWith('.min.js')) {
+          fs.copyFileSync(`./buildS2Action/${file}`, `../../web/s2maps.io/public/s2maps-gl/${VERSION}/${file}`)
+        }
+      }
+    } else {
+      console.log('NO COPY, FOLDER EXISTS')
+    }
     // store the latest version
     fs.writeFileSync('../../web/s2maps.io/public/s2maps-gl/latest.js', `export default '${VERSION}'`)
   }
   // store in the cloud
-  for (const region of REGIONS) await store(region)
+  // for (const region of REGIONS) await store(region)
 }
 
 async function store (region) {

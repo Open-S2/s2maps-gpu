@@ -5,7 +5,8 @@ import type { Feature } from '../../../tile.worker'
 // geometry: Array<Array<Point>> | Array<Point>
 export default function preprocessFill (feature: Feature, division: number) {
   // pull data
-  const { geometry, type, vertices, indices, extent } = feature
+  let { geometry, type, vertices, indices, extent } = feature
+  // if indices, the polygon has already been "solved"
   if (indices.length) {
     feature.vertices = geometry
     return

@@ -6,7 +6,7 @@ import type { Feature } from '../../tile.worker'
 
 type Cap = 'butt' | 'round' | 'square'
 
-export default function postprocessLine (mapID: string, source: string, tileID: string,
+export default function postprocessLine (mapID: string, sourceName: string, tileID: string,
   features: Array<Feature>, postMessage: Function) {
   // now that we have created all triangles, let's merge into bundled buffer sets
   // for the main thread to build VAOs.
@@ -84,8 +84,8 @@ export default function postprocessLine (mapID: string, source: string, tileID: 
   // ship the vector data.
   postMessage({
     mapID,
-    type: 'linedata',
-    source,
+    type: 'line',
+    sourceName,
     tileID,
     vertexBuffer,
     featureGuideBuffer

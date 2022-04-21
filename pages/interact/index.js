@@ -12,14 +12,14 @@ export default function Interact () {
   const [display, setDisplay] = useState(false)
 
   function ready (map) {
-    function geoSuccess (position) {
-      const { longitude, latitude } = position.coords
-      map.jumpTo(longitude, latitude, 7)
-    }
+    // function geoSuccess (position) {
+    //   const { longitude, latitude } = position.coords
+    //   map.jumpTo(longitude, latitude, 7)
+    // }
 
-    try {
-      navigator.geolocation.getCurrentPosition(geoSuccess)
-    } catch (_) {}
+    // try {
+    //   navigator.geolocation.getCurrentPosition(geoSuccess)
+    // } catch (_) {}
   }
 
   function click (feature) {
@@ -42,7 +42,7 @@ export default function Interact () {
 
   return (
     <div>
-      <Map style={style} click={click} ready={ready} />
+      <Map style={style} click={click} ready={ready} opts={{ contextType: 1 }} />
       <Card display={display} info={info} close={close} />
     </div>
   )

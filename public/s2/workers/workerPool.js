@@ -5,6 +5,7 @@
 import Worker from '../util/corsWorker'
 
 import type S2Map from '../s2Map'
+import type { Analytics } from '../style'
 import type { Layer, StylePackage } from '../style/styleSpec'
 import type { Marker } from './source/MarkerSource'
 
@@ -16,7 +17,8 @@ export type TileRequest = {
   j: number,
   bbox: [number, number, number, number],
   division: number,
-  size: number
+  size: number,
+  time?: number
 }
 
 // workerPool is designed to manage the workers and when a worker is free, send... work
@@ -56,6 +58,10 @@ class WorkerPool {
     this.maps[map.id] = map
   }
 
+  requestStyle (mapID: string, style: string, apiKey: string, analytics: Analytics) {
+    this.sourceWorker.postMessage({ mapID, type: 'requestStyle', style, analytics })
+  }
+
   injectStyle (mapID: string, style: StylePackage) {
     this.sourceWorker.postMessage({ mapID, type: 'style', style })
     for (const worker of this.workers) worker.postMessage({ mapID, type: 'style', style })
@@ -74,6 +80,10 @@ class WorkerPool {
 
   tileRequest (mapID: string, tiles: Array<TileRequest>, sources: Array<[string, string]>) {
     this.sourceWorker.postMessage({ mapID, type: 'tilerequest', tiles, sources })
+  }
+
+  timeRequest (mapID: string, tiles: Array<TileRequest>, sourceNames: Array<string>) {
+    this.sourceWorker.postMessage({ mapID, type: 'timerequest', tiles, sourceNames })
   }
 
   getInfo (mapID: string, featureID: number) {

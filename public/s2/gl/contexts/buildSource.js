@@ -31,6 +31,19 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, source.indexBuffer)
       gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, source.indexArray, gl.STATIC_DRAW)
     }
+    // IDS
+    if (source.fillIDArray && source.fillIDArray.length) {
+      // Create an id buffer
+      source.fillIDBuffer = gl.createBuffer()
+      // Bind and buffer
+      gl.bindBuffer(gl.ARRAY_BUFFER, source.fillIDBuffer)
+      gl.bufferData(gl.ARRAY_BUFFER, source.fillIDArray, gl.STATIC_DRAW)
+      // setup feature attribute
+      gl.enableVertexAttribArray(6)
+      gl.vertexAttribPointer(6, 3, gl.UNSIGNED_BYTE, true, 0, 0)
+      // if subtype is point or heatmap, we need to make instanced
+      if (source.subType !== 'fill') gl.vertexAttribDivisor(6, 1)
+    }
 
     // PREP VERTEX DATA
     // Create a vertex buffer
@@ -50,6 +63,7 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
       gl.vertexAttribPointer(1, 2, gl.SHORT, false, 4, 0)
       // make our aPos instanced
       gl.vertexAttribDivisor(1, 1)
+
 
       // if heatmap, we encode the "indexArray"
       // Create a weight buffer
@@ -211,7 +225,9 @@ export default function buildSource (context: WebGL2Context | WebGLContext, sour
 
     // cleanup
     context.cleanup()
-  } else if (source.type === 'raster') {
+  } else if (source.type === 'raster' || source.type === 'raster-dem') {
+    // do not premultiply
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false)
     // setup texture params
     source.texture = gl.createTexture()
     gl.bindTexture(gl.TEXTURE_2D, source.texture)

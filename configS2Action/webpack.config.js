@@ -1,8 +1,12 @@
+const dotenv = require('dotenv')
 const webpack = require('webpack')
 const path = require('path')
 const { version } = require('../package.json')
 
 const CorsWorkerPlugin = require('../config/cors-worker-plugin')
+
+// read env file from .env.production
+dotenv.config({ path: '.env.production' })
 
 // This is the production and development configuration.
 // It is focused on developer experience, fast rebuilds, and a minimal bundle.
@@ -15,6 +19,7 @@ module.exports = {
   output: {
     path: path.join(__dirname, '../buildS2Action'),
     // publicPath: 'http://192.168.0.189:3000/',
+    // publicPath: `http://localhost:3000/s2maps-gl/v${version}/`,
     publicPath: `https://s2maps.io/s2maps-gl/v${version}/`,
     filename: '[name].min.js',
     // this defaults to 'window', but by setting it to 'this' then
@@ -22,7 +27,7 @@ module.exports = {
     globalObject: 'this'
   },
   context: path.join(__dirname, '/../public'),
-  devtool: 'source-map',
+  // devtool: 'source-map',
   module: {
     rules: [
       {
@@ -68,7 +73,7 @@ module.exports = {
     extensions: ['*', '.js']
   },
   plugins: [
-    new webpack.EnvironmentPlugin(['NEXT_PUBLIC_DEV']),
+    new webpack.EnvironmentPlugin(['NEXT_PUBLIC_DEV', 'NEXT_PUBLIC_API_URL']),
     new webpack.ProgressPlugin(),
     new CorsWorkerPlugin()
   ]

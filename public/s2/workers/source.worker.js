@@ -3,6 +3,7 @@
 import { GlyphSource, LocalSource, MarkerSource, S2TilesSource, S2JSONSource, Source, TexturePack, Session } from './source'
 import s2mapsURL from '../util/s2mapsURL'
 
+import type { Analytics } from '../style'
 import type { StylePackage, Layer } from '../style/styleSpec'
 import type { Marker } from './source/markerSource'
 import type { GlyphRequest } from './source/glyphSource'
@@ -52,8 +53,10 @@ export default class SourceWorker {
   onMessage ({ data }) {
     const { mapID, type } = data
     if (type === 'port') this._loadWorkerPort(data.messagePort, data.postPort, data.id)
+    else if (type === 'requestStyle') this._requestStyle(mapID, data.style, data.apiKey, data.analytics)
     else if (type === 'style') this._loadStyle(mapID, data.style)
     else if (type === 'tilerequest') this._request(mapID, data.tiles, data.sources)
+    else if (type === 'timerequest') this._requestTime(mapID, data.tiles, data.sourceNames)
     else if (type === 'glyphrequest') this._glyphRequest(mapID, data.id, data.reqID, data.glyphList, data.iconList)
     else if (type === 'getInfo') this._getInfo(mapID, data.featureID)
     else if (type === 'addMarkers') this._addMarkers(mapID, data.markers, data.sourceName)
@@ -70,16 +73,23 @@ export default class SourceWorker {
     this.session.loadWorker(messagePort, postPort, id)
   }
 
+  _requestStyle (mapID: string, style: string, apiKey: string, analytics: Analytics) {
+    // build maps session
+    this.session.loadStyle(analytics, mapID, apiKey)
+    // request style
+    this.session.requestStyle(mapID, style)
+  }
+
   _loadStyle (mapID: string, style: StylePackage = {}) {
     // create the source map, if sources already exists, we are dumping the old sources
     this.sources[mapID] = {}
     // pull style data
-    const { sources, layers, fonts, icons, analytics, apiKey } = style
+    const { sources, layers, fonts, icons, glyphs, analytics, apiKey } = style
     this.layers[mapID] = layers
     // create a session with the style
     this.session.loadStyle(analytics, mapID, apiKey)
     // now build sources
-    this._buildSources(mapID, sources, layers, fonts, icons)
+    this._buildSources(mapID, sources, layers, fonts, icons, glyphs)
   }
 
   _addLayer (mapID: string, layer: Layer, index: number) {
@@ -120,23 +130,22 @@ export default class SourceWorker {
     for (let i = 0; i < layers.length; i++) layers[i] = newLayers[i]
   }
 
-  async _buildSources (mapID: string, sources = {}, layers: Array<Layer>, fonts = {}, icons = {}) {
+  async _buildSources (mapID: string, sources = {}, layers: Array<Layer>, fonts = {}, icons = {}, glyphs = {}) {
     // sources
     for (const [name, source] of Object.entries(sources)) {
       this._createSource(mapID, name, source, layers.filter(layer => layer.source === name))
     }
     // fonts & icons
-    for (const [name, source] of Object.entries({ ...fonts, ...icons })) {
+    for (const [name, source] of Object.entries({ ...fonts, ...icons, ...glyphs })) {
       if (typeof source === 'object') {
         this._createGlyphSource(mapID, name, source.path, source.fallback)
       } else { this._createGlyphSource(mapID, name, source) }
     }
 
     // add in glyph fallbacks
-    const { glyphs } = this
-    for (const [, glyphSource] of Object.entries(glyphs)) {
+    for (const [, glyphSource] of Object.entries(this.glyphs)) {
       const { fallback } = glyphSource
-      if (fallback) glyphSource.fallback = glyphs[fallback]
+      if (fallback) glyphSource.fallback = this.glyphs[fallback]
     }
   }
 
@@ -160,22 +169,19 @@ export default class SourceWorker {
     // store
     this.sources[mapID][name] = source
     // build
-    source.build(mapID).finally(() => {
-      // incase the input was originally an object, insert the metadata
-      if (metadata) source._buildMetadata(metadata)
-    })
+    source.build(mapID, metadata)
   }
 
   _createGlyphSource (mapID: string, name: string, input: string, fallback?: string) {
-    const { texturePack } = this
+    const { texturePack, session } = this
     // prepare
     const apiSource = input.includes('s2maps://')
     const path = (apiSource) ? s2mapsURL(input) : input
     // check if already exists
     if (this.glyphs[name]) return
-    const source = new GlyphSource(name, path, fallback, texturePack, apiSource)
+    const source = new GlyphSource(name, path, fallback, texturePack, apiSource, session)
     this.glyphs[name] = source
-    source.build()
+    source.build(mapID)
   }
 
   async _request (mapID: string, tiles: Array<TileRequest>, sources?: Array<[string, string]> = []) {
@@ -194,6 +200,17 @@ export default class SourceWorker {
     for (const tile of tiles) {
       for (const source of Object.values(this.sources[mapID])) {
         if (sourceNames.length && !sourceNames.includes(source.name)) continue
+        if (source.isTimeFormat) continue
+        source.tileRequest(mapID, tile)
+      }
+    }
+  }
+
+  async _requestTime (mapID: string, tiles: Array<TileRequest>, sourceNames: Array<string>) {
+    // build requests
+    for (const tile of tiles) {
+      for (const source of Object.values(this.sources[mapID])) {
+        if (!source.isTimeFormat || !sourceNames.includes(source.name)) continue
         source.tileRequest(mapID, tile)
       }
     }

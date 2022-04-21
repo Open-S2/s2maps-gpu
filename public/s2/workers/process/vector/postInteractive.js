@@ -1,5 +1,5 @@
 // @flow
-export default function postInteractiveData (mapID: string, source: string,
+export default function postInteractiveData (mapID: string, sourceName: string,
   tileID: BigInt, interactiveMap: Map<number, Object>, postMessage: Function) {
   const interactiveGuide = []
   const interactiveData = []
@@ -21,8 +21,8 @@ export default function postInteractiveData (mapID: string, source: string,
   // ship the vector data.
   postMessage({
     mapID,
-    type: 'interactivedata',
-    source,
+    type: 'interactive',
+    sourceName,
     tileID,
     interactiveGuideBuffer,
     interactiveDataBuffer

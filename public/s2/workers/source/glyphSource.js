@@ -64,30 +64,34 @@ export default class GlyphSource {
   maxHeight: number
   range: number
   texturePack: TexturePack
+  needsToken: boolean = false
+  session: Session
   colors: Colors
   iconMap: IconMap
   glyphMap: Map<Unicode, { pos: number, length: number }> = new Map() // existing glyphs
   glyphWaitlist: Map<Unicode, Promise> = new Map()
   glyphCache: Map<Glyph> = new Map() // glyphs we have built already
   requestCache: Array<[string, IconRequest | GlyphRequest, string, string, MessageChannel.port2]> = [] // each element in array -> [glyphList, mapID, reqID, worker]
-  constructor (name: string, path: string, fallback?: string, texturePack: TexturePack) {
+  constructor (name: string, path: string, fallback?: string, texturePack: TexturePack, needsToken: boolean, session: Session) {
     this.name = name
     this.path = path
     this.fallback = fallback // temporary reference to the source name
     this.texturePack = texturePack
+    if (needsToken) this.needsToken = true
+    this.session = session
   }
 
-  async build () {
+  async build (mapID: string) {
     const self = this
-    const metadata = await this._fetch(`${this.path}?bytes=0-u`)
+    const metadata = await this._fetch(`${this.path}?bytes=0-u`, mapID)
 
     if (!metadata) {
       self.active = false
       console.log(`FAILED TO extrapolate ${this.path} metadata`)
-    } else { await self._buildMetadata(metadata) }
+    } else { await self._buildMetadata(metadata, mapID) }
   }
 
-  async _buildMetadata (metadata: ArrayBuffer) {
+  async _buildMetadata (metadata: ArrayBuffer, mapID: string) {
     const { glyphMap } = this
     const meta = new DataView(metadata)
     // build the metadata
@@ -100,7 +104,7 @@ export default class GlyphSource {
     const glyphMetaSize = meta.getUint32(14, true)
     const iconMapSize = meta.getUint32(22, true)
     const colorBufSize = meta.getUint32(26, true)
-    const metadataBuf = await this._fetch(`${this.path}?bytes=u-${base36(glyphMetaSize)}`)
+    const metadataBuf = await this._fetch(`${this.path}?bytes=u-${base36(glyphMetaSize)}`, mapID)
     const glyphMapSize = metadataBuf.byteLength - iconMapSize - colorBufSize
     const glyphCount = glyphMapSize / 8
 
@@ -246,14 +250,14 @@ export default class GlyphSource {
     })
   }
 
-  _requestGlyphs (list, mapID) {
+  _requestGlyphs (list, mapID: string) {
     const { extent, glyphCache, glyphWaitlist, maxHeight, texturePack } = this
     // 1) build the ranges, max 35 glyphs per request
     const requests = this.buildRequests(list)
     // 2) return the request promise, THEN: store the glyphs in cache, build the images, and ship the images to the mapID
     const promises = []
     for (const request of requests) {
-      promises.push(this._fetch(request).then(glyphsBuf => {
+      promises.push(this._fetch(request, mapID).then(glyphsBuf => {
         const images = []
         const dv = new DataView(glyphsBuf)
         const size = dv.byteLength - 1
@@ -321,8 +325,11 @@ export default class GlyphSource {
     return requests
   }
 
-  async _fetch (path: string) {
-    const res = await fetch(path, { headers: { Accept: 'application/protobuf' } })
+  async _fetch (path: string, mapID: string) {
+    const headers = {}
+    const Authorization = this.needsToken && await this.session.requestSessionToken(mapID)
+    if (Authorization) headers.Authorization = Authorization
+    const res = await fetch(path, { headers })
     if (res.status !== 200 && res.status !== 206) return null
     return res.arrayBuffer()
   }

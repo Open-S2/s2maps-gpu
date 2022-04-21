@@ -44,28 +44,29 @@ export default class S2TilesSource extends Source {
     if (!ab || ab.byteLength !== DB_METADATA_SIZE) { // if the return is empty, we failed
       self.active = false
       console.log(`Failed to extrapolate ${this.path} metadata`)
-    } else { // prep a data view, store in header, build metadata
-      const dv = new DataView(ab, 0, 20)
-      if (dv.getUint16(0, true) !== 12883) { // the first two bytes are S and 2, we validate
-        self.active = false
-        console.log(`Bad metadata from ${this.path}`)
-      } else { // parse
-        // grab the version
-        this.version = dv.getUint16(2, true)
-        // parse the JSON metadata length and offset
-        const mL = dv.getUint32(4, true)
-        const mO = getUint48(dv, 8)
-        if (mL === 0 || mO === 0) { // if the metadata is empty, we failed
-          self.active = false
-          console.log(`Failed to extrapolate ${this.path} metadata`)
-          return
-        }
-        // create root directories
-        for (const face of [0, 1, 2, 3, 4, 5]) this.rootDir[face] = new DataView(ab, 20 + face * DIR_SIZE, DIR_SIZE)
-        const metadata = await this.getRange(`${this.path}?type=metadata`, mO, mL, mapID, true)
-        this._buildMetadata(metadata, mapID)
-      }
+      return
     }
+    // prep a data view, store in header, build metadata
+    const dv = new DataView(ab, 0, 20)
+    if (dv.getUint16(0, true) !== 12883) { // the first two bytes are S and 2, we validate
+      self.active = false
+      console.log(`Bad metadata from ${this.path}`)
+      return
+    }
+    // parse: grab the version
+    this.version = dv.getUint16(2, true)
+    // parse the JSON metadata length and offset
+    const mL = dv.getUint32(4, true)
+    const mO = getUint48(dv, 8)
+    if (mL === 0 || mO === 0) { // if the metadata is empty, we failed
+      self.active = false
+      console.log(`Failed to extrapolate ${this.path} metadata`)
+      return
+    }
+    // create root directories
+    for (const face of [0, 1, 2, 3, 4, 5]) this.rootDir[face] = new DataView(ab, 20 + face * DIR_SIZE, DIR_SIZE)
+    const metadata = await this.getRange(`${this.path}?type=metadata`, mO, mL, mapID)
+    this._buildMetadata(metadata, mapID)
   }
 
   // Here, we use the memory mapped file directory tree system to find our data
@@ -84,7 +85,7 @@ export default class S2TilesSource extends Source {
     const data = await this.getRange(`${this.path}?type=tile&enc=${encoding}`, node[0], node[1], mapID)
     if (data) {
       const worker = session.requestWorker()
-      worker.postMessage({ mapID, type: type === 'vector' ? 'pbfdata' : 'rasterdata', tile, sourceName, parent, data, layerIndexes }, [data])
+      worker.postMessage({ mapID, type, tile, sourceName, parent, data, layerIndexes }, [data])
     } else { return this._flush(mapID, id, sourceName) }
   }
 
@@ -128,16 +129,16 @@ export default class S2TilesSource extends Source {
     return null
   }
 
-  async getRange (url: string, offset: number, length: number, mapID: string, json?: boolean = false): Promise<ArrayBuffer | Object> {
-    const { type } = this
+  async getRange (url: string, offset: number, length: number, mapID: string): Promise<ArrayBuffer | Object> {
+    const { needsToken, type, session } = this
     const headers = { Accept: 'application/x-protobuf,image/webp,application/json' }
     const bytes = offset + '-' + (offset + length - 1)
-    const Authorization = this.needsToken && await this.session.requestSessionToken(mapID)
+    const Authorization = needsToken && await session.requestSessionToken(mapID)
     if (Authorization) headers.Authorization = Authorization
     if (length === 0 || length > MAX_SIZE) return null
     const res = await fetch(`${url}&bytes=${bytes}&subtype=${type}`, { headers })
     if (res.status !== 200 && res.status !== 206) return null
-    if (json) return res.json()
+    if (res.headers.get('content-type') === 'application/json') return res.json()
     return res.arrayBuffer()
   }
 }

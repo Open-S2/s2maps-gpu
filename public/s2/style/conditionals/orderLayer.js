@@ -7,6 +7,7 @@ export default function orderLayer (layer: Layer) {
   else if (layer.type === 'heatmap') orderHeatmap(layer)
   else if (layer.type === 'line') orderLine(layer)
   else if (layer.type === 'glyph') orderGlyph(layer)
+  else if (layer.type === 'raster' || layer.type === 'sensor' || layer.type === 'raster-dem') orderRaster(layer)
 }
 
 function orderFill (layer: Layer) {
@@ -33,7 +34,7 @@ function orderPoint (layer: Layer) {
 function orderHeatmap (layer: Layer) {
   const { layout, paint } = layer
   // move color ramp
-  layer.colorRamp = layout['color-ramp'] || [0, 'rgba(68, 1, 84, 0)', 0.2, 'rgba(58, 83, 139, 0.85)', 0.4, '#23898e', 0.6, '#35b779', 0.8, '#95d840', 1, '#fde725']
+  layer.colorRamp = layout['color-ramp'] || [0, '#44015400', 0.2, '#3a538bd9', 0.4, '#23898e', 0.6, '#35b779', 0.8, '#95d840', 1, '#fde725']
   // store
   layer.layoutLocal = {
     weight: layout.weight || 0.5
@@ -50,10 +51,15 @@ function orderHeatmap (layer: Layer) {
 // line order: (paint)color->width->dasharray->(layout)cap->join
 function orderLine (layer: Layer) {
   const { paint } = layer
-  // store
+  // paint
   layer.paint = {
     color: paint.color || 'rgba(0, 0, 0, 0)',
     width: paint.width || 1
+  }
+  // layount
+  layer.layout = {
+    cap: paint.cap || 'butt',
+    join: paint.join || 'miter'
   }
 }
 
@@ -102,4 +108,17 @@ function orderGlyph (layer: Layer) {
   layer.iconPaint = {
     'icon-size': (paint['icon-size']) ? JSON.parse(JSON.stringify(paint['icon-size'])) : 16
   }
+}
+
+// order: (paint)opacity
+function orderRaster (layer: Layer) {
+  // grab variables
+  const { type, layout, paint } = layer
+  // move color ramp
+  if (type === 'sensor') layer.colorRamp = layout['color-ramp'] || [0, '#44015400', 0.2, '#3a538bd9', 0.4, '#23898e', 0.6, '#35b779', 0.8, '#95d840', 1, '#fde725']
+  // store
+  layer.paint = {
+    opacity: paint.opacity || 1
+  }
+  layer.layout = {}
 }

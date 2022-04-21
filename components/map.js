@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from 'react'
 
 const { NEXT_PUBLIC_API_KEY } = process.env
+const { NEXT_PUBLIC_LOCATION } = process.env
 
 function Map (props) {
   const s2map = useRef()
@@ -28,25 +29,30 @@ function Map (props) {
   }, [])
 
   return (
-    <div className='App'>
-      <div style={{ height }} ref={node => { s2mapContainer.current = node }} />
+    <div>
+      <div style={{ height, width: '100%' }} ref={node => { s2mapContainer.current = node }} />
     </div>
   )
 }
 
 function prepCanvas (container, s2map, props) {
   // pull in properties
-  let { style, opts, click, ready, info, mouseenter, mouseleave } = props
+  let { style, opts, click, ready, info, mouseenter, mouseleave, noAPIKey } = props
   if (!opts) opts = {}
   // don't bother reloading without a style or container
   if (!style || !container) return
+
+  // replace website in sources
+  for (const source in style.sources) {
+    if (style.sources[source] && typeof style.sources[source] === 'string') style.sources[source] = style.sources[source].replace('{{s2maps}}', NEXT_PUBLIC_LOCATION)
+  }
 
   // build new map
   import('../public/s2').then(({ S2Map }) => {
     s2map.current = new S2Map({
       ...opts,
       style,
-      apiKey: NEXT_PUBLIC_API_KEY,
+      apiKey: noAPIKey ? null : NEXT_PUBLIC_API_KEY,
       container,
       projection: 'blend',
       colorBlindController: (typeof opts.zoomController === 'boolean') ? opts.zoomController : true,

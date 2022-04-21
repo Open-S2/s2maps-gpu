@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "name": "s2test",
+  "center": [-122.4585607773497, 37.778443127730476],
+  "zoom": -0.5,
+  "minzoom": -0.5,
+  "maxzoom": 1,
+  "sources": {
+    "countries": "http://localhost:8000/s2json/countriesHD.s2json"
+  },
+  "fonts": {},
+  "colorBlind": false,
+  "layers": [
+    {
+      "name": "background",
+      "type": "fill",
+      "source": "mask",
+      "opaque": true,
+      "layout": {},
+      "paint": {
+        "color": "#fff"
+      }
+    },
+    {
+      "name": "country-fill",
+      "source": "countries",
+      "type": "fill",
+      "invert": true,
+      "layout": {},
+      "paint": {
+        "color": "#f5f9fb"
+      }
+    },
+    {
+      "name": "country-fill",
+      "source": "countries",
+      "type": "fill",
+      "filter": ["iso2", "has", ["US", "DE", "RU", "AU"]],
+      "interactive": true,
+      "cursor": "pointer",
+      "layout": {},
+      "paint": {
+        "color": [
+          "data-condition",
+          ["iso2", "==", "US"],
+          "#007bfe",
+          ["iso2", "==", "DE"],
+          "#dbeafa",
+          ["iso2", "==", "RU"],
+          "#f3f7fb",
+          ["iso2", "==", "AU"],
+          "#f0f6fa"
+        ]
+      }
+    },
+    {
+      "name": "country-line",
+      "source": "countries",
+      "type": "line",
+      "layout": {},
+      "paint": {
+        "color": "#bbd3de",
+        "width": 1.25
+      }
+    }
+  ]
+}

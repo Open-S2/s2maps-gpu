@@ -4,7 +4,7 @@ import featureSort from '../featureSort'
 
 import type { Feature } from '../../tile.worker'
 
-export default function postprocessPoint (mapID: string, source: string, tileID: string,
+export default function postprocessPoint (mapID: string, sourceName: string, tileID: string,
   features: Array<Feature>, postMessage: Function, heatmap?: boolean = false) {
   // now that we have created all triangles, let's merge into bundled buffer sets
   // for the main thread to build VAOs.
@@ -30,6 +30,7 @@ export default function postprocessPoint (mapID: string, source: string, tileID:
   const vertices: Array<number> = []
   const weights: Array<number> = []
   const featureGuide: Array<number> = []
+  const ids: Array<number> = []
   let encodings: Array<number> = features[0].code
   let subEncodings: Array<number> = features[0].featureCode
   let indexCount: number = 0
@@ -62,7 +63,10 @@ export default function postprocessPoint (mapID: string, source: string, tileID:
     // NOTE: Spreader functions on large arrays are failing in chrome right now -_-
     // so we just do a for loop. Store vertices and feature code for each vertex set
     const fl: number = feature.vertices.length
-    for (let f = 0; f < fl; f++) vertices.push(feature.vertices[f])
+    for (let f = 0; f < fl; f++) {
+      vertices.push(feature.vertices[f])
+      if (f % 2 === 0) ids.push(...feature.idRGB)
+    }
     // build weights if heatmap (hidden in indices)
     if (heatmap) {
       const wl: number = feature.indices.length
@@ -83,15 +87,17 @@ export default function postprocessPoint (mapID: string, source: string, tileID:
   // Upon building the batches, convert to buffers and ship.
   const vertexBuffer = new Int16Array(vertices).buffer
   const weightBuffer = new Float32Array(weights).buffer
+  const fillIDBuffer = new Uint8Array(ids).buffer // pre-store each id as an rgb value
   const featureGuideBuffer = new Float32Array(featureGuide).buffer
   // ship the vector data.
   postMessage({
     mapID,
-    type: (heatmap) ? 'heatmapdata' : 'pointdata',
-    source,
+    type: (heatmap) ? 'heatmap' : 'point',
+    sourceName,
     tileID,
     vertexBuffer,
     weightBuffer,
+    fillIDBuffer,
     featureGuideBuffer
-  }, [vertexBuffer, weightBuffer, featureGuideBuffer])
+  }, [vertexBuffer, weightBuffer, fillIDBuffer, featureGuideBuffer])
 }

@@ -8,10 +8,12 @@ import { toIJ, level } from 's2projection/s2CellID'
 
 import type WebGLContext from '../gl/contexts/WebGLContext'
 import type WebGL2Context from '../gl/contexts/WebGL2Context'
-import type { RasterTileSource, VectorTileSource, GlyphTileSource } from '../gl/contexts/context'
+import type { VectorTileSource, GlyphTileSource, RasterTileSource } from '../gl/contexts/context'
 import type Projector from '../ui/camera/projector'
 import type { Face, Layer, Mask, XYZ } from '../style/styleSpec'
 import type { ProgramType } from '../gl/programs/program'
+import type { RasterFeatureGuide } from '../workers/process/raster'
+import type TimeCache from '../ui/camera/timeCache'
 
 opaque type GLenum = number
 
@@ -40,7 +42,8 @@ export type FeatureGuide = {
   color?: Float32Array,
   opacity?: Float32Array,
   mode?: GLenum, // TRIANGLES | TRIANGLE_STRIP | TRIANGLE_FAN | etc
-  lch?: boolean
+  lch?: boolean,
+  getTextures?: Function // used for sensors. we need to be fed the textures to bind them
 }
 
 // eslint-disable-next-line
@@ -116,6 +119,8 @@ export default class Tile {
       if (feature.maskLayer) continue // ignore mask features
       if (this.zoom <= maxzoom) this.featureGuide.push({ ...feature, tile: this, parent, bounds })
     }
+    // interactive guides
+    for (const [id, interactive] of parent.interactiveGuide) this.interactiveGuide.set(id, interactive)
   }
 
   // currently this is for glyphs, points, and heatmaps. By sharing glyph data with children,
@@ -182,15 +187,15 @@ export default class Tile {
     }
   }
 
-  flush (data: { source: string }) {
-    const { source } = data
+  flush (data: { sourceName: string }) {
+    const { sourceName } = data
     // remove "left over" feature guide data from parent injection or old data that wont be replaced in the future
     this.featureGuide = this.featureGuide.filter(fg => {
       const split = fg.sourceName.split(':')
       const fgType = split.pop()
-      const fgSource = split.join(':')
+      const fgSource = split.join(':') // remerge sourceName with parentHash should it exist
       return !(
-        fgSource === source &&
+        fgSource === sourceName &&
         !data[fgType] &&
         fg.parent
       )
@@ -251,8 +256,8 @@ export default class Tile {
         mode: this.sourceData.mask.mode
       }
       if (this.context.type === 1 && paint) {
-        feature.color = (paint.color(null, null, this.zoom)).getRGB()
-        feature.opacity = [paint.opacity(null, null, this.zoom)]
+        if (paint.color) feature.color = (paint.color(null, null, this.zoom)).getRGB()
+        if (paint.opacity) feature.opacity = [paint.opacity(null, null, this.zoom)]
       }
       this.featureGuide.push(feature)
     }
@@ -274,35 +279,44 @@ export default class Tile {
     this.context.buildSource(this.context, mask)
   }
 
-  injectRasterData (sourceName: string, layerIndexes: Array<number>, image: Image,
-    layers: Array<Layer>) {
+  // sourceName, image, featureGuides, time, timeCache
+  injectRaster (sourceName: string, image: Image, featureGuides: RasterFeatureGuide,
+    layers: Array<Layer>, time?: number, timeCache?: TimeCache) {
     // filter parent data if applicable
     this.featureGuide = this.featureGuide.filter(fg => fg.rasterSource !== sourceName)
-    const { size } = this
+    const { id, size } = this
     // prep the source
     const rasterSource = this.sourceData[sourceName] = { type: 'raster', size, image }
     this.context.buildSource(rasterSource)
+    // store source in timeCache should it exist
+    if (time) timeCache.addSourceData(id, time, sourceName, rasterSource)
     // store texture information to featureGuide
-    for (const layerIndex of layerIndexes) {
-      const { depthPos } = layers[layerIndex]
-      this.featureGuide.push({
+    for (const { opacity, layerIndex, type } of featureGuides) {
+      const { colorRamp, depthPos, code } = layers[layerIndex]
+      const feature = {
         tile: this,
         faceST: this.faceST,
         layerIndex,
+        colorRamp,
         depthPos,
         source: this.sourceData.mask,
         rasterSource: sourceName,
         sourceName: 'mask',
         subType: 'fill',
-        type: 'raster',
-        featureCode: [0],
+        type,
+        featureCode: new Float32Array([0]),
+        layerCode: code,
+        opacity,
         texture: rasterSource.texture
-      })
+      }
+      if (time) feature.getTextures = () => { return timeCache.getTextures(id, sourceName) }
+      this.featureGuide.push(feature)
     }
   }
 
   injectVectorSourceData (sourceName: string, vertexArray: Int16Array, indexArray?: Uint32Array,
-    codeTypeArray: Uint8Array, featureGuideArray: Float32Array, layers: Array<Layer>): VectorTileSource {
+    fillIDArray: Uint8Array, codeTypeArray: Uint8Array, featureGuideArray: Float32Array,
+    layers: Array<Layer>): VectorTileSource {
     // filter parent data if applicable
     this.featureGuide = this.featureGuide.filter(fg => fg.sourceName !== sourceName)
     // store a reference to the source
@@ -312,6 +326,7 @@ export default class Tile {
       subType,
       vertexArray,
       indexArray,
+      fillIDArray,
       codeTypeArray
     }
     // we work off the featureGuideArray, adding to the buffer as we go
@@ -330,7 +345,7 @@ export default class Tile {
       // build featureCode
       const featureCode = new Float32Array(encodingSize ? [...featureGuideArray.slice(i, i + encodingSize)] : [0])
       // grab the layers type and code
-      const { type, invert, depthPos, opaque, code, lch, colorRamp } = layers[layerIndex]
+      const { type, invert, depthPos, opaque, code, lch, colorRamp, interactive } = layers[layerIndex]
       // create and store the featureGuide
       const feature = {
         tile: this,
@@ -348,6 +363,7 @@ export default class Tile {
         featureCode, // NOTE: The sorting algorithm doesn't work if an array is empty, so we have to have at least one number, just set it to 0
         layerCode: code,
         lch,
+        interactive,
         colorRamp
       }
       // update index

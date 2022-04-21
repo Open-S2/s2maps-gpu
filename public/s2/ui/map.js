@@ -11,7 +11,8 @@ import type { AnimationType, AnimationDirections } from './camera/animator'
 import type { TileRequest } from '../workers/workerPool'
 
 export type MapOptions = {
-  container?: HTMLElement,
+  contextType?: 1 | 2 | 3, // can force a specific context type (1 -> webgl1, 2 -> webgl2, 3 -> webgpu)
+  container?: HTMLElement, // used by offscreen canvas
   interactive?: boolean,
   apiKey: string,
   style: Object | string,
@@ -27,7 +28,8 @@ export type MapOptions = {
   canZoom?: boolean,
   canMove?: boolean,
   darkMode?: boolean,
-  webworker?: boolean
+  webworker?: boolean,
+  noClamp?: boolean // lat and lon can be any number
 }
 
 type ResizeDimensions = { width: number, height: number }
@@ -43,7 +45,6 @@ export default class Map extends Camera {
   mousePosition: [number, number] = [0, 0]
   injectionQueue: Array<Function> = []
   resizeQueued: null | ResizeDimensions = null
-  webworker: boolean = false
   dragPan: DragPan
   canMove: boolean = true
   canZoom: boolean = true
@@ -86,22 +87,23 @@ export default class Map extends Camera {
   // we figure out which context we can use before pulling in GL or GPU
   // After we have the appropriate context, we build the painter and then the
   async _createPainter (options: MapOptions): Promise<boolean> {
+    const { contextType } = options
     let context
     let type = 0
     // first try webGPU
-    context = this._canvas.getContext('webgpu')
-    if (context && typeof context.configure === 'function') {
+    if (contextType === 3) {
+      context = this._canvas.getContext('webgpu')
       type = 3
     } else {
       // prep webgl style options
       const webglOptions = { powerPreference: 'high-performance', antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: false, alpha: true, stencil: true }
       // than try webgl2
-      context = this._canvas.getContext('webgl2', webglOptions)
-      if (context && typeof context.getParameter === 'function') {
+      if (contextType === 2) {
+        context = this._canvas.getContext('webgl2', webglOptions)
         type = 2
       } else { // last effort, webgl1
         context = this._canvas.getContext('webgl', webglOptions)
-        if (context && typeof context.getParameter === 'function') type = 1
+        type = 1
       }
     }
     // create the painter and build the context
@@ -365,7 +367,7 @@ export default class Map extends Camera {
   // awaitReplace => to avoid flickering (i.e. adding/removing markers), we can wait for an update (from source+tile workers) on how the tile should look
   _resetTileCache (sourceNames?: Array<string>, keepCache: boolean, awaitReplace: boolean): Array<TileRequest> {
     // get tiles in view, prep request for said tiles
-    const tilesInView = this._getTiles().map(tile => tile.id)
+    const tilesInView = this.getTiles()
     const tileRequests: Array<TileRequest> = []
     // delete all tiles not in view, add to tileRequests for those that are,
     // and delete source data from tile
@@ -534,6 +536,12 @@ export default class Map extends Camera {
     if (done || mouseActive) this.currAnimFunction = null
   }
 
+  _updatePainter () {
+    const { painter } = this
+    painter.dirty = true
+    this.render()
+  }
+
   /* DRAW */
 
   // we don't want to over request rendering, so we render with a limiter to
@@ -545,6 +553,8 @@ export default class Map extends Camera {
     self.renderNextFrame = true
     requestAnimationFrame(now => {
       self.renderNextFrame = false
+      // if timeCache exists, run animation function
+      if (self.timeCache) self.timeCache.animate(now, self._updatePainter.bind(self))
       // if animation currently exists, run it
       if (self.currAnimFunction) self.currAnimFunction(now)
       // if resize has been queued, we do so now

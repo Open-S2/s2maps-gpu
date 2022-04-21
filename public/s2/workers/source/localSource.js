@@ -43,7 +43,7 @@ export default class LocalSource {
             return {
               properties: { id, face, zoom, i, j },
               type: 1, // Point
-              loadGeometry: () => { return [[0, 8192]] }
+              loadGeometry: () => { return [[4096, 4096]] }
             }
           }
         }

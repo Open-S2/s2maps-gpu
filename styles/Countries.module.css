@@ -1,0 +1,74 @@
+.countries {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  color: #212529;
+}
+
+.countriesDark {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  color: #212529;
+  background-color: #171c22;
+}
+
+.countriesMapContainer {
+  /* width: 600px; */
+  /* height: 400px; */
+  margin: auto;
+}
+
+.popup {
+  display: flex;
+  flex-direction: column;
+  background-color: #fff;
+  justify-content: flex-start;
+  /* border: 1px solid #ccc; */
+  border-radius: 5px;
+  box-shadow: 0 0 7px rgba(0, 0, 0, 0.2);
+  padding: 15px;
+  transform: translate(-50%, calc(-100% - 10px));
+}
+
+.title {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  font-weight: 500;
+  font-size: 18px;
+}
+
+.flag {
+  width: 30px;
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid #bbd3de;
+}
+
+.name {
+  margin-left: 10px;
+  /* font-weight: 500; */
+}
+
+.queries {
+  margin-top: 5px;
+  font-size: 14px;
+  color: #30353a;
+}
+
+.topDomains {
+  margin-top: 12px;
+  margin-bottom: 5px;
+  font-size: 15px;
+  color: #f6821f;
+  text-transform: uppercase;
+  font-weight: 700;
+  /* letter-spacing: 0.05em; */
+}
+
+.domain {
+  font-size: 13px;
+  color: #6e757c;
+  margin-top: 2px;
+}
