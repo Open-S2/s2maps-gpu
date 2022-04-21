@@ -11,7 +11,6 @@ export default function Range () {
       <Map style={style} />
 
       <div id={styles.legendContainer}>
-
         <div id={styles.legendHeader}>Project Status</div>
         <div id={styles.legendChoropleth}>
           <div className={styles.choroplethContainer}>
@@ -38,7 +37,6 @@ export default function Range () {
           <span className={styles.circle} id={styles.circle6} />
         </div>
         <div id={styles.legendHeader}>1 - 100+ MW</div>
-
       </div>
     </div>
   )

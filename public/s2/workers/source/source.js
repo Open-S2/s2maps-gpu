@@ -39,14 +39,17 @@ export type ParentLayers = {
   [string | number]: ParentLayer
 }
 
+export type Format = 'fzxy' | 'tfzxy'
+
 export default class Source {
   ready: boolean = false
   active: boolean = true
   name: string
   path: string
-  type: 'vector' | 'raster' | 'rasterDEM' | 'rasterData' = 'vector' // how to process the result
+  type: 'vector' | 'raster' | 'raster-dem' = 'vector' // how to process the result
   extension: string
   encoding: 'none' | 'br' | 'gz'
+  isTimeFormat: boolean = false
   attributions: { [string]: string } = {}
   styleLayers: Array<Layer>
   layers: LayerMetaData
@@ -54,6 +57,7 @@ export default class Source {
   maxzoom: number = 20
   faces: Set<Face>
   needsToken: boolean = false
+  time: number
   session: Session
   requestCache: Array<[string, TileRequest]> = [] // each element in array -> [mapID, TileRequest]
   constructor (name: string, layers: Array<Layer>, path?: string, needsToken: boolean, session: Session) {
@@ -65,9 +69,9 @@ export default class Source {
   }
 
   // if this function runs, we assume default tile source
-  async build (mapID) {
+  async build (mapID, metadata?: Metadata) {
     const self = this
-    const metadata = await this._fetch(`${this.path}/metadata.json`, mapID, true)
+    if (!metadata) metadata = await this._fetch(`${this.path}/metadata.json`, mapID)
     if (!metadata) {
       self.active = false
       console.log(`FAILED TO extrapolate ${this.path} metadata`)
@@ -82,26 +86,28 @@ export default class Source {
     if (metadata.extension) this.extension = metadata.extension
     if (metadata.attributions) this.attributions = metadata.attributions
     if (metadata.type) this.type = metadata.type
-    else this.active = false // we cannot process if we do not know the extension
+    else { this.active = false; console.log('Failed to acquire "type" from metadata') } // we cannot process if we do not know the extension
     if (metadata.encoding) this.encoding = metadata.encoding
     if (metadata.layers) { // cleanup the fields property
       const { layers } = metadata
       for (const layer of Object.values(layers)) delete layer.fields
       this.layers = layers
     }
+    // time series data check
+    if (metadata.format) this.isTimeFormat = metadata.format === 'tfzxy'
+    if (this.isTimeFormat) postMessage({ mapID, type: 'timesource', sourceName: this.name, interval: metadata.interval })
     // once the metadata is complete, we should check if any tiles were queued
     this.ready = true
     this._checkCache()
     // if attributions, we send them off
-    const attributions = {}
-    for (const [name, link] of Object.entries(this.attributions)) attributions[name] = link
+    const attributions = { ...this.attributions }
     if (Object.keys(attributions).length) postMessage({ mapID, type: 'attributions', attributions })
   }
 
   _checkCache () {
     while (this.requestCache.length) {
-      const [mapID, tile] = this.requestCache.pop()
-      this.tileRequest(mapID, tile)
+      const [mapID, tile, layerIndexes] = this.requestCache.pop()
+      this.tileRequest(mapID, tile, layerIndexes)
     }
   }
 
@@ -109,7 +115,7 @@ export default class Source {
   tileRequest (mapID: string, tile: TileRequest, layerIndexes?: Array<number>) {
     // if the source isn't ready yet, we store in cache
     if (!this.ready) {
-      this.requestCache.push([mapID, tile])
+      this.requestCache.push([mapID, tile, layerIndexes])
       return
     }
     // pull out data, check if data exists in bounds, then request
@@ -120,7 +126,7 @@ export default class Source {
       minzoom <= zoom && maxzoom >= zoom && // check zoom bounds
       (!faces || faces.has(face)) // check the face exists
     ) {
-      this._tileRequest(mapID, tile, name, false, layerIndexes)
+      this._tileRequest(mapID, tile, name, null, layerIndexes)
     } else { this._flush(mapID, id, name) }
     // now make requests for parent data as necessary
     this._getParentData(mapID, tile, layerIndexes)
@@ -129,7 +135,7 @@ export default class Source {
   _getParentData (mapID: string, tile: TileRequest, layerIndexes?: Array<number>) {
     const { layers, styleLayers, name } = this
     // pull out data
-    const { face, zoom, id } = tile
+    const { time, face, zoom, id } = tile
     // setup parentLayers
     const parentLayers: ParentLayers = {}
     // iterate over layers and found any data doesn't exist at current zoom but the style asks for
@@ -150,7 +156,7 @@ export default class Source {
         // pull out i & j
         const [, i, j] = toIJ(newID, pZoom)
         // store parent reference
-        if (!parentLayers[newID]) parentLayers[newID] = { face, id: newID, zoom: pZoom, i, j, layers: [] }
+        if (!parentLayers[newID]) parentLayers[newID] = { time, face, id: newID, zoom: pZoom, i, j, layers: [] }
         parentLayers[newID].layers.push(layer.layerIndex)
       }
     }
@@ -165,15 +171,15 @@ export default class Source {
   // if this function runs, we assume default tile source.
   // in the default case, we want the worker to process the data
   async _tileRequest (mapID: string, tile: TileRequest,
-    sourceName: string, parent: boolean | ParentLayer, layerIndexes?: Array<number>) {
-    const { path, session } = this
-    const { id } = parent || tile
+    sourceName: string, parent?: ParentLayer, layerIndexes?: Array<number>) {
+    const { path, session, type, extension } = this
+    const { time, face, zoom, i, j, id } = parent || tile
+    const location = `${time ? time + '/' : ''}${face}/${zoom}/${i}/${j}.${extension}`
 
-    const data = await this._fetch(`${path}/${id}.${this.extension}`, mapID, false)
-    const type = (this.extension.includes('pbf')) ? 'pbfdata' : 'rasterdata'
+    const data = await this._fetch(`${path}/${location}`, mapID)
     if (data) {
       const worker = session.requestWorker()
-      worker.postMessage({ mapID, type, tile, sourceName, parent, data, layerIndexes }, [data])
+      worker.postMessage({ mapID, type, tile, parent, sourceName, data, layerIndexes }, [data])
     } else { this._flush(mapID, id, sourceName) }
   }
 
@@ -197,7 +203,7 @@ export default class Source {
     if (this.needsToken && Authorization) headers.Authorization = Authorization
     const res = await fetch(path, { headers })
     if (res.status !== 200 && res.status !== 206) return null
-    if (!json) return res.arrayBuffer()
-    else return res.json()
+    if (json || res.headers.get('content-type').includes('application/json')) return res.json()
+    return res.arrayBuffer()
   }
 }

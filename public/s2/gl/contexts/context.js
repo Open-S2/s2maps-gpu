@@ -18,12 +18,14 @@ export type VectorTileSource = {
   subType: 'fill' | 'line' | 'point' | 'heatmap',
   radiiArray?: Float32Array,
   indexArray: Uint32Array,
+  fillIDArray?: Uint8Array, // id's encoded as RGB
   codeTypeArray: Uint8Array,
   typeArray?: Float32Array,
   typeBuffer?: WebGLBuffer,
   vertexBuffer: WebGLBuffer,
   radiiBuffer?: WebGLBuffer,
   indexBuffer?: WebGLBuffer,
+  fillIDBuffer?: WebGLBuffer,
   codeTypeBuffer?: WebGLBuffer,
   threeD?: boolean,
   vao?: WebGLVertexArrayObject,
@@ -52,6 +54,8 @@ export type RasterTileSource = {
   mode?: GLenum // TRIANGLES | TRIANGLE_STRIP | TRIANGLE_FAN | etc
 }
 
+// TODO: get apple devices https://github.com/pmndrs/detect-gpu/blob/master/src/internal/deobfuscateAppleGPU.ts
+
 export default class Context {
   gl: WebGLRenderingContext | WebGL2RenderingContext
   renderer: string // ex: AMD Radeon Pro 560 OpenGL Engine (https://github.com/pmndrs/detect-gpu)
@@ -73,6 +77,7 @@ export default class Context {
   interactTexture: WebGLTexture
   stencilBuffer: WebGLRenderbuffer
   interactFramebuffer: WebGLFramebuffer
+  currentProgram: string
   constructor (context: WebGLRenderingContext | WebGL2RenderingContext, options: MapOptions) {
     const { canvasMultiplier, interactive } = options
     this.gl = context
@@ -130,6 +135,8 @@ export default class Context {
     gl.bindFramebuffer(gl.FRAMEBUFFER, interactFramebuffer)
     // grab the data
     gl.readPixels(x, gl.canvas.height - y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, featurePoint)
+    // console.log(featurePoint)
+    if (featurePoint[3] !== 255) return null
     // create the actual feature id
     const featureID = featurePoint[0] + (featurePoint[1] << 8) + (featurePoint[2] << 16)
     // return if we found something
@@ -471,5 +478,5 @@ function cleanRenderer (renderer) {
   return renderer
     .toLowerCase()
     .replace(/angle \((.+)\)*$/, '$1')
-    .replace(/\s+([0-9]+gb|direct3d|opengl.+$)|\(r\)| \([^)]+\)$/g, '')
+    // .replace(/\s+([0-9]+gb|direct3d|opengl.+$)|\(r\)| \([^)]+\)$/g, '')
 }

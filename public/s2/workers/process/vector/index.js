@@ -31,7 +31,7 @@ export default class VectorManager {
 
   processVector (mapID: string, tile: TileRequest, sourceName: string,
     vectorTile: VectorTile, layers: Array<Layer>,
-    parent?: boolean | ParentLayer = false, layerIndexes?: Array<number>) {
+    parent?: ParentLayer, layerIndexes?: Array<number>) {
     const { webgl1, glyphManager, mainThread, idGen } = this
     const { zoom } = tile
     const tileID = tile.id
@@ -78,14 +78,16 @@ export default class VectorManager {
           for (const p in paint) paint[p](code, properties, zoom)
           for (const l in layout) layout[l](code, properties, zoom)
           // store
-          let geometry = (type === 'fill' && !parent) ? feature.loadGeometryFlat() : feature.loadGeometry()
-          const { indices } = feature
+          let geometry = (type === 'fill' && !parent && feature.loadGeometryFlat) ? feature.loadGeometryFlat() : feature.loadGeometry()
+          let { indices } = feature
+          if (!indices) indices = []
           if (parent) geometry = scaleShiftClip(geometry, feature.type, extent, tile, parent)
           // scale and filter as necessary
           if (!geometry || !geometry.length) continue
           const id = idGen.getNum()
           features.push({
             id,
+            idRGB: [id & 255, (id >> 8) & 255, (id >> 16) & 255],
             layerIndex,
             geometry,
             code,
@@ -103,10 +105,16 @@ export default class VectorManager {
       }
     }
     // build for any feature type that we have features in
+    if (featureStore.fill.length) processFill(mapID, tile, sourceName, featureStore.fill, mainThread)
+    if (featureStore.line.length) processLine(mapID, tile, sourceName, featureStore.line, mainThread)
+    if (featureStore.point.length) processPoint(mapID, tile, sourceName, featureStore.point, mainThread)
+    if (featureStore.heatmap.length) processPoint(mapID, tile, sourceName, featureStore.heatmap, mainThread)
+    if (featureStore.glyph.length) glyphManager.processGlyphs(mapID, tile, sourceName, featureStore.glyph)
+    if (interactiveMap.size) postInteractiveData(mapID, sourceName, tileID, interactiveMap, mainThread)
     mainThread({
       mapID,
       tileID,
-      source: sourceName,
+      sourceName,
       type: 'flush',
       fill: featureStore.fill.length !== 0,
       line: featureStore.line.length !== 0,
@@ -114,12 +122,6 @@ export default class VectorManager {
       heatmap: featureStore.heatmap.length !== 0,
       glyph: featureStore.glyph.length !== 0
     })
-    if (featureStore.fill.length) processFill(mapID, tile, sourceName, featureStore.fill, mainThread)
-    if (featureStore.line.length) processLine(mapID, tile, sourceName, featureStore.line, mainThread)
-    if (featureStore.point.length) processPoint(mapID, tile, sourceName, featureStore.point, mainThread)
-    if (featureStore.heatmap.length) processPoint(mapID, tile, sourceName, featureStore.heatmap, mainThread)
-    if (featureStore.glyph.length) glyphManager.processGlyphs(mapID, tile, sourceName, featureStore.glyph)
-    if (interactiveMap.size) postInteractiveData(mapID, sourceName, tileID, interactiveMap, mainThread)
   }
 }
 

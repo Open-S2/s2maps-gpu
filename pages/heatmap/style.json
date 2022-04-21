@@ -1,24 +1,24 @@
 {
   "version": 1,
-  "name": "s2test",
+  "name": "heatmap-example",
   "center": [-122.444700, 37.780739],
   "zoom": -0.25,
   "minzoom": -0.5,
   "maxzoom": 17.99,
   "sources": {
-    "streets": "s2maps://data/s2maps/streets-v4.s2tiles",
-    "plates": "https://data.s2maps.io/public/demos/s2json/plates.s2json",
-    "earthquakes": "https://data.s2maps.io/public/demos/s2json/earthquakes.s2json"
+    "streets": "s2maps://s2tiles/s2maps/streets-v1.s2tiles",
+    "plates": "{{s2maps}}/s2json/plates.s2json",
+    "earthquakes": "{{s2maps}}/s2json/earthquakes.s2json"
   },
   "fonts": {
-    "noto-sans-regular": "https://data.s2maps.io/glyphs/Noto/NotoSansRegular.font",
-    "noto-sans-medium": "https://data.s2maps.io/glyphs/Noto/NotoSansMedium.font",
+    "noto-sans-regular": "s2maps://glyphs/s2maps/NotoSansRegular.font",
+    "noto-sans-medium": "s2maps://glyphs/s2maps/NotoSansMedium.font",
     "roboto-regular": {
-      "path": "https://data.s2maps.io/glyphs/Roboto/RobotoRegular.font",
+      "path": "s2maps://glyphs/s2maps/RobotoRegular.font",
       "fallback": "noto-sans-regular"
     },
     "roboto-medium": {
-      "path": "https://data.s2maps.io/glyphs/Roboto/RobotoMedium.font",
+      "path": "s2maps://glyphs/s2maps/RobotoMedium.font",
       "fallback": "noto-sans-medium"
     }
   },

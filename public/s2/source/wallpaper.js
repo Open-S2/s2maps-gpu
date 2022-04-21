@@ -6,6 +6,7 @@ import { degToRad } from 's2projection/util'
 import * as mat4 from '../util/mat4'
 
 import type { WallpaperImageType, WallpaperStyle } from '../style/styleSpec'
+import { Painter } from '../gl'
 
 export type WallpaperUniforms = {
   uScale: Float32Array,
@@ -18,6 +19,7 @@ export type WallpaperUniforms = {
 export class Wallpaper {
   style: Style // reference to the style objects colors
   projector: Projector
+  painter: Painter
   tileSize: number
   uniforms: WallpaperUniforms = {
     uScale: new Float32Array(2),
@@ -28,19 +30,17 @@ export class Wallpaper {
   }
 
   skybox: boolean = false
-  constructor (style: Style, projector: Projector, tileSize?: number = 512) {
+  constructor (style: Style, projector: Projector, painter: Painter, tileSize?: number = 512) {
     this.style = style
     this.projector = projector
+    this.painter = painter
     this.tileSize = tileSize
   }
 
   getUniforms (): void | WallpaperUniforms {
     let dirty = false
-    if (this.projector.dirty) {
+    if (this.painter.dirty || this.projector.dirty || this.style.dirty) {
       this._updateScale()
-      dirty = true
-    }
-    if (this.style.dirty) {
       this._updateStyle()
       dirty = true
     }
@@ -63,11 +63,13 @@ export class Wallpaper {
         this.uniforms[key] = wallpaperStyle[key].getRGB()
       }
     }
+    this.dirty = true
   }
 }
 
 export class Skybox {
   projector: Projector
+  painter: Painter
   path: string
   type: WallpaperImageType
   size: number = 1024
@@ -75,16 +77,17 @@ export class Skybox {
   angle: number = degToRad(40)
   matrix: Float32Array
   skybox: boolean = true
-  constructor (style: WallpaperStyle, projector: Projector) {
+  constructor (style: WallpaperStyle, projector: Projector, painter: Painter) {
     const { skybox, type, size } = style
     this.path = skybox
     this.type = type
     if (size) this.size = size
     this.projector = projector
+    this.painter = painter
   }
 
   getMatrix (): null | Float32Array {
-    if (!this.matrix || this.projector.dirty) {
+    if (!this.matrix || this.painter.dirty) {
       const { aspect, lon, lat } = this.projector
       const matrix = mat4.create()
       // create a perspective matrix

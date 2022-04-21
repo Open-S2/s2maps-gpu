@@ -53,6 +53,7 @@ export default function buildGlyphQuads (feature: GlyphObject, glyphMap: GlyphMa
       continue
     }
     // grab the unicode information
+    if (!familyMap.has(unicode)) continue
     const { texX, texY, texW, texH, xOffset, yOffset, width, height, advanceWidth } = familyMap.get(unicode)
     // prep x-y positions
     const xPos = cursorX + xOffset

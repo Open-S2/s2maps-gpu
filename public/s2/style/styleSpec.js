@@ -85,6 +85,24 @@ export type GlyphPaint = {
   'icon-size': number | Array<any>
 }
 
+/** RASTER **/
+export type RasterPaint = {
+  opacity?: number | Array<any>
+}
+
+/** RASTER DATA **/
+export type RasterDataPaint = {
+  opacity?: number | Array<any>
+}
+export type RasterDataLayout = {
+  'start-date'?: number | string, // Date string or number
+  'end-date'?: number | string, // Date string or number
+  speed?: number, // hours per second
+  'pause-duration'?: number, // in seconds, default: 0
+  loop?: boolean, // default: false
+  'auto-play'?: boolean // default: false
+}
+
 /** Layer **/
 export type Layer = {
   name: string,
@@ -98,7 +116,7 @@ export type Layer = {
   layer: string,
   minzoom: number,
   maxzoom: number,
-  type: 'raster' | 'fill' | 'fill3D' | 'line' | 'line3D' | 'glyph' | 'point',
+  type: 'raster' | 'raster-dem' | 'sensor' | 'fill' | 'fill3D' | 'line' | 'line3D' | 'glyph' | 'point',
   filter: Array<any>, // ["any", ["class", "==", "ocean"], ["class", "==", "river"]]
   layout: LineLayout | GlyphLayout,
   paint: FillPaint | PointPaint | LinePaint | GlyphPaint,
@@ -106,7 +124,13 @@ export type Layer = {
   colorRamp?: Uint8ClampedArray,
   lch?: boolean,
   code?: Float32Array,
-  iconCode?: Float32Array // special case for icon sizing
+  iconCode?: Float32Array, // special case for icon sizing
+  startTime?: number, // pulled from start-date
+  endTime?: number, // pulled from end-date
+  speed?: number,
+  pauseDuration?: number, // pulled from pause-duration
+  loop?: boolean,
+  autoPlay?: boolean // pulled from auto-play
 }
 
 export type HeatmapLayer = {
@@ -137,7 +161,7 @@ export type StylePackage = {
 }
 
 /** WALLPAPER **/
-export type WallpaperImageType = 'png' | 'jpg' | 'jpeg'
+export type WallpaperImageType = 'png' | 'jpg' | 'jpeg' | 'webp' | 'avic'
 export type WallpaperStyle = {
   skybox: string,
   type: WallpaperImageType,

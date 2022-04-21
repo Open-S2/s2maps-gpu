@@ -1,6 +1,6 @@
 {
   "name": "s2maps-gl",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "private": false,
   "license": "SEE LICENSE FILE",
   "keywords": [
@@ -15,6 +15,7 @@
     "build-amplify": "next build && next export",
     "buildS2": "node configS2/build.js",
     "buildS2Action": "node configS2Action/build.js",
+    "buildS2ActionDev": "node configS2Action-dev/build.js",
     "buildS2NPM": "node configS2NPM/build.js",
     "npmPublish": "pnpm buildS2NPM && npm publish",
     "standardFix": "standard --fix ./public/s2/**/*.js",
@@ -23,8 +24,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "chroma-js": "^2.4.2",
     "earclip": "workspace:*",
-    "next": "12.0.3",
+    "next": "12.1.0",
     "react": "^17.0.2",
     "react-beautiful-dnd": "^13.1.0",
     "react-colorful": "^5.5.1",
@@ -70,7 +72,9 @@
     "webpack-bundle-analyzer": "^4.5.0"
   },
   "standard": {
-    "plugins": ["ft-flow"],
+    "plugins": [
+      "ft-flow"
+    ],
     "parser": "@babel/eslint-parser"
   }
 }

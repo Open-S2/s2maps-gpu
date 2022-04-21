@@ -2,8 +2,7 @@ precision highp float;
 
 attribute vec2 aExtent; // the quad
 attribute vec2 aPos; // STPoint positional data
-// layout (location = 2) in float aID; // float ID
-// layout (location = 6) in float aRadius; // world sphere radial adjust
+attribute vec3 aID;
 
 varying vec2 extent;
 varying float antialiasFactor;
@@ -12,7 +11,7 @@ varying float radius;
 varying vec4 stroke;
 varying float strokeWidth;
 
-// uniform bool uInteractive;
+uniform bool uInteractive;
 uniform float uDevicePixelRatio;
 uniform vec4 uBounds;
 uniform vec2 uAspect;
@@ -28,23 +27,22 @@ uniform float uOpacity;
 void main () {
   if (aPos.x < uBounds.x || aPos.x > uBounds.z || aPos.y < uBounds.y || aPos.y > uBounds.w) return;
   // decode attributes
-  // if (false) {
-  //   int id = int(aID);
-  //   color = vec4(float(id & 255), float((id >> 8) & 255), float(id >> 16), 1.);
-  // } else {
-  //   color = decodeFeature(true, index, featureIndex);
-  // }
   color = uColor;
   radius = uRadius * uDevicePixelRatio;
   stroke = uStroke;
   strokeWidth = uSWidth * uDevicePixelRatio;
-  // if (!uInteractive) opacity = decodeFeature(false, index, featureIndex)[0];
-  float opacity = uOpacity;
-  // else opacity = 1.;
-  // adjust color by opacity
-  color.rgb *= color.a;
-  color.rgba *= opacity;
-  stroke.rgba *= opacity;
+
+  float opacity;
+  if (!uInteractive) {
+    opacity = uOpacity;
+    // adjust color by opacity
+    color.rgb *= color.a;
+    color.rgba *= opacity;
+    stroke.rgba *= opacity;
+  } else {
+    opacity = 1.;
+    color = vec4(aID, 1.);
+  }
 
   // get position
   vec4 glPos = getPos(aPos);

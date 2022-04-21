@@ -272,6 +272,15 @@ export default class Color {
   // take two hsv OR values and return an rgb Color
   static interpolate (color1: Color, color2: Color, t: number): Color {
     if (color1.type !== color2.type) return new Color(color1.val[0], color1.val[1], color1.val[2], color1.val[3], color1.type)
+    if (color1.type === 'rgb') {
+      const [r1, g1, b1, a1] = color1.val
+      const [r2, g2, b2, a2] = color2.val
+      const r = r1 + (r2 - r1) * t
+      const g = g1 + (g2 - g1) * t
+      const b = b1 + (b2 - b1) * t
+      const a = a1 + (a2 - a1) * t
+      return new Color(r, g, b, a, 'rgb')
+    }
     // prep variables
     let sat, hue, dh
     const [hue0, sat0, lbv0, alpha0] = color1.val
@@ -299,6 +308,33 @@ export default class Color {
     const alpha = alpha0 + t * (alpha1 - alpha0)
     // create the new color
     return new Color(hue, sat, lbv, alpha, color1.type)
+  }
+
+  static sinebow (t: number): Color {
+    const { sin, cos, floor, max, PI } = Math
+    let rad = t * (2 * PI) * (5 / 6)
+    rad *= 0.75;  // increase frequency to 2/3 cycle per rad
+
+    const s = sin(rad)
+    const c = cos(rad)
+    const r = floor(max(0, -c) * 255)
+    const g = floor(max(s, 0) * 255)
+    const b = floor(max(c, 0, -s) * 255)
+    return new Color(r, g, b, 1, 'rgb')
+  }
+
+  static fadeToWhite (t: number): Color {
+    return this.interpolate(
+      this.sinebow(1),
+      new Color(255, 255, 255, 1, 'rgb'),
+      t
+    )
+  }
+
+  static sinebowExtended (t: number): Color {
+    return t <= 0.45 ?
+      this.sinebow(t / 0.45) :
+      this.fadeToWhite((t - 0.45) / (1 - 0.45))
   }
 }
 

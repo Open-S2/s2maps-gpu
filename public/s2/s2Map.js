@@ -2,6 +2,7 @@
 /* eslint-env browser */
 import Worker from './util/corsWorker'
 import Info from './ui/info'
+import { isSafari } from './util/browsers'
 
 import type { MapOptions } from './ui/map'
 import type { Layer } from './style/styleSpec'
@@ -79,6 +80,15 @@ export default class S2Map extends EventTarget {
     // prep the ready function should it exist
     const { ready } = options
     delete options.ready
+    // prep webgpu/webgl type
+    if (!options.contextType) {
+      const tryContext = (name: string) => !!document.createElement('canvas').getContext(name)
+      options.contextType = (tryContext('webgpu'))
+        ? 3
+        : (tryContext('webgl2'))
+          ? 2
+          : 1
+    }
     // if browser supports it, create an instance of the mapWorker
     if (!navigator.gpu && canvas.transferControlToOffscreen) {
       // TODO: MORE THAN LIKELY A RACE CONDITION HERE IF WAITING FOR A "READY" EVENT
@@ -209,14 +219,14 @@ export default class S2Map extends EventTarget {
       if (this.info) this.info.injectInfo(data.json)
     } else if (offscreen) {
       const { type } = data
-      if (type === 'filldata') offscreen.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.codeTypeBuffer, data.featureGuideBuffer])
-      else if (type === 'linedata') offscreen.postMessage(data, [data.vertexBuffer, data.featureGuideBuffer])
-      else if (type === 'glyphdata') offscreen.postMessage(data, [data.glyphFilterBuffer, data.glyphQuadBuffer, data.glyphColorBuffer, data.featureGuideBuffer])
+      if (type === 'fill') offscreen.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.fillIDBuffer, data.codeTypeBuffer, data.featureGuideBuffer])
+      else if (type === 'line') offscreen.postMessage(data, [data.vertexBuffer, data.featureGuideBuffer])
+      else if (type === 'glyph') offscreen.postMessage(data, [data.glyphFilterBuffer, data.glyphQuadBuffer, data.glyphColorBuffer, data.featureGuideBuffer])
       else if (type === 'glyphimages') offscreen.postMessage(data, data.images.map(i => i.data))
-      else if (type === 'rasterdata') offscreen.postMessage(data, [data.image])
-      else if (type === 'maskdata') offscreen.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.radiiBuffer])
-      else if (type === 'pointdata' || type === 'heatmapdata') offscreen.postMessage(data, [data.vertexBuffer, data.weightBuffer, data.featureGuideBuffer])
-      else if (type === 'interactivedata') offscreen.postMessage(data, [data.interactiveGuideBuffer, data.interactiveDataBuffer])
+      else if (type === 'raster') offscreen.postMessage(data, [data.image])
+      else if (type === 'mask') offscreen.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.radiiBuffer])
+      else if (type === 'point' || type === 'heatmap') offscreen.postMessage(data, [data.vertexBuffer, data.weightBuffer, data.featureGuideBuffer])
+      else if (type === 'interactive') offscreen.postMessage(data, [data.interactiveGuideBuffer, data.interactiveDataBuffer])
       else offscreen.postMessage(data)
     } else if (map) {
       map.injectData(data)
@@ -227,6 +237,8 @@ export default class S2Map extends EventTarget {
     const { mapID, type } = data
     if (type === 'tilerequest') {
       window.S2WorkerPool.tileRequest(mapID, data.tiles, data.sources)
+    } else if (type === 'timerequest') {
+      window.S2WorkerPool.timeRequest(mapID, data.tiles, data.sourceNames)
     } else if (type === 'mouseenter') {
       const { feature } = data
       if (feature) {
@@ -237,6 +249,7 @@ export default class S2Map extends EventTarget {
       const { feature } = data
       this._canvas.style.cursor = 'default'
       if (feature) this.dispatchEvent(new CustomEvent('mouseleave', { detail: feature }))
+      this.dispatchEvent(new CustomEvent('mouseleave', { detail: feature }))
     } else if (type === 'click') {
       const { feature, lon, lat } = data
       if (this.info) this.info.click(feature, lon, lat)
@@ -244,6 +257,8 @@ export default class S2Map extends EventTarget {
     } else if (type === 'pos') {
       const { zoom, lon, lat } = data
       this.dispatchEvent(new CustomEvent('pos', { detail: { zoom, lon, lat } }))
+    } else if (type === 'requestStyle') {
+      window.S2WorkerPool.requestStyle(mapID, data.style, data.apiKey, data.analytics)
     } else if (type === 'style') {
       window.S2WorkerPool.injectStyle(mapID, data.style)
     } else if (type === 'updateCompass') {
@@ -346,11 +361,10 @@ export default class S2Map extends EventTarget {
   }
 
   _onCanvasMouseMove (e: MouseEvent) {
-    const { map, offscreen, _canvasContainer, _canvasMultiplier } = this
-    const { pageX, pageY } = e
-
-    const x = (pageX - _canvasContainer.offsetLeft) * _canvasMultiplier
-    const y = (pageY - _canvasContainer.offsetTop) * _canvasMultiplier
+    const { map, offscreen, _canvasMultiplier } = this
+    const { layerX, layerY } = e
+    const x = layerX * _canvasMultiplier
+    const y = layerY * _canvasMultiplier
 
     if (offscreen) offscreen.postMessage({ type: 'canvasmousemove', x, y })
     else if (map) map.onCanvasMouseMove(x, y)
@@ -359,7 +373,7 @@ export default class S2Map extends EventTarget {
   _updateCompass (bearing: number, pitch: number) {
     this.bearing = -bearing
     this.pitch = pitch
-    this._compass.style.transform = `translate(-50%, -50%) rotate(${this.bearing}deg)`
+    if (this._compass) this._compass.style.transform = `translate(-50%, -50%) rotate(${this.bearing}deg)`
   }
 
   _onCompassMouseDown (e) {
@@ -578,7 +592,7 @@ export default class S2Map extends EventTarget {
     // 1) let the worker pool know we need to remove marker(s)
     window.S2WorkerPool.removeMarkers(this.id, ids, sourceName)
     // 2) tell the map that (a) marker(s) has/have to be removed
-    this.resetSource(sourceName, true, true)
+    this.resetSource(sourceName, true, false)
   }
 
   screenshot (): Promise<null | Uint8Array> {
@@ -593,3 +607,10 @@ export default class S2Map extends EventTarget {
 }
 
 if (window) window.S2Map = S2Map
+
+// use 
+// GLYPH pairs (icon + font):
+// * GL algorithm should check if ID is the same and move on if true
+
+// GLYPHS ALONG PATH:
+// 

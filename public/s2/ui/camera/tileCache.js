@@ -3,11 +3,10 @@ import { Tile } from '../../source'
 
 export default class TileCache extends Map<BigInt, Tile> {
   maxCacheSize: number
-  order: Array<number>
+  order: Array<number> = []
   constructor (maxCacheSize?: number = 100) {
     super()
     this.maxCacheSize = maxCacheSize
-    this.order = []
   }
 
   set (key: BigInt, tile: Tile) {
@@ -35,12 +34,12 @@ export default class TileCache extends Map<BigInt, Tile> {
   delete (key: BigInt) {
     this.order.splice(this.order.indexOf(key), 1)
     const tile = super.get(key)
-    if (tile) tile.delete()
+    if (tile && typeof tile.delete === 'function') tile.delete()
     return super.delete(key)
   }
 
   deleteAll () { // eslint-disable-next-line
-    for (const [_, tile] of this) tile.delete()
+    for (const [_, tile] of this) if (tile && typeof tile.delete === 'function') tile.delete()
     super.clear()
     this.order = []
   }

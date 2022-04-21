@@ -28,10 +28,11 @@ export default class RasterProgram extends Program {
   draw (featureGuide: FeatureGuide, sourceData: RasterTileSource) {
     // grab gl from the context
     const { gl, context } = this
+    const { type } = context
 
     // get current source data
     const { count, mode } = sourceData
-    const { texture, depthPos } = featureGuide
+    const { texture, depthPos, featureCode, opacity } = featureGuide
     // ensure proper blend state
     context.defaultBlend()
     // adjust to current depthPos
@@ -40,6 +41,10 @@ export default class RasterProgram extends Program {
       context.lessDepth()
       context.setDepthRange(depthPos)
     } else { context.resetDepthRange() }
+    // set feature code (webgl 1 we store the opacity, webgl 2 we store layerCode lookups)
+    if (type === 1) {
+      if (!isNaN(opacity)) gl.uniform1f(this.uOpacity, opacity)
+    } else if (featureCode) { this.setFeatureCode(featureCode) }
     // setup the texture
     gl.bindTexture(gl.TEXTURE_2D, texture)
     // draw elements

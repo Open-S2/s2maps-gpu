@@ -7,7 +7,7 @@ import type { Feature } from '../../tile.worker'
 // const MAX_FEATURE_BATCH_SIZE = 1 << 7 // 128
 const MAX_FEATURE_BATCH_SIZE = 1 << 6 // 64
 
-export default function postprocessFill (mapID: string, source: string,
+export default function postprocessFill (mapID: string, sourceName: string,
   tileID: string, features: Array<Feature>, postMessage: Function) {
   // now that we have created all triangles, let's merge into bundled buffer sets
   // for the main thread to build VAOs.
@@ -32,6 +32,7 @@ export default function postprocessFill (mapID: string, source: string,
   // 2) don't store any feature code larger than MAX_FEATURE_BATCH_SIZE
   const vertices: Array<number> = []
   const indices: Array<number> = []
+  const ids: Array<number> = []
   const codeType: Array<number> = []
   const featureGuide: Array<number> = []
   let encodings: Array<number> = []
@@ -39,7 +40,7 @@ export default function postprocessFill (mapID: string, source: string,
   let indicesOffset: number = 0
   let vertexOffset: number = 0
   let encodingIndexes = { '': 0 }
-  let encodingIndex
+  let encodingIndex = 0
   let curlayerIndex = features[0].layerIndex
 
   for (const feature of features) {
@@ -69,11 +70,20 @@ export default function postprocessFill (mapID: string, source: string,
     vertexOffset = vertices.length / 2
     // NOTE: Spreader functions on large arrays are failing in chrome right now -_-
     // so we just do a for loop
-    for (let f = 0, fl = feature.vertices.length; f < fl; f++) vertices.push(feature.vertices[f])
+    for (let f = 0, fl = feature.vertices.length; f < fl; f++) {
+      vertices.push(feature.vertices[f])
+      // ids.push(...feature.idRGB)
+      // codeType.push(encodingIndex)
+    }
     for (let f = 0, fl = feature.indices.length; f < fl; f++) {
       const index = feature.indices[f] + vertexOffset
       indices.push(index)
       codeType[index] = encodingIndex
+      // store id RGB value
+      const idRGBIndex = index * 3
+      ids[idRGBIndex] = feature.idRGB[0]
+      ids[idRGBIndex + 1] = feature.idRGB[1]
+      ids[idRGBIndex + 2] = feature.idRGB[2]
     }
     // update previous layerIndex
     curlayerIndex = feature.layerIndex
@@ -87,17 +97,19 @@ export default function postprocessFill (mapID: string, source: string,
   // Upon building the batches, convert to buffers and ship.
   const vertexBuffer = new Int16Array(vertices).buffer
   const indexBuffer = new Uint32Array(indices).buffer
+  const fillIDBuffer = new Uint8Array(ids).buffer // pre-store each id as an rgb value
   const codeTypeBuffer = new Uint8Array(codeType).buffer
   const featureGuideBuffer = new Float32Array(featureGuide).buffer
   // ship the vector data.
   postMessage({
     mapID,
-    type: 'filldata',
-    source,
+    type: 'fill',
+    sourceName,
     tileID,
     vertexBuffer,
     indexBuffer,
+    fillIDBuffer,
     codeTypeBuffer,
     featureGuideBuffer
-  }, [vertexBuffer, indexBuffer, codeTypeBuffer, featureGuideBuffer])
+  }, [vertexBuffer, indexBuffer, fillIDBuffer, codeTypeBuffer, featureGuideBuffer])
 }

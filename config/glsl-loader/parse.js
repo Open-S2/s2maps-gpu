@@ -125,7 +125,7 @@ const noSpaceChars = new Set([
   '?', ':'
 ])
 
-const sourceMaps = {}
+const SOURCE_MAPS = {}
 
 function parse (id, contents, res = { source: '', uniforms: {}, attributes: {}, variables: { main: 'main' } }) {
   let path = id.split('/')
@@ -135,8 +135,8 @@ function parse (id, contents, res = { source: '', uniforms: {}, attributes: {}, 
   let shaderName = id.split('/').pop()
   shaderName = shaderName.split('.')[0]
 
-  if (!sourceMaps[shaderName]) {
-    sourceMaps[shaderName] = {
+  if (!SOURCE_MAPS[shaderName]) {
+    SOURCE_MAPS[shaderName] = {
       uniformMap: new Map(),
       attributeMap: new Map(),
       varMap: new Map(),
@@ -192,7 +192,7 @@ function _parseLine (line, res, shaderName) {
 }
 
 function _parseWords (words, res, shaderName) {
-  const { attributeMap, uniformMap, varMap } = sourceMaps[shaderName]
+  const { attributeMap, uniformMap, varMap } = SOURCE_MAPS[shaderName]
   if (words.length === 1 && words[0] === '') return
 
   let size = words.length
@@ -207,7 +207,7 @@ function _parseWords (words, res, shaderName) {
         let value
         if (attributeMap.has(attr)) {
           value = attributeMap.get(attr)
-        } else { value = 'a' + newChar(sourceMaps[shaderName]) }
+        } else { value = 'a' + newChar(SOURCE_MAPS[shaderName]) }
         res.attributes[attr] = value
         attributeMap.set(attr, value)
       }
@@ -218,7 +218,7 @@ function _parseWords (words, res, shaderName) {
         let value
         if (uniformMap.has(unifm)) {
           value = uniformMap.get(unifm)
-        } else { value = 'u' + newChar(sourceMaps[shaderName]) }
+        } else { value = 'u' + newChar(SOURCE_MAPS[shaderName]) }
         res.uniforms[unifm] = value
         uniformMap.set(unifm, value)
       }

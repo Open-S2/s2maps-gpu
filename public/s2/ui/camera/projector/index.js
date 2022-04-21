@@ -31,6 +31,7 @@ export type MatrixType = 'm' | 'km' // meters of kilometers
 
 export default class Projector {
   map: Map
+  noClamp: boolean = false
   radius: number = 6_371.0088
   radii: number = [6378137, 6356752.3, 6378137]
   zTranslateStart: number = 5
@@ -58,10 +59,11 @@ export default class Projector {
   multiplier: number = 1
   dirty: boolean = true
   constructor (config: MapOptions, map: Map) {
-    const { canvasMultiplier, positionalZoom, webworker } = config
+    const { canvasMultiplier, positionalZoom, webworker, noClamp } = config
     if (canvasMultiplier) this.multiplier = canvasMultiplier
     if (positionalZoom === false) this.positionalZoom = false
     if (webworker) this.webworker = true
+    if (noClamp === true) this.noClamp = true
     this.map = map
   }
 
@@ -85,7 +87,7 @@ export default class Projector {
   setStyleParameters (style, ignorePosition: boolean) {
     const { min, max } = Math
     const {
-      minLatPosition, maxLatPosition, minzoom, maxzoom, zoomOffset,
+      noClamp, minLatPosition, maxLatPosition, minzoom, maxzoom, zoomOffset,
       zoom, lon, lat, bearing, pitch, zNear, zFar
     } = style
     // clamp values and ensure minzoom is less than maxzoom
@@ -94,6 +96,7 @@ export default class Projector {
     if (!isNaN(zoomOffset)) this.zoomOffset = zoomOffset
     if (!isNaN(maxLatPosition)) this.maxLatPosition = min(maxLatPosition, this.maxLatPosition)
     if (!isNaN(minLatPosition)) this.minLatPosition = max(minLatPosition, this.minLatPosition)
+    if (noClamp === true) this.noClamp = true
     this.setCompass(bearing, pitch)
     if (zNear) this.zNear = zNear
     if (zFar) this.zFar = zFar
@@ -247,8 +250,10 @@ export default class Projector {
   /* INTERNAL FUNCTIONS */
 
   _setLonLat (lon: number, lat: number) {
-    lon = this.clampDeg(lon)
-    lat = this.clampLat(lat)
+    if (!this.noClamp) {
+      lon = this.clampDeg(lon)
+      lat = this.clampLat(lat)
+    }
     if (this.lon !== lon || this.lat !== lat) {
       this.lon = lon
       this.lat = lat
@@ -307,7 +312,7 @@ export default class Projector {
     // get perspective matrix
     let matrix = this._getProjectionMatrix(type, zoom)
     // create view matrix
-    const view = mat4.lookAt(eye, [0, 1, 0])
+    const view = mat4.lookAt(eye, [0, (lat > 90 || lat < -90) ? -1 : 1, 0])
     // adjust by bearing
     if (bearing) mat4.rotateZ(matrix, degToRad(bearing))
     // if km we "remove" the eye

@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "name": "s2test",
+  "center": [-122.4585607773497, 37.778443127730476],
+  "zoom": -0.5,
+  "minzoom": -0.5,
+  "maxzoom": 3,
+  "sources": {
+    "countries": "http://localhost:8000/s2json/countriesHD.s2json",
+    "cloudflare": "http://localhost:8000/s2json/cloudflare-nodes.s2json"
+  },
+  "fonts": {},
+  "wallpaper": {
+    "background-color": "#171c22",
+    "fade-1": "#171c22",
+    "fade-2": "#151b24",
+    "halo": "#293646"
+  },
+  "layers": [
+    {
+      "name": "background",
+      "type": "fill",
+      "opaque": true,
+      "source": "mask",
+      "layout": {},
+      "paint": {
+        "color": "#171c22"
+      }
+    },
+    {
+      "name": "country-fill",
+      "source": "countries",
+      "type": "fill",
+      "invert": true,
+      "layout": {},
+      "paint": {
+        "color": "#10141c"
+      }
+    },
+    {
+      "name": "country-line",
+      "source": "countries",
+      "filter": ["type", "!=", "river"],
+      "type": "line",
+      "layout": {},
+      "paint": {
+        "color": "#3a5066",
+        "width": 1
+      }
+    },
+    {
+      "name": "cloudflare-point",
+      "source": "cloudflare",
+      "type": "point",
+      "interactive": true,
+      "cursor": "pointer",
+      "layout": {},
+      "paint": {
+        "color": "#71a98e",
+        "radius": 12.5,
+        "stroke": "#171c22",
+        "strokeWidth": 2.5
+      }
+    }
+  ]
+}

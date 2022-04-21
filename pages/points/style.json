@@ -1,23 +1,24 @@
 {
-  "version": 2,
-  "name": "s2maps-open-street-map",
+  "version": 1,
+  "name": "points-example",
   "center": [-111.865828, 40.765627],
   "zoom": 4,
   "minzoom": -0.5,
   "maxzoom": 17.99,
   "sources": {
-    "terrain": "http://192.168.0.110:8000/s2tiles/terrain-v1.s2tiles",
-    "openAddressData": "http://192.168.0.110:8000/s2tiles/open-address-data-v1.s2tiles"
+    "streets": "s2maps://s2tiles/s2maps/streets-v1.s2tiles",
+    "terrain": "s2maps://s2tiles/s2maps/terrain-v1.s2tiles",
+    "openAddressData": "s2maps://s2tiles/s2maps/open-address-data-v1.s2tiles"
   },
   "fonts": {
-    "noto-sans-regular": "http://192.168.0.110:8000/glyphs/Noto/NotoSansRegular.font",
-    "noto-sans-medium": "http://192.168.0.110:8000/glyphs/Noto/NotoSansMedium.font",
+    "noto-sans-regular": "s2maps://glyphs/s2maps/NotoSansRegular.font",
+    "noto-sans-medium": "s2maps://glyphs/s2maps/NotoSansMedium.font",
     "roboto-regular": {
-      "path": "http://192.168.0.110:8000/glyphs/Roboto/RobotoRegular.font",
+      "path": "s2maps://glyphs/s2maps/RobotoRegular.font",
       "fallback": "noto-sans-regular"
     },
     "roboto-medium": {
-      "path": "http://192.168.0.110:8000/glyphs/Roboto/RobotoMedium.font",
+      "path": "s2maps://glyphs/s2maps/RobotoMedium.font",
       "fallback": "noto-sans-medium"
     }
   },

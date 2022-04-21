@@ -3,4 +3,4 @@ import Map from '../../components/map'
 /* JSON */
 import style from './style.json'
 
-export default function Land () { return <Map style={style} /> }
+export default function Land () { return <Map style={style} noAPIKey /> }

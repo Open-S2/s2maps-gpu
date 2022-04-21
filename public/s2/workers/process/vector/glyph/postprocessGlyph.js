@@ -68,8 +68,8 @@ export default function postprocessGlyph (mapID: string, sourceName: string,
   // ship the data
   postMessage({
     mapID,
-    type: 'glyphdata',
-    source: sourceName,
+    type: 'glyph',
+    sourceName,
     tileID,
     glyphFilterBuffer,
     glyphQuadBuffer,

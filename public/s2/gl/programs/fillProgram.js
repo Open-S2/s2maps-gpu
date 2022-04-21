@@ -10,7 +10,7 @@ import vert2 from '../shaders/fill2.vertex.glsl'
 import frag2 from '../shaders/fill2.fragment.glsl'
 
 import type { Context } from '../contexts'
-import type { FeatureGuide } from '../../source/tile'
+import type { FeatureGuide, VectorTileSource } from '../../source/tile'
 
 export default class FillProgram extends Program {
   uColors: WebGLUniformLocation
@@ -19,15 +19,16 @@ export default class FillProgram extends Program {
     // get gl from context
     const { gl, type } = context
     // if webgl1, setup attribute locations
-    if (type === 1) gl.attributeLocations = { aPos: 0, aIndex: 7 }
+    if (type === 1) gl.attributeLocations = { aPos: 0, aID: 6, aIndex: 7 }
     // inject Program
     super(context)
+
     // build shaders
     if (type === 1) this.buildShaders(vert1, frag1)
     else this.buildShaders(vert2, frag2)
   }
 
-  draw (featureGuide: FeatureGuide) {
+  draw (featureGuide: FeatureGuide, source: VectorTileSource, interactive: boolean = false) {
     // grab context
     const { context } = this
     const { gl, type } = context
@@ -36,11 +37,12 @@ export default class FillProgram extends Program {
     // ensure proper blend state
     context.defaultBlend()
     // adjust to current depthPos
-    if (depthPos) {
+    if (depthPos || interactive) {
       context.enableDepthTest()
       context.lessDepth()
       context.setDepthRange(depthPos)
     } else { context.resetDepthRange() }
+    if (interactive) context.stencilFuncAlways(0)
     // ensure culling
     context.enableCullFace()
     // set feature code (webgl 1 we store the colors, webgl 2 we store layerCode lookups)

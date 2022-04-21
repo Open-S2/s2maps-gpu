@@ -11,6 +11,7 @@ import Projector from './projector'
 /** SOURCES **/
 import { Tile } from '../../source'
 import TileCache from './tileCache'
+import TimeCache from './timeCache'
 
 import type { TileDefinitions } from './projector'
 
@@ -25,18 +26,18 @@ export default class Camera {
   style: Style
   painter: Painter
   projector: Projector
-  tileCache: TileCache
+  tileCache: TileCache = new TileCache()
+  timeCache: TimeCache
   tilesInView: Array<Tile> = [] // S2CellIDs of the tiles
   lastTileViewState: Array<number> = []
   requestQueue: Array<Tile> = []
   zooming: void | SetTimeout
   request: void | SetTimeout
   wasDirtyLastFrame: boolean = false
+  webworker: boolean = false
   constructor (options: MapOptions) {
     // setup projector
     this.projector = new Projector(options, this)
-    // prep the tileCache for future tiles
-    this.tileCache = new TileCache()
   }
 
   _resizeCamera (width: number, height: number) {
@@ -50,16 +51,17 @@ export default class Camera {
 
   _injectData (data) {
     const { type } = data
-    if (type === 'filldata' || type === 'linedata' || type === 'pointdata') this._injectVectorSourceData(data.source, data.tileID, data.vertexBuffer, data.indexBuffer, data.codeTypeBuffer, data.featureGuideBuffer)
-    else if (type === 'heatmapdata') this._injectVectorSourceData(data.source, data.tileID, data.vertexBuffer, data.weightBuffer, data.codeTypeBuffer, data.featureGuideBuffer, true)
-    else if (type === 'maskdata') this._injectMaskGeometry(data.tileID, data.vertexBuffer, data.indexBuffer, data.radiiBuffer)
-    else if (type === 'rasterdata') this._injectRasterData(data.source, data.tileID, data.built, data.image)
-    else if (type === 'glyphdata') this._injectGlyphSourceData(data.source, data.tileID, data.glyphFilterBuffer, data.glyphQuadBuffer, data.glyphColorBuffer, data.featureGuideBuffer)
+    if (type === 'fill' || type === 'line' || type === 'point' || type === 'heatmap') this._injectVectorSourceData(data.sourceName, data.tileID, data.vertexBuffer, data.indexBuffer || data.weightBuffer, data.fillIDBuffer, data.codeTypeBuffer, data.featureGuideBuffer, type === 'heatmap')
+    else if (type === 'mask') this._injectMaskGeometry(data.tileID, data.vertexBuffer, data.indexBuffer, data.radiiBuffer)
+    else if (type === 'raster') this._injectRaster(data.sourceName, data.tileID, data.built, data.image, data.featureGuides, data.time)
+    else if (type === 'glyph') this._injectGlyphSourceData(data.sourceName, data.tileID, data.glyphFilterBuffer, data.glyphQuadBuffer, data.glyphColorBuffer, data.featureGuideBuffer)
     else if (type === 'glyphimages') this.painter.injectGlyphImages(data.maxHeight, data.images)
-    else if (type === 'interactivedata') this._injectInteractiveData(data.source, data.tileID, data.interactiveGuideBuffer, data.interactiveDataBuffer)
+    else if (type === 'interactive') this._injectInteractiveData(data.sourceName, data.tileID, data.interactiveGuideBuffer, data.interactiveDataBuffer)
     else if (type === 'flush') this._injectFlush(data)
+    else if (type === 'timesource') this._addTimeSource(data.sourceName, data.interval)
     // new 'paint', so painter is dirty
     this.painter.dirty = true
+    this.render()
   }
 
   _injectFlush (data) {
@@ -70,7 +72,18 @@ export default class Camera {
     }
   }
 
-  _injectMaskGeometry (tileID: number, vertexBuffer: ArrayBuffer,
+  _buildTimeCache (timeSeries: TimeSeries) {
+    const { parent, webworker } = this
+    this.timeCache = new TimeCache(this, webworker, timeSeries)
+  }
+
+  _addTimeSource (sourceName: string, interval: number) {
+    const { parent, webworker, timeCache } = this
+    if (!timeCache) return
+    timeCache.addSource(sourceName, interval)
+  }
+
+  _injectMaskGeometry (tileID: string | BigInt, vertexBuffer: ArrayBuffer,
     indexBuffer: ArrayBuffer, radiiBuffer: ArrayBuffer) {
     if (this.tileCache.has(tileID)) {
       const tile = this.tileCache.get(tileID)
@@ -78,54 +91,59 @@ export default class Camera {
     }
   }
 
-  _injectVectorSourceData (source: string, tileID: number, vertexBuffer: ArrayBuffer,
-    indexWeightBuffer: ArrayBuffer, codeTypeBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer,
+  _injectVectorSourceData (sourceName: string, tileID: string | BigInt, vertexBuffer: ArrayBuffer,
+    indexWeightBuffer: ArrayBuffer, fillIDBuffer: ArrayBuffer, codeTypeBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer,
     weight?: boolean = false) {
     if (this.tileCache.has(tileID)) {
       // get tile
       const tile = this.tileCache.get(tileID)
       // inject into tile
-      tile.injectVectorSourceData(source, new Int16Array(vertexBuffer), (weight) ? new Float32Array(indexWeightBuffer) : new Uint32Array(indexWeightBuffer), codeTypeBuffer ? new Uint8Array(codeTypeBuffer) : null, new Float32Array(featureGuideBuffer), this.style.layers)
+      tile.injectVectorSourceData(sourceName, new Int16Array(vertexBuffer), (weight) ? new Float32Array(indexWeightBuffer) : new Uint32Array(indexWeightBuffer), new Uint8Array(fillIDBuffer), codeTypeBuffer ? new Uint8Array(codeTypeBuffer) : null, new Float32Array(featureGuideBuffer), this.style.layers)
     }
   }
 
-  _injectRasterData (source: string, tileID: number, built: boolean, image: ImageBitmap | ArrayBuffer) {
-    if (this.tileCache.has(tileID)) {
+  async _injectRaster (sourceName: string, tileID: string | BigInt, built: boolean, image: ImageBitmap | ArrayBuffer, featureGuides: RasterFeatureGuide, time: number) {
+    const { tileCache, timeCache, style } = this
+    const { layers } = style
+    if (tileCache.has(tileID)) {
       // get tile
-      const tile = this.tileCache.get(tileID)
-      // find all layers that utilize the raster data
-      const layerIndexs = this.style.layers.filter(layer => layer.source === source).map(layer => layer.layerIndex)
+      const tile = tileCache.get(tileID)
+      // if not build yet, build the raster
+      if (!built) image = await createImageBitmap(new Blob([image]))
       // inject into tile
-      if (!built) {
-        createImageBitmap(new Blob([image]))
-          .then(image => tile.injectRasterData(source, layerIndexs, image, this.style.layers))
-      } else { tile.injectRasterData(source, layerIndexs, image, this.style.layers) }
+      tile.injectRaster(sourceName, image, featureGuides, layers, time, timeCache)
     }
   }
 
-  _injectGlyphSourceData (source: string, tileID: number, glyphFilterBuffer: ArrayBuffer,
+  _injectGlyphSourceData (sourceName: string, tileID: string | BigInt, glyphFilterBuffer: ArrayBuffer,
     glyphQuadBuffer: ArrayBuffer, glyphColorBuffer: ArrayBuffer, featureGuideBuffer: ArrayBuffer) {
     // store the vertexBuffer and texture in the gpu.
     if (this.tileCache.has(tileID)) {
       const tile = this.tileCache.get(tileID)
       tile.injectGlyphSourceData(
-        source, new Float32Array(glyphFilterBuffer), new Float32Array(glyphQuadBuffer),
+        sourceName, new Float32Array(glyphFilterBuffer), new Float32Array(glyphQuadBuffer),
         new Uint8ClampedArray(glyphColorBuffer), new Float32Array(featureGuideBuffer),
         this.style.layers
       )
     }
   }
 
-  _injectInteractiveData (source: string, tileID: number, interactiveGuideBuffer: ArrayBuffer,
+  _injectInteractiveData (sourceName: string, tileID: string | BigInt, interactiveGuideBuffer: ArrayBuffer,
     interactiveDataBuffer: ArrayBuffer) {
     if (this.tileCache.has(tileID)) {
       const tile = this.tileCache.get(tileID)
-      tile.injectInteractiveData(source, new Uint32Array(interactiveGuideBuffer), new Uint8Array(interactiveDataBuffer))
+      tile.injectInteractiveData(sourceName, new Uint32Array(interactiveGuideBuffer), new Uint8Array(interactiveDataBuffer))
     }
   }
 
-  _getTiles (): Array<Tile> {
+  getTile (tileID: BigInt) {
+    return this.tileCache.get(tileID)
+  }
+
+  getTiles (): Array<Tile> {
     if (this.projector.dirty) {
+      this.painter.dirty = true // to avoid re-requesting getTiles (which is expensive), we set painter.dirty to true
+      this.projector.dirty = false
       let tilesInView: TileDefinitions = []
       // no matter what we need to update what's in view
       const newTiles = []
@@ -141,10 +159,7 @@ export default class Camera {
         }
       }
       // if new tiles exist, ensture the worker and painter are updated
-      if (newTiles.length) {
-        this.painter.dirty = true
-        this.style.requestTiles(newTiles)
-      }
+      if (newTiles.length) this.style.requestTiles(newTiles)
       // given the S2CellID, find them in cache and return them
       this.tilesInView = this.tileCache.getBatch(tilesInView)
 
@@ -172,7 +187,7 @@ export default class Camera {
     // create tile
     const tile = new Tile(this.painter.context, id)
     // should our style have default layers, let's add them
-    if (style.maskLayers.length) tile.injectMaskLayers(style.maskLayers)
+    if (style.maskLayers && style.maskLayers.length) tile.injectMaskLayers(style.maskLayers)
     // inject parent should one exist
     if (!isFace(id)) {
       // get closest parent S2CellID. If actively zooming, the parent tile will pass along
@@ -191,7 +206,7 @@ export default class Camera {
   }
 
   _fullyRenderedScreen (): boolean {
-    const tiles = this._getTiles()
+    const tiles = this.getTiles()
     let fullyRendered = true
     for (const tile of tiles) {
       if (tile.rendered !== true) {
@@ -207,7 +222,7 @@ export default class Camera {
   _draw () {
     const { style, painter, projector } = this
     // prep tiles
-    const tiles = this._getTiles()
+    const tiles = this.getTiles()
     // if any changes, we paint new scene
     if (style.dirty || painter.dirty || projector.dirty) {
       // store for future draw that it was a "dirty" frame

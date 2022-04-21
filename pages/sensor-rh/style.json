@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "name": "s2test",
+  "center": [-122.4585607773497, 37.778443127730476],
+  "zoom": -0.5,
+  "minzoom": -0.5,
+  "maxzoom": 3,
+  "sources": {
+    "countries": "http://localhost:8000/s2json/countriesHD.s2json",
+    "relative-humidity": {
+      "type": "raster",
+      "extension": "webp",
+      "path": "http://localhost:8000/tiles/sensors/rh",
+      "format": "tfzxy",
+      "minzoom": 0,
+      "maxzoom": 0,
+      "faces": [0, 1, 2, 3, 4, 5],
+      "interval": 43200,
+      "attributions": {
+        "S2 Maps": "https://s2maps.io/data",
+        "GFS": "https://www.nco.ncep.noaa.gov/pmb/products/gfs"
+      }
+    }
+  },
+  "fonts": {},
+  "wallpaper": {
+    "background-color": "#171c22",
+    "fade-1": "#171c22",
+    "fade-2": "#151b24",
+    "halo": "#3f5166"
+  },
+  "time-series": {
+    "start-date": 1630972800000,
+    "end-date": 1631124000000,
+    "speed": 10800,
+    "auto-play": true,
+    "loop": true
+  },
+  "layers": [
+    {
+      "name": "background",
+      "type": "fill",
+      "opaque": true,
+      "source": "mask",
+      "layout": {},
+      "paint": {
+        "color": "#171c22"
+      }
+    },
+    {
+      "name": "tmp",
+      "type": "sensor",
+      "source": "relative-humidity",
+      "layout": {
+        "color-ramp": [
+          0,
+          "#e4a31f",
+          0.45,
+          "#3f3c5c",
+          0.75,
+          "#1e14c7",
+          1,
+          "#15feff"
+        ],
+        "start-date": 1630972800000,
+        "end-date": 1631124000000,
+        "speed": 10800,
+        "pause-duration": 3,
+        "auto-play": true,
+        "loop": true
+      },
+      "paint": {
+        "opacity": 0.4
+      }
+    },
+    {
+      "name": "country-line",
+      "source": "countries",
+      "filter": ["type", "!=", "river"],
+      "type": "line",
+      "layout": {},
+      "paint": {
+        "color": "rgba(187, 211, 222, 0.4)",
+        "width": 1.25
+      }
+    },
+    {
+      "name": "river-line",
+      "source": "countries",
+      "filter": ["type", "==", "river"],
+      "type": "line",
+      "layout": {},
+      "paint": {
+        "color": "rgba(187, 211, 222, 0.3)",
+        "width": 1.1
+      }
+    },
+    {
+      "name": "shade",
+      "source": "mask",
+      "type": "shade",
+      "maxzoom": 2
+    }
+  ]
+}

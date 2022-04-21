@@ -266,7 +266,7 @@ export default class Animator {
 
   _buildFutureTileList () {
     const { endLon, endLat, endZoom, endBearing, endPitch, projector, duration } = this
-    const tileSet = new Set(projector.map._getTiles().map(tile => tile.id))
+    const tileSet = new Set(projector.map.getTiles().map(tile => tile.id))
     const newTiles = {}
     let tilesFound: boolean
     const batch = [

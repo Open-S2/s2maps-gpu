@@ -24,7 +24,7 @@ export default class PointProgram extends Program {
     // get gl from context
     const { gl, type, devicePixelRatio } = context
     // if webgl1, setup attribute locations
-    if (type === 1) gl.attributeLocations = { aExtent: 0, aPos: 1 }
+    if (type === 1) gl.attributeLocations = { aExtent: 0, aPos: 1, aID: 6 }
     // inject Program
     super(context)
     // build shaders
@@ -36,7 +36,7 @@ export default class PointProgram extends Program {
     this.setDevicePixelRatio(devicePixelRatio)
   }
 
-  draw (featureGuide: FeatureGuide, source: VectorTileSource, interactive?: boolean) {
+  draw (featureGuide: FeatureGuide, source: VectorTileSource, interactive?: boolean = false) {
     // grab context
     const { gl, context, defaultBounds, uColor, uRadius, uStroke, uSWidth, uOpacity, uBounds } = this
     const { type } = context

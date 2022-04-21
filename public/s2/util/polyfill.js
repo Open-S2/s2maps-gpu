@@ -1,9 +1,10 @@
+import { isSafari } from './browsers'
 // @flow
 /* eslint-env browser */
 /* Safari and Edge polyfill for createImageBitmap
  * https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/createImageBitmap
  */
-if (!('createImageBitmap' in window)) {
+if (!('createImageBitmap' in window) || isSafari) {
   window.createImageBitmap = async function (blob) {
     return new Promise((resolve, reject) => {
       const img = document.createElement('img')

@@ -50,6 +50,7 @@ export default class TileWorker {
   id: number
   webgl1: boolean = false
   vectorManager: VectorManager
+  rasterManager: RasterManager
   maps: { [string]: Array<Layer> } = {}
   messagePort: MessageChannel.port1
   postPort: MessageChannel.port2
@@ -58,8 +59,8 @@ export default class TileWorker {
     const { mapID, type } = data
     if (type === 'port') this._loadWorkerPort(data.messagePort, data.postPort, data.id, data.totalWorkers)
     else if (type === 'style') this._loadStyle(mapID, data.style)
-    else if (type === 'pbfdata') this._processPBF(mapID, data.tile, data.sourceName, data.parent, data.data)
-    else if (type === 'rasterdata') this._processRaster(mapID, data.tile, data.sourceName, data.parent, data.data)
+    else if (type === 'vector') this._processPBF(mapID, data.tile, data.sourceName, data.parent, data.data)
+    else if (type === 'raster') this._processRaster(mapID, data.tile, data.sourceName, data.parent, data.data)
     else if (type === 'jsondata') this._processJSONData(mapID, data.tile, data.sourceName, data.data)
     else if (type === 'glyphresponse') this._processGlyphResponse(mapID, data.reqID, data.glyphMetadata, data.familyName, data.icons, data.colors)
     else if (type === 'addLayer') this._addLayer(mapID, data.layer, data.index)
@@ -97,7 +98,7 @@ export default class TileWorker {
     const { layers, glType } = style
     parseLayers(layers, glType)
     this.maps[mapID] = layers
-    this.vectorManager.webgl1 = this.webgl1 = glType === 1
+    this.webgl1 = this.vectorManager.webgl1 = glType === 1
   }
 
   _addLayer (mapID: string, layer: Layer, index: number) {
@@ -136,13 +137,13 @@ export default class TileWorker {
   }
 
   _processPBF (mapID: string, tile: TileRequest, sourceName: string,
-    parent: boolean, data: ArrayBuffer) {
+    parent?: ParentLayer, data: ArrayBuffer) {
     this.vectorManager.processVector(mapID, tile, sourceName, new VectorTile(data), this.maps[mapID], parent)
   }
 
   _processRaster (mapID: string, tile: TileRequest, sourceName: string,
-    parent: boolean, data: ArrayBuffer) {
-    processRaster(mapID, tile, sourceName, parent, data, postMessage)
+    parent?: ParentLayer, data: ArrayBuffer) {
+    processRaster(mapID, this.webgl1, tile, sourceName, parent, data, this.maps[mapID])
   }
 
   _processJSONData (mapID: string, tile: TileRequest, sourceName: string, data: Object) {

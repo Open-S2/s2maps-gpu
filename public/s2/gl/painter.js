@@ -19,12 +19,13 @@ import type {
   LineProgram,
   PointProgram,
   RasterProgram,
+  SensorProgram,
   ShadeProgram,
   SkyboxProgram,
   WallpaperProgram
 } from './programs'
 
-type ProgramGL = FillProgram | GlyphFilterProgram | GlyphProgram | HeatmapProgram | LineProgram | PointProgram | RasterProgram | ShadeProgram | SkyboxProgram | WallpaperProgram
+type ProgramGL = FillProgram | GlyphFilterProgram | GlyphProgram | HeatmapProgram | LineProgram | PointProgram | RasterProgram | SensorProgram | ShadeProgram | SkyboxProgram | WallpaperProgram
 
 export default class Painter {
   context: WebGL2Context | WebGLContext
@@ -52,8 +53,10 @@ export default class Painter {
         case 'raster':
           programs.raster = await import('./programs/rasterProgram').then(P => { return new P.default(context) }) // eslint-disable-line
           break
+        case 'sensor':
+          programs.sensor = await import('./programs/sensorProgram').then(P => { return new P.default(context) }) // eslint-disable-line
+          break
         case 'fill':
-          // programs.fill = new FillProgram(context)
           programs.fill = await import('./programs/fillProgram').then(P => { return new P.default(context) }) // eslint-disable-line
           break
         case 'line':
@@ -90,11 +93,10 @@ export default class Painter {
 
   useProgram (programName: ProgramType): ProgramGL {
     const program = this.programs[programName]
-    // if (this.currProgram !== programName) {
-    //   this.currProgram = programName
-    //   program.use()
-    // }
-    program.use()
+    if (this.currProgram !== programName) {
+      this.currProgram = programName
+      program.use()
+    } else { program.flush() }
     return program
   }
 

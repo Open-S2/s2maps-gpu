@@ -1,20 +1,16 @@
 {
   "version": 1,
-  "name": "rasterTest",
+  "name": "raster-example",
   "center": [0, 0],
   "zoom": -0.5,
   "minzoom": -1.5,
   "maxzoom": 5.25,
   "zoom-offset": 0.5,
   "sources": {
-    "satellite": "s2maps://data/s2maps/modis-v1/7.s2tiles"
-  },
-  "shade": false,
-  "mask": {
-    "exaggeration": 1.5
+    "satellite": "s2maps://s2tiles/s2maps/modis/3.s2tiles"
   },
   "wallpaper": {
-    "skybox": "https://data.s2maps.io/public/backgrounds/milkyway",
+    "skybox": "backgrounds/milkyway",
     "loadingBackground": "rgb(9, 8, 17)",
     "size": 2048,
     "type": "webp"
