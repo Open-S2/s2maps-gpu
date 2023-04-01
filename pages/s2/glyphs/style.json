@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "name": "s2test",
+  "center": [-122.4585607773497, 37.778443127730476],
+  "zoom": -0.5,
+  "minzoom": -0.5,
+  "maxzoom": 5,
+  "sources": {
+    "countries": "s2maps://s2json/s2maps/countriesHD.s2json"
+  },
+  "fonts": {
+    "noto-sans-medium": "s2maps://glyphs/s2maps/Noto/NotoSansMedium.font",
+    "roboto-medium": {
+      "path": "s2maps://glyphs/s2maps/Roboto/RobotoMedium.font",
+      "fallback": "noto-sans-medium"
+    }
+  },
+  "layers": [
+    {
+      "name": "background",
+      "type": "fill",
+      "source": "mask",
+      "opaque": true,
+      "layout": {},
+      "paint": {
+        "color": "#fff"
+      }
+    },
+    {
+      "name": "country-fill",
+      "source": "countries",
+      "type": "fill",
+      "invert": true,
+      "opaque": false,
+      "layout": {},
+      "paint": {
+        "color": "#eaf1f4"
+      }
+    },
+    {
+      "name": "country-line",
+      "source": "countries",
+      "type": "line",
+      "layout": {},
+      "paint": {
+        "color": "#bbd3de",
+        "width": 1.25
+      }
+    },
+    {
+      "name": "poi_labels",
+      "source": "countries",
+      "filter": ["and", ["iso", "==", "us"], ["name", "==", "United States"]],
+      "type": "glyph",
+      "layout": {
+        "text-family": "roboto-medium",
+        "text-field": "?!Uname",
+        "text-anchor": "center",
+        "text-offset": [0, 0],
+        "text-padding": [1, 1]
+      },
+      "paint": {
+        "text-size": 18,
+        "text-fill": "#1a73e7",
+        "text-stroke": "rgba(255, 255, 255, 0.75)",
+        "text-stroke-width": 0.5
+      }
+    }
+  ]
+}

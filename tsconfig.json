@@ -1,0 +1,47 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "lib": [
+      "DOM",
+      "dom.iterable",
+      "esnext",
+      "WebWorker"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": false,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "typeRoots": [ /* Specify multiple folders that act like `./node_modules/@types`. */
+      "./node_modules/@webgpu/types",
+      "./node_modules/@types"
+    ],
+    "baseUrl": ".",
+    "paths": {    
+      "*" : ["./*"],
+      "@s2/*": ["./s2/*"],
+      "@assets/*": ["./assets/*"],
+      "@components/*": ["./components/*"],
+      "@contexts/*": ["./contexts/*"],
+      "@pages/*": ["./pages/*"],
+      "@public/*": ["./public/*"],
+      "@styles/*": ["./styles/*"]
+    }
+  },
+  "include": [
+    "types/*.d.ts",
+    "s2/**/*.ts",
+    "s2/**/*.tsx",
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

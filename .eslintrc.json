@@ -1,0 +1,34 @@
+{
+  "extends": [
+    "next/core-web-vitals",
+    "standard-with-typescript",
+    "standard-jsx",
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "env": {
+    "browser": true
+  },
+  "parser": "@typescript-eslint/parser",
+  "plugins": [
+    "@typescript-eslint",
+    "react"
+  ],
+  "rules": {
+    "@next/next/no-img-element": "off",
+    "react/require-default-props": "off",
+    "react/react-in-jsx-scope": "off",
+    "react/prop-types": "off",
+    "@typescript-eslint/no-dynamic-delete": "off",
+    "sort-imports": ["error", {
+      "ignoreCase": false,
+      "ignoreDeclarationSort": true,
+      "ignoreMemberSort": false,
+      "memberSyntaxSortOrder": ["none", "all", "multiple", "single"],
+      "allowSeparatedGroups": false
+    }],
+    "@typescript-eslint/ban-types": "warn"
+  },
+  "parserOptions": {
+    "project": ["./tsconfig.next.json"]
+  }
+}

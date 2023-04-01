@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "name": "s2test",
+  "center": [-122.4585607773497, 37.778443127730476],
+  "zoom": -0.5,
+  "minzoom": -0.5,
+  "maxzoom": 5,
+  "sources": {
+    "countries": "s2maps://s2json/s2maps/countriesHD.s2json",
+    "earthquakes": "s2maps://s2json/s2maps/earthquakes.s2json"
+  },
+  "fonts": {},
+  "layers": [
+    {
+      "name": "background",
+      "type": "fill",
+      "source": "mask",
+      "opaque": true,
+      "layout": {},
+      "paint": {
+        "color": "#fff"
+      }
+    },
+    {
+      "name": "country-fill",
+      "source": "countries",
+      "type": "fill",
+      "invert": true,
+      "opaque": false,
+      "layout": {},
+      "paint": {
+        "color": "#eaf1f4"
+      }
+    },
+    {
+      "name": "country-line",
+      "source": "countries",
+      "type": "line",
+      "layout": {},
+      "paint": {
+        "color": "#bbd3de",
+        "width": 1.25
+      }
+    },
+    {
+      "name": "shade",
+      "source": "mask",
+      "type": "shade",
+      "maxzoom": 2
+    },
+    {
+      "name": "earthquakes-heat",
+      "source": "earthquakes",
+      "type": "heatmap",
+      "minzoom": 0,
+      "maxzoom": 8,
+      "layout": {
+        "color-ramp": [
+          0,
+          "rgba(33,102,172,0)",
+          0.2,
+          "rgba(103,169,207, 0.85)",
+          0.4,
+          "rgb(209,229,240)",
+          0.6,
+          "rgb(253,219,199)",
+          0.8,
+          "rgb(239,138,98)",
+          1,
+          "rgb(178,24,43)"
+        ],
+        "weight": [
+          "data-range",
+          "mag",
+          "lin",
+          0,
+          0,
+          8,
+          1
+        ]
+      },
+      "paint": {
+        "radius": [
+          "input-range",
+          "zoom",
+          "lin",
+          0,
+          3,
+          8,
+          30
+        ],
+        "opacity": [
+          "input-range",
+          "zoom",
+          "lin",
+          4,
+          1,
+          5,
+          0
+        ],
+        "intensity": [
+          "input-range",
+          "zoom",
+          "lin",
+          0,
+          1,
+          8,
+          3
+        ]
+      }
+    }
+  ]
+}
