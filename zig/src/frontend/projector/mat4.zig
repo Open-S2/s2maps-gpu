@@ -1,0 +1,500 @@
+const std = @import("std");
+const testing = std.testing;
+const meta = @import("std").meta;
+const Vector = meta.Vector;
+
+pub fn create() Vector(16, f32) {
+    var m = @splat(16, @as(f32, 0));
+    m[0] = 1.0;
+    m[5] = 1.0;
+    m[10] = 1.0;
+    m[15] = 1.0;
+    return m;
+}
+
+pub fn clone(m: Vector(16, f32)) Vector(16, f32) {
+    var res = @splat(16, @as(f32, 1));
+    res *= m;
+    return res;
+}
+
+pub fn blend(
+    width: f32,
+    height: f32,
+    near: f32,
+    far: ?f32,
+) Vector(16, f32) {
+    var m = @splat(16, @as(f32, 0));
+
+    m[0] = 1.0 / width;
+    m[5] = 1.0 / height;
+    m[11] = -1.0;
+    if (far != null and far.? != std.math.inf_f32) {
+        const nf = 1.0 / (near - far.?);
+        m[10] = (far.? + near) * nf;
+        m[14] = (2.0 * far.? * near) * nf;
+    } else {
+        m[10] = -1.0;
+        m[14] = -2.0 * near;
+    }
+
+    return m;
+}
+
+pub fn ortho(
+    width: f32,
+    height: f32,
+    far: f32,
+) Vector(16, f32) {
+    var m = @splat(16, @as(f32, 0));
+
+    m[0] = 1.0 / width;
+    m[5] = 1.0 / height;
+    m[10] = -1.0 / far;
+    m[15] = 1.0;
+
+    return m;
+}
+
+pub fn perspective(
+    fovy: f32,
+    aspect: f32,
+    near: f32,
+    far: ?f32,
+) Vector(16, f32) {
+    var m = @splat(16, @as(f32, 0));
+
+    const f = 1.0 / @tan(fovy / 2.0);
+    m[0] = f / aspect;
+    m[5] = f;
+    m[11] = -1.0;
+    if (far != null and far.? != std.math.inf_f32) {
+        const nf = 1.0 / (near - far.?);
+        m[10] = (far.? + near) * nf;
+        m[14] = (2.0 * far.? * near) * nf;
+    } else {
+        m[10] = -1.0;
+        m[14] = -2.0 * near;
+    }
+
+    return m;
+}
+
+pub fn lookAt(
+    eye: [3]f32,
+    up: [3]f32,
+    allocator: std.mem.Allocator,
+) ![]f32 {
+    var m = try allocator.alloc(f32, 16);
+    for (m, 0..) |_, idx| {
+        m[idx] = 0.0;
+    }
+
+    var x0: f32 = 0.0;
+    var x1: f32 = 0.0;
+    var x2: f32 = 0.0;
+    var y0: f32 = 0.0;
+    var y1: f32 = 0.0;
+    var y2: f32 = 0.0;
+    var z0: f32 = 0.0;
+    var z1: f32 = 0.0;
+    var z2: f32 = 0.0;
+    var len: usize = 0.0;
+    const eyex = eye[0];
+    const eyey = eye[1];
+    const eyez = eye[2];
+    const upx = up[0];
+    const upy = up[1];
+    const upz = up[2];
+
+    z0 = eyex;
+    z1 = eyey;
+    z2 = eyez;
+    len = 1 / std.math.hypot(z0, z1, z2);
+    z0 *= len;
+    z1 *= len;
+    z2 *= len;
+    x0 = upy * z2 - upz * z1;
+    x1 = upz * z0 - upx * z2;
+    x2 = upx * z1 - upy * z0;
+    len = std.math.hypot(x0, x1, x2);
+
+    if (len == 0) {
+        x0 = 0.0;
+        x1 = 0.0;
+        x2 = 0.0;
+    } else {
+        len = 1 / len;
+        x0 *= len;
+        x1 *= len;
+        x2 *= len;
+    }
+
+    y0 = z1 * x2 - z2 * x1;
+    y1 = z2 * x0 - z0 * x2;
+    y2 = z0 * x1 - z1 * x0;
+    len = std.math.hypot(y0, y1, y2);
+
+    if (len == 0) {
+        y0 = 0.0;
+        y1 = 0.0;
+        y2 = 0.0;
+    } else {
+        len = 1 / len;
+        y0 *= len;
+        y1 *= len;
+        y2 *= len;
+    }
+
+    m[0] = x0;
+    m[1] = y0;
+    m[2] = z0;
+    m[3] = 0.0;
+    m[4] = x1;
+    m[5] = y1;
+    m[6] = z1;
+    m[7] = 0.0;
+    m[8] = x2;
+    m[9] = y2;
+    m[10] = z2;
+    m[11] = 0.0;
+    m[12] = -(x0 * eyex + x1 * eyey + x2 * eyez);
+    m[13] = -(y0 * eyex + y1 * eyey + y2 * eyez);
+    m[14] = -(z0 * eyex + z1 * eyey + z2 * eyez);
+    m[15] = 1.0;
+
+    return m;
+}
+
+pub fn addCenter(
+    m: [16]f32,
+    v: [4]f32,
+) []f32 {
+    m[12] = v[0];
+    m[13] = v[1];
+    m[14] = v[2];
+    m[15] = v[3];
+
+    return m;
+}
+
+pub fn translate(
+    m: [16]f32,
+    v: [3]f32,
+) []f32 {
+    const x = v[0];
+    const y = v[1];
+    const z = v[2];
+
+    m[12] = m[0] * x + m[4] * y + m[8] * z + m[12];
+    m[13] = m[1] * x + m[5] * y + m[9] * z + m[13];
+    m[14] = m[2] * x + m[6] * y + m[10] * z + m[14];
+    m[15] = m[3] * x + m[7] * y + m[11] * z + m[15];
+
+    return m;
+}
+
+pub fn scale(
+    m: [16]f32,
+    v: [3]f32,
+) [16]f32 {
+    const x = v[0];
+    const y = v[1];
+    const z = v[2];
+
+    m[0] = m[0] * x;
+    m[1] = m[1] * x;
+    m[2] = m[2] * x;
+    m[3] = m[3] * x;
+    m[4] = m[4] * y;
+    m[5] = m[5] * y;
+    m[6] = m[6] * y;
+    m[7] = m[7] * y;
+    m[8] = m[8] * z;
+    m[9] = m[9] * z;
+    m[10] = m[10] * z;
+    m[11] = m[11] * z;
+
+    return m;
+}
+
+pub fn rotate(
+    m: [16]f32,
+    rad: [3]f32,
+) [16]f32 {
+    if (m.len != 16) unreachable;
+    if (rad.len != 4) unreachable;
+
+    rotateX(m, rad[0]);
+    rotateY(m, rad[1]);
+    rotateZ(m, rad[2]);
+
+    return m;
+}
+
+pub fn rotateX(m: [16]f32, rad: f32) void {
+    const s = @sin(rad);
+    const c = @cos(rad);
+    const m10 = m[4];
+    const m11 = m[5];
+    const m12 = m[6];
+    const m13 = m[7];
+    const m20 = m[8];
+    const m21 = m[9];
+    const m22 = m[10];
+    const m23 = m[11];
+    // Perform axis-specific matrix multiplication
+    m[4] = m10 * c + m20 * s;
+    m[5] = m11 * c + m21 * s;
+    m[6] = m12 * c + m22 * s;
+    m[7] = m13 * c + m23 * s;
+    m[8] = m20 * c - m10 * s;
+    m[9] = m21 * c - m11 * s;
+    m[10] = m22 * c - m12 * s;
+    m[11] = m23 * c - m13 * s;
+}
+
+pub fn rotateY(m: [16]f32, rad: f32) void {
+    const s = @sin(rad);
+    const c = @cos(rad);
+    const m00 = m[0];
+    const m01 = m[1];
+    const m02 = m[2];
+    const m03 = m[3];
+    const m20 = m[8];
+    const m21 = m[9];
+    const m22 = m[10];
+    const m23 = m[11];
+    // Perform axis-specific matrix multiplication
+    m[0] = m00 * c - m20 * s;
+    m[1] = m01 * c - m21 * s;
+    m[2] = m02 * c - m22 * s;
+    m[3] = m03 * c - m23 * s;
+    m[8] = m00 * s + m20 * c;
+    m[9] = m01 * s + m21 * c;
+    m[10] = m02 * s + m22 * c;
+    m[11] = m03 * s + m23 * c;
+}
+
+pub fn rotateZ(m: [16]f32, rad: f32) void {
+    const s = @sin(rad);
+    const c = @cos(rad);
+    const m00 = m[0];
+    const m01 = m[1];
+    const m02 = m[2];
+    const m03 = m[3];
+    const m10 = m[4];
+    const m11 = m[5];
+    const m12 = m[6];
+    const m13 = m[7];
+    // Perform axis-specific matrix multiplication
+    m[0] = m00 * c + m10 * s;
+    m[1] = m01 * c + m11 * s;
+    m[2] = m02 * c + m12 * s;
+    m[3] = m03 * c + m13 * s;
+    m[4] = m10 * c - m00 * s;
+    m[5] = m11 * c - m01 * s;
+    m[6] = m12 * c - m02 * s;
+    m[7] = m13 * c - m03 * s;
+}
+
+pub fn multiplyVector(
+    m: [16]f32,
+    v: [3]f32,
+    allocator: std.mem.Allocator,
+) ![16]f32 {
+    const out = try allocator.alloc(f32, 4);
+
+    out.push(m[0] * v[0] + m[4] * v[1] + m[8] * v[2] + m[12]);
+    out.push(m[1] * v[0] + m[5] * v[1] + m[9] * v[2] + m[13]);
+    out.push(m[2] * v[0] + m[6] * v[1] + m[10] * v[2] + m[14]);
+    out.push(m[3] * v[0] + m[7] * v[1] + m[11] * v[2] + m[15]);
+
+    return out;
+}
+
+pub fn multiply(
+    a: [16]f32,
+    b: [16]f32,
+) [16]f32 {
+    const a00 = a[0];
+    const a01 = a[1];
+    const a02 = a[2];
+    const a03 = a[3];
+    const a10 = a[4];
+    const a11 = a[5];
+    const a12 = a[6];
+    const a13 = a[7];
+    const a20 = a[8];
+    const a21 = a[9];
+    const a22 = a[10];
+    const a23 = a[11];
+    const a30 = a[12];
+    const a31 = a[13];
+    const a32 = a[14];
+    const a33 = a[15];
+    // Cache only the current line of the second matrix
+    var b0 = b[0];
+    var b1 = b[1];
+    var b2 = b[2];
+    var b3 = b[3];
+    a[0] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
+    a[1] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
+    a[2] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
+    a[3] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
+    b0 = b[4];
+    b1 = b[5];
+    b2 = b[6];
+    b3 = b[7];
+    a[4] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
+    a[5] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
+    a[6] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
+    a[7] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
+    b0 = b[8];
+    b1 = b[9];
+    b2 = b[10];
+    b3 = b[11];
+    a[8] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
+    a[9] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
+    a[10] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
+    a[11] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
+    b0 = b[12];
+    b1 = b[13];
+    b2 = b[14];
+    b3 = b[15];
+    a[12] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
+    a[13] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
+    a[14] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
+    a[15] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
+
+    return a;
+}
+
+pub fn invert(m: [16]f32) ?[16]f32 {
+    const a00 = m[0];
+    const a01 = m[1];
+    const a02 = m[2];
+    const a03 = m[3];
+    const a10 = m[4];
+    const a11 = m[5];
+    const a12 = m[6];
+    const a13 = m[7];
+    const a20 = m[8];
+    const a21 = m[9];
+    const a22 = m[10];
+    const a23 = m[11];
+    const a30 = m[12];
+    const a31 = m[13];
+    const a32 = m[14];
+    const a33 = m[15];
+
+    const b00 = a00 * a11 - a01 * a10;
+    const b01 = a00 * a12 - a02 * a10;
+    const b02 = a00 * a13 - a03 * a10;
+    const b03 = a01 * a12 - a02 * a11;
+    const b04 = a01 * a13 - a03 * a11;
+    const b05 = a02 * a13 - a03 * a12;
+    const b06 = a20 * a31 - a21 * a30;
+    const b07 = a20 * a32 - a22 * a30;
+    const b08 = a20 * a33 - a23 * a30;
+    const b09 = a21 * a32 - a22 * a31;
+    const b10 = a21 * a33 - a23 * a31;
+    const b11 = a22 * a33 - a23 * a32;
+    // Calculate the determinant
+    var det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
+    if (det == 0.0) return null;
+
+    det = 1.0 / det;
+    m[0] = (a11 * b11 - a12 * b10 + a13 * b09) * det;
+    m[1] = (a02 * b10 - a01 * b11 - a03 * b09) * det;
+    m[2] = (a31 * b05 - a32 * b04 + a33 * b03) * det;
+    m[3] = (a22 * b04 - a21 * b05 - a23 * b03) * det;
+    m[4] = (a12 * b08 - a10 * b11 - a13 * b07) * det;
+    m[5] = (a00 * b11 - a02 * b08 + a03 * b07) * det;
+    m[6] = (a32 * b02 - a30 * b05 - a33 * b01) * det;
+    m[7] = (a20 * b05 - a22 * b02 + a23 * b01) * det;
+    m[8] = (a10 * b10 - a11 * b08 + a13 * b06) * det;
+    m[9] = (a01 * b08 - a00 * b10 - a03 * b06) * det;
+    m[10] = (a30 * b04 - a31 * b02 + a33 * b00) * det;
+    m[11] = (a21 * b02 - a20 * b04 - a23 * b00) * det;
+    m[12] = (a11 * b07 - a10 * b09 - a12 * b06) * det;
+    m[13] = (a00 * b09 - a01 * b07 + a02 * b06) * det;
+    m[14] = (a31 * b01 - a30 * b03 - a32 * b00) * det;
+    m[15] = (a20 * b03 - a21 * b01 + a22 * b00) * det;
+
+    return m;
+}
+
+pub fn project(matrix: [16]f32, vector: [3]f32, allocator: std.mem.Allocator) ![3]f32 {
+    const out = try allocator.alloc(3);
+    const mul = try multiplyVector(matrix, vector, allocator);
+    defer allocator.free(mul);
+
+    out[0] = mul[0] / mul[3];
+    out[1] = mul[1] / mul[3];
+    out[2] = mul[2] / mul[3];
+
+    return out;
+}
+
+test "create" {
+    const m = create();
+    const expect = @Vector(16, f32){ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 };
+
+    try testing.expect(meta.eql(expect, m));
+}
+
+test "clone" {
+    var m = create();
+    m[1] = 2.0;
+    var c = clone(m);
+    m[1] = 3.0;
+    try testing.expect(!meta.eql(m, c));
+    const expectM = @Vector(16, f32){ 1.0, 3.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 };
+    const expectC = @Vector(16, f32){ 1.0, 2.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 };
+    try testing.expect(meta.eql(expectM, m));
+    try testing.expect(meta.eql(expectC, c));
+}
+
+// test "project" {
+//     const m = create();
+//     const point = Vector(4, f32){ 1.0, 0.0, 0.5, 1.0 };
+//     _ = project(m, point);
+//     // const expect = Vector(16, f32){ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 };
+
+//     // try testing.expect(meta.eql(expect, m));
+// }
+
+// test "create projection types" {
+//     const alloc = testing.allocator;
+
+//     // blend
+//     {
+//         const matrix = try blend(10.0, 10.0, 0.1, 10, alloc);
+//         defer alloc.free(matrix);
+
+//         const expect = [16]f32{ 1.00000001e-01, 0.0, 0.0, 0.0, 0.0, 1.00000001e-01, 0.0, 0.0, 0.0, 0.0, -1.02020215e+00, -1.0, 0.0, 0.0, -2.02020213e-01, 0.0 };
+
+//         try testing.expectEqualSlices(f32, &expect, matrix);
+//     }
+
+//     // ortho
+//     {
+//         const matrix = try ortho(10.0, 10.0, 10, alloc);
+//         defer alloc.free(matrix);
+
+//         const expect = [16]f32{ 1.00000001e-01, 0.0, 0.0, 0.0, 0.0, 1.00000001e-01, 0.0, 0.0, 0.0, 0.0, -1.00000001e-01, 0.0, 0.0, 0.0, 0, 1.0 };
+
+//         try testing.expectEqualSlices(f32, &expect, matrix);
+//     }
+
+//     // perspective
+//     {
+//         const matrix = try perspective(10.0, 1.0 / 2.0, 0.01, 10.0, alloc);
+//         defer alloc.free(matrix);
+
+//         const expect = [16]f32{ -5.91625869e-01, 0.0, 0.0, 0.0, 0.0, -2.95812934e-01, 0.0, 0.0, 0.0, 0.0, -1.00200200e+00, -1.0, 0.0, 0.0, -2.00200192e-02, 0.0 };
+
+//         try testing.expectEqualSlices(f32, &expect, matrix);
+//     }
+// }

@@ -1,0 +1,416 @@
+/* eslint-env browser */
+/** CONTEXTS **/
+import { WebGL2Context, WebGLContext } from './contexts'
+/** SOURCES **/
+import type { Painter as PainterSpec } from './painter.spec'
+import type { TileGL as Tile } from '../source/tile.spec'
+
+import type { MapOptions } from '../ui/s2mapUI'
+import type Projector from '../ui/camera/projector'
+import type TimeCache from '../ui/camera/timeCache'
+import type { FeatureGuide, GlyphFeatureGuide, HeatmapFeatureGuide } from './contexts/context.spec'
+import type {
+  FillProgram,
+  GlyphFilterProgram,
+  GlyphProgram,
+  HeatmapProgram,
+  LineProgram,
+  PointProgram,
+  Program,
+  RasterProgram,
+  SensorProgram,
+  ShadeProgram,
+  SkyboxProgram,
+  WallpaperProgram,
+  Workflow,
+  WorkflowKey,
+  WorkflowType
+} from './programs/program.spec'
+import type { GlyphImages } from '../workers/source/glyphSource'
+import type { ColorMode } from '../s2Map'
+import type { PainterData } from '../workers/worker.spec'
+
+export default class Painter implements PainterSpec {
+  context: WebGL2Context | WebGLContext
+  workflows: Workflow = {}
+  currProgram?: WorkflowKey
+  dirty = true
+  constructor (
+    context: WebGL2RenderingContext | WebGLRenderingContext,
+    type: 1 | 2,
+    options: MapOptions
+  ) {
+    // build a context API
+    if (type === 2) this.context = new WebGL2Context(context as WebGL2RenderingContext, options)
+    else this.context = new WebGLContext(context as WebGLRenderingContext, options)
+  }
+
+  delete (): void {
+    const { context, workflows } = this
+    for (const program of Object.values(workflows)) program.delete()
+    context.delete()
+  }
+
+  buildFeatureData (tile: Tile, data: PainterData): void {
+    this.workflows[data.type]?.buildSource(data as any, tile)
+  }
+
+  async buildWorkflows (buildSet: Set<WorkflowType>): Promise<void> {
+    const { workflows, context } = this
+    const promises: Array<Promise<void>> = []
+    for (const program of buildSet) {
+      if (program in workflows) continue
+      switch (program) {
+        case 'fill':
+          promises.push(new Promise(resolve => {
+            import('./programs/fillProgram')
+              .then(async ({ default: fillProgram }) => { workflows.fill = await fillProgram(context) })
+              .finally(() => resolve())
+          }))
+          break
+        case 'raster':
+          promises.push(new Promise(resolve => {
+            import('./programs/rasterProgram')
+              .then(async ({ default: rasterProgram }) => { workflows.raster = await rasterProgram(context) })
+              .finally(() => resolve())
+          }))
+          break
+        case 'sensor':
+          promises.push(new Promise(resolve => {
+            import('./programs/sensorProgram')
+              .then(async ({ default: sensorProgram }) => { workflows.sensor = await sensorProgram(context) })
+              .finally(() => resolve())
+          }))
+          break
+        case 'line':
+          promises.push(new Promise(resolve => {
+            import('./programs/lineProgram')
+              .then(async ({ default: lineProgram }) => { workflows.line = await lineProgram(context) })
+              .finally(() => resolve())
+          }))
+          break
+        case 'point':
+          promises.push(new Promise(resolve => {
+            import('./programs/pointProgram')
+              .then(async ({ default: pointProgram }) => { workflows.point = await pointProgram(context) })
+              .finally(() => resolve())
+          }))
+          break
+        case 'heatmap':
+          promises.push(new Promise(resolve => {
+            import('./programs/heatmapProgram')
+              .then(async ({ default: heatmapProgram }) => { workflows.heatmap = await heatmapProgram(context) })
+              .finally(() => resolve())
+          }))
+          break
+        case 'shade':
+          promises.push(new Promise(resolve => {
+            import('./programs/shadeProgram')
+              .then(async ({ default: shadeProgram }) => { workflows.shade = await shadeProgram(context) })
+              .finally(() => resolve())
+          }))
+          break
+        case 'glyph':
+          promises.push(new Promise(resolve => {
+            import('./programs/glyphProgram')
+              .then(async ({ default: glyphProgram }) => { workflows.glyph = await glyphProgram(context) })
+              .finally(() => resolve())
+          }))
+          promises.push(new Promise(resolve => {
+            import('./programs/glyphFilterProgram')
+              .then(async ({ default: glyphFilterProgram }) => { workflows.glyphFilter = await glyphFilterProgram(context) })
+              .finally(() => resolve())
+          }))
+          break
+        case 'wallpaper':
+          promises.push(new Promise(resolve => {
+            import('./programs/wallpaperProgram')
+              .then(async ({ default: wallpaperProgram }) => { workflows.background = await wallpaperProgram(context) })
+              .finally(() => resolve())
+          }))
+          break
+        case 'skybox':
+          promises.push(new Promise(resolve => {
+            import('./programs/skyboxProgram')
+              .then(async ({ default: skyboxProgram }) => { workflows.background = await skyboxProgram(context) })
+              .finally(() => resolve())
+          }))
+          break
+        default: break
+      }
+    }
+    await Promise.allSettled(promises)
+    if (workflows.glyphFilter !== undefined && workflows.glyph !== undefined) {
+      const glyph = workflows.glyph
+      glyph.injectFilter(workflows.glyphFilter)
+    }
+  }
+
+  injectFrameUniforms (matrix: Float32Array, view: number[], aspect: number[]): void {
+    const { workflows } = this
+    for (const programName in workflows) {
+      workflows[programName as keyof Workflow]?.injectFrameUniforms(matrix, view, aspect)
+    }
+  }
+
+  injectTimeCache (timeCache: TimeCache): void {
+    this.workflows.sensor?.injectTimeCache(timeCache)
+  }
+
+  useWorkflow (programName: 'fill'): FillProgram
+  useWorkflow (programName: 'glyph'): GlyphProgram
+  useWorkflow (programName: 'heatmap'): HeatmapProgram
+  useWorkflow (programName: 'line'): LineProgram
+  useWorkflow (programName: 'point'): PointProgram
+  useWorkflow (programName: 'raster'): RasterProgram
+  useWorkflow (programName: 'sensor'): SensorProgram
+  useWorkflow (programName: 'shade'): ShadeProgram
+  useWorkflow (programName: 'glyphFilter'): GlyphFilterProgram
+  useWorkflow (programName: 'background'): WallpaperProgram | SkyboxProgram | undefined
+  useWorkflow (programName: WorkflowKey): Program | undefined {
+    const program = this.workflows[programName]
+    if (program === undefined && programName !== 'background') throw new Error(`Program ${programName} not found`)
+    if (this.currProgram !== programName) {
+      this.currProgram = programName
+      program?.use()
+    } else { program?.flush() }
+    return program
+  }
+
+  resize (_width: number, _height: number): void {
+    const { context } = this
+    // If we are using the text program, update the text program's framebuffer component's sizes
+    const glyphFilter = this.workflows.glyphFilter
+    const heatmap = this.workflows.heatmap
+    if (glyphFilter !== undefined) glyphFilter.resize()
+    if (heatmap !== undefined) heatmap.resize()
+    // ensure interaction buffer is accurate
+    context.resize()
+    // ensure our default viewport is accurate
+    context.resetViewport()
+    // notify that the painter is dirty
+    this.dirty = true
+  }
+
+  paint (projector: Projector, tiles: Tile[]): void {
+    const { context } = this
+    // PREPARE PHASE
+    this.currProgram = undefined
+    // prep frame uniforms
+    const { view, aspect } = projector
+    const matrix = projector.getMatrix('m')
+    this.injectFrameUniforms(matrix, view, aspect)
+    // prep mask id's
+    this.#createTileMasksIDs(tiles)
+    // prep all tile's features to draw
+    const features = tiles.flatMap(tile => tile.featureGuides.filter(f => f.type !== 'heatmap'))
+    // draw heatmap data if applicable
+    const heatmapFeatures = tiles.flatMap(tile => tile.featureGuides.filter(f => f.type === 'heatmap') as HeatmapFeatureGuide[])
+    if (heatmapFeatures.length > 0) features.push(this.paintHeatmap(heatmapFeatures))
+    // sort features
+    features.sort(featureSort)
+    // corner case: all features tiles past zoom 12 must set screen positions
+    const featureTiles = features.map(f => f.parent ?? f.tile)
+    for (const tile of featureTiles) tile.setScreenPositions(projector)
+    // prep glyph features for drawing box filters
+    const glyphFeatures = features.filter(feature => feature.type === 'glyph' && !feature.overdraw) as GlyphFeatureGuide[]
+    // use text boxes to filter out overlap
+    if (glyphFeatures.length > 0) this.paintGlyphFilter(glyphFeatures)
+    // return to our default framebuffer
+    context.bindMainBuffer()
+    // clear main buffer
+    context.newScene()
+
+    // DRAW PHASE
+    // prep masks
+    this.paintMasks(tiles)
+    // draw the wallpaper
+    this.useWorkflow('background')?.draw(projector)
+    // paint opaque fills
+    const opaqueFillFeatures = features.filter(f => f.opaque).reverse()
+    this.paintFeatures(opaqueFillFeatures)
+    // paint features that are potentially transparent
+    const residualFeatures = features.filter(f => !(f.opaque ?? false))
+    this.paintFeatures(residualFeatures)
+    // cleanup
+    context.cleanup()
+  }
+
+  paintInteractive (tiles: Tile[]): void {
+    const interactiveFeatures = tiles
+      .flatMap(tile => tile.featureGuides)
+      .filter(feature => feature.interactive === true)
+      .sort(featureSort)
+      .reverse()
+    if (interactiveFeatures.length > 0) {
+      // prepare
+      this.context.clearInteractBuffer()
+      // draw
+      this.paintFeatures(interactiveFeatures, true)
+    }
+  }
+
+  #createTileMasksIDs (tiles: Tile[]): void {
+    let maskRef = 1
+    // add all tiles
+    for (const tile of tiles) {
+      tile.tmpMaskID = maskRef
+      maskRef++
+    }
+  }
+
+  paintMasks (tiles: Tile[]): void {
+    // get context
+    const { context } = this
+    // prep the fill program
+    const fillProgram = this.useWorkflow('fill')
+    // set proper states
+    context.enableMaskTest()
+
+    // create mask for each tile
+    for (const tile of tiles) {
+      const { tmpMaskID, faceST, bottom, top, mask } = tile
+      // set uniforms & stencil test
+      fillProgram.setFaceST(faceST)
+      fillProgram.setTilePos(bottom, top)
+      // set correct tile mask
+      context.stencilFuncAlways(tmpMaskID)
+      // draw mask
+      fillProgram.drawMask(mask)
+    }
+    // lock in the stencil, draw colors again
+    context.flushMask()
+  }
+
+  paintFeatures (features: FeatureGuide[], interactive = false): void {
+    if (features.length === 0) return
+    // setup context
+    const { context } = this
+    // setup variables
+    let curLayer = -1
+    let program: Program
+    // run through the features, and upon tile, layer, or program change, adjust accordingly
+    for (const feature of features) {
+      const { tile, parent, layerIndex, type, layerCode, lch } = feature
+      const { tmpMaskID } = tile
+      const { faceST, bottom, top } = parent ?? tile
+      // set program
+      program = this.useWorkflow(type as any) // TODO: Maybe there is a way for this to properly check
+      // set stencil
+      context.stencilFuncEqual(tmpMaskID)
+      // update layerCode if the current layer has changed
+      if (curLayer !== layerIndex) {
+        // now setup new layercode
+        curLayer = layerIndex
+        program.setLayerCode(layerCode, lch)
+        // set interactive if applicable
+        program.setInteractive(interactive)
+      }
+      // adjust tile uniforms
+      program.setFaceST(faceST)
+      program.setTilePos(bottom, top)
+      // draw (just ignore types... they are handled in the program)
+      program.draw(feature as any, interactive) // TODO: We could wisen this up too
+    }
+  }
+
+  paintHeatmap (features: HeatmapFeatureGuide[]): HeatmapFeatureGuide {
+    // grab heatmap program
+    const heatmapProgram = this.useWorkflow('heatmap')
+    // setup texture draws
+    heatmapProgram.setupTextureDraw()
+    // draw all features
+    for (const feature of features) {
+      const { tile, parent, layerCode, lch } = feature
+      // grab bottom-top
+      const { bottom, top, faceST } = parent ?? tile
+      // set faceST & layercode, bind vao, and draw
+      heatmapProgram.setFaceST(faceST)
+      heatmapProgram.setTilePos(bottom, top)
+      heatmapProgram.setLayerCode(layerCode, lch)
+      heatmapProgram.drawTexture(feature)
+    }
+    // return a "featureGuide" to draw to the screen
+    return features[0]
+  }
+
+  paintGlyphFilter (glyphFeatures: GlyphFeatureGuide[]): void {
+    const glyphFilterProgram = this.useWorkflow('glyphFilter')
+    // Step 1: draw quads
+    glyphFilterProgram.bindQuadFrameBuffer()
+    this.#paintGlyphFilter(glyphFilterProgram, glyphFeatures, 1)
+    // Step 2: draw result points
+    glyphFilterProgram.bindResultFramebuffer()
+    this.#paintGlyphFilter(glyphFilterProgram, glyphFeatures, 2)
+  }
+
+  getScreen (): Uint8ClampedArray {
+    const { gl } = this.context
+    const { canvas, RGBA, UNSIGNED_BYTE } = gl
+    const { width, height } = canvas
+    const pixels = new Uint8ClampedArray(width * height * 4)
+    gl.readPixels(0, 0, width, height, RGBA, UNSIGNED_BYTE, pixels)
+    // console.log(pixels)
+
+    return pixels
+  }
+
+  #paintGlyphFilter (
+    glyphFilterProgram: GlyphFilterProgram,
+    glyphFeatures: GlyphFeatureGuide[],
+    mode: 1 | 2
+  ): void {
+    const { context } = this
+    const { gl } = context
+    let curLayer = -1
+    // set mode
+    glyphFilterProgram.setMode(mode)
+    // draw each feature
+    for (const glyphFeature of glyphFeatures) {
+      const { lch, tile, parent, layerIndex, source, layerCode } = glyphFeature
+      const { bottom, top, faceST } = parent ?? tile
+      // update layerIndex
+      if (curLayer !== layerIndex) {
+        curLayer = layerIndex
+        glyphFilterProgram.setLayerCode(layerCode, lch)
+      }
+      glyphFilterProgram.setFaceST(faceST)
+      glyphFilterProgram.setTilePos(bottom, top)
+      gl.bindVertexArray(source.filterVAO)
+      // draw
+      glyphFilterProgram.draw(glyphFeature, false)
+    }
+  }
+
+  injectGlyphImages (maxHeight: number, images: GlyphImages): void {
+    const { glyph } = this.workflows
+    glyph?.injectImages(maxHeight, images)
+  }
+
+  setColorMode (mode: ColorMode): void {
+    this.dirty = true
+    // tell all the workflows
+    const { workflows } = this
+    for (const programName in workflows) {
+      const program = workflows[programName as WorkflowKey] as Program
+      program.updateColorBlindMode = mode
+    }
+  }
+}
+
+function featureSort (a: FeatureGuide, b: FeatureGuide): number {
+  // first check if the layer is the same
+  let diff = a.layerIndex - b.layerIndex
+  if (diff !== 0) return diff
+  // check for zoom difference
+  const zoomDiff = ((a.parent !== undefined) ? 1 : 0) - ((b.parent !== undefined) ? 1 : 0)
+  if (zoomDiff !== 0) return zoomDiff
+  // lastlye try to sort by feature code
+  let index = 0
+  const maxSize = Math.min(a.featureCode.length, b.featureCode.length)
+  while (diff === 0 && index < maxSize) {
+    diff = a.featureCode[index] - b.featureCode[index]
+    index++
+  }
+  return diff
+}

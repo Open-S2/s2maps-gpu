@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "name": "raster-test",
+  "center": [-122.4585607773497, 37.778443127730476],
+  "zoom": -0.5,
+  "minzoom": -0.5,
+  "maxzoom": 5,
+  "sources": {
+    "satellite": "s2maps://s2tiles/s2maps/modis/3.s2tiles"
+  },
+  "skybox": {
+    "path": "/backgrounds/milkyway",
+    "loadingBackground": "rgb(9, 8, 17)",
+    "size": 2048,
+    "type": "webp"
+  },
+  "layers": [
+    {
+      "name": "background",
+      "type": "fill",
+      "source": "mask",
+      "layout": {},
+      "paint": {
+        "color": "rgb(9, 8, 17)"
+      }
+    },
+    {
+      "name": "sat",
+      "source": "satellite",
+      "type": "raster",
+      "paint": {
+      }
+    },
+    {
+      "name": "shade",
+      "source": "mask",
+      "type": "shade",
+      "maxzoom": 2
+    }
+  ]
+}

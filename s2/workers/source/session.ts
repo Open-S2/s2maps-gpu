@@ -1,0 +1,120 @@
+/* eslint-env worker */
+import s2mapsURL from '../../util/s2mapsURL'
+
+import type { Analytics, StyleDefinition } from '../../style/style.spec'
+import type { InfoDetails } from '../../ui/info'
+
+declare const process: {
+  env: {
+    NEXT_PUBLIC_API_URL: string
+  }
+}
+
+// an API key enables the user to construct a session token
+// a session token lasts 10 minutes and allows the user to make requests for data
+
+interface SessionKey {
+  apiKey?: string
+  token?: string
+  exp?: number
+}
+
+interface SessionResponse {
+  token: string
+  maxAge: number
+}
+
+export default class Session {
+  analytics?: Analytics
+  sessionKeys: { [key: string]: SessionKey } = {} // [mapID]: session
+  workers: Array<MessageChannel['port2']> = []
+  currWorker = 0
+  totalWorkers = 0
+  sessionPromise?: Promise<SessionKey | undefined>
+
+  loadStyle (mapID: string, analytics: Analytics, apiKey?: string): void {
+    this.analytics = analytics
+    this.sessionKeys[mapID] = { apiKey }
+  }
+
+  loadWorker (_messagePort: MessageChannel['port1'], postPort: MessageChannel['port2'], id: number): void {
+    this.totalWorkers++
+    this.workers[id] = postPort
+  }
+
+  requestWorker (): MessagePort {
+    const worker = this.workers[this.currWorker]
+    this.currWorker++
+    if (this.currWorker >= this.totalWorkers) this.currWorker = 0
+
+    return worker
+  }
+
+  hasAPIKey (mapID: string): boolean {
+    return this.sessionKeys[mapID]?.apiKey !== undefined
+  }
+
+  async requestStyle (mapID: string, style: string): Promise<void> {
+    // grab the auth token
+    const Authorization = await this.requestSessionToken(mapID)
+    if (Authorization === undefined) return
+    // fetch the style
+    const json = await fetch(s2mapsURL(style), { headers: { Authorization } })
+      .then<StyleDefinition | null>(res => {
+      if (res.status !== 200) return null
+      return res.json()
+    }).catch<null>(err => { console.error(err); return null })
+    // send style back to map
+    if (json !== null) postMessage({ type: 'setStyle', mapID, style: json, ignorePosition: false })
+  }
+
+  async getInfo (mapID: string, featureID: number): Promise<void> {
+    // grab the auth token
+    const Authorization = await this.requestSessionToken(mapID)
+    if (Authorization === undefined) return
+    // fetch the json
+    const json = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/info/${featureID}.json`, { headers: { Authorization } })
+      .then<InfoDetails | null>((res) => {
+      if (res.status !== 200) return null
+      return res.json()
+    }).catch((err) => { console.error(err); return null })
+    // send json back to map
+    if (json !== null) postMessage({ mapID, type: 'info', json })
+  }
+
+  async requestSessionToken (mapID: string): Promise<string | undefined | 'failed'> {
+    const failed = 'failed'
+    const mapSessionKey = this.sessionKeys[mapID]
+    // if there is no apiKey, then the map doesn't requre a session token
+    if (mapSessionKey === undefined) return undefined
+    // check if the token is already fresh
+    const { apiKey, token, exp } = mapSessionKey
+    if (apiKey === undefined) return failed
+    if (exp !== undefined && token !== undefined && exp - (new Date()).getTime() > 0) return token
+    const { gpu, context, language, width, height } = this.analytics ?? {}
+    // grab a new token
+    if (this.sessionPromise === undefined) {
+      this.sessionPromise = fetch(`${process.env.NEXT_PUBLIC_API_URL}/session`, {
+        method: 'POST',
+        body: JSON.stringify({ apiKey, gpu, context, language, width, height }),
+        headers: { 'Content-Type': 'application/json' }
+      }).then<SessionResponse | undefined>(res => {
+        if (res.status !== 200 && res.status !== 206) return undefined
+        return res.json()
+      }).then<SessionKey | undefined>(t => {
+        if (t === undefined) return undefined
+        const expDate = new Date()
+        expDate.setSeconds(expDate.getSeconds() + t.maxAge)
+        return { token: t.token, exp: expDate.getTime() }
+      }).catch(err => { console.error(err); return undefined })
+    }
+    const sessionKey = await this.sessionPromise
+    this.sessionPromise = undefined
+    // store the new key, exp, and return the key to use
+    if (sessionKey === undefined) return failed
+    mapSessionKey.token = sessionKey.token
+    mapSessionKey.exp = sessionKey.exp
+
+    return mapSessionKey.token ?? failed
+  }
+}

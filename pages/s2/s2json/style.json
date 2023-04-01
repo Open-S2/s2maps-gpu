@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "name": "s2maps-hilbert-simple",
+  "center": [-90, 0],
+  "zoom": -0.65,
+  "bearing": 0,
+  "minzoom": -1,
+  "maxzoom": 2.5,
+  "sources": {
+    "hilbert": "http://localhost:3000/s2json/hilbert.s2json"
+  },
+  "layers": [
+    {
+      "name": "hilbert_path",
+      "source": "hilbert",
+      "filter": ["and", ["class", "==", "hilbert"], ["level", "==", 4]],
+      "type": "line",
+      "layout": {
+        "cap": "butt",
+        "join": "bevel"
+      },
+      "paint": {
+        "color": "#475569",
+        "width": 3
+      }
+    }
+  ]
+}
