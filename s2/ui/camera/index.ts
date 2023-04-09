@@ -1,24 +1,24 @@
 /* eslint-env browser */
 /** STYLE **/
-import Style from '../../style'
+import Style from 's2/style'
 /** PAINT **/
-import type { Painter as GLPainter } from '../../gl/painter.spec'
-import type { Painter as GPUPainter } from '../../gpu/painter.spec'
+import type { Painter as GLPainter } from 's2/gl/painter.spec'
+import type { Painter as GPUPainter } from 's2/gpu/painter.spec'
 import type { MapOptions } from '../s2mapUI'
 /** PROJECTIONS **/
-import { isFace, parent as parentID } from 's2projection/s2CellID'
+import { isFace, parent as parentID } from 's2/projections/s2/s2CellID'
 import Projector from './projector/index'
 /** SOURCES **/
-import { Tile } from '../../source'
+import { Tile } from 's2/source'
 import Cache from './cache'
 import TimeCache from './timeCache'
 import DragPan, { ClickEvent } from './dragPan'
 import Animator from './animator'
-import { StyleDefinition, TimeSeriesStyle } from '../../style/style.spec'
+import { StyleDefinition, TimeSeriesStyle } from 's2/style/style.spec'
 
-import type S2Map from '../../s2Map'
-import type { FlushData, InteractiveObject, ReadyMessageGL, TileRequest, TileWorkerMessage } from '../../workers/worker.spec'
-import type { TileGL, TileGPU } from '../../source/tile.spec'
+import type S2Map from 's2/s2Map'
+import type { FlushData, InteractiveObject, ReadyMessageGL, TileRequest, TileWorkerMessage } from 's2/workers/worker.spec'
+import type { TileGL, TileGPU } from 's2/source/tile.spec'
 
 export interface ResizeDimensions {
   width: number
@@ -145,7 +145,7 @@ export default class Camera {
     if (contextType === 3) {
       // context = this.#canvas.getContext('webgpu') as unknown as GPUCanvasContext // GPUCanvasContext
       // if (context === null) return false
-      // const Painter = await import('../../gpu').then(m => m.Painter)
+      // const Painter = await import('s2/gpu').then(m => m.Painter)
       // this.painter = new Painter(context, options) as any
     } else {
       let type: 1 | 2 = 1
@@ -161,7 +161,7 @@ export default class Camera {
         context = this.#canvas.getContext('webgl', webglOptions) as WebGLRenderingContext
       }
       if (context === null) return false
-      const Painter = await import('../../gl').then(m => m.Painter)
+      const Painter = await import('s2/gl').then(m => m.Painter)
       this.painter = new Painter(context, type, options) as any
     }
 

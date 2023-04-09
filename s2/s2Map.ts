@@ -112,7 +112,7 @@ export default class S2Map extends EventTarget {
       //   : (!isChrome && !isSafari && tryContext('webgl2'))
       //       ? 2
       //       : 1
-      options.contextType = (!isChrome && !isSafari && tryContext('webgl2')) ? 2 : 1
+      options.contextType = (!isSafari && tryContext('webgl2')) ? 2 : 1
     }
     // @ts-expect-error - if webgl2 context was found, lose the context
     if (options.contextType === 2) tmpContext?.getExtension('WEBGL_lose_context').loseContext()

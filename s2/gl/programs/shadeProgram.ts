@@ -6,8 +6,8 @@ import frag2 from '../shaders/shade2.fragment.glsl'
 
 import type { Context, ShadeFeatureGuide } from '../contexts'
 import type { ShadeProgram as ShadeProgramSpec, ShadeProgramUniforms } from './program.spec'
-import type { LayerDefinitionBase, LayerStyle, ShadeLayerDefinition } from '../../style/style.spec'
-import type { TileGL as Tile } from '../../source/tile.spec'
+import type { LayerDefinitionBase, LayerStyle, ShadeLayerDefinition } from 's2/style/style.spec'
+import type { TileGL as Tile } from 's2/source/tile.spec'
 
 export default async function shadeProgram (context: Context): Promise<ShadeProgramSpec> {
   const Program = await import('./program').then(m => m.default)

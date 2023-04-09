@@ -1,5 +1,5 @@
 /** TYPES **/
-import type { Face, S2GeometryType, Properties } from 's2projection'
+import type { Face, S2GeometryType, Properties } from 's2/projections'
 
 export interface FeatureVectorBase {
   properties: Properties

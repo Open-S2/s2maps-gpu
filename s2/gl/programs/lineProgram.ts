@@ -1,5 +1,5 @@
 import encodeLayerAttribute from './util/encodeLayerAttribute'
-import { buildDashImage } from '../../style/buildColorRamp'
+import { buildDashImage } from 's2/style/buildColorRamp'
 
 // WEBGL1
 import vert1 from '../shaders/line1.vertex.glsl'
@@ -10,15 +10,15 @@ import frag2 from '../shaders/line2.fragment.glsl'
 
 import type { Context, LineFeatureGuide, LineSource } from '../contexts'
 import type { LineProgram as LineProgramSpec, LineProgramUniforms } from './program.spec'
-import type { TileGL as Tile } from '../../source/tile.spec'
-import type { LineData } from '../../workers/worker.spec'
+import type { TileGL as Tile } from 's2/source/tile.spec'
+import type { LineData } from 's2/workers/worker.spec'
 import type {
   LayerDefinitionBase,
   LayerStyle,
   LineLayerDefinition,
   LineLayerStyle,
   LineWorkflowLayerGuide
-} from '../../style/style.spec'
+} from 's2/style/style.spec'
 
 export default async function lineProgram (context: Context): Promise<LineProgramSpec> {
   const Program = await import('./program').then(m => m.default)

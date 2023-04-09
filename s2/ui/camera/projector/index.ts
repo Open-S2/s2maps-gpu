@@ -3,10 +3,10 @@ import Camera from '..'
 import * as mat4 from './mat4'
 import getTiles from './getTilesInView'
 import _cursorToLonLat from './cursorToLonLat'
-import { fromLonLatGL, mul, normalize } from 's2projection/s2Point'
-import { degToRad } from 's2projection/util'
+import { fromLonLatGL, mul, normalize } from 's2/projections/s2/s2Point'
+import { degToRad } from 's2/projections'
 
-import type { MapOptions } from '../../s2mapUI'
+import type { MapOptions } from 's2/ui/s2mapUI'
 
 export interface ProjectionConfig {
   minLatPosition?: number

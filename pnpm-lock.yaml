@@ -9,11 +9,8 @@ dependencies:
     specifier: ^0.9.8
     version: 0.9.8
   s2-vector-tile:
-    specifier: ^2.0.8
-    version: 2.0.8
-  s2projection:
-    specifier: ^3.1.6
-    version: 3.1.6
+    specifier: ^2.0.9
+    version: 2.0.9
 
 devDependencies:
   '@svgr/webpack':
@@ -5435,12 +5432,8 @@ packages:
       tslib: 1.14.1
     dev: true
 
-  /s2-vector-tile@2.0.8:
-    resolution: {integrity: sha512-qLtuxWNkYwwJMO9vnKpDuX6moAFI+Jo3kMB7ioh2nT7cbjxnB8Mh3QtwTQerrBai9CNzGts+6DIvLrdpkSXoOg==}
-    dev: false
-
-  /s2projection@3.1.6:
-    resolution: {integrity: sha512-CHT1eHcmgUkT4LsMesZk5IjCYELWuMNy5wrIY+0+RpIUSIpXqPxOddRjs+eqvSuLWzcCteWn7crNXr3HzoZQtA==}
+  /s2-vector-tile@2.0.9:
+    resolution: {integrity: sha512-mdkEyT1WD/hyPng9Uz8YN0yKPJQpHudw7TtMpA7rWuS2TwRa6IJG5mUiRKl1SBkVBKMm3hy+rteOxxwCX+KtbA==}
     dev: false
 
   /safe-buffer@5.2.1:

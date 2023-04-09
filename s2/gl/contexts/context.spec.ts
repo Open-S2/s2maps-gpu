@@ -1,6 +1,6 @@
-import type { TileGL, TileGPU } from '../../source/tile.spec'
-import type { GPUType, Resampling } from '../../style/style.spec'
-import type { SensorTextureDefinition } from '../../ui/camera/timeCache'
+import type { TileGL, TileGPU } from 's2/source/tile.spec'
+import type { GPUType, Resampling } from 's2/style/style.spec'
+import type { SensorTextureDefinition } from 's2/ui/camera/timeCache'
 
 // type Merge<X, Y> = {
 //   [K in (keyof X | keyof Y)]:

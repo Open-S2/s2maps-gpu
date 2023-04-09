@@ -152,7 +152,7 @@ interface StyleDefinition {
 }
 
 /** SOURCES **/
-type Format = 'fzxy' | 'tfzxy'
+export type Format = 'zxy' | 'tzxy' | 'fzxy' | 'tfzxy'
 
 interface LayerMetaData {
   [key: string]: { // layer

@@ -16,10 +16,10 @@ import type {
   IconMap,
   Unicode
 } from './glyph.spec'
-import type { ColorMap as ColorMapResponse, IconMap as IconMapResponse } from '../../source/glyphSource'
-import type { GlyphData, GlyphRequestMessage, TileRequest } from '../../worker.spec'
+import type { ColorMap as ColorMapResponse, IconMap as IconMapResponse } from 's2/workers/source/glyphSource'
+import type { GlyphData, GlyphRequestMessage, TileRequest } from 's2/workers/worker.spec'
 import type { GlyphFeature, GlyphWorker as GlyphWorkerSpec, IDGen, VTFeature } from '../process.spec'
-import type { Alignment, Anchor, GPUType, GlyphLayerDefinition, GlyphWorkerLayer } from '../../../style/style.spec'
+import type { Alignment, Anchor, GPUType, GlyphLayerDefinition, GlyphWorkerLayer } from 's2/style/style.spec'
 import type { CodeDesign } from '../vectorWorker'
 import type { S2VectorPoints } from 's2-vector-tile'
 

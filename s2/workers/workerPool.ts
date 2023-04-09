@@ -4,7 +4,7 @@
 import { CorsWorker as Worker } from '../util/corsWorker'
 
 // import type S2Map from '../s2Map'
-import type { Analytics, LayerDefinition, StylePackage } from '../style/style.spec'
+import type { Analytics, LayerDefinition, StylePackage } from 's2/style/style.spec'
 import type { MarkerDefinition } from './source/markerSource'
 import type { SourceWorkerMessage, TileRequest, TileWorkerMessage, WorkerPoolPortMessage } from './worker.spec'
 

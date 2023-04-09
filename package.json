@@ -13,8 +13,7 @@
   },
   "dependencies": {
     "earclip": "^0.9.8",
-    "s2-vector-tile": "^2.0.8",
-    "s2projection": "^3.1.6"
+    "s2-vector-tile": "^2.0.9"
   },
   "devDependencies": {
     "@svgr/webpack": "^6.1.1",

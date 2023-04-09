@@ -12,7 +12,7 @@ import type { TileRequest } from '../worker.spec'
 import type {
   FillLayerDefinition,
   FillWorkerLayer
-} from '../../style/style.spec'
+} from 's2/style/style.spec'
 import type {
   FillFeature,
   FillWorker as FillWorkerSpec,

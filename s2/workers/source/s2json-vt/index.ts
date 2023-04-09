@@ -1,5 +1,13 @@
 /** MODULES **/
-import { childrenIJ, contains, fromFace, face as getFace, isFace, level, parent as parentID } from 's2projection/s2CellID'
+import {
+  childrenIJ,
+  contains,
+  fromFace,
+  face as getFace,
+  isFace,
+  level,
+  parent as parentID
+} from 's2/projections/s2/s2CellID'
 import convert from './convert' // GeoJSON conversion and preprocessing
 import clip from './clip'
 import transformTile from './transform' // coordinate transformation
@@ -7,7 +15,7 @@ import createTile from './tile' // final simplified tile generation
 /** TYPES **/
 import type { JSONTile, JSONVectorTile } from './tile'
 import type { FeatureVector } from './feature'
-import type { Face, S2Feature, S2FeatureCollection } from 's2projection'
+import type { Face, S2Feature, S2FeatureCollection } from 's2/projections'
 
 export interface Options {
   maxzoom?: number // max zoom to preserve detail on

@@ -1,9 +1,9 @@
 /* eslint-env browser */
 import buildMask from './buildMask'
 
-import type { MapOptions } from '../../ui/s2mapUI'
+import type { MapOptions } from 's2/ui/s2mapUI'
 import type { Context as ContextSpec, MaskSource } from './context.spec'
-import type { GPUType } from '../../style/style.spec'
+import type { GPUType } from 's2/style/style.spec'
 
 const DEPTH_ESPILON = 1 / Math.pow(2, 16)
 
@@ -23,7 +23,7 @@ export default class Context implements ContextSpec {
   zLow = 0
   zHigh = 1
   type: GPUType = 1
-  clearColorRGBA: [number, number, number, number] = [0, 0, 0, 0]
+  clearColorRGBA: [r: number, g: number, b: number, a: number] = [0, 0, 0, 0]
   featurePoint: Uint8Array = new Uint8Array(4)
   masks: Map<number, MaskSource> = new Map() // <zoom, mask>
   vao!: WebGLVertexArrayObject
@@ -31,7 +31,7 @@ export default class Context implements ContextSpec {
   interactTexture!: WebGLTexture
   stencilBuffer!: WebGLRenderbuffer
   interactFramebuffer!: WebGLFramebuffer
-  defaultBounds: [number, number, number, number] = [0, 0, 8192, 8192]
+  defaultBounds: [r: number, g: number, b: number, a: number] = [0, 0, 8192, 8192]
   constructor (context: WebGLRenderingContext | WebGL2RenderingContext, options: MapOptions) {
     const { canvasMultiplier } = options
     const gl = this.gl = context
@@ -188,7 +188,7 @@ export default class Context implements ContextSpec {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
   }
 
-  setClearColor (clearColor: [number, number, number, number]): void {
+  setClearColor (clearColor: [r: number, g: number, b: number, a: number]): void {
     this.clearColorRGBA = clearColor
   }
 

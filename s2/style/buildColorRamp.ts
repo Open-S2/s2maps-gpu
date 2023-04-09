@@ -14,7 +14,6 @@ export function buildColorRamp (
   let getColor
   if (typeof ramp === 'string') {
     if (ramp === 'sinebow') getColor = (i: number, cbAdjust?: ColorBlindAdjust): [number, number, number, number] => Color.sinebow(i).getRGB(false, cbAdjust)
-    // else if (ramp === 'sinebow-extended') getColor = (i: number): [number, number, number, number] => Color.sinebowExtended(i).getRGB(false)
     else getColor = (i: number, cbAdjust?: ColorBlindAdjust): [number, number, number, number] => Color.sinebowExtended(i).getRGB(false, cbAdjust)
   } else {
     const colorRamp: Color[] = []

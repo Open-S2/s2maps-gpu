@@ -9,11 +9,11 @@ import {
   RasterLayerDefinition,
   SensorLayerDefinition,
   ShadeLayerDefinition
-} from '../../style/style.spec'
+} from 's2/style/style.spec'
 import { WebGPUContext } from '../context'
 
-import type { TileGPU as Tile } from '../../source/tile.spec'
-import type TimeCache from '../../ui/camera/timeCache'
+import type { TileGPU as Tile } from 's2/source/tile.spec'
+import type TimeCache from 's2/ui/camera/timeCache'
 
 export interface Workflow {
   fill?: FillPipeline

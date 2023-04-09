@@ -20,7 +20,7 @@ function ready (s2map: S2Map): void {
 
 const Raster: NextPage = () => {
   return (
-    <div className={styles.countries}>
+    <div className='pages'>
       <Map
         style={style}
         opts={{ zoomController: false }}

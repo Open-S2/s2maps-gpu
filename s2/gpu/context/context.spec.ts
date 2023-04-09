@@ -1,5 +1,5 @@
-import type { TileGPU as Tile } from '../../source/tile.spec'
-// import type { GPUType } from '../../style/style.spec'
+import type { TileGPU as Tile } from 's2/source/tile.spec'
+// import type { GPUType } from 's2/style/style.spec'
 
 export interface MaskSource {
   type: 'mask'

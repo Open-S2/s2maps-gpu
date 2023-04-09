@@ -1,6 +1,6 @@
-import Color from '../../style/color'
-import { degToRad } from 's2projection/util'
-import { invert, multiply, perspective, rotate } from '../../ui/camera/projector/mat4'
+import Color from 's2/style/color'
+import { degToRad } from 's2/projections/util'
+import { invert, multiply, perspective, rotate } from 's2/ui/camera/projector/mat4'
 
 // WEBGL1
 import vert1 from '../shaders/skybox1.vertex.glsl'
@@ -10,10 +10,10 @@ import vert2 from '../shaders/skybox2.vertex.glsl'
 import frag2 from '../shaders/skybox2.fragment.glsl'
 
 import type { Context } from '../contexts'
-import type { StyleDefinition } from '../../style/style.spec'
+import type { StyleDefinition } from 's2/style/style.spec'
 import type { SkyboxProgram as SkyboxProgramSpec, SkyboxProgramUniforms } from './program.spec'
-import type Camera from '../../ui/camera'
-import type Projector from '../../ui/camera/projector'
+import type Camera from 's2/ui/camera'
+import type Projector from 's2/ui/camera/projector'
 
 export default async function skyboxProgram (context: Context): Promise<SkyboxProgramSpec> {
   const Program = await import('./program').then(m => m.default)

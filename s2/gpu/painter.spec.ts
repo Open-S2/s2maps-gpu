@@ -1,10 +1,10 @@
 // @ts-nocheck
 import type { WebGPUContext } from './context'
 import type { FillPipeline, GlyphFilterPipeline, GlyphPipeline, HeatmapPipeline, LinePipeline, PointPipeline, RasterPipeline, SensorPipeline, ShadePipeline, SkyboxPipeline, WallpaperPipeline, Workflow, WorkflowKey, WorkflowType } from './pipelines/pipeline.spec'
-import type { TileGPU as Tile } from '../source/tile.spec'
-import type { FillData, GlyphData, HeatmapData, LineData, PointData, RasterData, SensorData } from '../workers/worker.spec'
-import type { GlyphImages } from '../workers/source/glyphSource'
-import type Projector from '../ui/camera/projector'
+import type { TileGPU as Tile } from 's2/source/tile.spec'
+import type { FillData, GlyphData, HeatmapData, LineData, PointData, RasterData, SensorData } from 's2/util/worker.spec'
+import type { GlyphImages } from 's2/util/source/glyphSource'
+import type Projector from 's2/ui/camera/projector'
 
 export interface Painter {
   context: WebGPUContext

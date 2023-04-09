@@ -9,7 +9,7 @@ import type {
   ShaderSource,
   Uniforms
 } from './program.spec'
-import type { ColorMode } from '../../s2Map'
+import type { ColorMode } from 's2/s2Map'
 
 export default class Program implements ProgramSpec {
   vertexShader!: WebGLShader

@@ -1,5 +1,5 @@
-import type { ColorMode } from '../../s2Map'
-import type { TileGL as Tile } from '../../source/tile.spec'
+import type { ColorMode } from 's2/s2Map'
+import type { TileGL as Tile } from 's2/source/tile.spec'
 import type {
   FillLayerDefinition,
   FillWorkflowLayerGuide,
@@ -19,13 +19,13 @@ import type {
   SensorWorkflowLayerGuide,
   ShadeLayerDefinition,
   StyleDefinition
-} from '../../style/style.spec'
-import type Projector from '../../ui/camera/projector'
-import type S2MapUI from '../../ui/s2mapUI'
-import type TimeCache from '../../ui/camera/timeCache'
-import type { GlyphImages } from '../../workers/source/glyphSource'
+} from 's2/style/style.spec'
+import type Projector from 's2/ui/camera/projector'
+import type S2MapUI from 's2/ui/s2mapUI'
+import type TimeCache from 's2/ui/camera/timeCache'
+import type { GlyphImages } from 's2/workers/source/glyphSource'
 import type { Scheme } from './wallpaperProgram'
-import type { FillData, GlyphData, HeatmapData, LineData, PointData, RasterData, SensorData } from '../../workers/worker.spec'
+import type { FillData, GlyphData, HeatmapData, LineData, PointData, RasterData, SensorData } from 's2/workers/worker.spec'
 import type {
   Context,
   FillFeatureGuide,

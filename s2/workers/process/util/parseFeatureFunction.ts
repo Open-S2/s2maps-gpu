@@ -1,9 +1,9 @@
 import parseFilter from './parseFilter'
-import getEasingFunction from '../../../style/easingFunctions'
+import getEasingFunction from 's2/style/easingFunctions'
 
-import type { LayerWorkerFunction } from '../../../style/style.spec'
+import type { LayerWorkerFunction } from 's2/style/style.spec'
 import type { FilterFunction } from './parseFilter'
-import type { Properties } from 's2projection'
+import type { Properties } from 's2/projections'
 
 interface DataCondition<U> {
   condition: FilterFunction

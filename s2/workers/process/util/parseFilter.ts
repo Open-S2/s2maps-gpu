@@ -1,6 +1,6 @@
 import coalesceField from './coalesceField'
 
-import type { Properties } from 's2projection'
+import type { Properties } from 's2/projections'
 
 // examples:
 // filter: ["class", "==", "ocean"]

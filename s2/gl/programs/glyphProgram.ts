@@ -8,16 +8,16 @@ import vert2 from '../shaders/glyph2.vertex.glsl'
 import frag2 from '../shaders/glyph2.fragment.glsl'
 
 import type { Context, GlyphFeatureGuide, GlyphSource } from '../contexts'
-import type { GlyphImages } from '../../workers/source/glyphSource'
+import type { GlyphImages } from 's2/workers/source/glyphSource'
 import type {
   GlyphLayerDefinition,
   GlyphLayerStyle,
   GlyphWorkflowLayerGuide,
   LayerDefinitionBase,
   LayerStyle
-} from '../../style/style.spec'
-import type { GlyphData } from '../../workers/worker.spec'
-import type { TileGL as Tile } from '../../source/tile.spec'
+} from 's2/style/style.spec'
+import type { GlyphData } from 's2/workers/worker.spec'
+import type { TileGL as Tile } from 's2/source/tile.spec'
 import type {
   FBO,
   GlyphFilterProgram,
@@ -155,16 +155,16 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
         // If webgl1, we pull out the color and opacity otherwise build featureCode
         let featureCode: number[] = [0]
         let size: number | undefined
-        let fill: [number, number, number, number] | undefined
-        let stroke: [number, number, number, number] | undefined
+        let fill: [r: number, g: number, b: number, a: number] | undefined
+        let stroke: [r: number, g: number, b: number, a: number] | undefined
         let strokeWidth: number | undefined
         if (this.type === 1) {
           if (type === 0) { // text
             // get fill, stroke, and stroke width. Increment
             size = featureGuideArray[i]
-            fill = [...featureGuideArray.slice(i + 1, i + 5)] as [number, number, number, number]
+            fill = [...featureGuideArray.slice(i + 1, i + 5)] as [r: number, g: number, b: number, a: number]
             strokeWidth = featureGuideArray[i + 5]
-            stroke = [...featureGuideArray.slice(i + 6, i + 10)] as [number, number, number, number]
+            stroke = [...featureGuideArray.slice(i + 6, i + 10)] as [r: number, g: number, b: number, a: number]
           } else { // icon
             size = featureGuideArray[i]
           }
