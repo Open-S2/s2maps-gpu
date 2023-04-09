@@ -1,4 +1,4 @@
-import type { Properties } from 's2/projections'
+import type { Properties } from 's2/geometry'
 
 /**
 Coalesce text layout property "field"

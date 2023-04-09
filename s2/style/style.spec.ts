@@ -1,6 +1,6 @@
 /* eslint-env browser */
 
-import type { Properties } from 's2/projections/proj.spec'
+import type { Properties } from 's2/geometry/proj.spec'
 import type { FilterFunction } from 's2/workers/process/util/parseFilter'
 
 /** SOURCES **/

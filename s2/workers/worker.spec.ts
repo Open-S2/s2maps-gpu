@@ -3,7 +3,7 @@ import type { AnimationDirections } from 's2/ui/camera/animator'
 import type { UserTouchEvent } from 's2/ui/camera/dragPan'
 import type { InfoData } from 's2/ui/info'
 import type { MapOptions } from 's2/ui/s2mapUI'
-import type { Face, Properties } from 's2/projections'
+import type { Face, Properties } from 's2/geometry'
 import type { ColorMap, GlyphImages, IconMap } from './source/glyphSource'
 import type { MarkerDefinition } from './source/markerSource'
 

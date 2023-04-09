@@ -1,6 +1,6 @@
 import type { FeatureGuide, MaskSource as GLMaskSource, WebGL2Context, WebGLContext } from 's2/gl/contexts'
 import type Projector from 's2/ui/camera/projector'
-import type { Face, XYZ } from 's2/projections'
+import type { Face, XYZ } from 's2/geometry'
 import type { FlushData, InteractiveObject } from 's2/workers/worker.spec'
 import type { LayerDefinition } from 's2/style/style.spec'
 import type { MaskSource as GPUMaskSource, WebGPUContext } from 's2/gpu/context'

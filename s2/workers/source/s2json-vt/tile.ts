@@ -1,8 +1,8 @@
 /** MODULES **/
-import { level, toIJ } from 's2/projections/s2/s2CellID'
+import { level, toIJ } from 's2/geometry/s2/s2CellID'
 import S2JsonVT from '.'
 /** TYPES **/
-import type { Properties } from 's2/projections'
+import type { Properties } from 's2/geometry'
 import type { FeatureVector } from './feature'
 import type {
   S2VectorGeometry,

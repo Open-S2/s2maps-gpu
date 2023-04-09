@@ -3,7 +3,7 @@ import getEasingFunction from 's2/style/easingFunctions'
 
 import type { LayerWorkerFunction } from 's2/style/style.spec'
 import type { FilterFunction } from './parseFilter'
-import type { Properties } from 's2/projections'
+import type { Properties } from 's2/geometry'
 
 interface DataCondition<U> {
   condition: FilterFunction
