@@ -1,6 +1,6 @@
 /* eslint-env worker */
 import Color from 's2/style/color'
-import { Properties } from 's2/projections'
+import { Properties } from 's2/geometry'
 import { parseFeatureFunction } from './util'
 
 import type { BuildCodeFunction, GPUType, InteractiveWorkerLayer, LayerWorkerFunction } from 's2/style/style.spec'

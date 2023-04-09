@@ -1,9 +1,9 @@
 /* eslint-env worker */
-import { fromLonLat, toST } from 's2/projections/s2/s2Point'
+import { fromLonLat, toST } from 's2/geometry/s2/s2Point'
 
 import type { Session } from '.'
 import type { TileRequest } from '../worker.spec'
-import type { Point } from 's2/projections'
+import type { Point } from 's2/geometry'
 
 export interface MarkerDefinition {
   id?: number

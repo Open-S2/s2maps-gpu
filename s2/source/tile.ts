@@ -1,12 +1,12 @@
 /* eslint-env browser */
 import { project } from 's2/ui/camera/projector/mat4'
-import { bboxST } from 's2/projections/s2/s2Coords'
-import { fromSTGL, mul, normalize } from 's2/projections/s2/s2Point'
-import { level, toIJ } from 's2/projections/s2/s2CellID'
+import { bboxST } from 's2/geometry/s2/s2Coords'
+import { fromSTGL, mul, normalize } from 's2/geometry/s2/s2Point'
+import { level, toIJ } from 's2/geometry/s2/s2CellID'
 
 import type { FeatureGuide as FeatureGuideGL, MaskSource as MaskSourceGL, WebGL2Context, WebGLContext } from 's2/gl/contexts'
 import type Projector from 's2/ui/camera/projector'
-import type { Face, XYZ } from 's2/projections'
+import type { Face, XYZ } from 's2/geometry'
 import type { FlushData, InteractiveObject } from 's2/workers/worker.spec'
 import type { LayerDefinition } from 's2/style/style.spec'
 import type { FeatureGuide as FeatureGuideGPU, MaskSource as MaskSourceGPU, WebGPUContext } from 's2/gpu/context'

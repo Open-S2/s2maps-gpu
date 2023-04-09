@@ -1,5 +1,5 @@
 /* eslint-env worker */
-import { parent as parentID, toIJ } from 's2/projections/s2/s2CellID'
+import { parent as parentID, toIJ } from 's2/geometry/s2/s2CellID'
 
 import type { Session } from '.'
 import type { ParentLayers, TileRequest } from '../worker.spec'

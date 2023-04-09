@@ -1,9 +1,9 @@
 import { project } from './mat4'
-import { bboxST, neighborsIJ } from 's2/projections/s2/s2Coords'
-import { fromLonLat, fromSTGL, mul, normalize, toIJ } from 's2/projections/s2/s2Point'
-import { fromFace, fromIJ, parent } from 's2/projections/s2/s2CellID'
+import { bboxST, neighborsIJ } from 's2/geometry/s2/s2Coords'
+import { fromLonLat, fromSTGL, mul, normalize, toIJ } from 's2/geometry/s2/s2Point'
+import { fromFace, fromIJ, parent } from 's2/geometry/s2/s2CellID'
 
-import type { Face, XYZ } from 's2/projections'
+import type { Face, XYZ } from 's2/geometry'
 
 const ZERO_TILES = [fromFace(0), fromFace(1), fromFace(2), fromFace(3), fromFace(4), fromFace(5)]
 

@@ -1,5 +1,5 @@
 import Color from 's2/style/color'
-import { degToRad } from 's2/projections/util'
+import { degToRad } from 's2/geometry/util'
 import { invert, multiply, perspective, rotate } from 's2/ui/camera/projector/mat4'
 
 // WEBGL1

@@ -6,7 +6,7 @@ import type { Painter as GLPainter } from 's2/gl/painter.spec'
 import type { Painter as GPUPainter } from 's2/gpu/painter.spec'
 import type { MapOptions } from '../s2mapUI'
 /** PROJECTIONS **/
-import { isFace, parent as parentID } from 's2/projections/s2/s2CellID'
+import { isFace, parent as parentID } from 's2/geometry/s2/s2CellID'
 import Projector from './projector/index'
 /** SOURCES **/
 import { Tile } from 's2/source'
