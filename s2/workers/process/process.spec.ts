@@ -18,8 +18,8 @@ import type {
   RasterWorkerLayer,
   SensorLayerDefinition,
   SensorWorkerLayer
-} from '../../style/style.spec'
-import type { Properties } from 's2projection'
+} from 's2/style/style.spec'
+import type { Properties } from 's2/projections'
 import type { JSONVectorFeature } from '../source/s2json-vt/tile'
 import type { GlyphObject } from './glyph/glyph.spec'
 import type { ColorMap as ColorMapResponse, IconMap as IconMapResponse } from '../source/glyphSource'

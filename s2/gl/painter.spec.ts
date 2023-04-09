@@ -21,7 +21,7 @@ import type {
   WorkflowKey,
   WorkflowType
 } from './programs/program.spec'
-import type { TileGL as Tile } from '../source/tile.spec'
+import type { TileGL as Tile } from 's2/source/tile.spec'
 import type {
   FillData,
   GlyphData,
@@ -31,10 +31,10 @@ import type {
   PointData,
   RasterData,
   SensorData
-} from '../workers/worker.spec'
-import type { GlyphImages } from '../workers/source/glyphSource'
-import type Projector from '../ui/camera/projector'
-import type TimeCache from '../ui/camera/timeCache'
+} from 's2/util/worker.spec'
+import type { GlyphImages } from 's2/util/source/glyphSource'
+import type Projector from 's2/ui/camera/projector'
+import type TimeCache from 's2/ui/camera/timeCache'
 
 export interface Painter {
   context: WebGLContext | WebGL2Context

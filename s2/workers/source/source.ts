@@ -1,9 +1,9 @@
 /* eslint-env worker */
-import { parent as parentID, toIJ } from 's2projection/s2CellID'
+import { parent as parentID, toIJ } from 's2/projections/s2/s2CellID'
 
 import type { Session } from '.'
 import type { ParentLayers, TileRequest } from '../worker.spec'
-import type { Attributions, LayerDefinition } from '../../style/style.spec'
+import type { Format, Attributions, LayerDefinition } from 's2/style/style.spec'
 
 export interface LayerMetaData {
   [key: string]: { // layer
@@ -18,8 +18,6 @@ export interface FaceBounds {
     [key: number]: [number, number, number, number] // zoom: [minX, minY, maxX, maxY]
   }
 }
-
-export type Format = 'fzxy' | 'tfzxy'
 
 export interface Metadata {
   type: 'vector' | 'json' | 'raster' | 'raster-dem' | 'sensor'

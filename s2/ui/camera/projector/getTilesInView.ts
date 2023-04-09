@@ -1,9 +1,9 @@
 import { project } from './mat4'
-import { bboxST, neighborsIJ } from 's2projection/s2Coords'
-import { fromLonLat, fromSTGL, mul, normalize, toIJ } from 's2projection/s2Point'
-import { fromFace, fromIJ, parent } from 's2projection/s2CellID'
+import { bboxST, neighborsIJ } from 's2/projections/s2/s2Coords'
+import { fromLonLat, fromSTGL, mul, normalize, toIJ } from 's2/projections/s2/s2Point'
+import { fromFace, fromIJ, parent } from 's2/projections/s2/s2CellID'
 
-import type { Face, XYZ } from 's2projection'
+import type { Face, XYZ } from 's2/projections'
 
 const ZERO_TILES = [fromFace(0), fromFace(1), fromFace(2), fromFace(3), fromFace(4), fromFace(5)]
 
@@ -61,8 +61,14 @@ export default function getTilesInView (
   })
 }
 
-function addNeighbors (face: Face, zoom: number, i: number, j: number,
-  checkedTiles: Set<string>, checkList: Array<[number, number, number]>): void {
+function addNeighbors (
+  face: Face,
+  zoom: number,
+  i: number,
+  j: number,
+  checkedTiles: Set<string>,
+  checkList: Array<[number, number, number]>
+): void {
   // add the surounding tiles we have not checked
   for (const [nFace, nI, nJ] of neighborsIJ(face, i, j, zoom)) {
     const fij = `${String(nFace)}-${String(nI)}-${String(nJ)}`

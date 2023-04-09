@@ -1,10 +1,14 @@
 /* eslint-env browser */
 
-import type { Properties } from 's2projection'
-import type { FilterFunction } from '../workers/process/util/parseFilter'
+import type { Properties } from 's2/projections/proj.spec'
+import type { FilterFunction } from 's2/workers/process/util/parseFilter'
 
 /** SOURCES **/
-export type Format = 'fzxy' | 'tfzxy'
+export type Format = 'zxy' | 'tzxy' | 'fzxy' | 'tfzxy'
+
+// WM => Web Mercator
+// S2 => Sphere
+export type Projection = 'WM' | 'S2'
 
 export interface LayerMetaData {
   [key: string]: { // layer
@@ -148,7 +152,9 @@ export interface LinePaintDefinition {
 }
 
 /** GLYPH **/
-export type Anchor = 'center' | 'left' | 'right' | 'top' | 'bottom' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+export type Anchor =
+  'center' | 'left' | 'right' | 'top' | 'bottom' |
+  'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 export type Alignment = 'center' | 'left' | 'right'
 export interface GlyphLayoutStyle {
   'text-family'?: string | any[]
@@ -526,7 +532,12 @@ export type InteractiveWorkerLayer =
   FillWorkerLayer | GlyphWorkerLayer | LineWorkerLayer |
   PointWorkerLayer
 
-/** WORKER PACKAGE **/
+/**
+ * WORKER PACKAGE: 
+ * 1 -> WebGL1;
+ * 2 -> WebGL2;
+ * 3 -> WebGPU;
+ */
 export type GPUType = 1 | 2 | 3
 
 export interface Analytics {
@@ -570,6 +581,7 @@ export interface WallpaperStyle {
 export interface StyleDefinition {
   version?: number
   name?: string
+  projection?: Projection,
   description?: string
   center?: [number, number]
   zoom?: number

@@ -1,7 +1,7 @@
 // @ts-nocheck
 /* eslint-env browser */
-import type { GPUType } from '../../style/style.spec'
-import type { MapOptions } from '../../ui/s2mapUI'
+import type { GPUType } from 's2/style/style.spec'
+import type { MapOptions } from 's2/ui/s2mapUI'
 import type { MaskSource } from './context.spec'
 
 export default class WebGPUContext {

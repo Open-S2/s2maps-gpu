@@ -1,7 +1,7 @@
 /* eslint-env worker */
-import S2MapUI from '../ui/s2mapUI'
+import S2MapUI from 's2/ui/s2mapUI'
 
-import type { MapOptions } from '../ui/s2mapUI'
+import type { MapOptions } from 's2/ui/s2mapUI'
 import type { S2MapMessage } from './worker.spec'
 
 export default class MapWorker {

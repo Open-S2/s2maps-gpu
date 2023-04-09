@@ -3,7 +3,7 @@ import S2JsonVT from './s2json-vt'
 import Source from './source'
 
 import type { TileRequest } from '../worker.spec'
-import type { S2FeatureCollection } from 's2projection'
+import type { S2FeatureCollection } from 's2/projections'
 
 export default class S2JSONSource extends Source {
   s2json!: S2JsonVT

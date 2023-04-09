@@ -9,7 +9,7 @@ import type {
   HeatmapWorkerLayer,
   PointLayerDefinition,
   PointWorkerLayer
-} from '../../style/style.spec'
+} from 's2/style/style.spec'
 import type {
   HeatmapFeature,
   PointFeature,

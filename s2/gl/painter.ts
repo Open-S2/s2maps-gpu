@@ -3,11 +3,11 @@
 import { WebGL2Context, WebGLContext } from './contexts'
 /** SOURCES **/
 import type { Painter as PainterSpec } from './painter.spec'
-import type { TileGL as Tile } from '../source/tile.spec'
+import type { TileGL as Tile } from 's2/source/tile.spec'
 
-import type { MapOptions } from '../ui/s2mapUI'
-import type Projector from '../ui/camera/projector'
-import type TimeCache from '../ui/camera/timeCache'
+import type { MapOptions } from 's2/ui/s2mapUI'
+import type Projector from 's2/ui/camera/projector'
+import type TimeCache from 's2/ui/camera/timeCache'
 import type { FeatureGuide, GlyphFeatureGuide, HeatmapFeatureGuide } from './contexts/context.spec'
 import type {
   FillProgram,
@@ -26,9 +26,9 @@ import type {
   WorkflowKey,
   WorkflowType
 } from './programs/program.spec'
-import type { GlyphImages } from '../workers/source/glyphSource'
+import type { GlyphImages } from 's2/workers/source/glyphSource'
 import type { ColorMode } from '../s2Map'
-import type { PainterData } from '../workers/worker.spec'
+import type { PainterData } from 's2/workers/worker.spec'
 
 export default class Painter implements PainterSpec {
   context: WebGL2Context | WebGLContext
@@ -209,8 +209,12 @@ export default class Painter implements PainterSpec {
     if (heatmapFeatures.length > 0) features.push(this.paintHeatmap(heatmapFeatures))
     // sort features
     features.sort(featureSort)
-    // corner case: all features tiles past zoom 12 must set screen positions
-    const featureTiles = features.map(f => f.parent ?? f.tile)
+    // Mercator: the tile needs to update it's matrix at all zooms.
+    // S2: all features tiles past zoom 12 must set screen positions
+    let featureTiles = features
+      .flatMap(({ parent, tile }) => parent !== undefined ? [parent, tile] : [tile])
+    // remove all duplicates of tiles by their id
+    featureTiles = featureTiles.filter((tile, index) => featureTiles.findIndex(t => t.id === tile.id) === index)
     for (const tile of featureTiles) tile.setScreenPositions(projector)
     // prep glyph features for drawing box filters
     const glyphFeatures = features.filter(feature => feature.type === 'glyph' && !feature.overdraw) as GlyphFeatureGuide[]

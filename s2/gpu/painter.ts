@@ -2,13 +2,13 @@
 /* eslint-env browser */
 import { WebGPUContext } from './context'
 
-import type { MapOptions } from '../ui/s2mapUI'
-// import S2MapGL from '../ui/s2mapGL'
-// import { StyleDefinition } from '../style/styleSpec'
+import type { MapOptions } from 's2/ui/s2mapUI'
+// import S2MapGL from 's2/ui/s2mapGL'
+// import { StyleDefinition } from 's2/style/styleSpec'
 import type { GlyphFilterPipeline, GlyphPipeline, HeatmapPipeline, LinePipeline, Pipeline, PointPipeline, RasterPipeline, SensorPipeline, ShadePipeline, SkyboxPipeline, WallpaperPipeline, Workflow, WorkflowKey, WorkflowType } from './pipelines/pipeline.spec'
-import type { GlyphImages } from '../workers/source/glyphSource'
-import type { TileGPU as Tile } from '../source/tile.spec'
-import type Projector from '../ui/camera/projector'
+import type { GlyphImages } from 's2/util/source/glyphSource'
+import type { TileGPU as Tile } from 's2/source/tile.spec'
+import type Projector from 's2/ui/camera/projector'
 import type {
   FillData,
   GlyphData,
@@ -18,10 +18,10 @@ import type {
   PointData,
   RasterData,
   SensorData
-} from '../workers/worker.spec'
+} from 's2/util/worker.spec'
 import FillPipeline from './pipelines/fillPipeline'
-import type TimeCache from '../ui/camera/timeCache'
-// import type { FeatureGuide } from '../source/tile'
+import type TimeCache from 's2/ui/camera/timeCache'
+// import type { FeatureGuide } from 's2/source/tile'
 // import type { PipelineType } from './pipelines/pipeline'
 
 export default class Painter {

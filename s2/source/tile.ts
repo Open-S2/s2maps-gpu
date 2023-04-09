@@ -1,15 +1,15 @@
 /* eslint-env browser */
-import { project } from '../ui/camera/projector/mat4'
-import { bboxST } from 's2projection/s2Coords'
-import { fromSTGL, mul, normalize } from 's2projection/s2Point'
-import { level, toIJ } from 's2projection/s2CellID'
+import { project } from 's2/ui/camera/projector/mat4'
+import { bboxST } from 's2/projections/s2/s2Coords'
+import { fromSTGL, mul, normalize } from 's2/projections/s2/s2Point'
+import { level, toIJ } from 's2/projections/s2/s2CellID'
 
-import type { FeatureGuide as FeatureGuideGL, MaskSource as MaskSourceGL, WebGL2Context, WebGLContext } from '../gl/contexts'
-import type Projector from '../ui/camera/projector'
-import type { Face, XYZ } from 's2projection'
-import type { FlushData, InteractiveObject } from '../workers/worker.spec'
-import type { LayerDefinition } from '../style/style.spec'
-import type { FeatureGuide as FeatureGuideGPU, MaskSource as MaskSourceGPU, WebGPUContext } from '../gpu/context'
+import type { FeatureGuide as FeatureGuideGL, MaskSource as MaskSourceGL, WebGL2Context, WebGLContext } from 's2/gl/contexts'
+import type Projector from 's2/ui/camera/projector'
+import type { Face, XYZ } from 's2/projections'
+import type { FlushData, InteractiveObject } from 's2/workers/worker.spec'
+import type { LayerDefinition } from 's2/style/style.spec'
+import type { FeatureGuide as FeatureGuideGPU, MaskSource as MaskSourceGPU, WebGPUContext } from 's2/gpu/context'
 import type { Corners, TileGL, TileGPU } from './tile.spec'
 
 // tiles are designed to create mask geometry and store prebuilt layer data handed off by the worker pool

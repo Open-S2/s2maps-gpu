@@ -3,7 +3,7 @@ import Source from './source'
 
 import type { Metadata } from './source'
 import type { TileRequest } from '../worker.spec'
-// import type { Face } from 's2projection'
+// import type { Face } from 's2/projections'
 
 const MAX_SIZE = 2_000_000 // ~2 MB
 const NODE_SIZE = 10

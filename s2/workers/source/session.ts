@@ -1,8 +1,8 @@
 /* eslint-env worker */
-import s2mapsURL from '../../util/s2mapsURL'
+import s2mapsURL from 's2/util/s2mapsURL'
 
-import type { Analytics, StyleDefinition } from '../../style/style.spec'
-import type { InfoDetails } from '../../ui/info'
+import type { Analytics, StyleDefinition } from 's2/style/style.spec'
+import type { InfoDetails } from 's2/ui/info'
 
 declare const process: {
   env: {

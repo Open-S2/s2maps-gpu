@@ -7,7 +7,7 @@ import type {
   S2VectorPoints,
   S2VectorPoly
 } from 's2-vector-tile'
-import type { TileRequest } from '../../worker.spec'
+import type { TileRequest } from 's2/workers/worker.spec'
 
 // 1) scale up by distance between tiles (if parent is 2 zooms above, you double size twice)
 // 2) shift x and y by position of current tile

@@ -14,7 +14,7 @@ import type {
   Join,
   LineLayerDefinition,
   LineWorkerLayer
-} from '../../style/style.spec'
+} from 's2/style/style.spec'
 import type {
   LineFeature,
   LineWorker as LineWorkerSpec,

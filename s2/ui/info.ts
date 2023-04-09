@@ -1,6 +1,6 @@
 /* eslint-env browser */
-import type S2Map from '../s2Map'
-import type { InteractiveObject } from '../workers/worker.spec'
+import type S2Map from 's2/s2Map'
+import type { InteractiveObject } from 's2/workers/worker.spec'
 
 export interface InfoDetails {
   extract?: string

@@ -1,5 +1,5 @@
 import type { Feature } from '../process.spec'
-import type { GlyphObject } from '../glyph/glyph.spec'
+import type { GlyphObject } from 's2/glyph/glyph.spec'
 
 export default function featureSort (a: Feature | GlyphObject, b: Feature | GlyphObject): number {
   // layerIndex
