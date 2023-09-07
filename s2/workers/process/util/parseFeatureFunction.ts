@@ -1,8 +1,8 @@
-import parseFilter from './parseFilter'
+import parseFilter from 's2/style/parseFilter'
 import getEasingFunction from 's2/style/easingFunctions'
 
 import type { LayerWorkerFunction } from 's2/style/style.spec'
-import type { FilterFunction } from './parseFilter'
+import type { FilterFunction } from 's2/style/parseFilter'
 import type { Properties } from 's2/geometry'
 
 interface DataCondition<U> {

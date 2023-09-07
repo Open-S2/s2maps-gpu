@@ -1,6 +1,7 @@
 /* eslint-env worker */
 import VectorWorker, { colorFunc, idToRGB } from './vectorWorker'
-import { featureSort, parseFeatureFunction, parseFilter, scaleShiftClip } from './util'
+import { featureSort, parseFeatureFunction, scaleShiftClip } from './util'
+import parseFilter from 's2/style/parseFilter'
 
 import type { HeatmapData, PointData, TileRequest } from '../worker.spec'
 import type { S2VectorPoints } from 's2-vector-tile'
