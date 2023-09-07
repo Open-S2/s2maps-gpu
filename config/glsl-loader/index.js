@@ -1,4 +1,7 @@
 // @refresh reset
+// TODO: https://github.com/leosingleton/webpack-glsl-minify migrate to this
+// TODO: also migrate this: https://github.com/vanruesc/esbuild-plugin-glsl/blob/main/src/index.ts
+// maybe pick and choose what's useful from both
 const parse = require('./parse')
 
 module.exports = function (source) {

@@ -1,18 +1,17 @@
 import type { Properties } from 's2/geometry'
 
-/**
-Coalesce text layout property "field"
-
-examples:
-
+// Coalesce text layout property "field"
+//
+// examples:
+//
 // const properties = { abbr: 'U.S.', name: 'United States', ... }
 // const field = ["\"", "?abbr,?name", "\""] - here we coallese to abbr if the property exists, otherwise we fallback on name
-cooalesceField(field) // returns "U.S." or "United States" depending on whether abbr exists
-
+// cooalesceField(field) // returns "U.S." or "United States" depending on whether abbr exists
+//
 // const properties = { type: 'airplane', ... }
 // const field = ["?type", "-16"]
-cooalesceField(field) // 'airplane-16'
-**/
+// cooalesceField(field) // 'airplane-16'
+
 const language = navigator.language.split('-')[0] ?? 'en'
 
 export default function coalesceField (

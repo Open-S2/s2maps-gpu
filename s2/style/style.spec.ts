@@ -1,7 +1,7 @@
 /* eslint-env browser */
 
 import type { Properties } from 's2/geometry/proj.spec'
-import type { FilterFunction } from 's2/workers/process/util/parseFilter'
+import type { FilterFunction } from 's2/style/parseFilter'
 
 /** SOURCES **/
 export type Format = 'zxy' | 'tzxy' | 'fzxy' | 'tfzxy'
@@ -533,7 +533,7 @@ export type InteractiveWorkerLayer =
   PointWorkerLayer
 
 /**
- * WORKER PACKAGE: 
+ * WORKER PACKAGE:
  * 1 -> WebGL1;
  * 2 -> WebGL2;
  * 3 -> WebGPU;
@@ -582,7 +582,7 @@ export interface WallpaperStyle {
 export interface StyleDefinition {
   version?: number
   name?: string
-  projection?: Projection,
+  projection?: Projection
   description?: string
   center?: [number, number]
   zoom?: number

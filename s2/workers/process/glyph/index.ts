@@ -3,7 +3,9 @@ import VectorWorker, { colorFunc, idToRGB } from '../vectorWorker'
 import featureSort from '../util/featureSort'
 import buildGlyphQuads, { QUAD_SIZE } from './buildGlyphQuads'
 import RTree from './rtree'
-import { coalesceField, parseFeatureFunction, parseFilter, scaleShiftClip } from '../util'
+import { parseFeatureFunction, scaleShiftClip } from '../util'
+import coalesceField from 's2/style/coalesceField'
+import parseFilter from 's2/style/parseFilter'
 
 import type {
   ColorMap,
@@ -363,6 +365,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
 
   #flush (mapID: string, sourceName: string, tileID: bigint): void {
     let { features } = this
+    // TODO: Is this necessary? we sorted earlier
     features = features.sort(featureSort)
 
     // setup draw thread variables

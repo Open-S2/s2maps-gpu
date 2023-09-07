@@ -1,7 +1,8 @@
 /* eslint-env worker */
 import VectorWorker, { colorFunc, idToRGB } from './vectorWorker'
 import { earclip } from 'earclip'
-import { featureSort, parseFilter, scaleShiftClip } from './util'
+import { featureSort, scaleShiftClip } from './util'
+import parseFilter from 's2/style/parseFilter'
 
 import type {
   S2VectorGeometry,
