@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "projection": "WM",
+  "name": "webmercator background",
+  "center": [0, 0],
+  "zoom": 0.95,
+  "minzoom": 0,
+  "maxzoom": 6.9,
+  "sources": {
+    "planet": "/tiles/merc/osm"
+  },
+  "fonts": {},
+  "layers": [
+    {
+      "name": "water-fill",
+      "source": "planet",
+      "layer": "water",
+      "type": "fill",
+      "invert": false,
+      "opaque": false,
+      "layout": {},
+      "paint": {
+        "color": "#b4c1c6"
+      }
+    }
+  ]
+}

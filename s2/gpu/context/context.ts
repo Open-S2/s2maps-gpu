@@ -5,8 +5,8 @@ import type { MapOptions } from 's2/ui/s2mapUI'
 import type { MaskSource } from './context.spec'
 
 export default class WebGPUContext {
-  ready: boolean = false
-  renderer: string = '' // ex: AMD Radeon Pro 560 OpenGL Engine (https://github.com/pmndrs/detect-gpu)
+  ready = false
+  renderer = '' // ex: AMD Radeon Pro 560 OpenGL Engine (https://github.com/pmndrs/detect-gpu)
   gpu: GPUCanvasContext
   device!: GPUDevice
   presentation!: { width: number, height: number }

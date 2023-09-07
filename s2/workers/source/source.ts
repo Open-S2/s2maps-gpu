@@ -1,9 +1,9 @@
 /* eslint-env worker */
-import { parent as parentID, toIJ } from 's2/geometry/s2/s2CellID'
+import { parent as parentID, toIJ } from 's2/geometry/id'
 
 import type { Session } from '.'
 import type { ParentLayers, TileRequest } from '../worker.spec'
-import type { Format, Attributions, LayerDefinition } from 's2/style/style.spec'
+import type { Attributions, Format, LayerDefinition, Projection } from 's2/style/style.spec'
 
 export interface LayerMetaData {
   [key: string]: { // layer
@@ -19,13 +19,15 @@ export interface FaceBounds {
   }
 }
 
+export type SourceType = 'vector' | 'json' | 'raster' | 'raster-dem' | 'sensor' | 'overlay'
+
 export interface Metadata {
-  type: 'vector' | 'json' | 'raster' | 'raster-dem' | 'sensor'
+  type: SourceType
   extension: string
   fileType?: 'json' | 's2json' | 'pbf' | 'png' | 'jpg' | 'webp'
   encoding?: 'gz' | 'br' | 'none'
   size?: number
-  format?: Format
+  format?: Format | 'pbf'
   attributions?: Attributions
   interval?: number
   minzoom?: number
@@ -39,9 +41,10 @@ export default class Source {
   active = true
   name: string
   path: string
-  type: 'vector' | 'json' | 'raster' | 'raster-dem' | 'sensor' = 'vector' // how to process the result
+  type: SourceType = 'vector' // how to process the result
   extension = 'pbf'
   encoding: 'none' | 'br' | 'gz' = 'none'
+  format: Format = 'zxy'
   isTimeFormat = false
   attributions: Attributions = {}
   styleLayers: LayerDefinition[]
@@ -79,14 +82,15 @@ export default class Source {
   }
 
   _buildMetadata (metadata: Metadata, mapID: string): void {
+    console.log(metadata)
     this.active = true // incase we use a "broken" aproach for metadata and insert later
     this.minzoom = metadata.minzoom ?? 0
     this.maxzoom = Math.min(metadata.maxzoom ?? 20, this.maxzoom)
     if (Array.isArray(metadata.faces)) this.faces = new Set(metadata.faces ?? [0, 1, 2, 3, 4, 5])
     if (typeof metadata.extension === 'string') this.extension = metadata.extension
     this.attributions = metadata.attributions ?? {}
-    if (metadata.type === undefined) { this.active = false; console.log('Failed to acquire "type" from metadata') } // we cannot process if we do not know the extension
-    this.type = metadata.type
+    this.type = metadata.type ?? 'vector'
+    if (this.type === 'overlay') this.type = 'vector'
     if (typeof metadata.size === 'number') this.size = metadata.size
     this.encoding = metadata.encoding ?? 'none'
     if (typeof metadata.layers === 'object') { // cleanup the fields property
@@ -94,7 +98,11 @@ export default class Source {
       this.layers = metadata.layers
     }
     // time series data check
-    if (metadata.format !== undefined) this.isTimeFormat = metadata.format === 'tfzxy'
+    if (metadata.format !== undefined && metadata.format !== 'pbf') {
+      this.format = metadata.format
+      this.isTimeFormat = metadata.format === 'tfzxy'
+    }
+    if (this.format === 'zxy') this.faces.add(0)
     if (this.isTimeFormat) {
       postMessage({
         mapID,
@@ -164,7 +172,8 @@ export default class Source {
   }
 
   #getParentData (mapID: string, tile: TileRequest): void {
-    const { layers, styleLayers, name } = this
+    const { format, layers, styleLayers, name } = this
+    const projection: Projection = format === 'zxy' ? 'WM' : 'S2'
     if (layers === undefined) return
     // pull out data
     const { time, face, zoom, id } = tile
@@ -186,11 +195,11 @@ export default class Source {
         let newID = id
         while (pZoom > sourceLayerMaxZoom) {
           pZoom--
-          newID = parentID(newID)
+          newID = parentID(projection, newID)
         }
         const newIDString = newID.toString()
         // pull out i & j
-        const [, i, j] = toIJ(newID, pZoom)
+        const [, i, j] = toIJ(projection, newID, pZoom)
         // store parent reference
         if (parentLayers[newIDString] === undefined) {
           parentLayers[newIDString] = { time, face, id: newID, zoom: pZoom, i, j, layerIndexes: [] }
@@ -213,7 +222,9 @@ export default class Source {
     const { parent } = tile
     const { time, face, zoom, i, j } = parent ?? tile
     const location = `${(time !== undefined) ? String(time) + '/' : ''}` +
-      `${face as number}/${zoom}/${i}/${j}.${extension}`
+      ((this.format === 'zxy')
+        ? `${zoom}/${i}/${j}.${extension}`
+        : `${face}/${zoom}/${i}/${j}.${extension}`)
 
     const data = await this._fetch(`${path}/${location}`, mapID) as ArrayBuffer
     if (data !== undefined) {

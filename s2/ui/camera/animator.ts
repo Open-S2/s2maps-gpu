@@ -114,7 +114,7 @@ export default class Animator {
       ]
     }
     // build renderTile list
-    this._buildFutureTileList()
+    this.#buildFutureTileList()
   }
 
   compassTo (): void {
@@ -133,7 +133,7 @@ export default class Animator {
       ]
     }
     // build renderTile list
-    this._buildFutureTileList()
+    this.#buildFutureTileList()
   }
 
   swipeTo (movementX: number, movementY: number): void {
@@ -178,7 +178,7 @@ export default class Animator {
       ]
     }
     // build renderTile list
-    this._buildFutureTileList()
+    this.#buildFutureTileList()
     return true
   }
 
@@ -266,11 +266,11 @@ export default class Animator {
     }
 
     // build renderTile list
-    this._buildFutureTileList()
+    this.#buildFutureTileList()
     return true
   }
 
-  _buildFutureTileList (): void {
+  #buildFutureTileList (): void {
     if (this.#increment === undefined) return
     const { endLon, endLat, endZoom, endBearing, endPitch, projector, duration } = this
     const tileSet = new Set(projector.camera.getTiles().map(tile => tile.id))
@@ -346,38 +346,12 @@ function easeInExpo (time: number, start: number, delta: number, duration: numbe
   return (time === 0) ? start : delta * Math.pow(2, 10 * (time / duration - 1)) + start
 }
 
-// function easeInQuad (time: number, start: number, delta: number, duration: number): number {
-//   return delta * (time /= duration) * time + start
-// }
-
-// function easeOutCubic (time: number, start: number, delta: number, duration: number): number {
-//   return delta * ((time = time / duration - 1) * time * time + 1) + start
-// }
-
 function easeOutExpo (time: number, start: number, delta: number, duration: number): number {
   return delta * (-Math.pow(2, -10 * time / duration) + 1) + start
 }
-
-// function easeOutQuad (time: number, start: number, delta: number, duration: number): number {
-//   return -delta * (time /= duration) * (time - 2) + start
-// }
-
-// function easeInCubic (t, b, c, d) {
-//     return c * (t /= d) * t * t + b;
-// }
 
 function easeInOutExpo (time: number, start: number, delta: number, duration: number): number {
   if (time === 0) return start
   if ((time /= duration / 2) < 1) return delta / 2 * Math.pow(2, 10 * (time - 1)) + start
   return delta / 2 * (-Math.pow(2, -10 * --time) + 2) + start
 }
-
-// function easeInOutQuad (time: number, start: number, delta: number, duration: number): number {
-//   if ((time /= duration / 2) < 1) return delta / 2 * time * time + start
-//   return -delta / 2 * ((--time) * (time - 2) - 1) + start
-// }
-
-// function easeInOutCubic (t, b, c, d) {
-//     if ((t /= d / 2) < 1) return c / 2 * t * t * t + b;
-//     return c / 2 * ((t -= 2) * t * t + 2) + b;
-// }

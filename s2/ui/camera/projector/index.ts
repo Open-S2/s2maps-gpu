@@ -1,12 +1,15 @@
 /* eslint-env browser */
 import Camera from '..'
 import * as mat4 from './mat4'
-import getTiles from './getTilesInView'
-import _cursorToLonLat from './cursorToLonLat'
+import { getTilesS2, getTilesWM } from './getTiles'
+import cursorToLonLatS2 from './cursorToLonLat'
 import { fromLonLatGL, mul, normalize } from 's2/geometry/s2/s2Point'
 import { degToRad } from 's2/geometry'
+import { mercatorLatScale } from 's2/geometry/webMerc'
 
 import type { MapOptions } from 's2/ui/s2mapUI'
+import type { Projection } from 's2/style/style.spec'
+import type { Point, XYZ } from 's2/geometry'
 
 export interface ProjectionConfig {
   minLatPosition?: number
@@ -23,22 +26,42 @@ export interface ProjectionConfig {
   zoomOffset?: number
 }
 
+export type View = [
+  zoom: number,
+  lon: number,
+  lat: number,
+  bearing: number,
+  pitch: number,
+  time: number,
+  featureState: number,
+  currFeature: number,
+  extension: number,
+  extension: number,
+  extension: number,
+  extension: number,
+  extension: number,
+  extension: number,
+  extension: number,
+  extension: number
+]
+
 export type MatrixType = 'm' | 'km' // meters or kilometers
 
 export default class Projector {
   camera: Camera
+  projection: Projection = 'S2'
   webworker = false
   noClamp = false
   radius = 6_371.0088
-  radii: [number, number, number] = [6378137, 6356752.3, 6378137]
+  radii: XYZ = [6378137, 6356752.3, 6378137]
   zTranslateStart = 5
   zTranslateEnd = 1.001
   zoomEnd = 5
   positionalZoom = true
-  view: number[] = new Array(16) // [zoom, lon, lat, bearing, pitch, time, featureState, currFeature, ...extensions]
-  aspect: number[] = [400, 300] // default canvas width x height
+  view: View = new Array(16) as View // [zoom, lon, lat, bearing, pitch, time, featureState, currFeature, ...extensions]
+  aspect: [x: number, y: number] = [400, 300] // default canvas width x height
   matrices: { [key in MatrixType]?: Float32Array } = {}
-  eye: [number, number, number] = [0, 0, 0] // [x, y, z] only z should change for visual effects
+  eye: XYZ = [0, 0, 0] // [x, y, z] only z should change for visual effects
   minLatPosition = 70
   maxLatPosition = 89.99999 // deg
   prevZoom = 0
@@ -56,7 +79,8 @@ export default class Projector {
   multiplier = 1
   dirty = true
   constructor (config: MapOptions, camera: Camera) {
-    const { canvasMultiplier, positionalZoom, webworker, noClamp } = config
+    const { canvasMultiplier, positionalZoom, webworker, noClamp, style } = config
+    if (typeof style === 'object' && style.projection === 'WM') this.projection = 'WM'
     if (canvasMultiplier !== undefined) this.multiplier = canvasMultiplier
     if (positionalZoom === false) this.positionalZoom = false
     if (webworker === true) this.webworker = true
@@ -124,7 +148,7 @@ export default class Projector {
 
   setCompass (bearing?: number, pitch?: number): void {
     let update = false
-    // set bearing & pitch
+    // set bearing
     if (bearing !== undefined) update ||= this.#setBearing(bearing)
     // set pitch
     if (pitch !== undefined) update ||= this.#setPitch(pitch)
@@ -192,7 +216,8 @@ export default class Projector {
       const posDeltaX = posX * zoomAdjust - posX
       const posDeltaY = posY * zoomAdjust - posY
       // STEP 3: The deltas need to be converted to deg change
-      this.onMove(-posDeltaX, posDeltaY, 3072, 1536)
+      if (this.projection === 'S2') this.onMove(-posDeltaX, posDeltaY, 3072, 1536)
+      else this.onMove(-posDeltaX, posDeltaY, 1, 1)
     }
   }
 
@@ -200,14 +225,19 @@ export default class Projector {
   onMove (
     movementX = 0,
     movementY = 0,
-    multiplierX: number = 6.5 * 360,
-    multiplierY: number = 6.5 * 180
+    multiplierX?: number,
+    multiplierY?: number
   ): void {
-    let { lon, lat, bearing } = this
+    let { lon, lat, tileSize, bearing } = this
+    const isS2 = this.projection === 'S2'
     const { abs, max, min, cos, sin, PI } = Math
     const zScale = max(this.zoomScale(), 1)
-    // https://math.stackexchange.com/questions/377445/given-a-latitude-how-many-miles-is-the-corresponding-longitude
-    const lonMultiplier = min(30, 1 / cos(abs(this.lat) * PI / 180))
+    const tileScale = tileSize / 512
+    // setup multipliers
+    if (multiplierX === undefined) multiplierX = isS2 ? 6.5 * 360 : 0.75
+    if (multiplierY === undefined) multiplierY = isS2 ? 6.5 * 180 : 0.75
+    multiplierX *= tileScale
+    multiplierY *= tileScale
     // adjust movement vector if bearing
     if (bearing !== 0) {
       bearing = degToRad(bearing) // adjust to radians
@@ -216,37 +246,62 @@ export default class Projector {
       movementY = tmpY
     }
     // set the new lon-lat
-    this.#setLonLat(
-      lon - (movementX / (multiplierX * zScale) * 360 * lonMultiplier),
-      lat + (movementY / (multiplierY * zScale) * 180)
-    )
+    if (isS2) {
+      // https://math.stackexchange.com/questions/377445/given-a-latitude-how-many-miles-is-the-corresponding-longitude
+      const lonMultiplier = min(30, 1 / cos(abs(this.lat) * PI / 180))
+      this.#setLonLat(
+        lon - (movementX / (multiplierX * zScale) * 360 * lonMultiplier),
+        lat + (movementY / (multiplierY * zScale) * 180)
+      )
+    } else {
+      this.#setLonLat(
+        lon - (movementX / (multiplierX * zScale)),
+        lat + (movementY / (multiplierY * zScale * mercatorLatScale(this.lat)))
+      )
+    }
   }
 
   // x and y are the distances from the center of the screen
-  cursorToLonLat (x: number, y: number): undefined | [number, number] {
-    const { lon, lat, zoom, tileSize } = this
-    return _cursorToLonLat(lon, lat, x, y, (tileSize * Math.pow(2, zoom)) / 2)
+  cursorToLonLat (xOffset: number, yOffset: number): undefined | [lon: number, lat: number] {
+    const { projection, lon, lat, zoom, tileSize } = this
+    if (projection === 'S2') return cursorToLonLatS2(lon, lat, xOffset, yOffset, (tileSize * Math.pow(2, zoom)) / 2)
+    // TODO: Web Mercator
+    return [0, 0]
   }
 
-  getMatrix (type: MatrixType): Float32Array {
-    let matrix = this.matrices[type]
+  // S2 -> type of meters or kilometers
+  // WM -> scale and offset
+  getMatrix (typeOrScale: number | MatrixType, offset: Point = [0, 0]): Float32Array {
+    if (typeof typeOrScale === 'number') { // WM case
+      const matrix = this.#getMatrixWM(typeOrScale, offset)
+      return mat4.clone(matrix)
+    }
+    // S2
+    let matrix = this.matrices[typeOrScale]
     if (matrix !== undefined) return mat4.clone(matrix)
     // updated matrix
-    matrix = this.matrices[type] = this.#getMatrix(type)
+    matrix = this.matrices[typeOrScale] = this.#getMatrixS2(typeOrScale)
 
     return mat4.clone(matrix)
   }
 
   getTilesInView (): bigint[] { // (S2CellIDs)
-    const { radius, zoom, zoomOffset, lon, lat } = this
-    const matrix = this.getMatrix('m')
-    return getTiles(zoom + zoomOffset, matrix, lon, lat, radius)
+    const { projection, radius, zoom, zoomOffset, lon, lat } = this
+    if (projection === 'S2') {
+      const matrix = this.getMatrix('m')
+      return getTilesS2(zoom + zoomOffset, matrix, lon, lat, radius)
+    }
+    return getTilesWM(zoom, this, lon, lat)
   }
 
   getTilesAtPosition (lon: number, lat: number, zoom: number, bearing: number, pitch: number): bigint[] { // (S2CellIDs)
-    const { radius, zoomOffset } = this
-    const matrix = this.#getMatrix('m', false, lon, lat, zoom, bearing, pitch)
-    return getTiles(zoom + zoomOffset, matrix, lon, lat, radius)
+    const { projection, radius, zoomOffset } = this
+    if (projection === 'S2') {
+      const matrix = this.#getMatrixS2('m', false, lon, lat, zoom, bearing, pitch)
+      return getTilesS2(zoom + zoomOffset, matrix, lon, lat, radius)
+    }
+    // TODO: Web Mercator
+    return []
   }
 
   /* INTERNAL FUNCTIONS */
@@ -302,7 +357,9 @@ export default class Projector {
     return false
   }
 
-  #getMatrix (
+  // * S2
+
+  #getMatrixS2 (
     type: MatrixType,
     updateEye = true,
     lon: number = this.lon,
@@ -312,9 +369,9 @@ export default class Projector {
     pitch: number = this.pitch
   ): Float32Array {
     // update eye
-    const eye = this.#updateEye(lon, lat, zoom, updateEye)
+    const eye = this.#updateEyeS2(lon, lat, zoom, updateEye)
     // get projection matrix
-    let matrix = this.#getProjectionMatrix(type, zoom)
+    let matrix = this.#getProjectionMatrixS2(type, zoom)
     // create view matrix
     const view = mat4.lookAt(eye, [0, (lat > 90 || lat < -90) ? -1 : 1, 0])
     // adjust by bearing
@@ -327,7 +384,7 @@ export default class Projector {
     return matrix
   }
 
-  #updateEye (lon: number, lat: number, zoom: number, update = true): [number, number, number] {
+  #updateEyeS2 (lon: number, lat: number, zoom: number, update = true): [number, number, number] {
     const { radius, zTranslateEnd, zTranslateStart, zoomEnd } = this
     // find radial distance from core of ellipsoid
     const radialMultiplier = Math.max(
@@ -336,12 +393,12 @@ export default class Projector {
     ) * radius
     // create xyz point for eye
     const eye = mul(normalize(fromLonLatGL(lon, lat)), radialMultiplier)
-    if (update) this.eye = mul(normalize(fromLonLatGL(lon, lat)), radialMultiplier)
+    if (update) this.eye = eye
 
     return eye
   }
 
-  #getProjectionMatrix (type: MatrixType, zoom: number = this.zoom): Float32Array {
+  #getProjectionMatrixS2 (type: MatrixType, zoom: number = this.zoom): Float32Array {
     let { radius, aspect, tileSize, multiplier } = this
     // prep a matrix
     const matrix = mat4.create()
@@ -350,6 +407,63 @@ export default class Projector {
     if (type === 'km') radius *= 1000
     const multpl = radius / multiplier / (tileSize * Math.pow(2, zoom))
 
+    // create projection
+    mat4.ortho(matrix, aspect[0] * multpl, aspect[1] * multpl, 100_000)
+
+    return matrix
+  }
+
+  // * WEB MERCATOR
+
+  getMatrixWM (scale: number | MatrixType, offset: Point): Float32Array {
+    if (typeof scale !== 'number') return mat4.create()
+    // updated matrix
+    const matrix = this.#getMatrixWM(scale, offset)
+
+    return mat4.clone(matrix)
+  }
+
+  getTilesInViewWM (): bigint[] { // (S2CellIDs)
+    const { zoom, zoomOffset, lon, lat } = this
+    return getTilesWM(zoom + zoomOffset, this, lon, lat)
+  }
+
+  // TODO: Rebuild this -_-
+  getTilesAtPositionWM (lon: number, lat: number, zoom: number, bearing: number, pitch: number): bigint[] { // (S2CellIDs)
+    const { zoomOffset } = this
+    const matrix = this.#getMatrixWM(1, [0, 0], bearing, pitch)
+    return getTilesWM(zoom + zoomOffset, this, lon, lat)
+  }
+
+  #getMatrixWM (
+    scale: number,
+    offset: Point,
+    bearing: number = this.bearing,
+    pitch: number = this.pitch
+  ): Float32Array {
+    const [offsetX, offsetY] = offset
+    // get projection matrix
+    let matrix = this.#getProjectionMatrixWM(scale)
+    // create view matrix
+    const view = mat4.lookAt([0, 0, -1], [0, -1, 0])
+    // adjust by bearing
+    if (bearing !== 0) mat4.rotateZ(matrix, degToRad(bearing))
+    // multiply projection matrix by view matrix
+    matrix = mat4.multiply(matrix, view)
+
+    // temp matrix for tile 0,0,0
+    // adjust by position
+    mat4.translate(matrix, [-offsetX, -offsetY, 0])
+
+    return matrix
+  }
+
+  #getProjectionMatrixWM (scale: number): Float32Array {
+    const { aspect, tileSize, multiplier } = this
+    // prep a matrix
+    const matrix = mat4.create()
+    // adjust aspect ratio by zoom
+    const multpl = 1 / multiplier / (tileSize * scale)
     // create projection
     mat4.ortho(matrix, aspect[0] * multpl, aspect[1] * multpl, 100_000)
 

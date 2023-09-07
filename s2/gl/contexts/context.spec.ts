@@ -1,12 +1,7 @@
-import type { TileGL, TileGPU } from 's2/source/tile.spec'
+import type { BBox } from 's2/geometry'
+import type { TileGL } from 's2/source/tile.spec'
 import type { GPUType, Resampling } from 's2/style/style.spec'
 import type { SensorTextureDefinition } from 's2/ui/camera/timeCache'
-
-// type Merge<X, Y> = {
-//   [K in (keyof X | keyof Y)]:
-//   (K extends keyof X ? X[K] : never)
-//   | (K extends keyof Y ? Y[K] : never)
-// }
 
 export interface MaskSource {
   type: 'mask'
@@ -75,8 +70,8 @@ export type FeatureSource = MaskSource | FillSource | LineSource | PointSource |
 /* FEATURE GUIDES */
 
 export interface FeatureGuideBase {
-  tile: TileGL | TileGPU
-  parent?: TileGL | TileGPU
+  tile: TileGL
+  parent?: TileGL
   layerIndex: number
   sourceName: string
   layerCode: number[]
@@ -84,7 +79,7 @@ export interface FeatureGuideBase {
   opaque?: boolean
   interactive?: boolean
   featureCode: number[] // webgl2
-  bounds?: [number, number, number, number]
+  bounds?: BBox
 }
 
 // ** FILL **
@@ -190,7 +185,7 @@ export interface SensorFeatureGuide extends FeatureGuideBase {
 }
 
 export interface ShadeFeatureGuide extends FeatureGuideBase {
-  tile: TileGL | TileGPU
+  tile: TileGL
   layerIndex: number
   sourceName: string
   type: 'shade'
@@ -220,7 +215,7 @@ export interface Context {
   zTestMode: number
   zLow: number
   zHigh: number
-  clearColorRGBA: [number, number, number, number]
+  clearColorRGBA: [r: number, g: number, b: number, a: number]
   featurePoint: Uint8Array
   masks: Map<number, MaskSource>
   vao: WebGLVertexArrayObject
@@ -228,9 +223,11 @@ export interface Context {
   interactTexture?: WebGLTexture
   stencilBuffer?: WebGLRenderbuffer
   interactFramebuffer?: WebGLFramebuffer
+  defaultBounds: BBox
 
   // SETUP INTERACTIVE BUFFER
   resize: () => void
+  setInteractive: (interactive: boolean) => void
   resizeInteract: () => void
   getFeatureAtMousePosition: (x: number, y: number) => undefined | number
   delete: () => void
@@ -251,7 +248,18 @@ export interface Context {
   clearColorBuffer: () => void
 
   /** TEXTURE **/
-  buildTexture: (imageData: ArrayBufferView, width: number, height: number) => WebGLTexture
+  buildTexture: (
+    imageData: null | ArrayBufferView | ImageBitmap,
+    width: number,
+    height: number,
+    repeat?: boolean
+  ) => WebGLTexture
+  updateTexture: (
+    texture: WebGLTexture,
+    imageData: null | ArrayBufferView | ImageBitmap,
+    width: number,
+    height: number
+  ) => void
 
   /** DEPTH **/
   enableDepthTest: () => void
@@ -288,6 +296,39 @@ export interface Context {
 
   /** MASKING **/
   enableMaskTest: () => void
+  flushMask: () => void
+
+  /** VAO **/
+  buildVAO: () => WebGLVertexArrayObject
+
+  /** Attributes **/
+  bindEnableVertexAttr: (
+    ab: ArrayBufferView,
+    indx: number,
+    size: number,
+    type: number,
+    normalized: boolean,
+    stride: number,
+    offset: number,
+    instance?: boolean
+  ) => WebGLBuffer
+  bindEnableVertexAttrMulti: (
+    ab: ArrayBufferView,
+    // [indx, size, type, normalized, stride, offset]
+    attributes: Array<[index: number, size: number, type: number, normalized: boolean, stride: number, offset: number]>,
+    instance?: boolean
+  ) => WebGLBuffer
+  bindAndBuffer: (ab: ArrayBufferView) => WebGLBuffer
+  defineBufferState: (
+    indx: number,
+    size: number,
+    type: number,
+    normalized: boolean,
+    stride: number,
+    offset: number,
+    instance?: boolean
+  ) => void
+  bindElementArray: (ab: ArrayBufferView) => WebGLBuffer
 
   /** CLEANUP **/
   cleanup: () => void

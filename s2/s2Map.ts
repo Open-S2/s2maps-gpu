@@ -1,7 +1,7 @@
 /* eslint-env browser */
 import { CorsWorker as Worker } from './util/corsWorker'
 import Info from './ui/info'
-import { isChrome, isSafari } from './util/polyfill'
+import { isSafari } from './util/polyfill'
 
 import type S2MapUI from './ui/s2mapUI'
 import type { MapOptions } from './ui/s2mapUI'
@@ -19,6 +19,10 @@ import type {
 export type ColorMode = 0 | 1 | 2 | 3
 
 type Ready = (s2map: S2Map) => void
+
+declare global {
+  interface Window { S2Map: typeof S2Map }
+}
 
 // S2Map is called by the user and includes the API to interact with the mapping engine
 export default class S2Map extends EventTarget {
@@ -112,12 +116,13 @@ export default class S2Map extends EventTarget {
       //   : (!isChrome && !isSafari && tryContext('webgl2'))
       //       ? 2
       //       : 1
-      options.contextType = (!isSafari && tryContext('webgl2')) ? 2 : 1
+      options.contextType = tryContext('webgl2') ? 2 : 1
     }
     // @ts-expect-error - if webgl2 context was found, lose the context
     if (options.contextType === 2) tmpContext?.getExtension('WEBGL_lose_context').loseContext()
     // if browser supports it, create an instance of the mapWorker
-    if (typeof canvas.transferControlToOffscreen === 'function') {
+    // TODO: Maybe there is a way to get offscreencanvas to work on safari but for now not worth
+    if (!isSafari && typeof canvas.transferControlToOffscreen === 'function') {
       const offscreenCanvas = canvas.transferControlToOffscreen()
       const mapWorker = this.offscreen = new Worker(new URL('./workers/map.worker', import.meta.url), { name: 'map-worker', type: 'module' })
       mapWorker.onmessage = this.#mapMessage.bind(this)
@@ -403,6 +408,7 @@ export default class S2Map extends EventTarget {
 
   #onCanvasMouseMove (e: MouseEvent): void {
     const { map, offscreen } = this
+    // @ts-expect-error - layerX and layerY are not defined in typescript
     const { layerX, layerY } = e
     const x = layerX * this.#canvasMultiplier
     const y = layerY * this.#canvasMultiplier

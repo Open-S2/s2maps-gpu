@@ -4,6 +4,7 @@ import buildMask from './buildMask'
 import type { MapOptions } from 's2/ui/s2mapUI'
 import type { Context as ContextSpec, MaskSource } from './context.spec'
 import type { GPUType } from 's2/style/style.spec'
+import type { BBox } from 's2/geometry'
 
 const DEPTH_ESPILON = 1 / Math.pow(2, 16)
 
@@ -31,7 +32,7 @@ export default class Context implements ContextSpec {
   interactTexture!: WebGLTexture
   stencilBuffer!: WebGLRenderbuffer
   interactFramebuffer!: WebGLFramebuffer
-  defaultBounds: [r: number, g: number, b: number, a: number] = [0, 0, 8192, 8192]
+  defaultBounds: BBox = [0, 0, 8192, 8192]
   constructor (context: WebGLRenderingContext | WebGL2RenderingContext, options: MapOptions) {
     const { canvasMultiplier } = options
     const gl = this.gl = context
@@ -516,7 +517,7 @@ export default class Context implements ContextSpec {
   bindEnableVertexAttrMulti (
     ab: ArrayBufferView,
     // [indx, size, type, normalized, stride, offset]
-    attributes: Array<[number, number, number, boolean, number, number]>,
+    attributes: Array<[index: number, size: number, type: number, normalized: boolean, stride: number, offset: number]>,
     instance = false
   ): WebGLBuffer {
     const buf = this.bindAndBuffer(ab)

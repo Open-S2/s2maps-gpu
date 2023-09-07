@@ -6,7 +6,7 @@
   "minzoom": -0.5,
   "maxzoom": 5,
   "sources": {
-    "countries": "s2maps://s2json/s2maps/land-points.s2json"
+    "countries": "/s2json/landPoints.s2json"
   },
   "fonts": {},
   "layers": [

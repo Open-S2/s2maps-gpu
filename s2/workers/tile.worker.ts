@@ -5,7 +5,7 @@ import ProcessManager from './process'
 
 import type { LayerDefinition, StylePackage } from 's2/style/style.spec'
 import type { TileRequest, TileWorkerMessages } from './worker.spec'
-import type { JSONVectorTile } from './source/s2json-vt/tile'
+import type { JSONVectorTile } from './source/json-vt/tile'
 
 // A TileWorker has one job: prebuild tile data for the WebGL / WebGPU instance
 // During construction, the tileworker is given the map's id to send the data to the correct recepient

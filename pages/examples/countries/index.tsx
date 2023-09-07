@@ -179,62 +179,62 @@ const mapStyle = {
       }
     },
     {
-      "name": "country_state",
-      "source": "place",
-      "filter": [
-        "or",
-        ["and", ["class", "==", "continent"], ["?name", "==", "Antarctica"]],
-        ["class", "has", ["country"]]
+      name: 'country_state',
+      source: 'place',
+      filter: [
+        'or',
+        ['and', ['class', '==', 'continent'], ['?name', '==', 'Antarctica']],
+        ['class', 'has', ['country']]
       ],
-      "layer": "place",
-      "type": "glyph",
-      "maxzoom": 12,
-      "layout": {
-        "text-family": "roboto-medium",
-        "text-field": [
-          "data-condition",
-          ["class", "==", "continent"],
-          "?!P!Uname_en",
-          "default",
-          "?!Pname_en"
+      layer: 'place',
+      type: 'glyph',
+      maxzoom: 12,
+      layout: {
+        'text-family': 'roboto-medium',
+        'text-field': [
+          'data-condition',
+          ['class', '==', 'continent'],
+          '?!P!Uname_en',
+          'default',
+          '?!Pname_en'
         ],
-        "text-anchor": "center",
-        "text-line-height": 0.02,
-        "text-offset": [0, 0],
-        "text-padding": [4, 2]
+        'text-anchor': 'center',
+        'text-line-height': 0.02,
+        'text-offset': [0, 0],
+        'text-padding': [4, 2]
       },
-      "paint": {
-        "text-size": [
-          "data-condition",
-          ["class", "==", "country"],
+      paint: {
+        'text-size': [
+          'data-condition',
+          ['class', '==', 'country'],
           [
-            "input-range",
-            "zoom",
-            "expo",
+            'input-range',
+            'zoom',
+            'expo',
             1.5,
             0,
             14,
             4,
             28
           ],
-          "default",
+          'default',
           15.3
         ],
-        "text-fill": [
-          "data-condition",
-          ["class", "==", "country"],
-          "rgb(80, 80, 80)",
-          ["class", "==", "continent"],
-          "rgb(100, 100, 100)",
-          "default",
-          "rgba(0, 0, 0, 0)"
+        'text-fill': [
+          'data-condition',
+          ['class', '==', 'country'],
+          'rgb(80, 80, 80)',
+          ['class', '==', 'continent'],
+          'rgb(100, 100, 100)',
+          'default',
+          'rgba(0, 0, 0, 0)'
         ],
-        "text-stroke": "rgba(255, 255, 255, 0.65)",
-        "text-stroke-width": [
-          "data-condition",
-          ["class", "==", "continent"],
+        'text-stroke': 'rgba(255, 255, 255, 0.65)',
+        'text-stroke-width': [
+          'data-condition',
+          ['class', '==', 'continent'],
           0.5,
-          "default",
+          'default',
           0
         ]
       }

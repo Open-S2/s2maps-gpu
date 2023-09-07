@@ -1,4 +1,4 @@
-export type ColorDefinition = [string, [number, number, number, number]]
+export type ColorDefinition = [encoding: string, colors: [r: number, g: number, b: number, a: number]]
 
 // there are two types of strings to parse
 // Hex: #ededed

@@ -7,7 +7,7 @@ import frag1 from '../shaders/glyph1.fragment.glsl'
 import vert2 from '../shaders/glyph2.vertex.glsl'
 import frag2 from '../shaders/glyph2.fragment.glsl'
 
-import type { Context, GlyphFeatureGuide, GlyphSource } from '../contexts'
+import type { Context, GlyphFeatureGuide, GlyphSource } from '../contexts/context.spec'
 import type { GlyphImages } from 's2/workers/source/glyphSource'
 import type {
   GlyphLayerDefinition,
@@ -97,6 +97,7 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
       // create the boxVertex buffer
       const glyphFilterVerts = new Float32Array(glyphData.glyphFilterBuffer)
       const glyphFilterBuffer = context.bindEnableVertexAttrMulti(glyphFilterVerts, [
+        // [indx, size, type, normalized, stride, offset]
         [1, 2, gl.FLOAT, false, 36, 0], // s, t
         [2, 2, gl.FLOAT, false, 36, 8], // x, y
         [3, 2, gl.FLOAT, false, 36, 16], // padding
@@ -114,6 +115,7 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
       // create the vertex and color buffers
       const glyphQuadVerts = new Float32Array(glyphData.glyphQuadBuffer)
       const glyphQuadBuffer = context.bindEnableVertexAttrMulti(glyphQuadVerts, [
+        // [indx, size, type, normalized, stride, offset]
         [1, 2, gl.FLOAT, false, 48, 0], // s, t
         [2, 2, gl.FLOAT, false, 48, 8], // x, y
         [3, 2, gl.FLOAT, false, 48, 16], // xOffset, yOffset

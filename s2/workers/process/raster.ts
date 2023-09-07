@@ -97,7 +97,9 @@ export default class RasterWorker implements RasterWorkerSpec {
     // https://bugzilla.mozilla.org/show_bug.cgi?id=1335594 - saved for posterity
     let built = false
     let image: ArrayBuffer | ImageBitmap = data
-    if (typeof createImageBitmap === 'function' && !isSafari) {
+    // TODO: Had to remove !isSafari, so even though premultiplyAlpha is not supported in Safari
+    // TODO: We will just have to let sensor data be wrong for now. no idea why this doesn't work anymore
+    if (typeof createImageBitmap === 'function') {
       image = await createImageBitmap(new Blob([data]), { premultiplyAlpha: 'none' })
       built = true
     }

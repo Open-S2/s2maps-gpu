@@ -1,7 +1,7 @@
 /* eslint-env browser */
 import loadShader from './loadShader'
 
-import type { Context } from '../contexts'
+import type { Context } from '../contexts/context.spec'
 import type {
   AttributeLocations,
   Attributes,
@@ -10,6 +10,7 @@ import type {
   Uniforms
 } from './program.spec'
 import type { ColorMode } from 's2/s2Map'
+import type { TileGL } from 's2/source/tile.spec'
 
 export default class Program implements ProgramSpec {
   vertexShader!: WebGLShader
@@ -104,6 +105,21 @@ export default class Program implements ProgramSpec {
     if (this.updateMatrix !== null) this.setMatrix(this.updateMatrix)
     if (this.updateInputs !== null) this.setInputs(this.updateInputs)
     if (this.updateAspect !== null) this.setAspect(this.updateAspect)
+  }
+
+  setTileUniforms (tile: TileGL): void {
+    const { gl, uniforms } = this
+    const { type } = tile
+    if (type === 'S2') {
+      const { faceST, bottom, top } = tile
+      this.setFaceST(faceST)
+      this.setTilePos(bottom, top)
+      gl.uniform1i(uniforms.uIsS2, 1)
+    } else {
+      const { matrix } = tile
+      this.setMatrix(matrix)
+      gl.uniform1i(uniforms.uIsS2, 0)
+    }
   }
 
   setDevicePixelRatio (ratio: number): void {

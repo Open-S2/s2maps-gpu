@@ -1,6 +1,5 @@
 {
   "extends": [
-    "next/core-web-vitals",
     "standard-with-typescript",
     "standard-jsx",
     "plugin:@typescript-eslint/recommended"
@@ -30,5 +29,6 @@
   },
   "parserOptions": {
     "project": ["./tsconfig.next.json"]
-  }
+  },
+  "ignorePatterns": ["temp.js", "**/*.js"]
 }

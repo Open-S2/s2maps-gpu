@@ -8,16 +8,16 @@ const R2D = 57.29577951308232088 // eslint-disable-line
 export default function cursorToLonLat (
   centerLon: number,
   centerLat: number,
-  x: number,
-  y: number,
+  xOffset: number,
+  yOffset: number,
   radius: number
-): undefined | [number, number] {
+): undefined | [lon: number, lat: number] {
   // pre adjust to radians
   centerLon *= D2R
   centerLat *= D2R
   // prep
   const { PI, sqrt, sin, cos, abs, atan2 } = Math
-  const rh = sqrt(x * x + y * y)
+  const rh = sqrt(xOffset * xOffset + yOffset * yOffset)
   // corner case, the x+y is too far
   if (rh > radius) return
   const z = asinz(rh / radius)
@@ -31,13 +31,13 @@ export default function cursorToLonLat (
   // corner case: basically on the dot center
   if (abs(rh) <= EPSLN) return [lon * R2D, lat * R2D]
   // build lat
-  lat = asinz(cosz * sinP14 + (y * sinz * cosP14) / rh)
+  lat = asinz(cosz * sinP14 + (yOffset * sinz * cosP14) / rh)
   // negative angles
   if (abs(con) <= EPSLN) {
-    if (centerLat >= 0) lon = adjustLon(centerLon + atan2(x, -y))
-    else lon = adjustLon(centerLon - atan2(-x, y))
+    if (centerLat >= 0) lon = adjustLon(centerLon + atan2(xOffset, -yOffset))
+    else lon = adjustLon(centerLon - atan2(-xOffset, yOffset))
   } else { // positive angles
-    lon = adjustLon(centerLon + atan2((x * sinz), rh * cosP14 * cosz - y * sinP14 * sinz))
+    lon = adjustLon(centerLon + atan2((xOffset * sinz), rh * cosP14 * cosz - yOffset * sinP14 * sinz))
   }
   return [lon * R2D, lat * R2D]
 }

@@ -4,7 +4,7 @@ import Camera from './camera/index'
 /** SOURCES **/
 import Animator from './camera/animator'
 
-import type { LayerStyle, StyleDefinition } from 's2/style/style.spec'
+import type { LayerStyle, StyleDefinition, Projection } from 's2/style/style.spec'
 import type { AnimationDirections, AnimationType } from './camera/animator'
 import type { UserTouchEvent } from './camera/dragPan'
 import type { TileWorkerMessage } from 's2/workers/worker.spec'
@@ -15,7 +15,7 @@ export interface MapOptions {
   container?: HTMLElement // used by offscreen canvas
   interactive?: boolean
   apiKey?: string
-  style: StyleDefinition | string
+  style: StyleDefinition | string // URL to a StyleDefinition or a StyleDefinition object
   scrollZoom?: boolean
   positionalZoom?: boolean // If true, cursor position impacts zoom's x & y directions [default: true]
   canvasMultiplier?: number

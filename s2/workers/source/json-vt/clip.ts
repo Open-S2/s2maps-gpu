@@ -1,5 +1,5 @@
 /** MODULES **/
-import S2JsonVT from '.'
+import JsonVT from '.'
 import createFeature from './feature'
 /** TYPES **/
 import type { JSONTile } from './tile'
@@ -12,7 +12,7 @@ type Sections = [
   FeatureVector[]
 ]
 
-export default function clip (features: FeatureVector[], tile: JSONTile, s2json: S2JsonVT): Sections {
+export default function clip (features: FeatureVector[], tile: JSONTile, s2json: JsonVT): Sections {
   const sections: Sections = [[], [], [], []] // [bl, br, tl, tr]
   const { i, j, zoom, minS, minT, maxS, maxT } = tile
   const scale = 1 << zoom
@@ -64,7 +64,7 @@ function _clip (
   axis: 0 | 1,
   minAxis: number,
   maxAxis: number,
-  s2json: S2JsonVT
+  s2json: JsonVT
 ): null | FeatureVector[] {
   // scale
   k1 /= scale

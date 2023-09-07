@@ -3,8 +3,8 @@
 /* REACT MODULES */
 import Map from '../../../components/map'
 /* STYLES */
-import styles from '../../styles/Countries.module.css'
-// import style from './style.json'
+// import styles from '../../styles/Countries.module.css'
+import style from './style.json'
 
 import type { NextPage } from 'next'
 
@@ -20,11 +20,12 @@ function ready (s2map: S2Map): void {
 
 const Cloudflare: NextPage = () => {
   return (
-    <div className={styles.countries}>
+    <div className='pages'>
       <Map
-        style='s2maps://style/s2maps/glyphs.json'
+        style={style}
         opts={{ zoomController: false }}
         ready={ready}
+        noAPIKey
       />
     </div>
   )

@@ -25,28 +25,15 @@
       "./node_modules/@types"
     ],
     "baseUrl": ".",
-    "paths": {
-      "*": [
-        "./*"
-      ],
-      "@s2/*": [
-        "./s2/*"
-      ],
-      "@assets/*": [
-        "./assets/*"
-      ],
-      "@components/*": [
-        "./components/*"
-      ],
-      "@contexts/*": [
-        "./contexts/*"
-      ],
-      "@pages/*": [
-        "./pages/*"
-      ],
-      "@public/*": [
-        "./public/*"
-      ]
+    "paths": {    
+      "*" : ["./*"],
+      "@s2/*": ["./s2/*"],
+      "@assets/*": ["./assets/*"],
+      "@components/*": ["./components/*"],
+      "@contexts/*": ["./contexts/*"],
+      "@pages/*": ["./pages/*"],
+      "@public/*": ["./public/*"],
+      "@styles/*": ["./styles/*"]
     },
     "plugins": [
       {

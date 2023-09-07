@@ -1,6 +1,6 @@
 /** MODULES **/
-import { level, toIJ } from 's2/geometry/s2/s2CellID'
-import S2JsonVT from '.'
+import { level, toIJ } from 's2/geometry/id'
+import JsonVT from '.'
 /** TYPES **/
 import type { Properties } from 's2/geometry'
 import type { FeatureVector } from './feature'
@@ -110,14 +110,15 @@ export interface JSONVectorTile {
   extent: number
 }
 
-export default function createTile (features: FeatureVector[], id: bigint, s2jsonVT: S2JsonVT): JSONTile {
-  const zoom = level(id)
-  const [, i, j] = toIJ(id, zoom)
-  const tolerance = (zoom === s2jsonVT.maxzoom)
+export default function createTile (features: FeatureVector[], id: bigint, jsonVT: JsonVT): JSONTile {
+  const { projection, maxzoom, extent } = jsonVT
+  const zoom = level(projection, id)
+  const [, i, j] = toIJ(projection, id, zoom)
+  const tolerance = (zoom === maxzoom)
     ? 0
-    : s2jsonVT.tolerance / ((1 << zoom) * s2jsonVT.extent)
+    : jsonVT.tolerance / ((1 << zoom) * extent)
   const tile: JSONTile = {
-    extent: s2jsonVT.extent,
+    extent,
     layers: {},
     numPoints: 0,
     numSimplified: 0,

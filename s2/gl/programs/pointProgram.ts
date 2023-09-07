@@ -7,7 +7,7 @@ import frag1 from '../shaders/point1.fragment.glsl'
 import vert2 from '../shaders/point2.vertex.glsl'
 import frag2 from '../shaders/point2.fragment.glsl'
 
-import type { Context, PointFeatureGuide, PointSource } from '../contexts'
+import type { Context, PointFeatureGuide, PointSource } from '../contexts/context.spec'
 import type { PointData } from 's2/workers/worker.spec'
 import type { TileGL as Tile } from 's2/source/tile.spec'
 import type {

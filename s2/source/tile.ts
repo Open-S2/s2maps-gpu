@@ -1,65 +1,74 @@
 /* eslint-env browser */
 import { project } from 's2/ui/camera/projector/mat4'
 import { bboxST } from 's2/geometry/s2/s2Coords'
+import { fromID, llToTilePx } from 's2/geometry/webMerc'
 import { fromSTGL, mul, normalize } from 's2/geometry/s2/s2Point'
 import { level, toIJ } from 's2/geometry/s2/s2CellID'
 
-import type { FeatureGuide as FeatureGuideGL, MaskSource as MaskSourceGL, WebGL2Context, WebGLContext } from 's2/gl/contexts'
+import type {
+  Context as ContextGL,
+  FeatureGuide as FeatureGuideGL,
+  MaskSource as MaskSourceGL
+} from 's2/gl/contexts/context.spec'
+import type {
+  Context as ContextGPU,
+  FeatureGuide as FeatureGuideGPU,
+  MaskSource as MaskSourceGPU
+} from 's2/gpu/context/context.spec'
 import type Projector from 's2/ui/camera/projector'
-import type { Face, XYZ } from 's2/geometry'
+import type { BBox, Face, XYZ } from 's2/geometry'
 import type { FlushData, InteractiveObject } from 's2/workers/worker.spec'
-import type { LayerDefinition } from 's2/style/style.spec'
-import type { FeatureGuide as FeatureGuideGPU, MaskSource as MaskSourceGPU, WebGPUContext } from 's2/gpu/context'
-import type { Corners, TileGL, TileGPU } from './tile.spec'
+import type { LayerDefinition, Projection } from 's2/style/style.spec'
+import type {
+  Bottom,
+  Corners,
+  FaceST,
+  S2Tile as S2TileSpec,
+  TileBase,
+  Top,
+  WMTile as WMTileSpec
+} from './tile.spec'
 
-// tiles are designed to create mask geometry and store prebuilt layer data handed off by the worker pool
-// whenever rerenders are called, they will access these tile objects for the layer data / vaos
-// before managing sources asyncronously, a tile needs to synchronously build spherical background
-// data to ensure we get no awkward visuals.
-export default class Tile {
+export function createTile (
+  projection: Projection,
+  context: ContextGL | ContextGPU,
+  id: bigint,
+  size = 512
+): S2Tile | WMTile {
+  if (projection === 'S2') return new S2Tile(context, id, size)
+  else return new WMTile(context, id, size)
+}
+
+class Tile implements TileBase {
   id: bigint
-  face: Face
-  i: number
-  j: number
-  zoom: number
+  face: Face = 0
+  i = 0
+  j = 0
+  zoom = 0
   size: number
+  division = 1
   tmpMaskID = 0
   mask: MaskSourceGL | MaskSourceGPU
-  bbox: [number, number, number, number]
-  faceST: [number, number, number, number, number, number]
-  corners?: Corners
-  bottom: [number, number, number, number] = [0, 0, 0, 0]
-  top: [number, number, number, number] = [0, 0, 0, 0]
-  division = 16
+  bbox: BBox = [0, 0, 0, 0]
   featureGuides: Array<FeatureGuideGL | FeatureGuideGPU> = []
-  context: WebGLContext | WebGL2Context | WebGPUContext
+  context: ContextGL | ContextGPU
   interactiveGuide: Map<number, InteractiveObject> = new Map()
   rendered = false
   constructor (
-    context: WebGLContext | WebGL2Context | WebGPUContext,
+    context: ContextGL | ContextGPU,
     id: bigint,
     size = 512
   ) {
-    const zoom = this.zoom = level(id)
-    const [face, i, j] = toIJ(id, zoom)
     this.context = context
     this.id = id
-    this.face = face
-    this.i = i
-    this.j = j
     this.size = size
-    const bbox = this.bbox = bboxST(i, j, zoom)
-    this.faceST = [face, zoom, bbox[2] - bbox[0], bbox[0], bbox[3] - bbox[1], bbox[1]]
-    if (zoom >= 12) this.#buildCorners()
-    // build division
-    this.division = 16 / (1 << Math.max(Math.min(Math.floor(zoom / 2), 4), 0))
     // grab mask
-    this.mask = context.getMask(this.division)
+    this.mask = context.getMask(1)
   }
 
   // inject references to featureGuide from each parentTile. Sometimes if we zoom really fast, we inject
   // a parents' parent or deeper, so we need to reflect that in the tile property.
-  injectParentTile (parent: TileGL & TileGPU, layers: LayerDefinition[]): void {
+  injectParentTile (parent: Tile, layers: LayerDefinition[]): void {
     // feature guides
     for (const feature of parent.featureGuides) {
       if ('maskLayer' in feature && feature.maskLayer) continue // ignore mask features
@@ -68,9 +77,9 @@ export default class Tile {
       if (this.zoom <= maxzoom) {
         this.featureGuides.push({
           ...feature,
-          tile: this as unknown as TileGL & TileGPU,
-          parent: actualParent,
-          bounds: this.#buildBounds(actualParent)
+          tile: this as any, // TODO: Maybe TS actually has a sane way to solve this problem.
+          parent: actualParent as any,
+          bounds: this.#buildBounds(actualParent as any)
         })
       }
     }
@@ -81,7 +90,7 @@ export default class Tile {
   // currently this is for glyphs, points, and heatmaps. By sharing glyph data with children,
   // the glyphs will be rendered 4 or even more times. To alleviate this, we can set boundaries
   // of what points will be considered
-  #buildBounds (parent: TileGL | TileGPU): [number, number, number, number] {
+  #buildBounds (parent: S2Tile): [number, number, number, number] {
     let { i, j, zoom } = this
     const parentZoom = parent.zoom
     // get the scale
@@ -101,42 +110,6 @@ export default class Tile {
 
     // build the bounds bbox
     return [0 + iShift, 0 + jShift, 8_192 / scale + iShift, 8_192 / scale + jShift]
-  }
-
-  #buildCorners (): void {
-    const { face, bbox } = this
-
-    this.corners = {
-      topLeft: mul(normalize(fromSTGL(face, bbox[0], bbox[3])), 6371008.8),
-      topRight: mul(normalize(fromSTGL(face, bbox[2], bbox[3])), 6371008.8),
-      bottomLeft: mul(normalize(fromSTGL(face, bbox[0], bbox[1])), 6371008.8),
-      bottomRight: mul(normalize(fromSTGL(face, bbox[2], bbox[1])), 6371008.8)
-    }
-  }
-
-  // given a matrix, compute the corners screen positions
-  setScreenPositions (projector: Projector): void {
-    if (this.corners !== undefined) {
-      const { eye } = projector
-      const eyeKM = eye.map(e => e * 1000)
-      const matrix = projector.getMatrix('km')
-      // pull out the S2Points
-      const { bottomLeft, bottomRight, topLeft, topRight } = this.corners
-      // project points and grab their x-y positions
-      const [blX, blY] = project(matrix, bottomLeft.map((n, i) => n - eyeKM[i]) as XYZ)
-      const [brX, brY] = project(matrix, bottomRight.map((n, i) => n - eyeKM[i]) as XYZ)
-      const [tlX, tlY] = project(matrix, topLeft.map((n, i) => n - eyeKM[i]) as XYZ)
-      const [trX, trY] = project(matrix, topRight.map((n, i) => n - eyeKM[i]) as XYZ)
-      // store for eventual uniform "upload"
-      this.bottom[0] = blX
-      this.bottom[1] = blY
-      this.bottom[2] = brX
-      this.bottom[3] = brY
-      this.top[0] = tlX
-      this.top[1] = tlY
-      this.top[2] = trX
-      this.top[3] = trY
-    }
   }
 
   addFeatures (features: Array<FeatureGuideGL | FeatureGuideGPU>): void {
@@ -217,5 +190,94 @@ export default class Tile {
       const fgSourceName = fg.sourceName.split(':')[0]
       return !sourceNames.includes(fgSourceName)
     })
+  }
+}
+
+export class S2Tile extends Tile implements S2TileSpec {
+  type = 'S2' as const
+  faceST: FaceST
+  corners?: Corners
+  bottom: Bottom = [0, 0, 0, 0]
+  top: Top = [0, 0, 0, 0]
+  constructor (
+    context: ContextGL | ContextGPU,
+    id: bigint,
+    size = 512
+  ) {
+    super(context, id, size)
+    const { max, min, floor } = Math
+    const zoom = this.zoom = level(id)
+    const [face, i, j] = toIJ(id, zoom)
+    this.face = face
+    this.i = i
+    this.j = j
+    const bbox = this.bbox = bboxST(i, j, zoom)
+    this.faceST = [face, zoom, bbox[2] - bbox[0], bbox[0], bbox[3] - bbox[1], bbox[1]]
+    if (zoom >= 12) this.#buildCorners()
+    // build division
+    this.division = 16 / (1 << max(min(floor(zoom / 2), 4), 0))
+    // grab mask
+    if (this.division !== 1) this.mask = context.getMask(this.division)
+  }
+
+  #buildCorners (): void {
+    const { face, bbox } = this
+
+    this.corners = {
+      topLeft: mul(normalize(fromSTGL(face, bbox[0], bbox[3])), 6371008.8),
+      topRight: mul(normalize(fromSTGL(face, bbox[2], bbox[3])), 6371008.8),
+      bottomLeft: mul(normalize(fromSTGL(face, bbox[0], bbox[1])), 6371008.8),
+      bottomRight: mul(normalize(fromSTGL(face, bbox[2], bbox[1])), 6371008.8)
+    }
+  }
+
+  // given a matrix, compute the corners screen positions
+  setScreenPositions (projector: Projector): void {
+    if (this.corners !== undefined) {
+      const { eye } = projector
+      const eyeKM = eye.map(e => e * 1000)
+      const matrix = projector.getMatrix('km')
+      // pull out the S2Points
+      const { bottomLeft, bottomRight, topLeft, topRight } = this.corners
+      // project points and grab their x-y positions
+      const [blX, blY] = project(matrix, bottomLeft.map((n, i) => n - eyeKM[i]) as XYZ)
+      const [brX, brY] = project(matrix, bottomRight.map((n, i) => n - eyeKM[i]) as XYZ)
+      const [tlX, tlY] = project(matrix, topLeft.map((n, i) => n - eyeKM[i]) as XYZ)
+      const [trX, trY] = project(matrix, topRight.map((n, i) => n - eyeKM[i]) as XYZ)
+      // store for eventual uniform "upload"
+      this.bottom[0] = blX
+      this.bottom[1] = blY
+      this.bottom[2] = brX
+      this.bottom[3] = brY
+      this.top[0] = tlX
+      this.top[1] = tlY
+      this.top[2] = trX
+      this.top[3] = trY
+    }
+  }
+}
+
+export class WMTile extends Tile implements WMTileSpec {
+  type = 'WM' as const
+  matrix: Float32Array = new Float32Array(16)
+  constructor (
+    context: ContextGL | ContextGPU,
+    id: bigint,
+    size = 512
+  ) {
+    super(context, id, size)
+    const [zoom, i, j] = fromID(id)
+    this.i = i
+    this.j = j
+    this.zoom = zoom
+  }
+
+  // given a basic ortho matrix, adjust by the tile's offset and scale
+  setScreenPositions (projector: Projector): void {
+    const { zoom, lon, lat } = projector
+    const scale = Math.pow(2, zoom - this.zoom)
+    const offset = llToTilePx([lon, lat], [this.zoom, this.i, this.j])
+
+    this.matrix = projector.getMatrix(scale, offset)
   }
 }

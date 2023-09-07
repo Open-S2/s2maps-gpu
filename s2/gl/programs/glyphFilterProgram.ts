@@ -5,7 +5,7 @@ import frag1 from '../shaders/glyphFilter1.fragment.glsl'
 import vert2 from '../shaders/glyphFilter2.vertex.glsl'
 import frag2 from '../shaders/glyphFilter2.fragment.glsl'
 
-import type { Context, GlyphFeatureGuide } from '../contexts'
+import type { Context, GlyphFeatureGuide } from '../contexts/context.spec'
 import type { GlyphFilterProgram as GlyphFilterProgramSpec, GlyphFilterUniforms } from './program.spec'
 
 export default async function glyphFilterProgram (context: Context): Promise<GlyphFilterProgramSpec> {

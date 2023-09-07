@@ -1,3 +1,5 @@
+import type { XYZ } from 's2/geometry'
+
 export function create (): Float32Array {
   const m = new Float32Array(16)
   m[0] = 1
@@ -16,8 +18,13 @@ export function clone (m: Float32Array): Float32Array {
   return out
 }
 
-export function blend (m: Float32Array, width: number, height: number,
-  near: number, far: number): Float32Array {
+export function blend (
+  m: Float32Array,
+  width: number,
+  height: number,
+  near: number,
+  far: number
+): Float32Array {
   m[0] = 1 / width
   m[1] = 0
   m[2] = 0
@@ -44,7 +51,12 @@ export function blend (m: Float32Array, width: number, height: number,
   return m
 }
 
-export function ortho (m: Float32Array, width: number, height: number, far: number): Float32Array {
+export function ortho (
+  m: Float32Array,
+  width: number,
+  height: number,
+  far: number
+): Float32Array {
   m[0] = 1 / width
   m[1] = 0
   m[2] = 0
@@ -65,7 +77,13 @@ export function ortho (m: Float32Array, width: number, height: number, far: numb
   return m
 }
 
-export function perspective (m: Float32Array, fovy: number, aspect: number, near: number, far: number): Float32Array {
+export function perspective (
+  m: Float32Array,
+  fovy: number,
+  aspect: number,
+  near: number,
+  far: number
+): Float32Array {
   const f = 1.0 / Math.tan(fovy / 2)
   m[0] = f / aspect
   m[1] = 0
@@ -93,7 +111,10 @@ export function perspective (m: Float32Array, fovy: number, aspect: number, near
   return m
 }
 
-export function lookAt (eye: [number, number, number], up: [number, number, number]): Float32Array {
+export function lookAt (
+  eye: XYZ,
+  up: XYZ
+): Float32Array {
   const m = new Float32Array(16)
   let x0: number, x1: number, x2: number, y0: number, y1: number
   let y2: number, z0: number, z1: number, z2: number, len: number
@@ -172,7 +193,10 @@ export function addCenter (m: Float32Array, v: Float32Array): Float32Array {
   return m
 }
 
-export function translate (m: Float32Array, v: Float32Array | [number, number, number]): Float32Array {
+export function translate (
+  m: Float32Array,
+  v: Float32Array | XYZ
+): Float32Array {
   const x = v[0]; const y = v[1]; const z = v[2]
 
   m[12] = m[0] * x + m[4] * y + m[8] * z + m[12]
@@ -183,7 +207,10 @@ export function translate (m: Float32Array, v: Float32Array | [number, number, n
   return m
 }
 
-export function scale (m: Float32Array, v: Float32Array | [number, number, number]): Float32Array {
+export function scale (
+  m: Float32Array,
+  v: Float32Array | XYZ
+): Float32Array {
   const x = v[0]
   const y = v[1]
   const z = v[2]
@@ -204,7 +231,10 @@ export function scale (m: Float32Array, v: Float32Array | [number, number, numbe
   return m
 }
 
-export function rotate (m: Float32Array, rad: [number, number, number]): Float32Array {
+export function rotate (
+  m: Float32Array,
+  rad: XYZ
+): Float32Array {
   rotateX(m, rad[0])
   rotateY(m, rad[1])
   rotateZ(m, rad[2])
@@ -212,7 +242,10 @@ export function rotate (m: Float32Array, rad: [number, number, number]): Float32
   return m
 }
 
-export function rotateX (m: Float32Array, rad: number): Float32Array {
+export function rotateX (
+  m: Float32Array,
+  rad: number
+): Float32Array {
   const s = Math.sin(rad)
   const c = Math.cos(rad)
   const m10 = m[4]
@@ -284,7 +317,10 @@ export function rotateZ (m: Float32Array, rad: number): Float32Array {
   return m
 }
 
-export function multiplyVector (m: Float32Array, v: [number, number, number]): number[] {
+export function multiplyVector (
+  m: Float32Array,
+  v: XYZ
+): number[] {
   const out = []
 
   out.push(m[0] * v[0] + m[4] * v[1] + m[8] * v[2] + m[12])
@@ -295,7 +331,10 @@ export function multiplyVector (m: Float32Array, v: [number, number, number]): n
   return out
 }
 
-export function multiply (a: Float32Array, b: Float32Array | number[]): Float32Array {
+export function multiply (
+  a: Float32Array,
+  b: Float32Array | number[]
+): Float32Array {
   const a00 = a[0]
   const a01 = a[1]
   const a02 = a[2]
@@ -391,7 +430,10 @@ export function invert (matrix: Float32Array): null | Float32Array {
   return matrix
 }
 
-export function project (matrix: Float32Array, vector: [number, number, number]): [number, number, number] {
+export function project (
+  matrix: Float32Array,
+  vector: XYZ
+): XYZ {
   const mul = multiplyVector(matrix, vector)
 
   return [mul[0] / mul[3], mul[1] / mul[3], mul[2] / mul[3]]

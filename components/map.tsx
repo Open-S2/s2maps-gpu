@@ -1,5 +1,5 @@
 /* MODULES */
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 import type { S2Map } from '../s2/index'
 import type { MapOptions } from '../s2/ui/s2mapUI'
@@ -8,12 +8,12 @@ const { NEXT_PUBLIC_API_KEY } = process.env
 const { NEXT_PUBLIC_LOCATION } = process.env
 
 export interface MapProps {
-  style: Object,
-  opts: MapOptions,
-  ready: boolean,
-  noAPIKey: boolean,
-  mouseenter: (input: any) => void,
-  mouseleave: (input: any) => void,
+  style: Object
+  opts: MapOptions
+  ready: boolean
+  noAPIKey: boolean
+  mouseenter: (input: any) => void
+  mouseleave: (input: any) => void
 }
 
 function Map (props: any) {
@@ -25,7 +25,7 @@ function Map (props: any) {
 
   useEffect(() => {
     // if already built, return
-    if (s2map.current) return
+    if (s2map.current != null) return
     // prep the canvas
     prepCanvas(s2mapRef.current, s2map, props)
     // prep resizing
@@ -34,7 +34,7 @@ function Map (props: any) {
     setHeight(window.innerHeight)
     // componentWillUnmount equivalent:
     return () => {
-      if (s2map.current) { s2map.current.delete(); s2map.current = undefined }
+      if (s2map.current != null) { s2map.current.delete(); s2map.current = undefined }
       window.removeEventListener('resize', resize, false)
       window.removeEventListener('orientationchange', resize, false)
     } // eslint-disable-next-line
@@ -58,7 +58,7 @@ function prepCanvas (
   let { style, opts, ready, noAPIKey, mouseenter, mouseleave } = props
   if (!opts) opts = {}
   // don't bother reloading without a style or container
-  if (!style || !container) return
+  if (!style || (container == null)) return
 
   // replace website in sources
   for (const source in style.sources) {

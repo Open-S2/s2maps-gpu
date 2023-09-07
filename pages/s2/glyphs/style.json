@@ -6,14 +6,10 @@
   "minzoom": -0.5,
   "maxzoom": 5,
   "sources": {
-    "countries": "s2maps://s2json/s2maps/countriesHD.s2json"
+    "countries": "/s2json/countriesHD.s2json"
   },
   "fonts": {
-    "noto-sans-medium": "s2maps://glyphs/s2maps/Noto/NotoSansMedium.font",
-    "roboto-medium": {
-      "path": "s2maps://glyphs/s2maps/Roboto/RobotoMedium.font",
-      "fallback": "noto-sans-medium"
-    }
+    "roboto-medium": "http://localhost:3000/api/glyphs/RobotoMedium.font"
   },
   "layers": [
     {
@@ -50,7 +46,6 @@
     {
       "name": "poi_labels",
       "source": "countries",
-      "filter": ["and", ["iso", "==", "us"], ["name", "==", "United States"]],
       "type": "glyph",
       "layout": {
         "text-family": "roboto-medium",
@@ -60,7 +55,7 @@
         "text-padding": [1, 1]
       },
       "paint": {
-        "text-size": 18,
+        "text-size": 12,
         "text-fill": "#1a73e7",
         "text-stroke": "rgba(255, 255, 255, 0.75)",
         "text-stroke-width": 0.5

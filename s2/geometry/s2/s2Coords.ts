@@ -1,5 +1,5 @@
 import { kLimitIJ } from './s2Proj.spec'
-import { radToDeg, degToRad } from '../util'
+import { degToRad, radToDeg } from '../util'
 
 import type { Face } from './s2Proj.spec'
 import type { BBox, XYZ } from '../proj.spec'

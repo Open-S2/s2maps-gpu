@@ -73,7 +73,10 @@ void main () {
   vec2 normal;
   vec4 pos = vec4(0.);
 
-  if (curr.z < zero.z && next.z < zero.z) {
+  if (
+    uIsS2 == false ||
+    (curr.z < zero.z && next.z < zero.z)
+  ) {
     bool currPrev = curr == prev;
     if ( // first case is end caps
       uCap != 0. &&

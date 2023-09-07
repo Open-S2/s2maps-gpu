@@ -6,10 +6,10 @@ import type { Painter as GLPainter } from 's2/gl/painter.spec'
 import type { Painter as GPUPainter } from 's2/gpu/painter.spec'
 import type { MapOptions } from '../s2mapUI'
 /** PROJECTIONS **/
-import { isFace, parent as parentID } from 's2/geometry/s2/s2CellID'
-import Projector from './projector/index'
+import { isFace, parent as parentID } from 's2/geometry/id'
+import Projector from './projector'
 /** SOURCES **/
-import { Tile } from 's2/source'
+import { createTile } from 's2/source'
 import Cache from './cache'
 import TimeCache from './timeCache'
 import DragPan, { ClickEvent } from './dragPan'
@@ -18,7 +18,7 @@ import { StyleDefinition, TimeSeriesStyle } from 's2/style/style.spec'
 
 import type S2Map from 's2/s2Map'
 import type { FlushData, InteractiveObject, ReadyMessageGL, TileRequest, TileWorkerMessage } from 's2/workers/worker.spec'
-import type { TileGL, TileGPU } from 's2/source/tile.spec'
+import type { Tile as TileSpec } from 's2/source/tile.spec'
 
 export interface ResizeDimensions {
   width: number
@@ -35,11 +35,11 @@ export default class Camera {
   style: Style
   projector: Projector
   painter!: GLPainter & GPUPainter
-  tileCache: Cache<bigint, TileGL & TileGPU> = new Cache()
+  tileCache: Cache<bigint, TileSpec> = new Cache()
   timeCache?: TimeCache
-  tilesInView: Array<TileGL & TileGPU> = [] // S2CellIDs of the tiles
+  tilesInView: TileSpec[] = [] // S2CellIDs of the tiles
   lastTileViewState: number[] = []
-  requestQueue: Array<TileGL & TileGPU> = []
+  requestQueue: TileSpec[] = []
   wasDirtyLastFrame = false
   webworker: boolean
   canMove = true
@@ -362,7 +362,7 @@ export default class Camera {
       const tile = this.tileCache.get(tileID)
       if (tile === undefined) return
       // 2) Build features via the painter. Said workflow will add to the tile's feature list
-      this.painter.buildFeatureData(tile, data)
+      this.painter.buildFeatureData(tile as any, data)
     }
 
     // new 'paint', so painter is dirty
@@ -395,17 +395,17 @@ export default class Camera {
     }
   }
 
-  getTile (tileID: bigint): undefined | (TileGL & TileGPU) {
+  getTile (tileID: bigint): undefined | TileSpec {
     return this.tileCache.get(tileID)
   }
 
-  getTiles (): Array<TileGL & TileGPU> {
+  getTiles (): TileSpec[] {
     const { tileCache, projector, painter, style } = this
     if (projector.dirty) {
       painter.dirty = true // to avoid re-requesting getTiles (which is expensive), we set painter.dirty to true
       let tilesInView: bigint[] = []
       // no matter what we need to update what's in view
-      const newTiles: Array<TileGL & TileGPU> = []
+      const newTiles: TileSpec[] = []
       // update tiles in view
       tilesInView = projector.getTilesInView()
       // check if any of the tiles don't exist in the cache. If they don't create a new tile
@@ -441,20 +441,21 @@ export default class Camera {
     style.requestTiles(newTiles)
   }
 
-  #createTile (id: bigint): TileGL & TileGPU {
-    const { style, painter, tileCache } = this
+  #createTile (id: bigint): TileSpec {
+    const { style, painter, tileCache, projector } = this
+    const { projection } = projector
     // create tile
-    const tile = new Tile(painter.context, id) as unknown as (TileGL & TileGPU)
+    const tile = createTile(projector.projection, painter.context, id)
     // should our style have mask layers, let's add them
     style.injectMaskLayers(tile)
     // inject parent should one exist
-    if (!isFace(id)) {
+    if (!isFace(projection, id)) {
       // get closest parent S2CellID. If actively zooming, the parent tile will pass along
       // it's parent tile (and so forth) if its own data has not been processed yet.
-      const pID = parentID(id)
+      const pID = parentID(projection, id)
       // check if parent tile exists, if so inject
       const parent = tileCache.get(pID)
-      if (parent !== undefined) tile.injectParentTile(parent, style.layers)
+      if (parent !== undefined) tile.injectParentTile(parent as any, style.layers)
     }
     // store the tile
     tileCache.set(id, tile)
@@ -473,12 +474,12 @@ export default class Camera {
       // store for future draw that it was a "dirty" frame
       this.wasDirtyLastFrame = true
       // paint scene
-      painter.paint(projector, tiles)
+      painter.paint(projector, tiles as any)
     }
     // draw the interactive elements if there was no movement/zoom change
     if (style.interactive && !projector.dirty && this.wasDirtyLastFrame) {
       this.wasDirtyLastFrame = false
-      painter.paintInteractive(tiles)
+      painter.paintInteractive(tiles as any)
     }
     // cleanup
     painter.dirty = false

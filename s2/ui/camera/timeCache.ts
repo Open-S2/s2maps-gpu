@@ -130,10 +130,10 @@ export default class TimeCache extends Cache<string, SensorSource> {
     let tiles: Array<TileGL & TileGPU> = []
     if (id !== undefined) {
       const tile = camera.getTile(id)
-      if (tile !== undefined) tiles = [tile]
+      if (tile !== undefined) tiles = [tile as any]
       else tiles = []
     } else {
-      tiles = camera.getTiles()
+      tiles = camera.getTiles() as any
     }
     const tileRequests: TileRequest[] = []
     // build tile requests

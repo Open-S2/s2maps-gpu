@@ -1,4 +1,4 @@
-import { radToDeg, degToRad } from '../util'
+import { degToRad, radToDeg } from '../util'
 
 // http://www.movable-type.co.uk/scripts/latlong.html
 export default class Orthodrome {

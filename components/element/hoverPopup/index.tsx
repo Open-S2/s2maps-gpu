@@ -1,5 +1,5 @@
 /* MODULES */
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 export default function HoverPopup ({ visible, children, className, id }: any): any {
   const [pos, setPos] = useState({ x: 0, y: 0 })
@@ -26,7 +26,7 @@ export default function HoverPopup ({ visible, children, className, id }: any): 
       id={id}
       style={{ display: visible ? 'block' : 'none', pointerEvents: 'none', position: 'absolute', top: y, left: x }}
     >
-        {children}
+      {children}
     </div>
   )
 }
