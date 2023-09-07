@@ -8,7 +8,7 @@ import frag1 from '../shaders/heatmap1.fragment.glsl'
 import vert2 from '../shaders/heatmap2.vertex.glsl'
 import frag2 from '../shaders/heatmap2.fragment.glsl'
 
-import type { Context, HeatmapFeatureGuide, HeatmapSource } from '../contexts'
+import type { Context, HeatmapFeatureGuide, HeatmapSource } from '../contexts/context.spec'
 import type { HeatmapData } from 's2/workers/worker.spec'
 import type { TileGL as Tile } from 's2/source/tile.spec'
 import type {

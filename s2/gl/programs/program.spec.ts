@@ -25,7 +25,15 @@ import type S2MapUI from 's2/ui/s2mapUI'
 import type TimeCache from 's2/ui/camera/timeCache'
 import type { GlyphImages } from 's2/workers/source/glyphSource'
 import type { Scheme } from './wallpaperProgram'
-import type { FillData, GlyphData, HeatmapData, LineData, PointData, RasterData, SensorData } from 's2/workers/worker.spec'
+import type {
+  FillData,
+  GlyphData,
+  HeatmapData,
+  LineData,
+  PointData,
+  RasterData,
+  SensorData
+} from 's2/workers/worker.spec'
 import type {
   Context,
   FillFeatureGuide,
@@ -37,7 +45,7 @@ import type {
   RasterFeatureGuide,
   SensorFeatureGuide,
   ShadeFeatureGuide
-} from '../contexts'
+} from '../contexts/context.spec'
 
 export interface Uniforms {
   [key: string]: string
@@ -106,6 +114,7 @@ export interface ProgramSpec {
   injectFrameUniforms: (matrix: Float32Array, view: number[], aspect: number[]) => void
   flush: () => void
   // set uniforms:
+  setTileUniforms: (tile: Tile) => void
   setDevicePixelRatio: (ratio: number) => void
   setColorBlindMode: (colorMode: ColorMode) => void
   setMatrix: (matrix: Float32Array) => void

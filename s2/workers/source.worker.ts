@@ -1,9 +1,9 @@
 /* eslint-env worker */
 import {
   GlyphSource,
+  JSONSource,
   LocalSource,
   MarkerSource,
-  S2JSONSource,
   S2TilesSource,
   Session,
   Source,
@@ -57,7 +57,7 @@ import type { SourceWorkerMessages, TileRequest } from './worker.spec'
 
 interface SourceMap {
   [mapID: string]: {
-    [sourceName: string]: Source | S2TilesSource | S2JSONSource | LocalSource | MarkerSource
+    [sourceName: string]: Source | S2TilesSource | JSONSource | LocalSource | MarkerSource
   }
 }
 
@@ -198,7 +198,7 @@ export default class SourceWorker {
     // create the proper source type
     let source
     if (fileType === 's2tiles') source = new S2TilesSource(name, layers, path, needsToken, session)
-    else if (fileType === 's2json') source = new S2JSONSource(name, layers, path, needsToken, session)
+    else if (fileType === 'json' || fileType === 's2json' || fileType === 'geojson') source = new JSONSource(name, layers, path, needsToken, session)
     else if (input === 'tile') source = new LocalSource()
     else source = new Source(name, layers, path, needsToken, session) // default -> folder structure
     // store

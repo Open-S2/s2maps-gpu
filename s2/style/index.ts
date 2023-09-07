@@ -9,12 +9,12 @@ import type {
   StyleDefinition,
   StylePackage
 } from './style.spec'
-import type { TileRequest } from 's2/util/worker.spec'
+import type { TileRequest } from 's2/workers/worker.spec'
 import type { WorkflowType as GLWorkflowType } from 's2/gl/programs/program.spec'
 import type { WorkflowType as GPUWorkflowType } from 's2/gpu/pipelines/pipeline.spec'
 import type Camera from 's2/ui/camera'
 import type { MapOptions } from 's2/ui/s2mapUI'
-import type { TileGL, TileGPU } from 's2/source/tile.spec'
+import type { Tile } from 's2/source/tile.spec'
 
 // PRE) If style is a string (url), ship it off to Source Worker to fetch the style
 // 1) Build programs necessary to render the style
@@ -56,11 +56,11 @@ export default class Style {
     return true
   }
 
-  injectMaskLayers (tile: TileGL & TileGPU): void {
+  injectMaskLayers (tile: Tile): void {
     const { maskLayers, camera } = this
     for (const maskLayer of maskLayers) {
       const workflow = camera.painter.workflows[maskLayer.type]
-      workflow?.buildMaskFeature(maskLayer as any, tile)
+      workflow?.buildMaskFeature(maskLayer as any, tile as any)
     }
   }
 
@@ -147,7 +147,7 @@ export default class Style {
     if (layerDefinition !== undefined) return layerDefinition
   }
 
-  requestTiles (tiles: Array<TileGL & TileGPU>): void {
+  requestTiles (tiles: Tile[]): void {
     if (tiles.length === 0) return
     const { id, webworker } = this.camera
     const tileRequests: TileRequest[] = []
@@ -169,10 +169,11 @@ export default class Style {
     const { apiKey, layers } = this
     const { id, webworker, painter } = this.camera
     const { type } = painter.context
-    const { sources, glyphs, fonts, icons, minzoom, maxzoom } = style
+    const { projection, sources, glyphs, fonts, icons, minzoom, maxzoom } = style
     const analytics = this.#buildAnalytics()
     // now that we have various source data, package up the style objects we need and send it off:
     const stylePackage: StylePackage = {
+      projection: projection ?? 'S2',
       gpuType: type,
       sources: sources ?? {},
       glyphs: glyphs ?? {},

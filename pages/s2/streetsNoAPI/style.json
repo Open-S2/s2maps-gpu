@@ -6,18 +6,18 @@
   "minzoom": -0.5,
   "maxzoom": 18.99,
   "sources": {
-    "streets": "s2maps://s2tiles/streets-v1.s2tiles",
-    "terrain": "s2maps://s2tiles/terrain-v1.s2tiles"
+    "streets": "http://192.168.0.188:8080/s2tiles/streets-v1.s2tiles",
+    "terrain": "http://192.168.0.188:8080/s2tiles/terrain-v1.s2tiles"
   },
   "fonts": {
-    "noto-sans-medium": "s2maps://glyphs/NotoSansMedium",
+    "noto-sans-medium": "http://192.168.0.188:8080/glyphs/NotoSansMedium",
     "roboto-medium": {
-      "path": "s2maps://glyphs/RobotoMedium",
+      "path": "http://192.168.0.188:8080/glyphs/RobotoMedium",
       "fallback": "noto-sans-medium"
     },
-    "noto-sans-regular": "s2maps://glyphs/NotoSansRegular",
+    "noto-sans-regular": "http://192.168.0.188:8080/glyphs/NotoSansRegular",
     "roboto-regular": {
-      "path": "s2maps://glyphs/RobotoRegular",
+      "path": "http://192.168.0.188:8080/glyphs/RobotoRegular",
       "fallback": "noto-sans-regular"
     }
   },

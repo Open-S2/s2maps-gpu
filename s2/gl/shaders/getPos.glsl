@@ -2,6 +2,7 @@ uniform float uFaceST[6]; // [face, zoom, sLow, deltaS, tLow, deltaT]
 uniform vec4 uBottom; // [bottomLeft-X, bottomLeft-Y, bottomRight-X, bottomRight-Y]
 uniform vec4 uTop; // [topLeft-X, topLeft-Y, topRight-X, topRight-Y]
 uniform mat4 uMatrix;
+uniform bool uIsS2;
 
 float STtoUV (in float s) {
   // compressed VTs are extended, so we must squeeze them back to [0,1]
@@ -37,6 +38,9 @@ vec4 STtoXYZ (in vec2 st) { // x -> s, y -> t
 
 vec4 getPosLocal (in vec2 pos) {
   pos /= 8192.;
+  if (!uIsS2) {
+    return uMatrix * vec4(pos, 0, 1);
+  }
   // find position following s
   vec2 deltaBottom = uBottom.zw - uBottom.xy;
   vec2 deltaTop = uTop.zw - uTop.xy;
@@ -49,7 +53,10 @@ vec4 getPosLocal (in vec2 pos) {
 }
 
 vec4 getPos (in vec2 pos) {
-  if (uFaceST[1] < 12.) {
+  if (!uIsS2) {
+    pos /= 8192.;
+    return uMatrix * vec4(pos, 0, 1);
+  } else if (uFaceST[1] < 12.) {
     return uMatrix * STtoXYZ(pos);
   } else {
     return getPosLocal(pos);

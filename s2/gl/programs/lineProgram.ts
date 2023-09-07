@@ -8,7 +8,7 @@ import frag1 from '../shaders/line1.fragment.glsl'
 import vert2 from '../shaders/line2.vertex.glsl'
 import frag2 from '../shaders/line2.fragment.glsl'
 
-import type { Context, LineFeatureGuide, LineSource } from '../contexts'
+import type { Context, LineFeatureGuide, LineSource } from '../contexts/context.spec'
 import type { LineProgram as LineProgramSpec, LineProgramUniforms } from './program.spec'
 import type { TileGL as Tile } from 's2/source/tile.spec'
 import type { LineData } from 's2/workers/worker.spec'

@@ -9,7 +9,7 @@ import frag1 from '../shaders/fill1.fragment.glsl'
 import vert2 from '../shaders/fill2.vertex.glsl'
 import frag2 from '../shaders/fill2.fragment.glsl'
 
-import type { Context, FillFeatureGuide, FillSource, MaskSource } from '../contexts'
+import type { Context, FillFeatureGuide, FillSource, MaskSource } from '../contexts/context.spec'
 import type { FillProgram as FillProgramSpec, FillProgramUniforms } from './program.spec'
 import type { FillData } from 's2/workers/worker.spec'
 import type { TileGL as Tile } from 's2/source/tile.spec'
@@ -218,7 +218,8 @@ export default async function fillProgram (context: Context): Promise<FillProgra
       // ensure proper context state
       context.defaultBlend()
       context.enableDepthTest()
-      context.enableCullFace()
+      if (tile.type === 'S2') context.enableCullFace()
+      else context.disableCullFace()
       context.enableStencilTest()
       context.lessDepth()
       context.setDepthRange(layerIndex)

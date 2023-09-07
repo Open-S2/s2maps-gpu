@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "projection": "WM",
+  "name": "webmercator raster",
+  "center": [-122.4585607773497, 37.778443127730476],
+  "zoom": -0.5,
+  "minzoom": -0.5,
+  "maxzoom": 5,
+  "sources": {
+    "satellite": "/tiles/merc/satellite"
+  },
+  "layers": [
+    {
+      "name": "background",
+      "type": "fill",
+      "source": "mask",
+      "layout": {},
+      "paint": {
+        "color": "rgb(255, 255, 255)"
+      }
+    },
+    {
+      "name": "sat",
+      "source": "satellite",
+      "type": "raster",
+      "paint": {
+      }
+    }
+  ]
+}

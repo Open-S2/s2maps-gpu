@@ -2,6 +2,7 @@ const webpack = require('webpack')
 const path = require('path')
 const { version } = require('../package.json')
 
+const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin')
 const CompressionPlugin = require('compression-webpack-plugin')
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin
 const CorsWorkerPlugin = require('../config/cors-worker-plugin')
@@ -41,7 +42,10 @@ module.exports = {
   },
   resolve: {
     extensions: ['*', '.js', '.ts'],
-    modules: ['node_modules']
+    modules: ['node_modules'],
+    plugins: [
+      new TsconfigPathsPlugin({ configFile: path.join(__dirname, '../tsconfig.json') })
+    ]
   },
   optimization: {
     minimizer: [new TerserPlugin({

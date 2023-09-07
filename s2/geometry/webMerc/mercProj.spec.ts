@@ -1,6 +1,4 @@
-// 900913 (Web Mercator) properties.
-export const A = 6378137.0
-export const MAXEXTENT = 20037508.342789244
+import type { Properties } from '../proj.spec'
 
 export type Sources = '900913' | 'WGS84'
 

@@ -273,10 +273,12 @@ export default class Painter implements PainterSpec {
 
     // create mask for each tile
     for (const tile of tiles) {
-      const { tmpMaskID, faceST, bottom, top, mask } = tile
-      // set uniforms & stencil test
-      fillProgram.setFaceST(faceST)
-      fillProgram.setTilePos(bottom, top)
+      const { type, tmpMaskID, mask } = tile
+      // set culling
+      if (type === 'S2') context.enableCullFace()
+      else context.disableCullFace()
+      // set tile uniforms
+      fillProgram.setTileUniforms(tile)
       // set correct tile mask
       context.stencilFuncAlways(tmpMaskID)
       // draw mask
@@ -297,7 +299,6 @@ export default class Painter implements PainterSpec {
     for (const feature of features) {
       const { tile, parent, layerIndex, type, layerCode, lch } = feature
       const { tmpMaskID } = tile
-      const { faceST, bottom, top } = parent ?? tile
       // set program
       program = this.useWorkflow(type as any) // TODO: Maybe there is a way for this to properly check
       // set stencil
@@ -311,8 +312,7 @@ export default class Painter implements PainterSpec {
         program.setInteractive(interactive)
       }
       // adjust tile uniforms
-      program.setFaceST(faceST)
-      program.setTilePos(bottom, top)
+      program.setTileUniforms(parent ?? tile)
       // draw (just ignore types... they are handled in the program)
       program.draw(feature as any, interactive) // TODO: We could wisen this up too
     }
@@ -326,11 +326,8 @@ export default class Painter implements PainterSpec {
     // draw all features
     for (const feature of features) {
       const { tile, parent, layerCode, lch } = feature
-      // grab bottom-top
-      const { bottom, top, faceST } = parent ?? tile
-      // set faceST & layercode, bind vao, and draw
-      heatmapProgram.setFaceST(faceST)
-      heatmapProgram.setTilePos(bottom, top)
+      // set tile uniforms & layercode, bind vao, and draw
+      heatmapProgram.setTileUniforms(parent ?? tile)
       heatmapProgram.setLayerCode(layerCode, lch)
       heatmapProgram.drawTexture(feature)
     }
@@ -372,14 +369,12 @@ export default class Painter implements PainterSpec {
     // draw each feature
     for (const glyphFeature of glyphFeatures) {
       const { lch, tile, parent, layerIndex, source, layerCode } = glyphFeature
-      const { bottom, top, faceST } = parent ?? tile
       // update layerIndex
       if (curLayer !== layerIndex) {
         curLayer = layerIndex
         glyphFilterProgram.setLayerCode(layerCode, lch)
       }
-      glyphFilterProgram.setFaceST(faceST)
-      glyphFilterProgram.setTilePos(bottom, top)
+      glyphFilterProgram.setTileUniforms(parent ?? tile)
       gl.bindVertexArray(source.filterVAO)
       // draw
       glyphFilterProgram.draw(glyphFeature, false)

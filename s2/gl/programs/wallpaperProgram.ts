@@ -7,7 +7,7 @@ import frag1 from '../shaders/wallpaper1.fragment.glsl'
 import vert2 from '../shaders/wallpaper2.vertex.glsl'
 import frag2 from '../shaders/wallpaper2.fragment.glsl'
 
-import type { Context } from '../contexts'
+import type { Context } from '../contexts/context.spec'
 import type Projector from 's2/ui/camera/projector'
 import type { WallpaperProgram as WallpaperProgramSpec, WallpaperProgramUniforms } from './program.spec'
 import type { StyleDefinition } from 's2/style/style.spec'
@@ -26,7 +26,7 @@ export default async function wallpaperProgram (context: Context): Promise<Wallp
   class WallpaperProgram extends Program implements WallpaperProgramSpec {
     scheme: Scheme
     tileSize = 512
-    scale: [number, number] = [0, 0]
+    scale: [x: number, y: number] = [0, 0]
     declare uniforms: { [key in WallpaperProgramUniforms]: WebGLUniformLocation }
     constructor (context: Context) {
       // get gl from context

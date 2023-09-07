@@ -4,6 +4,7 @@ const { version } = require('../package.json')
 
 const CorsWorkerPlugin = require('../config/cors-worker-plugin')
 const TerserPlugin = require('terser-webpack-plugin')
+const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin')
 
 // This is the production and development configuration.
 // It is focused on developer experience, fast rebuilds, and a minimal bundle.
@@ -38,7 +39,10 @@ module.exports = {
   },
   resolve: {
     extensions: ['*', '.js', '.ts'],
-    modules: ['node_modules']
+    modules: ['node_modules'],
+    plugins: [
+      new TsconfigPathsPlugin({ configFile: path.join(__dirname, '../tsconfig.json') })
+    ]
   },
   optimization: {
     minimizer: [new TerserPlugin({

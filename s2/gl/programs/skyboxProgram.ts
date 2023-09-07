@@ -9,7 +9,7 @@ import frag1 from '../shaders/skybox1.fragment.glsl'
 import vert2 from '../shaders/skybox2.vertex.glsl'
 import frag2 from '../shaders/skybox2.fragment.glsl'
 
-import type { Context } from '../contexts'
+import type { Context } from '../contexts/context.spec'
 import type { StyleDefinition } from 's2/style/style.spec'
 import type { SkyboxProgram as SkyboxProgramSpec, SkyboxProgramUniforms } from './program.spec'
 import type Camera from 's2/ui/camera'

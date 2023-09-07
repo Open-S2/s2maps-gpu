@@ -549,6 +549,7 @@ export interface Analytics {
 }
 
 export interface StylePackage {
+  projection: Projection
   gpuType: GPUType
   sources: Sources
   fonts: Fonts

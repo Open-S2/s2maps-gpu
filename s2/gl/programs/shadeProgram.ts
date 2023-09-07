@@ -4,7 +4,7 @@ import frag1 from '../shaders/shade1.fragment.glsl'
 import vert2 from '../shaders/shade2.vertex.glsl'
 import frag2 from '../shaders/shade2.fragment.glsl'
 
-import type { Context, ShadeFeatureGuide } from '../contexts'
+import type { Context, ShadeFeatureGuide } from '../contexts/context.spec'
 import type { ShadeProgram as ShadeProgramSpec, ShadeProgramUniforms } from './program.spec'
 import type { LayerDefinitionBase, LayerStyle, ShadeLayerDefinition } from 's2/style/style.spec'
 import type { TileGL as Tile } from 's2/source/tile.spec'

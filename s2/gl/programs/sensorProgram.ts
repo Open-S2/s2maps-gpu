@@ -8,7 +8,7 @@ import frag1 from '../shaders/sensors1.fragment.glsl'
 import vert2 from '../shaders/sensors2.vertex.glsl'
 import frag2 from '../shaders/sensors2.fragment.glsl'
 
-import type { Context, SensorFeatureGuide, SensorSource } from '../contexts'
+import type { Context, SensorFeatureGuide, SensorSource } from '../contexts/context.spec'
 import type { SensorData } from 's2/workers/worker.spec'
 import type { TileGL as Tile } from 's2/source/tile.spec'
 import type {

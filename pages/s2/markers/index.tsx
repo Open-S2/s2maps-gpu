@@ -22,9 +22,7 @@ export default function Cloudflare (): JSX.Element {
         style={style}
         opts={{ zoomController: false }}
         ready={ready}
-      >
-
-      </Map>
+      />
     </div>
   )
 }

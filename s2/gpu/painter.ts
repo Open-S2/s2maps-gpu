@@ -1,12 +1,13 @@
 // @ts-nocheck
 /* eslint-env browser */
 import { WebGPUContext } from './context'
+import FillPipeline from './pipelines/fillPipeline'
 
 import type { MapOptions } from 's2/ui/s2mapUI'
 // import S2MapGL from 's2/ui/s2mapGL'
 // import { StyleDefinition } from 's2/style/styleSpec'
 import type { GlyphFilterPipeline, GlyphPipeline, HeatmapPipeline, LinePipeline, Pipeline, PointPipeline, RasterPipeline, SensorPipeline, ShadePipeline, SkyboxPipeline, WallpaperPipeline, Workflow, WorkflowKey, WorkflowType } from './pipelines/pipeline.spec'
-import type { GlyphImages } from 's2/util/source/glyphSource'
+import type { GlyphImages } from 's2/workers/source/glyphSource'
 import type { TileGPU as Tile } from 's2/source/tile.spec'
 import type Projector from 's2/ui/camera/projector'
 import type {
@@ -18,8 +19,7 @@ import type {
   PointData,
   RasterData,
   SensorData
-} from 's2/util/worker.spec'
-import FillPipeline from './pipelines/fillPipeline'
+} from 's2/workers/worker.spec'
 import type TimeCache from 's2/ui/camera/timeCache'
 // import type { FeatureGuide } from 's2/source/tile'
 // import type { PipelineType } from './pipelines/pipeline'

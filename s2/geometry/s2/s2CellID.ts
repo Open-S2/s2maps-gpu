@@ -1,16 +1,16 @@
 /** COMPONENTS **/
 import {
-  quadraticUVtoST as UVtoST,
-  quadraticSTtoUV as STtoUV,
-  lonLatToXYZ,
-  faceUVtoXYZ,
-  XYZtoFaceUV,
-  xyzToLonLat,
-  STtoIJ,
   IJtoST,
-  SiTiToST
+  STtoIJ,
+  quadraticSTtoUV as STtoUV,
+  SiTiToST,
+  quadraticUVtoST as UVtoST,
+  XYZtoFaceUV,
+  faceUVtoXYZ,
+  lonLatToXYZ,
+  xyzToLonLat
 } from './s2Coords'
-import { fromS2CellID, toIJ as S2PointToIJ } from './s2Point'
+import { toIJ as S2PointToIJ, fromS2CellID } from './s2Point'
 import { EARTH_RADIUS } from '../util'
 
 import type { Face } from './s2Proj.spec'
@@ -234,8 +234,12 @@ export function children (id: bigint, orientation = 0): [bigint, bigint, bigint,
   return childs
 }
 
-// [bottomLeft, bottomRight, topLeft, topRight]
-export function childrenIJ (face: Face, level: number, i: number, j: number): [bigint, bigint, bigint, bigint] {
+export function childrenIJ (
+  face: Face,
+  level: number,
+  i: number,
+  j: number
+): [blID: bigint, brID: bigint, tlID: bigint, trID: bigint] {
   i = i << 1
   j = j << 1
 

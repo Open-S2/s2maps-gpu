@@ -1,12 +1,16 @@
 /** @type {import('next').NextConfig} */
 module.exports = {
+  // NOTE: Do not use CORS for online testing. Maybe remove this later.
+  env: {
+    NEXT_PUBLIC_DEV: '1',
+  },
   swcMinify: false,
   reactStrictMode: false,
   images: {
     formats: ['image/avif', 'image/webp']
   },
   typescript: {
-    tsconfigPath: './tsconfig.json'
+    tsconfigPath: './tsconfig.next.json'
   },
   webpack: (config, options) => {
     config.module.rules.push({

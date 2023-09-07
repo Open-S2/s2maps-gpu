@@ -7,7 +7,7 @@ import frag1 from '../shaders/raster1.fragment.glsl'
 import vert2 from '../shaders/raster2.vertex.glsl'
 import frag2 from '../shaders/raster2.fragment.glsl'
 
-import type { Context, RasterFeatureGuide, RasterSource } from '../contexts'
+import type { Context, RasterFeatureGuide, RasterSource } from '../contexts/context.spec'
 import type { RasterProgram as RasterProgramSpec, RasterProgramUniforms } from './program.spec'
 import type { TileGL as Tile } from 's2/source/tile.spec'
 import type { RasterData } from 's2/workers/worker.spec'
@@ -169,6 +169,8 @@ export default async function rasterProgram (context: Context): Promise<RasterPr
       const { mask } = parent ?? tile
       const { vao, count, offset } = mask
       context.setDepthRange(layerIndex)
+      if (tile.type === 'S2') context.enableCullFace()
+      else context.disableCullFace()
       // set fade
       gl.uniform1f(uFade, 1)
       // set feature code (webgl 1 we store the opacity, webgl 2 we store layerCode lookups)

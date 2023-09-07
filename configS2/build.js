@@ -60,11 +60,11 @@ Promise.all([
     fs.copyFileSync('./buildS2/s2maps-gpu.min.css', './buildS2-local/s2maps-gpu.min.css')
     fs.copyFileSync('./buildS2/s2maps-gpu.min.css', './buildS2-dev/s2maps-gpu.min.css')
     // setup local and live version for .io
-    store('../../web/s2maps.io/public/s2maps-gpu', './buildS2-local', `${VERSION}-local`)
-    store('../../web/s2maps.io/public/s2maps-gpu', './buildS2', VERSION)
+    store('../s2maps.io/public/s2maps-gpu', './buildS2-local', `${VERSION}-local`)
+    store('../s2maps.io/public/s2maps-gpu', './buildS2', VERSION)
     // setup local and live version for .dev
-    store('../../web/s2maps.dev/public/s2maps-gpu', './buildS2-local', `${VERSION}-local`)
-    store('../../web/s2maps.dev/public/s2maps-gpu', './buildS2-dev', VERSION)
+    // store('../s2maps.dev/public/s2maps-gpu', './buildS2-local', `${VERSION}-local`)
+    // store('../s2maps.dev/public/s2maps-gpu', './buildS2-dev', VERSION)
   })
   .catch((err) => { console.log('Failed to build', err) })
 

@@ -1,7 +1,9 @@
 import type {
   FeatureGuide,
   GlyphFeatureGuide,
-  HeatmapFeatureGuide,
+  HeatmapFeatureGuide
+} from './contexts/context.spec'
+import type {
   WebGL2Context,
   WebGLContext
 } from './contexts'
@@ -31,8 +33,8 @@ import type {
   PointData,
   RasterData,
   SensorData
-} from 's2/util/worker.spec'
-import type { GlyphImages } from 's2/util/source/glyphSource'
+} from 's2/workers/worker.spec'
+import type { GlyphImages } from 's2/workers/source/glyphSource'
 import type Projector from 's2/ui/camera/projector'
 import type TimeCache from 's2/ui/camera/timeCache'
 
