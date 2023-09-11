@@ -1,5 +1,5 @@
 /** MODULES **/
-import JsonVT from '.'
+import type JsonVT from '.'
 import simplify from './simplify'
 import createFeature from './feature'
 /** TYPES **/

@@ -1,5 +1,5 @@
 /* eslint-env worker */
-import VectorWorker, { CodeDesign, colorFunc, idToRGB } from './vectorWorker'
+import VectorWorker, { type CodeDesign, colorFunc, idToRGB } from './vectorWorker'
 import { drawLine, featureSort, parseFeatureFunction } from './util'
 import scaleShiftClip from './util/scaleShiftClip'
 import parseFilter from 's2/style/parseFilter'

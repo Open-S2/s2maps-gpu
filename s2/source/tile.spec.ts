@@ -45,7 +45,7 @@ export interface TileBase {
 
   flush: (data: FlushData) => void
   removeLayer: (index: number) => void
-  reorderLayers: (layerChanges: { [key: number]: number }) => void
+  reorderLayers: (layerChanges: Record<number, number>) => void
 
   // we don't parse the interactiveData immediately to save time
   injectInteractiveData: (

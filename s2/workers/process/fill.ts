@@ -26,7 +26,7 @@ const MAX_FEATURE_BATCH_SIZE = 1 << 6 // 64
 
 export default class FillWorker extends VectorWorker implements FillWorkerSpec {
   features: FillFeature[] = []
-  invertLayers: Map<number, FillWorkerLayer> = new Map()
+  invertLayers = new Map<number, FillWorkerLayer>()
 
   setupLayer (fillLayer: FillLayerDefinition): FillWorkerLayer {
     const {
@@ -206,7 +206,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     let encodings: number[] = []
     let indicesOffset = 0
     let vertexOffset = 0
-    let encodingIndexes: { [index: string]: number } = { '': 0 }
+    let encodingIndexes: Record<string, number> = { '': 0 }
     let encodingIndex = 0
     let curlayerIndex = features[0].layerIndex
 

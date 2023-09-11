@@ -35,7 +35,7 @@ class DirCache extends Map<number, DataView> {
 
 export default class S2TilesSource extends Source {
   version = 1
-  rootDir: { [face: number]: DataView } = {}
+  rootDir: Record<number, DataView> = {}
   dirCache: DirCache = new DirCache()
   async build (mapID: string): Promise<void> {
     // fetch the metadata
@@ -82,14 +82,14 @@ export default class S2TilesSource extends Source {
     const dir = this.rootDir[face]
     // now we walk to the next directory as necessary
     const node = await this.#walk(mapID, dir, zoom, i, j) // [offset, length]
-    if (node === undefined) return this._flush(mapID, tile, sourceName)
+    if (node === undefined) { this._flush(mapID, tile, sourceName); return }
 
     // we found the vector file, let's send the details off to the tile worker
     const data = await this.getRange(`${this.path}?type=tile&enc=${encoding}`, node[0], node[1], mapID) as ArrayBuffer | undefined
     if (data !== undefined) {
       const worker = session.requestWorker()
       worker.postMessage({ mapID, type, tile, sourceName, data, size }, [data])
-    } else { return this._flush(mapID, tile, sourceName) }
+    } else { this._flush(mapID, tile, sourceName) }
   }
 
   async #walk (mapID: string, dir: DataView, zoom: number, i: number, j: number): Promise<undefined | [number, number]> {

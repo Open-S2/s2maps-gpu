@@ -1,6 +1,6 @@
 /* eslint-env worker */
 import Color from 's2/style/color'
-import { Properties } from 's2/geometry'
+import { type Properties } from 's2/geometry'
 import { parseFeatureFunction } from './util'
 
 import type { BuildCodeFunction, GPUType, InteractiveWorkerLayer, LayerWorkerFunction } from 's2/style/style.spec'
@@ -26,7 +26,7 @@ export const clamp: Callback<number> = (i: number): number => Math.max(-1, Math.
 export default class VectorWorker {
   idGen: IDGen
   gpuType: GPUType
-  interactiveMap: Map<number, InteractiveObject> = new Map()
+  interactiveMap = new Map<number, InteractiveObject>()
   constructor (idGen: IDGen, gpuType: GPUType) {
     this.idGen = idGen
     this.gpuType = gpuType

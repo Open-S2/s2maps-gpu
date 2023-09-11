@@ -1,5 +1,5 @@
 /** MODULES **/
-import JsonVT from '.'
+import type JsonVT from '.'
 import createFeature from './feature'
 /** TYPES **/
 import type { JSONTile } from './tile'

@@ -1,5 +1,5 @@
 /* eslint-env browser */
-import Camera from '..'
+import type Camera from '..'
 import * as mat4 from './mat4'
 import { getTilesS2, getTilesWM } from './getTiles'
 import cursorToLonLatS2 from './cursorToLonLat'

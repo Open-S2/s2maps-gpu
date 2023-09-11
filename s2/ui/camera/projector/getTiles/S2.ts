@@ -17,7 +17,7 @@ export default function getTilesInView (
   if (zoom < 1) return ZERO_TILES
   const tiles: bigint[] = []
   const checkList: Array<[number, number, number]> = []
-  const checkedTiles: Set<string> = new Set()
+  const checkedTiles = new Set<string>()
   zoom = zoom << 0 // move to whole number
   let stBbox, tLProj, tRProj, bLProj, bRProj
 

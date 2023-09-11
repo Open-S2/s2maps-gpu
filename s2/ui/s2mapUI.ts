@@ -4,7 +4,7 @@ import Camera from './camera/index'
 /** SOURCES **/
 import Animator from './camera/animator'
 
-import type { LayerStyle, StyleDefinition, Projection } from 's2/style/style.spec'
+import type { LayerStyle, Projection, StyleDefinition } from 's2/style/style.spec'
 import type { AnimationDirections, AnimationType } from './camera/animator'
 import type { UserTouchEvent } from './camera/dragPan'
 import type { TileWorkerMessage } from 's2/workers/worker.spec'
@@ -19,7 +19,7 @@ export interface MapOptions {
   scrollZoom?: boolean
   positionalZoom?: boolean // If true, cursor position impacts zoom's x & y directions [default: true]
   canvasMultiplier?: number
-  attributions?: { [key: string]: string }
+  attributions?: Record<string, string>
   attributionOff?: boolean
   infoLayers?: string[]
   controls?: boolean // zoom, compass, and colorblind turned on or off
@@ -61,7 +61,7 @@ export default class S2MapUI extends Camera {
     const render = (type === 'flyTo') ? animator.flyTo() : animator.easeTo()
     if (!render) return
     // set an animation fuction
-    this.currAnimFunction = (now: number): void => this._animate(animator, now * 0.001)
+    this.currAnimFunction = (now: number): void => { this._animate(animator, now * 0.001) }
     // render it out
     this.render()
   }
@@ -136,7 +136,7 @@ export default class S2MapUI extends Camera {
     // this.render()
   }
 
-  reorderLayers (layerChanges: { [key: number]: number }): void {
+  reorderLayers (layerChanges: Record<number, number>): void {
     // // style needs to updated on the change
     // this.style.reorderLayers(layerChanges)
     // // update every tile
@@ -193,7 +193,7 @@ export default class S2MapUI extends Camera {
     if (newBearing !== undefined) {
       const animator = new Animator(projector, { duration: 1, bearing: newBearing })
       animator.compassTo()
-      this.currAnimFunction = (now: number) => this._animate(animator, now * 0.001)
+      this.currAnimFunction = (now: number) => { this._animate(animator, now * 0.001) }
       this.render()
     }
   }
@@ -205,7 +205,7 @@ export default class S2MapUI extends Camera {
     const duration = bearing !== 0 ? ((bearing > 90) ? 1.75 : 1) : 1
     const animator = new Animator(projector, { duration, bearing: 0, pitch: bearing !== 0 ? bearing : pitch })
     animator.compassTo()
-    this.currAnimFunction = (now: number) => this._animate(animator, now * 0.001)
+    this.currAnimFunction = (now: number) => { this._animate(animator, now * 0.001) }
     // send off a render
     this.render()
   }

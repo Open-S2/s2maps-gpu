@@ -1,16 +1,16 @@
 import {
-  FillLayerDefinition,
-  GlyphLayerDefinition,
-  HeatmapLayerDefinition,
-  LayerDefinitionBase,
-  LayerStyle,
-  LineLayerDefinition,
-  PointLayerDefinition,
-  RasterLayerDefinition,
-  SensorLayerDefinition,
-  ShadeLayerDefinition
+  type FillLayerDefinition,
+  type GlyphLayerDefinition,
+  type HeatmapLayerDefinition,
+  type LayerDefinitionBase,
+  type LayerStyle,
+  type LineLayerDefinition,
+  type PointLayerDefinition,
+  type RasterLayerDefinition,
+  type SensorLayerDefinition,
+  type ShadeLayerDefinition
 } from 's2/style/style.spec'
-import { WebGPUContext } from '../context'
+import { type WebGPUContext } from '../context'
 
 import type { TileGPU as Tile } from 's2/source/tile.spec'
 import type TimeCache from 's2/ui/camera/timeCache'

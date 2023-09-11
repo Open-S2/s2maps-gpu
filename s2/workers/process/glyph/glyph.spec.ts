@@ -62,25 +62,13 @@ export type Color = [number, number, number, number]
 
 export type Colors = Color[]
 
-export interface ColorMap {
-  [family: string]: {
-    [colorID: number]: Color
-  }
-}
+export type ColorMap = Record<string, Record<number, Color>>
 
-export interface FamilyMap {
-  [code: Unicode]: Glyph
-}
+export type FamilyMap = Record<Unicode, Glyph>
 
-export interface GlyphMap {
-  [family: string]: FamilyMap
-}
+export type GlyphMap = Record<string, FamilyMap>
 
-export interface IconMap {
-  [family: string]: {
-    [icon: string]: Array<{ glyphID: Unicode, colorID: number }>
-  }
-}
+export type IconMap = Record<string, Record<string, Array<{ glyphID: Unicode, colorID: number }>>>
 
 export interface GlyphStore {
   features: GlyphObject[]
@@ -89,10 +77,6 @@ export interface GlyphStore {
   processed: number
 }
 
-export interface IconList {
-  [family: string]: Set<string>
-}
+export type IconList = Record<string, Set<string>>
 
-export interface GlyphList {
-  [family: string]: Set<Unicode>
-}
+export type GlyphList = Record<string, Set<Unicode>>

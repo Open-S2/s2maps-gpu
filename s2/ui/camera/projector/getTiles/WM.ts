@@ -16,7 +16,7 @@ export default function getTilesInView (
   if (zoom < 1) return [0n]
   const tiles: bigint[] = []
   const checkList: Array<[number, number, number]> = []
-  const checkedTiles: Set<string> = new Set()
+  const checkedTiles = new Set<string>()
   zoom = zoom << 0 // move to whole number
 
   // let's find the current tile and store it

@@ -26,7 +26,7 @@ interface SessionResponse {
 
 export default class Session {
   analytics?: Analytics
-  sessionKeys: { [key: string]: SessionKey } = {} // [mapID]: session
+  sessionKeys: Record<string, SessionKey> = {} // [mapID]: session
   workers: Array<MessageChannel['port2']> = []
   currWorker = 0
   totalWorkers = 0
@@ -60,9 +60,9 @@ export default class Session {
     if (Authorization === undefined) return
     // fetch the style
     const json = await fetch(s2mapsURL(style), { headers: { Authorization } })
-      .then<StyleDefinition | null>(res => {
+      .then<StyleDefinition | null>(async res => {
       if (res.status !== 200) return null
-      return res.json()
+      return await res.json()
     }).catch<null>(err => { console.error(err); return null })
     // send style back to map
     if (json !== null) postMessage({ type: 'setStyle', mapID, style: json, ignorePosition: false })
@@ -74,9 +74,9 @@ export default class Session {
     if (Authorization === undefined) return
     // fetch the json
     const json = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/info/${featureID}.json`, { headers: { Authorization } })
-      .then<InfoDetails | null>((res) => {
+      .then<InfoDetails | null>(async (res) => {
       if (res.status !== 200) return null
-      return res.json()
+      return await res.json()
     }).catch((err) => { console.error(err); return null })
     // send json back to map
     if (json !== null) postMessage({ mapID, type: 'info', json })
@@ -98,9 +98,9 @@ export default class Session {
         method: 'POST',
         body: JSON.stringify({ apiKey, gpu, context, language, width, height }),
         headers: { 'Content-Type': 'application/json' }
-      }).then<SessionResponse | undefined>(res => {
+      }).then<SessionResponse | undefined>(async res => {
         if (res.status !== 200 && res.status !== 206) return undefined
-        return res.json()
+        return await res.json()
       }).then<SessionKey | undefined>(t => {
         if (t === undefined) return undefined
         const expDate = new Date()

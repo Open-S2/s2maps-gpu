@@ -30,7 +30,7 @@ export default class ProcessManager {
   messagePort!: MessageChannel['port1']
   sourceWorker!: MessageChannel['port2']
   textDecoder: TextDecoder = new TextDecoder()
-  layers: { [mapID: string]: WorkerLayer[] } = {}
+  layers: Record<string, WorkerLayer[]> = {}
   workers: Workers = {}
 
   _buildIDGen (totalWorkers: number): void {
@@ -40,7 +40,7 @@ export default class ProcessManager {
   setupLayers (mapID: string, style: StylePackage): void {
     const { layers, gpuType } = style
     this.gpuType = gpuType
-    const workerTypes: Set<LayerType> = new Set()
+    const workerTypes = new Set<LayerType>()
 
     // first we need to build the workers
     for (const layer of layers) workerTypes.add(layer.type)
@@ -93,7 +93,7 @@ export default class ProcessManager {
     )
     // prep a layerIndex tracker for an eventual generic flush.
     // Some layerIndexes will never be updated, so it's good to know
-    const layers: { [key: number]: number } = {}
+    const layers: Record<number, number> = {}
     sourceLayers.forEach(l => { layers[l.layerIndex] = 0 })
 
     // TODO: features is repeated through too many times. Simplify this down.
@@ -126,7 +126,7 @@ export default class ProcessManager {
     mapID: string,
     tile: TileRequest,
     sourceName: string,
-    layers: { [key: number]: number }
+    layers: Record<number, number>
   ): void {
     const { workers } = this
     for (const worker of Object.values(workers)) {

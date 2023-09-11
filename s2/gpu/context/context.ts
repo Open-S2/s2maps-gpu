@@ -16,7 +16,7 @@ export default class WebGPUContext {
   devicePixelRatio: number
   interactive = false
   format!: GPUTextureFormat
-  masks: Map<number, MaskSource> = new Map()
+  masks = new Map<number, MaskSource>()
   type: GPUType = 3 // specifying that we are using a WebGPUContext
   constructor (context: GPUCanvasContext, options: MapOptions) {
     const { canvasMultiplier } = options

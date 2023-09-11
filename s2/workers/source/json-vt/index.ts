@@ -32,7 +32,7 @@ type FaceSet = [
 export default class JsonVT {
   minzoom = 0 // min zoom to preserve detail on
   maxzoom = 20 // max zoom to preserve detail on
-  faces: Set<Face> = new Set() // store which faces are active. 0 face could be entire WM projection
+  faces = new Set<Face>() // store which faces are active. 0 face could be entire WM projection
   indexMaxzoom = 4 // max zoom in the tile index
   indexMaxPoints = 100000 // max number of points per tile in the tile index
   tolerance = 3 // simplification tolerance (higher means simpler)
@@ -111,7 +111,7 @@ export default class JsonVT {
       parent = this.tiles.get(pID)
     }
 
-    if (parent === undefined || parent.source === undefined) return
+    if (parent?.source === undefined) return
     this.splitTile(parent.source, pID, id, zoom)
 
     tile = this.tiles.get(id)

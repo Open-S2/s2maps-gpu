@@ -40,7 +40,7 @@ export default class Animator {
   duration = 2.5
   velocity = 0
   futureOffset = 0
-  futureTiles: Map<number, bigint[]> = new Map() // timeKey: [tileID]
+  futureTiles = new Map<number, bigint[]>() // timeKey: [tileID]
   futureKeys: number[] = []
   ease: (time: number, start: number, delta: number, duration: number) => number
   #increment?: (time: number) => IncrementResponse

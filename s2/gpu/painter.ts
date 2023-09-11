@@ -1,7 +1,7 @@
 // @ts-nocheck
 /* eslint-env browser */
 import { WebGPUContext } from './context'
-import FillPipeline from './pipelines/fillPipeline'
+import type FillPipeline from './pipelines/fillPipeline'
 
 import type { MapOptions } from 's2/ui/s2mapUI'
 // import S2MapGL from 's2/ui/s2mapGL'

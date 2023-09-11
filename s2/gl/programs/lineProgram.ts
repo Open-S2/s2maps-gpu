@@ -27,7 +27,7 @@ export default async function lineProgram (context: Context): Promise<LineProgra
     curTexture = -1
     typeBuffer?: WebGLBuffer
     nullTexture: WebGLTexture
-    layerGuides: Map<number, LineWorkflowLayerGuide> = new Map()
+    layerGuides = new Map<number, LineWorkflowLayerGuide>()
     declare uniforms: { [key in LineProgramUniforms]: WebGLUniformLocation }
     constructor (context: Context) {
       // get gl from context

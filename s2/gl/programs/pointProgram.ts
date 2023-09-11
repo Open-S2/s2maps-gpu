@@ -24,7 +24,7 @@ export default async function pointProgram (context: Context): Promise<PointProg
 
   class PointProgram extends Program implements PointProgramSpec {
     extentBuffer?: WebGLBuffer
-    layerGuides: Map<number, PointWorkflowLayerGuide> = new Map()
+    layerGuides = new Map<number, PointWorkflowLayerGuide>()
     declare uniforms: { [key in PointProgramUniforms]: WebGLUniformLocation }
     constructor (context: Context) {
       // get gl from context

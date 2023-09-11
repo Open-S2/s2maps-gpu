@@ -37,9 +37,15 @@ module.exports = {
         test: /\.tsx?$/,
         use: 'ts-loader',
         exclude: /node_modules/
+      },
+      {
+        test: /\.wasm$/,
+        type: 'javascript/auto',
+        use: ['arraybuffer-loader']
       }
     ]
   },
+
   resolve: {
     extensions: ['*', '.js', '.ts'],
     modules: ['node_modules'],
@@ -49,12 +55,12 @@ module.exports = {
   },
   optimization: {
     minimizer: [new TerserPlugin({
-      extractComments: false,
-    })],
+      extractComments: false
+    })]
   },
   plugins: [
     new webpack.EnvironmentPlugin(['NEXT_PUBLIC_DEV', 'NEXT_PUBLIC_API_URL']),
-    new webpack.BannerPlugin(`S2Maps GPU is Copyright © ${(new Date).getFullYear()} S2Maps and subject to the S2 Maps Terms of Service (https://www.s2maps.io/tos/).`),
+    new webpack.BannerPlugin(`S2Maps GPU is Copyright © ${(new Date()).getFullYear()} S2Maps and subject to the S2 Maps Terms of Service (https://www.s2maps.io/tos/).`),
     new webpack.ProgressPlugin(),
     new CorsWorkerPlugin(),
     new CompressionPlugin({

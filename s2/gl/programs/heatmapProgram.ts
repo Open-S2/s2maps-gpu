@@ -29,7 +29,7 @@ export default async function heatmapProgram (context: Context): Promise<Heatmap
     nullTextureB!: WebGLTexture
     framebuffer!: WebGLFramebuffer
     extentBuffer?: WebGLBuffer
-    layerGuides: Map<number, HeatmapWorkflowLayerGuide> = new Map()
+    layerGuides = new Map<number, HeatmapWorkflowLayerGuide>()
     declare uniforms: { [key in HeatmapProgramUniforms]: WebGLUniformLocation }
     constructor (context: Context) {
       // get gl from context

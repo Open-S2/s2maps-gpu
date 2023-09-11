@@ -12,9 +12,9 @@ import Projector from './projector'
 import { createTile } from 's2/source'
 import Cache from './cache'
 import TimeCache from './timeCache'
-import DragPan, { ClickEvent } from './dragPan'
+import DragPan, { type ClickEvent } from './dragPan'
 import Animator from './animator'
-import { StyleDefinition, TimeSeriesStyle } from 's2/style/style.spec'
+import { type StyleDefinition, type TimeSeriesStyle } from 's2/style/style.spec'
 
 import type S2Map from 's2/s2Map'
 import type { FlushData, InteractiveObject, ReadyMessageGL, TileRequest, TileWorkerMessage } from 's2/workers/worker.spec'
@@ -35,7 +35,7 @@ export default class Camera {
   style: Style
   projector: Projector
   painter!: GLPainter & GPUPainter
-  tileCache: Cache<bigint, TileSpec> = new Cache()
+  tileCache = new Cache<bigint, TileSpec>()
   timeCache?: TimeCache
   tilesInView: TileSpec[] = [] // S2CellIDs of the tiles
   lastTileViewState: number[] = []
@@ -120,9 +120,9 @@ export default class Camera {
       // listen to dragPans updates
       dragPan.addEventListener('move', this.#onMovement.bind(this))
       dragPan.addEventListener('swipe', this.#onSwipe.bind(this))
-      dragPan.addEventListener('zoom', () => this.onZoom(dragPan.zoom))
-      dragPan.addEventListener('click', ((e: CustomEvent) => this.#onClick(e)) as EventListener)
-      dragPan.addEventListener('doubleClick', ((e: CustomEvent) => this.#onDoubleClick(e)) as EventListener)
+      dragPan.addEventListener('zoom', () => { this.onZoom(dragPan.zoom) })
+      dragPan.addEventListener('click', ((e: CustomEvent) => { this.#onClick(e) }) as EventListener)
+      dragPan.addEventListener('doubleClick', ((e: CustomEvent) => { this.#onDoubleClick(e) }) as EventListener)
     }
     // setup camera
     this.#resizeCamera(this.#canvas.width, this.#canvas.height)
@@ -254,7 +254,7 @@ export default class Camera {
     // build animation
     const animator = new Animator(projector, { duration: 1.5, zoom: endZoom, lon, lat })
     animator.zoomTo()
-    this.currAnimFunction = (now: number) => this._animate(animator, now * 0.001)
+    this.currAnimFunction = (now: number) => { this._animate(animator, now * 0.001) }
     // render
     this.render()
   }
@@ -330,7 +330,7 @@ export default class Camera {
     // build animation
     const animator = new Animator(projector, { duration: 1.75 })
     animator.swipeTo(movementX, movementY)
-    this.currAnimFunction = (now: number) => this._animate(animator, now * 0.001)
+    this.currAnimFunction = (now: number) => { this._animate(animator, now * 0.001) }
     // render
     this.render()
   }

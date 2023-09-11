@@ -26,7 +26,7 @@ export default class Context implements ContextSpec {
   type: GPUType = 1
   clearColorRGBA: [r: number, g: number, b: number, a: number] = [0, 0, 0, 0]
   featurePoint: Uint8Array = new Uint8Array(4)
-  masks: Map<number, MaskSource> = new Map() // <zoom, mask>
+  masks = new Map<number, MaskSource>() // <zoom, mask>
   vao!: WebGLVertexArrayObject
   vertexBuffer!: WebGLBuffer
   interactTexture!: WebGLTexture

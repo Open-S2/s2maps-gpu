@@ -258,7 +258,7 @@ export function lngFromMercatorX (x: number): number {
 }
 
 /**
- * Convert mercator projection's Y-Value to latitude 
+ * Convert mercator projection's Y-Value to latitude
  */
 export function latFromMercatorY (y: number): number {
   const { PI, atan, exp } = Math

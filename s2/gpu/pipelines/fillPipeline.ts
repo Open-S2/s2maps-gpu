@@ -6,7 +6,7 @@ import vert from '../shaders/fill.vert.wgsl'
 import frag from '../shaders/fill.frag.wgsl'
 
 import type { WebGPUContext } from '../context'
-import { FillFeatureGuide } from 's2/gl'
+import { type FillFeatureGuide } from 's2/gl'
 
 export default class FillPipeline {
   context: WebGPUContext
