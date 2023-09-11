@@ -104,7 +104,7 @@ export default class S2Map extends EventTarget {
   async #setupCanvas (canvas: HTMLCanvasElement, options: MapOptions): Promise<void> {
     // prep the ready function should it exist
     // prep webgpu/webgl type
-    let tmpContext: RenderingContext | null = null
+    let tmpContext: WebGLRenderingContext | null = null
     if (options.contextType === undefined) {
       const tryContext = (name: string): boolean => {
         tmpContext = document.createElement('canvas').getContext(name)
@@ -143,9 +143,9 @@ export default class S2Map extends EventTarget {
       canvasContainer.addEventListener('mouseleave', this.#onCanvasMouseLeave.bind(this))
       if (options.scrollZoom ?? true) canvasContainer.addEventListener('wheel', this.#onScroll.bind(this))
       canvasContainer.addEventListener('mousedown', this.#onMouseDown.bind(this))
-      canvasContainer.addEventListener('touchstart', (e: TouchEvent) => this.#onTouch(e, 'touchstart'))
-      canvasContainer.addEventListener('touchend', (e: TouchEvent) => this.#onTouch(e, 'touchend'))
-      canvasContainer.addEventListener('touchmove', (e: TouchEvent) => this.#onTouch(e, 'touchmove'))
+      canvasContainer.addEventListener('touchstart', (e: TouchEvent) => { this.#onTouch(e, 'touchstart') })
+      canvasContainer.addEventListener('touchend', (e: TouchEvent) => { this.#onTouch(e, 'touchend') })
+      canvasContainer.addEventListener('touchmove', (e: TouchEvent) => { this.#onTouch(e, 'touchmove') })
     }
   }
 
@@ -207,7 +207,7 @@ export default class S2Map extends EventTarget {
         zoomPlus.setAttribute('aria-hidden', '')
         zoomPlus.tabIndex = -1
         navigationContainer.appendChild(zoomPlus)
-        zoomPlus.addEventListener('click', () => this.#navEvent('zoomIn'))
+        zoomPlus.addEventListener('click', () => { this.#navEvent('zoomIn') })
         // seperator
         navSep = window.document.createElement('div')
         navSep.className = 's2-nav-sep' + darkModeEnd
@@ -218,7 +218,7 @@ export default class S2Map extends EventTarget {
         zoomMinus.setAttribute('aria-hidden', '')
         zoomMinus.tabIndex = -1
         navigationContainer.appendChild(zoomMinus)
-        zoomMinus.addEventListener('click', () => this.#navEvent('zoomOut'))
+        zoomMinus.addEventListener('click', () => { this.#navEvent('zoomOut') })
       }
       if (compassController !== false) {
         // seperator
@@ -250,7 +250,7 @@ export default class S2Map extends EventTarget {
         colorBlind.setAttribute('aria-hidden', '')
         colorBlind.tabIndex = -1
         navigationContainer.appendChild(colorBlind)
-        colorBlind.addEventListener('click', () => this.#setColorMode())
+        colorBlind.addEventListener('click', () => { this.#setColorMode() })
       }
     }
   }
@@ -629,7 +629,7 @@ export default class S2Map extends EventTarget {
   }
 
   // { [+from]: +to }
-  reorderLayers (layerChanges: { [key: string | number]: number }): void {
+  reorderLayers (layerChanges: Record<string | number, number>): void {
     const { offscreen, map } = this
     offscreen?.postMessage({ type: 'reorderLayers', layerChanges })
     map?.reorderLayers(layerChanges)

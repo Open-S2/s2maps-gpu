@@ -35,7 +35,7 @@ export interface SensorTextureDefinition {
 
 export default class TimeCache extends Cache<string, SensorSource> {
   camera: Camera
-  sources: { [key: string]: TimeSource } = {} // [sourceName]: { interval: number }
+  sources: Record<string, TimeSource> = {} // [sourceName]: { interval: number }
   lastFrame?: number
   webworker: boolean
   timeSeries!: TimeSeries

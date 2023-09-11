@@ -26,7 +26,7 @@ export default async function fillProgram (context: Context): Promise<FillProgra
 
   class FillProgram extends Program implements FillProgramSpec {
     declare uniforms: { [key in FillProgramUniforms]: WebGLUniformLocation }
-    layerGuides: Map<number, FillWorkflowLayerGuide> = new Map()
+    layerGuides = new Map<number, FillWorkflowLayerGuide>()
     constructor (context: Context) {
       // inject Program
       super(context)

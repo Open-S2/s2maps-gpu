@@ -5,19 +5,13 @@ import type { Session } from '.'
 import type { ParentLayers, TileRequest } from '../worker.spec'
 import type { Attributions, Format, LayerDefinition, Projection } from 's2/style/style.spec'
 
-export interface LayerMetaData {
-  [key: string]: { // layer
-    minzoom: number
-    maxzoom: number
-    fields?: { [key: string]: Array<string | number | boolean> } // max fields size of 50
-  }
-}
+export type LayerMetaData = Record<string, { // layer
+  minzoom: number
+  maxzoom: number
+  fields?: Record<string, Array<string | number | boolean>> // max fields size of 50
+}>
 
-export interface FaceBounds {
-  [key: number]: { // face
-    [key: number]: [number, number, number, number] // zoom: [minX, minY, maxX, maxY]
-  }
-}
+export type FaceBounds = Record<number, Record<number, [number, number, number, number]>>
 
 export type SourceType = 'vector' | 'json' | 'raster' | 'raster-dem' | 'sensor' | 'overlay'
 
@@ -52,7 +46,7 @@ export default class Source {
   minzoom = 0
   maxzoom = 20
   size = 512 // used for raster type sources
-  faces: Set<number> = new Set()
+  faces = new Set<number>()
   needsToken: boolean
   time?: number
   session: Session
@@ -82,7 +76,6 @@ export default class Source {
   }
 
   _buildMetadata (metadata: Metadata, mapID: string): void {
-    console.log(metadata)
     this.active = true // incase we use a "broken" aproach for metadata and insert later
     this.minzoom = metadata.minzoom ?? 0
     this.maxzoom = Math.min(metadata.maxzoom ?? 20, this.maxzoom)
@@ -253,7 +246,7 @@ export default class Source {
     }
     const res = await fetch(path, { headers })
     if (res.status !== 200 && res.status !== 206) return
-    if (json || (res.headers.get('content-type') ?? '').includes('application/json')) return await res.json() as Metadata
+    if (json || (res.headers.get('content-type') ?? '').includes('application/json')) return await res.json()
     return await res.arrayBuffer()
   }
 }

@@ -10,7 +10,7 @@ export interface MarkerDefinition {
   lon: number
   lat: number
   html?: string // HTMLElement
-  properties?: { [key: string]: any }
+  properties?: Record<string, any>
   geometry?: Point
 }
 
@@ -31,12 +31,12 @@ export default class MarkerSource {
   isTimeFormat = false
   styleLayers: undefined
   idGen = 0
-  0: Map<number, Marker> = new Map()
-  1: Map<number, Marker> = new Map()
-  2: Map<number, Marker> = new Map()
-  3: Map<number, Marker> = new Map()
-  4: Map<number, Marker> = new Map()
-  5: Map<number, Marker> = new Map()
+  0 = new Map<number, Marker>()
+  1 = new Map<number, Marker>()
+  2 = new Map<number, Marker>()
+  3 = new Map<number, Marker>()
+  4 = new Map<number, Marker>()
+  5 = new Map<number, Marker>()
   session: Session
   textEncoder: TextEncoder = new TextEncoder()
   constructor (name: string, session: Session) {

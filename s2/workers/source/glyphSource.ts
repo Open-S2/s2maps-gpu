@@ -1,5 +1,5 @@
 /* eslint-env worker */
-import Session from './session'
+import type Session from './session'
 
 import type TexturePack from './texturePack'
 import type { Color, Colors } from '../process/glyph/glyph.spec'
@@ -37,9 +37,7 @@ type RequestCache = IconRequestCache | GlyphRequestCache
 // export type GlyphResponse = {
 //   [Unicode]: Glyph // [unicode]: Glyph
 // }
-export interface GlyphResponse {
-  [key: string]: Float32Array
-} // [unicode, texX, texY, texW, texH, xOffset, yOffset, advanceWidth, ...]
+export type GlyphResponse = Record<string, Float32Array> // [unicode, texX, texY, texW, texH, xOffset, yOffset, advanceWidth, ...]
 
 export interface GlyphImage {
   posX: number
@@ -63,15 +61,11 @@ export interface Glyph {
   advanceWidth: number // how far to move the cursor
 }
 
-export interface IconMap {
-  [key: string]: Array<{ glyphID: Unicode, colorID: number }>
-} // ex: ['airport']: [0, 1, 2, 5, 7] (name maps reference a list of unicodes)
+export type IconMap = Record<string, Array<{ glyphID: Unicode, colorID: number }>> // ex: ['airport']: [0, 1, 2, 5, 7] (name maps reference a list of unicodes)
 
 type GlyphSet = Set<Unicode>
 
-export interface ColorMap {
-  [key: number]: Color
-}
+export type ColorMap = Record<number, Color>
 
 const zagzig = (num: number): number => {
   return (num >> 1) ^ (-(num & 1))
@@ -101,8 +95,8 @@ export default class GlyphSource {
   colors!: Colors
   iconMap!: IconMap
   glyphSet: GlyphSet = new Set() // existing glyphs
-  glyphWaitlist: Map<Unicode, Promise<void>> = new Map()
-  glyphCache: Map<number, Glyph> = new Map() // glyphs we have built already
+  glyphWaitlist = new Map<Unicode, Promise<void>>()
+  glyphCache = new Map<number, Glyph>() // glyphs we have built already
   requestCache: RequestCache[] = [] // each element in array -> [glyphList, mapID, reqID, worker]
   constructor (
     name: string,
@@ -208,7 +202,7 @@ export default class GlyphSource {
     const icons: IconMap = {}
     const colorMap: ColorMap = {} // [colorID]: Color
     // 1) build a list of glyphs to request
-    const glyphList: Set<number> = new Set()
+    const glyphList = new Set<number>()
     for (const iconReq of request) {
       // pull out the icon and store said icon for the worker to have the
       const icon = iconMap[iconReq]
@@ -245,7 +239,7 @@ export default class GlyphSource {
     const promiseList: Array<Promise<void>> = []
     const requestList: number[] = []
     const fallbackrequestList: number[] = []
-    const waitlistPromiseMap: Map<string, Promise<void>> = new Map()
+    const waitlistPromiseMap = new Map<string, Promise<void>>()
     for (const unicode of request) {
       // 1) already cached in glyphCache; do nothing
       if (glyphCache.has(unicode)) continue

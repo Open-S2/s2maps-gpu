@@ -25,7 +25,7 @@ export default async function rasterProgram (context: Context): Promise<RasterPr
 
   class RasterProgram extends Program implements RasterProgramSpec {
     curSample: 'none' | 'linear' | 'nearest' = 'none'
-    layerGuides: Map<number, RasterWorkflowLayerGuide> = new Map()
+    layerGuides = new Map<number, RasterWorkflowLayerGuide>()
     declare uniforms: { [key in RasterProgramUniforms]: WebGLUniformLocation }
     constructor (context: Context) {
       // get gl from context

@@ -3,8 +3,8 @@
     "target": "esnext",
     "lib": [
       "DOM",
-      "dom.iterable",
-      "esnext",
+      "DOM.Iterable",
+      "ESNext",
       "WebWorker"
     ],
     "allowJs": true,
@@ -20,7 +20,7 @@
     "incremental": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "typeRoots": [ /* Specify multiple folders that act like `./node_modules/@types`. */
+    "typeRoots": [
       "./node_modules/@webgpu/types",
       "./node_modules/@types"
     ],

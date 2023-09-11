@@ -10,17 +10,13 @@ export type Format = 'zxy' | 'tzxy' | 'fzxy' | 'tfzxy'
 // S2 => Sphere
 export type Projection = 'WM' | 'S2'
 
-export interface LayerMetaData {
-  [key: string]: { // layer
-    minzoom: number
-    maxzoom: number
-    fields?: { [key: string]: Array<string | number | boolean> } // max fields size of 50
-  }
-}
+export type LayerMetaData = Record<string, { // layer
+  minzoom: number
+  maxzoom: number
+  fields?: Record<string, Array<string | number | boolean>> // max fields size of 50
+}>
 
-export interface Attributions {
-  [key: string]: string
-}
+export type Attributions = Record<string, string>
 
 // MUST have
 export interface SourceMetadata {
@@ -40,16 +36,14 @@ export interface SourceMetadata {
   sourceName?: string // if you want to make requests without getting metadata, you need this
 }
 export type Source = string | SourceMetadata
-export interface Sources { [key: string]: Source } // address to source or source itself
+export type Sources = Record<string, Source> // address to source or source itself
 
 /** GLYPHS, FONTS, AND ICONS */
 
-export interface Glyphs {
-  [key: string]: string | {
-    path: string
-    fallback?: string
-  }
-}
+export type Glyphs = Record<string, string | {
+  path: string
+  fallback?: string
+}>
 export interface Fonts extends Glyphs {}
 export interface Icons extends Glyphs {}
 

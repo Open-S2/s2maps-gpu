@@ -28,7 +28,7 @@ export default async function sensorProgram (context: Context): Promise<SensorPr
   class SensorProgram extends Program implements SensorProgramSpec {
     nullTexture!: WebGLTexture
     timeCache?: TimeCache
-    layerGuides: Map<number, SensorWorkflowLayerGuide> = new Map()
+    layerGuides = new Map<number, SensorWorkflowLayerGuide>()
     declare uniforms: { [key in SensorProgramUniforms]: WebGLUniformLocation }
     constructor (context: Context) {
       // get gl from context

@@ -18,7 +18,7 @@ export class WorkerPool {
   workerCount: number = Math.max(Math.min(AVAILABLE_LOGICAL_PROCESSES, 6), 2)
   workers: Worker[] = []
   sourceWorker: Worker
-  maps: { [key: string]: S2Map } = {} // MapID: S2Map
+  maps: Record<string, S2Map> = {} // MapID: S2Map
   constructor () {
     // create source worker
     const sourceWorker = this.sourceWorker = new Worker(new URL('./source.worker', import.meta.url), { name: 'source-worker', type: 'module' })
@@ -107,7 +107,7 @@ export class WorkerPool {
     for (const worker of this.workers) worker.postMessage({ mapID, type: 'removeLayer', index })
   }
 
-  reorderLayers (mapID: string, layerChanges: { [key: string | number]: number }): void {
+  reorderLayers (mapID: string, layerChanges: Record<string | number, number>): void {
     this.sourceWorker.postMessage({ mapID, type: 'reorderLayers', layerChanges })
     for (const worker of this.workers) worker.postMessage({ mapID, type: 'reorderLayers', layerChanges })
   }

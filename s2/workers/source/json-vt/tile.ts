@@ -1,6 +1,6 @@
 /** MODULES **/
 import { level, toIJ } from 's2/geometry/id'
-import JsonVT from '.'
+import type JsonVT from '.'
 /** TYPES **/
 import type { Properties } from 's2/geometry'
 import type { FeatureVector } from './feature'
@@ -79,9 +79,7 @@ export interface JSONLayer {
   feature?: (i: number) => JSONVectorFeature
 }
 
-export interface JSONLayers {
-  [key: string]: JSONLayer
-}
+export type JSONLayers = Record<string, JSONLayer>
 
 export interface JSONTile {
   extent: number

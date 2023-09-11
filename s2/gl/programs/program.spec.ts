@@ -47,17 +47,11 @@ import type {
   ShadeFeatureGuide
 } from '../contexts/context.spec'
 
-export interface Uniforms {
-  [key: string]: string
-}
+export type Uniforms = Record<string, string>
 
-export interface Attributes {
-  [key: string]: string
-}
+export type Attributes = Record<string, string>
 
-export interface AttributeLocations {
-  [key: string]: number
-}
+export type AttributeLocations = Record<string, number>
 
 export interface ShaderSource {
   source: string

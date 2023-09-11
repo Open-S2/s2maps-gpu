@@ -25,9 +25,7 @@ export interface ParentLayer {
   time?: number
 }
 
-export interface ParentLayers {
-  [key: string | number]: ParentLayer
-}
+export type ParentLayers = Record<string | number, ParentLayer>
 
 export interface TileRequest {
   id: bigint
@@ -237,7 +235,7 @@ export interface RemoveLayerMessage {
 
 export interface ReorderLayersMessage {
   type: 'reorderLayers'
-  layerChanges: { [key: number]: number }
+  layerChanges: Record<number, number>
 }
 
 export interface DeleteMessage {
@@ -351,7 +349,7 @@ export interface RemoveLayerMessageGL extends MapID {
 
 export interface ReorderLayersMessageGL extends MapID {
   type: 'reorderLayers'
-  layerChanges: { [key: number]: number }
+  layerChanges: Record<number, number>
 }
 
 export interface ScreenshotMessageGL extends MapID {
@@ -483,9 +481,7 @@ export interface InteractiveData extends WorkerMessageBase {
 export interface FlushData extends MapID {
   type: 'flush'
   tileID: bigint
-  layers: {
-    [key: number]: number
-  }
+  layers: Record<number, number>
 }
 
 export interface TimeSourceData extends WorkerMessageBase {
@@ -508,8 +504,8 @@ export interface GlyphRequestMessage extends MapID {
   type: 'glyphrequest'
   workerID: number
   reqID: string
-  glyphList: { [key: string]: ArrayBuffer }
-  iconList: { [key: string]: Set<string> }
+  glyphList: Record<string, ArrayBuffer>
+  iconList: Record<string, Set<string>>
 }
 export type TileWorkerToSourceWorkerMessage = GlyphRequestMessage
 

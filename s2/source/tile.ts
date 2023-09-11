@@ -52,7 +52,7 @@ class Tile implements TileBase {
   bbox: BBox = [0, 0, 0, 0]
   featureGuides: Array<FeatureGuideGL | FeatureGuideGPU> = []
   context: ContextGL | ContextGPU
-  interactiveGuide: Map<number, InteractiveObject> = new Map()
+  interactiveGuide = new Map<number, InteractiveObject>()
   rendered = false
   constructor (
     context: ContextGL | ContextGPU,
@@ -150,7 +150,7 @@ class Tile implements TileBase {
     }
   }
 
-  reorderLayers (layerChanges: { [key: number]: number }): void {
+  reorderLayers (layerChanges: Record<number, number>): void {
     for (const feature of this.featureGuides) {
       feature.layerIndex = layerChanges[feature.layerIndex]
     }

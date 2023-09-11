@@ -1,4 +1,7 @@
 /* eslint-env worker */
+import UnicodeShaper from 'unicode-shaper-zig'
+// @ts-expect-error - file exists
+import uShaperWASM from 'unicode-shaper-zig/u-shaper.wasm'
 import VectorWorker, { colorFunc, idToRGB } from '../vectorWorker'
 import featureSort from '../util/featureSort'
 import buildGlyphQuads, { QUAD_SIZE } from './buildGlyphQuads'
@@ -32,9 +35,10 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
   colorMap: ColorMap = {}
   iconList: IconList = {}
   glyphList: GlyphList = {}
-  glyphStore: Map<string, GlyphStore> = new Map()
+  glyphStore = new Map<string, GlyphStore>()
   features: GlyphFeature[] = []
   sourceWorker: MessagePort
+  uShaper = new UnicodeShaper(uShaperWASM)
   constructor (idGen: IDGen, gpuType: GPUType, sourceWorker: MessagePort) {
     super(idGen, gpuType)
     this.sourceWorker = sourceWorker
@@ -145,9 +149,10 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
         // build all layout and paint parameters
         // per tile properties
         const deadCode: number[] = []
-        const field = coalesceField(layout[`${type}Field`](deadCode, properties, zoom), properties)
-        // console.log(field)
+        let field = coalesceField(layout[`${type}Field`](deadCode, properties, zoom), properties)
+        // pre-process and shape the unicodes
         if (field.length === 0) continue
+        field = this.uShaper.shapeString(field)
         let fieldCodes: Unicode[] = []
         const family = layout[`${type}Family`](deadCode, properties, zoom)
         // if icon, convert field to list of codes, otherwise create a unicode array
@@ -307,7 +312,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       const reqID = `${mapID}:${sourceName}:${Math.random().toString(36).substring(2, 9)}`
       // build glyphList and iconList to ship to the source thread
       // prep glyphList for transfer
-      const glyphList: { [family: string]: ArrayBuffer } = {}
+      const glyphList: Record<string, ArrayBuffer> = {}
       for (const family in _glyphList) {
         const list = [..._glyphList[family]].sort((a, b) => a - b)
         glyphList[family] = (new Uint16Array(list)).buffer

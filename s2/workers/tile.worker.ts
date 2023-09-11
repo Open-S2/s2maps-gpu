@@ -67,7 +67,7 @@ export default class TileWorker extends ProcessManager {
     // }
   }
 
-  #reorderLayers (mapID: string, layerChanges: { [key: number]: number }): void {
+  #reorderLayers (mapID: string, layerChanges: Record<number, number>): void {
     // const layers = this.maps[mapID]
     // const newLayers: LayerDefinition[] = []
     // // move the layer to its new position

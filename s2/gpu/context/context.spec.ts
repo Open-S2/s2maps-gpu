@@ -1,5 +1,5 @@
 import type { TileGPU as Tile } from 's2/source/tile.spec'
-import WebGPUContext from './context'
+import type WebGPUContext from './context'
 import type { GPUType } from 's2/style/style.spec'
 
 export interface MaskSource {

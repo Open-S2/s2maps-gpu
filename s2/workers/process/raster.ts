@@ -1,5 +1,5 @@
 /* eslint-env worker */
-import { isSafari } from 's2/util/polyfill'
+// import { isSafari } from 's2/util/polyfill'
 import { parseFeatureFunction } from './util'
 
 import type { RasterData, RasterDataGuide, SensorData, SensorDataGuide, TileRequest } from '../worker.spec'

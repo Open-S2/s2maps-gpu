@@ -80,7 +80,7 @@ export default class Style {
     const { camera } = this
     const { painter } = camera
     const { skybox, wallpaper, layers } = style
-    const workflows: Set<GLWorkflowType & GPUWorkflowType> = new Set(['fill'])
+    const workflows = new Set<GLWorkflowType & GPUWorkflowType>(['fill'])
     // setup appropriate background if it exists
     if (skybox !== undefined) workflows.add('skybox')
     if (wallpaper !== undefined) workflows.add('wallpaper')

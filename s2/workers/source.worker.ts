@@ -55,18 +55,14 @@ import type { SourceWorkerMessages, TileRequest } from './worker.spec'
   (now - timestamp) / 1000 = seconds passed
 **/
 
-interface SourceMap {
-  [mapID: string]: {
-    [sourceName: string]: Source | S2TilesSource | JSONSource | LocalSource | MarkerSource
-  }
-}
+type SourceMap = Record<string, Record<string, Source | S2TilesSource | JSONSource | LocalSource | MarkerSource>>
 
 export default class SourceWorker {
   workers: Array<MessageChannel['port2']> = []
   session: Session = new Session()
-  layers: { [mapID: string]: LayerDefinition[] } = {}
+  layers: Record<string, LayerDefinition[]> = {}
   sources: SourceMap = {}
-  glyphs: { [glyphName: string]: GlyphSource } = {} // path is key again
+  glyphs: Record<string, GlyphSource> = {} // path is key again
   texturePack: TexturePack = new TexturePack()
 
   onMessage ({ data, ports }: MessageEvent<SourceWorkerMessages>): void {
@@ -145,7 +141,7 @@ export default class SourceWorker {
     }
   }
 
-  #reorderLayers (mapID: string, layerChanges: { [key: string | number]: number }): void {
+  #reorderLayers (mapID: string, layerChanges: Record<string | number, number>): void {
     const layers = this.layers[mapID]
     const newLayers = []
     // move the layer to its new position
@@ -258,8 +254,8 @@ export default class SourceWorker {
     mapID: string,
     workerID: number,
     reqID: string,
-    sourceGlyphs: { [key: string]: ArrayBuffer },
-    iconList: { [key: string]: Set<string> }
+    sourceGlyphs: Record<string, ArrayBuffer>,
+    iconList: Record<string, Set<string>>
   ): void {
     // prep
     const { workers } = this

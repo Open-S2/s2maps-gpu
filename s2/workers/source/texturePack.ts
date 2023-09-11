@@ -13,7 +13,7 @@ interface Space {
 export default class TexturePack {
   height = 0
   maxWidth = 2048
-  spaces: { [height: number]: Space } = {}
+  spaces: Record<number, Space> = {}
 
   addGlyph (width: number, height: number): [number, number] {
     // create a box object

@@ -33,7 +33,7 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
     stepBuffer?: WebGLBuffer
     uvBuffer?: WebGLBuffer
     glyphFilterProgram!: GlyphFilterProgram
-    layerGuides: Map<number, GlyphWorkflowLayerGuide> = new Map()
+    layerGuides = new Map<number, GlyphWorkflowLayerGuide>()
     declare uniforms: { [key in GlyphProgramUniforms]: WebGLUniformLocation }
     constructor (context: Context) {
       // get gl from context

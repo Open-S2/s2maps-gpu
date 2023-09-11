@@ -59,9 +59,9 @@ export default async function skyboxProgram (context: Context): Promise<SkyboxPr
     async #getImage (index: number, path: string, camera: Camera): Promise<void> {
       const { gl } = this
       const data = await fetch(path)
-        .then((res: Response) => {
+        .then(async (res: Response) => {
           if (res.status !== 200 && res.status !== 206) return
-          return res.blob()
+          return await res.blob()
         })
         .catch(() => { /* no-op */ })
       if (data === undefined) return
