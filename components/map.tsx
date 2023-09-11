@@ -16,12 +16,12 @@ export interface MapProps {
   mouseleave: (input: any) => void
 }
 
-function Map (props: any) {
+function Map (props: any): JSX.Element {
   const s2map = useRef<S2Map>()
   const s2mapRef = useRef<HTMLDivElement>(null)
   const [height, setHeight] = useState(0)
 
-  function resize () { setHeight(window.innerHeight) }
+  function resize (): void { setHeight(window.innerHeight) }
 
   useEffect(() => {
     // if already built, return
@@ -52,8 +52,8 @@ function Map (props: any) {
 function prepCanvas (
   container: HTMLDivElement | null,
   s2map: React.MutableRefObject<S2Map | undefined>,
-  props: any
-) {
+  props: MapProps
+): void {
   // pull in properties
   let { style, opts, ready, noAPIKey, mouseenter, mouseleave } = props
   if (!opts) opts = {}
@@ -84,6 +84,7 @@ function prepCanvas (
       s2map.current.addEventListener('mouseleave', (({ detail }: CustomEvent) => mouseleave(detail)) as EventListener)
     }
   })
+    .catch((err) => { throw err })
 }
 
 export default Map

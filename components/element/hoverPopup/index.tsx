@@ -1,7 +1,12 @@
 /* MODULES */
 import React, { useEffect, useRef, useState } from 'react'
 
-export default function HoverPopup ({ visible, children, className, id }: any): any {
+export default function HoverPopup ({ visible, children, className, id }: {
+  visible: boolean
+  children: React.ReactNode
+  className?: string
+  id?: string
+}): any {
   const [pos, setPos] = useState({ x: 0, y: 0 })
   const ref = useRef(null)
 

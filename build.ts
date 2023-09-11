@@ -6,7 +6,7 @@ await Bun.build({
     './s2/ui/s2mapUI.ts',
     './s2/workers/map.worker.ts',
     './s2/workers/source.worker.ts',
-    './s2/workers/tile.worker.ts',
+    './s2/workers/tile.worker.ts'
   ],
   outdir: './buildS2',
   minify: true,

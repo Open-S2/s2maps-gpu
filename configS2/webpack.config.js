@@ -40,8 +40,8 @@ module.exports = {
       },
       {
         test: /\.wasm$/,
-        type: 'javascript/auto',
-        use: ['arraybuffer-loader']
+        type: 'asset/inline'
+        // use: ['arraybuffer-loader']
       }
     ]
   },

@@ -1,6 +1,5 @@
 import type {
   Context as ContextGL,
-  FeatureGuideBase,
   FeatureGuide as FeatureGuideGL,
   MaskSource as MaskSourceGL
 } from 's2/gl/contexts/context.spec'

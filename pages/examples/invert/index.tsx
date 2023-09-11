@@ -2,7 +2,7 @@
 import React from 'react'
 /* REACT MODULES */
 import Map from '../../../components/map'
-/* STYLES */ // @ts-expect-error: why?
+/* STYLES */
 import styles from '../../../styles/Countries.module.css'
 import style from './style.json'
 

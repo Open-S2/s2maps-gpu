@@ -10,7 +10,7 @@
     "build:S2:bun": "rm -rf buildS2 && mkdir buildS2 && bun build.ts",
     "start": "next start",
     "lint": "next lint",
-    "lint:types": "tsc --noEmit",
+    "lint:types": "tsc --noEmit --lib dom",
     "lint:S2": "eslint s2 --ext .ts"
   },
   "dependencies": {
@@ -25,6 +25,7 @@
     "@types/node": "^20.3.3",
     "@types/react": "^18.2.14",
     "@types/react-dom": "^18.2.6",
+    "@types/react-syntax-highlighter": "^15.5.7",
     "@typescript-eslint/eslint-plugin": "6.6.0",
     "@typescript-eslint/parser": "6.6.0",
     "@use-gpu/wgsl-loader": "^0.10.1",
@@ -47,8 +48,9 @@
     "raw-loader": "^4.0.2",
     "react": "18.2.0",
     "react-dom": "18.2.0",
+    "react-syntax-highlighter": "^15.5.0",
     "terser-webpack-plugin": "^5.3.5",
-    "ts-loader": "^9.3.1",
+    "ts-loader": "^9.4.4",
     "ts-standard": "*",
     "tsconfig-paths-webpack-plugin": "^4.1.0",
     "typescript": "latest",

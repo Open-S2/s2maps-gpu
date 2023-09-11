@@ -1,4 +1,5 @@
 /* MODULES */
+import React from 'react'
 // import { useEffect, useState } from 'react'
 /* REACT MODULES */
 import Map from '../../../components/map'
