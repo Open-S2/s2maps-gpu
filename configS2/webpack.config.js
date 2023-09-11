@@ -25,6 +25,10 @@ module.exports = {
     // module chunks which are built will work in web workers as well.
     globalObject: 'this'
   },
+  // 'type: "webassembly/async"'
+  // experiments: {
+  //   asyncWebAssembly: true
+  // },
   context: path.join(__dirname, '/../public'),
   module: {
     rules: [
@@ -34,14 +38,23 @@ module.exports = {
         // use: 'webpack-glsl-minify'
       },
       {
-        test: /\.tsx?$/,
-        use: 'ts-loader',
+        test: /\.ts?$/,
+        use: [
+          {
+            loader: 'ts-loader',
+            options: {
+              transpileOnly: true
+            }
+          }
+        ],
         exclude: /node_modules/
       },
       {
         test: /\.wasm$/,
-        type: 'asset/inline'
-        // use: ['arraybuffer-loader']
+        // type: 'asset/inline',
+        // use: 'raw-loader'
+        type: 'javascript/auto',
+        use: ['arraybuffer-loader']
       }
     ]
   },

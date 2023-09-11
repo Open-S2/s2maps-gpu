@@ -106,7 +106,7 @@ export default class S2Map extends EventTarget {
     // prep webgpu/webgl type
     let tmpContext: WebGLRenderingContext | null = null
     if (options.contextType === undefined) {
-      const tryContext = (name: string): boolean => {
+      const tryContext = (name: 'webgl' | 'experimental-webgl' | 'webgl2'): boolean => {
         tmpContext = document.createElement('canvas').getContext(name)
         return tmpContext !== null
       }
@@ -126,7 +126,7 @@ export default class S2Map extends EventTarget {
       const offscreenCanvas = canvas.transferControlToOffscreen()
       const mapWorker = this.offscreen = new Worker(new URL('./workers/map.worker', import.meta.url), { name: 'map-worker', type: 'module' })
       mapWorker.onmessage = this.#mapMessage.bind(this)
-      mapWorker.postMessage({ type: 'canvas', options, canvas: offscreenCanvas, id: this.id }, [offscreenCanvas as Transferable])
+      mapWorker.postMessage({ type: 'canvas', options, canvas: offscreenCanvas, id: this.id }, [offscreenCanvas])
     } else {
       const Map = await import('./ui/s2mapUI').then(m => m.default)
       this.map = new Map(options, canvas, this.id, this)
@@ -271,7 +271,7 @@ export default class S2Map extends EventTarget {
       else if (type === 'line') offscreen.postMessage(data, [data.vertexBuffer, data.featureGuideBuffer])
       else if (type === 'glyph') offscreen.postMessage(data, [data.glyphFilterBuffer, data.glyphFilterIDBuffer, data.glyphQuadBuffer, data.glyphQuadIDBuffer, data.glyphColorBuffer, data.featureGuideBuffer])
       else if (type === 'glyphimages') offscreen.postMessage(data, data.images.map(i => i.data) as Transferable[])
-      else if (type === 'raster') offscreen.postMessage(data, [data.image])
+      else if (type === 'raster') offscreen.postMessage(data, [data.image as Transferable])
       else if (type === 'point') offscreen.postMessage(data, [data.vertexBuffer, data.featureGuideBuffer])
       else if (type === 'heatmap') offscreen.postMessage(data, [data.vertexBuffer, data.weightBuffer, data.featureGuideBuffer])
       else if (type === 'interactive') offscreen.postMessage(data, [data.interactiveGuideBuffer, data.interactiveDataBuffer])
