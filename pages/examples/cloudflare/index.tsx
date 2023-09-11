@@ -3,7 +3,7 @@ import React, { useState } from 'react'
 /* REACT MODULES */
 import Map from '../../../components/map'
 import HoverPopup from '../../../components/element/hoverPopup'
-/* STYLES */ // @ts-expect-error: why?
+/* STYLES */
 import styles from '../../../styles/Countries.module.css'
 import style from './style.json'
 

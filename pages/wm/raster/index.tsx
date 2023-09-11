@@ -1,4 +1,5 @@
 /* MODULES */
+import React from 'react'
 // import { useEffect, useState } from 'react'
 /* REACT MODULES */
 import Map from '../../../components/map'
@@ -7,6 +8,7 @@ import Map from '../../../components/map'
 import style from './style.json'
 
 import type { NextPage } from 'next'
+import type { S2Map } from '../../../s2'
 
 function ready (s2map: S2Map): void {
   // 1) request online status

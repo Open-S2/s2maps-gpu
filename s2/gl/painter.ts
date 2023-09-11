@@ -60,80 +60,94 @@ export default class Painter implements PainterSpec {
     const promises: Array<Promise<void>> = []
     for (const program of buildSet) {
       if (program in workflows) continue
+      // TODO: Adjust all the others to how fill is done
       switch (program) {
         case 'fill':
-          promises.push(new Promise(() => {
+          promises.push(new Promise((resolve, reject) => {
             import('./programs/fillProgram')
-              .then(async ({ default: fillProgram }) => { workflows.fill = await fillProgram(context) })
-              .catch(err => { console.error(err) })
+              .then(async ({ default: fillProgram }) => {
+                workflows.fill = await fillProgram(context)
+                resolve()
+              })
+              .catch(err => { reject(err) })
           }))
           break
         case 'raster':
-          promises.push(new Promise(() => {
+          promises.push(new Promise(resolve => {
             import('./programs/rasterProgram')
               .then(async ({ default: rasterProgram }) => { workflows.raster = await rasterProgram(context) })
               .catch(err => { console.error(err) })
+              .finally(() => { resolve() })
           }))
           break
         case 'sensor':
-          promises.push(new Promise(() => {
+          promises.push(new Promise(resolve => {
             import('./programs/sensorProgram')
               .then(async ({ default: sensorProgram }) => { workflows.sensor = await sensorProgram(context) })
               .catch(err => { console.error(err) })
+              .finally(() => { resolve() })
           }))
           break
         case 'line':
-          promises.push(new Promise(() => {
+          promises.push(new Promise(resolve => {
             import('./programs/lineProgram')
               .then(async ({ default: lineProgram }) => { workflows.line = await lineProgram(context) })
               .catch(err => { console.error(err) })
+              .finally(() => { resolve() })
           }))
           break
         case 'point':
-          promises.push(new Promise(() => {
+          promises.push(new Promise(resolve => {
             import('./programs/pointProgram')
               .then(async ({ default: pointProgram }) => { workflows.point = await pointProgram(context) })
               .catch(err => { console.error(err) })
+              .finally(() => { resolve() })
           }))
           break
         case 'heatmap':
-          promises.push(new Promise(() => {
+          promises.push(new Promise(resolve => {
             import('./programs/heatmapProgram')
               .then(async ({ default: heatmapProgram }) => { workflows.heatmap = await heatmapProgram(context) })
               .catch(err => { console.error(err) })
+              .finally(() => { resolve() })
           }))
           break
         case 'shade':
-          promises.push(new Promise(() => {
+          promises.push(new Promise(resolve => {
             import('./programs/shadeProgram')
               .then(async ({ default: shadeProgram }) => { workflows.shade = await shadeProgram(context) })
               .catch(err => { console.error(err) })
+              .finally(() => { resolve() })
           }))
           break
         case 'glyph':
-          promises.push(new Promise(() => {
+          promises.push(new Promise(resolve => {
             import('./programs/glyphProgram')
               .then(async ({ default: glyphProgram }) => { workflows.glyph = await glyphProgram(context) })
               .catch(err => { console.error(err) })
+              .finally(() => { resolve() })
           }))
-          promises.push(new Promise(() => {
+          promises.push(new Promise(resolve => {
             import('./programs/glyphFilterProgram')
               .then(async ({ default: glyphFilterProgram }) => { workflows.glyphFilter = await glyphFilterProgram(context) })
               .catch(err => { console.error(err) })
+              .finally(() => { resolve() })
           }))
           break
         case 'wallpaper':
-          promises.push(new Promise(() => {
+          promises.push(new Promise(resolve => {
             import('./programs/wallpaperProgram')
               .then(async ({ default: wallpaperProgram }) => { workflows.background = await wallpaperProgram(context) })
               .catch(err => { console.error(err) })
+              .finally(() => { resolve() })
           }))
           break
         case 'skybox':
-          promises.push(new Promise(() => {
+          promises.push(new Promise(resolve => {
             import('./programs/skyboxProgram')
               .then(async ({ default: skyboxProgram }) => { workflows.background = await skyboxProgram(context) })
               .catch(err => { console.error(err) })
+              .finally(() => { resolve() })
           }))
           break
         default: break

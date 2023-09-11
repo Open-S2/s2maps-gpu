@@ -431,7 +431,7 @@ export default class Projector {
   // TODO: Rebuild this -_-
   getTilesAtPositionWM (lon: number, lat: number, zoom: number, bearing: number, pitch: number): bigint[] { // (S2CellIDs)
     const { zoomOffset } = this
-    const matrix = this.#getMatrixWM(1, [0, 0], bearing, pitch)
+    // const matrix = this.#getMatrixWM(1, [0, 0], bearing, pitch)
     return getTilesWM(zoom + zoomOffset, this, lon, lat)
   }
 

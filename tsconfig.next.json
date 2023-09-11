@@ -13,15 +13,18 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": false,
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "Bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
+    // "types": [
+    //   "@webgpu/types",
+    //   "bun-types"
+    // ],
     "typeRoots": [
-      "./node_modules/@webgpu/types",
       "./node_modules/@types"
     ],
     "baseUrl": ".",
@@ -44,8 +47,7 @@
   "include": [
     "types/*.d.ts",
     "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts"
+    "**/*.tsx"
   ],
   "exclude": [
     "node_modules"
