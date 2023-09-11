@@ -33,9 +33,9 @@ export default class WebGLContext extends Context {
       // createVertexArray
       gl.createVertexArray = () => vertexArrayObject.createVertexArrayOES()
       // bindVertexArray
-      gl.bindVertexArray = (vao: WebGLVertexArrayObject | null) => vertexArrayObject.bindVertexArrayOES(vao)
+      gl.bindVertexArray = (vao: WebGLVertexArrayObject | null) => { vertexArrayObject.bindVertexArrayOES(vao) }
       // deleteVertexArray
-      gl.deleteVertexArray = (vao: WebGLVertexArrayObject | null) => vertexArrayObject.deleteVertexArrayOES(vao)
+      gl.deleteVertexArray = (vao: WebGLVertexArrayObject | null) => { vertexArrayObject.deleteVertexArrayOES(vao) }
     }
     // ANGLE_instanced_arrays
     if (this.angledInstancedArrays !== null) {
