@@ -1,9 +1,9 @@
 /* eslint-env worker */
-import Color from 's2/style/color'
-import { type Properties } from 's2/geometry'
+import Color from 'style/color'
+import { type Properties } from 'geometry'
 import { parseFeatureFunction } from './util'
 
-import type { BuildCodeFunction, GPUType, InteractiveWorkerLayer, LayerWorkerFunction } from 's2/style/style.spec'
+import type { BuildCodeFunction, GPUType, InteractiveWorkerLayer, LayerWorkerFunction } from 'style/style.spec'
 import type { InteractiveObject, TileRequest } from '../worker.spec'
 import type { IDGen } from './process.spec'
 import type { Callback } from './util'

@@ -1,7 +1,7 @@
-import type { BBox } from 's2/geometry'
-import type { TileGL } from 's2/source/tile.spec'
-import type { GPUType, Resampling } from 's2/style/style.spec'
-import type { SensorTextureDefinition } from 's2/ui/camera/timeCache'
+import type { BBox } from 'geometry'
+import type { TileGL } from 'source/tile.spec'
+import type { GPUType, Resampling } from 'style/style.spec'
+import type { SensorTextureDefinition } from 'ui/camera/timeCache'
 
 export interface MaskSource {
   type: 'mask'

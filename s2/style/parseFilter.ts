@@ -1,6 +1,6 @@
 import coalesceField from './coalesceField'
 
-import type { Properties } from 's2/geometry'
+import type { Properties } from 'geometry'
 
 // examples:
 // filter: ["class", "==", "ocean"]

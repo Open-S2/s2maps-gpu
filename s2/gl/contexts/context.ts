@@ -1,10 +1,10 @@
 /* eslint-env browser */
 import buildMask from './buildMask'
 
-import type { MapOptions } from 's2/ui/s2mapUI'
+import type { MapOptions } from 'ui/s2mapUI'
 import type { Context as ContextSpec, MaskSource } from './context.spec'
-import type { GPUType } from 's2/style/style.spec'
-import type { BBox } from 's2/geometry'
+import type { GPUType } from 'style/style.spec'
+import type { BBox } from 'geometry'
 
 const DEPTH_ESPILON = 1 / Math.pow(2, 16)
 

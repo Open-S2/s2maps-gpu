@@ -7,11 +7,13 @@
     "dev": "next dev",
     "build": "next build",
     "build:S2": "node configS2/build.js",
-    "build:S2:bun": "rm -rf buildS2 && mkdir buildS2 && bun build.ts",
+    "build:ESM": "tsc --project tsconfig.json",
     "start": "next start",
     "lint": "next lint",
     "lint:types": "tsc --noEmit --lib dom",
-    "lint:S2": "eslint s2 --ext .ts"
+    "lint:S2": "eslint s2 --ext .ts",
+    "test:dev": "vitest dev",
+    "test": "vitest run"
   },
   "dependencies": {
     "earclip": "^0.9.8",
@@ -28,11 +30,10 @@
     "@types/react-syntax-highlighter": "^15.5.7",
     "@typescript-eslint/eslint-plugin": "6.6.0",
     "@typescript-eslint/parser": "6.6.0",
-    "@use-gpu/wgsl-loader": "^0.10.1",
+    "@vitest/web-worker": "^0.34.4",
     "@webgpu/types": "^0.1.34",
     "arraybuffer-loader": "^1.0.8",
     "better-sqlite3": "^8.5.0",
-    "bun-types": "^1.0.1",
     "chroma-js": "^2.4.2",
     "compression-webpack-plugin": "^9.1.1",
     "css-loader": "^6.5.1",
@@ -42,9 +43,12 @@
     "eslint-config-standard-jsx": "^11.0.0",
     "eslint-config-standard-with-typescript": "39.0.0",
     "filesize": "^8.0.6",
+    "gl": "^6.0.2",
     "mini-css-extract-plugin": "^2.4.5",
     "next": "13.4.8",
+    "node-canvas-webgl": "^0.3.0",
     "picocolors": "^1.0.0",
+    "pixelmatch": "^5.3.0",
     "raw-loader": "^4.0.2",
     "react": "18.2.0",
     "react-dom": "18.2.0",
@@ -54,8 +58,10 @@
     "ts-standard": "*",
     "tsconfig-paths-webpack-plugin": "^4.1.0",
     "typescript": "latest",
+    "vitest": "^0.34.4",
     "webpack": "^5.88.2",
-    "webpack-bundle-analyzer": "^4.9.0"
+    "webpack-bundle-analyzer": "^4.9.0",
+    "webpack-stats-viewer-plugin": "^1.1.1"
   },
   "license": "SEE LICENSE FILE"
 }

@@ -1,19 +1,30 @@
-import {
-  type FillLayerDefinition,
-  type GlyphLayerDefinition,
-  type HeatmapLayerDefinition,
-  type LayerDefinitionBase,
-  type LayerStyle,
-  type LineLayerDefinition,
-  type PointLayerDefinition,
-  type RasterLayerDefinition,
-  type SensorLayerDefinition,
-  type ShadeLayerDefinition
-} from 's2/style/style.spec'
-import { type WebGPUContext } from '../context'
+import type {
+  // FillLayerDefinition,
+  FillWorkflowLayerGuide,
+  GlyphLayerDefinition,
+  HeatmapLayerDefinition,
+  LayerDefinitionBase,
+  LayerStyle,
+  LineLayerDefinition,
+  PointLayerDefinition,
+  RasterLayerDefinition,
+  SensorLayerDefinition,
+  ShadeLayerDefinition
+} from 'style/style.spec'
+import type { FillFeatureGuide, WebGPUContext } from '../context'
 
-import type { TileGPU as Tile } from 's2/source/tile.spec'
-import type TimeCache from 's2/ui/camera/timeCache'
+// import type { TileGPU as Tile } source/tile.spec'
+import type TimeCache from 'ui/camera/timeCache'
+import type {
+  FillData,
+  GlyphData,
+  HeatmapData,
+  LineData,
+  PointData,
+  RasterData,
+  SensorData
+} from 'workers/worker.spec'
+import type { Tile } from 'source/tile.spec'
 
 export interface Workflow {
   fill?: FillPipeline
@@ -25,6 +36,8 @@ export interface Workflow {
   raster?: RasterPipeline
   sensor?: SensorPipeline
   shade?: ShadePipeline
+  wallpaper?: WallpaperPipeline
+  skybox?: SkyboxPipeline
   background?: WallpaperPipeline | SkyboxPipeline
 }
 
@@ -34,41 +47,56 @@ export type WorkflowType = 'fill' | 'glyph' | 'heatmap' | 'line' | 'point' | 'ra
 
 export interface Pipeline {
   context: WebGPUContext
-  buildPipeline: () => GPURenderPipeline
-  draw: () => void
-  use: () => void
-  flush: () => void
+  setup: (
+    vert: string,
+    frag: string,
+    buffers?: Iterable<GPUVertexBufferLayout | null>,
+    primitive?: GPUPrimitiveState,
+    depthStencil?: GPUDepthStencilState
+  ) => Promise<void>
+  use: (passEncoder: GPURenderPassEncoder) => void
+  // flush: () => void
 }
 
 export interface FillPipeline extends Pipeline {
-  buildMaskFeatures: (layerIndexes: number[], tile: Tile) => void
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LayerStyle) => FillLayerDefinition
+  layerGuides: Map<number, FillWorkflowLayerGuide>
+  setup: () => Promise<void>
+  draw: (featureGuide: FillFeatureGuide, passEncoder: GPURenderPassEncoder) => void
+  buildSource: (fillData: FillData, tile: Tile) => void
+  // buildMaskFeatures: (layerIndexes: number[], tile: Tile) => void
+  // buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LayerStyle) => FillLayerDefinition
 }
 
 export interface GlyphFilterPipeline extends Pipeline {
 }
 
 export interface GlyphPipeline extends Pipeline {
+  buildSource: (glyphData: GlyphData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LayerStyle) => GlyphLayerDefinition
 }
 
 export interface HeatmapPipeline extends Pipeline {
+  buildSource: (heatmapData: HeatmapData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LayerStyle) => HeatmapLayerDefinition
 }
 
 export interface LinePipeline extends Pipeline {
+  buildSource: (lineData: LineData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LayerStyle) => LineLayerDefinition
 }
 
 export interface PointPipeline extends Pipeline {
+  buildSource: (pointData: PointData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LayerStyle) => PointLayerDefinition
 }
 
 export interface RasterPipeline extends Pipeline {
+  buildSource: (rasterData: RasterData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LayerStyle) => RasterLayerDefinition
 }
 
 export interface SensorPipeline extends Pipeline {
+  buildSource: (sensorData: SensorData, tile: Tile) => void
   injectTimeCache: (timeCache: TimeCache) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LayerStyle) => SensorLayerDefinition
 }

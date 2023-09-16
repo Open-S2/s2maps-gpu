@@ -19,6 +19,7 @@
     "react/prop-types": "off",
     "@typescript-eslint/no-dynamic-delete": "off",
     "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/ban-ts-comment": "warn",
     "sort-imports": ["error", {
       "ignoreCase": false,
       "ignoreDeclarationSort": true,
@@ -26,10 +27,11 @@
       "memberSyntaxSortOrder": ["none", "all", "multiple", "single"],
       "allowSeparatedGroups": false
     }],
-    "@typescript-eslint/ban-types": "warn"
+    "@typescript-eslint/ban-types": "warn",
+    "@typescript-eslint/restrict-plus-operands": "off"
   },
   "parserOptions": {
     "project": ["./tsconfig.next.json"]
   },
-  "ignorePatterns": ["temp.js", "**/*.js"]
+  "ignorePatterns": ["temp.js", "**/*.js", "dist"]
 }

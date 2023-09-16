@@ -1,9 +1,9 @@
 /* eslint-env worker */
-import { parent as parentID, toIJ } from 's2/geometry/id'
+import { parent as parentID, toIJ } from 'geometry/id'
 
 import type { Session } from '.'
 import type { ParentLayers, TileRequest } from '../worker.spec'
-import type { Attributions, Format, LayerDefinition, Projection } from 's2/style/style.spec'
+import type { Attributions, Format, LayerDefinition, Projection } from 'style/style.spec'
 
 export type LayerMetaData = Record<string, { // layer
   minzoom: number
@@ -219,7 +219,7 @@ export default class Source {
         ? `${zoom}/${i}/${j}.${extension}`
         : `${face}/${zoom}/${i}/${j}.${extension}`)
 
-    const data = await this._fetch(`${path}/${location}`, mapID) as ArrayBuffer
+    const data = await this._fetch(`${path}/${location}`, mapID) as ArrayBuffer | undefined
     if (data !== undefined) {
       const worker = session.requestWorker()
       worker.postMessage({ mapID, type, tile, sourceName, data, size }, [data])
@@ -246,7 +246,10 @@ export default class Source {
     }
     const res = await fetch(path, { headers })
     if (res.status !== 200 && res.status !== 206) return
-    if (json || (res.headers.get('content-type') ?? '').includes('application/json')) return await res.json()
+    if (
+      json ||
+      (res.headers.get('content-type') ?? '').includes('application/json')
+    ) return await res.json()
     return await res.arrayBuffer()
   }
 }

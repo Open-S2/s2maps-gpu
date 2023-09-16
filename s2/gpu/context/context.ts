@@ -1,7 +1,8 @@
-// @ts-nocheck
 /* eslint-env browser */
-import type { GPUType } from 's2/style/style.spec'
-import type { MapOptions } from 's2/ui/s2mapUI'
+import buildMask from './buildMask'
+
+import type { GPUType } from 'style/style.spec'
+import type { MapOptions } from 'ui/s2mapUI'
 import type { MaskSource } from './context.spec'
 
 export default class WebGPUContext {
@@ -18,6 +19,10 @@ export default class WebGPUContext {
   format!: GPUTextureFormat
   masks = new Map<number, MaskSource>()
   type: GPUType = 3 // specifying that we are using a WebGPUContext
+  // manage buffers, layouts, and bind groups
+  #vpBuffer!: GPUBuffer
+  vpBindGroupLayout!: GPUBindGroupLayout
+  vpBufferBindGroup!: GPUBindGroup
   constructor (context: GPUCanvasContext, options: MapOptions) {
     const { canvasMultiplier } = options
     this.gpu = context
@@ -30,13 +35,12 @@ export default class WebGPUContext {
     const adapter = await navigator.gpu.requestAdapter()
     if (adapter === null) throw new Error('Failed to get GPU adapter')
     this.#adapter = adapter
-    const device = this.device = await adapter.requestDevice()
+    const device = this.device = await this.#adapter.requestDevice()
     // configure context
     const format = this.format = navigator.gpu.getPreferredCanvasFormat()
     this.gpu.configure({
       device,
       format,
-      // @ts-expect-error (@webgpu/types hasn't updated to alphaMode yet)
       alphaMode: 'premultiplied'
     })
     // set size
@@ -45,38 +49,31 @@ export default class WebGPUContext {
 
     // prepare renderpass descriptor
     this.#prepareRenderpassDescriptor()
+    // prep view projection layout
+    this.#buildViewProjectionLayout()
     // update state
     this.ready = true
   }
 
-  #prepareRenderpassDescriptor (): void {
-    const { presentation, gpu } = this
-    // Create the texture for our depth buffer
-    const depthStencilTexture = this.#depthStencilTexture = this.device.createTexture({
-      size: presentation,
-      format: 'depth24plus-stencil8',
-      usage: GPUTextureUsage.RENDER_ATTACHMENT
+  // https://programmer.ink/think/several-best-practices-of-webgpu.html
+  // BEST PRACTICE 1: Use the label attribute where it can be used
+  // BEST PRACTICE 5: Buffer data upload (give priority to writeBuffer() API,
+  //                  which avoids extra buffer replication operation.)
+  buildGPUBuffer (
+    label: string,
+    inputArray: BufferSource,
+    usage: number = GPUBufferUsage.VERTEX
+  ): GPUBuffer {
+    // prep buffer
+    const gpuBuffer = this.device.createBuffer({
+      label,
+      size: inputArray.byteLength,
+      usage: usage | GPUBufferUsage.COPY_DST
     })
+    // inject data then unmap
+    this.device.queue.writeBuffer(gpuBuffer, 0, inputArray)
 
-    // Create our render pass descriptor
-    const colorAttachments: GPURenderPassColorAttachment[] = [
-      {
-        // @ts-expect-error ignore labels for now
-        view: gpu, // set on each render pass
-        clearValue: { r: 0.25, g: 0.25, b: 0.25, a: 1.0 },
-        loadOp: 'clear',
-        storeOp: 'store'
-      }
-    ]
-    this.#renderPassDescriptor = {
-      colorAttachments,
-      depthStencilAttachment: {
-        view: depthStencilTexture.createView(),
-        depthClearValue: 1.0,
-        depthLoadOp: 'clear',
-        depthStoreOp: 'store'
-      }
-    }
+    return gpuBuffer
   }
 
   getFeatureAtMousePosition (x: number, y: number): undefined | number {
@@ -125,11 +122,71 @@ export default class WebGPUContext {
     let mask = masks.get(division)
     if (mask !== undefined) return mask
     // otherwise, create a new mask
-    // mask = buildMask(division, this)
-    mask = {
-      type: 'mask'
-    }
+    mask = buildMask(division, this)
     masks.set(division, mask)
+
     return mask
+  }
+
+  #prepareRenderpassDescriptor (): void {
+    const { presentation, gpu } = this
+    // Create the texture for our depth buffer
+    this.#depthStencilTexture = this.device.createTexture({
+      size: presentation,
+      format: 'depth24plus-stencil8',
+      usage: GPUTextureUsage.RENDER_ATTACHMENT
+    })
+
+    // Create our render pass descriptor
+    const colorAttachments: GPURenderPassColorAttachment[] = [
+      {
+        // @ts-expect-error ignore labels for now
+        view: gpu, // set on each render pass
+        clearValue: { r: 0, g: 0, b: 0, a: 0 },
+        loadOp: 'clear',
+        storeOp: 'store'
+      }
+    ]
+    this.#renderPassDescriptor = {
+      colorAttachments,
+      depthStencilAttachment: {
+        view: this.#depthStencilTexture.createView(),
+        depthClearValue: 1.0,
+        depthLoadOp: 'clear',
+        depthStoreOp: 'store'
+      }
+    }
+  }
+
+  // https://programmer.ink/think/several-best-practices-of-webgpu.html
+  // BEST PRACTICE 7: shared resource binding group and binding group layout object
+  #buildViewProjectionLayout (): void {
+    const { device } = this
+    const viewProjectionMatrix = new Float32Array(16)
+
+    // Create a uniform buffers for our vp matrix
+    this.#vpBuffer = this.buildGPUBuffer(
+      'Tail VP Matrix Buffer',
+      viewProjectionMatrix,
+      GPUBufferUsage.UNIFORM
+    )
+
+    // Create a resource binding group layout of camera UBO and its binding group ontology
+    this.vpBindGroupLayout = device.createBindGroupLayout({
+      label: 'View Projection uniforms BindGroupLayout',
+      entries: [{
+        binding: 0,
+        visibility: GPUShaderStage.VERTEX,
+        buffer: {}
+      }]
+    })
+    // Create the bind group mapping our uniform buffer to shader resources
+    this.vpBufferBindGroup = device.createBindGroup({
+      layout: this.vpBindGroupLayout,
+      entries: [{
+        binding: 0,
+        resource: { buffer: this.#vpBuffer }
+      }]
+    })
   }
 }

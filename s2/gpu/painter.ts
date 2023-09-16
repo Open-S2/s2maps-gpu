@@ -1,15 +1,28 @@
-// @ts-nocheck
 /* eslint-env browser */
 import { WebGPUContext } from './context'
-import type FillPipeline from './pipelines/fillPipeline'
 
-import type { MapOptions } from 's2/ui/s2mapUI'
-// import S2MapGL from 's2/ui/s2mapGL'
-// import { StyleDefinition } from 's2/style/styleSpec'
-import type { GlyphFilterPipeline, GlyphPipeline, HeatmapPipeline, LinePipeline, Pipeline, PointPipeline, RasterPipeline, SensorPipeline, ShadePipeline, SkyboxPipeline, WallpaperPipeline, Workflow, WorkflowKey, WorkflowType } from './pipelines/pipeline.spec'
-import type { GlyphImages } from 's2/workers/source/glyphSource'
-import type { TileGPU as Tile } from 's2/source/tile.spec'
-import type Projector from 's2/ui/camera/projector'
+import type { MapOptions } from 'ui/s2mapUI'
+import type { FeatureGuide, GlyphFeatureGuide, HeatmapFeatureGuide } from './context'
+import type {
+  FillPipeline,
+  GlyphFilterPipeline,
+  GlyphPipeline,
+  HeatmapPipeline,
+  LinePipeline,
+  Pipeline,
+  PointPipeline,
+  RasterPipeline,
+  SensorPipeline,
+  ShadePipeline,
+  SkyboxPipeline,
+  WallpaperPipeline,
+  Workflow,
+  WorkflowKey,
+  WorkflowType
+} from './pipelines/pipeline.spec'
+import type { GlyphImages } from 'workers/source/glyphSource'
+import type { TileGPU as Tile } from 'source/tile.spec'
+import type Projector from 'ui/camera/projector'
 import type {
   FillData,
   GlyphData,
@@ -19,16 +32,16 @@ import type {
   PointData,
   RasterData,
   SensorData
-} from 's2/workers/worker.spec'
-import type TimeCache from 's2/ui/camera/timeCache'
-// import type { FeatureGuide } from 's2/source/tile'
+} from 'workers/worker.spec'
+import type TimeCache from 'ui/camera/timeCache'
+// import type { FeatureGuide } source/tile'
 // import type { PipelineType } from './pipelines/pipeline'
 
 export default class Painter {
   context: WebGPUContext
   workflows: Workflow = {}
   dirty: boolean = false
-  currProgram?: WorkflowKey
+  currPipeline?: WorkflowKey
   // currPipeline: PipelineType
   // dirty: boolean = true
   constructor (context: GPUCanvasContext, options: MapOptions) {
@@ -43,10 +56,62 @@ export default class Painter {
   buildFeatureData (tile: Tile, data: RasterData): void
   buildFeatureData (tile: Tile, data: SensorData): void
   buildFeatureData (tile: Tile, data: PainterData): void {
-    // this.workflows[data.type]?.buildSource(data as any, tile)
+    this.workflows[data.type]?.buildSource(data as any, tile)
   }
 
   async buildWorkflows (buildSet: Set<WorkflowType>): Promise<void> {
+    const { workflows, context } = this
+    const promises: Array<Promise<void>> = []
+    const programCases: {
+      [key in keyof Omit<Workflow, 'background'>]: any
+    } = {
+      fill: async () => { return await import('./pipelines/fillPipeline') },
+      // raster: async () => { return await import('./pipelines/rasterPipeline') },
+      // sensor: async () => { return await import('./pipelines/sensorPipeline') },
+      // line: async () => { return await import('./pipelines/linePipeline') },
+      // point: async () => { return await import('./pipelines/pointPipeline') },
+      // heatmap: async () => { return await import('./pipelines/heatmapPipeline') },
+      // shade: async () => { return await import('./pipelines/shadePipeline') },
+      // glyph: async () => { return await import('./pipelines/glyphPipeline') },
+      // glyphFilter: async () => { return await import('./pipelines/glyphFilterPipeline') },
+      // wallpaper: async () => { return await import('./pipelines/wallpaperPipeline') },
+      // skybox: async () => { return await import('./pipelines/skyboxPipeline') }
+      raster: async () => {},
+      sensor: async () => {},
+      line: async () => {},
+      point: async () => {},
+      heatmap: async () => {},
+      shade: async () => {},
+      glyph: async () => {},
+      glyphFilter: async () => {},
+      wallpaper: async () => {},
+      skybox: async () => {}
+    }
+    const programKeys: Array<keyof Omit<Workflow, 'background'>> = []
+    for (const program of buildSet) {
+      if (program in workflows) continue
+      if (program === 'glyph') programKeys.push('glyphFilter')
+      programKeys.push(program)
+    }
+    // actually import the programs
+    for (const key of programKeys) {
+      promises.push(new Promise((resolve, reject) => {
+        programCases[key]()
+          // @ts-expect-error - just ignore for now
+          .then(async ({ default: pModule }) => {
+            workflows[key] = await pModule(context)
+            if (key === 'wallpaper' || key === 'skybox') workflows.background = workflows[key]
+            resolve()
+          })
+          .catch((err: any) => { reject(err) })
+      }))
+    }
+    await Promise.allSettled(promises)
+    if (workflows.glyphFilter !== undefined && workflows.glyph !== undefined) {
+      // TODO:
+      // const glyph = workflows.glyph
+      // glyph.injectFilter(workflows.glyphFilter)
+    }
   }
 
   resize (width: number, height: number): void {
@@ -97,53 +162,16 @@ export default class Painter {
   useWorkflow (programName: WorkflowKey): Pipeline | undefined {
     const program = this.workflows[programName]
     if (program === undefined && programName !== 'background') throw new Error(`Program ${programName} not found`)
-    if (this.currProgram !== programName) {
-      this.currProgram = programName
-      program?.use()
-    } else { program?.flush() }
+    if (this.currPipeline !== programName) {
+      this.currPipeline = programName
+      // program?.use()
+    }
     return program
   }
 
   injectTimeCache (timeCache: TimeCache): void {
     this.workflows.sensor?.injectTimeCache(timeCache)
   }
-
-  // buildPipelines (buildSet: Set<PipelineType>) {
-  //   const { pipelines, context } = this
-  //   for (const pipeline of buildSet) {
-  //     switch (pipeline) {
-  //       case 'raster':
-  //         pipelines.raster = new RasterPipeline(context)
-  //         break
-  //       case 'fill':
-  //         pipelines.fill = new FillPipeline(context)
-  //         break
-  //       case 'line':
-  //         pipelines.line = new LinePipeline(context)
-  //         break
-  //       case 'point':
-  //         pipelines.point = new PointPipeline(context)
-  //         break
-  //       case 'heatmap':
-  //         pipelines.heatmap = new HeatmapPipeline(context)
-  //         break
-  //       case 'shade':
-  //         pipelines.shade = new ShadePipeline(context)
-  //         break
-  //       case 'glyph':
-  //         pipelines.glyphFilter = new GlyphFilterPipeline(context)
-  //         pipelines.glyph = new GlyphPipeline(context, pipelines.glyphFilter)
-  //         break
-  //       case 'wallpaper':
-  //         pipelines.wallpaper = new WallpaperPipeline(context)
-  //         break
-  //       case 'skybox':
-  //         pipelines.skybox = new SkyboxPipeline(context)
-  //         break
-  //       default: break
-  //     }
-  //   }
-  // }
 
   injectFrameUniforms (matrix: Float32Array, view: Float32Array, aspect: Float32Array): void {
   }
@@ -192,6 +220,7 @@ export default class Painter {
   // }
 
   paintHeatmap (features: HeatmapFeatureGuide[]): HeatmapFeatureGuide {
+    return features[0]
   }
 
   paintGlyphFilter (glyphFeatures: GlyphFeatureGuide[]): void {}

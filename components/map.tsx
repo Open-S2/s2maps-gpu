@@ -1,22 +1,22 @@
 /* MODULES */
 import React, { useEffect, useRef, useState } from 'react'
 
-import type { S2Map } from '../s2/index'
+import type { Ready, S2Map, StyleDefinition } from '../s2/index'
 import type { MapOptions } from '../s2/ui/s2mapUI'
 
 const { NEXT_PUBLIC_API_KEY } = process.env
-const { NEXT_PUBLIC_LOCATION } = process.env
 
 export interface MapProps {
-  style: Object
-  opts: MapOptions
-  ready: boolean
-  noAPIKey: boolean
-  mouseenter: (input: any) => void
-  mouseleave: (input: any) => void
+  style?: StyleDefinition
+  opts?: Omit<MapOptions, 'style'>
+  ready?: Ready
+  noAPIKey?: boolean
+  mouseenter?: (input?: unknown) => void
+  mouseleave?: (input?: unknown) => void
+  children?: React.ReactNode
 }
 
-function Map (props: any): JSX.Element {
+function Map (props: MapProps): JSX.Element {
   const s2map = useRef<S2Map>()
   const s2mapRef = useRef<HTMLDivElement>(null)
   const [height, setHeight] = useState(0)
@@ -55,33 +55,31 @@ function prepCanvas (
   props: MapProps
 ): void {
   // pull in properties
-  let { style, opts, ready, noAPIKey, mouseenter, mouseleave } = props
-  if (!opts) opts = {}
+  const { style, opts, ready, noAPIKey, mouseenter, mouseleave } = props
   // don't bother reloading without a style or container
-  if (!style || (container == null)) return
-
-  // replace website in sources
-  for (const source in style.sources) {
-    if (style.sources[source] && typeof style.sources[source] === 'string') style.sources[source] = style.sources[source].replace('{{s2maps}}', NEXT_PUBLIC_LOCATION)
-  }
+  if (style === undefined || (container == null)) return
 
   // build new map
   import('../s2/index').then(({ S2Map }) => {
     s2map.current = new S2Map({
-      ...opts,
+      ...(opts ?? {}),
       style,
-      apiKey: noAPIKey ? undefined : NEXT_PUBLIC_API_KEY,
+      apiKey: noAPIKey === true ? undefined : NEXT_PUBLIC_API_KEY,
       container,
-      projection: 'blend',
-      colorBlindController: (typeof opts.zoomController === 'boolean') ? opts.zoomController : true,
-      zoomController: (typeof opts.zoomController === 'boolean') ? opts.zoomController : true
+      // projection: 'blend',
+      // colorBlindController: (typeof opts.zoomController === 'boolean') ? opts.zoomController : true,
+      zoomController: opts?.zoomController
     }, ready)
     // assign events
     if (mouseenter !== undefined) {
-      s2map.current.addEventListener('mouseenter', (({ detail }: CustomEvent) => mouseenter(detail)) as EventListener)
+      s2map.current.addEventListener('mouseenter', (
+        ({ detail }: CustomEvent) => { mouseenter(detail) }) as EventListener
+      )
     }
     if (mouseleave !== undefined) {
-      s2map.current.addEventListener('mouseleave', (({ detail }: CustomEvent) => mouseleave(detail)) as EventListener)
+      s2map.current.addEventListener('mouseleave', (
+        ({ detail }: CustomEvent) => { mouseleave(detail) }) as EventListener
+      )
     }
   })
     .catch((err) => { throw err })

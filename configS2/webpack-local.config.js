@@ -34,6 +34,11 @@ module.exports = {
         test: /\.tsx?$/,
         use: 'ts-loader',
         exclude: /node_modules/
+      },
+      {
+        test: /\.wasm$/,
+        type: 'javascript/auto',
+        use: ['arraybuffer-loader']
       }
     ]
   },
@@ -50,9 +55,9 @@ module.exports = {
     })]
   },
   plugins: [
-    // new webpack.EnvironmentPlugin(['NEXT_PUBLIC_DEV', 'NEXT_PUBLIC_API_URL']),
+    // new webpack.EnvironmentPlugin(['CORS', 'NEXT_PUBLIC_API_URL']),
     new webpack.DefinePlugin({
-      'process.env.NEXT_PUBLIC_DEV': '1',
+      'process.env.CORS': '0',
       'process.env.NEXT_PUBLIC_API_URL': '\'http://192.168.0.113:8789/v1\''
     }),
     new webpack.BannerPlugin(`S2Maps GPU is Copyright © ${(new Date()).getFullYear()} S2Maps and subject to the S2 Maps Terms of Service (https://www.s2maps.io/tos/).`),

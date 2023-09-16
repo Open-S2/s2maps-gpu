@@ -1,5 +1,5 @@
-import type { Alignment, Anchor } from 's2/style/style.spec'
-import type { TileRequest } from 's2/workers/worker.spec'
+import type { Alignment, Anchor } from 'style/style.spec'
+import type { TileRequest } from 'workers/worker.spec'
 
 export interface Node {
   children: Node[]

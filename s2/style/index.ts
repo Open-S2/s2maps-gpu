@@ -9,12 +9,12 @@ import type {
   StyleDefinition,
   StylePackage
 } from './style.spec'
-import type { TileRequest } from 's2/workers/worker.spec'
-import type { WorkflowType as GLWorkflowType } from 's2/gl/programs/program.spec'
-import type { WorkflowType as GPUWorkflowType } from 's2/gpu/pipelines/pipeline.spec'
-import type Camera from 's2/ui/camera'
-import type { MapOptions } from 's2/ui/s2mapUI'
-import type { Tile } from 's2/source/tile.spec'
+import type { TileRequest } from 'workers/worker.spec'
+import type { WorkflowType as GLWorkflowType } from 'gl/programs/program.spec'
+import type { WorkflowType as GPUWorkflowType } from 'gpu/pipelines/pipeline.spec'
+import type Camera from 'ui/camera'
+import type { MapOptions } from 'ui/s2mapUI'
+import type { Tile } from 'source/tile.spec'
 
 // PRE) If style is a string (url), ship it off to Source Worker to fetch the style
 // 1) Build programs necessary to render the style

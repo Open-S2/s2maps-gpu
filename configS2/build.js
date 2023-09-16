@@ -1,7 +1,7 @@
 // setup env variables
 process.env.BABEL_ENV = 'production'
 process.env.NODE_ENV = 'production'
-process.env.NEXT_PUBLIC_DEV = 0
+process.env.CORS = 1
 process.env.NEXT_PUBLIC_API_URL = 'https://api.s2maps.io/v1'
 // grab components
 const fs = require('fs')
@@ -54,7 +54,8 @@ Promise.all([
   build(jsDevCompiler),
   build(jsLocalCompiler)
 ])
-  .then(res => {
+  .catch((err) => { console.log('Failed to build', err) })
+  .finally(res => {
     getFileSizes()
     // copy css
     fs.copyFileSync('./buildS2/s2maps-gpu.min.css', './buildS2-local/s2maps-gpu.min.css')
@@ -66,7 +67,6 @@ Promise.all([
     // store('../s2maps.dev/public/s2maps-gpu', './buildS2-local', `${VERSION}-local`)
     // store('../s2maps.dev/public/s2maps-gpu', './buildS2-dev', VERSION)
   })
-  .catch((err) => { console.log('Failed to build', err) })
 
 function removeDir (path) {
   if (fs.existsSync(path)) {

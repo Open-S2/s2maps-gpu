@@ -1,4 +1,4 @@
-import Color from 's2/style/color'
+import Color from 'style/color'
 
 // WEBGL1
 import vert1 from '../shaders/wallpaper1.vertex.glsl'
@@ -8,10 +8,10 @@ import vert2 from '../shaders/wallpaper2.vertex.glsl'
 import frag2 from '../shaders/wallpaper2.fragment.glsl'
 
 import type { Context } from '../contexts/context.spec'
-import type Projector from 's2/ui/camera/projector'
+import type Projector from 'ui/camera/projector'
 import type { WallpaperProgram as WallpaperProgramSpec, WallpaperProgramUniforms } from './program.spec'
-import type { StyleDefinition } from 's2/style/style.spec'
-import type { ColorBlindAdjust } from 's2/style/color/colorBlindAdjust'
+import type { StyleDefinition } from 'style/style.spec'
+import type { ColorBlindAdjust } from 'style/color/colorBlindAdjust'
 
 export interface Scheme {
   background: Color

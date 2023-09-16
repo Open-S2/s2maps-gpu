@@ -1,4 +1,4 @@
-import Color from 's2/style/color'
+import Color from './color'
 
 // CONDITION ENCODINGS: 128 positions possible
 // 0 -> null

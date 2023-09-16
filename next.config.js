@@ -2,7 +2,7 @@
 module.exports = {
   // NOTE: Do not use CORS for online testing. Maybe remove this later.
   env: {
-    NEXT_PUBLIC_DEV: '1'
+    CORS: '0'
   },
   swcMinify: false,
   reactStrictMode: false,
@@ -13,6 +13,7 @@ module.exports = {
     tsconfigPath: './tsconfig.next.json'
   },
   webpack: (config, options) => {
+    config.externals.push('bun:sqlite')
     // glsl
     config.module.rules.push({
       test: /\.glsl$/,
@@ -25,14 +26,9 @@ module.exports = {
     })
     // wgsl
     config.module.rules.push({
-      test: /\.wgsl$/,
-      use: ['@use-gpu/wgsl-loader']
+      test: /\.wgsl$/i,
+      use: 'raw-loader'
     })
-    // wglsl old
-    // config.module.rules.push({
-    //   test: /\.wgsl$/i,
-    //   use: 'raw-loader'
-    // })
     // svg
     config.module.rules.push({
       test: /\.svg$/,

@@ -1,6 +1,6 @@
 /** TYPES **/
 import type { JSONTile, JSONVectorTile } from './tile'
-import type { Point } from 's2-vector-tile/dist/vectorTile.spec'
+import type { Point } from 'geometry'
 // Transforms the coordinates of each feature in the given tile from
 // uv-projected space into (extent x extent) tile space.
 export default function transformTile (tile: JSONTile, extent: number): JSONVectorTile {

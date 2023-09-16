@@ -1,4 +1,4 @@
-import encodeLayerAttribute from './util/encodeLayerAttribute'
+import encodeLayerAttribute from 'style/encodeLayerAttribute'
 
 // WEBGL1
 import vert1 from '../shaders/point1.vertex.glsl'
@@ -8,15 +8,15 @@ import vert2 from '../shaders/point2.vertex.glsl'
 import frag2 from '../shaders/point2.fragment.glsl'
 
 import type { Context, PointFeatureGuide, PointSource } from '../contexts/context.spec'
-import type { PointData } from 's2/workers/worker.spec'
-import type { TileGL as Tile } from 's2/source/tile.spec'
+import type { PointData } from 'workers/worker.spec'
+import type { TileGL as Tile } from 'source/tile.spec'
 import type {
   LayerDefinitionBase,
   LayerStyle,
   PointLayerDefinition,
   PointLayerStyle,
   PointWorkflowLayerGuide
-} from 's2/style/style.spec'
+} from 'style/style.spec'
 import type { PointProgram as PointProgramSpec, PointProgramUniforms } from './program.spec'
 
 export default async function pointProgram (context: Context): Promise<PointProgramSpec> {

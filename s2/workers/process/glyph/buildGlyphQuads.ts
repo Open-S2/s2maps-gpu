@@ -1,4 +1,4 @@
-import type { Alignment, Anchor } from 's2/style/style.spec'
+import type { Alignment, Anchor } from 'style/style.spec'
 import type { GlyphMap, GlyphObject } from './glyph.spec'
 
 // [s, t, xOffset, yOffset, xPos, yPos, width, height, texX, texY, texWidth, texHeight, id]

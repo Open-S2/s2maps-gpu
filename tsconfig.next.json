@@ -7,29 +7,26 @@
       "esnext",
       "WebWorker"
     ],
+    "jsx": "preserve",
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
-    "noEmit": false,
+    "noEmit": true,
     "module": "esnext",
     "moduleResolution": "Bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "preserve",
     "incremental": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    // "types": [
-    //   "@webgpu/types",
-    //   "bun-types"
-    // ],
-    "typeRoots": [
+    "typeRoots": [ /* Specify multiple folders that act like `./node_modules/@types`. */
+      "./node_modules/@webgpu/types",
       "./node_modules/@types"
     ],
     "baseUrl": ".",
     "paths": {    
-      "*" : ["./*"],
+      "*" : ["./*", "./s2/*"],
       "@s2/*": ["./s2/*"],
       "@assets/*": ["./assets/*"],
       "@components/*": ["./components/*"],

@@ -2,6 +2,7 @@ const webpack = require('webpack')
 const path = require('path')
 const { version } = require('../package.json')
 
+const { WebpackStatsViewerPlugin } = require('webpack-stats-viewer-plugin')
 const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin')
 const CompressionPlugin = require('compression-webpack-plugin')
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin
@@ -25,10 +26,6 @@ module.exports = {
     // module chunks which are built will work in web workers as well.
     globalObject: 'this'
   },
-  // 'type: "webassembly/async"'
-  // experiments: {
-  //   asyncWebAssembly: true
-  // },
   context: path.join(__dirname, '/../public'),
   module: {
     rules: [
@@ -51,8 +48,6 @@ module.exports = {
       },
       {
         test: /\.wasm$/,
-        // type: 'asset/inline',
-        // use: 'raw-loader'
         type: 'javascript/auto',
         use: ['arraybuffer-loader']
       }
@@ -72,7 +67,7 @@ module.exports = {
     })]
   },
   plugins: [
-    new webpack.EnvironmentPlugin(['NEXT_PUBLIC_DEV', 'NEXT_PUBLIC_API_URL']),
+    new webpack.EnvironmentPlugin(['CORS', 'NEXT_PUBLIC_API_URL']),
     new webpack.BannerPlugin(`S2Maps GPU is Copyright © ${(new Date()).getFullYear()} S2Maps and subject to the S2 Maps Terms of Service (https://www.s2maps.io/tos/).`),
     new webpack.ProgressPlugin(),
     new CorsWorkerPlugin(),
@@ -91,6 +86,7 @@ module.exports = {
       threshold: 0,
       minRatio: 1
     }),
+    new WebpackStatsViewerPlugin(),
     new BundleAnalyzerPlugin({ analyzerMode: 'static', generateStatsFile: true, statsFilename: 'bundle-stat.json' })
   ]
 }

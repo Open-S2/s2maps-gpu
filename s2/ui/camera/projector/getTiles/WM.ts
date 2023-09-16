@@ -1,7 +1,7 @@
 import { project } from '../mat4'
-import { llToTile, llToTilePx, neighborsXY, toID } from 's2/geometry/webMerc'
+import { llToTile, llToTilePx, neighborsXY, toID } from 'geometry/webMerc'
 
-import type { XYZ } from 's2/geometry'
+import type { XYZ } from 'geometry'
 import type Projector from '../'
 
 // Due to the nature of the Web Mercator design, it's easiest to store an MVP matrix for each tile

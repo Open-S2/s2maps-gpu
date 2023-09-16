@@ -1,7 +1,7 @@
 /* eslint-env browser */
 
-import type { Properties } from 's2/geometry/proj.spec'
-import type { FilterFunction } from 's2/style/parseFilter'
+import type { Properties } from 'geometry/proj.spec'
+import type { FilterFunction } from 'style/parseFilter'
 
 /** SOURCES **/
 export type Format = 'zxy' | 'tzxy' | 'fzxy' | 'tfzxy'
@@ -578,7 +578,7 @@ export interface StyleDefinition {
   name?: string
   projection?: Projection
   description?: string
-  center?: [number, number]
+  center?: [number, number] | number[]
   zoom?: number
   zNear?: number
   zFar?: number

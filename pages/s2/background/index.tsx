@@ -7,7 +7,6 @@ import Map from '../../../components/map'
 // import styles from '../../styles/Countries.module.css'
 import style from './style.json'
 
-import type { NextPage } from 'next'
 import type { S2Map } from '../../../s2'
 
 function ready (s2map: S2Map): void {
@@ -20,7 +19,7 @@ function ready (s2map: S2Map): void {
 
 }
 
-const Cloudflare: NextPage = () => {
+export default function Background (): React.JSX.Element {
   return (
     <div className='pages'>
       <Map
@@ -32,5 +31,3 @@ const Cloudflare: NextPage = () => {
     </div>
   )
 }
-
-export default Cloudflare

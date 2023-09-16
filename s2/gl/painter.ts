@@ -3,11 +3,11 @@
 import { WebGL2Context, WebGLContext } from './contexts'
 /** SOURCES **/
 import type { Painter as PainterSpec } from './painter.spec'
-import type { TileGL as Tile } from 's2/source/tile.spec'
+import type { TileGL as Tile } from 'source/tile.spec'
 
-import type { MapOptions } from 's2/ui/s2mapUI'
-import type Projector from 's2/ui/camera/projector'
-import type TimeCache from 's2/ui/camera/timeCache'
+import type { MapOptions } from 'ui/s2mapUI'
+import type Projector from 'ui/camera/projector'
+import type TimeCache from 'ui/camera/timeCache'
 import type { FeatureGuide, GlyphFeatureGuide, HeatmapFeatureGuide } from './contexts/context.spec'
 import type {
   FillProgram,
@@ -26,9 +26,18 @@ import type {
   WorkflowKey,
   WorkflowType
 } from './programs/program.spec'
-import type { GlyphImages } from 's2/workers/source/glyphSource'
+import type { GlyphImages } from 'workers/source/glyphSource'
 import type { ColorMode } from '../s2Map'
-import type { PainterData } from 's2/workers/worker.spec'
+import type {
+  FillData,
+  GlyphData,
+  HeatmapData,
+  LineData,
+  PainterData,
+  PointData,
+  RasterData,
+  SensorData
+} from 'workers/worker.spec'
 
 export default class Painter implements PainterSpec {
   context: WebGL2Context | WebGLContext
@@ -51,6 +60,13 @@ export default class Painter implements PainterSpec {
     context.delete()
   }
 
+  buildFeatureData (tile: Tile, data: FillData): void
+  buildFeatureData (tile: Tile, data: HeatmapData): void
+  buildFeatureData (tile: Tile, data: RasterData): void
+  buildFeatureData (tile: Tile, data: LineData): void
+  buildFeatureData (tile: Tile, data: SensorData): void
+  buildFeatureData (tile: Tile, data: PointData): void
+  buildFeatureData (tile: Tile, data: GlyphData): void
   buildFeatureData (tile: Tile, data: PainterData): void {
     this.workflows[data.type]?.buildSource(data as any, tile)
   }
@@ -58,100 +74,42 @@ export default class Painter implements PainterSpec {
   async buildWorkflows (buildSet: Set<WorkflowType>): Promise<void> {
     const { workflows, context } = this
     const promises: Array<Promise<void>> = []
+    const programCases: {
+      [key in keyof Omit<Workflow, 'background'>]: any
+    } = {
+      fill: async () => { return await import('./programs/fillProgram') },
+      raster: async () => { return await import('./programs/rasterProgram') },
+      sensor: async () => { return await import('./programs/sensorProgram') },
+      line: async () => { return await import('./programs/lineProgram') },
+      point: async () => { return await import('./programs/pointProgram') },
+      heatmap: async () => { return await import('./programs/heatmapProgram') },
+      shade: async () => { return await import('./programs/shadeProgram') },
+      glyph: async () => { return await import('./programs/glyphProgram') },
+      glyphFilter: async () => { return await import('./programs/glyphFilterProgram') },
+      wallpaper: async () => { return await import('./programs/wallpaperProgram') },
+      skybox: async () => { return await import('./programs/skyboxProgram') }
+    }
+    const programKeys: Array<keyof Omit<Workflow, 'background'>> = []
     for (const program of buildSet) {
       if (program in workflows) continue
-      // TODO: Adjust all the others to how fill is done
-      switch (program) {
-        case 'fill':
-          promises.push(new Promise((resolve, reject) => {
-            import('./programs/fillProgram')
-              .then(async ({ default: fillProgram }) => {
-                workflows.fill = await fillProgram(context)
-                resolve()
-              })
-              .catch(err => { reject(err) })
-          }))
-          break
-        case 'raster':
-          promises.push(new Promise(resolve => {
-            import('./programs/rasterProgram')
-              .then(async ({ default: rasterProgram }) => { workflows.raster = await rasterProgram(context) })
-              .catch(err => { console.error(err) })
-              .finally(() => { resolve() })
-          }))
-          break
-        case 'sensor':
-          promises.push(new Promise(resolve => {
-            import('./programs/sensorProgram')
-              .then(async ({ default: sensorProgram }) => { workflows.sensor = await sensorProgram(context) })
-              .catch(err => { console.error(err) })
-              .finally(() => { resolve() })
-          }))
-          break
-        case 'line':
-          promises.push(new Promise(resolve => {
-            import('./programs/lineProgram')
-              .then(async ({ default: lineProgram }) => { workflows.line = await lineProgram(context) })
-              .catch(err => { console.error(err) })
-              .finally(() => { resolve() })
-          }))
-          break
-        case 'point':
-          promises.push(new Promise(resolve => {
-            import('./programs/pointProgram')
-              .then(async ({ default: pointProgram }) => { workflows.point = await pointProgram(context) })
-              .catch(err => { console.error(err) })
-              .finally(() => { resolve() })
-          }))
-          break
-        case 'heatmap':
-          promises.push(new Promise(resolve => {
-            import('./programs/heatmapProgram')
-              .then(async ({ default: heatmapProgram }) => { workflows.heatmap = await heatmapProgram(context) })
-              .catch(err => { console.error(err) })
-              .finally(() => { resolve() })
-          }))
-          break
-        case 'shade':
-          promises.push(new Promise(resolve => {
-            import('./programs/shadeProgram')
-              .then(async ({ default: shadeProgram }) => { workflows.shade = await shadeProgram(context) })
-              .catch(err => { console.error(err) })
-              .finally(() => { resolve() })
-          }))
-          break
-        case 'glyph':
-          promises.push(new Promise(resolve => {
-            import('./programs/glyphProgram')
-              .then(async ({ default: glyphProgram }) => { workflows.glyph = await glyphProgram(context) })
-              .catch(err => { console.error(err) })
-              .finally(() => { resolve() })
-          }))
-          promises.push(new Promise(resolve => {
-            import('./programs/glyphFilterProgram')
-              .then(async ({ default: glyphFilterProgram }) => { workflows.glyphFilter = await glyphFilterProgram(context) })
-              .catch(err => { console.error(err) })
-              .finally(() => { resolve() })
-          }))
-          break
-        case 'wallpaper':
-          promises.push(new Promise(resolve => {
-            import('./programs/wallpaperProgram')
-              .then(async ({ default: wallpaperProgram }) => { workflows.background = await wallpaperProgram(context) })
-              .catch(err => { console.error(err) })
-              .finally(() => { resolve() })
-          }))
-          break
-        case 'skybox':
-          promises.push(new Promise(resolve => {
-            import('./programs/skyboxProgram')
-              .then(async ({ default: skyboxProgram }) => { workflows.background = await skyboxProgram(context) })
-              .catch(err => { console.error(err) })
-              .finally(() => { resolve() })
-          }))
-          break
-        default: break
-      }
+      if (program === 'glyph') programKeys.push('glyphFilter')
+      programKeys.push(program)
+    }
+    // actually import the programs
+    for (const key of programKeys) {
+      promises.push(new Promise((resolve, reject) => {
+        programCases[key]()
+          // @ts-expect-error - just ignore for now
+          .then(async ({ default: pModule }) => {
+            workflows[key] = await pModule(context)
+            if (key === 'wallpaper' || key === 'skybox') workflows.background = workflows[key]
+            resolve()
+          })
+          .catch((err: any) => {
+            console.log('FAILED', err)
+            reject(err)
+          })
+      }))
     }
     await Promise.allSettled(promises)
     if (workflows.glyphFilter !== undefined && workflows.glyph !== undefined) {

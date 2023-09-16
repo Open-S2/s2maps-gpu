@@ -2,16 +2,16 @@ import type {
   Context as ContextGL,
   FeatureGuide as FeatureGuideGL,
   MaskSource as MaskSourceGL
-} from 's2/gl/contexts/context.spec'
+} from 'gl/contexts/context.spec'
 import type {
   Context as ContextGPU,
   FeatureGuide as FeatureGuideGPU,
   MaskSource as MaskSourceGPU
-} from 's2/gpu/context/context.spec'
-import type { BBox, Face, XYZ } from 's2/geometry'
-import type { FlushData, InteractiveObject } from 's2/workers/worker.spec'
-import type { LayerDefinition } from 's2/style/style.spec'
-import type Projector from 's2/ui/camera/projector'
+} from 'gpu/context/context.spec'
+import type { BBox, Face, XYZ } from 'geometry'
+import type { FlushData, InteractiveObject } from 'workers/worker.spec'
+import type { LayerDefinition } from 'style/style.spec'
+import type Projector from 'ui/camera/projector'
 
 export interface Corners {
   topLeft: XYZ
