@@ -1,4 +1,4 @@
-import encodeLayerAttribute from './util/encodeLayerAttribute'
+import encodeLayerAttribute from 'style/encodeLayerAttribute'
 
 // WEBGL1
 import vert1 from '../shaders/glyph1.vertex.glsl'
@@ -8,16 +8,16 @@ import vert2 from '../shaders/glyph2.vertex.glsl'
 import frag2 from '../shaders/glyph2.fragment.glsl'
 
 import type { Context, GlyphFeatureGuide, GlyphSource } from '../contexts/context.spec'
-import type { GlyphImages } from 's2/workers/source/glyphSource'
+import type { GlyphImages } from 'workers/source/glyphSource'
 import type {
   GlyphLayerDefinition,
   GlyphLayerStyle,
   GlyphWorkflowLayerGuide,
   LayerDefinitionBase,
   LayerStyle
-} from 's2/style/style.spec'
-import type { GlyphData } from 's2/workers/worker.spec'
-import type { TileGL as Tile } from 's2/source/tile.spec'
+} from 'style/style.spec'
+import type { GlyphData } from 'workers/worker.spec'
+import type { TileGL as Tile } from 'source/tile.spec'
 import type {
   FBO,
   GlyphFilterProgram,

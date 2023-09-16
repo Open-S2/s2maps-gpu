@@ -2,7 +2,7 @@
 import VectorWorker, { colorFunc, idToRGB } from './vectorWorker'
 import { earclip } from 'earclip'
 import { featureSort, scaleShiftClip } from './util'
-import parseFilter from 's2/style/parseFilter'
+import parseFilter from 'style/parseFilter'
 
 import type {
   S2VectorGeometry,
@@ -13,7 +13,7 @@ import type { TileRequest } from '../worker.spec'
 import type {
   FillLayerDefinition,
   FillWorkerLayer
-} from 's2/style/style.spec'
+} from 'style/style.spec'
 import type {
   FillFeature,
   FillWorker as FillWorkerSpec,

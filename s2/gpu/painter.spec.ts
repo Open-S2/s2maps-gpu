@@ -1,10 +1,38 @@
-// @ts-nocheck
-import type { WebGPUContext } from './context'
-import type { FillPipeline, GlyphFilterPipeline, GlyphPipeline, HeatmapPipeline, LinePipeline, PointPipeline, RasterPipeline, SensorPipeline, ShadePipeline, SkyboxPipeline, WallpaperPipeline, Workflow, WorkflowKey, WorkflowType } from './pipelines/pipeline.spec'
-import type { TileGPU as Tile } from 's2/source/tile.spec'
-import type { FillData, GlyphData, HeatmapData, LineData, PointData, RasterData, SensorData } from 's2/workers/worker.spec'
-import type { GlyphImages } from 's2/workers/source/glyphSource'
-import type Projector from 's2/ui/camera/projector'
+import type {
+  FeatureGuide,
+  GlyphFeatureGuide,
+  HeatmapFeatureGuide,
+  WebGPUContext
+} from './context'
+import type {
+  FillPipeline,
+  GlyphFilterPipeline,
+  GlyphPipeline,
+  HeatmapPipeline,
+  LinePipeline,
+  PointPipeline,
+  RasterPipeline,
+  SensorPipeline,
+  ShadePipeline,
+  SkyboxPipeline,
+  WallpaperPipeline,
+  Workflow,
+  WorkflowKey,
+  WorkflowType
+} from './pipelines/pipeline.spec'
+import type { TileGPU as Tile } from 'source/tile.spec'
+import type {
+  // FillData,
+  // GlyphData,
+  // HeatmapData,
+  // LineData,
+  PainterData
+  // PointData,
+  // RasterData,
+  // SensorData
+} from 'workers/worker.spec'
+import type { GlyphImages } from 'workers/source/glyphSource'
+import type Projector from 'ui/camera/projector'
 
 export interface Painter {
   context: WebGPUContext
@@ -12,15 +40,16 @@ export interface Painter {
   dirty: boolean
   currProgram?: WorkflowKey
 
-  buildFeatureData: (
-    ((tile: Tile, data: FillData) => void) &
-    ((tile: Tile, data: GlyphData) => void) &
-    ((tile: Tile, data: HeatmapData) => void) &
-    ((tile: Tile, data: LineData) => void) &
-    ((tile: Tile, data: PointData) => void) &
-    ((tile: Tile, data: RasterData) => void) &
-    ((tile: Tile, data: SensorData) => void)
-  )
+  buildFeatureData: (tile: Tile, data: PainterData) => void
+  // buildFeatureData: (
+  //   ((tile: Tile, data: FillData) => void) &
+  //   ((tile: Tile, data: GlyphData) => void) &
+  //   ((tile: Tile, data: HeatmapData) => void) &
+  //   ((tile: Tile, data: LineData) => void) &
+  //   ((tile: Tile, data: PointData) => void) &
+  //   ((tile: Tile, data: RasterData) => void) &
+  //   ((tile: Tile, data: SensorData) => void)
+  // )
   useWorkflow: (
     ((programName: 'fill') => FillPipeline | undefined) &
     ((programName: 'glyph') => GlyphPipeline | undefined) &
@@ -31,6 +60,8 @@ export interface Painter {
     ((programName: 'sensor') => SensorPipeline | undefined) &
     ((programName: 'shade') => ShadePipeline | undefined) &
     ((programName: 'glyphFilter') => GlyphFilterPipeline | undefined) &
+    ((programName: 'wallpaper') => WallpaperPipeline | undefined) &
+    ((programName: 'skybox') => SkyboxPipeline | undefined) &
     ((programName: 'background') => WallpaperPipeline | SkyboxPipeline | undefined)
   )
   buildWorkflows: (buildSet: Set<WorkflowType>) => Promise<void>

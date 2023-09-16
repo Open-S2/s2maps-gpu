@@ -15,7 +15,7 @@ import type {
   StylePackage,
   VectorWorkerLayer,
   WorkerLayer
-} from 's2/style/style.spec'
+} from 'style/style.spec'
 import type { JSONVectorTile } from '../source/json-vt/tile'
 import type { IDGen, Workers } from './process.spec'
 import type { ColorMap as ColorMapResponse, IconMap as IconMapResponse } from '../source/glyphSource'

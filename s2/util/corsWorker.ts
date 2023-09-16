@@ -1,13 +1,13 @@
 /* eslint-env browser */
 declare const process: {
   env: {
-    NEXT_PUBLIC_DEV: string
+    CORS: string
   }
 }
 
 export class CorsWorker extends Worker {
   constructor (url: URL, options?: { name: string, type: 'module' }) {
-    if (+process.env.NEXT_PUBLIC_DEV === 1) {
+    if (+process.env.CORS !== 1) {
       super(url, options)
     } else {
       const webpackWorkerOrigin = `__webpack_worker_origin__ = ${JSON.stringify(

@@ -2,7 +2,7 @@
 import VectorWorker, { type CodeDesign, colorFunc, idToRGB } from './vectorWorker'
 import { drawLine, featureSort, parseFeatureFunction } from './util'
 import scaleShiftClip from './util/scaleShiftClip'
-import parseFilter from 's2/style/parseFilter'
+import parseFilter from 'style/parseFilter'
 
 import type {
   S2VectorLines,
@@ -15,7 +15,7 @@ import type {
   Join,
   LineLayerDefinition,
   LineWorkerLayer
-} from 's2/style/style.spec'
+} from 'style/style.spec'
 import type {
   LineFeature,
   LineWorker as LineWorkerSpec,

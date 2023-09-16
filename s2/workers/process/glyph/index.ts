@@ -7,8 +7,8 @@ import featureSort from '../util/featureSort'
 import buildGlyphQuads, { QUAD_SIZE } from './buildGlyphQuads'
 import RTree from './rtree'
 import { parseFeatureFunction, scaleShiftClip } from '../util'
-import coalesceField from 's2/style/coalesceField'
-import parseFilter from 's2/style/parseFilter'
+import coalesceField from 'style/coalesceField'
+import parseFilter from 'style/parseFilter'
 
 import type {
   ColorMap,
@@ -21,10 +21,10 @@ import type {
   IconMap,
   Unicode
 } from './glyph.spec'
-import type { ColorMap as ColorMapResponse, IconMap as IconMapResponse } from 's2/workers/source/glyphSource'
-import type { GlyphData, GlyphRequestMessage, TileRequest } from 's2/workers/worker.spec'
+import type { ColorMap as ColorMapResponse, IconMap as IconMapResponse } from 'workers/source/glyphSource'
+import type { GlyphData, GlyphRequestMessage, TileRequest } from 'workers/worker.spec'
 import type { GlyphFeature, GlyphWorker as GlyphWorkerSpec, IDGen, VTFeature } from '../process.spec'
-import type { Alignment, Anchor, GPUType, GlyphLayerDefinition, GlyphWorkerLayer } from 's2/style/style.spec'
+import type { Alignment, Anchor, GPUType, GlyphLayerDefinition, GlyphWorkerLayer } from 'style/style.spec'
 import type { CodeDesign } from '../vectorWorker'
 import type { S2VectorPoints } from 's2-vector-tile'
 

@@ -1,9 +1,9 @@
 /* eslint-env worker */
 import { VectorTile } from 's2-vector-tile'
-// import { parseLayers } from 's2/style/conditionals'
+// import { parseLayers } style/conditionals'
 import ProcessManager from './process'
 
-import type { LayerDefinition, StylePackage } from 's2/style/style.spec'
+import type { LayerDefinition, StylePackage } from 'style/style.spec'
 import type { TileRequest, TileWorkerMessages } from './worker.spec'
 import type { JSONVectorTile } from './source/json-vt/tile'
 

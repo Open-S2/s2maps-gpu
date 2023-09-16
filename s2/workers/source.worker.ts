@@ -20,7 +20,7 @@ import type {
   Sources,
   StylePackage,
   Source as StyleSource
-} from 's2/style/style.spec'
+} from 'style/style.spec'
 import type { MarkerDefinition } from './source/markerSource'
 import type { SourceWorkerMessages, TileRequest } from './worker.spec'
 

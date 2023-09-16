@@ -1,24 +1,24 @@
 /* eslint-env browser */
-import { project } from 's2/ui/camera/projector/mat4'
-import { bboxST } from 's2/geometry/s2/s2Coords'
-import { fromID, llToTilePx } from 's2/geometry/webMerc'
-import { fromSTGL, mul, normalize } from 's2/geometry/s2/s2Point'
-import { level, toIJ } from 's2/geometry/s2/s2CellID'
+import { project } from 'ui/camera/projector/mat4'
+import { bboxST } from 'geometry/s2/s2Coords'
+import { fromID, llToTilePx } from 'geometry/webMerc'
+import { fromSTGL, mul, normalize } from 'geometry/s2/s2Point'
+import { level, toIJ } from 'geometry/s2/s2CellID'
 
 import type {
   Context as ContextGL,
   FeatureGuide as FeatureGuideGL,
   MaskSource as MaskSourceGL
-} from 's2/gl/contexts/context.spec'
+} from 'gl/contexts/context.spec'
 import type {
   Context as ContextGPU,
   FeatureGuide as FeatureGuideGPU,
   MaskSource as MaskSourceGPU
-} from 's2/gpu/context/context.spec'
-import type Projector from 's2/ui/camera/projector'
-import type { BBox, Face, XYZ } from 's2/geometry'
-import type { FlushData, InteractiveObject } from 's2/workers/worker.spec'
-import type { LayerDefinition, Projection } from 's2/style/style.spec'
+} from 'gpu/context/context.spec'
+import type Projector from 'ui/camera/projector'
+import type { BBox, Face, XYZ } from 'geometry'
+import type { FlushData, InteractiveObject } from 'workers/worker.spec'
+import type { LayerDefinition, Projection } from 'style/style.spec'
 import type {
   Bottom,
   Corners,

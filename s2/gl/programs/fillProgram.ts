@@ -1,6 +1,6 @@
-import encodeLayerAttribute from './util/encodeLayerAttribute'
-import { colorFunc } from 's2/workers/process/vectorWorker'
-import { parseFeatureFunction } from 's2/workers/process/util'
+import encodeLayerAttribute from 'style/encodeLayerAttribute'
+import { colorFunc } from 'workers/process/vectorWorker'
+import { parseFeatureFunction } from 'workers/process/util'
 
 // WEBGL1
 import vert1 from '../shaders/fill1.vertex.glsl'
@@ -11,15 +11,15 @@ import frag2 from '../shaders/fill2.fragment.glsl'
 
 import type { Context, FillFeatureGuide, FillSource, MaskSource } from '../contexts/context.spec'
 import type { FillProgram as FillProgramSpec, FillProgramUniforms } from './program.spec'
-import type { FillData } from 's2/workers/worker.spec'
-import type { TileGL as Tile } from 's2/source/tile.spec'
+import type { FillData } from 'workers/worker.spec'
+import type { TileGL as Tile } from 'source/tile.spec'
 import type {
   FillLayerDefinition,
   FillLayerStyle,
   FillWorkflowLayerGuide,
   LayerDefinitionBase,
   LayerStyle
-} from 's2/style/style.spec'
+} from 'style/style.spec'
 
 export default async function fillProgram (context: Context): Promise<FillProgramSpec> {
   const Program = await import('./program').then(m => m.default)

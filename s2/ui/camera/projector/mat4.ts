@@ -1,4 +1,4 @@
-import type { XYZ } from 's2/geometry'
+import type { XYZ } from 'geometry'
 
 export function create (): Float32Array {
   const m = new Float32Array(16)

@@ -18,7 +18,7 @@ import type {
 
 export type ColorMode = 0 | 1 | 2 | 3
 
-type Ready = (s2map: S2Map) => void
+export type Ready = (s2map: S2Map) => void
 
 declare global {
   interface Window { S2Map: typeof S2Map }
@@ -26,7 +26,7 @@ declare global {
 
 // S2Map is called by the user and includes the API to interact with the mapping engine
 export default class S2Map extends EventTarget {
-  #container: HTMLElement
+  #container?: HTMLElement
   #canvasContainer!: HTMLElement
   #navigationContainer!: HTMLElement
   #canvasMultiplier: number
@@ -53,20 +53,24 @@ export default class S2Map extends EventTarget {
   ) {
     super()
     options.canvasMultiplier = this.#canvasMultiplier = Math.max(2, options.canvasMultiplier ?? 2)
-    // get the container
-    if (typeof options.container === 'string') {
-      const container = window.document.getElementById(options.container)
-      if (container === null) throw new Error('Container not found.')
-      this.#container = container
-    } else if (options.container instanceof HTMLElement) {
-      this.#container = options.container
-    } else { throw new Error('Invalid type: "container" must be a String or HTMLElement.') }
+    // get the container if we don't already have a canvas instance
+    if (options.canvas === undefined) {
+      if (typeof options.container === 'string') {
+        const container = window.document.getElementById(options.container)
+        if (container === null) throw new Error('Container not found.')
+        this.#container = container
+      } else if (options.container instanceof HTMLElement) {
+        this.#container = options.container
+      } else if (options.canvas === undefined) {
+        throw new Error('Invalid type: "container" must be a String or HTMLElement.')
+      }
+    }
     // we now remove container from options for potential webworker
     delete options.container
     // prep container, creating the canvas
-    const canvas = this._canvas = this.#setupContainer(options)
+    this._canvas = options.canvas ?? this.#setupContainer(options)
     // create map via a webworker if possible, otherwise just load it in directly
-    void this.#setupCanvas(canvas, options)
+    void this.#setupCanvas(this._canvas, options)
     // store ready for later use
     this.#ready = ready
   }
@@ -80,6 +84,7 @@ export default class S2Map extends EventTarget {
   /* BUILD */
 
   #setupContainer (options: MapOptions): HTMLCanvasElement {
+    if (this.#container === undefined) throw new Error('Container not found.')
     // prep container
     const container = this.#container
     container.classList.add('s2-map')
@@ -102,10 +107,11 @@ export default class S2Map extends EventTarget {
   }
 
   async #setupCanvas (canvas: HTMLCanvasElement, options: MapOptions): Promise<void> {
+    const isBrowser = options.canvas === undefined
     // prep the ready function should it exist
     // prep webgpu/webgl type
-    let tmpContext: WebGLRenderingContext | null = null
-    if (options.contextType === undefined) {
+    let tmpContext: RenderingContext | null = null
+    if (isBrowser && options.contextType === undefined) {
       const tryContext = (name: 'webgl' | 'experimental-webgl' | 'webgl2'): boolean => {
         tmpContext = document.createElement('canvas').getContext(name)
         return tmpContext !== null
@@ -119,10 +125,10 @@ export default class S2Map extends EventTarget {
       options.contextType = tryContext('webgl2') ? 2 : 1
     }
     // @ts-expect-error - if webgl2 context was found, lose the context
-    if (options.contextType === 2) tmpContext?.getExtension('WEBGL_lose_context').loseContext()
+    if (isBrowser && options.contextType === 2) tmpContext?.getExtension('WEBGL_lose_context').loseContext()
     // if browser supports it, create an instance of the mapWorker
     // TODO: Maybe there is a way to get offscreencanvas to work on safari but for now not worth
-    if (!isSafari && typeof canvas.transferControlToOffscreen === 'function') {
+    if (options.offscreen !== false && !isSafari && typeof canvas.transferControlToOffscreen === 'function') {
       const offscreenCanvas = canvas.transferControlToOffscreen()
       const mapWorker = this.offscreen = new Worker(new URL('./workers/map.worker', import.meta.url), { name: 'map-worker', type: 'module' })
       mapWorker.onmessage = this.#mapMessage.bind(this)
@@ -189,7 +195,7 @@ export default class S2Map extends EventTarget {
       }
       attribution.appendChild(info)
       attribution.appendChild(popup)
-      this.#container.appendChild(attribution)
+      this.#container?.appendChild(attribution)
     }
     // if zoom or compass controllers, add
     if (controls !== false) {
@@ -199,7 +205,7 @@ export default class S2Map extends EventTarget {
       const navigationContainer = this.#navigationContainer = window.document.createElement('div')
       navigationContainer.className = 's2-nav-container'
       if (isDarkMode) navigationContainer.classList.add('s2-nav-dark')
-      this.#container.appendChild(navigationContainer)
+      this.#container?.appendChild(navigationContainer)
       if (zoomController !== false) {
         // plus
         const zoomPlus = window.document.createElement('button')
@@ -328,9 +334,9 @@ export default class S2Map extends EventTarget {
     const mode = parseInt(localStorage.getItem('s2maps:gpu:colorBlindMode') ?? '0') as ColorMode
     this.#setColorMode(mode)
     // now that canvas is setup, support resizing
-    if ('ResizeObserver' in window) new ResizeObserver(this.#resize.bind(this)).observe(this.#container)
-    // @ts-expect-error window isn't found currently. bad ts implementation?
-    else window.addEventListener('resize', this.#resize.bind(this))
+    if (this.#container !== undefined && 'ResizeObserver' in window) {
+      new ResizeObserver(this.#resize.bind(this)).observe(this.#container)
+    } else window.addEventListener('resize', this.#resize.bind(this))
     // let the S2WorkerPool know of this maps existance
     window.S2WorkerPool.addMap(this)
   }
@@ -461,6 +467,7 @@ export default class S2Map extends EventTarget {
   #resize (): void {
     const { map, offscreen } = this
     const container = this.#container
+    if (container === undefined) return
     const canvasMultiplier = this.#canvasMultiplier
     // rebuild the proper width and height using the container as a guide
     offscreen?.postMessage({
@@ -503,11 +510,13 @@ export default class S2Map extends EventTarget {
     // remove all canvas listeners via cloning
     _canvas.replaceWith(_canvas.cloneNode(true))
     // cleanup the html
-    while (this.#container.lastChild !== null) this.#container.removeChild(this.#container.lastChild)
+    if (this.#container !== undefined) {
+      while (this.#container.lastChild !== null) this.#container.removeChild(this.#container.lastChild)
+    }
   }
 
   getContainer (): HTMLElement {
-    return this.#container
+    return this.#container as HTMLElement
   }
 
   getCanvasContainer (): HTMLElement {
@@ -515,7 +524,7 @@ export default class S2Map extends EventTarget {
   }
 
   getContainerDimensions (): null | [number, number] {
-    return [this.#container.clientWidth, this.#container.clientHeight]
+    return [this.#container?.clientWidth ?? 0, this.#container?.clientHeight ?? 0]
   }
 
   // in this case, reset the style from scratch
@@ -673,6 +682,11 @@ export default class S2Map extends EventTarget {
 
 window.S2Map = S2Map
 
+// SIDE STUFF:
+// * https://github.com/lgarron/worker-execution-origin
+
+// TODO PART 1:
+
 // TODO PART 2:
 // * webgl1 -> sorting by featureCode does NOT now because only webgl1 Code is shipped (just ).
 // * parent tiles update on new data?
@@ -746,15 +760,51 @@ window.S2Map = S2Map
 // tile-worker.min.js            54.62 kB      18.77 kB     16.79 kB
 // all major packages            170.63 kB     59.59 kB     53.24 kB
 
-// TODO NOW:
-// 1) Get working in web/s2maps.io
+// SEPTEMBER 2023:
+// map-worker.min.js             6.47 kB       2.53 kB      2.29 kB
+// s2maps-gpu.min.js             20.54 kB      6.5 kB       5.7 kB
+// source-worker.min.js          30.71 kB      10.8 kB      9.68 kB
+// tile-worker.min.js            34.98 kB      13.15 kB     11.78 kB
 
-// 3) Support local -> locahost-api
-// 4) Do last Part 1s above
+// TODO NOW:
+
 // 6) API 100%
 // 7) Website ready
-// 8) Create contract with cloudflare
 // 9) WebGPU support
 // 10) Support glyphs + icons
 // 11) Support glyphs along path
 // 12) Support dashed lines
+
+// [
+//   "data-condition",
+//   ["class", "==", "snow"],
+//   "#ffffff",
+//   ["class", "==", "wood"],
+//   "#93d2a5",
+//   ["class", "==", "tree"],
+//   "#a8dab5",
+//   ["class", "==", "crop"],
+//   "#bbe2c6",
+//   ["class", "==", "shrub"],
+//   "#f1e9d7",
+//   ["class", "==", "wasteland"],
+//   "#e8e8e1",
+//   "default",
+//   "#93d2a5"
+// ],
+
+// const styleExperiment = {
+//   color: {
+//     dataCondition: [
+//       { key: 'class', value: 'snow', input: '#ffffff' },
+//       { key: 'class', value: 'wood', input: '#93d2a5' },
+//       { key: 'class', value: 'tree', input: '#a8dab5' },
+//       { key: 'class', value: 'crop', input: '#bbe2c6' },
+//       { key: 'class', value: 'shrub', input: '#f1e9d7' },
+//       { key: 'class', value: 'wasteland', input: '#e8e8e1' }
+//     ],
+//     dataCondition2: { key: 'class', value: 'snow', input: '#ffffff' },
+//     default: '#93d2a5'
+//   },
+//   color2: '#ffffff'
+// }

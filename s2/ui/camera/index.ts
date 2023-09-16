@@ -1,24 +1,24 @@
 /* eslint-env browser */
 /** STYLE **/
-import Style from 's2/style'
+import Style from 'style'
 /** PAINT **/
-import type { Painter as GLPainter } from 's2/gl/painter.spec'
-import type { Painter as GPUPainter } from 's2/gpu/painter.spec'
+import type { Painter as GLPainter } from 'gl/painter.spec'
+import type { Painter as GPUPainter } from 'gpu/painter.spec'
 import type { MapOptions } from '../s2mapUI'
 /** PROJECTIONS **/
-import { isFace, parent as parentID } from 's2/geometry/id'
+import { isFace, parent as parentID } from 'geometry/id'
 import Projector from './projector'
 /** SOURCES **/
-import { createTile } from 's2/source'
+import { createTile } from 'source'
 import Cache from './cache'
 import TimeCache from './timeCache'
 import DragPan, { type ClickEvent } from './dragPan'
 import Animator from './animator'
-import { type StyleDefinition, type TimeSeriesStyle } from 's2/style/style.spec'
+import { type StyleDefinition, type TimeSeriesStyle } from 'style/style.spec'
 
-import type S2Map from 's2/s2Map'
-import type { FlushData, InteractiveObject, ReadyMessageGL, TileRequest, TileWorkerMessage } from 's2/workers/worker.spec'
-import type { Tile as TileSpec } from 's2/source/tile.spec'
+import type S2Map from 's2Map'
+import type { FlushData, InteractiveObject, ReadyMessageGL, TileRequest, TileWorkerMessage } from 'workers/worker.spec'
+import type { Tile as TileSpec } from 'source/tile.spec'
 
 export interface ResizeDimensions {
   width: number
@@ -161,8 +161,8 @@ export default class Camera {
         context = this.#canvas.getContext('webgl', webglOptions) as WebGLRenderingContext
       }
       if (context === null) return false
-      const Painter = await import('s2/gl').then(m => m.Painter)
-      this.painter = new Painter(context, type, options) as any
+      const Painter = await import('gl').then(m => m.Painter)
+      this.painter = new Painter(context, type, options) as unknown as any
     }
 
     return true

@@ -1,7 +1,7 @@
 /* eslint-env browser */
 import Context from './context'
 
-import type { MapOptions } from 's2/ui/s2mapUI'
+import type { MapOptions } from 'ui/s2mapUI'
 
 export default class WebGL2Context extends Context {
   constructor (context: WebGL2RenderingContext, options: MapOptions) {

@@ -9,8 +9,8 @@ import type {
   ShaderSource,
   Uniforms
 } from './program.spec'
-import type { ColorMode } from 's2/s2Map'
-import type { TileGL } from 's2/source/tile.spec'
+import type { ColorMode } from 's2Map'
+import type { TileGL } from 'source/tile.spec'
 
 export default class Program implements ProgramSpec {
   vertexShader!: WebGLShader

@@ -8,7 +8,7 @@ import type {
   FeatureCollection,
   S2Feature,
   S2FeatureCollection
-} from 's2/geometry'
+} from 'geometry'
 
 type JSON = Feature | FeatureCollection | S2Feature | S2FeatureCollection
 

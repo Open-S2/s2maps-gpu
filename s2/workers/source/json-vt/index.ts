@@ -7,7 +7,7 @@ import {
   isFace,
   level,
   parent as parentID
-} from 's2/geometry/id'
+} from 'geometry/id'
 import convert from './convert' // GeoJSON conversion and preprocessing
 import clip from './clip'
 import transformTile from './transform' // coordinate transformation
@@ -15,8 +15,8 @@ import createTile from './tile' // final simplified tile generation
 /** TYPES **/
 import type { JSONTile, JSONVectorTile } from './tile'
 import type { FeatureVector } from './feature'
-import type { Face, Feature, FeatureCollection, S2Feature, S2FeatureCollection } from 's2/geometry'
-import type { Projection } from 's2/style/style.spec'
+import type { Face, Feature, FeatureCollection, S2Feature, S2FeatureCollection } from 'geometry'
+import type { Projection } from 'style/style.spec'
 
 export type Tiles = Map<bigint, JSONTile>
 

@@ -3,13 +3,13 @@ import type Camera from '..'
 import * as mat4 from './mat4'
 import { getTilesS2, getTilesWM } from './getTiles'
 import cursorToLonLatS2 from './cursorToLonLat'
-import { fromLonLatGL, mul, normalize } from 's2/geometry/s2/s2Point'
-import { degToRad } from 's2/geometry'
-import { mercatorLatScale } from 's2/geometry/webMerc'
+import { fromLonLatGL, mul, normalize } from 'geometry/s2/s2Point'
+import { degToRad } from 'geometry'
+import { mercatorLatScale } from 'geometry/webMerc'
 
-import type { MapOptions } from 's2/ui/s2mapUI'
-import type { Projection } from 's2/style/style.spec'
-import type { Point, XYZ } from 's2/geometry'
+import type { MapOptions } from 'ui/s2mapUI'
+import type { Projection } from 'style/style.spec'
+import type { Point, XYZ } from 'geometry'
 
 export interface ProjectionConfig {
   minLatPosition?: number
@@ -17,7 +17,7 @@ export interface ProjectionConfig {
   zoom?: number
   minzoom?: number
   maxzoom?: number
-  center?: [number, number]
+  center?: [number, number] | number[]
   zNear?: number
   zFar?: number
   bearing?: number

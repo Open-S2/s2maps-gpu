@@ -1,4 +1,4 @@
-import { Orthodrome } from 's2/geometry'
+import { Orthodrome } from 'geometry'
 
 import type Projector from './projector'
 

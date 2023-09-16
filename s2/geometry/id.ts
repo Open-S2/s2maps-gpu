@@ -19,7 +19,7 @@ import {
 } from './webMerc/mercID'
 
 import type { Face } from './s2'
-import type { Projection } from 's2/style/style.spec'
+import type { Projection } from 'style/style.spec'
 
 export function parent (proj: Projection, id: bigint): bigint {
   if (proj === 'S2') return parentS2(id)

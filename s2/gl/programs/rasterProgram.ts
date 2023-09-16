@@ -1,4 +1,4 @@
-import encodeLayerAttribute from './util/encodeLayerAttribute'
+import encodeLayerAttribute from 'style/encodeLayerAttribute'
 
 // WEBGL1
 import vert1 from '../shaders/raster1.vertex.glsl'
@@ -9,8 +9,8 @@ import frag2 from '../shaders/raster2.fragment.glsl'
 
 import type { Context, RasterFeatureGuide, RasterSource } from '../contexts/context.spec'
 import type { RasterProgram as RasterProgramSpec, RasterProgramUniforms } from './program.spec'
-import type { TileGL as Tile } from 's2/source/tile.spec'
-import type { RasterData } from 's2/workers/worker.spec'
+import type { TileGL as Tile } from 'source/tile.spec'
+import type { RasterData } from 'workers/worker.spec'
 import type {
   LayerDefinitionBase,
   LayerStyle,
@@ -18,7 +18,7 @@ import type {
   RasterLayerStyle,
   RasterWorkflowLayerGuide,
   Resampling
-} from 's2/style/style.spec'
+} from 'style/style.spec'
 
 export default async function rasterProgram (context: Context): Promise<RasterProgramSpec> {
   const Program = await import('./program').then(m => m.default)

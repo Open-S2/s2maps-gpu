@@ -4,8 +4,8 @@ import simplify from './simplify'
 import createFeature from './feature'
 /** TYPES **/
 import type { FeatureVector } from './feature'
-import type { Feature, FeatureCollection, Point, S2Feature, S2FeatureCollection } from 's2/geometry'
-import type { Projection } from 's2/style/style.spec'
+import type { Feature, FeatureCollection, Point, S2Feature, S2FeatureCollection } from 'geometry'
+import type { Projection } from 'style/style.spec'
 
 // convert S2JSON to a geometry with simplification data
 export default function convert (

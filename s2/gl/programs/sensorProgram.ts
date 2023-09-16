@@ -1,5 +1,5 @@
-import encodeLayerAttribute from './util/encodeLayerAttribute'
-import { buildColorRamp } from 's2/style/buildColorRamp'
+import encodeLayerAttribute from 'style/encodeLayerAttribute'
+import { buildColorRamp } from 'style/buildColorRamp'
 
 // WEBGL1
 import vert1 from '../shaders/sensors1.vertex.glsl'
@@ -9,18 +9,18 @@ import vert2 from '../shaders/sensors2.vertex.glsl'
 import frag2 from '../shaders/sensors2.fragment.glsl'
 
 import type { Context, SensorFeatureGuide, SensorSource } from '../contexts/context.spec'
-import type { SensorData } from 's2/workers/worker.spec'
-import type { TileGL as Tile } from 's2/source/tile.spec'
+import type { SensorData } from 'workers/worker.spec'
+import type { TileGL as Tile } from 'source/tile.spec'
 import type {
   LayerDefinitionBase,
   LayerStyle,
   SensorLayerDefinition,
   SensorLayerStyle,
   SensorWorkflowLayerGuide
-} from 's2/style/style.spec'
+} from 'style/style.spec'
 import type { SensorProgram as SensorProgramSpec, SensorProgramUniforms } from './program.spec'
-import type TimeCache from 's2/ui/camera/timeCache'
-import type { SensorTextureDefinition } from 's2/ui/camera/timeCache'
+import type TimeCache from 'ui/camera/timeCache'
+import type { SensorTextureDefinition } from 'ui/camera/timeCache'
 
 export default async function sensorProgram (context: Context): Promise<SensorProgramSpec> {
   const Program = await import('./program').then(m => m.default)

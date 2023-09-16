@@ -1,5 +1,5 @@
 import type { Point, S2VectorLine } from 's2-vector-tile'
-import type { Cap } from 's2/style/style.spec'
+import type { Cap } from 'style/style.spec'
 
 export interface Line {
   prev: number[]

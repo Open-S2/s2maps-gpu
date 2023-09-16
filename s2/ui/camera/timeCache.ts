@@ -1,10 +1,10 @@
 import Cache from './cache'
 
 import type Camera from '.'
-import type { SensorSource } from 's2/gl/contexts/context.spec'
-import type { TileRequest } from 's2/workers/worker.spec'
-import type { TileGL, TileGPU } from 's2/source/tile.spec'
-import type { TimeSeriesStyle } from 's2/style/style.spec'
+import type { SensorSource } from 'gl/contexts/context.spec'
+import type { TileRequest } from 'workers/worker.spec'
+import type { TileGL, TileGPU } from 'source/tile.spec'
+import type { TimeSeriesStyle } from 'style/style.spec'
 
 export interface TimeSource {
   step: number

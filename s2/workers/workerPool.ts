@@ -4,7 +4,7 @@
 import { CorsWorker as Worker } from '../util/corsWorker'
 
 import type S2Map from '../s2Map'
-import type { Analytics, LayerDefinition, StylePackage } from 's2/style/style.spec'
+import type { Analytics, LayerDefinition, StylePackage } from 'style/style.spec'
 import type { MarkerDefinition } from './source/markerSource'
 import type { SourceWorkerMessage, TileRequest, TileWorkerMessage, WorkerPoolPortMessage } from './worker.spec'
 
@@ -13,7 +13,7 @@ declare global {
 }
 
 // workerPool is designed to manage the workers and when a worker is free, send... work
-const AVAILABLE_LOGICAL_PROCESSES: number = Math.floor((window.navigator.hardwareConcurrency ?? 4) / 2)
+const AVAILABLE_LOGICAL_PROCESSES: number = Math.floor((global.window.navigator.hardwareConcurrency ?? 4) / 2)
 export class WorkerPool {
   workerCount: number = Math.max(Math.min(AVAILABLE_LOGICAL_PROCESSES, 6), 2)
   workers: Worker[] = []
