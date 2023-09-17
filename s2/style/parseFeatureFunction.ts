@@ -6,8 +6,10 @@ import type {
   DataRange,
   InputRange,
   LayerWorkerFunction,
+  NotNullOrObject,
   NumberColor,
-  Property
+  Property,
+  ValueType
 } from './style.spec'
 import type { FilterFunction } from './parseFilter'
 import type { Properties } from 'geometry'
@@ -18,37 +20,33 @@ interface DataConditionList<U> {
   result: LayerWorkerFunction<U>
 }
 
-export type Callback<T, U> = (i: undefined | T) => U
+export type Callback<T extends NotNullOrObject, U> = (i: T) => U
 
 // This functionality is built for the tile worker.
-export default function parseFeatureFunction<T, U = T> (
-  input?: T | Property<T>,
-  cb: Callback<T, U> = (i: undefined | T): U => i as U
+export default function parseFeatureFunction<T extends NotNullOrObject, U = T> (
+  input: ValueType<T> | Property<ValueType<T>>,
+  cb: Callback<T, U> = (i: T): U => i as unknown as U
 ): LayerWorkerFunction<U> {
-  if (input === undefined || input === null) {
-    return () => cb(undefined)
-  } else if (typeof input === 'object') {
+  if (typeof input === 'object') {
     if ('dataCondition' in input && input.dataCondition !== undefined) {
       return dataConditionFunction<T, U>(input.dataCondition, cb)
     } else if ('dataRange' in input && input.dataRange !== undefined) {
       return dataRangeFunction<T>(input.dataRange, cb as Callback<T, NumberColor<U>>) as LayerWorkerFunction<U>
     } else if ('inputRange' in input && input.inputRange !== undefined) {
       return inputRangeFunction<T>(input.inputRange, cb as Callback<T, NumberColor<U>>) as LayerWorkerFunction<U>
-    } else if ('fallback' in input) {
+    } else if ('fallback' in input && input.fallback !== undefined) {
       return parseFeatureFunction(input.fallback, cb)
-    } else {
-      return () => cb(undefined)
-    }
+    } else { throw Error('invalid input') }
   } else { return () => cb(input) }
 }
 
-function dataConditionFunction<T, U> (
-  dataCondition: DataCondition<T>,
-  cb: Callback<T, U>
+function dataConditionFunction<T extends NotNullOrObject, U> (
+  dataCondition: DataCondition<ValueType<T>>,
+  cb: Callback<ValueType<T>, U>
 ): LayerWorkerFunction<U> {
   const { conditions, fallback } = dataCondition
   const conditionList: Array<DataConditionList<U>> = []
-  const fallbackCondition = parseFeatureFunction<T, U>(fallback)
+  const fallbackCondition = parseFeatureFunction(fallback)
   // store conditions
   for (const condition of conditions) {
     conditionList.push({
@@ -70,11 +68,15 @@ function dataConditionFunction<T, U> (
     }
     // if we made it here, just run the fallback
     code.push(0)
-    return fallbackCondition?.(code, properties, zoom) ?? cb(undefined)
+    const fallback = fallbackCondition?.(code, properties, zoom) as ValueType<T>
+    return cb(fallback)
   }
 }
 
-function dataRangeFunction<T> (dataRange: DataRange<NumberColor<T>>, cb: Callback<T, number | Color>): LayerWorkerFunction<number | Color> {
+function dataRangeFunction<T extends NotNullOrObject> (
+  dataRange: DataRange<NumberColor<T>>,
+  cb: Callback<T, number | Color>
+): LayerWorkerFunction<number | Color> {
   const { key, ease, base, ranges } = dataRange
   const easeFunction = getEasingFunction(ease ?? 'lin', base)
 
@@ -109,7 +111,10 @@ function dataRangeFunction<T> (dataRange: DataRange<NumberColor<T>>, cb: Callbac
 }
 
 // TODO: Support type property (defaults to 'zoom')
-function inputRangeFunction<T> (inputRange: InputRange<NumberColor<T>>, cb: Callback<T, number | Color>): LayerWorkerFunction<number | Color> {
+function inputRangeFunction<T extends NotNullOrObject> (
+  inputRange: InputRange<NumberColor<T>>,
+  cb: Callback<T, number | Color>
+): LayerWorkerFunction<number | Color> {
   const { ease, base, ranges } = inputRange
   const easeFunction = getEasingFunction(ease ?? 'lin', base)
 

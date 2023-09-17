@@ -58,8 +58,8 @@ export default class RasterWorker implements RasterWorkerSpec {
     const { gpuType } = this
 
     const featureFunctions: Array<LayerWorkerFunction<number | [number, number, number, number]>> = []
-    for (const [input, output] of design) {
-      featureFunctions.push(parseFeatureFunction<number | [number, number, number, number]>(input, output))
+    for (const [input, cb] of design) {
+      featureFunctions.push(parseFeatureFunction<number, [number, number, number, number]>(input, cb))
     }
 
     return (zoom: number) => {

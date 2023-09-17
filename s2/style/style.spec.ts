@@ -78,9 +78,7 @@ export type BuildCodeFunctionZoom = (zoom: number) => number[]
 
 export type Comparitor = '==' | '!=' | '>' | '>=' | '<' | '<=' | 'in' | '!in' | 'has' | '!has'
 
-export type NumberColor<T> = T extends (number | Color) ? T : never
-
-export interface DataCondition<T> {
+export interface DataCondition<T extends NotNullOrObject> {
   conditions: Array<{
     filter: Filter
     input: T | Property<T>
@@ -108,22 +106,37 @@ export interface InputRange<T extends number | Color> {
   }>
 }
 
-export interface FeatureState<T> {
+export interface FeatureState<T extends NotNullOrObject> {
   condition: 'default' /* (inactive) */ | 'active' | 'hover' | 'selected' | 'disabled'
   key: string
   value: T
   input: T | Property<T>
 }
 
-export interface Property<T> {
-  dataCondition?: DataCondition<T>
+export type NotNullOrObject = string | number | boolean | bigint | Color | Array<string | number | boolean | bigint | Color>
+export type ValueType<T> = T extends NotNullOrObject ? T : never
+export type NumberColor<T> = T extends (number | Color) ? T : never
+
+export interface Property<T extends NotNullOrObject> {
+  dataCondition?: DataCondition<ValueType<T>>
   dataRange?: DataRange<NumberColor<T>>
   inputRange?: InputRange<NumberColor<T>>
-  featureState?: FeatureState<T>
+  featureState?: FeatureState<ValueType<T>>
   fallback?: T | Property<T>
 }
 
-/** Layer **/
+const x: Property<number> = {
+  dataRange: {
+    key: 'x',
+    ranges: [{
+      stop: 1,
+      input: 2
+    }]
+  }
+}
+console.log(x)
+
+/** Layer */
 export type LayerType = 'fill' | 'glyph' | 'heatmap' | 'line' | 'point' | 'raster' | 'sensor' | 'shade'
 export type LayerDataType = 'fill' | 'glyph' | 'heatmap' | 'line' | 'point' | 'raster' | 'sensor'
 

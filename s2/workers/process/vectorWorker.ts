@@ -3,25 +3,27 @@ import Color from 'style/color'
 import { type Properties } from 'geometry'
 import parseFeatureFunction from 'style/parseFeatureFunction'
 
-import type { BuildCodeFunction, GPUType, InteractiveWorkerLayer, LayerWorkerFunction } from 'style/style.spec'
+import type { BuildCodeFunction, GPUType, InteractiveWorkerLayer, LayerWorkerFunction, NotNullOrObject, Property, ValueType } from 'style/style.spec'
 import type { InteractiveObject, TileRequest } from '../worker.spec'
 import type { IDGen } from './process.spec'
 import type { Callback } from 'style/parseFeatureFunction'
 
-export type CodeDesignInput = [
-  any,
-  Callback<number | [number, number, number, number]>
-] | [any]
+export type CodeDesignInput<T extends NotNullOrObject> = [
+  T | Property<T>,
+  Callback<T, [number, number, number, number]>
+] | [T | Property<T>]
 
-export type CodeDesign = CodeDesignInput[]
+// export interface CodeDesignInputRange<T> {
 
-export const colorFunc = (lch: boolean): Callback<[number, number, number, number]> => {
+export type CodeDesign<T = any> = Array<CodeDesignInput<ValueType<T>>>
+
+export const colorFunc = (lch: boolean): Callback<string, [number, number, number, number]> => {
   return (i: string): [number, number, number, number] => {
     const color = new Color(i)
     return lch ? color.getLCH() : color.getRGB()
   }
 }
-export const clamp: Callback<number> = (i: number): number => Math.max(-1, Math.min(1, i))
+export const clamp: Callback<number, number> = (i: number): number => Math.max(-1, Math.min(1, i))
 
 export default class VectorWorker {
   idGen: IDGen
@@ -53,10 +55,10 @@ export default class VectorWorker {
     this.postInteractive(mapID, sourceName, tile.id)
   }
 
-  buildCode (design: CodeDesign): BuildCodeFunction {
+  buildCode (design: CodeDesign<NotNullOrObject>): BuildCodeFunction {
     const featureFunctions: Array<LayerWorkerFunction<number | [number, number, number, number]>> = []
-    for (const [input, output] of design) {
-      featureFunctions.push(parseFeatureFunction<number | [number, number, number, number]>(input, output))
+    for (const [input, cb] of design) {
+      featureFunctions.push(parseFeatureFunction<NotNullOrObject, [number, number, number, number]>(input, cb))
     }
 
     return (zoom: number, properties: Properties): [number[], number[]] => {
