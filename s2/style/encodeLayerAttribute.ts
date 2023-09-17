@@ -5,8 +5,10 @@ import type {
   DataRange,
   FeatureState,
   InputRange,
+  NotNullOrObject,
   NumberColor,
-  Property
+  Property,
+  ValueType
 } from './style.spec'
 
 // CONDITION ENCODINGS: 128 positions possible
@@ -45,12 +47,13 @@ import type {
 // This functionality is built for webgl to parse for drawing
 // The Style object will parse all layers' attributes like "color", "fill", "width", etc.
 // The code will be placed into "LayerCode" for the GPU shader to parse as necessary.
-export default function encodeLayerAttribute<T> (input: T | Property<T>, lch: boolean): number[] {
+export default function encodeLayerAttribute<T extends NotNullOrObject> (
+  input: ValueType<T> | Property<ValueType<T>>,
+  lch: boolean
+): number[] {
   const encodings: number[] = []
   encodings.push(0) // store a null no matter what
-  if (input === undefined || input === null) {
-    return encodings
-  } else if (typeof input === 'object') { // conditional
+  if (typeof input === 'object') { // conditional
     if ('dataCondition' in input && input.dataCondition !== undefined) {
       // set the condition bits as data-condition
       encodings[0] += (2 << 4)
@@ -102,7 +105,7 @@ export default function encodeLayerAttribute<T> (input: T | Property<T>, lch: bo
   return encodings
 }
 
-function encodeDataCondition<T> ({ conditions, fallback }: DataCondition<T>, lch: boolean): number[] {
+function encodeDataCondition<T extends NotNullOrObject> ({ conditions, fallback }: DataCondition<ValueType<T>>, lch: boolean): number[] {
   const encoding = []
   let i = 1
 
@@ -127,7 +130,7 @@ function encodeRange<T> ({ base, ranges }: DataRange<NumberColor<T>> | InputRang
   return encoding
 }
 
-function encodeFeatureStates<T> ({ condition, input }: FeatureState<T>, lch: boolean): number[] {
+function encodeFeatureStates<T extends NotNullOrObject> ({ condition, input }: FeatureState<ValueType<T>>, lch: boolean): number[] {
   const encoding = []
 
   const conditionCode = (condition === 'default')
