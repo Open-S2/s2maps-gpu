@@ -1,5 +1,14 @@
 import Color from './color'
 
+import type {
+  DataCondition,
+  DataRange,
+  FeatureState,
+  InputRange,
+  NumberColor,
+  Property
+} from './style.spec'
+
 // CONDITION ENCODINGS: 128 positions possible
 // 0 -> null
 // 1 -> value
@@ -14,6 +23,8 @@ import Color from './color'
 // 0 -> default (inactive)
 // 1 -> hover
 // 2 -> active
+// 3 -> selected
+// 4 -> disabled
 
 // INPUT RANGE/CONDITION ENCODINGS:
 // 0 -> zoom
@@ -27,63 +38,55 @@ import Color from './color'
 // if exponential the base must also be encoded, after the type
 // 0 -> linear
 // 1 -> exponential
+// 2 -> quad-bezier
+// 3 -> cubic-bezier
+// 4 -> step
 
 // This functionality is built for webgl to parse for drawing
 // The Style object will parse all layers' attributes like "color", "fill", "width", etc.
 // The code will be placed into "LayerCode" for the GPU shader to parse as necessary.
-export default function encodeLayerAttribute (input: any, lch: boolean): number[] {
+export default function encodeLayerAttribute<T> (input: T | Property<T>, lch: boolean): number[] {
   const encodings: number[] = []
   encodings.push(0) // store a null no matter what
-  // create a copy of the input to avoid mutating the original
-  if (input !== undefined) input = JSON.parse(JSON.stringify(input))
-  if (Array.isArray(input)) { // conditional
-    const conditionType = input.shift()
-    if (conditionType === 'data-condition') {
+  if (input === undefined || input === null) {
+    return encodings
+  } else if (typeof input === 'object') { // conditional
+    if ('dataCondition' in input && input.dataCondition !== undefined) {
       // set the condition bits as data-condition
       encodings[0] += (2 << 4)
       // encode the condition type
-      encodings.push(...encodeDataCondition(input, lch))
-    } else if (conditionType === 'data-range') {
+      encodings.push(...encodeDataCondition<T>(input.dataCondition, lch))
+    } else if ('dataRange' in input && input.dataRange !== undefined) {
+      const { dataRange } = input
+      const { ease } = dataRange
       // set the condition bits as data-range
       encodings[0] += (4 << 4)
       // encode the interpolation type
-      const inputRangeInterpType = input.shift()
-      if (inputRangeInterpType === 'expo') {
-        encodings[0] += 1
-        // store base seperately as it can be a floating point
-        encodings.push(input.shift())
-      }
-      // remove data type
-      input.shift()
+      if (ease === 'expo') encodings[0] += 1
       // encode range data and store
-      encodings.push(...encodeRange(input, lch))
-    } else if (conditionType === 'input-range') {
+      encodings.push(...encodeRange<T>(dataRange, lch))
+    } else if ('inputRange' in input && input.inputRange !== undefined) {
+      const { inputRange } = input
+      const { type, ease } = inputRange
       // set the condition bits as input-range
       encodings[0] += (5 << 4)
       // encode the input-range type
-      const inputRangeType = input.shift()
-      if (inputRangeType === 'zoom') encodings[0] += (0 << 1)
-      else if (inputRangeType === 'lon') encodings[0] += (1 << 1)
-      else if (inputRangeType === 'lat') encodings[0] += (2 << 1)
-      else if (inputRangeType === 'angle') encodings[0] += (3 << 1)
-      else if (inputRangeType === 'pitch') encodings[0] += (4 << 1)
-      else throw Error('unknown input-range type')
-      // encode the interpolation type
-      const inputRangeInterpType = input.shift()
-      if (inputRangeInterpType === 'expo') {
-        encodings[0] += 1
-        // store base seperately as it can be a floating point
-        encodings.push(input.shift())
-      }
+      if (type === 'zoom') encodings[0] += (0 << 1)
+      else if (type === 'lon') encodings[0] += (1 << 1)
+      else if (type === 'lat') encodings[0] += (2 << 1)
+      else if (type === 'angle') encodings[0] += (3 << 1)
+      else if (type === 'pitch') encodings[0] += (4 << 1)
+      // encode the interpolation type (ONLY expo takes a base)
+      if (ease === 'expo') encodings[0] += 1
       // encode range data and store
-      encodings.push(...encodeRange(input, lch))
-    } else if (conditionType === 'feature-state') {
+      encodings.push(...encodeRange<T>(input.inputRange, lch))
+    } else if ('featureState' in input && input.featureState !== undefined) {
       // set the condition bits as feature-state
       encodings[0] += (6 << 4)
       // encode the feature-states and store
-      encodings.push(...encodeFeatureStates(input, lch))
+      encodings.push(...encodeFeatureStates<T>(input.featureState, lch))
     } else throw Error('unknown condition type')
-  } else if (input !== undefined) { // assuming data exists, than it's just a value type
+  } if (input !== undefined && input !== null) { // assuming data exists, than it's just a value type
     // value
     if (typeof input === 'string') {
       const color = new Color(input) // build the color as RGB or LCH
@@ -91,7 +94,7 @@ export default function encodeLayerAttribute (input: any, lch: boolean): number[
       encodings.push(...((lch) ? color.getLCH() : color.getRGB())) // store that it is a value and than the values
     } else {
       encodings[0] += (1 << 4) // set the condition bits as 1 (value)
-      encodings.push(input) // store true as 1 and false as 0, otherwise it's a number
+      encodings.push(input as number) // store true as 1 and false as 0, otherwise it's a number
     }
   }
   // lastly store length of the current encoding
@@ -99,53 +102,43 @@ export default function encodeLayerAttribute (input: any, lch: boolean): number[
   return encodings
 }
 
-function encodeDataCondition (input: any[], lch: boolean): number[] {
+function encodeDataCondition<T> ({ conditions, fallback }: DataCondition<T>, lch: boolean): number[] {
   const encoding = []
   let i = 1
 
-  while (input.length > 0) {
-    const condition = input.shift()
-    const value = input.shift()
-    if (Array.isArray(condition)) {
-      encoding.push(i, ...encodeLayerAttribute(value, lch))
-    } else if (condition === 'default') {
-      encoding.push(0, ...encodeLayerAttribute(value, lch))
-    } else { throw new Error('unkown condition type') }
+  for (const { input } of conditions) {
+    encoding.push(i, ...encodeLayerAttribute(input, lch))
     i++
   }
+  encoding.push(0, ...encodeLayerAttribute(fallback, lch))
 
   return encoding
 }
 
-function encodeRange (input: any[], lch: boolean): number[] {
+function encodeRange<T> ({ base, ranges }: DataRange<NumberColor<T>> | InputRange<NumberColor<T>>, lch: boolean): number[] {
   const encoding = []
 
-  while (input.length > 0) {
-    const condition = input.shift()
-    const value = input.shift()
-    encoding.push(condition, ...encodeLayerAttribute(value, lch))
+  encoding.push(base ?? 1)
+
+  for (const { stop, input } of ranges) {
+    encoding.push(stop, ...encodeLayerAttribute(input, lch))
   }
 
   return encoding
 }
 
-function encodeFeatureStates (input: any[], lch: boolean): number[] {
+function encodeFeatureStates<T> ({ condition, input }: FeatureState<T>, lch: boolean): number[] {
   const encoding = []
 
-  while (input.length > 0) {
-    // get condition name
-    const condition = input.shift()
-    const conditionCode = (condition === 'default')
-      ? 0 // (inactive)
-      : (condition === 'hover')
-          ? 1
-          : (condition === 'active')
-              ? 2
-              : 0 // default / inactive
-    // get condition
-    const value = input.shift()
-    encoding.push(conditionCode, ...encodeLayerAttribute(value, lch))
-  }
+  const conditionCode = (condition === 'default')
+    ? 0 // (inactive)
+    : (condition === 'hover')
+        ? 1
+        : (condition === 'active')
+            ? 2
+            : 0 // default / inactive
+  // store condition
+  encoding.push(conditionCode, ...encodeLayerAttribute(input, lch))
 
   return encoding
 }

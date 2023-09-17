@@ -17,22 +17,14 @@ import type {
   SkyboxPipeline,
   WallpaperPipeline,
   Workflow,
+  WorkflowImports,
   WorkflowKey,
   WorkflowType
 } from './pipelines/pipeline.spec'
 import type { GlyphImages } from 'workers/source/glyphSource'
 import type { TileGPU as Tile } from 'source/tile.spec'
 import type Projector from 'ui/camera/projector'
-import type {
-  FillData,
-  GlyphData,
-  HeatmapData,
-  LineData,
-  PainterData,
-  PointData,
-  RasterData,
-  SensorData
-} from 'workers/worker.spec'
+import type { PainterData } from 'workers/worker.spec'
 import type TimeCache from 'ui/camera/timeCache'
 // import type { FeatureGuide } source/tile'
 // import type { PipelineType } from './pipelines/pipeline'
@@ -48,44 +40,26 @@ export default class Painter {
     this.context = new WebGPUContext(context, options)
   }
 
-  buildFeatureData (tile: Tile, data: FillData): void
-  buildFeatureData (tile: Tile, data: GlyphData): void
-  buildFeatureData (tile: Tile, data: HeatmapData): void
-  buildFeatureData (tile: Tile, data: LineData): void
-  buildFeatureData (tile: Tile, data: PointData): void
-  buildFeatureData (tile: Tile, data: RasterData): void
-  buildFeatureData (tile: Tile, data: SensorData): void
   buildFeatureData (tile: Tile, data: PainterData): void {
-    this.workflows[data.type]?.buildSource(data as any, tile)
+    const workflow = this.workflows[data.type] as { buildSource: (data: PainterData, tile: Tile) => void } | undefined
+    workflow?.buildSource(data, tile)
   }
 
   async buildWorkflows (buildSet: Set<WorkflowType>): Promise<void> {
     const { workflows, context } = this
     const promises: Array<Promise<void>> = []
-    const programCases: {
-      [key in keyof Omit<Workflow, 'background'>]: any
-    } = {
-      fill: async () => { return await import('./pipelines/fillPipeline') },
-      // raster: async () => { return await import('./pipelines/rasterPipeline') },
-      // sensor: async () => { return await import('./pipelines/sensorPipeline') },
-      // line: async () => { return await import('./pipelines/linePipeline') },
-      // point: async () => { return await import('./pipelines/pointPipeline') },
-      // heatmap: async () => { return await import('./pipelines/heatmapPipeline') },
-      // shade: async () => { return await import('./pipelines/shadePipeline') },
-      // glyph: async () => { return await import('./pipelines/glyphPipeline') },
-      // glyphFilter: async () => { return await import('./pipelines/glyphFilterPipeline') },
-      // wallpaper: async () => { return await import('./pipelines/wallpaperPipeline') },
-      // skybox: async () => { return await import('./pipelines/skyboxPipeline') }
-      raster: async () => {},
-      sensor: async () => {},
-      line: async () => {},
-      point: async () => {},
-      heatmap: async () => {},
-      shade: async () => {},
-      glyph: async () => {},
-      glyphFilter: async () => {},
-      wallpaper: async () => {},
-      skybox: async () => {}
+    const programCases: WorkflowImports = {
+      fill: async () => { return await import('./pipelines/fillPipeline') }
+      // raster: async () => {},
+      // sensor: async () => {},
+      // line: async () => {},
+      // point: async () => {},
+      // heatmap: async () => {},
+      // shade: async () => {},
+      // glyph: async () => {},
+      // glyphFilter: async () => {},
+      // wallpaper: async () => {},
+      // skybox: async () => {}
     }
     const programKeys: Array<keyof Omit<Workflow, 'background'>> = []
     for (const program of buildSet) {
@@ -96,6 +70,7 @@ export default class Painter {
     // actually import the programs
     for (const key of programKeys) {
       promises.push(new Promise((resolve, reject) => {
+        // @ts-expect-error - just ignore for now
         programCases[key]()
           // @ts-expect-error - just ignore for now
           .then(async ({ default: pModule }) => {

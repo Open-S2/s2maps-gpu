@@ -2,7 +2,7 @@ import Color from './color'
 // these modules return a value between 0->1 via a start, end, and input
 // obviously, the input must be between start and end inclusive: [start, end]
 
-export type EaseType = 'lin' | 'expo' | 'quad' | 'cubic'
+export type EaseType = 'lin' | 'expo' | 'quad' | 'cubic' | 'step'
 
 export type EaseFunction = (zoom: number, start: number, end: number, startValue: number | Color, endValue: number | Color) => number | Color
 

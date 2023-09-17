@@ -13,7 +13,6 @@ import type { TileGL as Tile } from 'source/tile.spec'
 import type { RasterData } from 'workers/worker.spec'
 import type {
   LayerDefinitionBase,
-  LayerStyle,
   RasterLayerDefinition,
   RasterLayerStyle,
   RasterWorkflowLayerGuide,
@@ -51,36 +50,33 @@ export default async function rasterProgram (context: Context): Promise<RasterPr
     }
 
     // programs helps design the appropriate layer parameters
-    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: LayerStyle): RasterLayerDefinition {
+    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: RasterLayerStyle): RasterLayerDefinition {
       const { source, layerIndex, lch } = layerBase
       // PRE) get layer base
-      let { paint } = layer as RasterLayerStyle
-      if (paint === undefined) paint = {}
-      let { opacity, saturation, contrast, resampling } = paint
-      const fadeDuration = paint['fade-duration'] ?? 300
-      resampling = resampling ?? 'linear'
+      let { opacity, saturation, contrast, resampling, fadeDuration } = layer
+      opacity = opacity ?? 1
+      saturation = saturation ?? 0
+      contrast = contrast ?? 0
       // 1) build definition
       const layerDefinition: RasterLayerDefinition = {
-        type: 'raster',
         ...layerBase,
-        paint: {
-          opacity: opacity ?? 1,
-          saturation: saturation ?? 0,
-          contrast: contrast ?? 0
-        }
+        type: 'raster',
+        opacity: opacity ?? 1,
+        saturation: saturation ?? 0,
+        contrast: contrast ?? 0
       }
       // 2) Store layer workflow, building code if webgl2
       const layerCode: number[] = []
-      for (const value of Object.values(layerDefinition.paint)) {
-        layerCode.push(...encodeLayerAttribute(value, lch))
+      for (const paint of [opacity, saturation, contrast]) {
+        layerCode.push(...encodeLayerAttribute(paint, lch))
       }
       this.layerGuides.set(layerIndex, {
         sourceName: source,
         layerIndex,
         layerCode,
         lch,
-        resampling,
-        fadeDuration
+        fadeDuration: fadeDuration ?? 300,
+        resampling: resampling ?? 'linear'
       })
 
       return layerDefinition

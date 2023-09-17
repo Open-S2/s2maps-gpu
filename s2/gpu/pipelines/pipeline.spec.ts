@@ -41,6 +41,20 @@ export interface Workflow {
   background?: WallpaperPipeline | SkyboxPipeline
 }
 
+export interface WorkflowImports {
+  fill: () => Promise<{ default: (context: WebGPUContext) => Promise<FillPipeline> }>
+  // glyphFilter: () => Promise<{ default: (context: WebGPUContext) => Promise<GlyphFilterPipeline> }>
+  // glyph: () => Promise<{ default: (context: WebGPUContext) => Promise<GlyphPipeline> }>
+  // heatmap: () => Promise<{ default: (context: WebGPUContext) => Promise<HeatmapPipeline> }>
+  // line: () => Promise<{ default: (context: WebGPUContext) => Promise<LinePipeline> }>
+  // point: () => Promise<{ default: (context: WebGPUContext) => Promise<PointPipeline> }>
+  // raster: () => Promise<{ default: (context: WebGPUContext) => Promise<RasterPipeline> }>
+  // sensor: () => Promise<{ default: (context: WebGPUContext) => Promise<SensorPipeline> }>
+  // shade: () => Promise<{ default: (context: WebGPUContext) => Promise<ShadePipeline> }>
+  // wallpaper: () => Promise<{ default: (context: WebGPUContext) => Promise<WallpaperPipeline> }>
+  // skybox: () => Promise<{ default: (context: WebGPUContext) => Promise<SkyboxPipeline> }>
+}
+
 export type WorkflowKey = keyof Workflow
 
 export type WorkflowType = 'fill' | 'glyph' | 'heatmap' | 'line' | 'point' | 'raster' | 'sensor' | 'shade' | 'skybox' | 'wallpaper'

@@ -1,5 +1,5 @@
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
-import { buildColorRamp } from 'style/buildColorRamp'
+import { buildColorRamp } from 'style/color'
 
 // WEBGL1
 import vert1 from '../shaders/heatmap1.vertex.glsl'
@@ -15,8 +15,7 @@ import type {
   HeatmapLayerDefinition,
   HeatmapLayerStyle,
   HeatmapWorkflowLayerGuide,
-  LayerDefinitionBase,
-  LayerStyle
+  LayerDefinitionBase
 } from 'style/style.spec'
 import type { HeatmapProgram as HeatmapProgramSpec, HeatmapProgramUniforms } from './program.spec'
 
@@ -154,34 +153,37 @@ export default async function heatmapProgram (context: Context): Promise<Heatmap
       tile.addFeatures(features)
     }
 
-    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: LayerStyle): HeatmapLayerDefinition {
+    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: HeatmapLayerStyle): HeatmapLayerDefinition {
       const { type, context } = this
       const { source, layerIndex, lch } = layerBase
       // PRE) get layer base
-      let { paint, layout } = layer as HeatmapLayerStyle
-      paint = paint ?? {}
-      layout = layout ?? {}
+      let {
+        // paint
+        radius, opacity, intensity,
+        // layout
+        colorRamp, weight
+      } = layer
+      radius = radius ?? 1
+      opacity = opacity ?? 1
+      intensity = intensity ?? 1
+      colorRamp = colorRamp ?? 'sinebow'
       // 1) build definition
-      const { radius, opacity, intensity } = paint
-      const { 'color-ramp': colorRamp, weight } = layout
       const layerDefinition: HeatmapLayerDefinition = {
-        type: 'heatmap',
         ...layerBase,
-        paint: {
-          radius: radius ?? 1,
-          opacity: opacity ?? 1,
-          intensity: intensity ?? 1
-        },
-        layout: {
-          colorRamp: colorRamp ?? 'sinebow',
-          weight: weight ?? 1
-        }
+        type: 'heatmap',
+        // paint
+        radius,
+        opacity,
+        intensity,
+        // layout
+        colorRamp,
+        weight: weight ?? 1
       }
       // 2) Store layer workflow, building code if webgl2
       const layerCode: number[] = []
       if (type === 2) {
-        for (const value of Object.values(layerDefinition.paint)) {
-          layerCode.push(...encodeLayerAttribute(value, lch))
+        for (const paint of [radius, opacity, intensity]) {
+          layerCode.push(...encodeLayerAttribute(paint, lch))
         }
       }
       this.layerGuides.set(layerIndex, {
@@ -189,7 +191,7 @@ export default async function heatmapProgram (context: Context): Promise<Heatmap
         layerIndex,
         layerCode,
         lch,
-        colorRamp: context.buildTexture(buildColorRamp(layerDefinition.layout.colorRamp, lch), 256, 4)
+        colorRamp: context.buildTexture(buildColorRamp(colorRamp, lch), 256, 4)
       })
 
       return layerDefinition

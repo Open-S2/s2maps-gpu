@@ -6,7 +6,7 @@ import frag2 from '../shaders/shade2.fragment.glsl'
 
 import type { Context, ShadeFeatureGuide } from '../contexts/context.spec'
 import type { ShadeProgram as ShadeProgramSpec, ShadeProgramUniforms } from './program.spec'
-import type { LayerDefinitionBase, LayerStyle, ShadeLayerDefinition } from 'style/style.spec'
+import type { LayerDefinitionBase, ShadeLayerDefinition, ShadeLayerStyle } from 'style/style.spec'
 import type { TileGL as Tile } from 'source/tile.spec'
 
 export default async function shadeProgram (context: Context): Promise<ShadeProgramSpec> {
@@ -28,10 +28,10 @@ export default async function shadeProgram (context: Context): Promise<ShadeProg
       this.setDevicePixelRatio(devicePixelRatio)
     }
 
-    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: LayerStyle): ShadeLayerDefinition {
+    buildLayerDefinition (layerBase: LayerDefinitionBase, _layer: ShadeLayerStyle): ShadeLayerDefinition {
       return {
-        type: 'shade',
-        ...layerBase
+        ...layerBase,
+        type: 'shade'
       }
     }
 

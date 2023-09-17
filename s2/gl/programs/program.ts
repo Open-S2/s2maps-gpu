@@ -27,7 +27,8 @@ export default class Program implements ProgramSpec {
   curMode = -1
   LCH?: boolean
   interactive?: boolean
-  uniforms: any
+  uniforms!: Record<string, WebGLUniformLocation>
+
   constructor (context: Context) {
     // set context
     this.context = context
@@ -69,7 +70,10 @@ export default class Program implements ProgramSpec {
     for (const [uniform, code] of Object.entries(uniforms)) {
       // const uniformName = uniform as keyof this
       const location = gl.getUniformLocation(glProgram, code)
-      if (location === null) console.error(`failed to get uniform location for ${uniform}`)
+      if (location === null) {
+        console.error(`failed to get uniform location for ${uniform}`)
+        continue
+      }
       this.uniforms[uniform] = location
     }
   }
@@ -134,6 +138,7 @@ export default class Program implements ProgramSpec {
     this.gl.uniform1f(uniforms.uCBlind, colorMode)
     if (type === 1 && colorMode !== 0) {
       // uCVD
+      if (!('uCVD' in uniforms)) return
       if (colorMode === 1) gl.uniform1fv(uniforms.uCVD, [0, 2.02344, -2.52581, 0, 1, 0, 0, 0, 1])
       else if (colorMode === 2) gl.uniform1fv(uniforms.uCVD, [1, 0, 0, 0.494207, 0, 1.24827, 0, 0, 1])
       else gl.uniform1fv(uniforms.uCVD, [1, 0, 0, 0, 1, 0, -0.395913, 0.801109, 0])

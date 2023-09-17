@@ -12,7 +12,6 @@ import type { PointData } from 'workers/worker.spec'
 import type { TileGL as Tile } from 'source/tile.spec'
 import type {
   LayerDefinitionBase,
-  LayerStyle,
   PointLayerDefinition,
   PointLayerStyle,
   PointWorkflowLayerGuide
@@ -142,34 +141,37 @@ export default async function pointProgram (context: Context): Promise<PointProg
       tile.addFeatures(features)
     }
 
-    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: LayerStyle): PointLayerDefinition {
+    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: PointLayerStyle): PointLayerDefinition {
       const { type } = this
       const { source, layerIndex, lch } = layerBase
       // PRE) get layer base
-      let { paint, interactive, cursor } = layer as PointLayerStyle
-      paint = paint ?? {}
+      let { radius, opacity, color, stroke, strokeWidth, interactive, cursor } = layer
+      radius = radius ?? 1
+      opacity = opacity ?? 1
+      color = color ?? 'rgba(0, 0, 0, 0)'
+      stroke = stroke ?? 'rgba(0, 0, 0, 0)'
+      strokeWidth = strokeWidth ?? 1
       interactive = interactive ?? false
       cursor = cursor ?? 'default'
       // 1) build definition
-      const { color, radius, stroke, strokeWidth, opacity } = paint
       const layerDefinition: PointLayerDefinition = {
-        type: 'point',
         ...layerBase,
-        paint: {
-          radius: radius ?? 1,
-          opacity: opacity ?? 1,
-          color: color ?? 'rgba(0, 0, 0, 0)',
-          stroke: stroke ?? 'rgba(0, 0, 0, 0)',
-          strokeWidth: strokeWidth ?? 1
-        },
+        type: 'point',
+        // paint
+        radius,
+        opacity,
+        color,
+        stroke,
+        strokeWidth,
+        // propreties
         interactive,
         cursor
       }
       // 2) Store layer workflow, building code if webgl2
       const layerCode: number[] = []
       if (type === 2) {
-        for (const value of Object.values(layerDefinition.paint)) {
-          layerCode.push(...encodeLayerAttribute(value, lch))
+        for (const paint of [radius, opacity, color, stroke, strokeWidth]) {
+          layerCode.push(...encodeLayerAttribute(paint, lch))
         }
       }
       this.layerGuides.set(layerIndex, {

@@ -1,7 +1,10 @@
 /* eslint-env browser */
 
 import type { Properties } from 'geometry/proj.spec'
-import type { FilterFunction } from 'style/parseFilter'
+import type { Filter, FilterFunction } from 'style/parseFilter'
+import type { EaseType } from './easingFunctions'
+import type { MapOptions } from 'ui/s2mapUI'
+import type Color from './color'
 
 /** SOURCES **/
 export type Format = 'zxy' | 'tzxy' | 'fzxy' | 'tfzxy'
@@ -51,7 +54,7 @@ export interface Icons extends Glyphs {}
 
 User defined layers are stored in the style.layers array.
 To ensure proper ordering (future GPU use) and ensure valid data,
-The layer data is sent to the appropriate program to process into a "Definition" version.
+the layer data is sent to the appropriate program to process into a "Definition" version.
 Style -> Definition
 
 The next step deviates upon whether the layer is used for rendering (program), or for filtering (worker).
@@ -73,188 +76,51 @@ export type LayerWorkerFunction<U> = (code: number[], properties: Properties, zo
 export type BuildCodeFunction = (zoom: number, properties: Properties) => [number[], number[]]
 export type BuildCodeFunctionZoom = (zoom: number) => number[]
 
-/** FILL **/
-export interface FillPaintStyle {
-  color?: string | any[]
-  opacity?: number | any[]
-}
-export interface FillPaintDefinition {
-  color: string | any[]
-  opacity: number | any[]
+export type Comparitor = '==' | '!=' | '>' | '>=' | '<' | '<=' | 'in' | '!in' | 'has' | '!has'
+
+export type NumberColor<T> = T extends (number | Color) ? T : never
+
+export interface DataCondition<T> {
+  conditions: Array<{
+    filter: Filter
+    input: T | Property<T>
+  }>
+  fallback: T | Property<T>
 }
 
-/** POINT **/
-export interface PointPaintStyle {
-  color?: string | any[]
-  radius?: number | any[]
-  stroke?: string | any[]
-  strokeWidth?: number | any[]
-  opacity?: number | any[]
-}
-export interface PointPaintDefinition {
-  color: string | any[]
-  radius: number | any[]
-  stroke: string | any[]
-  strokeWidth: number | any[]
-  opacity: number | any[]
+export interface DataRange<T extends number | Color> {
+  key: string // the objects[key] -> value used as position on range
+  ease?: EaseType
+  base?: number // 0 -> 2
+  ranges: Array<{
+    stop: number
+    input: T | Property<T>
+  }>
 }
 
-/** HEATMAP **/
-export interface HeatmapLayoutStyle {
-  'color-ramp'?: 'sinebow' | 'sinebow-extended' | Array<number | string>
-  weight?: number | any[]
-}
-export interface HeatmapLayoutDefinition {
-  colorRamp: 'sinebow' | 'sinebow-extended' | Array<number | string>
-  weight: number | any[]
-}
-export interface HeatmapPaintStyle {
-  radius?: number | any[]
-  opacity?: number | any[]
-  intensity?: number | any[]
-}
-export interface HeatmapPaintDefinition {
-  radius: number | any[]
-  opacity: number | any[]
-  intensity: number | any[]
+export interface InputRange<T extends number | Color> {
+  type: 'zoom' | 'lon' | 'lat' | 'angle' | 'pitch'
+  ease?: EaseType
+  base?: number // 0 -> 2
+  ranges: Array<{
+    stop: number
+    input: T | Property<T>
+  }>
 }
 
-/** LINE **/
-export type Cap = 'butt' | 'square' | 'round'
-export type Join = 'bevel' | 'miter' | 'round'
-export interface LineLayoutStyle {
-  cap?: Cap
-  join?: Join
-  dasharray?: Array<[number, string]>
-}
-export interface LineLayoutDefinition {
-  cap: Cap
-  join: Join
-  dasharray: number[] | any[]
-}
-export interface LinePaintStyle {
-  color?: string | any[]
-  opacity?: number | any[]
-  width?: number | any[]
-  gapwidth?: number | any[]
-}
-export interface LinePaintDefinition {
-  color: string | any[]
-  opacity: number | any[]
-  width: number | any[]
-  gapwidth: number | any[]
+export interface FeatureState<T> {
+  condition: 'default' /* (inactive) */ | 'active' | 'hover' | 'selected' | 'disabled'
+  key: string
+  value: T
+  input: T | Property<T>
 }
 
-/** GLYPH **/
-export type Anchor =
-  'center' | 'left' | 'right' | 'top' | 'bottom' |
-  'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
-export type Alignment = 'center' | 'left' | 'right'
-export interface GlyphLayoutStyle {
-  'text-family'?: string | any[]
-  'text-field'?: string | string[] | any[]
-  'text-anchor'?: Anchor | any[]
-  'text-offset'?: number | any[]
-  'text-padding'?: number | any[]
-  'text-word-wrap'?: number | any[]
-  'text-align'?: Alignment | any[]
-  'text-kerning'?: number | any[]
-  'text-line-height'?: number | any[]
-  'icon-family'?: string | any[]
-  'icon-field'?: string | string[] | any[]
-  'icon-anchor'?: Anchor | any[]
-  'icon-offset'?: number | any[]
-  'icon-padding'?: number | any[]
-}
-export interface GlyphLayoutDefinition {
-  textFamily: string | any[]
-  textField: string | string[] | any[]
-  textAnchor: Anchor | any[]
-  textOffset: number | any[]
-  textPadding: number | any[]
-  textWordWrap: number | any[]
-  textAlign: Alignment | any[]
-  textKerning: number | any[]
-  textLineHeight: number | any[]
-  iconFamily: string | any[]
-  iconField: string | string[] | any[]
-  iconAnchor: Anchor | any[]
-  iconOffset: number | any[]
-  iconPadding: number | any[]
-}
-export interface GlyphWorkerLayout {
-  textFamily: LayerWorkerFunction<string>
-  textField: LayerWorkerFunction<string | string[]>
-  textAnchor: LayerWorkerFunction<string>
-  textOffset: LayerWorkerFunction<[number, number]>
-  textPadding: LayerWorkerFunction<[number, number]>
-  textWordWrap: LayerWorkerFunction<number>
-  textAlign: LayerWorkerFunction<Alignment>
-  textKerning: LayerWorkerFunction<number>
-  textLineHeight: LayerWorkerFunction<number>
-  iconFamily: LayerWorkerFunction<string>
-  iconField: LayerWorkerFunction<string | string[]>
-  iconAnchor: LayerWorkerFunction<Anchor>
-  iconOffset: LayerWorkerFunction<[number, number]>
-  iconPadding: LayerWorkerFunction<[number, number]>
-}
-export interface GlyphPaintStyle {
-  'text-size'?: number | any[]
-  'text-fill'?: string | any[]
-  'text-stroke'?: string | any[]
-  'text-stroke-width'?: number | any[]
-  'icon-size'?: number | any[]
-}
-export interface GlyphPaintDefinition {
-  textSize: number | any[]
-  textFill: string | any[]
-  textStroke: string | any[]
-  textStrokeWidth: number | any[]
-  iconSize: number | any[]
-}
-
-/** RASTER **/
-export type Resampling = 'nearest' | 'linear'
-
-export interface RasterPaintStyle {
-  opacity?: number | any[]
-  saturation?: number | any[]
-  contrast?: number | any[]
-  'fade-duration'?: number
-  resampling?: Resampling
-}
-export interface RasterPaintDefinition {
-  opacity: number | any[]
-  saturation: number | any[]
-  contrast: number | any[]
-}
-export interface RasterWorkerPaint {
-  opacity: LayerWorkerFunction<number>
-  saturation: LayerWorkerFunction<number>
-  contrast: LayerWorkerFunction<number>
-}
-
-/** SENSOR DATA **/
-export interface SensorPaintStyle {
-  opacity?: number | any[]
-  'fade-duration'?: number
-}
-export interface SensorPaintDefinition {
-  opacity: number | any[]
-}
-export interface SensorLayoutStyle {
-  colorRamp?: 'sinebow' | 'sinebow-extended' | Array<number | string>
-}
-
-/** TIME SERIES **/
-
-export interface TimeSeriesStyle {
-  'start-date'?: number | string // date formatted string or unix timestamp
-  'end-date'?: 1631124000000 // date formatted string or unix timestamp
-  speed?: 10800 // seconds in time series per second
-  'pause-duration'?: 3 // in seconds
-  'auto-play'?: true // if true, start playing automatically
-  loop?: true // if true, loop the animation
+export interface Property<T> {
+  dataCondition?: DataCondition<T>
+  dataRange?: DataRange<NumberColor<T>>
+  inputRange?: InputRange<NumberColor<T>>
+  featureState?: FeatureState<T>
+  fallback?: T | Property<T>
 }
 
 /** Layer **/
@@ -269,19 +135,19 @@ export interface LayerStyleBase {
   layer?: string
   minzoom?: number
   maxzoom?: number
-  filter?: any[] // ["any" ["class" "==" "ocean"] ["class" "==" "river"]]
+  filter?: Filter // ["or" ["class" "==" "ocean"] ["class" "==" "river"]]
   lch?: boolean
 }
 // refines the style.json to ensure all variables exist that need to
 export interface LayerDefinitionBase {
-  type?: any
+  type: LayerType
   name: string
   layerIndex: number
   source: string
   layer: string
   minzoom: number
   maxzoom: number
-  filter?: any[] // ["any" ["class" "==" "ocean"] ["class" "==" "river"]]
+  filter?: Filter // ["or" ["class" "==" "ocean"] ["class" "==" "river"]]
   lch: boolean
 }
 // uses definition to create a guide for the workflow (program/pipeline)
@@ -315,9 +181,14 @@ export interface LayerWorkerBaseRaster {
 
 export interface UnkownLayerStyle extends LayerStyleBase {}
 
+/** FILL **/
+
 export interface FillLayerStyle extends LayerStyleBase {
   type: 'fill'
-  paint?: FillPaintStyle
+  // paint
+  color?: string | Property<string>
+  opacity?: number | Property<number>
+  // properties
   invert?: boolean
   interactive?: boolean
   cursor?: Cursor
@@ -325,7 +196,10 @@ export interface FillLayerStyle extends LayerStyleBase {
 }
 export interface FillLayerDefinition extends LayerDefinitionBase {
   type: 'fill'
-  paint: FillPaintDefinition
+  // paint
+  color: string | Property<string>
+  opacity: number | Property<number>
+  // properties
   invert: boolean
   interactive: boolean
   cursor: Cursor
@@ -347,18 +221,64 @@ export interface FillWorkerLayer extends LayerWorkerBase {
   opaque: boolean
 }
 
+/** GLYPH **/
+
+export type Anchor =
+  'center' | 'left' | 'right' | 'top' | 'bottom' |
+  'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+export type Alignment = 'center' | 'left' | 'right'
 export interface GlyphLayerStyle extends LayerStyleBase {
   type: 'glyph'
-  paint?: GlyphPaintStyle
-  layout?: GlyphLayoutStyle
+  // paint
+  textSize?: number | Property<number>
+  textFill?: string | Property<string>
+  textStroke?: string | Property<string>
+  textStrokeWidth?: number | Property<number>
+  iconSize?: number | Property<number>
+  // layout
+  textFamily?: string | Property<string>
+  textField?: string | string[] | Property<string | string[]>
+  textAnchor?: Anchor | Property<Anchor>
+  textOffset?: [number, number] | Property<[number, number]>
+  textPadding?: [number, number] | Property<[number, number]>
+  textWordWrap?: number | Property<number>
+  textAlign?: Alignment | Property<Alignment>
+  textKerning?: number | Property<number>
+  textLineHeight?: number | Property<number>
+  iconFamily?: string | Property<string>
+  iconField?: string | string[] | Property<string | string[]>
+  iconAnchor?: Anchor | Property<Anchor>
+  iconOffset?: [number, number] | Property<[number, number]>
+  iconPadding?: [number, number] | Property<[number, number]>
+  // properties
   overdraw?: boolean
   interactive?: boolean
   cursor?: Cursor
 }
 export interface GlyphLayerDefinition extends LayerDefinitionBase {
   type: 'glyph'
-  paint: GlyphPaintDefinition
-  layout: GlyphLayoutDefinition
+  // paint
+  textSize: number | Property<number>
+  textFill: string | Property<string>
+  textStroke: string | Property<string>
+  textStrokeWidth: number | Property<number>
+  iconSize: number | Property<number>
+  // layout
+  textFamily: string | Property<string>
+  textField: string | string[] | Property<string | string[]>
+  textAnchor: Anchor | Property<Anchor>
+  textOffset: [number, number] | Property<[number, number]>
+  textPadding: [number, number] | Property<[number, number]>
+  textWordWrap: number | Property<number>
+  textAlign: Alignment | Property<Alignment>
+  textKerning: number | Property<number>
+  textLineHeight: number | Property<number>
+  iconFamily: string | Property<string>
+  iconField: string | string[] | Property<string | string[]>
+  iconAnchor: Anchor | Property<Anchor>
+  iconOffset: [number, number] | Property<[number, number]>
+  iconPadding: [number, number] | Property<[number, number]>
+  // properties
   overdraw: boolean
   interactive: boolean
   cursor: Cursor
@@ -372,24 +292,52 @@ export interface GlyphWorkerLayer extends LayerWorkerBase {
   type: 'glyph'
   textGetCode: BuildCodeFunction
   iconGetCode: BuildCodeFunction
+  // paint
   iconPaint?: number[]
   textSize: LayerWorkerFunction<number>
   iconSize: LayerWorkerFunction<number>
-  layout: GlyphWorkerLayout
+  // layout
+  textFamily: LayerWorkerFunction<string>
+  textField: LayerWorkerFunction<string | string[]>
+  textAnchor: LayerWorkerFunction<string>
+  textOffset: LayerWorkerFunction<[number, number]>
+  textPadding: LayerWorkerFunction<[number, number]>
+  textWordWrap: LayerWorkerFunction<number>
+  textAlign: LayerWorkerFunction<Alignment>
+  textKerning: LayerWorkerFunction<number>
+  textLineHeight: LayerWorkerFunction<number>
+  iconFamily: LayerWorkerFunction<string>
+  iconField: LayerWorkerFunction<string | string[]>
+  iconAnchor: LayerWorkerFunction<Anchor>
+  iconOffset: LayerWorkerFunction<[number, number]>
+  iconPadding: LayerWorkerFunction<[number, number]>
+  // properties
   overdraw: boolean
   interactive: boolean
   cursor: Cursor
 }
 
+/** HEATMAP **/
+
 export interface HeatmapLayerStyle extends LayerStyleBase {
   type: 'heatmap'
-  paint?: HeatmapPaintStyle
-  layout?: HeatmapLayoutStyle
+  // paint
+  radius?: number | Property<number>
+  opacity?: number | Property<number>
+  intensity?: number | Property<number>
+  // layout
+  colorRamp?: 'sinebow' | 'sinebow-extended' | Array<{ stop: number, color: string }>
+  weight?: number | Property<number>
 }
 export interface HeatmapLayerDefinition extends LayerDefinitionBase {
   type: 'heatmap'
-  paint: HeatmapPaintDefinition
-  layout: HeatmapLayoutDefinition
+  // paint
+  radius: number | Property<number>
+  opacity: number | Property<number>
+  intensity: number | Property<number>
+  // layout
+  colorRamp: 'sinebow' | 'sinebow-extended' | Array<{ stop: number, color: string }>
+  weight: number | Property<number>
 }
 export interface HeatmapWorkflowLayerGuide extends LayerWorkflowGuideBase {
   colorRamp: WebGLTexture
@@ -400,18 +348,37 @@ export interface HeatmapWorkerLayer extends LayerWorkerBase {
   weight: LayerWorkerFunction<number>
 }
 
+/** LINE **/
+export type Cap = 'butt' | 'square' | 'round'
+export type Join = 'bevel' | 'miter' | 'round'
 export interface LineLayerStyle extends LayerStyleBase {
   type: 'line'
-  paint?: LinePaintStyle
-  layout?: LineLayoutStyle
+  // paint
+  color?: string | Property<string>
+  opacity?: number | Property<number>
+  width?: number | Property<number>
+  gapwidth?: number | Property<number>
+  // layout
+  cap?: Cap
+  join?: Join
+  dasharray?: Array<[number, string]>
+  // properties
   onlyLines?: boolean
   interactive?: boolean
   cursor?: Cursor
 }
 export interface LineLayerDefinition extends LayerDefinitionBase {
   type: 'line'
-  paint: LinePaintDefinition
-  layout: LineLayoutDefinition
+  // paint
+  color: string | Property<string>
+  opacity: number | Property<number>
+  width: number | Property<number>
+  gapwidth: number | Property<number>
+  // layout
+  cap: Cap
+  join: Join
+  dasharray: Array<[number, string]>
+  // properties
   dashed: boolean
   onlyLines: boolean
   interactive: boolean
@@ -425,10 +392,9 @@ export interface LineWorkflowLayerGuide extends LayerWorkflowGuideBase {
 }
 export interface LineWorkerLayer extends LayerWorkerBase {
   type: 'line'
-  layout: {
-    cap: LayerWorkerFunction<Cap>
-    join: LayerWorkerFunction<Join>
-  }
+  cap: LayerWorkerFunction<Cap>
+  join: LayerWorkerFunction<Join>
+  // properties
   getCode: BuildCodeFunction
   dashed: boolean
   onlyLines: boolean
@@ -436,15 +402,29 @@ export interface LineWorkerLayer extends LayerWorkerBase {
   cursor: Cursor
 }
 
+/** POINT **/
+
 export interface PointLayerStyle extends LayerStyleBase {
   type: 'point'
-  paint?: PointPaintStyle
+  // paint
+  color?: string | Property<string>
+  radius?: number | Property<number>
+  stroke?: string | Property<string>
+  strokeWidth?: number | Property<number>
+  opacity?: number | Property<number>
+  // properties
   interactive?: boolean
   cursor?: Cursor
 }
 export interface PointLayerDefinition extends LayerDefinitionBase {
   type: 'point'
-  paint: PointPaintDefinition
+  // paint
+  color: string | Property<string>
+  radius: number | Property<number>
+  stroke: string | Property<string>
+  strokeWidth: number | Property<number>
+  opacity: number | Property<number>
+  // properties
   interactive: boolean
   cursor: Cursor
 }
@@ -459,13 +439,24 @@ export interface PointWorkerLayer extends LayerWorkerBase {
   cursor: Cursor
 }
 
+/** RASTER **/
+
+export type Resampling = 'nearest' | 'linear'
 export interface RasterLayerStyle extends LayerStyleBase {
   type: 'raster'
-  paint?: RasterPaintStyle
+  // paint
+  opacity?: number | Property<number>
+  saturation?: number | Property<number>
+  contrast?: number | Property<number>
+  fadeDuration?: number
+  resampling?: Resampling
 }
 export interface RasterLayerDefinition extends LayerDefinitionBase {
   type: 'raster'
-  paint: RasterPaintDefinition
+  // paint
+  opacity: number | Property<number>
+  saturation: number | Property<number>
+  contrast: number | Property<number>
 }
 export interface RasterWorkflowLayerGuide extends LayerWorkflowGuideBase {
   fadeDuration: number
@@ -476,18 +467,32 @@ export interface RasterWorkerLayer extends LayerWorkerBaseRaster {
   getCode: BuildCodeFunctionZoom
 }
 
+/** SENSOR **/
+
 export interface SensorLayerStyle extends LayerStyleBase {
   type: 'sensor'
-  paint?: SensorPaintStyle
-  layout?: SensorLayoutStyle
+  // paint
+  opacity?: number | Property<number>
+  // layout
+  fadeDuration?: number
+  colorRamp?: 'sinebow' | 'sinebow-extended' | Array<{ stop: number, color: string }>
+  // properties
   interactive?: boolean
   cursor?: Cursor
 }
 export interface SensorLayerDefinition extends LayerDefinitionBase {
   type: 'sensor'
-  paint: SensorPaintDefinition
+  // paint
+  opacity: number | Property<number>
+  // layout
+  fadeDuration: number
+  colorRamp: 'sinebow' | 'sinebow-extended' | Array<{ stop: number, color: string }>
+  // properties
+  interactive: boolean
+  cursor: Cursor
 }
 export interface SensorWorkflowLayerGuide extends LayerWorkflowGuideBase {
+  // layout
   fadeDuration: number
   colorRamp: WebGLTexture
 }
@@ -521,7 +526,6 @@ export type WorkerLayer =
 export type VectorWorkerLayer =
   FillWorkerLayer | GlyphWorkerLayer | HeatmapWorkerLayer |
   LineWorkerLayer | PointWorkerLayer
-
 export type InteractiveWorkerLayer =
   FillWorkerLayer | GlyphWorkerLayer | LineWorkerLayer |
   PointWorkerLayer
@@ -573,7 +577,21 @@ export interface WallpaperStyle {
   halo?: string
 }
 
+/** TIME SERIES **/
+
+export interface TimeSeriesStyle {
+  startDate?: number | string // date formatted string or unix timestamp
+  endDate?: number | string // date formatted string or unix timestamp (e.g. 1631124000000)
+  speed?: number // seconds in time series per second (e.g. 10800 seconds per second)
+  pauseDuration?: number // in seconds (e.g. 3 seconds)
+  autoPlay?: true // if true, start playing automatically
+  loop?: true // if true, loop the animation
+}
+
+/** STYLE DEFINITION **/
+
 export interface StyleDefinition {
+  mapOptions?: Omit<MapOptions, 'canvas' | 'container' | 'style'>
   version?: number
   name?: string
   projection?: Projection
@@ -591,7 +609,7 @@ export interface StyleDefinition {
   zoomOffset?: number
   noClamp?: boolean
   sources?: Sources
-  'time-series'?: TimeSeriesStyle
+  timeSeries?: TimeSeriesStyle
   glyphs?: Glyphs
   fonts?: Fonts
   icons?: Icons

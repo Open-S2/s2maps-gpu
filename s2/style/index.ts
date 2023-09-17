@@ -49,7 +49,7 @@ export default class Style {
     // build layers let us know if we have an interactive layer or not
     this.camera.painter.context.setInteractive(this.interactive)
     // build time series if exists
-    if (style['time-series'] !== undefined) this.camera.buildTimeCache(style['time-series'])
+    if (style.timeSeries !== undefined) this.camera.buildTimeCache(style.timeSeries)
     // ship to Tile Workers
     this.#sendStyleDataToWorkers(style)
     // return we can start rendering
@@ -143,7 +143,7 @@ export default class Style {
       lch: lch ?? false
     }
     // store the layer definition
-    const layerDefinition = workflows[type]?.buildLayerDefinition?.(base, layerStyle)
+    const layerDefinition = workflows[type]?.buildLayerDefinition?.(base, layerStyle as any)
     if (layerDefinition !== undefined) return layerDefinition
   }
 

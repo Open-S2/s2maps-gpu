@@ -31,9 +31,8 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
   setupLayer (fillLayer: FillLayerDefinition): FillWorkerLayer {
     const {
       name, layerIndex, source, layer, minzoom, maxzoom,
-      filter, paint, invert, interactive, cursor, opaque, lch
+      filter, color, opacity, invert, interactive, cursor, opaque, lch
     } = fillLayer
-    const { color, opacity } = paint
 
     // build featureCode design
     // radius -> opacity

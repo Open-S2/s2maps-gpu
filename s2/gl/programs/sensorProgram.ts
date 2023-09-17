@@ -1,5 +1,5 @@
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
-import { buildColorRamp } from 'style/buildColorRamp'
+import { buildColorRamp } from 'style/color'
 
 // WEBGL1
 import vert1 from '../shaders/sensors1.vertex.glsl'
@@ -13,7 +13,6 @@ import type { SensorData } from 'workers/worker.spec'
 import type { TileGL as Tile } from 'source/tile.spec'
 import type {
   LayerDefinitionBase,
-  LayerStyle,
   SensorLayerDefinition,
   SensorLayerStyle,
   SensorWorkflowLayerGuide
@@ -118,20 +117,22 @@ export default async function sensorProgram (context: Context): Promise<SensorPr
       tile.addFeatures(features)
     }
 
-    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: LayerStyle): SensorLayerDefinition {
+    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: SensorLayerStyle): SensorLayerDefinition {
       const { source, layerIndex, lch } = layerBase
-      // PRE) get layer base
-      let { paint, layout } = layer as SensorLayerStyle
-      if (paint === undefined) paint = {}
-      const colorRamp = layout?.colorRamp ?? 'sinebow'
-      let { opacity } = paint
+      // PRE) get layer properties
+      let { colorRamp, opacity, fadeDuration, interactive, cursor } = layer
       opacity = opacity ?? 1
-      const fadeDuration = paint['fade-duration'] ?? 300
+      colorRamp = colorRamp ?? 'sinebow'
+      fadeDuration = fadeDuration ?? 300
       // 1) build definition
       const layerDefinition: SensorLayerDefinition = {
-        type: 'raster',
         ...layerBase,
-        paint: { opacity }
+        type: 'sensor',
+        opacity,
+        colorRamp,
+        fadeDuration,
+        interactive: interactive ?? false,
+        cursor: cursor ?? 'default'
       }
       // 2) Store layer workflow, building code if webgl2
       const layerCode: number[] = []
