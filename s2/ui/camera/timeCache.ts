@@ -160,12 +160,12 @@ export default class TimeCache extends Cache<string, SensorSource> {
 
   #buildTimeSeries (timeSeries: TimeSeriesStyle): void {
     const {
-      'start-date': startDate,
-      'end-date': endDate,
+      startDate,
+      endDate,
       speed,
-      'pause-duration': pauseDuration,
+      pauseDuration,
       loop,
-      'auto-play': autoPlay
+      autoPlay
     } = timeSeries
     // setup date to beginning of current day
     const date = new Date()

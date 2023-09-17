@@ -1,8 +1,9 @@
 /* eslint-env worker */
 import VectorWorker, { type CodeDesign, colorFunc, idToRGB } from './vectorWorker'
-import { drawLine, featureSort, parseFeatureFunction } from './util'
+import { drawLine, featureSort } from './util'
 import scaleShiftClip from './util/scaleShiftClip'
 import parseFilter from 'style/parseFilter'
+import parseFeatureFunction from 'style/parseFeatureFunction'
 
 import type {
   S2VectorLines,
@@ -28,9 +29,9 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
   setupLayer (lineLayer: LineLayerDefinition): LineWorkerLayer {
     const {
       name, layerIndex, source, layer, minzoom, maxzoom, filter,
-      paint, layout, dashed, onlyLines, interactive, cursor, lch
+      dashed, onlyLines, interactive, cursor, lch, cap, join,
+      color, opacity, width, gapwidth
     } = lineLayer
-    const { color, opacity, width, gapwidth } = paint
 
     // build feature code design
     // color -> opacity -> width -> gapwidth
@@ -49,10 +50,8 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
       layer,
       minzoom,
       maxzoom,
-      layout: {
-        cap: parseFeatureFunction<Cap>(layout.cap),
-        join: parseFeatureFunction<Join>(layout.join)
-      },
+      cap: parseFeatureFunction<Cap, Cap>(cap),
+      join: parseFeatureFunction<Join, Join>(join),
       filter: parseFilter(filter),
       getCode: this.buildCode(design),
       dashed,
@@ -70,7 +69,7 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
     const { gpuType } = this
     const { zoom, division } = tile
     const { type, extent, properties } = feature
-    const { getCode, layout, dashed, layerIndex, onlyLines } = lineLayer
+    const { getCode, dashed, layerIndex, onlyLines } = lineLayer
     if (
       type === 1 ||
       type > 4 ||
@@ -78,7 +77,7 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
     ) return false
     const geometry = feature.loadGeometry?.()
     if (geometry === undefined) return false
-    const cap = layout.cap([], properties, zoom)
+    const cap = lineLayer.cap([], properties, zoom)
     const vertices: number[] = []
     const lengthSoFar: number[] = []
 

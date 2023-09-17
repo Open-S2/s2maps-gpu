@@ -6,9 +6,10 @@ import VectorWorker, { colorFunc, idToRGB } from '../vectorWorker'
 import featureSort from '../util/featureSort'
 import buildGlyphQuads, { QUAD_SIZE } from './buildGlyphQuads'
 import RTree from './rtree'
-import { parseFeatureFunction, scaleShiftClip } from '../util'
+import { scaleShiftClip } from '../util'
 import coalesceField from 'style/coalesceField'
 import parseFilter from 'style/parseFilter'
+import parseFeatureFunction from 'style/parseFeatureFunction'
 
 import type {
   ColorMap,
@@ -47,31 +48,14 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
   setupLayer (glyphLayer: GlyphLayerDefinition): GlyphWorkerLayer {
     const {
       name, layerIndex, source, layer, minzoom, maxzoom,
-      filter, paint, layout, interactive, cursor, lch, overdraw
+      filter, interactive, cursor, lch, overdraw,
+      // paint
+      textSize, textFill, textStroke, textStrokeWidth, iconSize,
+      // layout
+      textFamily, textField, textAnchor, textOffset, textPadding, textWordWrap,
+      textAlign, textKerning, textLineHeight, iconFamily, iconField, iconAnchor,
+      iconOffset, iconPadding
     } = glyphLayer
-    const {
-      textSize,
-      textFill,
-      textStroke,
-      textStrokeWidth,
-      iconSize
-    } = paint
-    const {
-      textFamily,
-      textField,
-      textAnchor,
-      textOffset,
-      textPadding,
-      textWordWrap,
-      textAlign,
-      textKerning,
-      textLineHeight,
-      iconFamily,
-      iconField,
-      iconAnchor,
-      iconOffset,
-      iconPadding
-    } = layout
 
     // build featureCode designs
     const textDesign: CodeDesign = [
@@ -95,24 +79,25 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       filter: parseFilter(filter),
       textGetCode: this.buildCode(textDesign),
       iconGetCode: this.buildCode(iconDesign),
+      // paint
       textSize: parseFeatureFunction<number>(textSize),
       iconSize: parseFeatureFunction<number>(iconSize),
-      layout: {
-        textFamily: parseFeatureFunction<string>(textFamily),
-        textField: parseFeatureFunction<string | string[]>(textField),
-        textAnchor: parseFeatureFunction<Anchor>(textAnchor),
-        textOffset: parseFeatureFunction<[number, number]>(textOffset),
-        textPadding: parseFeatureFunction<[number, number]>(textPadding),
-        textWordWrap: parseFeatureFunction<number>(textWordWrap),
-        textAlign: parseFeatureFunction<Alignment>(textAlign),
-        textKerning: parseFeatureFunction<number>(textKerning),
-        textLineHeight: parseFeatureFunction<number>(textLineHeight),
-        iconFamily: parseFeatureFunction<string>(iconFamily),
-        iconField: parseFeatureFunction<string | string[]>(iconField),
-        iconAnchor: parseFeatureFunction<Anchor>(iconAnchor),
-        iconOffset: parseFeatureFunction<[number, number]>(iconOffset),
-        iconPadding: parseFeatureFunction<[number, number]>(iconPadding)
-      },
+      // layout
+      textFamily: parseFeatureFunction<string>(textFamily),
+      textField: parseFeatureFunction<string | string[]>(textField),
+      textAnchor: parseFeatureFunction<Anchor>(textAnchor),
+      textOffset: parseFeatureFunction<[number, number]>(textOffset),
+      textPadding: parseFeatureFunction<[number, number]>(textPadding),
+      textWordWrap: parseFeatureFunction<number>(textWordWrap),
+      textAlign: parseFeatureFunction<Alignment>(textAlign),
+      textKerning: parseFeatureFunction<number>(textKerning),
+      textLineHeight: parseFeatureFunction<number>(textLineHeight),
+      iconFamily: parseFeatureFunction<string>(iconFamily),
+      iconField: parseFeatureFunction<string | string[]>(iconField),
+      iconAnchor: parseFeatureFunction<Anchor>(iconAnchor),
+      iconOffset: parseFeatureFunction<[number, number]>(iconOffset),
+      iconPadding: parseFeatureFunction<[number, number]>(iconPadding),
+      // properties
       interactive,
       cursor,
       overdraw
@@ -135,7 +120,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     // preprocess geometry
     const clip = scaleShiftClip(geometry, type, extent, tile) as S2VectorPoints
     const { idGen } = this
-    const { layerIndex, overdraw, layout, interactive } = glyphLayer
+    const { layerIndex, overdraw, interactive } = glyphLayer
     const { zoom } = tile
     if (clip.length === 0) return false
 
@@ -149,12 +134,12 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
         // build all layout and paint parameters
         // per tile properties
         const deadCode: number[] = []
-        let field = coalesceField(layout[`${type}Field`](deadCode, properties, zoom), properties)
+        let field = coalesceField(glyphLayer[`${type}Field`](deadCode, properties, zoom), properties)
         // pre-process and shape the unicodes
         if (field.length === 0) continue
         field = this.uShaper.shapeString(field)
         let fieldCodes: Unicode[] = []
-        const family = layout[`${type}Family`](deadCode, properties, zoom)
+        const family = glyphLayer[`${type}Family`](deadCode, properties, zoom)
         // if icon, convert field to list of codes, otherwise create a unicode array
         if (type === 'icon') {
           this.#addMissingIcons(field, family)
@@ -180,13 +165,13 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
           family,
           field,
           fieldCodes,
-          offset: layout[`${type}Offset`](deadCode, properties, zoom),
-          padding: layout[`${type}Padding`](deadCode, properties, zoom),
-          anchor: layout[`${type}Anchor`](deadCode, properties, zoom) as Anchor,
-          wordWrap: (type === 'text') ? layout.textWordWrap(deadCode, properties, zoom) : 0,
-          align: (type === 'text') ? layout.textAlign(deadCode, properties, zoom) : 'center',
-          kerning: (type === 'text') ? layout.textKerning(deadCode, properties, zoom) : 0,
-          lineHeight: (type === 'text') ? layout.textLineHeight(deadCode, properties, zoom) : 0,
+          offset: glyphLayer[`${type}Offset`](deadCode, properties, zoom),
+          padding: glyphLayer[`${type}Padding`](deadCode, properties, zoom),
+          anchor: glyphLayer[`${type}Anchor`](deadCode, properties, zoom) as Anchor,
+          wordWrap: (type === 'text') ? glyphLayer.textWordWrap(deadCode, properties, zoom) : 0,
+          align: (type === 'text') ? glyphLayer.textAlign(deadCode, properties, zoom) : 'center',
+          kerning: (type === 'text') ? glyphLayer.textKerning(deadCode, properties, zoom) : 0,
+          lineHeight: (type === 'text') ? glyphLayer.textLineHeight(deadCode, properties, zoom) : 0,
           // paint
           size,
           // tile position

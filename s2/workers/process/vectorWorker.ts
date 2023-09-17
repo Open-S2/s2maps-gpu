@@ -1,12 +1,12 @@
 /* eslint-env worker */
 import Color from 'style/color'
 import { type Properties } from 'geometry'
-import { parseFeatureFunction } from './util'
+import parseFeatureFunction from 'style/parseFeatureFunction'
 
 import type { BuildCodeFunction, GPUType, InteractiveWorkerLayer, LayerWorkerFunction } from 'style/style.spec'
 import type { InteractiveObject, TileRequest } from '../worker.spec'
 import type { IDGen } from './process.spec'
-import type { Callback } from './util'
+import type { Callback } from 'style/parseFeatureFunction'
 
 export type CodeDesignInput = [
   any,

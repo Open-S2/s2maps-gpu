@@ -27,20 +27,21 @@ export default async function fillPipeline (context: WebGPUContext): Promise<Fil
     buildLayerDefinition (layerBase: LayerDefinitionBase, layer: LayerStyle): FillLayerDefinition {
       const { source, layerIndex, lch } = layerBase
       // PRE) get layer base
-      let { paint, invert, opaque, interactive, cursor } = layer as FillLayerStyle
-      paint = paint ?? {}
+      let { color, opacity, invert, opaque, interactive, cursor } = layer as FillLayerStyle
       invert = invert ?? false
       opaque = opaque ?? false
       interactive = interactive ?? false
       cursor = cursor ?? 'default'
       // 1) build definition
-      let { color, opacity } = paint
       color = color ?? 'rgb(0, 0, 0)'
       opacity = opacity ?? 1
       const layerDefinition: FillLayerDefinition = {
-        type: 'fill',
         ...layerBase,
-        paint: { color, opacity },
+        type: 'fill',
+        // paint
+        color,
+        opacity,
+        // propreties
         invert,
         interactive,
         opaque,
@@ -48,8 +49,8 @@ export default async function fillPipeline (context: WebGPUContext): Promise<Fil
       }
       // 2) Store layer workflow, building code if webgl2
       const layerCode: number[] = []
-      for (const value of Object.values(layerDefinition.paint)) {
-        layerCode.push(...encodeLayerAttribute(value, lch))
+      for (const paint of [color, opacity]) {
+        layerCode.push(...encodeLayerAttribute(paint, lch))
       }
       this.layerGuides.set(layerIndex, {
         sourceName: source,

@@ -41,15 +41,6 @@ export interface Painter {
   currProgram?: WorkflowKey
 
   buildFeatureData: (tile: Tile, data: PainterData) => void
-  // buildFeatureData: (
-  //   ((tile: Tile, data: FillData) => void) &
-  //   ((tile: Tile, data: GlyphData) => void) &
-  //   ((tile: Tile, data: HeatmapData) => void) &
-  //   ((tile: Tile, data: LineData) => void) &
-  //   ((tile: Tile, data: PointData) => void) &
-  //   ((tile: Tile, data: RasterData) => void) &
-  //   ((tile: Tile, data: SensorData) => void)
-  // )
   useWorkflow: (
     ((programName: 'fill') => FillPipeline | undefined) &
     ((programName: 'glyph') => GlyphPipeline | undefined) &

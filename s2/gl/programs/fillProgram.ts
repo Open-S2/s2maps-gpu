@@ -1,6 +1,6 @@
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
 import { colorFunc } from 'workers/process/vectorWorker'
-import { parseFeatureFunction } from 'workers/process/util'
+import parseFeatureFunction from 'style/parseFeatureFunction'
 
 // WEBGL1
 import vert1 from '../shaders/fill1.vertex.glsl'
@@ -17,8 +17,7 @@ import type {
   FillLayerDefinition,
   FillLayerStyle,
   FillWorkflowLayerGuide,
-  LayerDefinitionBase,
-  LayerStyle
+  LayerDefinitionBase
 } from 'style/style.spec'
 
 export default async function fillProgram (context: Context): Promise<FillProgramSpec> {
@@ -39,24 +38,23 @@ export default async function fillProgram (context: Context): Promise<FillProgra
     }
 
     // programs helps design the appropriate layer parameters
-    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: LayerStyle): FillLayerDefinition {
+    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: FillLayerStyle): FillLayerDefinition {
       const { type } = this
       const { source, layerIndex, lch } = layerBase
       // PRE) get layer base
-      let { paint, invert, opaque, interactive, cursor } = layer as FillLayerStyle
-      paint = paint ?? {}
+      let { color, opacity, invert, opaque, interactive, cursor } = layer
       invert = invert ?? false
       opaque = opaque ?? false
       interactive = interactive ?? false
       cursor = cursor ?? 'default'
-      // 1) build definition
-      let { color, opacity } = paint
       color = color ?? 'rgb(0, 0, 0)'
       opacity = opacity ?? 1
+      // 1) Build layer definition
       const layerDefinition: FillLayerDefinition = {
-        type: 'fill',
         ...layerBase,
-        paint: { color, opacity },
+        type: 'fill',
+        color,
+        opacity,
         invert,
         interactive,
         opaque,
@@ -65,8 +63,8 @@ export default async function fillProgram (context: Context): Promise<FillProgra
       // 2) Store layer workflow, building code if webgl2
       const layerCode: number[] = []
       if (type === 2) {
-        for (const value of Object.values(layerDefinition.paint)) {
-          layerCode.push(...encodeLayerAttribute(value, lch))
+        for (const paint of [color, opacity]) {
+          layerCode.push(...encodeLayerAttribute(paint, lch))
         }
       }
       // if mask source, and webgl1, build maskColor and maskOpacity
@@ -79,8 +77,8 @@ export default async function fillProgram (context: Context): Promise<FillProgra
         invert,
         opaque,
         interactive,
-        color: isGL1Mask ? parseFeatureFunction<[number, number, number, number]>(color, colorFunc(lch)) : undefined,
-        opacity: isGL1Mask ? parseFeatureFunction<number[]>(opacity, (i) => [i]) : undefined
+        color: isGL1Mask ? parseFeatureFunction<string, [number, number, number, number]>(color, colorFunc(lch)) : undefined,
+        opacity: isGL1Mask ? parseFeatureFunction<number, number[]>(opacity, (i: number) => [i]) : undefined
       })
 
       return layerDefinition

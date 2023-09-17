@@ -24,15 +24,7 @@ import type {
   WorkflowType
 } from './programs/program.spec'
 import type { TileGL as Tile } from 'source/tile.spec'
-import type {
-  FillData,
-  GlyphData,
-  HeatmapData,
-  LineData,
-  PointData,
-  RasterData,
-  SensorData
-} from 'workers/worker.spec'
+import type { PainterData } from 'workers/worker.spec'
 import type { GlyphImages } from 'workers/source/glyphSource'
 import type Projector from 'ui/camera/projector'
 import type TimeCache from 'ui/camera/timeCache'
@@ -43,15 +35,7 @@ export interface Painter {
   dirty: boolean
   currProgram?: WorkflowKey
 
-  buildFeatureData: (
-    ((tile: Tile, data: FillData) => void) &
-    ((tile: Tile, data: GlyphData) => void) &
-    ((tile: Tile, data: HeatmapData) => void) &
-    ((tile: Tile, data: LineData) => void) &
-    ((tile: Tile, data: PointData) => void) &
-    ((tile: Tile, data: RasterData) => void) &
-    ((tile: Tile, data: SensorData) => void)
-  )
+  buildFeatureData: (tile: Tile, data: PainterData) => void
   useWorkflow: (
     ((programName: 'fill') => FillProgram | undefined) &
     ((programName: 'glyph') => GlyphProgram | undefined) &

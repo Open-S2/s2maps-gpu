@@ -1,9 +1,9 @@
-import Color from './color'
+import Color from '.'
 
-import type { ColorBlindAdjust } from './color/colorBlindAdjust'
+import type { ColorBlindAdjust } from './colorBlindAdjust'
 
 export function buildColorRamp (
-  ramp: 'sinebow' | 'sinebow-extended' | Array<number | string>,
+  ramp: 'sinebow' | 'sinebow-extended' | Array<{ stop: number, color: string }>,
   lch = false
 ): Uint8ClampedArray {
   const { round } = Math
@@ -18,9 +18,9 @@ export function buildColorRamp (
   } else {
     const colorRamp: Color[] = []
     const numberRamp: number[] = []
-    for (let i = 0, rl = ramp.length; i < rl; i += 2) {
-      numberRamp.push(ramp[i] as number)
-      const color = new Color(ramp[i + 1])
+    for (const { stop, color: c } of ramp) {
+      numberRamp.push(stop)
+      const color = new Color(c)
       colorRamp.push(lch ? color.toLCH() : color.toRGB())
     }
     // setup color output function

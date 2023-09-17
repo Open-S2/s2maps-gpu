@@ -1,6 +1,6 @@
 /* eslint-env worker */
 // import { isSafari } util/polyfill'
-import { parseFeatureFunction } from './util'
+import parseFeatureFunction from 'style/parseFeatureFunction'
 
 import type { RasterData, RasterDataGuide, SensorData, SensorDataGuide, TileRequest } from '../worker.spec'
 import type {
@@ -26,9 +26,8 @@ export default class RasterWorker implements RasterWorkerSpec {
   setupLayer (layerDefinition: SensorLayerDefinition | RasterLayerDefinition): RasterWorkerLayer | SensorWorkerLayer {
     const {
       type, name, layerIndex, source,
-      layer, minzoom, maxzoom, paint
+      layer, minzoom, maxzoom, opacity
     } = layerDefinition
-    const { opacity } = paint
 
     // build feature code design
     // opacity->saturation->contrast
@@ -36,7 +35,7 @@ export default class RasterWorker implements RasterWorkerSpec {
       [opacity]
     ]
     if (type === 'raster') {
-      const { saturation, contrast } = paint
+      const { saturation, contrast } = layerDefinition
       design.push(
         [saturation],
         [contrast]

@@ -3,6 +3,8 @@ import colorParser from './colorParser'
 
 import type { ColorBlindAdjust } from './colorBlindAdjust'
 
+export * from './colorGenerators'
+
 // COLOR INTERPOLATION: we should use the LCH color space
 // https://www.alanzucconi.com/2016/01/06/colour-interpolation/4/
 // use https://github.com/gka/chroma.js as a guide to create best interpolation

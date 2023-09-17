@@ -774,37 +774,3 @@ window.S2Map = S2Map
 // 10) Support glyphs + icons
 // 11) Support glyphs along path
 // 12) Support dashed lines
-
-// [
-//   "data-condition",
-//   ["class", "==", "snow"],
-//   "#ffffff",
-//   ["class", "==", "wood"],
-//   "#93d2a5",
-//   ["class", "==", "tree"],
-//   "#a8dab5",
-//   ["class", "==", "crop"],
-//   "#bbe2c6",
-//   ["class", "==", "shrub"],
-//   "#f1e9d7",
-//   ["class", "==", "wasteland"],
-//   "#e8e8e1",
-//   "default",
-//   "#93d2a5"
-// ],
-
-// const styleExperiment = {
-//   color: {
-//     dataCondition: [
-//       { key: 'class', value: 'snow', input: '#ffffff' },
-//       { key: 'class', value: 'wood', input: '#93d2a5' },
-//       { key: 'class', value: 'tree', input: '#a8dab5' },
-//       { key: 'class', value: 'crop', input: '#bbe2c6' },
-//       { key: 'class', value: 'shrub', input: '#f1e9d7' },
-//       { key: 'class', value: 'wasteland', input: '#e8e8e1' }
-//     ],
-//     dataCondition2: { key: 'class', value: 'snow', input: '#ffffff' },
-//     default: '#93d2a5'
-//   },
-//   color2: '#ffffff'
-// }

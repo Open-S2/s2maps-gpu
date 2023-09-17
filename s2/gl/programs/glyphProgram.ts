@@ -13,8 +13,7 @@ import type {
   GlyphLayerDefinition,
   GlyphLayerStyle,
   GlyphWorkflowLayerGuide,
-  LayerDefinitionBase,
-  LayerStyle
+  LayerDefinitionBase
 } from 'style/style.spec'
 import type { GlyphData } from 'workers/worker.spec'
 import type { TileGL as Tile } from 'source/tile.spec'
@@ -206,66 +205,53 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
       tile.addFeatures(features)
     }
 
-    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: LayerStyle): GlyphLayerDefinition {
+    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: GlyphLayerStyle): GlyphLayerDefinition {
       const { type } = this
       const { source, layerIndex, lch } = layerBase
       // PRE) get layer base
-      let { paint, layout, interactive, cursor, overdraw } = layer as GlyphLayerStyle
-      paint = paint ?? {}
-      layout = layout ?? {}
+      let {
+        // paint
+        textSize, iconSize, textFill, textStrokeWidth, textStroke,
+        // layout
+        textFamily, textField, textAnchor, textOffset, textPadding, textWordWrap,
+        textAlign, textKerning, textLineHeight, iconFamily, iconField, iconAnchor,
+        iconOffset, iconPadding,
+        // properties
+        interactive, cursor, overdraw
+      } = layer
+      textSize = textSize ?? 16
+      iconSize = iconSize ?? 16
+      textFill = textFill ?? 'rgb(0, 0, 0)'
+      textStrokeWidth = textStrokeWidth ?? 16
+      textStroke = textStroke ?? 'rgb(0, 0, 0)'
       interactive = interactive ?? false
       cursor = cursor ?? 'default'
       overdraw = overdraw ?? false
       // 1) build definition
-      const {
-        'text-size': textSize,
-        'text-fill': textFill,
-        'text-stroke': textStroke,
-        'text-stroke-width': textStrokeWidth,
-        'icon-size': iconSize
-      } = paint
-      const {
-        'text-family': textFamily,
-        'text-field': textField,
-        'text-anchor': textAnchor,
-        'text-offset': textOffset,
-        'text-padding': textPadding,
-        'text-word-wrap': textWordWrap,
-        'text-align': textAlign,
-        'text-kerning': textKerning,
-        'text-line-height': textLineHeight,
-        'icon-family': iconFamily,
-        'icon-field': iconField,
-        'icon-anchor': iconAnchor,
-        'icon-offset': iconOffset,
-        'icon-padding': iconPadding
-      } = layout
       const layerDefinition: GlyphLayerDefinition = {
-        type: 'line',
         ...layerBase,
-        paint: {
-          textSize: textSize ?? 16,
-          iconSize: iconSize ?? 16,
-          textFill: textFill ?? 'rgb(0, 0, 0)',
-          textStrokeWidth: textStrokeWidth ?? 16,
-          textStroke: textStroke ?? 'rgb(0, 0, 0)'
-        },
-        layout: {
-          textFamily: textFamily ?? '',
-          textField: textField ?? '',
-          textAnchor: textAnchor ?? 'center',
-          textOffset: textOffset ?? 0,
-          textPadding: textPadding ?? 0,
-          textWordWrap: textWordWrap ?? 0,
-          textAlign: textAlign ?? 'center',
-          textKerning: textKerning ?? 0,
-          textLineHeight: textLineHeight ?? 0,
-          iconFamily: iconFamily ?? '',
-          iconField: iconField ?? '',
-          iconAnchor: iconAnchor ?? 'center',
-          iconOffset: iconOffset ?? 0,
-          iconPadding: iconPadding ?? 0
-        },
+        type: 'glyph',
+        // paint
+        textSize,
+        iconSize,
+        textFill,
+        textStrokeWidth,
+        textStroke,
+        // layout
+        textFamily: textFamily ?? '',
+        textField: textField ?? '',
+        textAnchor: textAnchor ?? 'center',
+        textOffset: textOffset ?? [0, 0],
+        textPadding: textPadding ?? [0, 0],
+        textWordWrap: textWordWrap ?? 0,
+        textAlign: textAlign ?? 'center',
+        textKerning: textKerning ?? 0,
+        textLineHeight: textLineHeight ?? 0,
+        iconFamily: iconFamily ?? '',
+        iconField: iconField ?? '',
+        iconAnchor: iconAnchor ?? 'center',
+        iconOffset: iconOffset ?? [0, 0],
+        iconPadding: iconPadding ?? [0, 0],
         interactive,
         cursor,
         overdraw
@@ -273,7 +259,7 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
       // 2) Store layer workflow, building code if webgl2
       const layerCode: number[] = []
       if (type === 2) {
-        for (const value of Object.values(layerDefinition.paint)) {
+        for (const value of [textSize, iconSize, textFill, textStrokeWidth, textStroke]) {
           layerCode.push(...encodeLayerAttribute(value, lch))
         }
       }

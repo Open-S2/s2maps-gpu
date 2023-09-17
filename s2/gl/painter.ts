@@ -23,20 +23,14 @@ import type {
   SkyboxProgram,
   WallpaperProgram,
   Workflow,
+  WorkflowImports,
   WorkflowKey,
   WorkflowType
 } from './programs/program.spec'
 import type { GlyphImages } from 'workers/source/glyphSource'
 import type { ColorMode } from '../s2Map'
 import type {
-  FillData,
-  GlyphData,
-  HeatmapData,
-  LineData,
-  PainterData,
-  PointData,
-  RasterData,
-  SensorData
+  PainterData
 } from 'workers/worker.spec'
 
 export default class Painter implements PainterSpec {
@@ -60,23 +54,15 @@ export default class Painter implements PainterSpec {
     context.delete()
   }
 
-  buildFeatureData (tile: Tile, data: FillData): void
-  buildFeatureData (tile: Tile, data: HeatmapData): void
-  buildFeatureData (tile: Tile, data: RasterData): void
-  buildFeatureData (tile: Tile, data: LineData): void
-  buildFeatureData (tile: Tile, data: SensorData): void
-  buildFeatureData (tile: Tile, data: PointData): void
-  buildFeatureData (tile: Tile, data: GlyphData): void
   buildFeatureData (tile: Tile, data: PainterData): void {
-    this.workflows[data.type]?.buildSource(data as any, tile)
+    const workflow = this.workflows[data.type] as { buildSource: (data: PainterData, tile: Tile) => void } | undefined
+    workflow?.buildSource(data, tile)
   }
 
   async buildWorkflows (buildSet: Set<WorkflowType>): Promise<void> {
     const { workflows, context } = this
     const promises: Array<Promise<void>> = []
-    const programCases: {
-      [key in keyof Omit<Workflow, 'background'>]: any
-    } = {
+    const workflowImports: WorkflowImports = {
       fill: async () => { return await import('./programs/fillProgram') },
       raster: async () => { return await import('./programs/rasterProgram') },
       sensor: async () => { return await import('./programs/sensorProgram') },
@@ -98,14 +84,14 @@ export default class Painter implements PainterSpec {
     // actually import the programs
     for (const key of programKeys) {
       promises.push(new Promise((resolve, reject) => {
-        programCases[key]()
-          // @ts-expect-error - just ignore for now
+        workflowImports[key]?.()
           .then(async ({ default: pModule }) => {
+            // @ts-expect-error - typescript can't handle matching the workflow to the module
             workflows[key] = await pModule(context)
             if (key === 'wallpaper' || key === 'skybox') workflows.background = workflows[key]
             resolve()
           })
-          .catch((err: any) => {
+          .catch((err) => {
             console.log('FAILED', err)
             reject(err)
           })

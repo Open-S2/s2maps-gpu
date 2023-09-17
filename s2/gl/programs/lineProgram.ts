@@ -1,5 +1,5 @@
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
-import { buildDashImage } from 'style/buildColorRamp'
+import { buildDashImage } from 'style/color'
 
 // WEBGL1
 import vert1 from '../shaders/line1.vertex.glsl'
@@ -14,7 +14,6 @@ import type { TileGL as Tile } from 'source/tile.spec'
 import type { LineData } from 'workers/worker.spec'
 import type {
   LayerDefinitionBase,
-  LayerStyle,
   LineLayerDefinition,
   LineLayerStyle,
   LineWorkflowLayerGuide
@@ -66,34 +65,36 @@ export default async function lineProgram (context: Context): Promise<LineProgra
     }
 
     // programs helps design the appropriate layer parameters
-    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: LayerStyle): LineLayerDefinition {
+    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: LineLayerStyle): LineLayerDefinition {
       const { type } = this
       const { source, layerIndex, lch } = layerBase
       // PRE) get layer base
-      let { paint, layout, interactive, cursor, onlyLines } = layer as LineLayerStyle
-      paint = paint ?? {}
-      layout = layout ?? {}
+      let {
+        interactive, cursor, onlyLines,
+        // paint
+        color, opacity, width, gapwidth,
+        // layout
+        cap, join, dasharray
+      } = layer
+      color = color ?? 'rgba(0, 0, 0, 0)'
+      opacity = opacity ?? 1
+      width = width ?? 1
+      gapwidth = gapwidth ?? 0
       // 1) build definition
-      const { color, opacity, width, gapwidth } = paint
-      let { cap, join, dasharray } = layout
       const dashed = Array.isArray(dasharray) && dasharray.length > 0
       interactive = interactive ?? false
       cursor = cursor ?? 'default'
       dasharray = dasharray ?? []
       const layerDefinition: LineLayerDefinition = {
-        type: 'line',
         ...layerBase,
-        paint: {
-          color: color ?? 'rgba(0, 0, 0, 0)',
-          opacity: opacity ?? 1,
-          width: width ?? 1,
-          gapwidth: gapwidth ?? 0
-        },
-        layout: {
-          cap: cap ?? 'butt',
-          join: join ?? 'miter',
-          dasharray
-        },
+        type: 'line',
+        color,
+        opacity,
+        width,
+        gapwidth,
+        cap: cap ?? 'butt',
+        join: join ?? 'miter',
+        dasharray,
         onlyLines: onlyLines ?? false,
         dashed,
         interactive,
@@ -102,8 +103,8 @@ export default async function lineProgram (context: Context): Promise<LineProgra
       // 2) Store layer workflow, building code if webgl2
       const layerCode: number[] = []
       if (type === 2) {
-        for (const value of Object.values(layerDefinition.paint)) {
-          layerCode.push(...encodeLayerAttribute(value, lch))
+        for (const paint of [color, opacity, width, gapwidth]) {
+          layerCode.push(...encodeLayerAttribute(paint, lch))
         }
       }
       // if dashed, build a texture

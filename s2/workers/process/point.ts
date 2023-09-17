@@ -1,7 +1,8 @@
 /* eslint-env worker */
 import VectorWorker, { colorFunc, idToRGB } from './vectorWorker'
-import { featureSort, parseFeatureFunction, scaleShiftClip } from './util'
+import { featureSort, scaleShiftClip } from './util'
 import parseFilter from 'style/parseFilter'
+import parseFeatureFunction from 'style/parseFeatureFunction'
 
 import type { HeatmapData, PointData, TileRequest } from '../worker.spec'
 import type { S2VectorPoints } from 's2-vector-tile'
@@ -32,9 +33,8 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
   ): PointWorkerLayer | HeatmapWorkerLayer {
     const {
       type, name, layerIndex, source, layer, minzoom, maxzoom,
-      filter, paint, lch
+      filter, radius, opacity, lch
     } = layerDefinition
-    const { radius, opacity } = paint
 
     // build featureCode design
     // heatmap: radius -> opacity -> intensity
@@ -44,14 +44,14 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
       [opacity]
     ]
     if (type === 'point') {
-      const { color, stroke, strokeWidth } = paint
+      const { color, stroke, strokeWidth } = layerDefinition
       design.push(
         [color, colorFunc(lch)],
         [stroke, colorFunc(lch)],
         [strokeWidth]
       )
     } else {
-      const { intensity } = paint
+      const { intensity } = layerDefinition
       design.push([intensity])
     }
 
@@ -70,7 +70,7 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
       const { interactive, cursor } = layerDefinition
       return { type, interactive, cursor, ...base }
     } else {
-      const weight = parseFeatureFunction<number>(layerDefinition.layout.weight)
+      const weight = parseFeatureFunction<number>(layerDefinition.weight)
       return { type, weight, ...base }
     }
   }
