@@ -125,17 +125,6 @@ export interface Property<T extends NotNullOrObject> {
   fallback?: T | Property<T>
 }
 
-const x: Property<number> = {
-  dataRange: {
-    key: 'x',
-    ranges: [{
-      stop: 1,
-      input: 2
-    }]
-  }
-}
-console.log(x)
-
 /** Layer */
 export type LayerType = 'fill' | 'glyph' | 'heatmap' | 'line' | 'point' | 'raster' | 'sensor' | 'shade'
 export type LayerDataType = 'fill' | 'glyph' | 'heatmap' | 'line' | 'point' | 'raster' | 'sensor'
