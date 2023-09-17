@@ -1,6 +1,6 @@
 import coalesceField from './coalesceField'
 
-import type { Comparitor } from './style.spec'
+import type { Comparitor, NotNullOrObject } from './style.spec'
 import type { Properties } from 'geometry'
 
 // examples:
@@ -24,7 +24,7 @@ export interface Conditional {
 export interface Condition {
   key: string
   comparitor: Comparitor
-  value?: string | number | string[] | number[]
+  value?: NotNullOrObject
 }
 
 export type Filter = { and: Filter[] } | { or: Filter[] } | Condition
@@ -66,7 +66,7 @@ export default function parseFilter (filter?: Filter): FilterFunction {
 //      comparisons between strings and numbers.
 function parseFilterCondition (
   comparitor: Comparitor,
-  value?: string | number | string[] | number[]
+  value?: NotNullOrObject
 ): ConditionFunction {
   // manage multiple comparitors
   // eslint-disable-next-line
@@ -83,12 +83,12 @@ function parseFilterCondition (
 }
 
 function buildValue (
-  value?: string | number | string[] | number[],
+  value?: NotNullOrObject,
   properties: Properties = {}
-): string | number | number[] {
+): NotNullOrObject {
   if (
     typeof value === 'string' ||
     (Array.isArray(value) && typeof value[0] === 'string')
   ) return coalesceField(value as string | string[], properties)
-  return value as number | number[]
+  return value as NotNullOrObject
 }
