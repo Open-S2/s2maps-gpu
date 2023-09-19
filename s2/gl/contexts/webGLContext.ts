@@ -14,11 +14,11 @@ export default class WebGLContext extends Context {
     const { gl } = this
     // grab extensions
     this.elementIndexUint = gl.getExtension('OES_element_index_uint')
-    if (this.elementIndexUint === null) console.log('*** Error - "OES_element_index_uint" is not a supported extension')
+    if (this.elementIndexUint === null) console.error('*** Error - "OES_element_index_uint" is not a supported extension')
     this.angledInstancedArrays = gl.getExtension('ANGLE_instanced_arrays')
-    if (this.angledInstancedArrays === null) console.log('*** Error - "ANGLE_instanced_arrays" is not a supported extension')
+    if (this.angledInstancedArrays === null) console.error('*** Error - "ANGLE_instanced_arrays" is not a supported extension')
     this.vertexArrayObject = gl.getExtension('OES_vertex_array_object')
-    if (this.vertexArrayObject === null) console.log('*** Error - "OES_vertex_array_object" is not a supported extension')
+    if (this.vertexArrayObject === null) console.error('*** Error - "OES_vertex_array_object" is not a supported extension')
     // polyfill
     this._polyfill()
     // create default quad

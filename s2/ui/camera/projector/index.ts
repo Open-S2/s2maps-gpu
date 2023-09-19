@@ -228,16 +228,18 @@ export default class Projector {
     multiplierX?: number,
     multiplierY?: number
   ): void {
-    let { lon, lat, tileSize, bearing } = this
-    const isS2 = this.projection === 'S2'
-    const { abs, max, min, cos, sin, PI } = Math
+    let { lon, lat, bearing, tileSize } = this
+    const { abs, max, min, PI, sin, cos } = Math
     const zScale = max(this.zoomScale(), 1)
     const tileScale = tileSize / 512
+    const isS2 = this.projection === 'S2'
     // setup multipliers
-    if (multiplierX === undefined) multiplierX = isS2 ? 6.5 * 360 : 0.75
-    if (multiplierY === undefined) multiplierY = isS2 ? 6.5 * 180 : 0.75
-    multiplierX *= tileScale
-    multiplierY *= tileScale
+    if (multiplierX === undefined) multiplierX = isS2 ? (6.5 * 360) : 0.75
+    if (multiplierY === undefined) multiplierY = isS2 ? (6.5 * 180) : 0.75
+    if (!isS2) {
+      multiplierX *= tileScale
+      multiplierY *= tileScale
+    }
     // adjust movement vector if bearing
     if (bearing !== 0) {
       bearing = degToRad(bearing) // adjust to radians
@@ -245,6 +247,7 @@ export default class Projector {
       movementX = movementX * cos(bearing) - movementY * sin(bearing)
       movementY = tmpY
     }
+
     // set the new lon-lat
     if (isS2) {
       // https://math.stackexchange.com/questions/377445/given-a-latitude-how-many-miles-is-the-corresponding-longitude
