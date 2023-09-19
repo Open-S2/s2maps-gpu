@@ -4,14 +4,14 @@ import Camera from './camera/index'
 /** SOURCES **/
 import Animator from './camera/animator'
 
-import type { LayerStyle, StyleDefinition } from 'style/style.spec'
+import type { GPUType, LayerStyle, StyleDefinition } from 'style/style.spec'
 import type { AnimationDirections, AnimationType } from './camera/animator'
 import type { UserTouchEvent } from './camera/dragPan'
 import type { TileWorkerMessage } from 'workers/worker.spec'
 import type { ColorMode } from 's2Map'
 
 export interface MapOptions {
-  contextType?: 1 | 2 | 3 // can force a specific context type (1 -> webgl1, 2 -> webgl2, 3 -> webgpu)
+  contextType?: GPUType // can force a specific context type (1 -> webgl1, 2 -> webgl2, 3 -> webgpu)
   /** support OffscreenCanvas */
   offscreen?: false
   canvas?: HTMLCanvasElement
@@ -33,6 +33,7 @@ export interface MapOptions {
   canZoom?: boolean
   canMove?: boolean
   darkMode?: boolean
+  // TODO: pushing this into options is not the play
   webworker?: boolean
   noClamp?: boolean // lat and lon can be any number
 }

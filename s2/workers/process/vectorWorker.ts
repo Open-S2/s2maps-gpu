@@ -15,6 +15,7 @@ export type CodeDesignInput<T extends NotNullOrObject> = [
 
 // export interface CodeDesignInputRange<T> {
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type CodeDesign<T = any> = Array<CodeDesignInput<ValueType<T>>>
 
 export const colorFunc = (lch: boolean): Callback<string, [number, number, number, number]> => {

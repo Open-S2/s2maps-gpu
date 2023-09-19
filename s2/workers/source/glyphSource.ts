@@ -119,7 +119,7 @@ export default class GlyphSource {
 
     if (metadata === undefined) {
       this.active = false
-      console.log(`FAILED TO extrapolate ${this.path} metadata`)
+      console.error(`FAILED TO extrapolate ${this.path} metadata`)
     } else { await this._buildMetadata(metadata) }
   }
 

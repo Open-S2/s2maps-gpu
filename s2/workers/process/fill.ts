@@ -21,7 +21,6 @@ import type {
 } from './process.spec'
 import type { CodeDesign } from './vectorWorker'
 
-// const MAX_FEATURE_BATCH_SIZE = 1 << 7 // 128
 const MAX_FEATURE_BATCH_SIZE = 1 << 6 // 64
 
 export default class FillWorker extends VectorWorker implements FillWorkerSpec {

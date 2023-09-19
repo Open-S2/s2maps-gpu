@@ -1,3 +1,4 @@
+import Color from './color'
 import parseFilter from './parseFilter'
 import getEasingFunction from './easingFunctions'
 
@@ -13,7 +14,6 @@ import type {
 } from './style.spec'
 import type { FilterFunction } from './parseFilter'
 import type { Properties } from 'geometry'
-import type Color from './color'
 
 interface DataConditionList<U> {
   condition: FilterFunction
@@ -75,8 +75,8 @@ function dataConditionFunction<T extends NotNullOrObject, U> (
 
 function dataRangeFunction<T extends NotNullOrObject> (
   dataRange: DataRange<NumberColor<T>>,
-  cb: Callback<T, number | Color>
-): LayerWorkerFunction<number | Color> {
+  cb: Callback<T, number | string | Color>
+): LayerWorkerFunction<number | string | Color> {
   const { key, ease, base, ranges } = dataRange
   const easeFunction = getEasingFunction(ease ?? 'lin', base)
 
@@ -87,7 +87,7 @@ function dataRangeFunction<T extends NotNullOrObject> (
     }
   })
 
-  return (code: number[], properties: Properties, _zoom: number): number | Color => {
+  return (code: number[], properties: Properties, _zoom: number): number | string | Color => {
     const dataInput = (properties[key] !== undefined && !isNaN(properties[key] as number))
       ? +(properties[key] as number)
       : 0
@@ -97,13 +97,16 @@ function dataRangeFunction<T extends NotNullOrObject> (
       return parsedRanges[parsedRanges.length - 1].input(code, properties, dataInput)
     } else {
       let i = 0
-      while (parsedRanges[i].stop <= dataInput) i += 2
-      // now we know the dataInput is inbetween input[i - 2][0] and input[i - 1][0]
+      while (parsedRanges[i] !== undefined && parsedRanges[i].stop <= dataInput) i++
+      if (parsedRanges.length === i) i--
+      // now we know the dataInput is inbetween i and i - 1
       const startRange = parsedRanges[i - 1].stop
-      const startValue = parsedRanges[i - 1].input(code, properties, dataInput)
+      let startValue = parsedRanges[i - 1].input(code, properties, dataInput)
+      if (typeof startValue === 'string') startValue = new Color(startValue)
       if (startRange === dataInput) return startValue
       const endRange = parsedRanges[i].stop
-      const endValue = parsedRanges[i].input(code, properties, dataInput)
+      let endValue = parsedRanges[i].input(code, properties, dataInput)
+      if (typeof endValue === 'string') endValue = new Color(endValue)
       // now we interpolate
       return easeFunction(dataInput, startRange, endRange, startValue, endValue)
     }
@@ -113,8 +116,8 @@ function dataRangeFunction<T extends NotNullOrObject> (
 // TODO: Support type property (defaults to 'zoom')
 function inputRangeFunction<T extends NotNullOrObject> (
   inputRange: InputRange<NumberColor<T>>,
-  cb: Callback<T, number | Color>
-): LayerWorkerFunction<number | Color> {
+  cb: Callback<T, number | string | Color>
+): LayerWorkerFunction<number | string | Color> {
   const { ease, base, ranges } = inputRange
   const easeFunction = getEasingFunction(ease ?? 'lin', base)
 
@@ -126,22 +129,25 @@ function inputRangeFunction<T extends NotNullOrObject> (
     }
   })
 
-  return (code: number[], properties: Properties, zoom: number): number | Color => {
+  return (code: number[], properties: Properties, zoom: number): number | string | Color => {
     if (zoom <= parsedRanges[0].stop) {
       return parsedRanges[0].input(code, properties, zoom)
     } else if (zoom >= parsedRanges[parsedRanges.length - 1].stop) {
       return parsedRanges[parsedRanges.length - 1].input(code, properties, zoom)
     } else {
       let i = 0
-      while (parsedRanges[i].stop <= zoom) i += 2
-      // now we know the zoom is inbetween input[i - 2][0] and input[i - 1][0]
-      const startZoom = parsedRanges[i - 2].stop
-      const startValue = parsedRanges[i - 1].input(code, properties, zoom)
-      if (startZoom === zoom) return startValue
-      const endZoom = parsedRanges[i].stop
-      const endValue = parsedRanges[i + 1].input(code, properties, zoom)
+      while (parsedRanges[i] !== undefined && parsedRanges[i].stop <= zoom) i++
+      if (parsedRanges.length === i) i--
+      // now we know the zoom is inbetween i and i - 1
+      const startRange = parsedRanges[i - 1].stop
+      let startValue = parsedRanges[i - 1].input(code, properties, zoom)
+      if (typeof startValue === 'string') startValue = new Color(startValue)
+      if (startRange === zoom) return startValue
+      const endRange = parsedRanges[i].stop
+      let endValue = parsedRanges[i].input(code, properties, zoom)
+      if (typeof endValue === 'string') endValue = new Color(endValue)
       // now we interpolate
-      return easeFunction(zoom, startZoom, endZoom, startValue, endValue)
+      return easeFunction(zoom, startRange, endRange, startValue, endValue)
     }
   }
 }

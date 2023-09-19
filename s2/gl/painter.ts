@@ -83,19 +83,16 @@ export default class Painter implements PainterSpec {
     }
     // actually import the programs
     for (const key of programKeys) {
-      promises.push(new Promise((resolve, reject) => {
-        workflowImports[key]?.()
-          .then(async ({ default: pModule }) => {
-            // @ts-expect-error - typescript can't handle matching the workflow to the module
-            workflows[key] = await pModule(context)
-            if (key === 'wallpaper' || key === 'skybox') workflows.background = workflows[key]
-            resolve()
-          })
-          .catch((err) => {
-            console.log('FAILED', err)
-            reject(err)
-          })
-      }))
+      promises.push(workflowImports[key]?.()
+        .then(async ({ default: pModule }) => {
+          // @ts-expect-error - typescript can't handle matching the workflow to the module
+          workflows[key] = await pModule(context)
+          if (key === 'wallpaper' || key === 'skybox') workflows.background = workflows[key]
+        })
+        .catch((err) => {
+          console.error(`FAILED to import painter program ${key}`, err)
+        })
+      )
     }
     await Promise.allSettled(promises)
     if (workflows.glyphFilter !== undefined && workflows.glyph !== undefined) {
