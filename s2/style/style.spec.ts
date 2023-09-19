@@ -86,7 +86,7 @@ export interface DataCondition<T extends NotNullOrObject> {
   fallback: T | Property<T>
 }
 
-export interface DataRange<T extends number | Color> {
+export interface DataRange<T extends number | string | Color> {
   key: string // the objects[key] -> value used as position on range
   ease?: EaseType
   base?: number // 0 -> 2
@@ -96,7 +96,7 @@ export interface DataRange<T extends number | Color> {
   }>
 }
 
-export interface InputRange<T extends number | Color> {
+export interface InputRange<T extends number | string | Color> {
   type: 'zoom' | 'lon' | 'lat' | 'angle' | 'pitch'
   ease?: EaseType
   base?: number // 0 -> 2
@@ -115,7 +115,7 @@ export interface FeatureState<T extends NotNullOrObject> {
 
 export type NotNullOrObject = string | number | boolean | bigint | Color | Array<string | number | boolean | bigint | Color>
 export type ValueType<T> = T extends NotNullOrObject ? T : never
-export type NumberColor<T> = T extends (number | Color) ? T : never
+export type NumberColor<T> = T extends (number | string | Color) ? T : never
 
 export interface Property<T extends NotNullOrObject> {
   dataCondition?: DataCondition<ValueType<T>>
@@ -137,7 +137,7 @@ export interface LayerStyleBase {
   layer?: string
   minzoom?: number
   maxzoom?: number
-  filter?: Filter // ["or" ["class" "==" "ocean"] ["class" "==" "river"]]
+  filter?: Filter
   lch?: boolean
 }
 // refines the style.json to ensure all variables exist that need to
@@ -149,7 +149,7 @@ export interface LayerDefinitionBase {
   layer: string
   minzoom: number
   maxzoom: number
-  filter?: Filter // ["or" ["class" "==" "ocean"] ["class" "==" "river"]]
+  filter?: Filter
   lch: boolean
 }
 // uses definition to create a guide for the workflow (program/pipeline)
@@ -563,7 +563,7 @@ export interface StylePackage {
 }
 
 /** WALLPAPER **/
-export type SkyboxImageType = 'png' | 'jpg' | 'jpeg' | 'webp' | 'avic'
+export type SkyboxImageType = 'png' | 'jpg' | 'jpeg' | 'webp' | 'avif'
 
 export interface SkyboxStyle {
   path: string

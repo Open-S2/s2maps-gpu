@@ -11,7 +11,7 @@ function ready (s2map: S2Map): void {
   console.log('ready', s2map)
 }
 
-export default function Background (): React.JSX.Element {
+export default function LCH (): React.JSX.Element {
   return (
     <div className='pages'>
       <Map

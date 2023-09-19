@@ -212,6 +212,7 @@ export default async function fillProgram (context: Context): Promise<FillProgra
       const { gl, context, type, uniforms } = this
       // get current source data
       const { source, tile, count, offset, layerIndex, color, opacity, invert, featureCode, mode } = featureGuide
+      // console.log(featureCode)
       const { vao } = source
       // ensure proper context state
       context.defaultBlend()
