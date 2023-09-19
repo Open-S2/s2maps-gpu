@@ -19,7 +19,7 @@ export default class JSONSource extends Source {
     const json = await this._fetch(`${this.path}`, mapID, true) as unknown as JSON
     if (json === undefined) {
       this.active = false
-      console.log(`FAILED TO extrapolate ${this.path} json data`)
+      console.error(`FAILED TO extrapolate ${this.path} json data`)
     } else {
       this.json = new JsonVT(json)
       const { minzoom, maxzoom, faces } = this.json

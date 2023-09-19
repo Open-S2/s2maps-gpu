@@ -42,14 +42,14 @@ export default class S2TilesSource extends Source {
     const ab = await this.getRange(`${this.path}?type=dir`, 0, DB_METADATA_SIZE, mapID) as ArrayBuffer | undefined
     if (ab === undefined || ab.byteLength !== DB_METADATA_SIZE) { // if the return is empty, we failed
       this.active = false
-      console.log(`Failed to extrapolate ${this.path} metadata`)
+      console.error(`Failed to extrapolate ${this.path} metadata`)
       return
     }
     // prep a data view, store in header, build metadata
     const dv = new DataView(ab, 0, 20)
     if (dv.getUint16(0, true) !== 12883) { // the first two bytes are S and 2, we validate
       this.active = false
-      console.log(`Bad metadata from ${this.path}`)
+      console.error(`Bad metadata from ${this.path}`)
       return
     }
     // parse: grab the version
@@ -59,7 +59,7 @@ export default class S2TilesSource extends Source {
     const mO = getUint48(dv, 8)
     if (mL === 0 || mO === 0) { // if the metadata is empty, we failed
       this.active = false
-      console.log(`Failed to extrapolate ${this.path} metadata`)
+      console.error(`Failed to extrapolate ${this.path} metadata`)
       return
     }
     // create root directories

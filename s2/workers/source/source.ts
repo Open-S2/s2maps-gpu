@@ -71,7 +71,7 @@ export default class Source {
     if (metadata === undefined) metadata = await this._fetch(`${this.path}/metadata.json`, mapID, true) as Metadata
     if (metadata === undefined) {
       this.active = false
-      console.log(`FAILED TO extrapolate ${this.path} metadata`)
+      console.error(`FAILED TO extrapolate ${this.path} metadata`)
     } else { this._buildMetadata(metadata, mapID) }
   }
 
