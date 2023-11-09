@@ -2,9 +2,11 @@ import Color from './color'
 
 import type {
   DataCondition,
-  DataRange,
+  DataRangeEase,
+  DataRangeStep,
   FeatureState,
-  InputRange,
+  InputRangeEase,
+  InputRangeStep,
   NotNullOrObject,
   NumberColor,
   Property,
@@ -128,7 +130,7 @@ function encodeDataCondition<T extends NotNullOrObject> (
 }
 
 function encodeRange<T> (
-  { ease, base, ranges }: DataRange<NumberColor<T>> | InputRange<NumberColor<T>>,
+  { ranges }: DataRangeEase<NumberColor<T>> | DataRangeStep<ValueType<T>> | InputRangeEase<NumberColor<T>> | InputRangeStep<ValueType<T>>,
   lch: boolean
 ): number[] {
   const encoding = []

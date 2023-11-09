@@ -24,7 +24,7 @@ import type {
 import type { GlyphImages } from 'workers/source/glyphSource'
 import type { TileGPU as Tile } from 'source/tile.spec'
 import type Projector from 'ui/camera/projector'
-import type { PainterData } from 'workers/worker.spec'
+import type { PainterData, SpriteImageMessage } from 'workers/worker.spec'
 import type TimeCache from 'ui/camera/timeCache'
 // import type { FeatureGuide } source/tile'
 // import type { PipelineType } from './pipelines/pipeline'
@@ -108,7 +108,7 @@ export default class Painter {
     // glyph.injectImages(maxHeight, images)
   }
 
-  setColorMode (mode: 0 | 1 | 2 | 3): void {
+  setColorMode (mode: 0 | 1 | 2 | 3 | 4): void {
     this.dirty = true
     // tell all the workflows
     // const { workflows } = this
@@ -208,6 +208,11 @@ export default class Painter {
 
   // injectGlyphImages (maxHeight: number, images: GlyphImages) {
   // }
+
+  injectSpriteImage (data: SpriteImageMessage): void {
+    // const { glyph } = this.workflows
+    // glyph?.injectSpriteImage(data)
+  }
 }
 
 // function featureSort (a: FeatureGuide, b: FeatureGuide): number {

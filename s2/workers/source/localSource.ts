@@ -1,17 +1,37 @@
 /* eslint-env worker */
 import type { TileRequest } from '../worker.spec'
 
+export interface LocalTileProperties {
+  id: bigint
+  face: number
+  zoom: number
+  i: number
+  j: number
+}
+
+export type GetFeatureBoundary = () => {
+  properties: LocalTileProperties
+  type: number
+  loadGeometry: () => number[][][]
+}
+
+export type GetFeatureName = () => {
+  properties: LocalTileProperties
+  type: number
+  loadGeometry: () => number[][]
+}
+
 export interface LocalTile {
   layers: {
     boundary: {
       extent: 8_192
       length: 1
-      feature: Function
+      feature: GetFeatureBoundary
     }
     name: {
       extent: 8_192
       length: 1
-      feature: Function
+      feature: GetFeatureName
     }
   }
 }

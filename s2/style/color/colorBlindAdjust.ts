@@ -2,8 +2,6 @@
 // http://www.daltonize.org/
 // https://galactic.ink/labs/Color-Vision/Javascript/Color.Vision.Daltonize.js
 
-// export type ColorBlindAdjust = 'protanopia' | 'deuteranopia' | 'tritanopia'
-
 export interface CVDType {
   protanopia: [number, number, number, number, number, number, number, number, number]
   deuteranopia: [number, number, number, number, number, number, number, number, number]
@@ -28,20 +26,25 @@ const CVDTypes: CVDType = {
   ]
 }
 
-export type ColorBlindAdjust = keyof CVDType
+export type ColorBlindAdjust = 'protanopia' | 'deuteranopia' | 'tritanopia' | 'grayscale'
 
 export default function colorBlindAdjust (
   color: [number, number, number, number],
   type: ColorBlindAdjust = 'tritanopia'
 ): [number, number, number, number] {
+  // ensure we are using RGB and grab the values
+  const [r, g, b, a] = color
+  // if grayscale just return the grayscale value
+  if (type === 'grayscale') {
+    const l = (0.3 * r) + (0.59 * g) + (0.11 * b)
+    return [l, l, l, a]
+  }
   // setup adjuster
   const [
     cvdA, cvdB, cvdC,
     cvdD, cvdE, cvdF,
     cvdG, cvdH, cvdI
   ] = CVDTypes[type]
-  // ensure we are using RGB and grab the values
-  const [r, g, b, a] = color
   // RGB to LMS matrix conversion
   const L = (17.8824 * r) + (43.5161 * g) + (4.11935 * b)
   const M = (3.45565 * r) + (27.1554 * g) + (3.86714 * b)

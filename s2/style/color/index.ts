@@ -225,47 +225,6 @@ export default class Color {
     this.val = [r, g, b, a]
   }
 
-  // take two hsv OR values and return an rgb Color
-  static interpolate (color1: Color, color2: Color, t: number): Color {
-    if (color1.type !== color2.type) return new Color(color1.val[0], color1.val[1], color1.val[2], color1.val[3], color1.type)
-    if (color1.type === 'rgb') {
-      const [r1, g1, b1, a1] = color1.val
-      const [r2, g2, b2, a2] = color2.val
-      const r = r1 + (r2 - r1) * t
-      const g = g1 + (g2 - g1) * t
-      const b = b1 + (b2 - b1) * t
-      const a = a1 + (a2 - a1) * t
-      return new Color(r, g, b, a, 'rgb')
-    }
-    // prep variables
-    let sat, hue, dh
-    const [hue0, sat0, lbv0, alpha0] = color1.val
-    const [hue1, sat1, lbv1, alpha1] = color2.val
-    // first manage hue
-    if (!isNaN(hue0) && !isNaN(hue1)) {
-      if (hue1 > hue0 && hue1 - hue0 > 180) dh = hue1 - (hue0 + 360)
-      else if (hue1 < hue0 && hue0 - hue1 > 180) dh = hue1 + 360 - hue0
-      else dh = hue1 - hue0
-      hue = hue0 + t * dh
-    } else if (!isNaN(hue0)) {
-      hue = hue0
-      if (lbv1 === 1 || lbv1 === 0) sat = sat0
-    } else if (!isNaN(hue1)) {
-      hue = hue1
-      if (lbv0 === 1 || lbv0 === 0) sat = sat1
-    } else {
-      hue = 0
-    }
-    // saturation
-    if (sat === undefined) sat = sat0 + t * (sat1 - sat0)
-    // luminosity
-    const lbv = lbv0 + t * (lbv1 - lbv0)
-    // alpha
-    const alpha = alpha0 + t * (alpha1 - alpha0)
-    // create the new color
-    return new Color(hue, sat, lbv, alpha, color1.type)
-  }
-
   static sinebow (t: number): Color {
     const { sin, cos, floor, max, PI } = Math
     let rad = t * (2 * PI) * (5 / 6)
@@ -280,7 +239,7 @@ export default class Color {
   }
 
   static fadeToWhite (t: number): Color {
-    return this.interpolate(
+    return interpolate(
       this.sinebow(1),
       new Color(255, 255, 255, 1, 'rgb'),
       t
@@ -321,4 +280,45 @@ const rgb2xyz = (r: number, g: number, b: number): [number, number, number] => {
   const y = xyzLab((0.2126729 * r + 0.7151522 * g + 0.0721750 * b) / 1)
   const z = xyzLab((0.0193339 * r + 0.1191920 * g + 0.9503041 * b) / 1.088830)
   return [x, y, z]
+}
+
+// take two hsv OR values and return an rgb Color
+export function interpolate (color1: Color, color2: Color, t: number): Color {
+  if (color1.type !== color2.type) return new Color(color1.val[0], color1.val[1], color1.val[2], color1.val[3], color1.type)
+  if (color1.type === 'rgb') {
+    const [r1, g1, b1, a1] = color1.val
+    const [r2, g2, b2, a2] = color2.val
+    const r = r1 + (r2 - r1) * t
+    const g = g1 + (g2 - g1) * t
+    const b = b1 + (b2 - b1) * t
+    const a = a1 + (a2 - a1) * t
+    return new Color(r, g, b, a, 'rgb')
+  }
+  // prep variables
+  let sat, hue, dh
+  const [hue0, sat0, lbv0, alpha0] = color1.val
+  const [hue1, sat1, lbv1, alpha1] = color2.val
+  // first manage hue
+  if (!isNaN(hue0) && !isNaN(hue1)) {
+    if (hue1 > hue0 && hue1 - hue0 > 180) dh = hue1 - (hue0 + 360)
+    else if (hue1 < hue0 && hue0 - hue1 > 180) dh = hue1 + 360 - hue0
+    else dh = hue1 - hue0
+    hue = hue0 + t * dh
+  } else if (!isNaN(hue0)) {
+    hue = hue0
+    if (lbv1 === 1 || lbv1 === 0) sat = sat0
+  } else if (!isNaN(hue1)) {
+    hue = hue1
+    if (lbv0 === 1 || lbv0 === 0) sat = sat1
+  } else {
+    hue = 0
+  }
+  // saturation
+  if (sat === undefined) sat = sat0 + t * (sat1 - sat0)
+  // luminosity
+  const lbv = lbv0 + t * (lbv1 - lbv0)
+  // alpha
+  const alpha = alpha0 + t * (alpha1 - alpha0)
+  // create the new color
+  return new Color(hue, sat, lbv, alpha, color1.type)
 }

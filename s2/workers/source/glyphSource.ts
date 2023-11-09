@@ -3,6 +3,7 @@ import type Session from './session'
 
 import type TexturePack from './texturePack'
 import type { Color, Colors } from '../process/glyph/glyph.spec'
+import type { GlyphImageData, GlyphResponseMessage } from 'workers/worker.spec'
 
 type Unicode = number
 
@@ -52,12 +53,12 @@ export type GlyphImages = GlyphImage[]
 export interface Glyph {
   texX: number // x position on glyph texture sheet
   texY: number // y position on glyph texture sheet
-  texW: number
-  texH: number
+  texW: number // width of glyph on texture sheet
+  texH: number // height of glyph on texture sheet
   xOffset: number // x offset for glyph
   yOffset: number // y offset for glyph
-  width: number
-  height: number
+  width: number // width of glyph
+  height: number // height of glyph
   advanceWidth: number // how far to move the cursor
 }
 
@@ -90,7 +91,6 @@ export default class GlyphSource {
   maxHeight!: number
   range!: number
   texturePack: TexturePack
-  needsToken = false
   session: Session
   colors!: Colors
   iconMap!: IconMap
@@ -102,14 +102,12 @@ export default class GlyphSource {
     name: string,
     path: string,
     texturePack: TexturePack,
-    needsToken: boolean,
     session: Session,
     fallbackName?: string
   ) {
     this.name = name
     this.path = path
     this.texturePack = texturePack
-    if (needsToken) this.needsToken = true
     this.session = session
     this.fallbackName = fallbackName // temporary reference to the source name
   }
@@ -274,7 +272,7 @@ export default class GlyphSource {
 
     await Promise.all(promiseList)
     // convert glyphList into a Float32Array of unicode data and ship it out
-    const shipment = []
+    const shipment: number[] = []
     for (const unicode of request) {
       const glyph = glyphCache.has(unicode)
         ? glyphCache.get(unicode)
@@ -288,7 +286,8 @@ export default class GlyphSource {
       }
     }
     const glyphMetadata = (new Float32Array(shipment)).buffer
-    worker.postMessage({ mapID, type: 'glyphresponse', reqID, glyphMetadata, familyName: name, icons, colors }, [glyphMetadata])
+    const glyphResponseMessage: GlyphResponseMessage = { mapID, type: 'glyphresponse', reqID, glyphMetadata, familyName: name, icons, colors }
+    worker.postMessage(glyphResponseMessage, [glyphMetadata])
   }
 
   async #requestGlyphs (list: number[], mapID: string): Promise<void> {
@@ -335,7 +334,8 @@ export default class GlyphSource {
         }
         // send off the images
         const imagesMaxHeight = images.reduce((acc, cur) => Math.max(acc, cur.posY + cur.height), 0)
-        postMessage({ mapID, type: 'glyphimages', images, maxHeight: imagesMaxHeight }, images.map(i => i.data))
+        const glyphImageMessage: GlyphImageData = { mapID, type: 'glyphimages', images, maxHeight: imagesMaxHeight }
+        postMessage(glyphImageMessage, images.map(i => i.data))
       }))
     }
     await Promise.allSettled(promises)
@@ -367,7 +367,7 @@ export default class GlyphSource {
 
   async _fetch (path: string, mapID: string): Promise<undefined | ArrayBuffer> {
     const headers: { Authorization?: string } = {}
-    if (this.needsToken) {
+    if (this.session.hasAPIKey(mapID)) {
       const Authorization = await this.session.requestSessionToken(mapID)
       if (Authorization === 'failed') return
       if (Authorization !== undefined) headers.Authorization = Authorization

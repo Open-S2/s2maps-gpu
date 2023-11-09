@@ -1,4 +1,4 @@
-import Color from './color'
+import Color, { interpolate } from './color'
 // these modules return a value between 0->1 via a start, end, and input
 // obviously, the input must be between start and end inclusive: [start, end]
 
@@ -20,7 +20,7 @@ export default function getEasingFunction (easeType: EaseType, base = 1): EaseFu
     const t = func(zoom, start, end, base)
 
     if (typeof startValue === 'number' && typeof endValue === 'number') return startValue + t * (endValue - startValue)
-    else if (startValue instanceof Color && endValue instanceof Color) return Color.interpolate(startValue, endValue, t)
+    else if (startValue instanceof Color && endValue instanceof Color) return interpolate(startValue, endValue, t)
     else return startValue
   }
 }

@@ -351,15 +351,16 @@ export default class Camera {
   }
 
   _injectData (data: TileWorkerMessage): void {
-    const { tileID, type } = data
+    const { type } = data
 
     if (type === 'interactive') this.#injectInteractiveData(data.tileID, data.interactiveGuideBuffer, data.interactiveDataBuffer)
     else if (type === 'flush') this.#injectFlush(data)
     else if (type === 'glyphimages') this.painter.injectGlyphImages(data.maxHeight, data.images)
+    else if (type === 'spriteimage') this.painter.injectSpriteImage(data)
     else if (type === 'timesource') this._addTimeSource(data.sourceName, data.interval)
     else {
       // 1) grab the tile
-      const tile = this.tileCache.get(tileID)
+      const tile = this.tileCache.get(data.tileID)
       if (tile === undefined) return
       // 2) Build features via the painter. Said workflow will add to the tile's feature list
       this.painter.buildFeatureData(tile as any, data)

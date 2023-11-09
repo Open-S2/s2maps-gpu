@@ -67,6 +67,7 @@ export default class JsonVT {
       const stackList = stack.pop()
       if (stackList === undefined) break
       const [features, id] = stackList
+      // console.log('features', features)
       // prep variables
       let tile = this.tiles.get(id)
       // if the tile we need does not exist, we create it
@@ -84,11 +85,13 @@ export default class JsonVT {
       ) continue
       // if we slice further down, no need to keep source geometry
       tile.source = undefined
+      // console.log('features.length', features.length)
       // dummy check: no features to clip
       if (features.length === 0) continue
       // acquire the new four tiles and four children
       const [bl, br, tl, tr] = clip(features, tile, this)
       const [blID, brID, tlID, trID] = childrenIJ(projection, getFace(projection, id), tile.zoom, tile.i, tile.j)
+      // console.log('CHILDREN', blID, brID, tlID, trID)
       // push the new features to the stack
       stack.push([bl, blID])
       stack.push([br, brID])
@@ -100,6 +103,7 @@ export default class JsonVT {
   getTile (id: bigint): undefined | JSONVectorTile {
     const { projection } = this
     const zoom = level(projection, id)
+    // console.log('projection', projection, id, zoom)
     if (zoom < 0 || zoom > 24 || !this.faces.has(getFace(projection, id))) return
     let tile = this.tiles.get(id)
     if (tile !== undefined) return transformTile(tile, this.extent)
@@ -110,6 +114,8 @@ export default class JsonVT {
       pID = parentID(projection, pID)
       parent = this.tiles.get(pID)
     }
+
+    // console.log('SPLIT PARENT', parent)
 
     if (parent?.source === undefined) return
     this.splitTile(parent.source, pID, id, zoom)

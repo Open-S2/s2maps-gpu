@@ -9,6 +9,8 @@ import type {
   GlyphWorkerLayer,
   HeatmapLayerDefinition,
   HeatmapWorkerLayer,
+  HillshadeLayerDefinition,
+  HillshadeWorkerLayer,
   InteractiveWorkerLayer,
   LineLayerDefinition,
   LineWorkerLayer,
@@ -116,12 +118,14 @@ export interface GlyphWorker extends VectorWorker {
 
 export interface RasterWorker {
   gpuType: GPUType
-  setupLayer: (layerDefinition: SensorLayerDefinition | RasterLayerDefinition) => RasterWorkerLayer | SensorWorkerLayer
+  setupLayer: (
+    layerDefinition: SensorLayerDefinition | RasterLayerDefinition | HillshadeLayerDefinition
+  ) => RasterWorkerLayer | SensorWorkerLayer | HillshadeWorkerLayer
 
   buildTile: (
     mapID: string,
     sourceName: string,
-    layers: RasterWorkerLayer[],
+    layers: Array<RasterWorkerLayer | SensorWorkerLayer | HillshadeWorkerLayer>,
     tile: TileRequest,
     data: ArrayBuffer,
     size: number
@@ -136,6 +140,7 @@ export interface Workers {
   glyph?: GlyphWorker
   raster?: RasterWorker
   sensor?: RasterWorker
+  hillshade?: RasterWorker
 }
 
 export type WorkersKeys = keyof Workers

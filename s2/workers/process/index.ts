@@ -70,7 +70,7 @@ export default class ProcessManager {
       } else if (name === 'glyph') {
         workers.glyph = new GlyphWorker(idGen, gpuType, sourceWorker)
       } else if (
-        (name === 'raster' || name === 'sensor') &&
+        (name === 'raster' || name === 'sensor' || name === 'hillshade') &&
         this.workers.raster === undefined
       ) {
         workers.sensor = workers.raster = new RasterWorker(gpuType)

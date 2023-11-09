@@ -1,4 +1,4 @@
-type BBox = [number, number, number, number] // x, y, width, height
+type BBox = [x: number, y: number, width: number, height: number] // x, y, width, height
 
 interface Space {
   widthOffset: number
@@ -15,7 +15,7 @@ export default class TexturePack {
   maxWidth = 2048
   spaces: Record<number, Space> = {}
 
-  addGlyph (width: number, height: number): [number, number] {
+  addGlyph (width: number, height: number): [offsetX: number, offsetY: number] {
     // create a box object
     const bbox: BBox = [0, 0, width, height]
 

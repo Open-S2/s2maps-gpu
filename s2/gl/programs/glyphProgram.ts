@@ -15,7 +15,7 @@ import type {
   GlyphWorkflowLayerGuide,
   LayerDefinitionBase
 } from 'style/style.spec'
-import type { GlyphData } from 'workers/worker.spec'
+import type { GlyphData, SpriteImageMessage } from 'workers/worker.spec'
 import type { TileGL as Tile } from 'source/tile.spec'
 import type {
   FBO,
@@ -368,6 +368,28 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
         const srcData = new Uint8ClampedArray(data)
         gl.texSubImage2D(gl.TEXTURE_2D, 0, posX, posY, width, height, gl.RGBA, gl.UNSIGNED_BYTE, srcData, 0)
       }
+    }
+
+    injectSpriteImage (data: SpriteImageMessage): void {
+      const { gl } = this
+      const { image, built, offsetX, offsetY, width, height, maxHeight } = data
+      // increase texture size if necessary
+      this.#increaseFBOSize(maxHeight)
+      // do not premultiply
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0)
+      // setup texture
+
+      const texture = context.buildTexture(
+        built ? image as ImageBitmap : new Uint8ClampedArray(image as ArrayBuffer),
+        width,
+        height
+      )
+      // bind the framebuffer and copy the texture
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo.glyphFramebuffer)
+      gl.bindTexture(gl.TEXTURE_2D, texture)
+      gl.copyTexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, offsetX, offsetY, width, height)
+      // cleanup (delete texture)
+      gl.deleteTexture(texture)
     }
 
     use (): void {
