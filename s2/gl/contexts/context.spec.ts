@@ -109,6 +109,7 @@ export interface GlyphFeatureGuide extends FeatureGuideBase {
   overdraw: boolean
   isIcon: boolean
   interactive: boolean
+  textureName?: string
   bounds?: [number, number, number, number]
   size?: number
   fill?: [number, number, number, number]
@@ -174,6 +175,15 @@ export interface RasterFeatureGuide extends FeatureGuideBase {
   saturation?: number // webgl1
 }
 
+// ** HILLSHADE **
+export interface HillshadeFeatureGuide extends FeatureGuideBase {
+  type: 'hillshade'
+  source: RasterSource
+  fadeDuration: number
+  fadeStartTime: number
+  opacity?: number // webgl1
+}
+
 // ** SENSOR **
 export interface SensorFeatureGuide extends FeatureGuideBase {
   type: 'sensor'
@@ -198,7 +208,7 @@ export interface ShadeFeatureGuide extends FeatureGuideBase {
 export type FeatureGuide =
   FillFeatureGuide | GlyphFeatureGuide | HeatmapFeatureGuide |
   LineFeatureGuide | PointFeatureGuide | RasterFeatureGuide |
-  SensorFeatureGuide | ShadeFeatureGuide
+  SensorFeatureGuide | ShadeFeatureGuide | HillshadeFeatureGuide
 
 /* CONTEXTS */
 

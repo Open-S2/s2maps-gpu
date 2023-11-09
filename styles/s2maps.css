@@ -67,6 +67,10 @@
 #s2-colorblind-trit {
   background-image: url('/s2/svg/tritanopia.svg');
 }
+/* TODO: USE a G */
+#s2-colorblind-gray {
+  background-image: url('/s2/svg/tritanopia.svg');
+}
 
 .s2-compass {
   position: absolute;

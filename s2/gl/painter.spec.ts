@@ -12,6 +12,7 @@ import type {
   GlyphFilterProgram,
   GlyphProgram,
   HeatmapProgram,
+  HillshadeProgram,
   LineProgram,
   PointProgram,
   RasterProgram,
@@ -37,12 +38,13 @@ export interface Painter {
 
   buildFeatureData: (tile: Tile, data: PainterData) => void
   useWorkflow: (
-    ((programName: 'fill') => FillProgram | undefined) &
+    ((programName: 'fill') => FillProgram) &
     ((programName: 'glyph') => GlyphProgram | undefined) &
     ((programName: 'heatmap') => HeatmapProgram | undefined) &
     ((programName: 'line') => LineProgram | undefined) &
     ((programName: 'point') => PointProgram | undefined) &
     ((programName: 'raster') => RasterProgram | undefined) &
+    ((programName: 'hillshade') => HillshadeProgram | undefined) &
     ((programName: 'sensor') => SensorProgram | undefined) &
     ((programName: 'shade') => ShadeProgram | undefined) &
     ((programName: 'glyphFilter') => GlyphFilterProgram | undefined) &
@@ -52,7 +54,7 @@ export interface Painter {
   resize: (width: number, height: number) => void
   getScreen: () => Uint8ClampedArray
   injectGlyphImages: (maxHeight: number, images: GlyphImages) => void
-  setColorMode: (mode: 0 | 1 | 2 | 3) => void
+  setColorMode: (mode: 0 | 1 | 2 | 3 | 4) => void
   delete: () => void
   injectFrameUniforms: (matrix: Float32Array, view: number[], aspect: number[]) => void
   injectTimeCache: (timeCache: TimeCache) => void

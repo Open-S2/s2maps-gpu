@@ -1,4 +1,4 @@
-import Color from '.'
+import Color, { interpolate } from '.'
 
 import type { ColorBlindAdjust } from './colorBlindAdjust'
 
@@ -28,11 +28,11 @@ export function buildColorRamp (
       let i = 0
       while (t > numberRamp[i]) i++
       if (t === numberRamp[i]) return lch ? colorRamp[i].getLCH() : colorRamp[i].getRGB(false, cbAdjust)
-      return Color.interpolate(colorRamp[i - 1], colorRamp[i], (t - numberRamp[i - 1]) / (numberRamp[i] - numberRamp[i - 1])).getRGB(false, cbAdjust)
+      return interpolate(colorRamp[i - 1], colorRamp[i], (t - numberRamp[i - 1]) / (numberRamp[i] - numberRamp[i - 1])).getRGB(false, cbAdjust)
     }
   }
   // build the ramp for base color and each colorblindness
-  const rampMap: Array<undefined | ColorBlindAdjust> = [undefined, 'protanopia', 'deuteranopia', 'tritanopia']
+  const rampMap: Array<undefined | ColorBlindAdjust> = [undefined, 'protanopia', 'deuteranopia', 'tritanopia', 'grayscale']
   for (let t = 0, tl = rampMap.length; t < tl; t++) {
     const type = rampMap[t]
     const offset = t * 256 * 4

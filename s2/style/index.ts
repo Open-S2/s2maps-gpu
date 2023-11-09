@@ -169,7 +169,7 @@ export default class Style {
     const { apiKey, layers } = this
     const { id, webworker, painter } = this.camera
     const { type } = painter.context
-    const { projection, sources, glyphs, fonts, icons, minzoom, maxzoom } = style
+    const { projection, sources, glyphs, fonts, icons, sprites, minzoom, maxzoom } = style
     const analytics = this.#buildAnalytics()
     // now that we have various source data, package up the style objects we need and send it off:
     const stylePackage: StylePackage = {
@@ -179,6 +179,7 @@ export default class Style {
       glyphs: glyphs ?? {},
       fonts: fonts ?? {},
       icons: icons ?? {},
+      sprites: sprites ?? {},
       layers: layers.filter(l => l.source !== 'mask'),
       minzoom: minzoom ?? 0,
       maxzoom: maxzoom ?? 20,

@@ -26,7 +26,7 @@ import type {
   // GlyphData,
   // HeatmapData,
   // LineData,
-  PainterData
+  PainterData, SpriteImageMessage
   // PointData,
   // RasterData,
   // SensorData
@@ -59,7 +59,8 @@ export interface Painter {
   resize: (width: number, height: number) => void
   getScreen: () => Uint8ClampedArray
   injectGlyphImages: (maxHeight: number, images: GlyphImages) => void
-  setColorMode: (mode: 0 | 1 | 2 | 3) => void
+  injectSpriteImage: (data: SpriteImageMessage) => void
+  setColorMode: (mode: 0 | 1 | 2 | 3 | 4) => void
   delete: () => void
   injectFrameUniforms: (matrix: Float32Array, view: Float32Array, aspect: Float32Array) => void
   paint: (projector: Projector, tiles: Tile[]) => void

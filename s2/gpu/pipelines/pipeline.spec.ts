@@ -3,6 +3,7 @@ import type {
   FillWorkflowLayerGuide,
   GlyphLayerDefinition,
   HeatmapLayerDefinition,
+  HillshadeLayerDefinition,
   LayerDefinitionBase,
   LayerStyle,
   LineLayerDefinition,
@@ -19,6 +20,7 @@ import type {
   FillData,
   GlyphData,
   HeatmapData,
+  HillshadeData,
   LineData,
   PointData,
   RasterData,
@@ -34,6 +36,7 @@ export interface Workflow {
   line?: LinePipeline
   point?: PointPipeline
   raster?: RasterPipeline
+  hillshade?: HillshadePipeline
   sensor?: SensorPipeline
   shade?: ShadePipeline
   wallpaper?: WallpaperPipeline
@@ -49,6 +52,7 @@ export interface WorkflowImports {
   // line: () => Promise<{ default: (context: WebGPUContext) => Promise<LinePipeline> }>
   // point: () => Promise<{ default: (context: WebGPUContext) => Promise<PointPipeline> }>
   // raster: () => Promise<{ default: (context: WebGPUContext) => Promise<RasterPipeline> }>
+  // hillshade: () => Promise<{ default: (context: WebGPUContext) => Promise<HillshadePipeline> }>
   // sensor: () => Promise<{ default: (context: WebGPUContext) => Promise<SensorPipeline> }>
   // shade: () => Promise<{ default: (context: WebGPUContext) => Promise<ShadePipeline> }>
   // wallpaper: () => Promise<{ default: (context: WebGPUContext) => Promise<WallpaperPipeline> }>
@@ -57,7 +61,7 @@ export interface WorkflowImports {
 
 export type WorkflowKey = keyof Workflow
 
-export type WorkflowType = 'fill' | 'glyph' | 'heatmap' | 'line' | 'point' | 'raster' | 'sensor' | 'shade' | 'skybox' | 'wallpaper'
+export type WorkflowType = 'fill' | 'glyph' | 'heatmap' | 'line' | 'point' | 'raster' | 'hillshade' | 'sensor' | 'shade' | 'skybox' | 'wallpaper'
 
 export interface Pipeline {
   context: WebGPUContext
@@ -107,6 +111,11 @@ export interface PointPipeline extends Pipeline {
 export interface RasterPipeline extends Pipeline {
   buildSource: (rasterData: RasterData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LayerStyle) => RasterLayerDefinition
+}
+
+export interface HillshadePipeline extends Pipeline {
+  buildSource: (rasterData: HillshadeData, tile: Tile) => void
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LayerStyle) => HillshadeLayerDefinition
 }
 
 export interface SensorPipeline extends Pipeline {

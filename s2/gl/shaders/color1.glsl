@@ -11,6 +11,16 @@ vec4 cBlindAdjust (in vec4 rgba) {
 	float r = rgba.r * 255.;
 	float g = rgba.g * 255.;
 	float b = rgba.b * 255.;
+	// if uCBlind is 4 return grayscale
+  if (uCBlind == 4.) {
+    float l = (0.3 * r) + (0.59 * g) + (0.11 * b);
+    return vec4(
+      l / 255.,
+      l / 255.,
+      l / 255.,
+      rgba.a
+    );
+  }
 	// RGB to LMS matrix conversion
 	float L = (17.8824 * r) + (43.5161 * g) + (4.11935 * b);
 	float M = (3.45565 * r) + (27.1554 * g) + (3.86714 * b);

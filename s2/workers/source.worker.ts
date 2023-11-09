@@ -18,11 +18,14 @@ import type {
   Icons,
   LayerDefinition,
   Sources,
+  SpriteFileType,
+  Sprites,
   StylePackage,
   Source as StyleSource
 } from 'style/style.spec'
 import type { MarkerDefinition } from './source/markerSource'
 import type { SourceWorkerMessages, TileRequest } from './worker.spec'
+import SpriteSource from './source/spriteSource'
 
 /**
   SOURCE WORKER
@@ -63,6 +66,7 @@ export default class SourceWorker {
   layers: Record<string, LayerDefinition[]> = {}
   sources: SourceMap = {}
   glyphs: Record<string, GlyphSource> = {} // path is key again
+  sprites: Record<string, SpriteSource> = {}
   texturePack: TexturePack = new TexturePack()
 
   onMessage ({ data, ports }: MessageEvent<SourceWorkerMessages>): void {
@@ -106,12 +110,12 @@ export default class SourceWorker {
     // create the source map, if sources already exists, we are dumping the old sources
     this.sources[mapID] = {}
     // pull style data
-    const { sources, layers, fonts, icons, glyphs, analytics, apiKey } = style
+    const { sources, layers, fonts, icons, glyphs, sprites, analytics, apiKey } = style
     this.layers[mapID] = layers
     // create a session with the style
     this.session.loadStyle(mapID, analytics, apiKey)
     // now build sources
-    void this.#buildSources(mapID, sources, layers, fonts, icons, glyphs)
+    void this.#buildSources(mapID, sources, layers, fonts, icons, glyphs, sprites)
   }
 
   #addLayer (
@@ -160,7 +164,8 @@ export default class SourceWorker {
     layers: LayerDefinition[],
     fonts: Fonts = {},
     icons: Icons = {},
-    glyphs: Glyphs = {}
+    glyphs: Glyphs = {},
+    sprites: Sprites = {}
   ): Promise<void> {
     // sources
     for (const [name, source] of Object.entries(sources)) {
@@ -173,10 +178,18 @@ export default class SourceWorker {
       } else { this.#createGlyphSource(mapID, name, source) }
     }
 
-    // add in glyph fallbacks
-    for (const [, glyphSource] of Object.entries(this.glyphs)) {
-      const { fallbackName } = glyphSource
-      if (fallbackName !== undefined) glyphSource.fallback = this.glyphs[fallbackName]
+    for (const [name, source] of Object.entries(sprites)) {
+      if (typeof source === 'object') {
+        this.#createSpriteSheet(mapID, name, source.path, source.fallback, source.fileType)
+      } else { this.#createSpriteSheet(mapID, name, source) }
+    }
+
+    // add in glyph and sprite fallbacks
+    for (const input of [this.glyphs, this.sprites]) {
+      for (const [, inputSource] of Object.entries(input)) {
+        const { fallbackName } = inputSource
+        if (fallbackName !== undefined) inputSource.fallback = input[fallbackName]
+      }
     }
   }
 
@@ -197,21 +210,33 @@ export default class SourceWorker {
     else if (fileType === 'json' || fileType === 's2json' || fileType === 'geojson') source = new JSONSource(name, layers, path, needsToken, session)
     else if (input === 'tile') source = new LocalSource()
     else source = new Source(name, layers, path, needsToken, session) // default -> folder structure
-    // store
+    // store & build
     this.sources[mapID][name] = source
-    // build
     void source.build(mapID, metadata)
   }
 
   #createGlyphSource (mapID: string, name: string, input: string, fallback?: string): void {
     const { texturePack, session } = this
-    // prepare
-    const needsToken = session.hasAPIKey(mapID)
-    const path = s2mapsURL(input)
     // check if already exists
     if (this.glyphs[name] !== undefined) return
-    const source = new GlyphSource(name, path, texturePack, needsToken, session, fallback)
+    const source = new GlyphSource(name, s2mapsURL(input), texturePack, session, fallback)
     this.glyphs[name] = source
+    void source.build(mapID)
+  }
+
+  #createSpriteSheet (
+    mapID: string,
+    name: string,
+    input: string,
+    fallback?: string,
+    fileType?: SpriteFileType
+  ): void {
+    const { texturePack, session } = this
+    // check if already exists
+    if (this.sprites[name] !== undefined) return
+    const source = new SpriteSource(name, s2mapsURL(input), texturePack, session, fallback, fileType)
+    // store & build
+    this.sprites[name] = source
     void source.build(mapID)
   }
 
@@ -265,7 +290,7 @@ export default class SourceWorker {
     }
     // iterate all icon requests
     for (const [name, icons] of Object.entries(iconList)) {
-      this.glyphs[name].iconRequest(icons, mapID, reqID, workers[workerID])
+      (this.sprites[name] ?? this.glyphs[name])?.iconRequest(icons, mapID, reqID, workers[workerID])
     }
   }
 

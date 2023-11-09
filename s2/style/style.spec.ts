@@ -4,7 +4,11 @@ import type { Properties } from 'geometry/proj.spec'
 import type { Filter, FilterFunction } from 'style/parseFilter'
 import type { EaseType } from './easingFunctions'
 import type { MapOptions } from 'ui/s2mapUI'
-import type Color from './color'
+
+export type { Properties } from 'geometry/proj.spec'
+export type { Filter } from './parseFilter'
+export type { EaseType } from './easingFunctions'
+export type { MapOptions } from 'ui/s2mapUI'
 
 /** SOURCES **/
 export type Format = 'zxy' | 'tzxy' | 'fzxy' | 'tfzxy'
@@ -28,6 +32,7 @@ export interface SourceMetadata {
   extension: string
   fileType?: 'json' | 's2json' | 'pbf' | 'png' | 'jpg' | 'webp'
   encoding?: 'gz' | 'br' | 'none'
+  bounds?: [minX: number, minY: number, maxX: number, maxY: number]
   format?: Format
   size?: number // required by raster type sources
   attributions?: Attributions
@@ -37,11 +42,18 @@ export interface SourceMetadata {
   faces?: number[]
   layers?: LayerMetaData
   sourceName?: string // if you want to make requests without getting metadata, you need this
+  // used by geojson sources
+  data?: unknown
+  cluster?: boolean
+  clusterRadius?: number
+  clusterMaxZoom?: number
+  clusterMinPoints?: number
+  clusterProperties?: Record<string, unknown>
 }
 export type Source = string | SourceMetadata
 export type Sources = Record<string, Source> // address to source or source itself
 
-/** GLYPHS, FONTS, AND ICONS */
+/** GLYPHS, FONTS, SPRITES, AND ICONS */
 
 export type Glyphs = Record<string, string | {
   path: string
@@ -49,6 +61,12 @@ export type Glyphs = Record<string, string | {
 }>
 export interface Fonts extends Glyphs {}
 export interface Icons extends Glyphs {}
+export type SpriteFileType = 'png' | 'webp' | 'avif'
+export type Sprites = Record<string, string | {
+  path: string
+  fallback?: string
+  fileType?: SpriteFileType
+}>
 
 /** LAYER MANAGMENT
 
@@ -69,14 +87,14 @@ Definition[paint + layout] -> parseFeatureFunction (updates all paint + layout p
 
 **/
 
-export type Cursor = 'default' | 'pointer' | 'wait' | 'not-allowed' | 'crosshair' | 'none'
+export type Cursor = CSSStyleDeclaration['cursor']
 
 export type LayerWorkerFunction<U> = (code: number[], properties: Properties, zoom: number) => U
 
 export type BuildCodeFunction = (zoom: number, properties: Properties) => [number[], number[]]
 export type BuildCodeFunctionZoom = (zoom: number) => number[]
 
-export type Comparitor = '==' | '!=' | '>' | '>=' | '<' | '<=' | 'in' | '!in' | 'has' | '!has'
+export type Comparator = '==' | '!=' | '>' | '>=' | '<' | '<=' | 'in' | '!in' | 'has' | '!has'
 
 export interface DataCondition<T extends NotNullOrObject> {
   conditions: Array<{
@@ -86,7 +104,9 @@ export interface DataCondition<T extends NotNullOrObject> {
   fallback: T | Property<T>
 }
 
-export interface DataRange<T extends number | string | Color> {
+// export type DataRange<T extends NotNullOrObject> = DataRangeStep<T> | DataRangeEase<T>
+
+export interface DataRangeEase<T extends number | string> {
   key: string // the objects[key] -> value used as position on range
   ease?: EaseType
   base?: number // 0 -> 2
@@ -96,9 +116,29 @@ export interface DataRange<T extends number | string | Color> {
   }>
 }
 
-export interface InputRange<T extends number | string | Color> {
+export interface DataRangeStep<T extends NotNullOrObject> {
+  key: string // the objects[key] -> value used as position on range
+  ease: 'step'
+  base?: number // 0 -> 2
+  ranges: Array<{
+    stop: number
+    input: T | Property<T>
+  }>
+}
+
+export interface InputRangeEase<T extends number | string> {
   type: 'zoom' | 'lon' | 'lat' | 'angle' | 'pitch'
   ease?: EaseType
+  base?: number // 0 -> 2
+  ranges: Array<{
+    stop: number
+    input: T | Property<T>
+  }>
+}
+
+export interface InputRangeStep<T extends NotNullOrObject> {
+  type: 'zoom' | 'lon' | 'lat' | 'angle' | 'pitch'
+  ease: 'step'
   base?: number // 0 -> 2
   ranges: Array<{
     stop: number
@@ -113,21 +153,21 @@ export interface FeatureState<T extends NotNullOrObject> {
   input: T | Property<T>
 }
 
-export type NotNullOrObject = string | number | boolean | bigint | Color | Array<string | number | boolean | bigint | Color>
+export type NotNullOrObject = string | number | boolean | bigint | Array<string | number | boolean | bigint>
 export type ValueType<T> = T extends NotNullOrObject ? T : never
-export type NumberColor<T> = T extends (number | string | Color) ? T : never
+export type NumberColor<T> = T extends (number | string) ? T : never
 
 export interface Property<T extends NotNullOrObject> {
   dataCondition?: DataCondition<ValueType<T>>
-  dataRange?: DataRange<NumberColor<T>>
-  inputRange?: InputRange<NumberColor<T>>
+  dataRange?: DataRangeEase<NumberColor<T>> | DataRangeStep<ValueType<T>>
+  inputRange?: InputRangeEase<NumberColor<T>> | InputRangeStep<ValueType<T>>
   featureState?: FeatureState<ValueType<T>>
   fallback?: T | Property<T>
 }
 
 /** Layer */
-export type LayerType = 'fill' | 'glyph' | 'heatmap' | 'line' | 'point' | 'raster' | 'sensor' | 'shade'
-export type LayerDataType = 'fill' | 'glyph' | 'heatmap' | 'line' | 'point' | 'raster' | 'sensor'
+export type LayerType = 'fill' | 'glyph' | 'heatmap' | 'line' | 'point' | 'raster' | 'hillshade' | 'sensor' | 'shade'
+export type LayerDataType = 'fill' | 'glyph' | 'heatmap' | 'line' | 'point' | 'raster' | 'hillshade' | 'sensor'
 
 // Found in style.json
 export interface LayerStyleBase {
@@ -139,6 +179,7 @@ export interface LayerStyleBase {
   maxzoom?: number
   filter?: Filter
   lch?: boolean
+  metadata?: unknown
 }
 // refines the style.json to ensure all variables exist that need to
 export interface LayerDefinitionBase {
@@ -225,10 +266,11 @@ export interface FillWorkerLayer extends LayerWorkerBase {
 
 /** GLYPH **/
 
+// TODO: Add opacity
 export type Anchor =
   'center' | 'left' | 'right' | 'top' | 'bottom' |
   'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
-export type Alignment = 'center' | 'left' | 'right'
+export type Alignment = 'auto' | 'center' | 'left' | 'right'
 export interface GlyphLayerStyle extends LayerStyleBase {
   type: 'glyph'
   // paint
@@ -361,8 +403,8 @@ export interface LineLayerStyle extends LayerStyleBase {
   width?: number | Property<number>
   gapwidth?: number | Property<number>
   // layout
-  cap?: Cap
-  join?: Join
+  cap?: Cap | Property<Cap>
+  join?: Join | Property<Join>
   dasharray?: Array<[number, string]>
   // properties
   onlyLines?: boolean
@@ -377,8 +419,8 @@ export interface LineLayerDefinition extends LayerDefinitionBase {
   width: number | Property<number>
   gapwidth: number | Property<number>
   // layout
-  cap: Cap
-  join: Join
+  cap: Cap | Property<Cap>
+  join: Join | Property<Join>
   dasharray: Array<[number, string]>
   // properties
   dashed: boolean
@@ -450,8 +492,9 @@ export interface RasterLayerStyle extends LayerStyleBase {
   opacity?: number | Property<number>
   saturation?: number | Property<number>
   contrast?: number | Property<number>
-  fadeDuration?: number
+  // layout
   resampling?: Resampling
+  fadeDuration?: number
 }
 export interface RasterLayerDefinition extends LayerDefinitionBase {
   type: 'raster'
@@ -466,6 +509,39 @@ export interface RasterWorkflowLayerGuide extends LayerWorkflowGuideBase {
 }
 export interface RasterWorkerLayer extends LayerWorkerBaseRaster {
   type: 'raster'
+  getCode: BuildCodeFunctionZoom
+}
+
+/** HILLSHADE **/
+
+export interface HillshadeLayerStyle extends LayerStyleBase {
+  type: 'hillshade'
+  // paint
+  opacity?: number | Property<number>
+  exaggeration?: number | Property<number>
+  color?: string | Property<string>
+  highlightColor?: string | Property<string>
+  accentColor?: string | Property<string>
+  // layout
+  illuminateDirection?: number | Property<number>
+  fadeDuration?: number
+}
+export interface HillshadeLayerDefinition extends LayerDefinitionBase {
+  type: 'hillshade'
+  // paint
+  opacity: number | Property<number>
+  exaggeration: number | Property<number>
+  color: string | Property<string>
+  highlightColor: string | Property<string>
+  accentColor: string | Property<string>
+  // layout
+  illuminateDirection: number | Property<number>
+}
+export interface HillshadeWorkflowLayerGuide extends LayerWorkflowGuideBase {
+  fadeDuration: number
+}
+export interface HillshadeWorkerLayer extends LayerWorkerBaseRaster {
+  type: 'hillshade'
   getCode: BuildCodeFunctionZoom
 }
 
@@ -520,11 +596,11 @@ export type LayerStyle =
 export type LayerDefinition =
   FillLayerDefinition | GlyphLayerDefinition | HeatmapLayerDefinition |
   LineLayerDefinition | PointLayerDefinition | RasterLayerDefinition |
-  SensorLayerDefinition | ShadeLayerDefinition
+  HillshadeLayerDefinition | SensorLayerDefinition | ShadeLayerDefinition
 export type WorkerLayer =
   FillWorkerLayer | GlyphWorkerLayer | HeatmapWorkerLayer |
   LineWorkerLayer | PointWorkerLayer | RasterWorkerLayer |
-  SensorWorkerLayer
+  HillshadeWorkerLayer | SensorWorkerLayer
 export type VectorWorkerLayer =
   FillWorkerLayer | GlyphWorkerLayer | HeatmapWorkerLayer |
   LineWorkerLayer | PointWorkerLayer
@@ -555,6 +631,7 @@ export interface StylePackage {
   fonts: Fonts
   icons: Icons
   glyphs: Glyphs
+  sprites: Sprites
   layers: LayerDefinition[]
   minzoom: number
   maxzoom: number
@@ -615,6 +692,7 @@ export interface StyleDefinition {
   glyphs?: Glyphs
   fonts?: Fonts
   icons?: Icons
+  sprites?: Sprites
   skybox?: SkyboxStyle
   wallpaper?: WallpaperStyle
   layers?: LayerStyle[]

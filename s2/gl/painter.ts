@@ -14,6 +14,7 @@ import type {
   GlyphFilterProgram,
   GlyphProgram,
   HeatmapProgram,
+  HillshadeProgram,
   LineProgram,
   PointProgram,
   Program,
@@ -30,13 +31,13 @@ import type {
 import type { GlyphImages } from 'workers/source/glyphSource'
 import type { ColorMode } from '../s2Map'
 import type {
-  PainterData
+  PainterData, SpriteImageMessage
 } from 'workers/worker.spec'
 
 export default class Painter implements PainterSpec {
   context: WebGL2Context | WebGLContext
   workflows: Workflow = {}
-  currProgram?: WorkflowKey
+  curProgram?: WorkflowKey
   dirty = true
   constructor (
     context: WebGL2RenderingContext | WebGLRenderingContext,
@@ -65,6 +66,7 @@ export default class Painter implements PainterSpec {
     const workflowImports: WorkflowImports = {
       fill: async () => { return await import('./programs/fillProgram') },
       raster: async () => { return await import('./programs/rasterProgram') },
+      hillshade: async () => { return await import('./programs/hillshadeProgram') },
       sensor: async () => { return await import('./programs/sensorProgram') },
       line: async () => { return await import('./programs/lineProgram') },
       point: async () => { return await import('./programs/pointProgram') },
@@ -113,20 +115,21 @@ export default class Painter implements PainterSpec {
   }
 
   useWorkflow (programName: 'fill'): FillProgram
-  useWorkflow (programName: 'glyph'): GlyphProgram
-  useWorkflow (programName: 'heatmap'): HeatmapProgram
-  useWorkflow (programName: 'line'): LineProgram
-  useWorkflow (programName: 'point'): PointProgram
-  useWorkflow (programName: 'raster'): RasterProgram
-  useWorkflow (programName: 'sensor'): SensorProgram
-  useWorkflow (programName: 'shade'): ShadeProgram
-  useWorkflow (programName: 'glyphFilter'): GlyphFilterProgram
+  useWorkflow (programName: 'glyph'): GlyphProgram | undefined
+  useWorkflow (programName: 'heatmap'): HeatmapProgram | undefined
+  useWorkflow (programName: 'line'): LineProgram | undefined
+  useWorkflow (programName: 'point'): PointProgram | undefined
+  useWorkflow (programName: 'raster'): RasterProgram | undefined
+  useWorkflow (programName: 'hillshade'): HillshadeProgram | undefined
+  useWorkflow (programName: 'sensor'): SensorProgram | undefined
+  useWorkflow (programName: 'shade'): ShadeProgram | undefined
+  useWorkflow (programName: 'glyphFilter'): GlyphFilterProgram | undefined
   useWorkflow (programName: 'background'): WallpaperProgram | SkyboxProgram | undefined
   useWorkflow (programName: WorkflowKey): Program | undefined {
     const program = this.workflows[programName]
     if (program === undefined && programName !== 'background') throw new Error(`Program ${programName} not found`)
-    if (this.currProgram !== programName) {
-      this.currProgram = programName
+    if (this.curProgram !== programName) {
+      this.curProgram = programName
       program?.use()
     } else { program?.flush() }
     return program
@@ -150,7 +153,7 @@ export default class Painter implements PainterSpec {
   paint (projector: Projector, tiles: Tile[]): void {
     const { context } = this
     // PREPARE PHASE
-    this.currProgram = undefined
+    this.curProgram = undefined
     // prep frame uniforms
     const { view, aspect } = projector
     const matrix = projector.getMatrix('m')
@@ -276,6 +279,7 @@ export default class Painter implements PainterSpec {
   paintHeatmap (features: HeatmapFeatureGuide[]): HeatmapFeatureGuide {
     // grab heatmap program
     const heatmapProgram = this.useWorkflow('heatmap')
+    if (heatmapProgram === undefined) throw new Error('Heatmap program not found')
     // setup texture draws
     heatmapProgram.setupTextureDraw()
     // draw all features
@@ -292,6 +296,7 @@ export default class Painter implements PainterSpec {
 
   paintGlyphFilter (glyphFeatures: GlyphFeatureGuide[]): void {
     const glyphFilterProgram = this.useWorkflow('glyphFilter')
+    if (glyphFilterProgram === undefined) throw new Error('GlyphFilter program not found')
     // Step 1: draw quads
     glyphFilterProgram.bindQuadFrameBuffer()
     this.#paintGlyphFilter(glyphFilterProgram, glyphFeatures, 1)
@@ -339,6 +344,11 @@ export default class Painter implements PainterSpec {
   injectGlyphImages (maxHeight: number, images: GlyphImages): void {
     const { glyph } = this.workflows
     glyph?.injectImages(maxHeight, images)
+  }
+
+  injectSpriteImage (data: SpriteImageMessage): void {
+    const { glyph } = this.workflows
+    glyph?.injectSpriteImage(data)
   }
 
   setColorMode (mode: ColorMode): void {

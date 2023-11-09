@@ -234,8 +234,8 @@ export default async function heatmapProgram (context: Context): Promise<Heatmap
       // set draw state
       gl.uniform1f(uniforms.uDrawState, 0)
       // setup context
-      context.oneBlend()
       context.clearColorBuffer()
+      context.oneBlend()
       context.disableCullFace()
       context.disableDepthTest()
       context.disableStencilTest()

@@ -1,11 +1,11 @@
-import Color from './color'
 import parseFilter from './parseFilter'
-import getEasingFunction from './easingFunctions'
 
 import type {
   DataCondition,
-  DataRange,
-  InputRange,
+  DataRangeEase,
+  DataRangeStep,
+  InputRangeEase,
+  InputRangeStep,
   LayerWorkerFunction,
   NotNullOrObject,
   NumberColor,
@@ -27,13 +27,13 @@ export default function parseFeatureFunction<T extends NotNullOrObject, U = T> (
   input: ValueType<T> | Property<ValueType<T>>,
   cb: Callback<T, U> = (i: T): U => i as unknown as U
 ): LayerWorkerFunction<U> {
-  if (typeof input === 'object') {
+  if (typeof input === 'object' && !Array.isArray(input)) {
     if ('dataCondition' in input && input.dataCondition !== undefined) {
       return dataConditionFunction<T, U>(input.dataCondition, cb)
     } else if ('dataRange' in input && input.dataRange !== undefined) {
-      return dataRangeFunction<T>(input.dataRange, cb as Callback<T, NumberColor<U>>) as LayerWorkerFunction<U>
+      return dataRangeFunction<T, U>(input.dataRange, cb)
     } else if ('inputRange' in input && input.inputRange !== undefined) {
-      return inputRangeFunction<T>(input.inputRange, cb as Callback<T, NumberColor<U>>) as LayerWorkerFunction<U>
+      return inputRangeFunction<T, U>(input.inputRange, cb)
     } else if ('fallback' in input && input.fallback !== undefined) {
       return parseFeatureFunction(input.fallback, cb)
     } else { throw Error('invalid input') }
@@ -73,12 +73,11 @@ function dataConditionFunction<T extends NotNullOrObject, U> (
   }
 }
 
-function dataRangeFunction<T extends NotNullOrObject> (
-  dataRange: DataRange<NumberColor<T>>,
-  cb: Callback<T, number | string | Color>
-): LayerWorkerFunction<number | string | Color> {
-  const { key, ease, base, ranges } = dataRange
-  const easeFunction = getEasingFunction(ease ?? 'lin', base)
+function dataRangeFunction<T extends NotNullOrObject, U> (
+  dataRange: DataRangeEase<NumberColor<T>> | DataRangeStep<ValueType<T>>,
+  cb: Callback<T, U>
+): LayerWorkerFunction<U> {
+  const { key, ranges } = dataRange
 
   const parsedRanges = ranges.map(({ stop, input }) => {
     return {
@@ -87,7 +86,7 @@ function dataRangeFunction<T extends NotNullOrObject> (
     }
   })
 
-  return (code: number[], properties: Properties, _zoom: number): number | string | Color => {
+  return (code: number[], properties: Properties, _zoom: number): U => {
     const dataInput = (properties[key] !== undefined && !isNaN(properties[key] as number))
       ? +(properties[key] as number)
       : 0
@@ -99,27 +98,17 @@ function dataRangeFunction<T extends NotNullOrObject> (
       let i = 0
       while (parsedRanges[i] !== undefined && parsedRanges[i].stop <= dataInput) i++
       if (parsedRanges.length === i) i--
-      // now we know the dataInput is inbetween i and i - 1
-      const startRange = parsedRanges[i - 1].stop
-      let startValue = parsedRanges[i - 1].input(code, properties, dataInput)
-      if (typeof startValue === 'string') startValue = new Color(startValue)
-      if (startRange === dataInput) return startValue
-      const endRange = parsedRanges[i].stop
-      let endValue = parsedRanges[i].input(code, properties, dataInput)
-      if (typeof endValue === 'string') endValue = new Color(endValue)
-      // now we interpolate
-      return easeFunction(dataInput, startRange, endRange, startValue, endValue)
+      return parsedRanges[i - 1].input(code, properties, dataInput)
     }
   }
 }
 
 // TODO: Support type property (defaults to 'zoom')
-function inputRangeFunction<T extends NotNullOrObject> (
-  inputRange: InputRange<NumberColor<T>>,
-  cb: Callback<T, number | string | Color>
-): LayerWorkerFunction<number | string | Color> {
-  const { ease, base, ranges } = inputRange
-  const easeFunction = getEasingFunction(ease ?? 'lin', base)
+function inputRangeFunction<T extends NotNullOrObject, U> (
+  inputRange: InputRangeEase<NumberColor<T>> | InputRangeStep<ValueType<T>>,
+  cb: Callback<T, U>
+): LayerWorkerFunction<U> {
+  const { ranges } = inputRange
 
   // first ensure each result property is parsed:
   const parsedRanges = ranges.map(({ stop, input }) => {
@@ -129,7 +118,7 @@ function inputRangeFunction<T extends NotNullOrObject> (
     }
   })
 
-  return (code: number[], properties: Properties, zoom: number): number | string | Color => {
+  return (code: number[], properties: Properties, zoom: number): U => {
     if (zoom <= parsedRanges[0].stop) {
       return parsedRanges[0].input(code, properties, zoom)
     } else if (zoom >= parsedRanges[parsedRanges.length - 1].stop) {
@@ -138,16 +127,7 @@ function inputRangeFunction<T extends NotNullOrObject> (
       let i = 0
       while (parsedRanges[i] !== undefined && parsedRanges[i].stop <= zoom) i++
       if (parsedRanges.length === i) i--
-      // now we know the zoom is inbetween i and i - 1
-      const startRange = parsedRanges[i - 1].stop
-      let startValue = parsedRanges[i - 1].input(code, properties, zoom)
-      if (typeof startValue === 'string') startValue = new Color(startValue)
-      if (startRange === zoom) return startValue
-      const endRange = parsedRanges[i].stop
-      let endValue = parsedRanges[i].input(code, properties, zoom)
-      if (typeof endValue === 'string') endValue = new Color(endValue)
-      // now we interpolate
-      return easeFunction(zoom, startRange, endRange, startValue, endValue)
+      return parsedRanges[i - 1].input(code, properties, zoom)
     }
   }
 }

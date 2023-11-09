@@ -2,10 +2,12 @@
 // import { isSafari } util/polyfill'
 import parseFeatureFunction from 'style/parseFeatureFunction'
 
-import type { RasterData, RasterDataGuide, SensorData, SensorDataGuide, TileRequest } from '../worker.spec'
+import type { HillshadeData, RasterData, RasterDataGuide, SensorData, TileRequest } from '../worker.spec'
 import type {
   BuildCodeFunctionZoom,
   GPUType,
+  HillshadeLayerDefinition,
+  HillshadeWorkerLayer,
   LayerWorkerFunction,
   RasterLayerDefinition,
   RasterWorkerLayer,
@@ -23,7 +25,9 @@ export default class RasterWorker implements RasterWorkerSpec {
     this.gpuType = gpuType
   }
 
-  setupLayer (layerDefinition: SensorLayerDefinition | RasterLayerDefinition): RasterWorkerLayer | SensorWorkerLayer {
+  setupLayer (
+    layerDefinition: SensorLayerDefinition | RasterLayerDefinition | HillshadeLayerDefinition
+  ): RasterWorkerLayer | SensorWorkerLayer | HillshadeWorkerLayer {
     const {
       type, name, layerIndex, source,
       layer, minzoom, maxzoom, opacity
@@ -75,7 +79,7 @@ export default class RasterWorker implements RasterWorkerSpec {
   async buildTile (
     mapID: string,
     sourceName: string,
-    layers: Array<RasterWorkerLayer | SensorWorkerLayer>,
+    layers: Array<RasterWorkerLayer | SensorWorkerLayer | HillshadeWorkerLayer>,
     tile: TileRequest,
     data: ArrayBuffer,
     size: number
@@ -84,9 +88,14 @@ export default class RasterWorker implements RasterWorkerSpec {
     const { zoom, id, time } = tile
     // prebuild feature code if webgl1
     const rasterFeatureGuides: RasterDataGuide[] = []
-    const sensorFeatureGuides: SensorDataGuide[] = []
+    const sensorFeatureGuides: RasterDataGuide[] = []
+    const HillshadeFeatureGuides: RasterDataGuide[] = []
     for (const { type, getCode, layerIndex } of layers) {
-      const guide = type === 'raster' ? rasterFeatureGuides : sensorFeatureGuides
+      const guide = type === 'raster'
+        ? rasterFeatureGuides
+        : (type === 'sensor')
+            ? sensorFeatureGuides
+            : HillshadeFeatureGuides
       guide.push({
         code: getCode(zoom),
         layerIndex
@@ -132,6 +141,20 @@ export default class RasterWorker implements RasterWorkerSpec {
       }
 
       postMessage(sensorData, [image])
+    }
+    if (HillshadeFeatureGuides.length > 0) {
+      const hillshadeData: HillshadeData = {
+        mapID,
+        type: 'hillshade',
+        tileID: id,
+        built,
+        size,
+        sourceName,
+        featureGuides: HillshadeFeatureGuides,
+        image
+      }
+
+      postMessage(hillshadeData, [image])
     }
   }
 }

@@ -2,7 +2,7 @@ import type { StyleDefinition } from '../../../s2/style/style.spec'
 
 const style: StyleDefinition = {
   version: 1,
-  name: 'LCH color space',
+  name: 'S2 LCH color space',
   center: [-122.4585607773497, 37.778443127730476],
   zoom: -0.5,
   minzoom: -0.5,

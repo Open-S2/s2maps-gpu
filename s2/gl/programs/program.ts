@@ -141,7 +141,7 @@ export default class Program implements ProgramSpec {
       if (!('uCVD' in uniforms)) return
       if (colorMode === 1) gl.uniform1fv(uniforms.uCVD, [0, 2.02344, -2.52581, 0, 1, 0, 0, 0, 1])
       else if (colorMode === 2) gl.uniform1fv(uniforms.uCVD, [1, 0, 0, 0.494207, 0, 1.24827, 0, 0, 1])
-      else gl.uniform1fv(uniforms.uCVD, [1, 0, 0, 0, 1, 0, -0.395913, 0.801109, 0])
+      else if (colorMode === 3) gl.uniform1fv(uniforms.uCVD, [1, 0, 0, 0, 1, 0, -0.395913, 0.801109, 0])
     }
     // flush update pointers
     this.updateColorBlindMode = null

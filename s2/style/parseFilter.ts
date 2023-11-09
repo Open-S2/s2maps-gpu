@@ -1,13 +1,12 @@
 import coalesceField from './coalesceField'
 
-import type { Comparitor, NotNullOrObject } from './style.spec'
+import type { Comparator, NotNullOrObject } from './style.spec'
 import type { Properties } from 'geometry'
 
 // examples:
-// filter: { key: 'class', comparitor: '==', value: 'ocean' }
-// TODO: FIX THESE LAST TWO EXAMPLES
-// 'filter': ['or', ['class', '==', 'ocean'], ['class', '==', 'river']]
-// 'filter': ['and', ['class', '==', 'ocean'], ['class', '==', 'lake'], ['class', '!=', 'river']]
+// filter: { key: 'class', comparator: '==', value: 'ocean' }
+// filter: { or: [{ key: 'class', comparator: '==', value: 'ocean' }, { key: 'class', comparator: '==', value: 'river' }] }
+// filter: { and: [{ key: 'class', comparator: '==', value: 'ocean' }, { key: 'class', comparator: '==', value: 'lake' }, { key: 'class', comparator: '!=', value: 'river' }] }
 
 export type ConditionFunction = (input: string | number, properties: Properties) => boolean
 
@@ -23,7 +22,7 @@ export interface Conditional {
 
 export interface Condition {
   key: string
-  comparitor: Comparitor
+  comparator: Comparator
   value?: NotNullOrObject
 }
 
@@ -52,9 +51,9 @@ export default function parseFilter (filter?: Filter): FilterFunction {
       return false
     }
   } else { // case 3: Condition
-    const { key, comparitor, value } = filter
-    if (typeof comparitor !== 'string') throw new Error('comparitor must be a string')
-    const filterLambda = parseFilterCondition(comparitor, value)
+    const { key, comparator, value } = filter
+    if (typeof comparator !== 'string') throw new Error('comparator must be a string')
+    const filterLambda = parseFilterCondition(comparator, value)
     return (properties: Properties = {}) => {
       return filterLambda(coalesceField(key, properties, true), properties)
     }
@@ -63,22 +62,22 @@ export default function parseFilter (filter?: Filter): FilterFunction {
 
 // NOTE: We disable the eslint rule here because we want to allow the use of
 //      `==` and `!=` instead of `===` and `!==` because we want to allow
-//      comparisons between strings and numbers.
+//      comparasons between strings and numbers.
 function parseFilterCondition (
-  comparitor: Comparitor,
+  comparator: Comparator,
   value?: NotNullOrObject
 ): ConditionFunction {
-  // manage multiple comparitors
+  // manage multiple comparators
   // eslint-disable-next-line
-  if (comparitor === '==') return (input: string | number, properties: Properties) => input == buildValue(value, properties) // ['class', '==', 'ocean'] OR ['elev', '==', 50]
+  if (comparator === '==') return (input: string | number, properties: Properties) => input == buildValue(value, properties) // ['class', '==', 'ocean'] OR ['elev', '==', 50]
   // eslint-disable-next-line
-  else if (comparitor === '!=') return (input: string | number, properties: Properties): boolean => input != buildValue(value, properties) // ['class', '!=', 'ocean'] OR ['elev', '!=', 50]
-  else if (comparitor === '>') return (input: string | number, properties: Properties): boolean => input > buildValue(value, properties) // ['elev', '>', 50]
-  else if (comparitor === '>=') return (input: string | number, properties: Properties): boolean => input >= buildValue(value, properties) // ['elev', '>=', 50]
-  else if (comparitor === '<') return (input: string | number, properties: Properties): boolean => input < buildValue(value, properties) // ['elev', '<', 50]
-  else if (comparitor === '<=') return (input: string | number, properties: Properties): boolean => input <= buildValue(value, properties) // ['elev', '<=', 50]
-  else if (comparitor === 'has') return (input: string | number, properties: Properties): boolean => Array.isArray(value) || typeof value === 'string' ? (buildValue(value, properties) as string | number[]).includes(input as never) : false // ['class', 'has', ['ocean', 'river']] OR ['elev', 'in', [2, 3, 4, 5]]
-  else if (comparitor === '!has') return (input: string | number, properties: Properties): boolean => Array.isArray(value) || typeof value === 'string' ? !(buildValue(value, properties) as string | number[]).includes(input as never) : true // ['class', '!has', ['ocean', 'river']] OR ['elev', '!in', [2, 3, 4, 5]]
+  else if (comparator === '!=') return (input: string | number, properties: Properties): boolean => input != buildValue(value, properties) // ['class', '!=', 'ocean'] OR ['elev', '!=', 50]
+  else if (comparator === '>') return (input: string | number, properties: Properties): boolean => input > buildValue(value, properties) // ['elev', '>', 50]
+  else if (comparator === '>=') return (input: string | number, properties: Properties): boolean => input >= buildValue(value, properties) // ['elev', '>=', 50]
+  else if (comparator === '<') return (input: string | number, properties: Properties): boolean => input < buildValue(value, properties) // ['elev', '<', 50]
+  else if (comparator === '<=') return (input: string | number, properties: Properties): boolean => input <= buildValue(value, properties) // ['elev', '<=', 50]
+  else if (comparator === 'has') return (input: string | number, properties: Properties): boolean => Array.isArray(value) || typeof value === 'string' ? (buildValue(value, properties) as string | number[]).includes(input as never) : false // ['class', 'has', ['ocean', 'river']] OR ['elev', 'in', [2, 3, 4, 5]]
+  else if (comparator === '!has') return (input: string | number, properties: Properties): boolean => Array.isArray(value) || typeof value === 'string' ? !(buildValue(value, properties) as string | number[]).includes(input as never) : true // ['class', '!has', ['ocean', 'river']] OR ['elev', '!in', [2, 3, 4, 5]]
   else return () => false
 }
 

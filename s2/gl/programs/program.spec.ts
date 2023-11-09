@@ -10,6 +10,9 @@ import type {
   HeatmapLayerDefinition,
   HeatmapLayerStyle,
   HeatmapWorkflowLayerGuide,
+  HillshadeLayerDefinition,
+  HillshadeLayerStyle,
+  HillshadeWorkflowLayerGuide,
   LayerDefinitionBase,
   LineLayerDefinition,
   LineLayerStyle,
@@ -36,16 +39,19 @@ import type {
   FillData,
   GlyphData,
   HeatmapData,
+  HillshadeData,
   LineData,
   PointData,
   RasterData,
-  SensorData
+  SensorData,
+  SpriteImageMessage
 } from 'workers/worker.spec'
 import type {
   Context,
   FillFeatureGuide,
   GlyphFeatureGuide,
   HeatmapFeatureGuide,
+  HillshadeFeatureGuide,
   LineFeatureGuide,
   MaskSource,
   PointFeatureGuide,
@@ -53,8 +59,6 @@ import type {
   SensorFeatureGuide,
   ShadeFeatureGuide
 } from '../contexts/context.spec'
-
-// import type FillProgramInstance from './fillProgram'
 
 export type Uniforms = Record<string, string>
 
@@ -85,6 +89,7 @@ export interface Workflow {
   line?: LineProgram
   point?: PointProgram
   raster?: RasterProgram
+  hillshade?: HillshadeProgram
   sensor?: SensorProgram
   shade?: ShadeProgram
   wallpaper?: WallpaperProgram
@@ -100,6 +105,7 @@ export interface WorkflowImports {
   line: () => Promise<{ default: (context: Context) => Promise<LineProgram> }>
   point: () => Promise<{ default: (context: Context) => Promise<PointProgram> }>
   raster: () => Promise<{ default: (context: Context) => Promise<RasterProgram> }>
+  hillshade: () => Promise<{ default: (context: Context) => Promise<HillshadeProgram> }>
   sensor: () => Promise<{ default: (context: Context) => Promise<SensorProgram> }>
   shade: () => Promise<{ default: (context: Context) => Promise<ShadeProgram> }>
   wallpaper: () => Promise<{ default: (context: Context) => Promise<WallpaperProgram> }>
@@ -108,7 +114,7 @@ export interface WorkflowImports {
 
 export type WorkflowKey = keyof Workflow
 
-export type WorkflowType = 'fill' | 'glyph' | 'heatmap' | 'line' | 'point' | 'raster' | 'sensor' | 'shade' | 'skybox' | 'wallpaper'
+export type WorkflowType = 'fill' | 'glyph' | 'heatmap' | 'line' | 'point' | 'raster' | 'hillshade' | 'sensor' | 'shade' | 'skybox' | 'wallpaper'
 
 export interface ProgramSpec {
   vertexShader: WebGLShader
@@ -187,6 +193,7 @@ export interface GlyphProgram extends ProgramSpec {
   buildSource: (glyphData: GlyphData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: GlyphLayerStyle) => GlyphLayerDefinition
   injectImages: (maxHeight: number, images: GlyphImages) => void
+  injectSpriteImage: (data: SpriteImageMessage) => void
   draw: (featureGuide: GlyphFeatureGuide, interactive: boolean) => void
 }
 
@@ -239,6 +246,17 @@ export interface RasterProgram extends ProgramSpec {
   draw: (featureGuide: RasterFeatureGuide, interactive: boolean) => void
 }
 
+export interface HillshadeProgram extends ProgramSpec {
+  texture: WebGLTexture
+  framebuffer: WebGLFramebuffer
+  layerGuides: Map<number, HillshadeWorkflowLayerGuide>
+  uniforms: { [key in HillshadeProgramUniforms]: WebGLUniformLocation }
+
+  buildSource: (hillshadeData: HillshadeData, tile: Tile) => void
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: HillshadeLayerStyle) => HillshadeLayerDefinition
+  draw: (featureGuide: HillshadeFeatureGuide, interactive: boolean) => void
+}
+
 export interface SensorProgram extends ProgramSpec {
   nullTexture: WebGLTexture
   timeCache?: TimeCache
@@ -284,7 +302,7 @@ export interface WallpaperProgram extends ProgramSpec {
 
 export type Program =
   FillProgram | GlyphFilterProgram | GlyphProgram | HeatmapProgram |
-  LineProgram | PointProgram | RasterProgram | SensorProgram |
+  LineProgram | PointProgram | RasterProgram | HillshadeProgram | SensorProgram |
   ShadeProgram | SkyboxProgram | WallpaperProgram
 
 export enum ProgramUniforms {
@@ -443,6 +461,22 @@ export enum RasterProgramUniforms {
   uOpacity = 'uOpacity', // WEBGL1
   uSaturation = 'uSaturation', // WEBGL1
   uContrast = 'uContrast' // WEBGL1
+}
+
+export enum HillshadeProgramUniforms {
+  uMatrix = 'uMatrix',
+  uInputs = 'uInputs',
+  uLCH = 'uLCH',
+  uFaceST = 'uFaceST',
+  uBottom = 'uBottom',
+  uTop = 'uTop',
+  uLayerCode = 'uLayerCode',
+  uFeatureCode = 'uFeatureCode',
+  uCBlind = 'uCBlind',
+  uFade = 'uFade',
+  uTexture = 'uTexture',
+  uDrawState = 'uDrawState',
+  uOpacity = 'uOpacity', // WEBGL1
 }
 
 export enum SensorProgramUniforms {

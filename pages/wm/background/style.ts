@@ -14,6 +14,13 @@ const style: StyleDefinition = {
   fonts: {},
   layers: [
     {
+      name: 'background',
+      type: 'fill',
+      source: 'mask',
+      opaque: true,
+      color: '#fff'
+    },
+    {
       name: 'water-fill',
       source: 'planet',
       layer: 'water',

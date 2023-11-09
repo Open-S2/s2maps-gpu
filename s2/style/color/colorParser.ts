@@ -1,6 +1,7 @@
 export type ColorDefinition = [encoding: string, colors: [r: number, g: number, b: number, a: number]]
 
-// there are two types of strings to parse
+// there are three types of strings to parse
+// color names: 'red', 'black', etc
 // Hex: #ededed
 // type encodings:
 // rgb(255, 255, 255)
@@ -8,8 +9,17 @@ export type ColorDefinition = [encoding: string, colors: [r: number, g: number, 
 // hsv(180, 0.9, 0.7843137254901961)
 // hsva(180, 0.9, 0.7843137254901961, 1)
 
+const colorNames = ['aqua', 'black', 'blue', 'fuchsia', 'gray', 'green', 'lime', 'maroon', 'navy', 'olive', 'orange', 'purple', 'red', 'silver', 'teal', 'white', 'yellow']
+const colorValues = [0x00FFFF, 0x000000, 0x0000FF, 0xFF00FF, 0x808080, 0x008000, 0x00FF00, 0x800000, 0x000080, 0x808000, 0xFFA500, 0x800080, 0xFF0000, 0xC0C0C0, 0x008080, 0xFFFFFF, 0xFFFF00]
+
 export default function colorParser (input: string): ColorDefinition {
-  if (input[0] === '#') { // hex encoding
+  if (colorNames.includes(input)) {
+    const u = colorValues[colorNames.indexOf(input)]
+    const r = u >> 16
+    const g = (u >> 8) & 0xFF
+    const b = u & 0xFF
+    return ['rgb', [r, g, b, 1]]
+  } else if (input[0] === '#') { // hex encoding
     return parseHex(input)
   } else {
     return parseString(input)

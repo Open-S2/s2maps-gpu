@@ -16,7 +16,7 @@ import type {
   TileWorkerMessage
 } from './workers/worker.spec'
 
-export type ColorMode = 0 | 1 | 2 | 3
+export type ColorMode = 0 | 1 | 2 | 3 | 4
 
 export type Ready = (s2map: S2Map) => void
 
@@ -37,7 +37,7 @@ export default class S2Map extends EventTarget {
   #attributions: Attributions = {}
   bearing = 0 // degrees
   pitch = 0 // degrees
-  colorMode: ColorMode = 0 // 0: none - 1: protanopia - 2: deuteranopia - 3: tritanopia
+  colorMode: ColorMode = 0 // 0: none - 1: protanopia - 2: deuteranopia - 3: tritanopia - 4: grayscale
   map?: S2MapUI
   offscreen?: Worker
   info?: Info
@@ -488,11 +488,11 @@ export default class S2Map extends EventTarget {
     const { map, offscreen } = this
     if (mode !== undefined) this.colorMode = mode
     else this.colorMode++
-    if (this.colorMode > 3) this.colorMode = 0
+    if (this.colorMode > 4) this.colorMode = 0
     localStorage.setItem('s2maps:gpu:colorBlindMode', String(this.colorMode))
     // update the icon
     const cM = this.colorMode
-    if (this.#colorBlind !== undefined) this.#colorBlind.id = `s2-colorblind${(cM === 0) ? '-default' : (cM === 1) ? '-proto' : (cM === 2) ? '-deut' : '-trit'}`
+    if (this.#colorBlind !== undefined) this.#colorBlind.id = `s2-colorblind${(cM === 0) ? '-default' : (cM === 1) ? '-proto' : (cM === 2) ? '-deut' : (cM === 3) ? '-trit' : '-gray'}`
     // tell the map to update
     offscreen?.postMessage({ type: 'colorMode', mode: cM })
     map?.colorMode(cM)
@@ -681,96 +681,3 @@ export default class S2Map extends EventTarget {
 }
 
 window.S2Map = S2Map
-
-// SIDE STUFF:
-// * https://github.com/lgarron/worker-execution-origin
-
-// TODO PART 1:
-
-// TODO PART 2:
-// * webgl1 -> sorting by featureCode does NOT now because only webgl1 Code is shipped (just ).
-// * parent tiles update on new data?
-// * store session token locally incase of app refresh.
-// * improve zooming in webgl1 for fill just like heatmap
-
-// * dashed lines
-// * glyphs: add alpha fade support
-// * glyphs (icon + text pairs)
-// * glyphs along path
-
-// TODO PART 3:
-// * snapshot post flush
-// * zoom out keeps children tiles
-// * pull out colorBlind changing from Color
-// * pull out interpolate and sinebows from Color
-// * raster fade-in from parent
-// * zooming fast interactive data search doesn't check parent tiles, so clicking does nothing.
-
-// SOLUTION:
-// we need to store ID, type, x, y, width, and height for texture lookups
-// use 16bit texture for x, y, width, and height (or radius instead of width and height)
-// store ID as 8bit RGB, and type as alpha
-// when drawing, use alpha channel as additive (increase or decrease depending upon whether filter says yes or no)
-// TWO input textures:
-// [x, y, width, height] OR [x, y, radius, radius]
-// [r, g, b, type]
-
-// 2 draws for filter:
-// 1:
-// read each filter block and check against all others
-// if overlap from previous filters and id is not the same, add to total, do NOT add to sum
-// otherwise add to total AND add to sum
-// [total, sum]
-// 2:
-// if total === sum, add [opacity + 0.1] to filter solution
-// if total !== sum, add [opacity - 0.1] to filter solution
-
-// 2 indexes
-// 1) index to glyph set position for lookups (+ offset when drawing)
-// 2) index "ID" that represents the color of the glyph
-
-// pair id + type
-// pair x and y
-// pair width and height OR store radius
-// [id-type(circle or square), x-y, width-height OR radius]
-
-// NEXT: GLYPHS ALONG PATH:
-
-// * WebGPU working (except for glyphs)
-// * Part 1 above complete
-// * API:
-// ** D1 working for tracking usage data
-// ** user -> login/register/change password/change email
-// ** key -> create/delete/update/get/refresh default
-// ** payment -> card-add/card-remove/card-update/package-upgrade/package-downgrade
-// ** tests: user, key, payment
-// * Website:
-// ** login/register
-// ** add/delete keys
-// ** buy packages
-
-// AUGUST 2022:
-// 330.min.js                    6.83 kB       2.98 kB      2.69 kB
-// 552.min.js                    34.43 kB      12.83 kB     11.38 kB
-// 556.min.js                    16.11 kB      4.75 kB      4.27 kB
-// 785.min.js                    3.24 kB       1.31 kB      1.17 kB
-// map-worker.min.js             6.35 kB       2.45 kB      2.24 kB
-// s2maps-gpu.min.js             20.06 kB      6.33 kB      5.56 kB
-// source-worker.min.js          28.99 kB      10.17 kB     9.14 kB
-// tile-worker.min.js            54.62 kB      18.77 kB     16.79 kB
-// all major packages            170.63 kB     59.59 kB     53.24 kB
-
-// SEPTEMBER 2023:
-// map-worker.min.js             6.47 kB       2.53 kB      2.29 kB
-// s2maps-gpu.min.js             20.54 kB      6.5 kB       5.7 kB
-// source-worker.min.js          30.71 kB      10.8 kB      9.68 kB
-// tile-worker.min.js            34.98 kB      13.15 kB     11.78 kB
-
-// TODO NOW:
-
-// 6) API 100%
-// 7) Website ready
-// 9) WebGPU support
-// 10) Support glyphs + icons
-// 11) Support glyphs along path
-// 12) Support dashed lines

@@ -39,7 +39,7 @@ export interface TileRequest {
   zoom: number
   i: number
   j: number
-  bbox: [number, number, number, number]
+  bbox: [left: number, bottom: number, right: number, top: number]
   division: number
   size: number
   time?: number
@@ -397,6 +397,18 @@ export interface SourceSetStyleMessage extends MapID {
   ignorePosition: boolean
 }
 
+export interface SpriteImageMessage extends MapID {
+  type: 'spriteimage'
+  name: string
+  built: boolean
+  offsetX: number
+  offsetY: number
+  width: number
+  height: number
+  maxHeight: number
+  image: ArrayBuffer | ImageBitmap
+}
+
 export type SourceWorkerMessage =
   AttributionsMessage | InfoMessage | SourceSetStyleMessage
 
@@ -433,7 +445,7 @@ export interface GlyphData extends WorkerMessageBase {
   featureGuideBuffer: ArrayBuffer
 }
 
-export interface GlyphImageData extends WorkerMessageBase {
+export interface GlyphImageData extends MapID {
   type: 'glyphimages'
   maxHeight: number
   images: GlyphImages
@@ -452,7 +464,13 @@ export interface RasterData extends WorkerMessageBase {
   featureGuides: RasterDataGuide[]
 }
 
-export interface SensorDataGuide extends RasterDataGuide {}
+export interface HillshadeData extends WorkerMessageBase {
+  type: 'hillshade'
+  image: ArrayBuffer | ImageBitmap
+  built: boolean
+  size: number
+  featureGuides: RasterDataGuide[]
+}
 
 export interface SensorData extends WorkerMessageBase {
   type: 'sensor'
@@ -496,13 +514,13 @@ export interface TimeSourceData extends WorkerMessageBase {
 }
 
 export type PainterData =
-  RasterData | SensorData | FillData | LineData |
-  PointData | HeatmapData | GlyphData
+  RasterData | HillshadeData | SensorData | FillData |
+  LineData | PointData | HeatmapData | GlyphData
 
 export type TileWorkerMessage =
-  FillData | LineData | GlyphData | GlyphImageData |
-  RasterData | SensorData | PointData | HeatmapData |
-  InteractiveData | FlushData | TimeSourceData
+  FillData | LineData | GlyphData | GlyphImageData | SpriteImageMessage |
+  RasterData | HillshadeData | SensorData | PointData |
+  HeatmapData | InteractiveData | FlushData | TimeSourceData
 
 /** TILE WORKER TO SOURCE WORKER MESSAGES */
 
@@ -549,8 +567,8 @@ export interface GlyphResponseMessage extends MapID {
   reqID: string
   glyphMetadata: ArrayBuffer
   familyName: string
-  icons: IconMap
-  colors: ColorMap
+  icons?: IconMap
+  colors?: ColorMap
 }
 
 /* WORKER POOL MESSAGE */
