@@ -3,9 +3,11 @@ import buildMask from './buildMask'
 
 import type { GPUType } from 'style/style.spec'
 import type { MapOptions } from 'ui/s2mapUI'
-import type { MaskSource } from '../workflows/workflow.spec'
+import type { MaskSource, TileMaskSource } from 'gpu/workflows/workflow.spec'
 import type Projector from 'ui/camera/projector'
 import type { ColorMode } from 's2Map'
+import type { Painter } from 'gpu/painter.spec'
+import type { TileBase as Tile } from 'source/tile.spec'
 
 const DEPTH_ESPILON = 1 / Math.pow(2, 20)
 
@@ -15,8 +17,10 @@ export default class WebGPUContext {
   renderer = '' // ex: AMD Radeon Pro 560 OpenGL Engine (https://github.com/pmndrs/detect-gpu)
   gpu: GPUCanvasContext
   device!: GPUDevice
-  presentation!: { width: number, height: number }
+  presentation!: { width: number, height: number, depthOrArrayLayers: number }
+  painter: Painter
   #adapter!: GPUAdapter
+  #renderTarget?: GPUTexture
   #depthStencilTexture!: GPUTexture
   #renderPassDescriptor!: GPURenderPassDescriptor
   devicePixelRatio: number
@@ -24,6 +28,7 @@ export default class WebGPUContext {
   format!: GPUTextureFormat
   masks = new Map<number, MaskSource>()
   type: GPUType = 3 // specifying that we are using a WebGPUContext
+  sampleCount = 4
   // manage buffers, layouts, and bind groups
   #viewUniformBuffer!: GPUBuffer
   #matrixUniformBuffer!: GPUBuffer
@@ -36,11 +41,11 @@ export default class WebGPUContext {
   // track current states
   colorMode: ColorMode = 0
   stencilRef = -1
-  cleanup: Array<() => void> = []
-  constructor (context: GPUCanvasContext, options: MapOptions) {
+  constructor (context: GPUCanvasContext, options: MapOptions, painter: Painter) {
     const { canvasMultiplier } = options
     this.gpu = context
     this.devicePixelRatio = canvasMultiplier ?? 1
+    this.painter = painter
   }
 
   async connectGPU (): Promise<void> {
@@ -80,20 +85,11 @@ export default class WebGPUContext {
 
     // setup bind groups
     this.passEncoder.setBindGroup(0, this.frameBufferBindGroup)
-    // this.passEncoder.setBindGroup(1, this.featureBufferBindGroup)
   }
 
   finish (): void {
-    // finish
     this.passEncoder.end()
     this.device.queue.submit([this.commandEncoder.finish()])
-    this.#cleanupResources()
-  }
-
-  #cleanupResources (): void {
-    // cleanup
-    for (const cleanup of this.cleanup) cleanup()
-    this.cleanup = []
   }
 
   setColorBlindMode (mode: ColorMode): void {
@@ -130,7 +126,8 @@ export default class WebGPUContext {
   buildGPUBuffer (
     label: string,
     inputArray: BufferSource,
-    usage: number
+    usage: number,
+    unmap = false
   ): GPUBuffer {
     // prep buffer
     const gpuBuffer = this.device.createBuffer({
@@ -164,20 +161,30 @@ export default class WebGPUContext {
 
   #resize (): void {
     this.#resizeNextFrame = false
-    const { gpu } = this
+    const { gpu, sampleCount } = this
     const { canvas } = gpu
     // in webGPU, you only have to edit the canvas size
     const width = 'clientWidth' in canvas ? canvas.clientWidth : canvas.width
     const height = 'clientHeight' in canvas ? canvas.clientHeight : canvas.height
-    this.presentation = { width, height }
+    this.presentation = { width, height, depthOrArrayLayers: 1 }
     // adjust canvas to match presentation
     canvas.width = width
     canvas.height = height
+    // fix the render target
+    if (this.#renderTarget !== undefined) this.#renderTarget.destroy()
+    if (sampleCount > 1) {
+      this.#renderTarget = this.device.createTexture({
+        size: this.presentation,
+        sampleCount,
+        format: this.format,
+        usage: GPUTextureUsage.RENDER_ATTACHMENT
+      })
+    }
     // fix the depth-stencil
     if (this.#depthStencilTexture !== undefined) this.#depthStencilTexture.destroy()
     this.#depthStencilTexture = this.device.createTexture({
       size: this.presentation,
-      // sampleCount: 2,
+      sampleCount,
       format: 'depth24plus-stencil8',
       usage: GPUTextureUsage.RENDER_ATTACHMENT
     })
@@ -195,16 +202,36 @@ export default class WebGPUContext {
   // so division is less useful.
   // 0, 1 => 16  ;  2, 3 => 8  ;  4, 5 => 4  ;  6, 7 => 2  ;  8+ => 1
   // context stores masks so we don't keep recreating them and put excess stress and memory on the GPU
-  getMask (division: number): MaskSource {
+  getMask (division: number, tile: Tile): TileMaskSource {
     const { masks } = this
     // check if we have a mask for this level
-    const mask = masks.get(division)
-    if (mask !== undefined) return mask
-    // otherwise, create a new mask
-    const builtMask = buildMask(division, this)
-    masks.set(division, builtMask)
+    let mask = masks.get(division)
+    if (mask === undefined) {
+      mask = buildMask(division, this, tile)
+      masks.set(division, mask)
+    }
 
-    return builtMask
+    // Create the source
+    const tileBuffer = this.buildStaticGPUBuffer('Tile Uniform Buffer', 'float', tile.uniforms, GPUBufferUsage.UNIFORM)
+    const layerBuffer = this.buildStaticGPUBuffer('Layer Uniform Buffer', 'float', new Float32Array([1, 0]), GPUBufferUsage.UNIFORM)
+    const layerCodeBuffer = this.buildStaticGPUBuffer('Layer Code Buffer', 'float', new Float32Array(128), GPUBufferUsage.STORAGE)
+    const featureCodeBuffer = this.buildStaticGPUBuffer('Feature Code Buffer', 'float', new Float32Array(64), GPUBufferUsage.STORAGE)
+    const bindGroup = this.buildGroup(
+      'Feature BindGroup',
+      this.featureBindGroupLayout,
+      [tileBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
+    )
+
+    const tileMaskSource: TileMaskSource = {
+      ...mask,
+      bindGroup,
+      draw: () => {
+        this.setStencilReference(tile.tmpMaskID)
+        this.painter.workflows.fill?.drawMask(tileMaskSource)
+      }
+    }
+
+    return tileMaskSource
   }
 
   getDepthPosition (layerIndex: number): number {
@@ -218,11 +245,13 @@ export default class WebGPUContext {
   }
 
   #prepareRenderpassDescriptor (): void {
+    const currentTexture = this.gpu.getCurrentTexture()
     // Create our render pass descriptor
     this.#renderPassDescriptor = {
       colorAttachments: [
         {
-          view: this.gpu.getCurrentTexture().createView(), // set on each render pass
+          view: (this.#renderTarget ?? currentTexture).createView(), // set on each render pass
+          resolveTarget: this.#renderTarget !== undefined ? currentTexture.createView() : undefined,
           clearValue: { r: 0, g: 0, b: 0, a: 0 },
           loadOp: 'clear',
           storeOp: 'store'

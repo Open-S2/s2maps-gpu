@@ -3,7 +3,7 @@ import shaderCode from '../shaders/fill.wgsl'
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
 
 import type { WebGPUContext } from '../context'
-import type { FillFeature, FillSource, FillWorkflow as FillWorkflowSpec, MaskSource } from './workflow.spec'
+import type { FillFeature, FillSource, FillWorkflow as FillWorkflowSpec, TileMaskSource } from './workflow.spec'
 import type {
   FillLayerDefinition,
   FillLayerStyle,
@@ -133,27 +133,30 @@ export default class FillWorkflow implements FillWorkflowSpec {
       interactive,
       featureCode: [0],
       bindGroup,
-      draw: () => { this.draw(feature) }
+      draw: () => {
+        context.setStencilReference(tile.tmpMaskID)
+        this.draw(feature)
+      }
     }
     tile.addFeatures([feature])
   }
 
-  async buildSource (fillData: FillData, tile: Tile): Promise<void> {
+  buildSource (fillData: FillData, tile: Tile): void {
     const { context } = this
     const { vertexBuffer, indexBuffer, fillIDBuffer, codeTypeBuffer, featureGuideBuffer } = fillData
     // prep buffers
     const source: FillSource = {
       type: 'fill',
-      vertexBuffer: context.buildGPUBuffer('Fill Vertex Buffer', new Float32Array(vertexBuffer), GPUBufferUsage.VERTEX),
-      indexBuffer: context.buildGPUBuffer('Fill Index Buffer', new Uint32Array(indexBuffer), GPUBufferUsage.INDEX),
-      fillIDBuffer: context.buildGPUBuffer('Fill ID Buffer', new Uint32Array(fillIDBuffer), GPUBufferUsage.VERTEX),
-      codeTypeBuffer: context.buildGPUBuffer('Fill Code Type Buffer', new Uint32Array(codeTypeBuffer), GPUBufferUsage.VERTEX)
+      vertexBuffer: context.buildGPUBuffer('Fill Vertex Buffer', new Float32Array(vertexBuffer), GPUBufferUsage.VERTEX, true),
+      indexBuffer: context.buildGPUBuffer('Fill Index Buffer', new Uint32Array(indexBuffer), GPUBufferUsage.INDEX, true),
+      fillIDBuffer: context.buildGPUBuffer('Fill ID Buffer', new Uint32Array(fillIDBuffer), GPUBufferUsage.VERTEX, true),
+      codeTypeBuffer: context.buildGPUBuffer('Fill Code Type Buffer', new Uint32Array(codeTypeBuffer), GPUBufferUsage.VERTEX, true)
     }
     // build features
-    await this.#buildFeatures(source, tile, new Float32Array(featureGuideBuffer))
+    this.#buildFeatures(source, tile, new Float32Array(featureGuideBuffer))
   }
 
-  async #buildFeatures (source: FillSource, tile: Tile, featureGuideArray: Float32Array): Promise<void> {
+  #buildFeatures (source: FillSource, tile: Tile, featureGuideArray: Float32Array): void {
     const { context } = this
     const features: FillFeature[] = []
 
@@ -202,7 +205,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
         interactive,
         bindGroup,
         draw: () => {
-          context.setStencilReference((feature.parent ?? feature.tile).tmpMaskID)
+          context.setStencilReference(tile.tmpMaskID)
           this.draw(feature)
         }
       }
@@ -217,13 +220,16 @@ export default class FillWorkflow implements FillWorkflowSpec {
   // BEST PRACTICE 7: explicitly define pipeline layouts
   async #getPipeline (type: 'fill' | 'mask' | 'invert'): Promise<GPURenderPipeline> {
     const { context } = this
-    const { device, format, frameBindGroupLayout, featureBindGroupLayout } = context
+    const { device, format, frameBindGroupLayout, featureBindGroupLayout, sampleCount } = context
     const invert = type === 'invert'
     const mask = type === 'mask'
 
-    const stencilState: GPUStencilFaceState = invert
-      ? { compare: 'always', failOp: 'keep', depthFailOp: 'invert', passOp: 'invert' }
-      : { compare: 'always', failOp: 'keep', depthFailOp: 'keep', passOp: 'replace' }
+    const stencilState: GPUStencilFaceState = {
+      compare: (mask || invert) ? 'always' : 'equal',
+      failOp: 'keep',
+      depthFailOp: invert ? 'invert' : 'keep',
+      passOp: invert ? 'invert' : 'replace'
+    }
 
     return await device.createRenderPipelineAsync({
       layout: device.createPipelineLayout({
@@ -237,62 +243,60 @@ export default class FillWorkflow implements FillWorkflowSpec {
       fragment: {
         module: device.createShaderModule({ code: shaderCode }),
         entryPoint: 'fMain',
-        targets: [{ format, writeMask: invert ? 0 : GPUColorWrite.ALL }]
+        targets: [{ format, writeMask: (mask || invert) ? 0 : GPUColorWrite.ALL }]
       },
-      primitive: { topology: mask ? 'triangle-strip' : 'triangle-list', cullMode: 'back' },
-      depthStencil: mask
-        ? {
-            depthWriteEnabled: false,
-            depthCompare: 'always',
-            format: 'stencil8',
-            stencilFront: stencilState,
-            stencilBack: stencilState,
-            stencilReadMask: 0xFFFFFFFF,
-            stencilWriteMask: 0xFFFFFFFF
-          }
-        : {
-            depthWriteEnabled: true,
-            depthCompare: 'less',
-            format: 'depth24plus-stencil8',
-            stencilFront: stencilState,
-            stencilBack: stencilState,
-            stencilReadMask: 0xFFFFFFFF,
-            stencilWriteMask: 0xFFFFFFFF
-          }
+      primitive: {
+        topology: mask ? 'triangle-strip' : 'triangle-list',
+        cullMode: 'back',
+        stripIndexFormat: mask ? 'uint32' : undefined
+      },
+      multisample: { count: sampleCount },
+      depthStencil: {
+        depthWriteEnabled: !mask,
+        depthCompare: mask ? 'always' : 'less',
+        format: 'depth24plus-stencil8',
+        stencilFront: stencilState,
+        stencilBack: stencilState,
+        stencilReadMask: 0xFFFFFFFF,
+        stencilWriteMask: 0xFFFFFFFF
+      }
     })
   }
 
   draw (featureGuide: FillFeature): void {
     // get current source data
     const { passEncoder } = this.context
-    const { bindGroup, invert, source, count, offset } = featureGuide
-    const { type, vertexBuffer, indexBuffer } = source
+    const { tile, bindGroup, invert, source, count, offset } = featureGuide
+    const { type, vertexBuffer, indexBuffer, fillIDBuffer, codeTypeBuffer } = source
     const pipeline = invert ? this.invertPipeline : type === 'mask' ? this.maskPipeline : this.fillPipeline
 
     passEncoder.setPipeline(pipeline)
-    // seup bind groups
+    // setup bind groups
     passEncoder.setBindGroup(1, bindGroup)
     // setup buffers
     passEncoder.setVertexBuffer(0, vertexBuffer)
     passEncoder.setIndexBuffer(indexBuffer, 'uint32')
-    if (type === 'fill') {
-      passEncoder.setVertexBuffer(1, source.fillIDBuffer)
-      passEncoder.setVertexBuffer(2, source.codeTypeBuffer)
-    }
+    passEncoder.setVertexBuffer(1, fillIDBuffer)
+    passEncoder.setVertexBuffer(2, codeTypeBuffer)
     // draw
     passEncoder.drawIndexed(count, 1, offset, 0, 0)
-    // TODO: If invert, we need to draw the mask after
+    // If invert, we need to draw the mask after
+    if (invert) this.drawMask(tile.mask)
   }
 
-  drawMask (maskSource: MaskSource): void {
+  drawMask (maskSource: TileMaskSource): void {
     // get current source data
     const { passEncoder } = this.context
-    const { vertexBuffer, indexBuffer, count, offset } = maskSource
+    const { vertexBuffer, indexBuffer, fillIDBuffer, codeTypeBuffer, bindGroup, count, offset } = maskSource
 
     passEncoder.setPipeline(this.maskPipeline)
+    // setup bind groups
+    passEncoder.setBindGroup(1, bindGroup)
     // setup buffers
     passEncoder.setVertexBuffer(0, vertexBuffer)
     passEncoder.setIndexBuffer(indexBuffer, 'uint32')
+    passEncoder.setVertexBuffer(1, fillIDBuffer)
+    passEncoder.setVertexBuffer(2, codeTypeBuffer)
     // draw
     passEncoder.drawIndexed(count, 1, offset, 0, 0)
   }

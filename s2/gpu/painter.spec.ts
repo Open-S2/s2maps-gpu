@@ -2,10 +2,10 @@ import type {
   WebGPUContext
 } from './context'
 import type {
-  FeatureBase,
-  Workflow,
+  // FeatureBase,
   WorkflowKey,
-  WorkflowType
+  WorkflowType,
+  Workflows
   // GlyphFeatureBase,
   // HeatmapFeatureBase,
 } from './workflows/workflow.spec'
@@ -26,7 +26,7 @@ import type Projector from 'ui/camera/projector'
 
 export interface Painter {
   context: WebGPUContext
-  workflows: Workflow
+  workflows: Workflows
   dirty: boolean
   currProgram?: WorkflowKey
 
@@ -42,9 +42,9 @@ export interface Painter {
   delete: () => void
   injectFrameUniforms: (matrix: Float32Array, view: Float32Array, aspect: Float32Array) => void
   paint: (projector: Projector, tiles: Tile[]) => void
-  paintInteractive: (tiles: Tile[]) => void
-  paintMasks: (tiles: Tile[]) => void
-  paintFeatures: (features: FeatureBase[], interactive: boolean) => void
+  // paintInteractive: (tiles: Tile[]) => void
+  // paintMasks: (tiles: Tile[]) => void
+  // paintFeatures: (features: FeatureBase[], interactive: boolean) => void
   // paintHeatmap: (features: HeatmapFeatureBase[]) => HeatmapFeatureBase
   // paintGlyphFilter: (glyphFeatures: GlyphFeatureBase[]) => void
 }

@@ -157,7 +157,7 @@ export default class Painter implements PainterSpec {
     const matrix = projector.getMatrix('m')
     this.injectFrameUniforms(matrix, view, aspect)
     // prep mask id's
-    this.#createTileMasksIDs(tiles)
+    tiles.forEach((tile, index) => { tile.tmpMaskID = index + 1 })
     // prep all tile's features to draw
     const features = tiles.flatMap(tile => tile.featureGuides.filter(f => f.type !== 'heatmap'))
     // draw heatmap data if applicable
@@ -207,15 +207,6 @@ export default class Painter implements PainterSpec {
       this.context.clearInteractBuffer()
       // draw
       this.paintFeatures(interactiveFeatures, true)
-    }
-  }
-
-  #createTileMasksIDs (tiles: Tile[]): void {
-    let maskRef = 1
-    // add all tiles
-    for (const tile of tiles) {
-      tile.tmpMaskID = maskRef
-      maskRef++
     }
   }
 
