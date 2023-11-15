@@ -1,43 +1,40 @@
 /* eslint-env browser */
 import { WebGPUContext } from './context'
+import {
+  FillWorkflow
+} from './workflows'
 
 import type { MapOptions } from 'ui/s2mapUI'
-import type { FeatureGuide, GlyphFeatureGuide, HeatmapFeatureGuide } from './context'
 import type {
-  FillPipeline,
-  GlyphFilterPipeline,
-  GlyphPipeline,
-  HeatmapPipeline,
-  LinePipeline,
-  Pipeline,
-  PointPipeline,
-  RasterPipeline,
-  SensorPipeline,
-  ShadePipeline,
-  SkyboxPipeline,
-  WallpaperPipeline,
-  Workflow,
+  FeatureBase,
+  GlyphFeature,
+  HeatmapFeature,
   WorkflowImports,
   WorkflowKey,
-  WorkflowType
-} from './pipelines/pipeline.spec'
+  WorkflowType,
+  Workflows
+} from './workflows/workflow.spec'
 import type { GlyphImages } from 'workers/source/glyphSource'
 import type { TileGPU as Tile } from 'source/tile.spec'
 import type Projector from 'ui/camera/projector'
 import type { PainterData, SpriteImageMessage } from 'workers/worker.spec'
 import type TimeCache from 'ui/camera/timeCache'
+import type { ColorMode } from 's2Map'
 // import type { FeatureGuide } source/tile'
 // import type { PipelineType } from './pipelines/pipeline'
 
 export default class Painter {
   context: WebGPUContext
-  workflows: Workflow = {}
-  dirty: boolean = false
+  workflows: Workflows = {}
+  dirty = true
   currPipeline?: WorkflowKey
-  // currPipeline: PipelineType
-  // dirty: boolean = true
   constructor (context: GPUCanvasContext, options: MapOptions) {
     this.context = new WebGPUContext(context, options)
+  }
+
+  // called once to properly prepare the context
+  async prepare (): Promise<void> {
+    await this.context.connectGPU()
   }
 
   buildFeatureData (tile: Tile, data: PainterData): void {
@@ -49,7 +46,7 @@ export default class Painter {
     const { workflows, context } = this
     const promises: Array<Promise<void>> = []
     const programCases: WorkflowImports = {
-      fill: async () => { return await import('./pipelines/fillPipeline') }
+      fill: new FillWorkflow(context)
       // raster: async () => {},
       // sensor: async () => {},
       // line: async () => {},
@@ -61,7 +58,7 @@ export default class Painter {
       // wallpaper: async () => {},
       // skybox: async () => {}
     }
-    const programKeys: Array<keyof Omit<Workflow, 'background'>> = []
+    const programKeys: Array<keyof Omit<Workflows, 'background'>> = []
     for (const program of buildSet) {
       if (program in workflows) continue
       if (program === 'glyph') programKeys.push('glyphFilter')
@@ -71,14 +68,21 @@ export default class Painter {
     for (const key of programKeys) {
       promises.push(new Promise((resolve, reject) => {
         // @ts-expect-error - just ignore for now
-        programCases[key]()
+        if (typeof programCases[key] === 'function') {
           // @ts-expect-error - just ignore for now
-          .then(async ({ default: pModule }) => {
-            workflows[key] = await pModule(context)
-            if (key === 'wallpaper' || key === 'skybox') workflows.background = workflows[key]
-            resolve()
-          })
-          .catch((err: any) => { reject(err) })
+          programCases[key]()
+            // @ts-expect-error - just ignore for now
+            .then(async ({ default: pModule }) => {
+              workflows[key] = await pModule(context)
+              if (key === 'wallpaper' || key === 'skybox') workflows.background = workflows[key]
+              resolve()
+            })
+            .catch((err: Error) => { reject(err) })
+        } else {
+          // @ts-expect-error - just ignore for now
+          workflows[key] = programCases[key]
+          resolve()
+        }
       }))
     }
     await Promise.allSettled(promises)
@@ -87,9 +91,9 @@ export default class Painter {
       // const glyph = workflows.glyph
       // glyph.injectFilter(workflows.glyphFilter)
     }
-  }
-
-  resize (width: number, height: number): void {
+    for (const workflow of Object.values(workflows)) {
+      await workflow.setup()
+    }
   }
 
   getScreen (): Uint8ClampedArray {
@@ -108,40 +112,15 @@ export default class Painter {
     // glyph.injectImages(maxHeight, images)
   }
 
-  setColorMode (mode: 0 | 1 | 2 | 3 | 4): void {
+  setColorMode (mode: ColorMode): void {
     this.dirty = true
-    // tell all the workflows
-    // const { workflows } = this
-    // for (const programName in workflows) {
-    //   const program = workflows[programName as WorkflowType] as Program
-    //   program.updateColorBlindMode = mode
-    // }
+    this.context.setColorBlindMode(mode)
   }
 
   delete (): void {
     // const { context, pipelines } = this
     // for (const pipelineName in pipelines) pipelines[pipelineName].delete()
     // context.delete()
-  }
-
-  useWorkflow (programName: 'fill'): FillPipeline | undefined
-  useWorkflow (programName: 'glyph'): GlyphPipeline | undefined
-  useWorkflow (programName: 'heatmap'): HeatmapPipeline | undefined
-  useWorkflow (programName: 'line'): LinePipeline | undefined
-  useWorkflow (programName: 'point'): PointPipeline | undefined
-  useWorkflow (programName: 'raster'): RasterPipeline | undefined
-  useWorkflow (programName: 'sensor'): SensorPipeline | undefined
-  useWorkflow (programName: 'shade'): ShadePipeline | undefined
-  useWorkflow (programName: 'glyphFilter'): GlyphFilterPipeline | undefined
-  useWorkflow (programName: 'background'): WallpaperPipeline | SkyboxPipeline | undefined
-  useWorkflow (programName: WorkflowKey): Pipeline | undefined {
-    const program = this.workflows[programName]
-    if (program === undefined && programName !== 'background') throw new Error(`Program ${programName} not found`)
-    if (this.currPipeline !== programName) {
-      this.currPipeline = programName
-      // program?.use()
-    }
-    return program
   }
 
   injectTimeCache (timeCache: TimeCache): void {
@@ -154,51 +133,93 @@ export default class Painter {
   // usePipeline (pipelineName: PipelineType): void | Pipeline {
   // }
 
-  // resize () {
-  //   // const { context } = this
-  //   // // If we are using the text pipeline, update the text pipeline's framebuffer component's sizes
-  //   // const glyphFilter: GlyphFilterPipeline = this.pipelines.glyphFilter
-  //   // const heatmap: HeatmapPipeline = this.pipelines.heatmap
-  //   // if (glyphFilter) glyphFilter.resize()
-  //   // if (heatmap) heatmap.resize()
-  //   // // ensure interaction buffer is accurate
-  //   // context.resizeInteract()
-  //   // // ensure our default viewport is accurate
-  //   // context.resetViewport()
-  //   // // notify that the painter is dirty
-  //   // this.dirty = true
-  // }
+  resize (_width: number, _height: number): void {
+    const { context } = this
+    context.resize()
+    // // If we are using the text pipeline, update the text pipeline's framebuffer component's sizes
+    // const glyphFilter: GlyphFilterPipeline = this.pipelines.glyphFilter
+    // const heatmap: HeatmapPipeline = this.pipelines.heatmap
+    // if (glyphFilter) glyphFilter.resize()
+    // if (heatmap) heatmap.resize()
+    // // ensure interaction buffer is accurate
+    // context.resizeInteract()
+    // // ensure our default viewport is accurate
+    // context.resetViewport()
+    // notify that the painter is dirty
+    this.dirty = true
+  }
 
   paint (projector: Projector, tiles: Tile[]): void {
+    const { context } = this
+    // PREPARE PHASE
+    this.currPipeline = undefined
+    // prep mask id's
+    tiles.forEach((tile, index) => { tile.tmpMaskID = index + 1 })
+    // prep all tile's features to draw
+    const features = tiles.flatMap(tile => tile.featureGuides.filter(f => f.type !== 'heatmap'))
+    // draw heatmap data if applicable
+    // const heatmapFeatures = tiles.flatMap(tile => tile.featureGuides.filter(f => f.type === 'heatmap') as HeatmapFeatureGuide[])
+    // if (heatmapFeatures.length > 0) features.push(this.paintHeatmap(heatmapFeatures))
+    // sort features
+    features.sort(featureSort)
+    // Mercator: the tile needs to update it's matrix at all zooms.
+    // S2: all features tiles past zoom 12 must set screen positions
+    let featureTiles = features
+      .flatMap(({ parent, tile }) => parent !== undefined ? [parent, tile] : [tile])
+    // remove all duplicates of tiles by their id
+    featureTiles = featureTiles.filter((tile, index) => featureTiles.findIndex(t => t.id === tile.id) === index)
+    for (const tile of featureTiles) tile.setScreenPositions(projector)
+    // prep glyph features for drawing box filters
+    const glyphFeatures = features.filter(feature => feature.type === 'glyph' && !feature.overdraw) as GlyphFeature[]
+    // use text boxes to filter out overlap
+    if (glyphFeatures.length > 0) this.paintGlyphFilter(glyphFeatures)
+    // setup for the next frame, creating new encoders
+    context.newScene(projector)
+
+    // DRAW PHASE
+    // TODO: draw masks
+    // this.paintMasks(tiles)
+    // TODO: draw the wallpaper
+    // this.useWorkflow('background')?.draw(projector)
+    // paint opaque fills
+    const opaqueFillFeatures = features.filter(f => f.opaque).reverse()
+    for (const feature of opaqueFillFeatures) feature.draw()
+    // paint features that are potentially transparent
+    const residualFeatures = features.filter(f => !(f.opaque ?? false))
+    for (const feature of residualFeatures) feature.draw()
+
+    // finish
+    context.finish()
   }
+
+  // paintMasks (tiles: Tile[]): void {
+  //   // get context
+  //   const { context } = this
+  //   // prep the fill program
+  //   const fillWorkflow = this.workflows.fill
+  //   if (fillWorkflow === undefined) throw Error('Fill workflow not found')
+  //   // create mask for each tile
+  //   for (const tile of tiles) {
+  //     const { tmpMaskID, mask } = tile
+  //     // set correct mask id for stencil
+  //     context.setStencilReference(tmpMaskID)
+  //     // draw mask
+  //     fillWorkflow.drawMask(mask)
+  //   }
+  // }
 
   paintInteractive (tiles: Tile[]): void {
-  }
-
-  #createTileMasksIDs (tiles: Tile[]): void {
-    let maskRef = 1
-    // add all tiles
-    for (const tile of tiles) {
-      tile.tmpMaskID = maskRef
-      maskRef++
-    }
-  }
-
-  paintMasks (tiles: Tile[]): void {
-  }
-
-  paintFeatures (features: FeatureGuide[], interactive: boolean): void {
   }
 
   // // run through tiles and draw the masks, inject depthPos and
   // flushInvert (tiles: Array<Tile>, pipeline: Pipeline, depthPos: number) {
   // }
 
-  paintHeatmap (features: HeatmapFeatureGuide[]): HeatmapFeatureGuide {
+  paintHeatmap (features: HeatmapFeature[]): HeatmapFeature {
     return features[0]
   }
 
-  paintGlyphFilter (glyphFeatures: GlyphFeatureGuide[]): void {}
+  paintGlyphFilter (glyphFeatures: GlyphFeature[]): void {}
 
   // getScreen (): Uint8ClampedArray {
   // }
@@ -215,16 +236,19 @@ export default class Painter {
   }
 }
 
-// function featureSort (a: FeatureGuide, b: FeatureGuide): number {
-//   let diff = a.layerIndex - b.layerIndex
-//   if (diff) return diff
-//   let index = 0
-//   const zoomDiff = (a.parent ? 1 : 0) - (b.parent ? 1 : 0)
-//   if (zoomDiff) return zoomDiff
-//   const maxSize = Math.min(a.featureCode.length, b.featureCode.length)
-//   while (diff === 0 && index < maxSize) {
-//     diff = a.featureCode[index] - b.featureCode[index]
-//     index++
-//   }
-//   return diff
-// }
+function featureSort (a: FeatureBase, b: FeatureBase): number {
+  // first check if the layer is the same
+  let diff = a.layerIndex - b.layerIndex
+  if (diff !== 0) return diff
+  // check for zoom difference
+  const zoomDiff = ((a.parent !== undefined) ? 1 : 0) - ((b.parent !== undefined) ? 1 : 0)
+  if (zoomDiff !== 0) return zoomDiff
+  // lastlye try to sort by feature code
+  let index = 0
+  const maxSize = Math.min(a.featureCode.length, b.featureCode.length)
+  while (diff === 0 && index < maxSize) {
+    diff = a.featureCode[index] - b.featureCode[index]
+    index++
+  }
+  return diff
+}

@@ -22,8 +22,8 @@ export default class Program implements ProgramSpec {
   glProgram: WebGLProgram
   updateColorBlindMode: null | ColorMode = null
   updateMatrix: null | Float32Array = null // pointer
-  updateInputs: null | number[] = null // pointer
-  updateAspect: null | number[] = null // pointer
+  updateInputs: null | Float32Array = null // pointer
+  updateAspect: null | [number, number] = null // pointer
   curMode = -1
   LCH?: boolean
   interactive?: boolean
@@ -98,7 +98,7 @@ export default class Program implements ProgramSpec {
     this.flush()
   }
 
-  injectFrameUniforms (matrix: Float32Array, view: number[], aspect: number[]): void {
+  injectFrameUniforms (matrix: Float32Array, view: Float32Array, aspect: [number, number]): void {
     this.updateMatrix = matrix
     this.updateInputs = view
     this.updateAspect = aspect
@@ -155,14 +155,14 @@ export default class Program implements ProgramSpec {
     this.updateMatrix = null
   }
 
-  setInputs (inputs: number[]): void {
+  setInputs (inputs: Float32Array): void {
     const { uniforms } = this
     if (uniforms.uInputs === undefined) return
     this.gl.uniform1fv(uniforms.uInputs, inputs)
     this.updateInputs = null // ensure updateInputs is "flushed"
   }
 
-  setAspect (aspect: number[]): void {
+  setAspect (aspect: [number, number]): void {
     const { uniforms } = this
     if (uniforms.uAspect === undefined) return
     this.gl.uniform2fv(uniforms.uAspect, aspect)

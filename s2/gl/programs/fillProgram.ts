@@ -123,7 +123,7 @@ export default async function fillProgram (context: Context): Promise<FillProgra
       const { gl, context } = this
       const { featureGuideBuffer } = fillData
       // prep buffers
-      const vertexA = new Int16Array(fillData.vertexBuffer)
+      const vertexA = new Float32Array(fillData.vertexBuffer)
       const indexA = new Uint32Array(fillData.indexBuffer)
       const fillIDA = new Uint8Array(fillData.fillIDBuffer)
       const codeTypeA = new Uint8Array(fillData.codeTypeBuffer)
@@ -132,9 +132,9 @@ export default async function fillProgram (context: Context): Promise<FillProgra
 
       // bind buffers to the vertex array object
       // Create the feature index buffer
-      const vertexBuffer = context.bindEnableVertexAttr(vertexA, 0, 2, gl.SHORT, false, 0, 0)
+      const vertexBuffer = context.bindEnableVertexAttr(vertexA, 0, 2, gl.FLOAT, false, 0, 0)
       const indexBuffer = context.bindElementArray(indexA)
-      const fillIDBuffer = context.bindEnableVertexAttr(fillIDA, 1, 3, gl.UNSIGNED_BYTE, true, 0, 0)
+      const fillIDBuffer = context.bindEnableVertexAttr(fillIDA, 1, 4, gl.UNSIGNED_BYTE, true, 0, 0)
       const codeTypeBuffer = context.bindEnableVertexAttr(codeTypeA, 2, 1, gl.UNSIGNED_BYTE, false, 0, 0)
 
       const source: FillSource = {
@@ -233,19 +233,11 @@ export default async function fillProgram (context: Context): Promise<FillProgra
         gl.bindVertexArray(vao)
         gl.drawElements(mode, count, gl.UNSIGNED_INT, offset * 4)
       }
-      // If invert draw again to the mask
-      if (invert) this.#drawInvert(tile.mask)
-    }
-
-    #drawInvert (mask: MaskSource): void {
-      const { gl } = this
-      const { count, offset, vao } = mask
-      // reset color mask
-      gl.colorMask(true, true, true, true)
-      // setup vao
-      gl.bindVertexArray(vao)
-      // draw elements
-      gl.drawElements(gl.TRIANGLE_STRIP, count, gl.UNSIGNED_INT, offset * 4)
+      // If invert reset color mask & draw a full tile mask
+      if (invert) {
+        gl.colorMask(true, true, true, true)
+        this.drawMask(tile.mask)
+      }
     }
 
     drawMask (mask: MaskSource): void {

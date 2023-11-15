@@ -126,8 +126,8 @@ export interface ProgramSpec {
   glProgram: WebGLProgram
   updateColorBlindMode: null | ColorMode
   updateMatrix: null | Float32Array
-  updateInputs: null | number[]
-  updateAspect: null | number[]
+  updateInputs: null | Float32Array
+  updateAspect: null | [number, number]
   curMode: number
   LCH?: boolean
 
@@ -136,15 +136,15 @@ export interface ProgramSpec {
   setupAttributes: (attributes: Attributes, attributeLocations: AttributeLocations) => void
   delete: () => void
   use: () => void
-  injectFrameUniforms: (matrix: Float32Array, view: number[], aspect: number[]) => void
+  injectFrameUniforms: (matrix: Float32Array, view: Float32Array, aspect: [number, number]) => void
   flush: () => void
   // set uniforms:
   setTileUniforms: (tile: Tile) => void
   setDevicePixelRatio: (ratio: number) => void
   setColorBlindMode: (colorMode: ColorMode) => void
   setMatrix: (matrix: Float32Array) => void
-  setInputs: (inputs: number[]) => void
-  setAspect: (aspect: number[]) => void
+  setInputs: (inputs: Float32Array) => void
+  setAspect: (aspect: [number, number]) => void
   setFaceST: (faceST: number[]) => void
   setTilePos: (bottom: number[], top: number[]) => void
   setLayerCode: (layerCode: number[], lch: boolean) => void

@@ -1,0 +1,545 @@
+@top Program { unit }
+@skip { space | comment }
+@external tokens untilEOLToken from "./tokens" { UntilEOL }
+@external tokens untilCommentCloseToken from "./tokens" { untilCommentClose }
+@precedence {
+  else @right,
+  if @right,
+  parens @left,
+  subscript @left,
+  unary @right,
+  mul @left,
+  add @left,
+  shift @left,
+  compare @left,
+  equal @left,
+  and @left,
+  xor @left,
+  or @left,
+  andand @left,
+  xorxor @left,
+  oror @left,
+  conditional @right,
+  assign @right,
+  statement @cut,
+  last
+}
+
+k<term> { @specialize[@name={term}]<Identifier, term> }
+d<term> { @specialize[@name={term}]<Identifier, term> }
+t<term> { @specialize[@name={term}]<Identifier, term> }
+r<term> { @specialize[@name={term}]<Identifier, term> }
+
+unit { externalDeclaration }
+externalDeclaration { FunctionDefinition | GlobalDeclaration | Preprocessor }
+
+comment { commentLine | commentOpen untilCommentClose }
+Preprocessor {
+  hash (
+    d<'pragma'> (
+      d<'import'> (ImportDeclarationList 'from')? String |
+      d<'export'> |
+      d<'optional'> |
+      d<'global'> |
+      d<'optimize'> |
+      d<'debug'>
+      d<'STDGL'>
+    ) |
+    Directive
+  )
+  UntilEOL
+}
+ImportDeclarationList { '{' (ImportDeclaration comma)* (ImportDeclaration comma?) '}' }
+ImportDeclaration { Identifier ('as' Identifier)? }
+
+FunctionDefinition { FunctionPrototype compoundStatement }
+FunctionPrototype { QualifiedType Identifier '(' (ParameterDeclaration (comma ParameterDeclaration)*)? ')' }
+ParameterDeclaration { TypeQualifier? TypeSpecifier (Identifier ArraySpecifier?)? }
+
+GlobalDeclaration {
+  (
+    FunctionPrototype |
+    VariableDeclaration |
+    k<"precision"> PrecisionQualifier TypeSpecifier |
+    QualifiedStructDeclaration |
+    QualifiedDeclaration
+  ) semicolon
+}
+
+VariableDeclaration { QualifiedType (SingleDeclaration (comma SingleDeclaration)*)? }
+SingleDeclaration { DeclarationSpecifier (!assign assign initializer)? }
+DeclarationSpecifier { Identifier ~qualified ArraySpecifier? }
+
+QualifiedStructDeclaration {
+  TypeQualifier ~qualified (
+    Identifier ~qualified (
+      '{' StructDeclarationList '}' DeclarationSpecifier?
+    )?
+  )?
+}
+
+QualifiedDeclaration {
+  TypeQualifier ~qualified (
+    Identifier ~qualified (comma Identifier)*
+  )?
+}
+
+LocalDeclaration {
+  (
+    VariableDeclaration |
+    k<"precision"> PrecisionQualifier TypeSpecifier
+  ) semicolon
+}
+
+PrivateIdentifier { Identifier }
+
+TypeSpecifier { (basicType | Struct | Identifier ~qualified) ArraySpecifier? }
+ArraySpecifier { (LeftBracket constantExpression RightBracket)* EmptyBrackets | (LeftBracket constantExpression RightBracket)+ EmptyBrackets? }
+TypeNameList { TypeName (comma TypeName)* }
+TypeName { Identifier }
+QualifiedType { TypeQualifier? TypeSpecifier }
+
+Struct { k<'struct'> Identifier? '{' StructDeclarationList '}' }
+StructDeclarationList { StructDeclaration* }
+StructDeclaration { TypeQualifier? TypeSpecifier structDeclaratorList semicolon }
+structDeclaratorList { StructDeclarationSpecifier (comma StructDeclarationSpecifier)* }
+StructDeclarationSpecifier { PrivateIdentifier ~qualified ArraySpecifier? }
+
+initializer {
+  assignmentExpression |
+  '{' initializer (comma initializer)* comma? '}'
+}
+
+StatementList { (Statement | Preprocessor)* }
+Statement {
+  compoundStatement |
+  simpleStatement
+}
+compoundStatement { '{' StatementList '}' }
+simpleStatement {
+  DeclarationStatement |
+  ExpressionStatement |
+  SelectionStatement |
+  SwitchStatement |
+  CaseLabel |
+  IterationStatement |
+  JumpStatement
+}
+
+DeclarationStatement { LocalDeclaration }
+ExpressionStatement { expression? semicolon }
+SelectionStatement { k<'if'> '(' expression ')' Statement (!else k<"else"> Statement)? }
+Condition { expression | QualifiedType Identifier !assign assign initializer }
+SwitchStatement { k<"switch"> '(' expression ')' '{' StatementList '}' }
+CaseLabel { (k<"default"> | k<"case"> expression) ':' }
+IterationStatement {
+  k<"while"> '(' Condition ')' Statement |
+  k<"do"> Statement k<"while"> '(' expression ')' semicolon |
+  k<"for"> '(' (ExpressionStatement | DeclarationStatement) (Condition semicolon expression?) ')'
+}
+JumpStatement {
+  k<"continue"> semicolon |
+  k<"break"> semicolon |
+  k<"return"> expression? semicolon |
+  k<"discard"> semicolon
+}
+fieldSelection { PrivateIdentifier }
+
+expression { assignmentExpression (comma assignmentExpression)* }
+
+primaryExpression {
+  Reserved? (Identifier ~qualified | Number | Parens ) 
+}
+Parens { '(' expression ')' }
+assignmentExpression { conditionalExpression | Assignment }
+constantExpression { conditionalExpression }
+integerExpression { expression }
+conditionalExpression {
+  unaryExpression | binaryExpression | ternaryExpression
+}
+unaryExpression { postfixExpression | Unary }
+ternaryExpression { Conditional }
+binaryExpression { Binary }
+postfixExpression {
+  primaryExpression |
+  Index |
+  FunctionCall |
+  Field |
+  Postfix
+}
+
+Index { postfixExpression LeftBracket integerExpression RightBracket }
+Field { postfixExpression '.' fieldSelection }
+Postfix { postfixExpression (Inc | Dec) }
+Unary { (Inc | Dec | Add | Sub | Bang | Tilde) unaryExpression }
+Binary {
+  conditionalExpression !mul Mul conditionalExpression |
+  conditionalExpression !mul Div conditionalExpression |
+  conditionalExpression !mul Mod conditionalExpression |
+  conditionalExpression !add Add conditionalExpression |
+  conditionalExpression !add Sub conditionalExpression |
+  conditionalExpression !shift Left conditionalExpression |
+  conditionalExpression !shift Right conditionalExpression |
+  conditionalExpression !compare Lt conditionalExpression |
+  conditionalExpression !compare Lte conditionalExpression |
+  conditionalExpression !compare Gt conditionalExpression |
+  conditionalExpression !compare Gte conditionalExpression |
+  conditionalExpression !equal Eq conditionalExpression |
+  conditionalExpression !equal Neq conditionalExpression |
+  conditionalExpression !and And conditionalExpression |
+  conditionalExpression !or Or conditionalExpression |
+  conditionalExpression !xor Xor conditionalExpression |
+  conditionalExpression !andand AndAnd conditionalExpression |
+  conditionalExpression !oror OrOr conditionalExpression |
+  conditionalExpression !xorxor XorXor conditionalExpression
+}
+Conditional { conditionalExpression !conditional '?' expression ':' assignmentExpression }
+Assignment {
+  unaryExpression (
+    !assign (
+      MulAssign |
+       DivAssign |
+       ModAssign |
+       AddAssign |
+       SubAssign |
+       LeftAssign |
+       RightAssign |
+       AndAssign |
+       XorAssign |
+       OrAssign |
+       assign
+    )
+  ) conditionalExpression
+}
+
+FunctionCall {
+  (Identifier | basicType) '(' (k<'void'>? | assignmentExpression (comma assignmentExpression)*) ')'
+}
+
+TypeQualifier {
+  (
+    StorageQualifier |
+    LayoutQualifier |
+    PrecisionQualifier |
+    InterpolationQualifier |
+    InvariantQualifier |
+    PreciseQualifier
+  )+
+}
+StorageQualifier {
+  k<'const'> |
+  k<'inout'> |
+  k<'in'> |
+  k<'out'> |
+  k<'centroid'> |
+  k<'patch'> |
+  k<'sample'> |
+  k<'uniform'> |
+  k<'buffer'> |
+  k<'shared'> |
+  k<'coherent'> |
+  k<'volatile'> |
+  k<'restrict'> |
+  k<'readonly'> |
+  k<'writeonly'> |
+  k<'subroutine'> |
+  k<'subroutine'> '(' TypeNameList ')'
+}
+InvariantQualifier { k<'invariant'> }
+InterpolationQualifier { ( k<'smooth'> | k<'flat'> | k<'noperspective'> ) }
+LayoutQualifier { ( k<'layout'> '(' LayoutQualifierId (comma LayoutQualifierId)* ')' ) }
+LayoutQualifierId { PrivateIdentifier (!assign assign constantExpression)? | k<'shared'> }
+PreciseQualifier { k<'precise'> }
+PrecisionQualifier { ( k<'highp'> | k<'medp'> | k<'lowp'> ) }
+
+@tokens {
+  space { std.whitespace+ }
+
+  commentLine { "//" ![\n]* }
+  commentOpen { "/*" }
+  
+  Identifier { $[A-Za-z_] $[A-Za-z0-9_]* }
+  String { '"' ( !["]+ | '\\"' )* '"' | "'" ( ![']+ | "\\'" )* "'" }
+
+  Number {
+    (
+      (std.digit+ ("." std.digit*)? | "." std.digit+)
+      (("e" | "E") "-"? std.digit+)?
+      ('f' | 'F' | 'lf' | 'LF')?
+    ) |
+    std.digit+ $[uU]? |
+    "0x" (std.digit | $[a-fA-F])+ $[uU]?
+  }
+
+  hash { "#" }
+
+  Add { "+" }
+  Sub { "-" }
+  Mul { "*" }
+  Div { "/" }
+  Mod { "%" }
+  Left { "<<" }
+  Right { ">>" }
+  And { "&" }
+  Xor { "^" }
+  Or { "|" }
+
+  assign { '=' }
+  AddAssign { "+=" }
+  SubAssign { "-=" }
+  MulAssign { "*=" }
+  DivAssign { "/=" }
+  ModAssign { "%=" }
+  LeftAssign { "<<=" }
+  RightAssign { ">>=" }
+  AndAssign { "&=" }
+  XorAssign { "^=" }
+  OrAssign { "|=" }
+  
+  Inc { "++" }
+  Dec { "--" }
+  Bang { "!" }
+  Tilde { '~' }
+  
+  Eq { '==' }
+  Neq { '!=' }
+  Lt { '<' }
+  Lte { '<=' }
+  Gt { '>' }
+  Gte { '>=' }
+
+  AndAnd { "&&" }
+  XorXor { "^^" }
+  OrOr { "||" }
+  
+  comma { ',' }
+  semicolon { ";" }
+
+  LeftBracket { "[" }
+  RightBracket { "]" }
+  EmptyBrackets { "[]"}
+
+  @precedence {
+    commentLine, Div, AndAnd, And, OrOr, Or, XorXor, Xor,
+    Identifier,
+    EmptyBrackets, LeftBracket
+  }
+}
+
+Directive {
+  d<"define"> |
+  d<"undef"> |
+  d<"if"> |
+  d<"ifdef"> |
+  d<"ifndef"> |
+  d<"else"> |
+  d<"elif"> |
+  d<"endif"> |
+  d<"error"> |
+  d<"extension"> |
+  d<"version"> |
+  d<"line">
+}
+
+basicType {
+  t<"void"> |
+  t<"float"> |
+  t<"double"> |
+  t<"int"> |
+  t<"uint"> |
+  t<"atomic_uint"> |
+  t<"bool"> |
+  t<"mat2"> |
+  t<"mat3"> |
+  t<"mat4"> |
+  t<"dmat2"> |
+  t<"dmat3"> |
+  t<"dmat4"> |
+  t<"mat2x2"> |
+  t<"mat2x3"> |
+  t<"mat2x4"> |
+  t<"dmat2x2"> |
+  t<"dmat2x3"> |
+  t<"dmat2x4"> |
+  t<"mat3x2"> |
+  t<"mat3x3"> |
+  t<"mat3x4"> |
+  t<"dmat3x2"> |
+  t<"dmat3x3"> |
+  t<"dmat3x4"> |
+  t<"mat4x2"> |
+  t<"mat4x3"> |
+  t<"mat4x4"> |
+  t<"dmat4x2"> |
+  t<"dmat4x3"> |
+  t<"dmat4x4"> |
+  t<"vec2"> |
+  t<"vec3"> |
+  t<"vec4"> |
+  t<"ivec2"> |
+  t<"ivec3"> |
+  t<"ivec4"> |
+  t<"bvec2"> |
+  t<"bvec3"> |
+  t<"bvec4"> |
+  t<"dvec2"> |
+  t<"dvec3"> |
+  t<"dvec4"> |
+  t<"uvec2"> |
+  t<"uvec3"> |
+  t<"uvec4"> |
+  t<"sampler3D"> |
+  t<"samplerCube"> |
+  t<"sampler1DShadow"> |
+  t<"sampler2DShadow"> |
+  t<"samplerCubeShadow"> |
+  t<"sampler1DArray"> |
+  t<"sampler2DArray"> |
+  t<"sampler1DArrayShadow"> |
+  t<"sampler2DArrayShadow"> |
+  t<"samplerCubeArray"> |
+  t<"samplerCubeArrayShadow"> |
+  t<"isampler1D"> |
+  t<"isampler2D"> |
+  t<"isampler3D"> |
+  t<"isamplerCube"> |
+  t<"isampler1DArray"> |
+  t<"isampler2DArray"> |
+  t<"isamplerCubeArray"> |
+  t<"usampler1D"> |
+  t<"usampler2D"> |
+  t<"usampler3D"> |
+  t<"usamplerCube"> |
+  t<"usampler1DArray"> |
+  t<"usampler2DArray"> |
+  t<"usamplerCubeArray"> |
+  t<"sampler2DRect"> |
+  t<"sampler2DRectShadow"> |
+  t<"isampler2DRect"> |
+  t<"usampler2DRect"> |
+  t<"samplerBuffer"> |
+  t<"isamplerBuffer"> |
+  t<"usamplerBuffer"> |
+  t<"sampler2DMS"> |
+  t<"isampler2DMS"> |
+  t<"usampler2DMS"> |
+  t<"sampler2DMSArray"> |
+  t<"isampler2DMSArray"> |
+  t<"usampler2DMSArray"> |
+  t<"image1D"> |
+  t<"iimage1D"> |
+  t<"uimage1D"> |
+  t<"image2D"> |
+  t<"iimage2D"> |
+  t<"uimage2D"> |
+  t<"image3D"> |
+  t<"iimage3D"> |
+  t<"uimage3D"> |
+  t<"image2DRect"> |
+  t<"iimage2DRect"> |
+  t<"uimage2DRect"> |
+  t<"imageCube"> |
+  t<"iimageCube"> |
+  t<"uimageCube"> |
+  t<"imageBuffer"> |
+  t<"iimageBuffer"> |
+  t<"uimageBuffer"> |
+  t<"image1DArray"> |
+  t<"iimage1DArray"> |
+  t<"uimage1DArray"> |
+  t<"image2DArray"> |
+  t<"iimage2DArray"> |
+  t<"uimage2DArray"> |
+  t<"imageCubeArray"> |
+  t<"iimageCubeArray"> |
+  t<"uimageCubeArray"> |
+  t<"image2DMS"> |
+  t<"iimage2DMS"> |
+  t<"uimage2DMS"> |
+  t<"image2DMSArray"> |
+  t<"iimage2DMSArray"> |
+  t<"uimage2DMSArray">
+}
+
+//Keyword {
+//  k<"attribute"> |
+//  k<"const"> |
+//  k<"uniform"> |
+//  k<"varying"> |
+//  k<"buffer"> |
+//  k<"shared"> |
+//  k<"coherent"> |
+//  k<"volatile"> |
+//  k<"restrict"> |
+//  k<"readonly"> |
+//  k<"writeonly"> |
+//  k<"layout"> |
+//  k<"centroid"> |
+//  k<"flat"> |
+//  k<"smooth"> |
+//  k<"noperspective"> |
+//  k<"patch"> |
+//  k<"sample"> |
+//  k<"break"> |
+//  k<"continue"> |
+//  k<"do"> |
+//  k<"for"> |
+//  k<"while"> |
+//  k<"switch"> |
+//  k<"case"> |
+//  k<"default"> |
+//  k<"if"> |
+//  k<"else"> |
+//  k<"subroutine"> |
+//  k<"in"> |
+//  k<"out"> |
+//  k<"inout"> |
+//  k<"true"> |
+//  k<"false"> |
+//  k<"invariant"> |
+//  k<"precise"> |
+//  k<"discard"> |
+//  k<"return">
+//}
+
+Reserved {
+  r<"common"> |
+  r<"partition"> |
+  r<"active"> |
+  r<"asm"> |
+  r<"class"> |
+  r<"union"> |
+  r<"enum"> |
+  r<"typedef"> |
+  r<"template"> |
+  r<"this"> |
+  r<"resource"> |
+  r<"goto"> |
+  r<"inline"> |
+  r<"noinline"> |
+  r<"public"> |
+  r<"static"> |
+  r<"extern"> |
+  r<"external"> |
+  r<"interface"> |
+  r<"long"> |
+  r<"short"> |
+  r<"half"> |
+  r<"fixed"> |
+  r<"unsigned"> |
+  r<"superp"> |
+  r<"input"> |
+  r<"output"> |
+  r<"hvec2"> |
+  r<"hvec3"> |
+  r<"hvec4"> |
+  r<"fvec2"> |
+  r<"fvec3"> |
+  r<"fvec4"> |
+  r<"sampler3DRect"> |
+  r<"filter"> |
+  r<"sizeof"> |
+  r<"cast"> |
+  r<"namespace"> |
+  r<"using">
+}

@@ -246,10 +246,11 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
         indices.push(index)
         codeType[index] = encodingIndex
         // store id RGB value
-        const idRGBIndex = index * 3
+        const idRGBIndex = index * 4
         ids[idRGBIndex] = idRGB[0]
         ids[idRGBIndex + 1] = idRGB[1]
         ids[idRGBIndex + 2] = idRGB[2]
+        ids[idRGBIndex + 3] = 255
       }
       // update previous layerIndex
       curlayerIndex = layerIndex
@@ -266,10 +267,10 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     }
 
     // Upon building the batches, convert to buffers and ship.
-    const vertexBuffer = new Int16Array(vertices).buffer
+    const vertexBuffer = new Float32Array(vertices).buffer
     const indexBuffer = new Uint32Array(indices).buffer
-    const fillIDBuffer = new Uint8Array(ids).buffer // pre-store each id as an rgb value
-    const codeTypeBuffer = new Uint8Array(codeType).buffer
+    const fillIDBuffer = new Uint32Array(ids).buffer // pre-store each id as an rgb value
+    const codeTypeBuffer = new Uint32Array(codeType).buffer
     const featureGuideBuffer = new Float32Array(featureGuide).buffer
     // ship the vector data.
     postMessage({

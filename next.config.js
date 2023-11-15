@@ -25,6 +25,10 @@ module.exports = {
       ]
     })
     // wgsl
+    // config.module.rules.push({
+    //   test: /\.wgsl$/i,
+    //   use: 'raw-loader'
+    // })
     config.module.rules.push({
       test: /\.wgsl$/i,
       use: 'raw-loader'

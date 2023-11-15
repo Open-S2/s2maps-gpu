@@ -3,11 +3,11 @@ import type {
   FeatureGuide as FeatureGuideGL,
   MaskSource as MaskSourceGL
 } from 'gl/contexts/context.spec'
+import type WebGPUContext from 'gpu/context/context'
 import type {
-  Context as ContextGPU,
-  FeatureGuide as FeatureGuideGPU,
+  Features as FeaturesGPU,
   MaskSource as MaskSourceGPU
-} from 'gpu/context/context.spec'
+} from 'gpu/workflows/workflow.spec'
 import type { BBox, Face, XYZ } from 'geometry'
 import type { FlushData, InteractiveObject } from 'workers/worker.spec'
 import type { LayerDefinition } from 'style/style.spec'
@@ -40,6 +40,7 @@ export interface TileBase {
   division: number
   tmpMaskID: number
   interactiveGuide: Map<number, InteractiveObject>
+  uniforms: Float32Array
   rendered: boolean
 
   flush: (data: FlushData) => void
@@ -72,13 +73,13 @@ export interface TileGLBase extends TileBase {
 
 export interface TileGPUBase extends TileBase {
   mask: MaskSourceGPU
-  featureGuides: FeatureGuideGPU[]
-  context: ContextGPU
+  featureGuides: FeaturesGPU[]
+  context: WebGPUContext
 
   injectParentTile: (parent: TileGPUBase, layers: LayerDefinition[]) => void
   // given a matrix, compute the corners screen positions
   setScreenPositions: (projector: Projector) => void
-  addFeatures: (features: FeatureGuideGPU[]) => void
+  addFeatures: (features: FeaturesGPU[]) => void
 }
 
 export interface S2Tile extends TileBase {

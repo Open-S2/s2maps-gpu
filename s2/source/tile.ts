@@ -10,11 +10,11 @@ import type {
   FeatureGuide as FeatureGuideGL,
   MaskSource as MaskSourceGL
 } from 'gl/contexts/context.spec'
+import type WebGPUContext from 'gpu/context/context'
 import type {
-  Context as ContextGPU,
-  FeatureGuide as FeatureGuideGPU,
+  FeatureBase as FeatureBaseGPU,
   MaskSource as MaskSourceGPU
-} from 'gpu/context/context.spec'
+} from 'gpu/workflows/workflow.spec'
 import type Projector from 'ui/camera/projector'
 import type { BBox, Face, XYZ } from 'geometry'
 import type { FlushData, InteractiveObject } from 'workers/worker.spec'
@@ -31,7 +31,7 @@ import type {
 
 export function createTile (
   projection: Projection,
-  context: ContextGL | ContextGPU,
+  context: ContextGL | WebGPUContext,
   id: bigint,
   size = 512
 ): S2Tile | WMTile {
@@ -50,12 +50,13 @@ class Tile implements TileBase {
   tmpMaskID = 0
   mask: MaskSourceGL | MaskSourceGPU
   bbox: BBox = [0, 0, 0, 0]
-  featureGuides: Array<FeatureGuideGL | FeatureGuideGPU> = []
-  context: ContextGL | ContextGPU
+  featureGuides: Array<FeatureGuideGL | FeatureBaseGPU> = []
+  context: ContextGL | WebGPUContext
   interactiveGuide = new Map<number, InteractiveObject>()
   rendered = false
+  uniforms: Float32Array = new Float32Array(16) // [padding, isS2, face, zoom, sLow, tLow, deltaS, deltaT, ...bottom, ...top]
   constructor (
-    context: ContextGL | ContextGPU,
+    context: ContextGL | WebGPUContext,
     id: bigint,
     size = 512
   ) {
@@ -112,7 +113,7 @@ class Tile implements TileBase {
     return [0 + iShift, 0 + jShift, 8_192 / scale + iShift, 8_192 / scale + jShift]
   }
 
-  addFeatures (features: Array<FeatureGuideGL | FeatureGuideGPU>): void {
+  addFeatures (features: Array<FeatureGuideGL | FeatureBaseGPU>): void {
     // filter parent tiles that were added
     const layerIndexes = new Set(features.map(f => f.layerIndex))
     this.featureGuides = this.featureGuides.filter(f => !(
@@ -200,7 +201,7 @@ export class S2Tile extends Tile implements S2TileSpec {
   bottom: Bottom = [0, 0, 0, 0]
   top: Top = [0, 0, 0, 0]
   constructor (
-    context: ContextGL | ContextGPU,
+    context: ContextGL | WebGPUContext,
     id: bigint,
     size = 512
   ) {
@@ -218,6 +219,19 @@ export class S2Tile extends Tile implements S2TileSpec {
     this.division = 16 / (1 << max(min(floor(zoom / 2), 4), 0))
     // grab mask
     if (this.division !== 1) this.mask = context.getMask(this.division)
+    // setup uniforms
+    this.uniforms = new Float32Array([
+      0, // padding
+      1, // isS2
+      face,
+      zoom,
+      bbox[0],
+      bbox[1],
+      bbox[2] - bbox[0],
+      bbox[3] - bbox[1],
+      ...this.bottom,
+      ...this.top
+    ])
   }
 
   #buildCorners (): void {
@@ -245,14 +259,14 @@ export class S2Tile extends Tile implements S2TileSpec {
       const [tlX, tlY] = project(matrix, topLeft.map((n, i) => n - eyeKM[i]) as XYZ)
       const [trX, trY] = project(matrix, topRight.map((n, i) => n - eyeKM[i]) as XYZ)
       // store for eventual uniform "upload"
-      this.bottom[0] = blX
-      this.bottom[1] = blY
-      this.bottom[2] = brX
-      this.bottom[3] = brY
-      this.top[0] = tlX
-      this.top[1] = tlY
-      this.top[2] = trX
-      this.top[3] = trY
+      this.uniforms[8] = this.bottom[0] = blX
+      this.uniforms[9] = this.bottom[1] = blY
+      this.uniforms[10] = this.bottom[2] = brX
+      this.uniforms[11] = this.bottom[3] = brY
+      this.uniforms[12] = this.top[0] = tlX
+      this.uniforms[13] = this.top[1] = tlY
+      this.uniforms[14] = this.top[2] = trX
+      this.uniforms[15] = this.top[3] = trY
     }
   }
 }
@@ -261,7 +275,7 @@ export class WMTile extends Tile implements WMTileSpec {
   type = 'WM' as const
   matrix: Float32Array = new Float32Array(16)
   constructor (
-    context: ContextGL | ContextGPU,
+    context: ContextGL | WebGPUContext,
     id: bigint,
     size = 512
   ) {
@@ -270,6 +284,13 @@ export class WMTile extends Tile implements WMTileSpec {
     this.i = i
     this.j = j
     this.zoom = zoom
+    // setup uniforms
+    this.uniforms = new Float32Array([
+      0, // padding
+      0, // isS2
+      0,
+      zoom
+    ])
   }
 
   // given a basic ortho matrix, adjust by the tile's offset and scale
