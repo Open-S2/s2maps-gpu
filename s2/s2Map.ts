@@ -112,17 +112,17 @@ export default class S2Map extends EventTarget {
     // prep webgpu/webgl type
     let tmpContext: RenderingContext | null = null
     if (isBrowser && options.contextType === undefined) {
-      const tryContext = (name: 'webgl' | 'experimental-webgl' | 'webgl2'): boolean => {
+      const tryContext = (name: 'webgl' | 'experimental-webgl' | 'webgl2' | 'webgpu'): boolean => {
         tmpContext = document.createElement('canvas').getContext(name)
         return tmpContext !== null
       }
       // TODO: ADD 3 when webgpu is ready
-      // options.contextType = (tryContext('webgpu'))
-      //   ? 3
-      //   : (!isChrome && !isSafari && tryContext('webgl2'))
-      //       ? 2
-      //       : 1
-      options.contextType = tryContext('webgl2') ? 2 : 1
+      options.contextType = (tryContext('webgpu'))
+        ? 3
+        : (!isSafari && tryContext('webgl2'))
+            ? 2
+            : 1
+      // options.contextType = tryContext('webgl2') ? 2 : 1
     }
     // @ts-expect-error - if webgl2 context was found, lose the context
     if (isBrowser && options.contextType === 2) tmpContext?.getExtension('WEBGL_lose_context').loseContext()

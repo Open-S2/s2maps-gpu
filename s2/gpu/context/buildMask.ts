@@ -1,6 +1,6 @@
 /* eslint-env browser */
 import type { WebGPUContext } from '.'
-import type { MaskSource } from './context.spec'
+import type { MaskSource } from '../workflows/workflow.spec'
 
 export default function buildMask (division: number, context: WebGPUContext): MaskSource {
   const vertices = []
@@ -31,20 +31,11 @@ export default function buildMask (division: number, context: WebGPUContext): Ma
     indices.push(index)
   }
 
-  // setup arrays
-  const vertexArray = new Int16Array(vertices)
-  const indexArray = new Uint32Array(indices)
-
-  const vertexBuffer = context.buildGPUBuffer('mask vertex buffer', vertexArray)
-  const indexBuffer = context.buildGPUBuffer('mask index buffer', indexArray)
-
   // return the mask
   return {
     type: 'mask',
-    vertexArray,
-    indexArray,
-    vertexBuffer,
-    indexBuffer,
+    vertexBuffer: context.buildStaticGPUBuffer('mask vertex buffer', 'float', vertices, GPUBufferUsage.VERTEX),
+    indexBuffer: context.buildStaticGPUBuffer('mask index buffer', 'uint', indices, GPUBufferUsage.INDEX),
     count: indices.length,
     offset: 0
   }

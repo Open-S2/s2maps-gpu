@@ -2,69 +2,73 @@
 
 struct DecodeUniforms {
   uInputs: array<f32, 16>, // [zoom, lon, lat, angle, pitch, time, featureState, curFeature, ...extensions]
-  uLayerCode: array<f32, 128>,
+  uLayerCode: array<i32, 128>,
   uFeatureCode: array<f32, 64>,
 }
 
 @binding(1) @group(1) var<uniform> decodeUniforms : DecodeUniforms;
 
 // y = e^x OR y = Math.pow(2, 10 * x)
-float exponentialInterpolation (float inputVal, float start, float end, float base) {
+fn exponentialInterpolation (inputVal: f32, start: f32, end: f32, base: f32) -> f32 {
   // grab change
-  float diff = end - start;
-  if (diff == 0.) return 0.;
+  var diff = end - start;
+  if (diff == 0.) { return 0.; }
   // refine base value
-  if (base <= 0.) base = 0.1;
-  else if (base > 2.) base = 2.;
+  if (base <= 0.) { base = 0.1; }
+  else if (base > 2.) { base = 2.; }
   // grab diff
-  float progress = inputVal - start;
+  var progress = inputVal - start;
   // linear case
-  if (base == 1.) return progress / diff;
+  if (base == 1.) { return progress / diff; }
   // solve
   return (pow(base, progress) - 1.) / (pow(base, diff) - 1.);
 }
 
-vec4 interpolateColor (vec4 color1, vec4 color2, float t) {
+fn interpolateColor (color1: vec4<f32>, color2: vec4<f32>, t: f32) -> vec4<f32> {
   // dummy check
-  if (t == 0.) return color1;
-  else if (t == 1.) return color2;
-  float sat, hue, lbv, dh, alpha;
+  if (t == 0.) { return color1; }
+  else if (t == 1.) { return color2; }
+  var hue = 0.;
   // LCH interpolation
   if (uLCH) { // create proper hue translation
-    if (color2[0] > color1[0] && color2[0] - color1[0] > 180.) dh = color2[0] - color1[0] + 360.;
-    else if (color2[0] < color1[0] && color1[0] - color2[0] > 180.) dh = color2[0] + 360. - color1[0];
-    else dh = color2[0] - color1[0];
+    var dh = 0.;
+    if (color2[0] > color1[0] && color2[0] - color1[0] > 180.) { dh = color2[0] - color1[0] + 360.; }
+    else if (color2[0] < color1[0] && color1[0] - color2[0] > 180.) { dh = color2[0] + 360. - color1[0]; }
+    else { dh = color2[0] - color1[0]; }
     hue = color1[0] + t * dh;
   } else { // otherwise red
     hue = color1[0] + t * (color2[0] - color1[0]);
   }
   // saturation or green
-  sat = color1[1] + t * (color2[1] - color1[1]);
+  var sat = color1[1] + t * (color2[1] - color1[1]);
   // luminosity or blue
-  lbv = color1[2] + t * (color2[2] - color1[2]);
+  var lbv = color1[2] + t * (color2[2] - color1[2]);
   // alpha
-  alpha = color1[3] + t * (color2[3] - color1[3]);
+  var alpha = color1[3] + t * (color2[3] - color1[3]);
   // create the new color
-  return vec4(hue, sat, lbv, alpha);
+  return vec4<f32>(hue, sat, lbv, alpha);
 }
 
-vec4 decodeFeature (bool color, inout int index, inout int featureIndex) {
+fn decodeFeature (color: bool, index: ptr<private, i32>, featureIndex: ptr<private, i32>) -> vec4<f32> {
   // prep result and variables
-  int decodeOffset = index;
-  int startingOffset = index;
-  int featureSize = int(uLayerCode[index]) >> 10;
-  vec4 res = vec4(-1, -1, -1, -1);
-  int conditionStack[6];
-  float tStack[6];
-  int stackIndex = 1; // start at 1 because our first condition will be the initial starting point
+  var decodeOffset = index;
+  var startingOffset = index;
+  var featureSize = uLayerCode[index] >> 10;
+  var res = vec4<f32>(-1., -1., -1., -1.);
+  var conditionStack = array<i32, 6>();
+  var tStack = array<f32, 6>();
+  var stackIndex = 1u; // start at 1 because our first condition will be the initial starting point
   conditionStack[0] = index;
-  int len, conditionSet, condition;
+  var len = 0u;
+  var conditionSet = 0u;
+  var condition = 0u;
 
-  do {
+  loop {
     stackIndex--;
     // pull out current stackIndex condition an decode
-    startingOffset = index = conditionStack[stackIndex];
-    conditionSet = int(uLayerCode[index]);
+    index = conditionStack[stackIndex];
+    startingOffset = index;
+    conditionSet = uLayerCode[index];
     len = conditionSet >> 10;
     condition = (conditionSet & 1008) >> 4;
     index++;
@@ -72,18 +76,23 @@ vec4 decodeFeature (bool color, inout int index, inout int featureIndex) {
     if (condition == 0) {
     } else if (condition == 1) { // value
       if (res[0] == -1.) {
-        for (int i = 0; i < len - 1; i++) res[i] = uLayerCode[index + i];
+        for (var i = 0u; i < len - 1; i++) {
+          res[i] = uLayerCode[index + i];
+        }
       } else {
         if (color) {
-          vec4 val = vec4(uLayerCode[index], uLayerCode[index + 1], uLayerCode[index + 2], uLayerCode[index + 3]);
+          var val = vec4<f32>(uLayerCode[index], uLayerCode[index + 1], uLayerCode[index + 2], uLayerCode[index + 3]);
           res = interpolateColor(res, val, tStack[stackIndex]);
         } else {
-          for (int i = 0; i < len - 1; i++) res[i] = res[i] + tStack[stackIndex] * (uLayerCode[index + i] - res[i]);
+          for (var i = 0u; i < len - 1; i++) {
+            res[i] = res[i] + tStack[stackIndex] * (uLayerCode[index + i] - res[i]);
+          }
         }
       }
     } else if (condition == 2 || condition == 3) { // data-condition & input-condition
       // get the input from either uFeatureCode or uInputs
-      float inputVal, conditionInput;
+      var inputVal = 0.0f;
+      var conditionInput = 0.0f;
       if (condition == 2) {
         inputVal = uFeatureCode[featureIndex];
         featureIndex++;
@@ -104,24 +113,30 @@ vec4 decodeFeature (bool color, inout int index, inout int featureIndex) {
       stackIndex++; // increment size of stackIndex
     } else if (condition == 4 || condition == 5) { // data-range & input-range
       // get interpolation & base
-      int interpolationType = conditionSet & 1;
-      int inputType = (conditionSet & 14) >> 1;
-      float base = 1.;
+      var interpolationType = conditionSet & 1;
+      var inputType = (conditionSet & 14) >> 1;
+      var base = 1.0f;
       if (interpolationType == 1) {
         base = uLayerCode[index];
         index++;
       }
       // find the two values and run them
-      float inputVal, start, end;
-      int startIndex, endIndex, subCondition;
+      var inputVal = 0.0f;
+      var start = 0.0f;
+      var end = 0.0f;
+      var startIndex = 0u;
+      var endIndex = 0u;
+      var subCondition = 0u;
       // grab the inputVal value
       if (condition == 4) {
         inputVal = uFeatureCode[featureIndex];
         featureIndex++;
       } else { inputVal = decodeUniforms.uInputs[inputType]; }
       // create a start point
-      start = end = uLayerCode[index];
-      startIndex = endIndex = index + 1;
+      end = uLayerCode[index];
+      start = end;
+      endIndex = index + 1;
+      startIndex = endIndex;
       while (end < inputVal && endIndex < len + startingOffset) {
         // if current sub condition is an input-range, we must check if if the "start"
         // subCondition was a data-condition or data-range, and if so,
@@ -142,17 +157,17 @@ vec4 decodeFeature (bool color, inout int index, inout int featureIndex) {
       if (startIndex == endIndex) {
         conditionStack[stackIndex] = startIndex;
         tStack[stackIndex] = 1.;
-        if (stackIndex > 0) tStack[stackIndex] = tStack[stackIndex - 1];
+        if (stackIndex > 0) { tStack[stackIndex] = tStack[stackIndex - 1]; }
         // else tStack[stackIndex] = 1.; UNKOWN WHY - THIS CAUSES AN ERROR FOR NVIDIA GPUS
         stackIndex++;
       } else if (end == inputVal) {
         conditionStack[stackIndex] = endIndex;
         tStack[stackIndex] = 1.;
-        if (stackIndex > 0) tStack[stackIndex] = tStack[stackIndex - 1];
+        if (stackIndex > 0) { tStack[stackIndex] = tStack[stackIndex - 1]; }
         // else tStack[stackIndex] = 1.; UNKOWN WHY - THIS CAUSES AN ERROR FOR NVIDIA GPUS
         stackIndex++;
       } else { // otherwise we process startIndex and endIndex
-        float t = exponentialInterpolation(inputVal, start, end, base);
+        var t = exponentialInterpolation(inputVal, start, end, base);
         conditionStack[stackIndex] = startIndex;
         tStack[stackIndex] = 1. - t;
         stackIndex++;
@@ -166,10 +181,10 @@ vec4 decodeFeature (bool color, inout int index, inout int featureIndex) {
         // if current sub condition is an input-range, we must check if if the "start"
         // subCondition was a data-condition or data-range, and if so,
         // we must move past the uFeatureCode that was stored there
-        subCondition = (int(uLayerCode[startIndex]) & 1008) >> 4;
+        subCondition = (uLayerCode[startIndex] & 1008) >> 4;
         if (subCondition == 2 || subCondition == 4) featureIndex++;
         index++;
-        index += int(uLayerCode[index]) >> 10;
+        index += uLayerCode[index] >> 10;
         endIndex = index + 1;
       }
     } else if (condition == 6) { // feature-state
@@ -184,15 +199,19 @@ vec4 decodeFeature (bool color, inout int index, inout int featureIndex) {
     if (stackIndex > 5) {
       break;
     }
-  } while (stackIndex > 0);
+
+    continuing {
+      break if stackIndex <= 0;
+    }
+  }
 
   // update index to the next Layer property
   index = featureSize + decodeOffset;
 
   // if lch: convert back to rgb
-  if (color && uLCH) res = LCH2RGB(res);
+  if (color && uLCH) { res = LCH2RGB(res); }
   // assuming user has selected a colorblind state, adjust accordingly
-  if (color && uCBlind != 0.) res = cBlindAdjust(res);
+  if (color && uCBlind != 0.) { res = cBlindAdjust(res); }
 
   return res;
 }

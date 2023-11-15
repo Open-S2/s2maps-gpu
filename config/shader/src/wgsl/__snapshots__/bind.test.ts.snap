@@ -1,0 +1,169 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`bind bind produces a bound bundle 1`] = `1068531536290827`;
+
+exports[`bind binds an external 1`] = `
+"const TEST = true;
+
+    fn _01_getColor() -> vec4<f32> { return vec4<f32>(1.0, 0.0, 1.0, 1.0); }
+    
+
+    fn colorUsed() -> vec4<f32> { return vec4<f32>(0.0, 0.1, 0.2, 0.0); }
+fn getColor() -> vec4<f32> {
+      return _01_getColor() + colorUsed();
+    }
+    "
+`;
+
+exports[`bind binds an external 2`] = `
+"const TEST = true;
+
+    fn _01_getColor() -> vec4<f32> { return vec4<f32>(1.0, 0.0, 1.0, 1.0); }
+    
+
+    fn colorUsed() -> vec4<f32> { return vec4<f32>(0.0, 0.1, 0.2, 0.0); }
+fn getColor() -> vec4<f32> {
+      return _01_getColor() + colorUsed();
+    }
+    "
+`;
+
+exports[`bind binds an external 3`] = `
+"const TEST = true;
+
+    fn _01_getColor() -> vec4<f32> { return vec4<f32>(1.0, 0.0, 1.0, 1.0); }
+    
+
+    fn _02_colorUsed() -> vec4<f32> { return vec4<f32>(0.0, 0.1, 0.2, 0.0); }
+fn _02_getColor() -> vec4<f32> {
+      return _01_getColor() + _02_colorUsed();
+    }
+    
+
+    fn main() {
+      var v: vec4<f32>;
+      v = _02_getColor();
+      return v;
+    }
+    "
+`;
+
+exports[`bind links data bindings 1`] = `
+"
+struct _VT_Type {
+  _VT_1_getColor: vec4<f32>,
+};
+@group(0) @binding(1) var<uniform> _VT_Uniform: _VT_Type;
+
+
+fn _VT_1_getColor(a: i32) -> vec4<f32> {
+  return _VT_Uniform._VT_1_getColor;
+}
+
+
+@group(0) @binding(0) var<storage> _VT_1_getSizeStorage: array<vec2<f32>>;
+
+fn _VT_1_getSize(a: i32) -> vec2<f32> {
+  return _VT_1_getSizeStorage[a];
+}
+
+
+    fn main() {
+      _VT_1_getColor(0);
+      _VT_1_getSize(0);
+    }
+    "
+`;
+
+exports[`bind makes deterministic links for data bindings 1`] = `
+Object {
+  "base": undefined,
+  "code": "@access [getColor getSize] [bxd6ge0qaz]",
+  "name": "_VT_171w40",
+  "storages": Array [
+    Object {
+      "storage": Object {
+        "buffer": Object {},
+        "format": "vec2<f32>",
+        "length": 10,
+        "size": Array [
+          10,
+        ],
+        "version": 1,
+      },
+      "uniform": Object {
+        "args": Array [
+          "i32",
+        ],
+        "format": "vec2<f32>",
+        "name": "getSize",
+        "value": Array [
+          1,
+          1,
+        ],
+      },
+    },
+  ],
+  "table": Object {
+    "exports": Array [
+      Object {
+        "flags": 1,
+        "func": Object {
+          "name": "getColor",
+          "parameters": Array [
+            "i32",
+          ],
+          "type": Object {
+            "name": "vec4<f32>",
+          },
+        },
+      },
+      Object {
+        "flags": 1,
+        "func": Object {
+          "name": "getSize",
+          "parameters": Array [
+            "i32",
+          ],
+          "type": Object {
+            "name": "vec2<f32>",
+          },
+        },
+      },
+    ],
+    "modules": undefined,
+    "symbols": Array [
+      "getColor",
+      "getSize",
+    ],
+    "visibles": Array [
+      "getColor",
+      "getSize",
+    ],
+  },
+  "textures": Array [],
+  "uniforms": Array [
+    Object {
+      "constant": Array [
+        1,
+        0.5,
+        1,
+        1,
+      ],
+      "uniform": Object {
+        "args": Array [
+          "i32",
+        ],
+        "format": "vec4<f32>",
+        "name": "getColor",
+        "value": Array [
+          0,
+          0.5,
+          1,
+          1,
+        ],
+      },
+    },
+  ],
+}
+`;

@@ -1,0 +1,69 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`example linking links two GLSL shaders as modules using a prototype 1`] = `
+"#version 450
+uniform vec4 color;
+
+vec4 _01_getColor() {
+  return color;
+}
+vec4 _01_getColor();
+
+void main() {
+  gl_FragColor = _01_getColor();
+}"
+`;
+
+exports[`example linking links two GLSL shaders from bundle using an import 1`] = `
+"#version 450
+uniform vec4 color;
+
+vec4 _01_getColor() {
+  return color;
+}
+void main() {
+  gl_FragColor = _01_getColor();
+}"
+`;
+
+exports[`example linking links two GLSL shaders from source code using a prototype 1`] = `
+"#version 450
+uniform vec4 color;
+
+vec4 _01_getColor() {
+  return color;
+}
+vec4 _01_getColor();
+
+void main() {
+  gl_FragColor = _01_getColor();
+}"
+`;
+
+exports[`example linking links two GLSL shaders from source code using an import 1`] = `
+"#version 450
+uniform vec4 color;
+
+vec4 _01_getColor() {
+  return color;
+}
+void main() {
+  gl_FragColor = _01_getColor();
+}"
+`;
+
+exports[`example linking readme example 1`] = `
+"#version 450
+vec4 _01_getColor() {
+  return vec4(_01_used(), 0.5, 0.0, 1.0);
+}
+
+float _01_used() {
+  return 1.0;
+}
+
+
+void main() {
+  gl_FragColor = _01_getColor();
+}"
+`;

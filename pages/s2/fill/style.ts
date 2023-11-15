@@ -13,13 +13,6 @@ const style: StyleDefinition = {
   fonts: {},
   layers: [
     {
-      name: 'background',
-      type: 'fill',
-      source: 'mask',
-      opaque: true,
-      color: '#fff'
-    },
-    {
       name: 'country-fill',
       source: 'countries',
       type: 'fill',

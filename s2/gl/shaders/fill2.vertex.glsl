@@ -2,7 +2,7 @@
 precision highp float;
 
 layout (location = 0) in vec2 aPos;
-layout (location = 1) in vec3 aID;
+layout (location = 1) in vec4 aID;
 layout (location = 2) in float aIndex;
 
 uniform bool uInteractive;
@@ -21,7 +21,7 @@ void main () {
   int featureIndex = int(aIndex);
   // decode color
   if (uInteractive) {
-    color = vec4(aID, 1.);
+    color = aID;
   } else {
     color = decodeFeature(true, index, featureIndex);
     color.a *= decodeFeature(false, index, featureIndex)[0];

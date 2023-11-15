@@ -26,24 +26,24 @@ export interface ProjectionConfig {
   zoomOffset?: number
 }
 
-export type View = [
-  zoom: number,
-  lon: number,
-  lat: number,
-  bearing: number,
-  pitch: number,
-  time: number,
-  featureState: number,
-  currFeature: number,
-  extension: number,
-  extension: number,
-  extension: number,
-  extension: number,
-  extension: number,
-  extension: number,
-  extension: number,
-  extension: number
-]
+// export type View = [
+//   zoom: number,
+//   lon: number,
+//   lat: number,
+//   bearing: number,
+//   pitch: number,
+//   time: number,
+//   featureState: number,
+//   currFeature: number,
+//   extension: number,
+//   extension: number,
+//   extension: number,
+//   extension: number,
+//   extension: number,
+//   extension: number,
+//   extension: number,
+//   extension: number
+// ]
 
 export type MatrixType = 'm' | 'km' // meters or kilometers
 
@@ -58,8 +58,8 @@ export default class Projector {
   zTranslateEnd = 1.001
   zoomEnd = 5
   positionalZoom = true
-  view: View = new Array(16) as View // [zoom, lon, lat, bearing, pitch, time, featureState, currFeature, ...extensions]
-  aspect: [x: number, y: number] = [400, 300] // default canvas width x height
+  view: Float32Array = new Float32Array(10) // [zoom, lon, lat, bearing, pitch, time, aspectX, aspectY, featureState, currFeature]
+  aspect: [number, number] = [400, 300] // default canvas width x height
   matrices: { [key in MatrixType]?: Float32Array } = {}
   eye: XYZ = [0, 0, 0] // [x, y, z] only z should change for visual effects
   minLatPosition = 70
@@ -188,8 +188,8 @@ export default class Projector {
   }
 
   resize (width: number, height: number): void {
-    this.aspect[0] = width
-    this.aspect[1] = height
+    this.view[6] = this.aspect[0] = width
+    this.view[7] = this.aspect[1] = height
     // cleanup
     this.reset()
   }

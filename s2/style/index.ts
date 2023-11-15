@@ -11,7 +11,7 @@ import type {
 } from './style.spec'
 import type { TileRequest } from 'workers/worker.spec'
 import type { WorkflowType as GLWorkflowType } from 'gl/programs/program.spec'
-import type { WorkflowType as GPUWorkflowType } from 'gpu/pipelines/pipeline.spec'
+import type { WorkflowType as GPUWorkflowType } from 'gpu/workflows/workflow.spec'
 import type Camera from 'ui/camera'
 import type { MapOptions } from 'ui/s2mapUI'
 import type { Tile } from 'source/tile.spec'
@@ -196,8 +196,8 @@ export default class Style {
   }
 
   #buildAnalytics (): Analytics {
-    const { gl, renderer, type } = this.camera.painter.context
-    const { width, height } = gl.canvas
+    const { gl, gpu, renderer, type } = this.camera.painter.context
+    const { width, height } = (gl ?? gpu).canvas
     return {
       gpu: renderer,
       context: type,

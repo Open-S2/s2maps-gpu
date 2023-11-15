@@ -143,10 +143,11 @@ export default class Camera {
     let context = null
     // first try webGPU
     if (contextType === 3) {
-      // context = this.#canvas.getContext('webgpu') as unknown as GPUCanvasContext // GPUCanvasContext
-      // if (context === null) return false
-      // const Painter = await import('s2/gpu').then(m => m.Painter)
-      // this.painter = new Painter(context, options) as any
+      context = this.#canvas.getContext('webgpu') as unknown as GPUCanvasContext // GPUCanvasContext
+      if (context === null) return false
+      const Painter = await import('gpu').then(m => m.Painter)
+      this.painter = new Painter(context, options) as any
+      await this.painter.prepare()
     } else {
       let type: 1 | 2 = 1
       // prep webgl style options

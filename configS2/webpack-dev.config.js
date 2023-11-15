@@ -31,6 +31,10 @@ module.exports = {
         // use: 'webpack-glsl-minify'
       },
       {
+        test: /\.wgsl$/i,
+        use: ['@use-gpu/wgsl-loader']
+      },
+      {
         test: /\.tsx?$/,
         use: 'ts-loader',
         exclude: /node_modules/

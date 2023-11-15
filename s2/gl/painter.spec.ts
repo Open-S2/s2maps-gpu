@@ -56,7 +56,7 @@ export interface Painter {
   injectGlyphImages: (maxHeight: number, images: GlyphImages) => void
   setColorMode: (mode: 0 | 1 | 2 | 3 | 4) => void
   delete: () => void
-  injectFrameUniforms: (matrix: Float32Array, view: number[], aspect: number[]) => void
+  injectFrameUniforms: (matrix: Float32Array, view: Float32Array, aspect: [number, number]) => void
   injectTimeCache: (timeCache: TimeCache) => void
   paint: (projector: Projector, tiles: Tile[]) => void
   paintInteractive: (tiles: Tile[]) => void

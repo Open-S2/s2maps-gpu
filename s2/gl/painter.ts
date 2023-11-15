@@ -29,10 +29,8 @@ import type {
   WorkflowType
 } from './programs/program.spec'
 import type { GlyphImages } from 'workers/source/glyphSource'
-import type { ColorMode } from '../s2Map'
-import type {
-  PainterData, SpriteImageMessage
-} from 'workers/worker.spec'
+import type { ColorMode } from 's2Map'
+import type { PainterData, SpriteImageMessage } from 'workers/worker.spec'
 
 export default class Painter implements PainterSpec {
   context: WebGL2Context | WebGLContext
@@ -103,7 +101,7 @@ export default class Painter implements PainterSpec {
     }
   }
 
-  injectFrameUniforms (matrix: Float32Array, view: number[], aspect: number[]): void {
+  injectFrameUniforms (matrix: Float32Array, view: Float32Array, aspect: [number, number]): void {
     const { workflows } = this
     for (const programName in workflows) {
       workflows[programName as keyof Workflow]?.injectFrameUniforms(matrix, view, aspect)

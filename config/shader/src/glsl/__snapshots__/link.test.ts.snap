@@ -1,0 +1,240 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`link lifts recursive dependency 1`] = `
+"#version 450
+
+    // Lifted Code
+    void _01_getLifted() {}
+    
+
+    vec4 _02_getColor2() { return vec4(1.0, 0.0, 1.0, 1.0); }
+    
+
+    vec4 _03_getColor1() { return _02_getColor2(); }
+    
+
+    void main() {
+      gl_FragColor = _03_getColor1();
+    }
+    "
+`;
+
+exports[`link links a global across a module 1`] = `
+"#version 450
+
+    vec4 getPosition(int index) { return vec4(1.0, 0.0, 1.0, 1.0); }
+    
+
+    void _02_getPosition() {};
+    
+    vec4 _02_getColor(int index) {
+      _02_getPosition();
+      return vec4(1.0, 0.0, 1.0, 1.0);
+    }
+    
+
+    vec4 getPosition(int index);
+    void main() {
+      vec4 a = getPosition(0);
+    }
+    "
+`;
+
+exports[`link links an external 1`] = `
+"#version 450
+
+    vec4 _01_getColor() { return vec4(1.0, 0.0, 1.0, 1.0); }
+    
+
+    vec4 _01_getColor();
+    void main() {
+      vec4 v;
+      v.xyz = vec3(1.0, 0.0, 0.0);
+      gl_FragColor = _01_getColor();
+    }
+    "
+`;
+
+exports[`link links quad vertex 1`] = `
+"#version 450
+const ivec2 _01_QUAD[] = {
+  ivec2(0, 0),
+  ivec2(1, 0),
+  ivec2(0, 1),
+  ivec2(1, 1),
+};
+
+ivec2 _01_getQuadIndex(int vertex) {
+  return _01_QUAD[vertex];
+}
+
+vec2 _01_getQuadUV(int vertex) {
+  return vec2(_01_getQuadIndex(vertex));
+}
+
+
+    vec4 _02_getPosition(int index) { return vec4(1.0, 0.0, 1.0, 1.0); }
+    
+
+    vec4 _03_getColor(int index) { return vec4(1.0, 0.0, 1.0, 1.0); }
+    
+
+    float _04_getSize(int index) { return 1.0; }
+    
+
+    float _05_getDepth(int index) { return 0.5; }
+    
+struct _06_SolidVertex {
+  vec4 position;
+  vec4 color;
+  vec2 uv;
+};
+
+
+layout(set = VIEW_BINDGROUP, binding = VIEW_BINDING) uniform _07_ViewUniforms {
+  mat4 projectionMatrix;
+  mat4 viewMatrix;
+  vec4 viewPosition;
+  vec2 viewResolution;
+  vec2 viewSize;
+  float viewWorldDepth;
+  float viewPixelRatio;
+} _07_viewUniforms;
+
+vec4 _07_worldToView(vec4 position) {
+  return _07_viewUniforms.viewMatrix * position;
+}
+
+vec4 _07_viewToClip(vec4 position) {
+  return _07_viewUniforms.projectionMatrix * position;
+}
+
+vec4 _07_worldToClip(vec4 position) {
+  return _07_viewToClip(_07_worldToView(position));
+}
+
+float _07_getPerspectiveScale(float w, float f) {
+  mat4 m = _07_viewUniforms.projectionMatrix;
+  float worldScale = m[1][1] * _07_viewUniforms.viewWorldDepth;
+  float clipScale = mix(1.0, worldScale / w, f);
+  float pixelScale = clipScale * _07_viewUniforms.viewPixelRatio;
+  return pixelScale;
+}
+
+vec4 _02_getPosition(int);
+vec4 _03_getColor(int);
+vec2 _04_getSize(int);
+float _05_getDepth(int);
+
+_06_SolidVertex getQuadVertex(int vertexIndex, int instanceIndex) {
+  vec4 position = _02_getPosition(instanceIndex);
+  vec4 color = _03_getColor(instanceIndex);
+  vec2 size = _04_getSize(instanceIndex);
+  float depth = _05_getDepth(instanceIndex);
+
+  vec4 center = _07_worldToClip(position);
+
+  vec2 uv = _01_getQuadUV(vertexIndex);
+  vec2 xy = uv * 2.0 - 1.0;
+  
+  // Lerp between fixed size and full perspective.
+  float pixelScale = _07_getPerspectiveScale(center.w, depth);
+  size *= pixelScale;
+
+  #ifdef HAS_EDGE_BLEED
+  xy = xy * (size + 0.5) / size;
+  uv = xy * .5 + .5;
+  #endif
+
+  center.xy += xy * size * _07_viewUniforms.viewResolution * center.w;
+
+  return _06_SolidVertex(
+    center,
+    color,
+    uv
+  );
+}"
+`;
+
+exports[`link links same module twice with different entry point 1`] = `
+"#version 450
+
+    float _01_used() { return 1.0; }
+    
+    vec4 _01_getPosition(int index) { return vec4(_01_used(), 0.0, 1.0, 1.0); }
+
+    vec4 _01_getColor(int index) { return vec4(_01_used(), 0.0, 1.0, 1.0); }
+    
+
+    vec4 _01_getPosition(int index);
+    vec4 _01_getColor(int index);
+    void main() {
+      vec4 a = _01_getPosition(0);
+      vec4 b = _01_getColor(0);
+    }
+    "
+`;
+
+exports[`link tree shakes around identifiers 1`] = `
+"#version 450
+
+    float _01_used() { return 1.0; }
+
+    vec4 _01_getPosition(int index) { return vec4(_01_used(), 0.0, 1.0, 1.0); }
+
+    
+
+    vec4 _01_getPosition(int index);
+    void main() {
+      vec4 a = _01_getPosition(0);
+    }
+    "
+`;
+
+exports[`link tree shakes around identifiers 2`] = `
+"#version 450
+
+    float _01_used() { return 1.0; }
+
+    vec4 _01_getPosition(int index) { return vec4(_01_used(), 0.0, 1.0, 1.0); }
+
+    
+
+    vec4 _01_getPosition(int index);
+    void main() {
+      vec4 a = _01_getPosition(0);
+    }
+    "
+`;
+
+exports[`link tree shakes constants 1`] = `
+"#version 450
+
+    const vec4 _01_colorUsed = vec4(0.0, 0.1, 0.2, 0.0);
+    vec4 _01_getColor() {
+      return _01_colorUsed;
+    }
+    
+
+    vec4 _01_getColor();
+    void main() {
+      vec4 a = _01_getColor();
+    }
+    "
+`;
+
+exports[`link tree shakes constants 2`] = `
+"#version 450
+
+    const vec4 _01_colorUsed = vec4(0.0, 0.1, 0.2, 0.0);
+    vec4 _01_getColor() {
+      return _01_colorUsed;
+    }
+    
+
+    vec4 _01_getColor();
+    void main() {
+      vec4 a = _01_getColor();
+    }
+    "
+`;

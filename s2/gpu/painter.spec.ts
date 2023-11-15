@@ -1,32 +1,22 @@
 import type {
-  FeatureGuide,
-  GlyphFeatureGuide,
-  HeatmapFeatureGuide,
   WebGPUContext
 } from './context'
 import type {
-  FillPipeline,
-  GlyphFilterPipeline,
-  GlyphPipeline,
-  HeatmapPipeline,
-  LinePipeline,
-  PointPipeline,
-  RasterPipeline,
-  SensorPipeline,
-  ShadePipeline,
-  SkyboxPipeline,
-  WallpaperPipeline,
+  FeatureBase,
   Workflow,
   WorkflowKey,
   WorkflowType
-} from './pipelines/pipeline.spec'
+  // GlyphFeatureBase,
+  // HeatmapFeatureBase,
+} from './workflows/workflow.spec'
 import type { TileGPU as Tile } from 'source/tile.spec'
 import type {
   // FillData,
   // GlyphData,
   // HeatmapData,
   // LineData,
-  PainterData, SpriteImageMessage
+  PainterData,
+  SpriteImageMessage
   // PointData,
   // RasterData,
   // SensorData
@@ -40,21 +30,9 @@ export interface Painter {
   dirty: boolean
   currProgram?: WorkflowKey
 
+  prepare: () => Promise<void>
+
   buildFeatureData: (tile: Tile, data: PainterData) => void
-  useWorkflow: (
-    ((programName: 'fill') => FillPipeline | undefined) &
-    ((programName: 'glyph') => GlyphPipeline | undefined) &
-    ((programName: 'heatmap') => HeatmapPipeline | undefined) &
-    ((programName: 'line') => LinePipeline | undefined) &
-    ((programName: 'point') => PointPipeline | undefined) &
-    ((programName: 'raster') => RasterPipeline | undefined) &
-    ((programName: 'sensor') => SensorPipeline | undefined) &
-    ((programName: 'shade') => ShadePipeline | undefined) &
-    ((programName: 'glyphFilter') => GlyphFilterPipeline | undefined) &
-    ((programName: 'wallpaper') => WallpaperPipeline | undefined) &
-    ((programName: 'skybox') => SkyboxPipeline | undefined) &
-    ((programName: 'background') => WallpaperPipeline | SkyboxPipeline | undefined)
-  )
   buildWorkflows: (buildSet: Set<WorkflowType>) => Promise<void>
   resize: (width: number, height: number) => void
   getScreen: () => Uint8ClampedArray
@@ -66,7 +44,7 @@ export interface Painter {
   paint: (projector: Projector, tiles: Tile[]) => void
   paintInteractive: (tiles: Tile[]) => void
   paintMasks: (tiles: Tile[]) => void
-  paintFeatures: (features: FeatureGuide[], interactive: boolean) => void
-  paintHeatmap: (features: HeatmapFeatureGuide[]) => HeatmapFeatureGuide
-  paintGlyphFilter: (glyphFeatures: GlyphFeatureGuide[]) => void
+  paintFeatures: (features: FeatureBase[], interactive: boolean) => void
+  // paintHeatmap: (features: HeatmapFeatureBase[]) => HeatmapFeatureBase
+  // paintGlyphFilter: (glyphFeatures: GlyphFeatureBase[]) => void
 }
