@@ -6,7 +6,7 @@ import type {
 import type WebGPUContext from 'gpu/context/context'
 import type {
   Features as FeaturesGPU,
-  MaskSource as MaskSourceGPU
+  TileMaskSource as MaskSourceGPU
 } from 'gpu/workflows/workflow.spec'
 import type { BBox, Face, XYZ } from 'geometry'
 import type { FlushData, InteractiveObject } from 'workers/worker.spec'

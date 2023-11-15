@@ -7,8 +7,8 @@ import {
 import type { MapOptions } from 'ui/s2mapUI'
 import type {
   FeatureBase,
-  GlyphFeature,
-  HeatmapFeature,
+  // GlyphFeature,
+  // HeatmapFeature,
   WorkflowImports,
   WorkflowKey,
   WorkflowType,
@@ -20,8 +20,6 @@ import type Projector from 'ui/camera/projector'
 import type { PainterData, SpriteImageMessage } from 'workers/worker.spec'
 import type TimeCache from 'ui/camera/timeCache'
 import type { ColorMode } from 's2Map'
-// import type { FeatureGuide } source/tile'
-// import type { PipelineType } from './pipelines/pipeline'
 
 export default class Painter {
   context: WebGPUContext
@@ -29,7 +27,7 @@ export default class Painter {
   dirty = true
   currPipeline?: WorkflowKey
   constructor (context: GPUCanvasContext, options: MapOptions) {
-    this.context = new WebGPUContext(context, options)
+    this.context = new WebGPUContext(context, options, this)
   }
 
   // called once to properly prepare the context
@@ -38,6 +36,7 @@ export default class Painter {
   }
 
   buildFeatureData (tile: Tile, data: PainterData): void {
+    // TODO: fix typescript
     const workflow = this.workflows[data.type] as { buildSource: (data: PainterData, tile: Tile) => void } | undefined
     workflow?.buildSource(data, tile)
   }
@@ -170,15 +169,14 @@ export default class Painter {
     featureTiles = featureTiles.filter((tile, index) => featureTiles.findIndex(t => t.id === tile.id) === index)
     for (const tile of featureTiles) tile.setScreenPositions(projector)
     // prep glyph features for drawing box filters
-    const glyphFeatures = features.filter(feature => feature.type === 'glyph' && !feature.overdraw) as GlyphFeature[]
-    // use text boxes to filter out overlap
-    if (glyphFeatures.length > 0) this.paintGlyphFilter(glyphFeatures)
+    // const glyphFeatures = features.filter(feature => feature.type === 'glyph' && !feature.overdraw) as GlyphFeature[]
+    // glyphFeatures.forEach(feature => feature.drawFilter())
     // setup for the next frame, creating new encoders
     context.newScene(projector)
 
     // DRAW PHASE
-    // TODO: draw masks
-    // this.paintMasks(tiles)
+    // draw masks
+    for (const { mask } of tiles) mask.draw()
     // TODO: draw the wallpaper
     // this.useWorkflow('background')?.draw(projector)
     // paint opaque fills
@@ -192,34 +190,18 @@ export default class Painter {
     context.finish()
   }
 
-  // paintMasks (tiles: Tile[]): void {
-  //   // get context
-  //   const { context } = this
-  //   // prep the fill program
-  //   const fillWorkflow = this.workflows.fill
-  //   if (fillWorkflow === undefined) throw Error('Fill workflow not found')
-  //   // create mask for each tile
-  //   for (const tile of tiles) {
-  //     const { tmpMaskID, mask } = tile
-  //     // set correct mask id for stencil
-  //     context.setStencilReference(tmpMaskID)
-  //     // draw mask
-  //     fillWorkflow.drawMask(mask)
-  //   }
+  // paintInteractive (tiles: Tile[]): void {
   // }
-
-  paintInteractive (tiles: Tile[]): void {
-  }
 
   // // run through tiles and draw the masks, inject depthPos and
   // flushInvert (tiles: Array<Tile>, pipeline: Pipeline, depthPos: number) {
   // }
 
-  paintHeatmap (features: HeatmapFeature[]): HeatmapFeature {
-    return features[0]
-  }
+  // paintHeatmap (features: HeatmapFeature[]): HeatmapFeature {
+  //   return features[0]
+  // }
 
-  paintGlyphFilter (glyphFeatures: GlyphFeature[]): void {}
+  // paintGlyphFilter (glyphFeatures: GlyphFeature[]): void {}
 
   // getScreen (): Uint8ClampedArray {
   // }

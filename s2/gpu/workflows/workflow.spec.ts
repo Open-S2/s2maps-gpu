@@ -34,8 +34,21 @@ export interface MaskSource {
   type: 'mask'
   vertexBuffer: GPUBuffer
   indexBuffer: GPUBuffer
+  fillIDBuffer: GPUBuffer
+  codeTypeBuffer: GPUBuffer
   count: number
   offset: number
+}
+export interface TileMaskSource {
+  type: 'mask'
+  vertexBuffer: GPUBuffer
+  indexBuffer: GPUBuffer
+  fillIDBuffer: GPUBuffer
+  codeTypeBuffer: GPUBuffer
+  bindGroup: GPUBindGroup
+  count: number
+  offset: number
+  draw: () => void
 }
 
 export interface FillSource {
@@ -238,13 +251,12 @@ export type WorkflowType = 'fill' | 'glyph' | 'heatmap' | 'line' | 'point' | 'ra
 export interface Workflow {
   context: WebGPUContext
   setup: () => Promise<void>
-  // flush: () => void
 }
 
 export interface FillWorkflow extends Workflow {
   layerGuides: Map<number, FillWorkflowLayerGuide>
   draw: (feature: FillFeature) => void
-  drawMask: (maskSource: MaskSource) => void
+  drawMask: (maskSource: TileMaskSource) => void
   buildSource: (fillData: FillData, tile: Tile) => void
   buildMaskFeature: (maskLayer: FillLayerDefinition, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LayerStyle) => FillLayerDefinition

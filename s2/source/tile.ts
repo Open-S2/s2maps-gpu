@@ -13,7 +13,7 @@ import type {
 import type WebGPUContext from 'gpu/context/context'
 import type {
   FeatureBase as FeatureBaseGPU,
-  MaskSource as MaskSourceGPU
+  TileMaskSource as MaskSourceGPU
 } from 'gpu/workflows/workflow.spec'
 import type Projector from 'ui/camera/projector'
 import type { BBox, Face, XYZ } from 'geometry'
@@ -64,7 +64,7 @@ class Tile implements TileBase {
     this.id = id
     this.size = size
     // grab mask
-    this.mask = context.getMask(1)
+    this.mask = context.getMask(1, this)
   }
 
   // inject references to featureGuide from each parentTile. Sometimes if we zoom really fast, we inject
@@ -215,10 +215,6 @@ export class S2Tile extends Tile implements S2TileSpec {
     const bbox = this.bbox = bboxST(i, j, zoom)
     this.faceST = [face, zoom, bbox[2] - bbox[0], bbox[0], bbox[3] - bbox[1], bbox[1]]
     if (zoom >= 12) this.#buildCorners()
-    // build division
-    this.division = 16 / (1 << max(min(floor(zoom / 2), 4), 0))
-    // grab mask
-    if (this.division !== 1) this.mask = context.getMask(this.division)
     // setup uniforms
     this.uniforms = new Float32Array([
       0, // padding
@@ -232,6 +228,10 @@ export class S2Tile extends Tile implements S2TileSpec {
       ...this.bottom,
       ...this.top
     ])
+    // build division
+    this.division = 16 / (1 << max(min(floor(zoom / 2), 4), 0))
+    // grab mask
+    if (this.division !== 1) this.mask = context.getMask(this.division, this)
   }
 
   #buildCorners (): void {
