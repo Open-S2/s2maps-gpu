@@ -54,7 +54,13 @@ class Tile implements TileBase {
   context: ContextGL | WebGPUContext
   interactiveGuide = new Map<number, InteractiveObject>()
   rendered = false
-  uniforms: Float32Array = new Float32Array(16) // [padding, isS2, face, zoom, sLow, tLow, deltaS, deltaT, ...bottom, ...top]
+  uniforms: Float32Array = new Float32Array(7) // [isS2, face, zoom, sLow, tLow, deltaS, deltaT]
+  bottom: Bottom = [0, 0, 0, 0]
+  top: Top = [0, 0, 0, 0]
+  // WebGPU specific properties
+  bindGroup!: GPUBindGroup
+  uniformBuffer!: GPUBuffer
+  positionBuffer!: GPUBuffer
   constructor (
     context: ContextGL | WebGPUContext,
     id: bigint,
@@ -86,6 +92,15 @@ class Tile implements TileBase {
     }
     // interactive guides
     for (const [id, interactive] of parent.interactiveGuide) this.interactiveGuide.set(id, interactive)
+  }
+
+  setScreenPositions (_: Projector): void {
+    const { context, mask, bottom, top } = this
+    // if WebGPU mask, we need to update the position buffer
+    if ('positionBuffer' in mask && 'device' in context) {
+      // TODO: We shouldn't need to create a new Float32Array buffer every time
+      context.device.queue.writeBuffer(mask.positionBuffer, 0, new Float32Array([...bottom, ...top]))
+    }
   }
 
   // currently this is for glyphs, points, and heatmaps. By sharing glyph data with children,
@@ -217,16 +232,13 @@ export class S2Tile extends Tile implements S2TileSpec {
     if (zoom >= 12) this.#buildCorners()
     // setup uniforms
     this.uniforms = new Float32Array([
-      0, // padding
       1, // isS2
       face,
       zoom,
       bbox[0],
       bbox[1],
       bbox[2] - bbox[0],
-      bbox[3] - bbox[1],
-      ...this.bottom,
-      ...this.top
+      bbox[3] - bbox[1]
     ])
     // build division
     this.division = 16 / (1 << max(min(floor(zoom / 2), 4), 0))
@@ -259,14 +271,16 @@ export class S2Tile extends Tile implements S2TileSpec {
       const [tlX, tlY] = project(matrix, topLeft.map((n, i) => n - eyeKM[i]) as XYZ)
       const [trX, trY] = project(matrix, topRight.map((n, i) => n - eyeKM[i]) as XYZ)
       // store for eventual uniform "upload"
-      this.uniforms[8] = this.bottom[0] = blX
-      this.uniforms[9] = this.bottom[1] = blY
-      this.uniforms[10] = this.bottom[2] = brX
-      this.uniforms[11] = this.bottom[3] = brY
-      this.uniforms[12] = this.top[0] = tlX
-      this.uniforms[13] = this.top[1] = tlY
-      this.uniforms[14] = this.top[2] = trX
-      this.uniforms[15] = this.top[3] = trY
+      this.bottom[0] = blX
+      this.bottom[1] = blY
+      this.bottom[2] = brX
+      this.bottom[3] = brY
+      this.top[0] = tlX
+      this.top[1] = tlY
+      this.top[2] = trX
+      this.top[3] = trY
+      // if WebGPU mask, we need to update the position buffer
+      super.setScreenPositions(projector)
     }
   }
 }
@@ -286,10 +300,9 @@ export class WMTile extends Tile implements WMTileSpec {
     this.zoom = zoom
     // setup uniforms
     this.uniforms = new Float32Array([
-      0, // padding
       0, // isS2
-      0,
-      zoom
+      0, // face
+      zoom // zoom
     ])
   }
 
@@ -300,5 +313,7 @@ export class WMTile extends Tile implements WMTileSpec {
     const offset = llToTilePx([lon, lat], [this.zoom, this.i, this.j])
 
     this.matrix = projector.getMatrix(scale, offset)
+    // if WebGPU mask, we need to update the position buffer
+    super.setScreenPositions(projector)
   }
 }

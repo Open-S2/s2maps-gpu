@@ -1,17 +1,25 @@
 import type {
   FillLayerDefinition,
-  FillWorkflowLayerGuide,
+  FillLayerStyle,
+  FillWorkflowLayerGuideGPU,
   GlyphLayerDefinition,
+  GlyphLayerStyle,
   HeatmapLayerDefinition,
+  HeatmapLayerStyle,
   HillshadeLayerDefinition,
+  HillshadeLayerStyle,
   LayerDefinitionBase,
-  LayerStyle,
   LineLayerDefinition,
+  LineLayerStyle,
   PointLayerDefinition,
+  PointLayerStyle,
   RasterLayerDefinition,
+  RasterLayerStyle,
   Resampling,
   SensorLayerDefinition,
-  ShadeLayerDefinition
+  SensorLayerStyle,
+  ShadeLayerDefinition,
+  ShadeLayerStyle
 } from 'style/style.spec'
 import type { WebGPUContext } from '../context'
 import type { SensorTextureDefinition } from 'ui/camera/timeCache'
@@ -46,6 +54,8 @@ export interface TileMaskSource {
   fillIDBuffer: GPUBuffer
   codeTypeBuffer: GPUBuffer
   bindGroup: GPUBindGroup
+  uniformBuffer: GPUBuffer
+  positionBuffer: GPUBuffer
   count: number
   offset: number
   draw: () => void
@@ -78,7 +88,7 @@ export interface LineSource {
   type: 'line'
   // fillIDBuffer: GPUBuffer
   vertexBuffer: GPUBuffer
-  lengthSoFarBuffer?: GPUBuffer
+  lengthSoFarBuffer: GPUBuffer
 }
 
 export interface PointSource {
@@ -254,12 +264,12 @@ export interface Workflow {
 }
 
 export interface FillWorkflow extends Workflow {
-  layerGuides: Map<number, FillWorkflowLayerGuide>
+  layerGuides: Map<number, FillWorkflowLayerGuideGPU>
   draw: (feature: FillFeature) => void
   drawMask: (maskSource: TileMaskSource) => void
   buildSource: (fillData: FillData, tile: Tile) => void
   buildMaskFeature: (maskLayer: FillLayerDefinition, tile: Tile) => void
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LayerStyle) => FillLayerDefinition
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: FillLayerStyle) => FillLayerDefinition
 }
 
 export interface GlyphFilterWorkflow extends Workflow {
@@ -267,42 +277,42 @@ export interface GlyphFilterWorkflow extends Workflow {
 
 export interface GlyphWorkflow extends Workflow {
   buildSource: (glyphData: GlyphData, tile: Tile) => void
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LayerStyle) => GlyphLayerDefinition
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: GlyphLayerStyle) => GlyphLayerDefinition
 }
 
 export interface HeatmapWorkflow extends Workflow {
   buildSource: (heatmapData: HeatmapData, tile: Tile) => void
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LayerStyle) => HeatmapLayerDefinition
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: HeatmapLayerStyle) => HeatmapLayerDefinition
 }
 
 export interface LineWorkflow extends Workflow {
   buildSource: (lineData: LineData, tile: Tile) => void
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LayerStyle) => LineLayerDefinition
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LineLayerStyle) => LineLayerDefinition
 }
 
 export interface PointWorkflow extends Workflow {
   buildSource: (pointData: PointData, tile: Tile) => void
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LayerStyle) => PointLayerDefinition
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: PointLayerStyle) => PointLayerDefinition
 }
 
 export interface RasterWorkflow extends Workflow {
   buildSource: (rasterData: RasterData, tile: Tile) => void
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LayerStyle) => RasterLayerDefinition
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: RasterLayerStyle) => RasterLayerDefinition
 }
 
 export interface HillshadeWorkflow extends Workflow {
   buildSource: (rasterData: HillshadeData, tile: Tile) => void
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LayerStyle) => HillshadeLayerDefinition
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: HillshadeLayerStyle) => HillshadeLayerDefinition
 }
 
 export interface SensorWorkflow extends Workflow {
   buildSource: (sensorData: SensorData, tile: Tile) => void
   injectTimeCache: (timeCache: TimeCache) => void
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LayerStyle) => SensorLayerDefinition
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: SensorLayerStyle) => SensorLayerDefinition
 }
 
 export interface ShadeWorkflow extends Workflow {
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LayerStyle) => ShadeLayerDefinition
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: ShadeLayerStyle) => ShadeLayerDefinition
 }
 
 export interface WallpaperWorkflow extends Workflow {

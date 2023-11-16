@@ -20,6 +20,7 @@ struct ViewUniforms {
 };
 
 struct TileUniforms {
+  padding: f32,
   isS2: f32, // Either S2 Projection or WM
   face: f32, // face relative to current tile
   zoom: f32, // zoom relative to current tile
@@ -27,13 +28,8 @@ struct TileUniforms {
   tLow: f32,
   deltaS: f32,
   deltaT: f32,
-};
-
-struct TilePosition {
-  bottomLeft: vec2<f32>,
-  bottomRight: vec2<f32>,
-  topLeft: vec2<f32>,
-  topRight: vec2<f32>
+  bottom: vec4<f32>, // [bottomLeft-X, bottomLeft-Y, bottomRight-X, bottomRight-Y]
+  top: vec4<f32>, // [topLeft-X, topLeft-Y, topRight-X, topRight-Y]
 };
 
 struct LayerUniforms {
@@ -41,23 +37,16 @@ struct LayerUniforms {
   useLCH: f32, // use LCH coloring or RGB if false
 };
 
-// ** FRAME DATA **
-// frame data is updated at the beginning of each new frame
+// frame data is updated at the beginning of the render thread
 @binding(0) @group(0) var<uniform> view: ViewUniforms;
 @binding(1) @group(0) var<uniform> matrix: mat4x4<f32>;
-// ** TILE DATA **
-// these bindings are stored in the tile's mask data
-// tile's need to self update positional data so we can store them a single time in a tile
+// tile data
 @binding(0) @group(1) var<uniform> tile: TileUniforms;
-@binding(1) @group(1) var<uniform> tilePos: TilePosition;
-// ** LAYER DATA **
-// layer data can be created upon style invocation. This data is static and will not change
-// unless the style is edited.
-@binding(2) @group(1) var<uniform> layer: LayerUniforms;
-@binding(3) @group(1) var<storage, read> layerCode: array<f32, 128>;
-// ** FEATURE DATA **
-// every feature will have it's own code to parse it's attribute data in real time
-@binding(4) @group(1) var<storage, read> featureCode: array<f32, 64>;
+// layer data
+@binding(1) @group(1) var<uniform> layer: LayerUniforms;
+@binding(2) @group(1) var<storage, read> layerCode: array<f32, 128>;
+// feature data
+@binding(3) @group(1) var<storage, read> featureCode: array<f32, 64>;
 
 fn LCH2LAB (lch: vec4<f32>) -> vec4<f32> { // r -> l ; g -> c ; b -> h
   var h = lch.b * (PI / 180.);
@@ -129,16 +118,6 @@ fn cBlindAdjust (rgba: vec4<f32>) -> vec4<f32> {
   var r = rgba.r * 255.;
   var g = rgba.g * 255.;
   var b = rgba.b * 255.;
-  // if uCBlind is 4 return grayscale
-  if (view.cBlind == 4.) {
-    var l = (0.3 * r) + (0.59 * g) + (0.11 * b);
-    return vec4<f32>(
-      l / 255.,
-      l / 255.,
-      l / 255.,
-      rgba.a
-    );
-  }
   // grab color conversion mode
   var CVD = array<f32, 9>();
   if (view.cBlind == 1.) { CVD = array<f32, 9>(0.0, 2.02344, -2.52581, 0., 1., 0., 0., 0., 1.); } // protanopia
@@ -210,10 +189,10 @@ fn getPosLocal (pos: vec2<f32>) -> vec4<f32> {
     return matrix * vec4(mutPos, 0, 1);
   }
   // find position following s
-  var deltaBottom = tilePos.bottomRight - tilePos.bottomLeft;
-  var deltaTop = tilePos.topRight - tilePos.topLeft;
-  var bottomPosS = tilePos.bottomLeft + deltaBottom * mutPos.x;
-  var topPosS = tilePos.topLeft + deltaTop * mutPos.x;
+  var deltaBottom = tile.bottom.zw - tile.bottom.xy;
+  var deltaTop = tile.top.zw - tile.top.xy;
+  var bottomPosS = tile.bottom.xy + deltaBottom * mutPos.x;
+  var topPosS = tile.top.xy + deltaTop * mutPos.x;
   // using s positions, find t
   var deltaS = topPosS - bottomPosS;
   var res = bottomPosS + deltaS * mutPos.y;
@@ -439,6 +418,12 @@ fn decodeFeature (color: bool, index: ptr<function, u32>, featureIndex: ptr<func
 
   return res;
 }
+
+// layout (location = 0) in float aType;
+// layout (location = 1) in vec2 aPrev; // (INSTANCED)
+// layout (location = 2) in vec2 aCurr; // (INSTANCED)
+// layout (location = 3) in vec2 aNext; // (INSTANCED)
+// layout (location = 4) in float aLengthSoFar; // (INSTANCED)
 
 @vertex
 fn vMain(

@@ -7,9 +7,8 @@ import type { FillFeature, FillSource, FillWorkflow as FillWorkflowSpec, TileMas
 import type {
   FillLayerDefinition,
   FillLayerStyle,
-  FillWorkflowLayerGuide,
-  LayerDefinitionBase,
-  LayerStyle
+  FillWorkflowLayerGuideGPU,
+  LayerDefinitionBase
 } from 'style/style.spec'
 import type { FillData } from 'workers/worker.spec'
 import type { TileGPU as Tile } from 'source/tile.spec'
@@ -43,7 +42,7 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout | null> = [
 
 export default class FillWorkflow implements FillWorkflowSpec {
   context: WebGPUContext
-  layerGuides = new Map<number, FillWorkflowLayerGuide>()
+  layerGuides = new Map<number, FillWorkflowLayerGuideGPU>()
   maskPipeline!: GPURenderPipeline
   fillPipeline!: GPURenderPipeline
   maskFillPipeline!: GPURenderPipeline
@@ -67,10 +66,11 @@ export default class FillWorkflow implements FillWorkflowSpec {
   }
 
   // programs helps design the appropriate layer parameters
-  buildLayerDefinition (layerBase: LayerDefinitionBase, layer: LayerStyle): FillLayerDefinition {
+  buildLayerDefinition (layerBase: LayerDefinitionBase, layer: FillLayerStyle): FillLayerDefinition {
+    const { context } = this
     const { source, layerIndex, lch } = layerBase
     // PRE) get layer base
-    let { color, opacity, invert, opaque, interactive, cursor } = layer as FillLayerStyle
+    let { color, opacity, invert, opaque, interactive, cursor } = layer
     invert = invert ?? false
     opaque = opaque ?? false
     interactive = interactive ?? false
@@ -90,15 +90,21 @@ export default class FillWorkflow implements FillWorkflowSpec {
       opaque,
       cursor
     }
-    // 2) Store layer workflow, building code if webgl2
+    // 2) build the layerCode
     const layerCode: number[] = []
     for (const paint of [color, opacity]) {
       layerCode.push(...encodeLayerAttribute(paint, lch))
     }
+    // 3) Setup layer buffers in GPU
+    const layerBuffer = context.buildStaticGPUBuffer('Layer Uniform Buffer', 'float', new Float32Array([context.getDepthPosition(layerIndex), lch ? 1 : 0]), GPUBufferUsage.UNIFORM)
+    const layerCodeBuffer = context.buildStaticGPUBuffer('Layer Code Buffer', 'float', new Float32Array([...layerCode, ...Array(128 - layerCode.length).fill(0)]), GPUBufferUsage.STORAGE)
+    // 4) Store layer guide
     this.layerGuides.set(layerIndex, {
       sourceName: source,
       layerIndex,
       layerCode,
+      layerBuffer,
+      layerCodeBuffer,
       lch,
       invert,
       opaque,
@@ -117,15 +123,12 @@ export default class FillWorkflow implements FillWorkflowSpec {
 
     const layer = this.layerGuides.get(layerIndex)
     if (layer === undefined) return
-    const { sourceName, layerCode, lch, invert, opaque, interactive } = layer
-    const tileBuffer = context.buildStaticGPUBuffer('Tile Uniform Buffer', 'float', tile.uniforms, GPUBufferUsage.UNIFORM)
-    const layerBuffer = context.buildStaticGPUBuffer('Layer Uniform Buffer', 'float', new Float32Array([context.getDepthPosition(layerIndex), lch ? 1 : 0]), GPUBufferUsage.UNIFORM)
-    const layerCodeBuffer = context.buildStaticGPUBuffer('Layer Code Buffer', 'float', new Float32Array([...layerCode, ...Array(128 - layerCode.length).fill(0)]), GPUBufferUsage.STORAGE)
+    const { sourceName, layerBuffer, layerCodeBuffer, lch, invert, opaque, interactive } = layer
     const featureCodeBuffer = context.buildStaticGPUBuffer('Feature Code Buffer', 'float', new Float32Array(64), GPUBufferUsage.STORAGE)
     const bindGroup = context.buildGroup(
       'Feature BindGroup',
       context.featureBindGroupLayout,
-      [tileBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
+      [mask.uniformBuffer, mask.positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
     )
     const feature: FillFeature = {
       type: 'fill' as const,
@@ -167,6 +170,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
 
   #buildFeatures (source: FillSource, tile: Tile, featureGuideArray: Float32Array): void {
     const { context } = this
+    const { mask } = tile
     const features: FillFeature[] = []
 
     const lgl = featureGuideArray.length
@@ -183,18 +187,15 @@ export default class FillWorkflow implements FillWorkflowSpec {
 
       const layerGuide = this.layerGuides.get(layerIndex)
       if (layerGuide === undefined) continue
-      const { sourceName, layerCode, lch, invert, opaque, interactive } = layerGuide
+      const { sourceName, layerBuffer, layerCodeBuffer, lch, invert, opaque, interactive } = layerGuide
 
       // TODO: we need to create two features if interactive is true.
 
-      const tileBuffer = context.buildStaticGPUBuffer('Tile Uniform Buffer', 'float', tile.uniforms, GPUBufferUsage.UNIFORM)
-      const layerBuffer = context.buildStaticGPUBuffer('Layer Uniform Buffer', 'float', new Float32Array([context.getDepthPosition(layerIndex), lch ? 1 : 0]), GPUBufferUsage.UNIFORM)
-      const layerCodeBuffer = context.buildStaticGPUBuffer('Layer Code Buffer', 'float', new Float32Array([...layerCode, ...Array(128 - layerCode.length).fill(0)]), GPUBufferUsage.STORAGE)
       const featureCodeBuffer = context.buildStaticGPUBuffer('Feature Code Buffer', 'float', new Float32Array([...featureCode, ...Array(64 - featureCode.length).fill(0)]), GPUBufferUsage.STORAGE)
       const bindGroup = context.buildGroup(
         'Feature BindGroup',
         context.featureBindGroupLayout,
-        [tileBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
+        [mask.uniformBuffer, mask.positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
       )
 
       const feature = {
@@ -202,7 +203,6 @@ export default class FillWorkflow implements FillWorkflowSpec {
         maskLayer: false,
         source,
         tile,
-        parent: undefined,
         count,
         offset,
         sourceName,
@@ -278,10 +278,9 @@ export default class FillWorkflow implements FillWorkflowSpec {
     const { vertexBuffer, indexBuffer, fillIDBuffer, codeTypeBuffer } = source
     const pipeline = invert ? this.invertPipeline : this.fillPipeline
 
+    // setup pipeline, bind groups, & buffers
     passEncoder.setPipeline(pipeline)
-    // setup bind groups
     passEncoder.setBindGroup(1, bindGroup)
-    // setup buffers
     passEncoder.setVertexBuffer(0, vertexBuffer)
     passEncoder.setIndexBuffer(indexBuffer, 'uint32')
     passEncoder.setVertexBuffer(1, fillIDBuffer)
@@ -297,10 +296,9 @@ export default class FillWorkflow implements FillWorkflowSpec {
     const { passEncoder } = this.context
     const { vertexBuffer, indexBuffer, fillIDBuffer, codeTypeBuffer, bindGroup, count, offset } = maskSource
 
+    // setup pipeline, bind groups, & buffers
     passEncoder.setPipeline(featureGuide === undefined ? this.maskPipeline : this.maskFillPipeline)
-    // setup bind groups
     passEncoder.setBindGroup(1, featureGuide?.bindGroup ?? bindGroup)
-    // setup buffers
     passEncoder.setVertexBuffer(0, vertexBuffer)
     passEncoder.setIndexBuffer(indexBuffer, 'uint32')
     passEncoder.setVertexBuffer(1, fillIDBuffer)

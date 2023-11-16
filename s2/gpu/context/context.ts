@@ -98,6 +98,7 @@ export default class WebGPUContext {
     this.device.queue.writeBuffer(this.#viewUniformBuffer, 0, new Float32Array([mode]))
   }
 
+  // TODO: This naming convetion sucks and doesn't properly explain what's going on
   buildStaticGPUBuffer (
     label: string,
     type: 'float' | 'uint' | 'int',
@@ -210,20 +211,26 @@ export default class WebGPUContext {
       masks.set(division, mask)
     }
 
-    // Create the source
-    const tileBuffer = this.buildStaticGPUBuffer('Tile Uniform Buffer', 'float', tile.uniforms, GPUBufferUsage.UNIFORM)
+    // tile binding
+    const uniformBuffer = this.buildStaticGPUBuffer('Tile Uniform Buffer', 'float', tile.uniforms, GPUBufferUsage.UNIFORM)
+    const positionBuffer = this.buildStaticGPUBuffer('Tile Position Buffer', 'float', [...tile.bottom, ...tile.top], GPUBufferUsage.UNIFORM)
+    // layer binding
     const layerBuffer = this.buildStaticGPUBuffer('Layer Uniform Buffer', 'float', new Float32Array([1, 0]), GPUBufferUsage.UNIFORM)
     const layerCodeBuffer = this.buildStaticGPUBuffer('Layer Code Buffer', 'float', new Float32Array(128), GPUBufferUsage.STORAGE)
+    // feature binding
     const featureCodeBuffer = this.buildStaticGPUBuffer('Feature Code Buffer', 'float', new Float32Array(64), GPUBufferUsage.STORAGE)
+    // store the group
     const bindGroup = this.buildGroup(
       'Feature BindGroup',
       this.featureBindGroupLayout,
-      [tileBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
+      [uniformBuffer, positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
     )
 
     const tileMaskSource: TileMaskSource = {
       ...mask,
       bindGroup,
+      uniformBuffer,
+      positionBuffer,
       draw: () => {
         this.setStencilReference(tile.tmpMaskID)
         this.painter.workflows.fill?.drawMask(tileMaskSource)
@@ -274,21 +281,22 @@ export default class WebGPUContext {
     this.#matrixUniformBuffer = this.buildGPUBuffer('Matrix Uniform Buffer', new Float32Array(16), GPUBufferUsage.UNIFORM)
     this.frameBindGroupLayout = this.buildLayout('Frame', ['uniform', 'uniform'])
     this.frameBufferBindGroup = this.buildGroup('Frame BindGroup', this.frameBindGroupLayout, [this.#viewUniformBuffer, this.#matrixUniformBuffer])
-    // setup per feature uniforms
-    this.featureBindGroupLayout = this.buildLayout('Feature', ['uniform', 'uniform', 'read-only-storage', 'read-only-storage'])
+    // setup per feature uniforms layout
+    this.featureBindGroupLayout = this.buildLayout('Feature', ['uniform', 'uniform', 'uniform', 'read-only-storage', 'read-only-storage'])
   }
 
   // https://programmer.ink/think/several-best-practices-of-webgpu.html
   // BEST PRACTICE 7: shared resource binding group and binding group layout object
   buildLayout (
     name: string,
-    bindings: GPUBufferBindingType[]
+    bindings: GPUBufferBindingType[],
+    visibility = GPUShaderStage.VERTEX
   ): GPUBindGroupLayout {
     return this.device.createBindGroupLayout({
       label: `${name} BindGroupLayout`,
       entries: bindings.map((type, index) => ({
         binding: index,
-        visibility: GPUShaderStage.VERTEX,
+        visibility,
         buffer: { type, hasDynamicOffset: false, minBindingSize: 0 }
       }))
     })
