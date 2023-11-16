@@ -255,6 +255,10 @@ export interface FillWorkflowLayerGuide extends LayerWorkflowGuideBase {
   color?: LayerWorkerFunction<[number, number, number, number]>
   opacity?: LayerWorkerFunction<number[]>
 }
+export interface FillWorkflowLayerGuideGPU extends FillWorkflowLayerGuide {
+  layerBuffer: GPUBuffer
+  layerCodeBuffer: GPUBuffer
+}
 export interface FillWorkerLayer extends LayerWorkerBase {
   type: 'fill'
   getCode: BuildCodeFunction

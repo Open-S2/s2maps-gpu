@@ -42,6 +42,8 @@ export interface TileBase {
   interactiveGuide: Map<number, InteractiveObject>
   uniforms: Float32Array
   rendered: boolean
+  bottom: Bottom
+  top: Top
 
   flush: (data: FlushData) => void
   removeLayer: (index: number) => void
@@ -86,8 +88,6 @@ export interface S2Tile extends TileBase {
   type: 'S2'
   faceST: FaceST
   corners?: Corners
-  bottom: Bottom
-  top: Top
 }
 export interface S2TileGL extends S2Tile, TileGLBase {}
 export interface S2TileGPU extends S2Tile, TileGPUBase {}
