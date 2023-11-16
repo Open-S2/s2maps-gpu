@@ -1,9 +1,8 @@
 /* eslint-env browser */
 import type { WebGPUContext } from '.'
 import type { MaskSource } from '../workflows/workflow.spec'
-import type { TileBase as Tile } from 'source/tile.spec'
 
-export default function buildMask (division: number, context: WebGPUContext, tile: Tile): MaskSource {
+export default function buildMask (division: number, context: WebGPUContext): MaskSource {
   const vertices = []
   const indices = []
   // prep variables
@@ -37,8 +36,8 @@ export default function buildMask (division: number, context: WebGPUContext, til
     type: 'mask',
     vertexBuffer: context.buildStaticGPUBuffer('mask vertex buffer', 'float', vertices, GPUBufferUsage.VERTEX),
     indexBuffer: context.buildStaticGPUBuffer('mask index buffer', 'uint', indices, GPUBufferUsage.INDEX),
-    fillIDBuffer: context.buildStaticGPUBuffer('mask fill id buffer', 'float', [0], GPUBufferUsage.VERTEX),
-    codeTypeBuffer: context.buildStaticGPUBuffer('mask code type buffer', 'float', [0], GPUBufferUsage.VERTEX),
+    fillIDBuffer: context.buildStaticGPUBuffer('mask fill id buffer', 'uint', Array(vertices.length / 2).fill(0), GPUBufferUsage.VERTEX),
+    codeTypeBuffer: context.buildStaticGPUBuffer('mask code type buffer', 'uint', Array(vertices.length / 2).fill(0), GPUBufferUsage.VERTEX),
     count: indices.length,
     offset: 0
   }

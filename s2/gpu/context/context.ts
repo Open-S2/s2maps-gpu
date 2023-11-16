@@ -4,7 +4,6 @@ import buildMask from './buildMask'
 import type { GPUType } from 'style/style.spec'
 import type { MapOptions } from 'ui/s2mapUI'
 import type { MaskSource, TileMaskSource } from 'gpu/workflows/workflow.spec'
-import type Projector from 'ui/camera/projector'
 import type { ColorMode } from 's2Map'
 import type { Painter } from 'gpu/painter.spec'
 import type { TileBase as Tile } from 'source/tile.spec'
@@ -69,7 +68,9 @@ export default class WebGPUContext {
     this.ready = true
   }
 
-  newScene (projector: Projector): void {
+  newScene (view: Float32Array, matrix: Float32Array): void {
+    // reset stencil ref
+    this.stencilRef = -1
     // if a resize was called, let's do that first
     if (this.#resizeNextFrame) this.#resize()
     // prepare descriptor
@@ -79,9 +80,8 @@ export default class WebGPUContext {
     this.passEncoder = this.commandEncoder.beginRenderPass(this.#renderPassDescriptor)
 
     // setup view and matrix uniforms immediately
-    const matrix = projector.getMatrix('m')
     this.device.queue.writeBuffer(this.#matrixUniformBuffer, 0, matrix)
-    this.device.queue.writeBuffer(this.#viewUniformBuffer, 4, projector.view)
+    this.device.queue.writeBuffer(this.#viewUniformBuffer, 4, view)
 
     // setup bind groups
     this.passEncoder.setBindGroup(0, this.frameBufferBindGroup)
@@ -126,8 +126,7 @@ export default class WebGPUContext {
   buildGPUBuffer (
     label: string,
     inputArray: BufferSource,
-    usage: number,
-    unmap = false
+    usage: number
   ): GPUBuffer {
     // prep buffer
     const gpuBuffer = this.device.createBuffer({
@@ -207,7 +206,7 @@ export default class WebGPUContext {
     // check if we have a mask for this level
     let mask = masks.get(division)
     if (mask === undefined) {
-      mask = buildMask(division, this, tile)
+      mask = buildMask(division, this)
       masks.set(division, mask)
     }
 
@@ -260,6 +259,7 @@ export default class WebGPUContext {
       depthStencilAttachment: {
         view: this.#depthStencilTexture.createView(),
         depthClearValue: 1.0,
+        stencilClearValue: 0,
         depthLoadOp: 'clear',
         depthStoreOp: 'store',
         stencilLoadOp: 'clear',

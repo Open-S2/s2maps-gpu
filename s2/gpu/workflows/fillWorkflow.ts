@@ -46,14 +46,23 @@ export default class FillWorkflow implements FillWorkflowSpec {
   layerGuides = new Map<number, FillWorkflowLayerGuide>()
   maskPipeline!: GPURenderPipeline
   fillPipeline!: GPURenderPipeline
+  maskFillPipeline!: GPURenderPipeline
   invertPipeline!: GPURenderPipeline
+  #shaderModule!: GPUShaderModule
+  #pipelineLayout!: GPUPipelineLayout
   constructor (context: WebGPUContext) {
     this.context = context
   }
 
   async setup (): Promise<void> {
+    const { device, frameBindGroupLayout, featureBindGroupLayout } = this.context
+    this.#shaderModule = device.createShaderModule({ code: shaderCode })
+    this.#pipelineLayout = device.createPipelineLayout({
+      bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout]
+    })
     this.maskPipeline = await this.#getPipeline('mask')
     this.fillPipeline = await this.#getPipeline('fill')
+    this.maskFillPipeline = await this.#getPipeline('mask-fill')
     this.invertPipeline = await this.#getPipeline('invert')
   }
 
@@ -111,7 +120,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
     const { sourceName, layerCode, lch, invert, opaque, interactive } = layer
     const tileBuffer = context.buildStaticGPUBuffer('Tile Uniform Buffer', 'float', tile.uniforms, GPUBufferUsage.UNIFORM)
     const layerBuffer = context.buildStaticGPUBuffer('Layer Uniform Buffer', 'float', new Float32Array([context.getDepthPosition(layerIndex), lch ? 1 : 0]), GPUBufferUsage.UNIFORM)
-    const layerCodeBuffer = context.buildStaticGPUBuffer('Layer Code Buffer', 'uint', new Uint32Array([...layerCode, ...Array(128 - layerCode.length).fill(0)]), GPUBufferUsage.STORAGE)
+    const layerCodeBuffer = context.buildStaticGPUBuffer('Layer Code Buffer', 'float', new Float32Array([...layerCode, ...Array(128 - layerCode.length).fill(0)]), GPUBufferUsage.STORAGE)
     const featureCodeBuffer = context.buildStaticGPUBuffer('Feature Code Buffer', 'float', new Float32Array(64), GPUBufferUsage.STORAGE)
     const bindGroup = context.buildGroup(
       'Feature BindGroup',
@@ -135,7 +144,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
       bindGroup,
       draw: () => {
         context.setStencilReference(tile.tmpMaskID)
-        this.draw(feature)
+        this.drawMask(mask, feature)
       }
     }
     tile.addFeatures([feature])
@@ -147,10 +156,10 @@ export default class FillWorkflow implements FillWorkflowSpec {
     // prep buffers
     const source: FillSource = {
       type: 'fill',
-      vertexBuffer: context.buildGPUBuffer('Fill Vertex Buffer', new Float32Array(vertexBuffer), GPUBufferUsage.VERTEX, true),
-      indexBuffer: context.buildGPUBuffer('Fill Index Buffer', new Uint32Array(indexBuffer), GPUBufferUsage.INDEX, true),
-      fillIDBuffer: context.buildGPUBuffer('Fill ID Buffer', new Uint32Array(fillIDBuffer), GPUBufferUsage.VERTEX, true),
-      codeTypeBuffer: context.buildGPUBuffer('Fill Code Type Buffer', new Uint32Array(codeTypeBuffer), GPUBufferUsage.VERTEX, true)
+      vertexBuffer: context.buildGPUBuffer('Fill Vertex Buffer', new Float32Array(vertexBuffer), GPUBufferUsage.VERTEX),
+      indexBuffer: context.buildGPUBuffer('Fill Index Buffer', new Uint32Array(indexBuffer), GPUBufferUsage.INDEX),
+      fillIDBuffer: context.buildGPUBuffer('Fill ID Buffer', new Uint32Array(fillIDBuffer), GPUBufferUsage.VERTEX),
+      codeTypeBuffer: context.buildGPUBuffer('Fill Code Type Buffer', new Uint32Array(codeTypeBuffer), GPUBufferUsage.VERTEX)
     }
     // build features
     this.#buildFeatures(source, tile, new Float32Array(featureGuideBuffer))
@@ -218,11 +227,12 @@ export default class FillWorkflow implements FillWorkflowSpec {
   // https://programmer.ink/think/several-best-practices-of-webgpu.html
   // BEST PRACTICE 6: it is recommended to create pipeline asynchronously
   // BEST PRACTICE 7: explicitly define pipeline layouts
-  async #getPipeline (type: 'fill' | 'mask' | 'invert'): Promise<GPURenderPipeline> {
+  async #getPipeline (type: 'fill' | 'mask' | 'invert' | 'mask-fill'): Promise<GPURenderPipeline> {
     const { context } = this
-    const { device, format, frameBindGroupLayout, featureBindGroupLayout, sampleCount } = context
+    const { device, format, sampleCount } = context
     const invert = type === 'invert'
     const mask = type === 'mask'
+    const maskFill = type === 'mask-fill'
 
     const stencilState: GPUStencilFaceState = {
       compare: (mask || invert) ? 'always' : 'equal',
@@ -232,23 +242,21 @@ export default class FillWorkflow implements FillWorkflowSpec {
     }
 
     return await device.createRenderPipelineAsync({
-      layout: device.createPipelineLayout({
-        bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout]
-      }),
+      layout: this.#pipelineLayout,
       vertex: {
-        module: device.createShaderModule({ code: shaderCode }),
+        module: this.#shaderModule,
         entryPoint: 'vMain',
         buffers: SHADER_BUFFER_LAYOUT
       },
       fragment: {
-        module: device.createShaderModule({ code: shaderCode }),
+        module: this.#shaderModule,
         entryPoint: 'fMain',
         targets: [{ format, writeMask: (mask || invert) ? 0 : GPUColorWrite.ALL }]
       },
       primitive: {
-        topology: mask ? 'triangle-strip' : 'triangle-list',
+        topology: (mask || maskFill) ? 'triangle-strip' : 'triangle-list',
         cullMode: 'back',
-        stripIndexFormat: mask ? 'uint32' : undefined
+        stripIndexFormat: (mask || maskFill) ? 'uint32' : undefined
       },
       multisample: { count: sampleCount },
       depthStencil: {
@@ -266,9 +274,9 @@ export default class FillWorkflow implements FillWorkflowSpec {
   draw (featureGuide: FillFeature): void {
     // get current source data
     const { passEncoder } = this.context
-    const { tile, bindGroup, invert, source, count, offset } = featureGuide
-    const { type, vertexBuffer, indexBuffer, fillIDBuffer, codeTypeBuffer } = source
-    const pipeline = invert ? this.invertPipeline : type === 'mask' ? this.maskPipeline : this.fillPipeline
+    const { tile, invert, bindGroup, source, count, offset } = featureGuide
+    const { vertexBuffer, indexBuffer, fillIDBuffer, codeTypeBuffer } = source
+    const pipeline = invert ? this.invertPipeline : this.fillPipeline
 
     passEncoder.setPipeline(pipeline)
     // setup bind groups
@@ -280,18 +288,18 @@ export default class FillWorkflow implements FillWorkflowSpec {
     passEncoder.setVertexBuffer(2, codeTypeBuffer)
     // draw
     passEncoder.drawIndexed(count, 1, offset, 0, 0)
-    // If invert, we need to draw the mask after
-    if (invert) this.drawMask(tile.mask)
+
+    if (invert) this.drawMask(tile.mask, featureGuide)
   }
 
-  drawMask (maskSource: TileMaskSource): void {
+  drawMask (maskSource: TileMaskSource, featureGuide?: FillFeature): void {
     // get current source data
     const { passEncoder } = this.context
     const { vertexBuffer, indexBuffer, fillIDBuffer, codeTypeBuffer, bindGroup, count, offset } = maskSource
 
-    passEncoder.setPipeline(this.maskPipeline)
+    passEncoder.setPipeline(featureGuide === undefined ? this.maskPipeline : this.maskFillPipeline)
     // setup bind groups
-    passEncoder.setBindGroup(1, bindGroup)
+    passEncoder.setBindGroup(1, featureGuide?.bindGroup ?? bindGroup)
     // setup buffers
     passEncoder.setVertexBuffer(0, vertexBuffer)
     passEncoder.setIndexBuffer(indexBuffer, 'uint32')

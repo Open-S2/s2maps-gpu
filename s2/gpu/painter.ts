@@ -172,7 +172,7 @@ export default class Painter {
     // const glyphFeatures = features.filter(feature => feature.type === 'glyph' && !feature.overdraw) as GlyphFeature[]
     // glyphFeatures.forEach(feature => feature.drawFilter())
     // setup for the next frame, creating new encoders
-    context.newScene(projector)
+    context.newScene(projector.view, projector.getMatrix('m'))
 
     // DRAW PHASE
     // draw masks

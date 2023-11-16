@@ -17,14 +17,6 @@ const style: StyleDefinition = {
       type: 'fill',
       source: 'mask',
       opaque: true,
-      color: '#fff'
-    },
-    {
-      name: 'country-fill',
-      source: 'countries',
-      type: 'fill',
-      invert: true,
-      opaque: false,
       color: '#b4c1c6'
     }
   ]
