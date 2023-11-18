@@ -3,6 +3,10 @@ const PI = 3.141592653589793238;
 struct VertexOutput {
   @builtin(position) Position : vec4<f32>,
   @location(0) color : vec4<f32>,
+  @location(1) width : vec2<f32>,
+  @location(2) norm : vec2<f32>,
+  @location(3) center : vec2<f32>,
+  @location(4) drawType : f32,
 };
 
 struct ViewUniforms {
@@ -17,10 +21,10 @@ struct ViewUniforms {
   aspectY: f32,
   featureState: f32,
   curFeature: f32,
+  devicePixelRatio: f32,
 };
 
 struct TileUniforms {
-  padding: f32,
   isS2: f32, // Either S2 Projection or WM
   face: f32, // face relative to current tile
   zoom: f32, // zoom relative to current tile
@@ -28,8 +32,13 @@ struct TileUniforms {
   tLow: f32,
   deltaS: f32,
   deltaT: f32,
-  bottom: vec4<f32>, // [bottomLeft-X, bottomLeft-Y, bottomRight-X, bottomRight-Y]
-  top: vec4<f32>, // [topLeft-X, topLeft-Y, topRight-X, topRight-Y]
+};
+
+struct TilePosition {
+  bottomLeft: vec2<f32>,
+  bottomRight: vec2<f32>,
+  topLeft: vec2<f32>,
+  topRight: vec2<f32>
 };
 
 struct LayerUniforms {
@@ -37,16 +46,30 @@ struct LayerUniforms {
   useLCH: f32, // use LCH coloring or RGB if false
 };
 
-// frame data is updated at the beginning of the render thread
+struct LineUniforms {
+  cap: f32,
+  dashed: f32, // bool
+};
+
+// ** FRAME DATA **
+// frame data is updated at the beginning of each new frame
 @binding(0) @group(0) var<uniform> view: ViewUniforms;
 @binding(1) @group(0) var<uniform> matrix: mat4x4<f32>;
-// tile data
+// ** TILE DATA **
+// these bindings are stored in the tile's mask data
+// tile's need to self update positional data so we can store them a single time in a tile
 @binding(0) @group(1) var<uniform> tile: TileUniforms;
-// layer data
-@binding(1) @group(1) var<uniform> layer: LayerUniforms;
-@binding(2) @group(1) var<storage, read> layerCode: array<f32, 128>;
-// feature data
-@binding(3) @group(1) var<storage, read> featureCode: array<f32, 64>;
+@binding(1) @group(1) var<uniform> tilePos: TilePosition;
+// ** LAYER DATA **
+// layer data can be created upon style invocation. This data is static and will not change
+// unless the style is edited.
+@binding(2) @group(1) var<uniform> layer: LayerUniforms;
+@binding(3) @group(1) var<storage, read> layerCode: array<f32, 128>;
+// ** FEATURE DATA **
+// every feature will have it's own code to parse it's attribute data in real time
+@binding(4) @group(1) var<storage, read> featureCode: array<f32, 64>;
+// ** LINE DATA **
+@binding(0) @group(2) var<uniform> line: LineUniforms;
 
 fn LCH2LAB (lch: vec4<f32>) -> vec4<f32> { // r -> l ; g -> c ; b -> h
   var h = lch.b * (PI / 180.);
@@ -118,6 +141,16 @@ fn cBlindAdjust (rgba: vec4<f32>) -> vec4<f32> {
   var r = rgba.r * 255.;
   var g = rgba.g * 255.;
   var b = rgba.b * 255.;
+  // if uCBlind is 4 return grayscale
+  if (view.cBlind == 4.) {
+    var l = (0.3 * r) + (0.59 * g) + (0.11 * b);
+    return vec4<f32>(
+      l / 255.,
+      l / 255.,
+      l / 255.,
+      rgba.a
+    );
+  }
   // grab color conversion mode
   var CVD = array<f32, 9>();
   if (view.cBlind == 1.) { CVD = array<f32, 9>(0.0, 2.02344, -2.52581, 0., 1., 0., 0., 0., 1.); } // protanopia
@@ -189,10 +222,10 @@ fn getPosLocal (pos: vec2<f32>) -> vec4<f32> {
     return matrix * vec4(mutPos, 0, 1);
   }
   // find position following s
-  var deltaBottom = tile.bottom.zw - tile.bottom.xy;
-  var deltaTop = tile.top.zw - tile.top.xy;
-  var bottomPosS = tile.bottom.xy + deltaBottom * mutPos.x;
-  var topPosS = tile.top.xy + deltaTop * mutPos.x;
+  var deltaBottom = tilePos.bottomRight - tilePos.bottomLeft;
+  var deltaTop = tilePos.topRight - tilePos.topLeft;
+  var bottomPosS = tilePos.bottomLeft + deltaBottom * mutPos.x;
+  var topPosS = tilePos.topLeft + deltaTop * mutPos.x;
   // using s positions, find t
   var deltaS = topPosS - bottomPosS;
   var res = bottomPosS + deltaS * mutPos.y;
@@ -209,6 +242,12 @@ fn getPos (pos: vec2<f32>) -> vec4<f32> {
   } else {
     return getPosLocal(mutPos);
   }
+}
+
+fn getZero () -> vec4<f32> {
+  if (view.zoom < 12.) {
+    return matrix * vec4<f32>(0., 0., 0., 1.);
+  } else { return vec4<f32>(0., 0., 1., 1.); }
 }
 
 // y = e^x OR y = Math.pow(2, 10 * x)
@@ -419,41 +458,109 @@ fn decodeFeature (color: bool, index: ptr<function, u32>, featureIndex: ptr<func
   return res;
 }
 
-// layout (location = 0) in float aType;
-// layout (location = 1) in vec2 aPrev; // (INSTANCED)
-// layout (location = 2) in vec2 aCurr; // (INSTANCED)
-// layout (location = 3) in vec2 aNext; // (INSTANCED)
-// layout (location = 4) in float aLengthSoFar; // (INSTANCED)
+fn isCCW (inPrev: vec2<f32>, inCurr: vec2<f32>, inNext: vec2<f32>) -> bool {
+  var det = (inCurr.y - inPrev.y) * (inNext.x - inCurr.x) - (inCurr.x - inPrev.x) * (inNext.y - inCurr.y);
+
+  return det < 0.;
+}
 
 @vertex
 fn vMain(
-  @location(0) position : vec2<f32>,
-  @location(1) featureID : u32,
-  @location(2) codeType : u32,
+  @location(0) drawType : f32,
+  @location(1) aPrev : vec2<f32>,
+  @location(2) aCurr : vec2<f32>,
+  @location(3) aNext : vec2<f32>,
+  // @location(4) lengthSoFar : f32,
 ) -> VertexOutput {
   var output : VertexOutput;
 
-  // setup position
-  var tempPos = getPos(position);
-  tempPos /= tempPos.w;
-  output.Position = vec4(tempPos.xy, layer.depthPos, 1.0);
-
-  // set color
+  // return output;
   // prep layer index and feature index positions
   var index = 0u;
-  var featureIndex = codeType;
+  var featureIndex = 0u;
+  var aspectAdjust = vec2<f32>(view.aspectX / view.aspectY, 1.);
   // decode color
-  // if (uInteractive) {
-  //   color = aID;
-  // } else {
-  //   color = decodeFeature(true, index, featureIndex);
-  //   color.a *= decodeFeature(false, index, featureIndex)[0];
-  //   color.rgb *= color.a;
-  // }
-  var color = decodeFeature(true, &index, &featureIndex);
+  var color = vec4<f32>(0.);
+  color = decodeFeature(true, &index, &featureIndex);
   color.a *= decodeFeature(false, &index, &featureIndex)[0];
-  // color.rgb *= color.a;
+  color = vec4<f32>(color.rgb * color.a, color.a);
   output.color = color;
+  // decode line width
+  var width = decodeFeature(false, &index, &featureIndex)[0] * view.devicePixelRatio;
+  // explain width to fragment shader
+  output.width = vec2<f32>(width, 0.);
+  // get the position in projected space
+  var curr = getPos(aCurr);
+  var next = getPos(aNext);
+  var prev = getPos(aPrev);
+  var zero = getZero();
+  // adjust by w & get the position in screen space
+  curr = vec4<f32>(curr.xyz / curr.w, 1.);
+  next = vec4<f32>(next.xyz / next.w, 1.);
+  prev = vec4<f32>(prev.xyz / prev.w, 1.);
+  zero = vec4<f32>(zero.xyz / zero.w, 1.);
+
+  var currScreen = curr.xy * aspectAdjust;
+  var nextScreen = next.xy * aspectAdjust;
+  var prevScreen = prev.xy * aspectAdjust;
+  var screen = curr.xy;
+  // grab the perpendicular vector
+  var normal = vec2<f32>(0.);
+  var pos = vec4<f32>(0.);
+
+  if (
+    tile.isS2 == 0. ||
+    (curr.z < zero.z && next.z < zero.z)
+  ) {
+    let uAspect = vec2<f32>(view.aspectX, view.aspectY);
+    let currPrev = all(curr == prev);
+    let currNext = all(curr == next);
+    if ( // first case is end caps
+      line.cap != 0. &&
+      (currPrev || currNext) &&
+      (drawType == 0. || drawType == 5. || drawType == 6.)
+    ) {
+      // set cap type
+      output.drawType = line.cap;
+      // find center
+      output.center = (curr.xy / 2. + 0.5) * uAspect;
+      // create normal and adjust if necessary
+      if (currPrev) {
+        normal = normalize(nextScreen - currScreen);
+      } else { normal = normalize(currScreen - prevScreen); }
+      var capNormal = normal;
+      normal = vec2<f32>(-normal.y, normal.x);
+      if (drawType == 0. || drawType == 5.) { normal *= -1.; }
+      if (currPrev) { capNormal *= -1.; }
+      // adjust screen position if necessary
+      if (drawType == 5. || (drawType == 6. && currPrev)) { screen += capNormal * width / uAspect; }
+      // set position
+      pos = vec4<f32>(screen + normal * width / uAspect, 0., 1.);
+    } else { // second case: draw a quad line
+      // create normalize
+      if (drawType == 0.) { normal = vec2<f32>(0.); }
+      else if (drawType == 5.) { normal = normalize(currScreen - prevScreen); }
+      else { normal = normalize(nextScreen - currScreen); }
+      normal = vec2<f32>(-normal.y, normal.x);
+      // adjust normal if necessary
+      if (
+        drawType == 1. || drawType == 3. ||
+        ((drawType == 5. || drawType == 6.) && isCCW(prevScreen, currScreen, nextScreen))
+      ) { normal *= -1.; }
+      // adjust screen if necessary
+      if (drawType == 3. || drawType == 4.) { screen = next.xy; }
+      // set position
+      pos = vec4(screen + normal * width / uAspect, 0., 1.);
+    }
+  }
+  // handle dashed lines if necessary
+  // if (uDashed) {
+
+  // }
+  // tell the fragment the normal vector
+  output.norm = normal;
+  pos /= pos.w;
+  output.Position = vec4(pos.xy, layer.depthPos, 1.0);
 
   return output;
 }
@@ -462,5 +569,26 @@ fn vMain(
 fn fMain(
   output : VertexOutput
 ) -> @location(0) vec4<f32> {
-  return output.color;
+  // Calculate the distance of the pixel from the line in pixels.
+  var dist = 0.;
+  var blur = 0.;
+  var startWidth = 0.;
+  var endWidth = 0.;
+  if (output.drawType <= 1.) {
+    dist = length(output.norm) * output.width.x;
+    blur = view.devicePixelRatio;
+    startWidth = output.width.y;
+    endWidth = output.width.x;
+  } else {
+    dist = distance(output.center, output.Position.xy);
+    blur = view.devicePixelRatio / 2.;
+    startWidth = output.width.y / 2.;
+    endWidth = output.width.x / 2.;
+  }
+  // AA for width and length
+  var wAlpha = clamp(min(dist - (startWidth - blur), endWidth - dist) / blur, 0., 1.);
+  if (wAlpha == 0.) { discard; }
+
+  // return output.color * wAlpha;
+  return vec4<f32>(1., 0., 0., 1.);
 }

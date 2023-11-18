@@ -492,7 +492,7 @@ export default class S2Map extends EventTarget {
     localStorage.setItem('s2maps:gpu:colorBlindMode', String(this.colorMode))
     // update the icon
     const cM = this.colorMode
-    if (this.#colorBlind !== undefined) this.#colorBlind.id = `s2-colorblind${(cM === 0) ? '-default' : (cM === 1) ? '-proto' : (cM === 2) ? '-deut' : (cM === 3) ? '-trit' : '-gray'}`
+    if (this.#colorBlind !== undefined) this.#colorBlind.id = `s2-colorblind${(cM === 0) ? '-default' : (cM === 1) ? '-proto' : (cM === 2) ? '-deut' : (cM === 3) ? '-trit' : '-grey'}`
     // tell the map to update
     offscreen?.postMessage({ type: 'colorMode', mode: cM })
     map?.colorMode(cM)

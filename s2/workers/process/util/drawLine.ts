@@ -11,7 +11,6 @@ export interface Line {
 export default function drawLine (
   points: S2VectorLine,
   cap: Cap = 'butt',
-  dashed = false,
   maxDistance = 0
 ): Line {
   let ll = points.length
@@ -40,7 +39,7 @@ export default function drawLine (
   const prev = [...points[0]]
   const curr = [...points[0]]
   const next = []
-  const lengthSoFar = dashed ? [0] : []
+  const lengthSoFar = []
   let curLength = 0
   let prevPoint = points[0]
 
@@ -56,10 +55,8 @@ export default function drawLine (
     // store the previous point
     prev.push(...prevPoint)
     // build the lengthSoFar
-    if (dashed) {
-      curLength += distance(prevPoint, point)
-      lengthSoFar.push(curLength)
-    }
+    curLength += distance(prevPoint, point)
+    lengthSoFar.push(curLength)
     // store the old point
     prevPoint = point
   }
@@ -70,10 +67,8 @@ export default function drawLine (
     prev.push(...points[ll - 2])
     curr.push(...points[ll - 1])
     next.push(...points[1])
-    if (dashed) {
-      curLength += distance(points[ll - 1], points[1])
-      lengthSoFar.push(curLength)
-    }
+    curLength += distance(points[ll - 1], points[1])
+    lengthSoFar.push(curLength)
   }
 
   // if not a butt cap, we add a duplicate of beginning and end
@@ -88,7 +83,7 @@ export default function drawLine (
     curr.push(curr[len - 1], curr[len])
     next.push(prev[len - 1], prev[len])
     // update length
-    if (dashed) lengthSoFar.push(0, curLength)
+    lengthSoFar.push(0, curLength)
   }
 
   return { prev, curr, next, lengthSoFar }

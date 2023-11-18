@@ -23,19 +23,19 @@ const style: StyleDefinition = {
       type: 'fill',
       source: 'mask',
       opaque: true,
-      color: '#fff'
+      color: 'rgb(9, 8, 17)'
     },
     {
       name: 'sat',
       source: 'satellite',
       type: 'raster'
-    },
-    {
-      name: 'shade',
-      source: 'mask',
-      type: 'shade',
-      maxzoom: 2
     }
+    //   {
+    //     name: 'shade',
+    //     source: 'mask',
+    //     type: 'shade',
+    //     maxzoom: 2
+    //   }
   ]
 }
 

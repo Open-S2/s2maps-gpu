@@ -28,7 +28,6 @@ fn stToXYZ (st: vec2<f32>) -> vec4<f32> { // x -> s, y -> t
   var xyz = vec3<f32>();
   // convert to uv
   var uv = vec2<f32>(
-    // TODO: verify deltaS and sLow are in the correct positions
     stToUV(posUniforms.deltaS * mutST.x + posUniforms.sLow), // deltaS * sPos + sLow
     stToUV(posUniforms.deltaT * mutST.y + posUniforms.tLow) // deltaT * tPos + tLow
   ); // x -> u, y -> v
@@ -75,7 +74,7 @@ fn getPos (pos: vec2<f32>) -> vec4<f32> {
 }
 
 fn getZero () -> vec4<f32> {
-  if (posUniforms.zoom < 12.) {
-    return posUniforms.uMatrix * vec4<f32>(0., 0., 0., 1.);
+  if (view.zoom < 12.) {
+    return matrix * vec4<f32>(0., 0., 0., 1.);
   } else { return vec4<f32>(0., 0., 1., 1.); }
 }
