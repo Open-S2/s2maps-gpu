@@ -2,7 +2,10 @@ const PI = 3.141592653589793238;
 
 struct VertexOutput {
   @builtin(position) Position : vec4<f32>,
-  @location(0) color : vec4<f32>,
+  @location(0) texcoord : vec2<f32>,
+  @location(1) opacity : f32,
+  @location(2) saturation : f32,
+  @location(3) contrast : f32,
 };
 
 struct ViewUniforms {
@@ -59,6 +62,10 @@ struct LayerUniforms {
 // ** FEATURE DATA **
 // every feature will have it's own code to parse it's attribute data in real time
 @binding(4) @group(1) var<storage, read> featureCode: array<f32, 64>;
+// ** RASTER DATA **
+@binding(0) @group(2) var<uniform> rasterFade: f32;
+@binding(1) @group(2) var rasterSampler: sampler;
+@binding(2) @group(2) var rasterTexture: texture_2d<f32>;
 
 fn LCH2LAB (lch: vec4<f32>) -> vec4<f32> { // r -> l ; g -> c ; b -> h
   var h = lch.b * (PI / 180.);
@@ -447,35 +454,48 @@ fn decodeFeature (color: bool, index: ptr<function, u32>, featureIndex: ptr<func
   return res;
 }
 
+fn getSaturation (saturation: f32) -> f32 {
+  var mutSaturation = saturation;
+  mutSaturation = clamp(mutSaturation, -1., 1.);
+  if (mutSaturation > 0.) {
+    return 1. - 1. / (1.001 - mutSaturation);
+  } else {
+    return -mutSaturation;
+  }
+}
+
+fn getContrast (contrast: f32) -> f32 {
+  var mutContrast = contrast;
+  mutContrast = clamp(mutContrast, -1., 1.);
+  if (mutContrast > 0.) {
+    return 1. / (1. - mutContrast);
+  } else {
+    return 1. + mutContrast;
+  }
+}
+
 @vertex
 fn vMain(
-  @location(0) position : vec2<f32>,
-  @location(1) featureID : u32,
-  @location(2) codeType : u32,
+  @location(0) position : vec2<f32>
 ) -> VertexOutput {
   var output : VertexOutput;
 
-  // setup position
+  // set where we are on the texture
+  var pos = position / 8192.;
+  output.texcoord = pos;
+
+  var index = 0u;
+  var featureIndex = 0u;
+
+  output.opacity = decodeFeature(false, &index, &featureIndex)[0];
+  output.saturation = decodeFeature(false, &index, &featureIndex)[0];
+  output.contrast = decodeFeature(false, &index, &featureIndex)[0];
+
+  // set position
   var tmpPos = getPos(position);
   tmpPos /= tmpPos.w;
-  output.Position = vec4(tmpPos.xy, layer.depthPos, 1.0);
-
-  // set color
-  // prep layer index and feature index positions
-  var index = 0u;
-  var featureIndex = codeType;
-  // decode color
-  // if (uInteractive) {
-  //   color = aID;
-  // } else {
-  //   color = decodeFeature(true, index, featureIndex);
-  //   color.a *= decodeFeature(false, index, featureIndex)[0];
-  //   color.rgb *= color.a;
-  // }
-  var color = decodeFeature(true, &index, &featureIndex);
-  color.a *= decodeFeature(false, &index, &featureIndex)[0];
-  color = vec4<f32>(color.rgb * color.a, color.a);
-  output.color = color;
+  tmpPos.z = layer.depthPos;
+  output.Position = vec4(tmpPos.xy, layer.depthPos, 1.);
 
   return output;
 }
@@ -484,5 +504,17 @@ fn vMain(
 fn fMain(
   output : VertexOutput
 ) -> @location(0) vec4<f32> {
-  return output.color;
+  var color = textureSample(rasterTexture, rasterSampler, output.texcoord);
+
+  // saturation
+  var average = (color.r + color.g + color.b) / 3.0;
+  var sat = (average - color.rgb) * -getSaturation(output.saturation);
+  color = vec4<f32>(color.rgb + sat, color.a);
+  // contrast
+  var contrast = (color.rgb - 0.5) * getContrast(output.contrast) + 0.5;
+  color = vec4<f32>(contrast, color.a);
+  // opacity
+  color *= output.opacity * rasterFade;
+
+  return color;
 }

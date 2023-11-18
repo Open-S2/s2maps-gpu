@@ -438,6 +438,10 @@ export interface LineWorkflowLayerGuide extends LayerWorkflowGuideBase {
   interactive: boolean
   cursor: Cursor
 }
+export interface LineWorkflowLayerGuideGPU extends LineWorkflowLayerGuide {
+  layerBuffer: GPUBuffer
+  layerCodeBuffer: GPUBuffer
+}
 export interface LineWorkerLayer extends LayerWorkerBase {
   type: 'line'
   cap: LayerWorkerFunction<Cap>
@@ -489,7 +493,7 @@ export interface PointWorkerLayer extends LayerWorkerBase {
 
 /** RASTER **/
 
-export type Resampling = 'nearest' | 'linear'
+export type Resampling = GPUFilterMode
 export interface RasterLayerStyle extends LayerStyleBase {
   type: 'raster'
   // paint
@@ -510,6 +514,10 @@ export interface RasterLayerDefinition extends LayerDefinitionBase {
 export interface RasterWorkflowLayerGuide extends LayerWorkflowGuideBase {
   fadeDuration: number
   resampling: Resampling
+}
+export interface RasterWorkflowLayerGuideGPU extends RasterWorkflowLayerGuide {
+  layerBuffer: GPUBuffer
+  layerCodeBuffer: GPUBuffer
 }
 export interface RasterWorkerLayer extends LayerWorkerBaseRaster {
   type: 'raster'

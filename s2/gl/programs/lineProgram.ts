@@ -140,9 +140,9 @@ export default async function lineProgram (context: Context): Promise<LineProgra
       // bind buffers to the vertex array object
       const vertexBuffer = context.bindEnableVertexAttrMulti(vertexA, [
         // [indx, size, type, normalized, stride, offset]
-        [1, 2, gl.SHORT, false, 12, 0],
-        [2, 2, gl.SHORT, false, 12, 4],
-        [3, 2, gl.SHORT, false, 12, 8]
+        [1, 2, gl.FLOAT, false, 24, 0],
+        [2, 2, gl.FLOAT, false, 24, 8],
+        [3, 2, gl.FLOAT, false, 24, 16]
       ], true)
       const lengthSoFarBuffer = lengthSoFarA.byteLength > 0
         ? context.bindEnableVertexAttr(lengthSoFarA, 4, 1, gl.FLOAT, false, 0, 0)
@@ -262,9 +262,9 @@ export default async function lineProgram (context: Context): Promise<LineProgra
       gl.bindVertexArray(vao)
       // apply the appropriate offset in the source vertexBuffer attribute
       gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer)
-      gl.vertexAttribPointer(1, 2, gl.SHORT, false, 12, 0 + (offset * 12))
-      gl.vertexAttribPointer(2, 2, gl.SHORT, false, 12, 4 + (offset * 12))
-      gl.vertexAttribPointer(3, 2, gl.SHORT, false, 12, 8 + (offset * 12))
+      gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 24, 0 + (offset * 24))
+      gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 24, 8 + (offset * 24))
+      gl.vertexAttribPointer(3, 2, gl.FLOAT, false, 24, 16 + (offset * 24))
       // draw elements
       gl.drawArraysInstanced(gl.TRIANGLES, 0, 9, count) // gl.drawArraysInstancedANGLE(mode, first, count, primcount)
     }

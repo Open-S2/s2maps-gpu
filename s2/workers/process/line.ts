@@ -69,7 +69,7 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
     const { gpuType } = this
     const { zoom, division } = tile
     const { type, extent, properties } = feature
-    const { getCode, dashed, layerIndex, onlyLines } = lineLayer
+    const { getCode, layerIndex, onlyLines } = lineLayer
     if (
       type === 1 ||
       type > 4 ||
@@ -95,7 +95,7 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
     const { round } = Math
     for (const lineString of geo) {
       // build the vertex, normal, and index data
-      const { prev, curr, next, lengthSoFar: _lsf } = drawLine(lineString, cap, dashed, maxDistance)
+      const { prev, curr, next, lengthSoFar: _lsf } = drawLine(lineString, cap, maxDistance)
       for (let i = 0, vc = curr.length; i < vc; i += 2) {
         vertices.push(
           round(prev[i] * multiplier), round(prev[i + 1] * multiplier),

@@ -13,7 +13,7 @@ import type {
 import type { FillData } from 'workers/worker.spec'
 import type { TileGPU as Tile } from 'source/tile.spec'
 
-const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout | null> = [
+const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
   { // position
     arrayStride: 4 * 2,
     attributes: [{
@@ -96,8 +96,8 @@ export default class FillWorkflow implements FillWorkflowSpec {
       layerCode.push(...encodeLayerAttribute(paint, lch))
     }
     // 3) Setup layer buffers in GPU
-    const layerBuffer = context.buildStaticGPUBuffer('Layer Uniform Buffer', 'float', new Float32Array([context.getDepthPosition(layerIndex), lch ? 1 : 0]), GPUBufferUsage.UNIFORM)
-    const layerCodeBuffer = context.buildStaticGPUBuffer('Layer Code Buffer', 'float', new Float32Array([...layerCode, ...Array(128 - layerCode.length).fill(0)]), GPUBufferUsage.STORAGE)
+    const layerBuffer = context.buildStaticGPUBuffer('Layer Uniform Buffer', 'float', [context.getDepthPosition(layerIndex), ~~lch], GPUBufferUsage.UNIFORM)
+    const layerCodeBuffer = context.buildStaticGPUBuffer('Layer Code Buffer', 'float', [...layerCode, ...Array(128 - layerCode.length).fill(0)], GPUBufferUsage.STORAGE)
     // 4) Store layer guide
     this.layerGuides.set(layerIndex, {
       sourceName: source,
@@ -124,7 +124,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
     const layer = this.layerGuides.get(layerIndex)
     if (layer === undefined) return
     const { sourceName, layerBuffer, layerCodeBuffer, lch, invert, opaque, interactive } = layer
-    const featureCodeBuffer = context.buildStaticGPUBuffer('Feature Code Buffer', 'float', new Float32Array(64), GPUBufferUsage.STORAGE)
+    const featureCodeBuffer = context.buildStaticGPUBuffer('Feature Code Buffer', 'float', Array(64).fill(0), GPUBufferUsage.STORAGE)
     const bindGroup = context.buildGroup(
       'Feature BindGroup',
       context.featureBindGroupLayout,
@@ -191,7 +191,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
 
       // TODO: we need to create two features if interactive is true.
 
-      const featureCodeBuffer = context.buildStaticGPUBuffer('Feature Code Buffer', 'float', new Float32Array([...featureCode, ...Array(64 - featureCode.length).fill(0)]), GPUBufferUsage.STORAGE)
+      const featureCodeBuffer = context.buildStaticGPUBuffer('Feature Code Buffer', 'float', [...featureCode, ...Array(64 - featureCode.length).fill(0)], GPUBufferUsage.STORAGE)
       const bindGroup = context.buildGroup(
         'Feature BindGroup',
         context.featureBindGroupLayout,

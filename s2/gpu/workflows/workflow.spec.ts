@@ -15,7 +15,6 @@ import type {
   PointLayerStyle,
   RasterLayerDefinition,
   RasterLayerStyle,
-  Resampling,
   SensorLayerDefinition,
   SensorLayerStyle,
   ShadeLayerDefinition,
@@ -35,6 +34,7 @@ import type {
   SensorData
 } from 'workers/worker.spec'
 import type { TileGPU as Tile } from 'source/tile.spec'
+import type Projector from 'ui/camera/projector'
 
 // SOURCES
 
@@ -86,7 +86,7 @@ export interface HeatmapSource {
 
 export interface LineSource {
   type: 'line'
-  // fillIDBuffer: GPUBuffer
+  typeBuffer: GPUBuffer
   vertexBuffer: GPUBuffer
   lengthSoFarBuffer: GPUBuffer
 }
@@ -101,6 +101,11 @@ export interface PointSource {
 export interface RasterSource {
   type: 'raster'
   texture: GPUTexture
+  // pulled from maskSource
+  vertexBuffer: GPUBuffer
+  indexBuffer: GPUBuffer
+  count: number
+  offset: number
 }
 
 export interface SensorSource {
@@ -176,6 +181,7 @@ export interface LineFeature extends FeatureBase {
   dashed: boolean
   dashTexture?: WebGLTexture
   cap: number
+  lineBindGroup: GPUBindGroup
 }
 
 // ** POINT **
@@ -191,9 +197,9 @@ export interface PointFeature extends FeatureBase {
 export interface RasterFeature extends FeatureBase {
   type: 'raster'
   source: RasterSource
-  resampling: Resampling
   fadeDuration: number
   fadeStartTime: number
+  rasterBindGroup: GPUBindGroup
 }
 
 // ** SENSOR **
@@ -245,13 +251,17 @@ export interface WorkflowImports {
   // glyph: () => Promise<{ default: (context: WebGPUContext) => Promise<GlyphWorkflow> }>
   // heatmap: () => Promise<{ default: (context: WebGPUContext) => Promise<HeatmapWorkflow> }>
   // line: () => Promise<{ default: (context: WebGPUContext) => Promise<LineWorkflow> }>
+  line: LineWorkflow
   // point: () => Promise<{ default: (context: WebGPUContext) => Promise<PointWorkflow> }>
   // raster: () => Promise<{ default: (context: WebGPUContext) => Promise<RasterWorkflow> }>
+  raster: RasterWorkflow
   // hillshade: () => Promise<{ default: (context: WebGPUContext) => Promise<HillshadeWorkflow> }>
   // sensor: () => Promise<{ default: (context: WebGPUContext) => Promise<SensorWorkflow> }>
   // shade: () => Promise<{ default: (context: WebGPUContext) => Promise<ShadeWorkflow> }>
   // wallpaper: () => Promise<{ default: (context: WebGPUContext) => Promise<WallpaperWorkflow> }>
+  wallpaper: WallpaperWorkflow
   // skybox: () => Promise<{ default: (context: WebGPUContext) => Promise<SkyboxWorkflow> }>
+  skybox: SkyboxWorkflow
 }
 
 export type WorkflowKey = keyof Workflow
@@ -316,7 +326,9 @@ export interface ShadeWorkflow extends Workflow {
 }
 
 export interface WallpaperWorkflow extends Workflow {
+  draw: (feature: Projector) => void
 }
 
 export interface SkyboxWorkflow extends Workflow {
+  draw: (feature: Projector) => void
 }

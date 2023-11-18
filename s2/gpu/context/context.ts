@@ -28,6 +28,7 @@ export default class WebGPUContext {
   masks = new Map<number, MaskSource>()
   type: GPUType = 3 // specifying that we are using a WebGPUContext
   sampleCount = 4
+  clearColorRGBA: [r: number, g: number, b: number, a: number] = [0, 0, 0, 0]
   // manage buffers, layouts, and bind groups
   #viewUniformBuffer!: GPUBuffer
   #matrixUniformBuffer!: GPUBuffer
@@ -60,10 +61,10 @@ export default class WebGPUContext {
       format,
       alphaMode: 'premultiplied'
     })
-    // set size
-    this.#resize()
     // prep uniform/storage buffers
     this.#buildContextStorageGroupsAndLayouts()
+    // set size
+    this.#resize()
     // update state
     this.ready = true
   }
@@ -92,13 +93,22 @@ export default class WebGPUContext {
     this.device.queue.submit([this.commandEncoder.finish()])
   }
 
+  setClearColor (clearColor: [r: number, g: number, b: number, a: number]): void {
+    this.clearColorRGBA = clearColor
+  }
+
   setColorBlindMode (mode: ColorMode): void {
     if (this.colorMode === mode) return
     this.colorMode = mode
     this.device.queue.writeBuffer(this.#viewUniformBuffer, 0, new Float32Array([mode]))
   }
 
-  // TODO: This naming convetion sucks and doesn't properly explain what's going on
+  setDevicePixelRatio (devicePixelRatio?: number): void {
+    if (devicePixelRatio !== undefined) this.devicePixelRatio = devicePixelRatio
+    this.device.queue.writeBuffer(this.#viewUniformBuffer, 11 * 4, new Float32Array([this.devicePixelRatio]))
+  }
+
+  // TODO: This naming convention sucks and doesn't properly explain what's going on
   buildStaticGPUBuffer (
     label: string,
     type: 'float' | 'uint' | 'int',
@@ -188,6 +198,8 @@ export default class WebGPUContext {
       format: 'depth24plus-stencil8',
       usage: GPUTextureUsage.RENDER_ATTACHMENT
     })
+    // update the device pixel ratio
+    this.setDevicePixelRatio()
   }
 
   setInteractive (interactive: boolean): void {
@@ -215,10 +227,10 @@ export default class WebGPUContext {
     const uniformBuffer = this.buildStaticGPUBuffer('Tile Uniform Buffer', 'float', tile.uniforms, GPUBufferUsage.UNIFORM)
     const positionBuffer = this.buildStaticGPUBuffer('Tile Position Buffer', 'float', [...tile.bottom, ...tile.top], GPUBufferUsage.UNIFORM)
     // layer binding
-    const layerBuffer = this.buildStaticGPUBuffer('Layer Uniform Buffer', 'float', new Float32Array([1, 0]), GPUBufferUsage.UNIFORM)
-    const layerCodeBuffer = this.buildStaticGPUBuffer('Layer Code Buffer', 'float', new Float32Array(128), GPUBufferUsage.STORAGE)
+    const layerBuffer = this.buildStaticGPUBuffer('Layer Uniform Buffer', 'float', [1, 0], GPUBufferUsage.UNIFORM)
+    const layerCodeBuffer = this.buildStaticGPUBuffer('Layer Code Buffer', 'float', Array(128).fill(0), GPUBufferUsage.STORAGE)
     // feature binding
-    const featureCodeBuffer = this.buildStaticGPUBuffer('Feature Code Buffer', 'float', new Float32Array(64), GPUBufferUsage.STORAGE)
+    const featureCodeBuffer = this.buildStaticGPUBuffer('Feature Code Buffer', 'float', Array(64).fill(0), GPUBufferUsage.STORAGE)
     // store the group
     const bindGroup = this.buildGroup(
       'Feature BindGroup',
@@ -251,6 +263,7 @@ export default class WebGPUContext {
   }
 
   #prepareRenderpassDescriptor (): void {
+    const [r, g, b, a] = this.clearColorRGBA
     const currentTexture = this.gpu.getCurrentTexture()
     // Create our render pass descriptor
     this.#renderPassDescriptor = {
@@ -258,7 +271,7 @@ export default class WebGPUContext {
         {
           view: (this.#renderTarget ?? currentTexture).createView(), // set on each render pass
           resolveTarget: this.#renderTarget !== undefined ? currentTexture.createView() : undefined,
-          clearValue: { r: 0, g: 0, b: 0, a: 0 },
+          clearValue: { r, g, b, a },
           loadOp: 'clear',
           storeOp: 'store'
         }
@@ -277,12 +290,77 @@ export default class WebGPUContext {
 
   #buildContextStorageGroupsAndLayouts (): void {
     // setup position uniforms
-    this.#viewUniformBuffer = this.buildGPUBuffer('View Uniform Buffer', new Float32Array(11), GPUBufferUsage.UNIFORM)
+    this.#viewUniformBuffer = this.buildGPUBuffer('View Uniform Buffer', new Float32Array(12), GPUBufferUsage.UNIFORM)
     this.#matrixUniformBuffer = this.buildGPUBuffer('Matrix Uniform Buffer', new Float32Array(16), GPUBufferUsage.UNIFORM)
-    this.frameBindGroupLayout = this.buildLayout('Frame', ['uniform', 'uniform'])
+    this.frameBindGroupLayout = this.buildLayout('Frame', ['uniform', 'uniform'], GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT)
     this.frameBufferBindGroup = this.buildGroup('Frame BindGroup', this.frameBindGroupLayout, [this.#viewUniformBuffer, this.#matrixUniformBuffer])
     // setup per feature uniforms layout
     this.featureBindGroupLayout = this.buildLayout('Feature', ['uniform', 'uniform', 'uniform', 'read-only-storage', 'read-only-storage'])
+  }
+
+  buildTexture (
+    imageData: null | ArrayBufferView | ImageBitmap,
+    width: number,
+    height: number,
+    depthOrArrayLayers = 1
+  ): GPUTexture {
+    const { device, format } = this
+    const texture = device.createTexture({
+      size: { width, height, depthOrArrayLayers },
+      format, // Equivalent to WebGL's gl.RGBA
+      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT
+    })
+    if (imageData !== null) this.uploadTextureData(texture, imageData, width, height)
+
+    return texture
+  }
+
+  buildSampler (
+    filter: 'linear' | 'nearest' = 'linear',
+    repeat = false
+  ): GPUSampler {
+    return this.device.createSampler({
+      addressModeU: repeat ? 'repeat' : 'clamp-to-edge',
+      addressModeV: repeat ? 'repeat' : 'clamp-to-edge',
+      magFilter: filter,
+      minFilter: filter
+    })
+  }
+
+  uploadTextureData (
+    texture: GPUTexture,
+    imageData: ArrayBufferView | ImageBitmap,
+    width: number,
+    height: number,
+    origin = { x: 0, y: 0, z: 0 },
+    depthOrArrayLayers = 1
+  ): void {
+    const { device } = this
+    if (imageData instanceof ImageBitmap) {
+      // For ImageBitmap, use 'copyExternalImageToTexture'
+      device.queue.copyExternalImageToTexture(
+        { source: imageData },
+        { texture, origin },
+        { width, height }
+      )
+    } else {
+      // For ArrayBufferView, use a buffer to upload
+      const buffer = device.createBuffer({
+        size: imageData.byteLength,
+        usage: GPUBufferUsage.COPY_SRC,
+        mappedAtCreation: true
+      })
+      new Uint8Array(buffer.getMappedRange()).set(new Uint8Array(imageData.buffer))
+      buffer.unmap()
+
+      const commandEncoder = device.createCommandEncoder()
+      commandEncoder.copyBufferToTexture(
+        { buffer, bytesPerRow: Math.max(256, width * 4) },
+        { texture },
+        { width, height, depthOrArrayLayers }
+      )
+      device.queue.submit([commandEncoder.finish()])
+    }
   }
 
   // https://programmer.ink/think/several-best-practices-of-webgpu.html

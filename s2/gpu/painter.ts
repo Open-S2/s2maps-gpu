@@ -1,7 +1,11 @@
 /* eslint-env browser */
 import { WebGPUContext } from './context'
 import {
-  FillWorkflow
+  FillWorkflow,
+  LineWorkflow,
+  RasterWorkflow,
+  SkyboxWorkflow,
+  WallpaperWorkflow
 } from './workflows'
 
 import type { MapOptions } from 'ui/s2mapUI'
@@ -45,17 +49,17 @@ export default class Painter {
     const { workflows, context } = this
     const promises: Array<Promise<void>> = []
     const programCases: WorkflowImports = {
-      fill: new FillWorkflow(context)
-      // raster: async () => {},
+      fill: new FillWorkflow(context),
+      raster: new RasterWorkflow(context),
       // sensor: async () => {},
-      // line: async () => {},
+      line: new LineWorkflow(context),
       // point: async () => {},
       // heatmap: async () => {},
       // shade: async () => {},
       // glyph: async () => {},
       // glyphFilter: async () => {},
-      // wallpaper: async () => {},
-      // skybox: async () => {}
+      wallpaper: new WallpaperWorkflow(context),
+      skybox: new SkyboxWorkflow(context)
     }
     const programKeys: Array<keyof Omit<Workflows, 'background'>> = []
     for (const program of buildSet) {
@@ -73,7 +77,6 @@ export default class Painter {
             // @ts-expect-error - just ignore for now
             .then(async ({ default: pModule }) => {
               workflows[key] = await pModule(context)
-              if (key === 'wallpaper' || key === 'skybox') workflows.background = workflows[key]
               resolve()
             })
             .catch((err: Error) => { reject(err) })
@@ -90,7 +93,8 @@ export default class Painter {
       // const glyph = workflows.glyph
       // glyph.injectFilter(workflows.glyphFilter)
     }
-    for (const workflow of Object.values(workflows)) {
+    for (const [key, workflow] of Object.entries(workflows)) {
+      if (key === 'wallpaper' || key === 'skybox') workflows.background = workflows[key]
       await workflow.setup()
     }
   }
@@ -177,8 +181,8 @@ export default class Painter {
     // DRAW PHASE
     // draw masks
     for (const { mask } of tiles) mask.draw()
-    // TODO: draw the wallpaper
-    // this.useWorkflow('background')?.draw(projector)
+    // draw the wallpaper
+    this.workflows.background?.draw(projector)
     // paint opaque fills
     const opaqueFillFeatures = features.filter(f => f.opaque).reverse()
     for (const feature of opaqueFillFeatures) feature.draw()
