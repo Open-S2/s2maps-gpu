@@ -32,7 +32,7 @@ export function buildColorRamp (
     }
   }
   // build the ramp for base color and each colorblindness
-  const rampMap: Array<undefined | ColorBlindAdjust> = [undefined, 'protanopia', 'deuteranopia', 'tritanopia', 'grayscale']
+  const rampMap: Array<undefined | ColorBlindAdjust> = [undefined, 'protanopia', 'deuteranopia', 'tritanopia', 'greyscale']
   for (let t = 0, tl = rampMap.length; t < tl; t++) {
     const type = rampMap[t]
     const offset = t * 256 * 4

@@ -37,7 +37,7 @@ export default class S2Map extends EventTarget {
   #attributions: Attributions = {}
   bearing = 0 // degrees
   pitch = 0 // degrees
-  colorMode: ColorMode = 0 // 0: none - 1: protanopia - 2: deuteranopia - 3: tritanopia - 4: grayscale
+  colorMode: ColorMode = 0 // 0: none - 1: protanopia - 2: deuteranopia - 3: tritanopia - 4: greyscale
   map?: S2MapUI
   offscreen?: Worker
   info?: Info

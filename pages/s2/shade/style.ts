@@ -32,6 +32,12 @@ const style: StyleDefinition = {
       invert: true,
       opaque: false,
       color: '#86bff2'
+    },
+    {
+      name: 'shade',
+      source: 'mask',
+      type: 'shade',
+      maxzoom: 2
     }
   ]
 }

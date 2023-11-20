@@ -593,9 +593,17 @@ export interface SensorWorkerLayer extends LayerWorkerBaseRaster {
 
 export interface ShadeLayerStyle extends LayerStyleBase {
   type: 'shade'
+  // layout
+  color?: string | Property<string>
 }
 export interface ShadeLayerDefinition extends LayerDefinitionBase {
   type: 'shade'
+  // layout
+  color: string | Property<string>
+}
+export interface ShadeLayerDefinitionGPU extends ShadeLayerDefinition {
+  layerBuffer: GPUBuffer
+  layerCodeBuffer: GPUBuffer
 }
 export interface ShadeWorkerLayer extends LayerWorkerBase {
   type: 'shade'

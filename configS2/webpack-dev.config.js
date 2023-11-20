@@ -32,7 +32,7 @@ module.exports = {
       },
       {
         test: /\.wgsl$/i,
-        use: ['@use-gpu/wgsl-loader']
+        use: ['raw-loader']
       },
       {
         test: /\.tsx?$/,

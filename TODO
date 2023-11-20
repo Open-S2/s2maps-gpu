@@ -4,7 +4,7 @@
 // TODO PART 1:
 
 // TODO PART 2:
-// * webgl1 -> sorting by featureCode does NOT now because only webgl1 Code is shipped (just ).
+// * webgl1 -> sorting by featureCode does NOT work now because only webgl1 Code is shipped (just ).
 // * parent tiles update on new data?
 // * store session token locally incase of app refresh.
 // * improve zooming in webgl1 for fill just like heatmap
