@@ -4,6 +4,7 @@ import {
   FillWorkflow,
   LineWorkflow,
   RasterWorkflow,
+  ShadeWorkflow,
   SkyboxWorkflow,
   WallpaperWorkflow
 } from './workflows'
@@ -55,7 +56,7 @@ export default class Painter {
       line: new LineWorkflow(context),
       // point: async () => {},
       // heatmap: async () => {},
-      // shade: async () => {},
+      shade: new ShadeWorkflow(context),
       // glyph: async () => {},
       // glyphFilter: async () => {},
       wallpaper: new WallpaperWorkflow(context),
@@ -140,14 +141,8 @@ export default class Painter {
     const { context } = this
     context.resize()
     // // If we are using the text pipeline, update the text pipeline's framebuffer component's sizes
-    // const glyphFilter: GlyphFilterPipeline = this.pipelines.glyphFilter
-    // const heatmap: HeatmapPipeline = this.pipelines.heatmap
-    // if (glyphFilter) glyphFilter.resize()
-    // if (heatmap) heatmap.resize()
-    // // ensure interaction buffer is accurate
-    // context.resizeInteract()
-    // // ensure our default viewport is accurate
-    // context.resetViewport()
+    // this.pipelines.glyphFilter?.resize()
+    // this.pipelines.heatmap?.resize()
     // notify that the painter is dirty
     this.dirty = true
   }

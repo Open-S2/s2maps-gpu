@@ -26,7 +26,7 @@ const CVDTypes: CVDType = {
   ]
 }
 
-export type ColorBlindAdjust = 'protanopia' | 'deuteranopia' | 'tritanopia' | 'grayscale'
+export type ColorBlindAdjust = 'protanopia' | 'deuteranopia' | 'tritanopia' | 'greyscale'
 
 export default function colorBlindAdjust (
   color: [number, number, number, number],
@@ -34,8 +34,8 @@ export default function colorBlindAdjust (
 ): [number, number, number, number] {
   // ensure we are using RGB and grab the values
   const [r, g, b, a] = color
-  // if grayscale just return the grayscale value
-  if (type === 'grayscale') {
+  // if greyscale just return the greyscale value
+  if (type === 'greyscale') {
     const l = (0.3 * r) + (0.59 * g) + (0.11 * b)
     return [l, l, l, a]
   }

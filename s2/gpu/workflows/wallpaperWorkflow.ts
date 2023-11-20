@@ -1,5 +1,5 @@
 /* eslint-env browser */
-import shaderCode from '../shaders/Wallpaper.wgsl'
+import shaderCode from '../shaders/wallpaper.wgsl'
 import Color from 'style/color'
 
 import type { WallpaperWorkflow as WallpaperWorkflowSpec } from './workflow.spec'
@@ -21,7 +21,7 @@ export default class WallpaperWorkflow implements WallpaperWorkflowSpec {
   scale = new Float32Array([0, 0])
   pipeline!: GPURenderPipeline
   #uniformBuffer!: GPUBuffer
-  #WallpaperBindGroupLayout!: GPUBindGroupLayout
+  #wallpaperBindGroupLayout!: GPUBindGroupLayout
   #bindGroup!: GPUBindGroup
   constructor (context: WebGPUContext) {
     this.context = context
@@ -55,7 +55,7 @@ export default class WallpaperWorkflow implements WallpaperWorkflowSpec {
     // build the bind group
     this.#bindGroup = device.createBindGroup({
       label: 'Wallpaper BindGroup',
-      layout: this.#WallpaperBindGroupLayout,
+      layout: this.#wallpaperBindGroupLayout,
       entries: [
         {
           binding: 0,
@@ -94,11 +94,11 @@ export default class WallpaperWorkflow implements WallpaperWorkflowSpec {
     const { device, format, sampleCount, frameBindGroupLayout } = this.context
 
     // prep Wallpaper uniforms
-    this.#WallpaperBindGroupLayout = this.context.buildLayout('Wallpaper', ['uniform'], GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT)
+    this.#wallpaperBindGroupLayout = this.context.buildLayout('Wallpaper', ['uniform'], GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT)
 
     const module = device.createShaderModule({ code: shaderCode })
     const layout = device.createPipelineLayout({
-      bindGroupLayouts: [frameBindGroupLayout, this.#WallpaperBindGroupLayout]
+      bindGroupLayouts: [frameBindGroupLayout, this.#wallpaperBindGroupLayout]
     })
 
     return await device.createRenderPipelineAsync({

@@ -1,5 +1,6 @@
 export { default as FillWorkflow } from './fillWorkflow'
 export { default as LineWorkflow } from './lineWorkflow'
 export { default as RasterWorkflow } from './rasterWorkflow'
+export { default as ShadeWorkflow } from './shadeWorkflow'
 export { default as SkyboxWorkflow } from './skyboxWorkflow'
 export { default as WallpaperWorkflow } from './wallpaperWorkflow'

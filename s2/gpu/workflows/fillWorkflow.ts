@@ -292,12 +292,12 @@ export default class FillWorkflow implements FillWorkflowSpec {
   }
 
   drawMask (maskSource: TileMaskSource, featureGuide?: FillFeature): void {
+    const { context, maskPipeline, maskFillPipeline } = this
     // get current source data
-    const { passEncoder } = this.context
+    const { passEncoder } = context
     const { vertexBuffer, indexBuffer, fillIDBuffer, codeTypeBuffer, bindGroup, count, offset } = maskSource
-
     // setup pipeline, bind groups, & buffers
-    passEncoder.setPipeline(featureGuide === undefined ? this.maskPipeline : this.maskFillPipeline)
+    passEncoder.setPipeline(featureGuide === undefined ? maskPipeline : maskFillPipeline)
     passEncoder.setBindGroup(1, featureGuide?.bindGroup ?? bindGroup)
     passEncoder.setVertexBuffer(0, vertexBuffer)
     passEncoder.setIndexBuffer(indexBuffer, 'uint32')

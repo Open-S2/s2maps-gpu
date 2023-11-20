@@ -28,10 +28,13 @@ export default async function shadeProgram (context: Context): Promise<ShadeProg
       this.setDevicePixelRatio(devicePixelRatio)
     }
 
-    buildLayerDefinition (layerBase: LayerDefinitionBase, _layer: ShadeLayerStyle): ShadeLayerDefinition {
+    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: ShadeLayerStyle): ShadeLayerDefinition {
+      let { color } = layer
+      color = color ?? 'rgb(0.6, 0.6, 0.6)'
       return {
         ...layerBase,
-        type: 'shade'
+        type: 'shade',
+        color
       }
     }
 

@@ -250,17 +250,13 @@ export interface WorkflowImports {
   // glyphFilter: () => Promise<{ default: (context: WebGPUContext) => Promise<GlyphFilterWorkflow> }>
   // glyph: () => Promise<{ default: (context: WebGPUContext) => Promise<GlyphWorkflow> }>
   // heatmap: () => Promise<{ default: (context: WebGPUContext) => Promise<HeatmapWorkflow> }>
-  // line: () => Promise<{ default: (context: WebGPUContext) => Promise<LineWorkflow> }>
   line: LineWorkflow
   // point: () => Promise<{ default: (context: WebGPUContext) => Promise<PointWorkflow> }>
-  // raster: () => Promise<{ default: (context: WebGPUContext) => Promise<RasterWorkflow> }>
   raster: RasterWorkflow
   // hillshade: () => Promise<{ default: (context: WebGPUContext) => Promise<HillshadeWorkflow> }>
   // sensor: () => Promise<{ default: (context: WebGPUContext) => Promise<SensorWorkflow> }>
-  // shade: () => Promise<{ default: (context: WebGPUContext) => Promise<ShadeWorkflow> }>
-  // wallpaper: () => Promise<{ default: (context: WebGPUContext) => Promise<WallpaperWorkflow> }>
+  shade: ShadeWorkflow
   wallpaper: WallpaperWorkflow
-  // skybox: () => Promise<{ default: (context: WebGPUContext) => Promise<SkyboxWorkflow> }>
   skybox: SkyboxWorkflow
 }
 
