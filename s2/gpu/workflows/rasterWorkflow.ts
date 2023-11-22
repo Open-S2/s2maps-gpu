@@ -37,6 +37,13 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
     this.pipeline = await this.#getPipeline()
   }
 
+  destroy (): void {
+    for (const { layerBuffer, layerCodeBuffer } of this.layerGuides.values()) {
+      layerBuffer.destroy()
+      layerCodeBuffer.destroy()
+    }
+  }
+
   // programs helps design the appropriate layer parameters
   buildLayerDefinition (layerBase: LayerDefinitionBase, layer: RasterLayerStyle): RasterLayerDefinition {
     const { context } = this
@@ -49,7 +56,7 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
     // 1) build definition
     const layerDefinition: RasterLayerDefinition = {
       ...layerBase,
-      type: 'raster',
+      type: 'raster' as const,
       opacity: opacity ?? 1,
       saturation: saturation ?? 0,
       contrast: contrast ?? 0
@@ -94,7 +101,8 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
       vertexBuffer: mask.vertexBuffer,
       indexBuffer: mask.indexBuffer,
       count: mask.count,
-      offset: mask.offset
+      offset: mask.offset,
+      destroy: () => { texture.destroy() }
     }
     // build features
     this.#buildFeatures(source, rasterData, tile)
@@ -141,7 +149,7 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
       )
 
       const feature: RasterFeature = {
-        type: 'raster',
+        type: 'raster' as const,
         tile,
         source,
         sourceName,
@@ -155,6 +163,10 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
         draw: () => {
           context.setStencilReference(tile.tmpMaskID)
           this.draw(feature)
+        },
+        destroy: () => {
+          rasterFadeBuffer.destroy()
+          featureCodeBuffer.destroy()
         }
       }
       features.push(feature)

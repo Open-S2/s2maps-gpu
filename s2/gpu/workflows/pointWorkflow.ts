@@ -1,64 +1,35 @@
 /* eslint-env browser */
-import shaderCode from '../shaders/line.wgsl'
+import shaderCode from '../shaders/point.wgsl'
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
-import { buildDashImage } from 'style/color'
 
 import type { WebGPUContext } from '../context'
-import type { LineFeature, LineSource, LineWorkflow as LineWorkflowSpec } from './workflow.spec'
+import type { PointFeature, PointSource, PointWorkflow as PointWorkflowSpec } from './workflow.spec'
 import type {
   LayerDefinitionBase,
-  LineLayerDefinition,
-  LineLayerStyle,
-  LineWorkflowLayerGuideGPU
+  PointLayerDefinition,
+  PointLayerStyle,
+  PointWorkflowLayerGuideGPU
 } from 'style/style.spec'
-import type { LineData } from 'workers/worker.spec'
+import type { PointData } from 'workers/worker.spec'
 import type { TileGPU as Tile } from 'source/tile.spec'
 
 const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
-  { // prev
-    arrayStride: 6 * 4, // 6 elements of 4 bytes
+  { // pos
+    arrayStride: 4 * 2,
     stepMode: 'instance',
     attributes: [{
       shaderLocation: 0,
       offset: 0,
       format: 'float32x2'
     }]
-  },
-  { // curr
-    arrayStride: 6 * 4, // 6 elements of 4 bytes
-    stepMode: 'instance',
-    attributes: [{
-      shaderLocation: 1,
-      offset: 2 * 4, // 2 elements of 4 bytes
-      format: 'float32x2'
-    }]
-  },
-  { // next
-    arrayStride: 6 * 4, // 6 elements of 4 bytes
-    stepMode: 'instance',
-    attributes: [{
-      shaderLocation: 2,
-      offset: 4 * 4, // 4 elements of 4 bytes
-      format: 'float32x2'
-    }]
   }
-  // { // lengthSoFar
-  //   arrayStride: 4,
-  //   stepMode: 'instance',
-  //   attributes: [{
-  //     shaderLocation: 3,
-  //     offset: 0,
-  //     format: 'float32'
-  //   }]
-  // }
 ]
 
-export default class LineWorkflow implements LineWorkflowSpec {
+export default class PointWorkflow implements PointWorkflowSpec {
   context: WebGPUContext
-  layerGuides = new Map<number, LineWorkflowLayerGuideGPU>()
+  layerGuides = new Map<number, PointWorkflowLayerGuideGPU>()
   pipeline!: GPURenderPipeline
-  curTexture = -1
-  #lineBindGroupLayout!: GPUBindGroupLayout
+  #pointBindGroupLayout!: GPUBindGroupLayout
   constructor (context: WebGPUContext) {
     this.context = context
   }
@@ -75,52 +46,41 @@ export default class LineWorkflow implements LineWorkflowSpec {
   }
 
   // programs helps design the appropriate layer parameters
-  buildLayerDefinition (layerBase: LayerDefinitionBase, layer: LineLayerStyle): LineLayerDefinition {
+  buildLayerDefinition (layerBase: LayerDefinitionBase, layer: PointLayerStyle): PointLayerDefinition {
     const { context } = this
     const { source, layerIndex, lch } = layerBase
     // PRE) get layer base
-    let {
-      interactive, cursor, onlyLines,
-      // paint
-      color, opacity, width, gapwidth,
-      // layout
-      cap, join, dasharray
-    } = layer
-    color = color ?? 'rgba(0, 0, 0, 0)'
+    let { radius, opacity, color, stroke, strokeWidth, interactive, cursor } = layer
+    radius = radius ?? 1
     opacity = opacity ?? 1
-    width = width ?? 1
-    gapwidth = gapwidth ?? 0
-    // 1) build definition
-    const dashed = Array.isArray(dasharray) && dasharray.length > 0
+    color = color ?? 'rgba(0, 0, 0, 0)'
+    stroke = stroke ?? 'rgba(0, 0, 0, 0)'
+    strokeWidth = strokeWidth ?? 1
     interactive = interactive ?? false
     cursor = cursor ?? 'default'
-    dasharray = dasharray ?? []
-    const layerDefinition: LineLayerDefinition = {
+    // 1) build definition
+    const layerDefinition: PointLayerDefinition = {
       ...layerBase,
-      type: 'line' as const,
-      color,
+      type: 'point' as const,
+      // paint
+      radius,
       opacity,
-      width,
-      gapwidth,
-      cap: cap ?? 'butt',
-      join: join ?? 'miter',
-      dasharray,
-      onlyLines: onlyLines ?? false,
-      dashed,
+      color,
+      stroke,
+      strokeWidth,
+      // propreties
       interactive,
       cursor
     }
     // 2) build the layerCode
     const layerCode: number[] = []
-    for (const paint of [color, opacity, width, gapwidth]) {
+    for (const paint of [radius, strokeWidth, opacity, color, stroke]) {
       layerCode.push(...encodeLayerAttribute(paint, lch))
     }
     // 3) Setup layer buffers in GPU
     const layerBuffer = context.buildStaticGPUBuffer('Layer Uniform Buffer', 'float', [context.getDepthPosition(layerIndex), ~~lch], GPUBufferUsage.UNIFORM)
     const layerCodeBuffer = context.buildStaticGPUBuffer('Layer Code Buffer', 'float', [...layerCode, ...Array(128 - layerCode.length).fill(0)], GPUBufferUsage.STORAGE)
-    // if dashed, build a texture
-    const { length, image } = buildDashImage(dasharray)
-    const dashTexture = length > 0 ? this.context.buildTexture(image, length, 4) : undefined
+    // 4) Store layer guide
     this.layerGuides.set(layerIndex, {
       sourceName: source,
       layerIndex,
@@ -128,8 +88,6 @@ export default class LineWorkflow implements LineWorkflowSpec {
       layerBuffer,
       layerCodeBuffer,
       lch,
-      dashed,
-      dashTexture,
       interactive,
       cursor
     })
@@ -137,37 +95,38 @@ export default class LineWorkflow implements LineWorkflowSpec {
     return layerDefinition
   }
 
-  buildSource (fillData: LineData, tile: Tile): void {
+  buildSource (pointData: PointData, tile: Tile): void {
     const { context } = this
-    const { vertexBuffer, lengthSoFarBuffer, featureGuideBuffer } = fillData
+    const { vertexBuffer, idBuffer, featureGuideBuffer } = pointData
     // prep buffers
-    const source: LineSource = {
-      type: 'line' as const,
-      vertexBuffer: context.buildGPUBuffer('Line Vertex Buffer', new Float32Array(vertexBuffer), GPUBufferUsage.VERTEX),
-      lengthSoFarBuffer: context.buildGPUBuffer('Line LengthSoFar Buffer', new Float32Array(lengthSoFarBuffer), GPUBufferUsage.VERTEX),
+    const source: PointSource = {
+      type: 'point' as const,
+      vertexBuffer: context.buildGPUBuffer('Point Vertex Buffer', new Float32Array(vertexBuffer), GPUBufferUsage.VERTEX),
+      idBuffer: context.buildGPUBuffer('Point Index Buffer', new Uint32Array(idBuffer), GPUBufferUsage.VERTEX),
       destroy: () => {
-        const { vertexBuffer, lengthSoFarBuffer } = source
+        const { vertexBuffer, idBuffer } = source
         vertexBuffer.destroy()
-        lengthSoFarBuffer.destroy()
+        idBuffer.destroy()
       }
     }
     // build features
     this.#buildFeatures(source, tile, new Float32Array(featureGuideBuffer))
   }
 
-  #buildFeatures (source: LineSource, tile: Tile, featureGuideArray: Float32Array): void {
+  #buildFeatures (source: PointSource, tile: Tile, featureGuideArray: Float32Array): void {
     const { context } = this
     const { mask } = tile
-    const features: LineFeature[] = []
+    const features: PointFeature[] = []
 
     const lgl = featureGuideArray.length
     let i = 0
     while (i < lgl) {
       // grab the size, layerIndex, count, and offset, and update the index
-      const [cap, layerIndex, count, offset, encodingSize] = featureGuideArray.slice(i, i + 5)
-      i += 5
+      const [layerIndex, count, offset, encodingSize] = featureGuideArray.slice(i, i + 4)
+      i += 4
       // build featureCode
       let featureCode: number[] = [0]
+
       featureCode = encodingSize > 0
         ? [...featureGuideArray.slice(i, i + encodingSize)]
         : [0]
@@ -176,15 +135,14 @@ export default class LineWorkflow implements LineWorkflowSpec {
 
       const layerGuide = this.layerGuides.get(layerIndex)
       if (layerGuide === undefined) continue
-      const { sourceName, layerBuffer, layerCodeBuffer, lch, dashed, dashTexture, interactive } = layerGuide
+      const { sourceName, lch, interactive, layerBuffer, layerCodeBuffer } = layerGuide
 
-      const lineUniformBuffer = context.buildStaticGPUBuffer('Line Uniform Buffer', 'float', [cap, ~~dashed], GPUBufferUsage.UNIFORM)
-      const lineBindGroup = context.buildGroup(
-        'Line BindGroup',
-        this.#lineBindGroupLayout,
-        [lineUniformBuffer]
+      const pointUniformBuffer = context.buildStaticGPUBuffer('Point Uniform Buffer', 'float', [0, 0, 8192, 8192], GPUBufferUsage.UNIFORM)
+      const pointBindGroup = context.buildGroup(
+        'Point BindGroup',
+        this.#pointBindGroupLayout,
+        [pointUniformBuffer]
       )
-
       const featureCodeBuffer = context.buildStaticGPUBuffer('Feature Code Buffer', 'float', [...featureCode, ...Array(64 - featureCode.length).fill(0)], GPUBufferUsage.STORAGE)
       const bindGroup = context.buildGroup(
         'Feature BindGroup',
@@ -192,14 +150,10 @@ export default class LineWorkflow implements LineWorkflowSpec {
         [mask.uniformBuffer, mask.positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
       )
 
-      const feature = {
-        type: 'line' as const,
-        maskLayer: false,
+      const feature: PointFeature = {
+        type: 'point' as const,
         source,
         tile,
-        parent: undefined,
-        dashed,
-        dashTexture,
         count,
         offset,
         sourceName,
@@ -207,18 +161,18 @@ export default class LineWorkflow implements LineWorkflowSpec {
         featureCode,
         lch,
         interactive,
-        cap,
         bindGroup,
-        lineBindGroup,
+        pointBindGroup,
         draw: () => {
           context.setStencilReference(tile.tmpMaskID)
           this.draw(feature)
         },
         destroy: () => {
-          lineUniformBuffer.destroy()
+          pointUniformBuffer.destroy()
           featureCodeBuffer.destroy()
         }
       }
+
       features.push(feature)
     }
 
@@ -232,15 +186,14 @@ export default class LineWorkflow implements LineWorkflowSpec {
     const { context } = this
     const { device, format, defaultBlend, sampleCount, frameBindGroupLayout, featureBindGroupLayout } = context
 
-    // prep line uniforms
-    this.#lineBindGroupLayout = context.buildLayout('Line', ['uniform'], GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT)
+    this.#pointBindGroupLayout = context.buildLayout('Point', ['uniform'], GPUShaderStage.VERTEX)
 
     const module = device.createShaderModule({ code: shaderCode })
     const layout = device.createPipelineLayout({
-      bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.#lineBindGroupLayout]
+      bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.#pointBindGroupLayout]
     })
     const stencilState: GPUStencilFaceState = {
-      compare: 'equal',
+      compare: 'always',
       failOp: 'keep',
       depthFailOp: 'keep',
       passOp: 'replace'
@@ -256,7 +209,10 @@ export default class LineWorkflow implements LineWorkflowSpec {
       fragment: {
         module,
         entryPoint: 'fMain',
-        targets: [{ format, blend: defaultBlend }]
+        targets: [{
+          format,
+          blend: defaultBlend
+        }]
       },
       primitive: {
         topology: 'triangle-list',
@@ -275,21 +231,18 @@ export default class LineWorkflow implements LineWorkflowSpec {
     })
   }
 
-  draw (featureGuide: LineFeature): void {
+  draw (featureGuide: PointFeature): void {
     // get current source data
     const { passEncoder } = this.context
-    const { bindGroup, lineBindGroup, source, count, offset } = featureGuide
+    const { bindGroup, pointBindGroup, source, count, offset } = featureGuide
     const { vertexBuffer } = source
 
     // setup pipeline, bind groups, & buffers
     passEncoder.setPipeline(this.pipeline)
     passEncoder.setBindGroup(1, bindGroup)
-    passEncoder.setBindGroup(2, lineBindGroup)
-    passEncoder.setVertexBuffer(0, vertexBuffer) // prev
-    passEncoder.setVertexBuffer(1, vertexBuffer) // curr
-    passEncoder.setVertexBuffer(2, vertexBuffer) // next
-    // passEncoder.setVertexBuffer(3, lengthSoFarBuffer, offset * 4)
+    passEncoder.setBindGroup(2, pointBindGroup)
+    passEncoder.setVertexBuffer(0, vertexBuffer)
     // draw
-    passEncoder.draw(9, count, 0, offset)
+    passEncoder.draw(6, count, 0, offset)
   }
 }

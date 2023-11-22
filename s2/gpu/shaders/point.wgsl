@@ -2,10 +2,12 @@ const PI = 3.141592653589793238;
 
 struct VertexOutput {
   @builtin(position) Position : vec4<f32>,
-  @location(0) texcoord : vec2<f32>,
-  @location(1) opacity : f32,
-  @location(2) saturation : f32,
-  @location(3) contrast : f32,
+  @location(0) color : vec4<f32>,
+  @location(1) extent: vec2<f32>,
+  @location(2) stroke: vec4<f32>,
+  @location(3) radius: f32,
+  @location(4) strokeWidth: f32,
+  @location(5) antialiasFactor: f32,
 };
 
 struct ViewUniforms {
@@ -45,6 +47,11 @@ struct LayerUniforms {
   useLCH: f32, // use LCH coloring or RGB if false
 };
 
+struct Bounds {
+  bottomLeft: vec2<f32>,
+  topRight: vec2<f32>,
+};
+
 // ** FRAME DATA **
 // frame data is updated at the beginning of each new frame
 @binding(0) @group(0) var<uniform> view: ViewUniforms;
@@ -62,10 +69,8 @@ struct LayerUniforms {
 // ** FEATURE DATA **
 // every feature will have it's own code to parse it's attribute data in real time
 @binding(4) @group(1) var<storage, read> featureCode: array<f32, 64>;
-// ** RASTER DATA **
-@binding(0) @group(2) var<uniform> rasterFade: f32;
-@binding(1) @group(2) var rasterSampler: sampler;
-@binding(2) @group(2) var rasterTexture: texture_2d<f32>;
+// ** POINT DATA **
+@binding(0) @group(2) var<uniform> bounds: Bounds;
 
 fn LCH2LAB (lch: vec4<f32>) -> vec4<f32> { // r -> l ; g -> c ; b -> h
   var h = lch.b * (PI / 180.);
@@ -83,7 +88,7 @@ fn LAB2XYZ (t: f32) -> f32 {
 }
 
 fn XYZ2RGB (r: f32) -> f32 {
-  var _r = 0.0f;
+  var _r = 0.;
   if (r <= 0.00304) {
     _r = 12.92 * r;
   } else {
@@ -288,10 +293,11 @@ fn interpolateColor (color1: vec4<f32>, color2: vec4<f32>, t: f32) -> vec4<f32> 
   return vec4<f32>(hue, sat, lbv, alpha);
 }
 
-fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndex: ptr<function, u32>) -> vec4<f32> {
+fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndexPtr: ptr<function, u32>) -> vec4<f32> {
   let uInputs = array<f32, 10>(view.zoom, view.lon, view.lat, view.bearing, view.pitch, view.time, view.aspectX, view.aspectY, view.featureState, view.curFeature);
   // prep result and variables
   var index = u32(*indexPtr);
+  var featureIndex = u32(*featureIndexPtr);
   var decodeOffset = index;
   var startingOffset = index;
   var featureSize = u32(layerCode[index]) >> 10;
@@ -335,17 +341,18 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndex: ptr<f
       var inputVal = 0.;
       var conditionInput = 0.;
       if (condition == 2) {
-        inputVal = featureCode[*featureIndex];
-        *featureIndex++;
+        inputVal = featureCode[featureIndex];
+        featureIndex++;
       } else { inputVal = uInputs[(conditionSet & 14) >> 1]; }
       // now that we have the inputVal, we iterate through and find a match
       conditionInput = layerCode[index];
-      while (inputVal != conditionInput || conditionInput != 0.) {
+      loop {
+        if (inputVal == conditionInput) { break; }
         // increment index & find length
         index += (u32(layerCode[index + 1]) >> 10) + 1;
         conditionInput = layerCode[index];
         // if we hit the default, than the value does not exist
-        // if (conditionInput == 0.) break;
+        if (conditionInput == 0.) { break; }
       }
       index++; // increment to conditionEncoding
       // now add subCondition to be parsed
@@ -356,7 +363,7 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndex: ptr<f
       // get interpolation & base
       var interpolationType = conditionSet & 1;
       var inputType = (conditionSet & 14) >> 1;
-      var base = 1.0f;
+      var base = 1.;
       if (interpolationType == 1) {
         base = layerCode[index];
         index++;
@@ -370,8 +377,8 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndex: ptr<f
       var subCondition = 0u;
       // grab the inputVal value
       if (condition == 4) {
-        inputVal = featureCode[*featureIndex];
-        *featureIndex++;
+        inputVal = featureCode[featureIndex];
+        featureIndex++;
       } else { inputVal = uInputs[inputType]; }
       // create a start point
       end = layerCode[index];
@@ -383,7 +390,7 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndex: ptr<f
         // subCondition was a data-condition or data-range, and if so,
         // we must move past the featureCode that was stored there
         subCondition = (u32(layerCode[startIndex]) & 1008) >> 4;
-        if (subCondition == 2 || subCondition == 4) { *featureIndex++; }
+        if (subCondition == 2 || subCondition == 4) { featureIndex++; }
         // increment to subCondition
         index++;
         // increment by subConditions length
@@ -423,7 +430,7 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndex: ptr<f
         // subCondition was a data-condition or data-range, and if so,
         // we must move past the featureCode that was stored there
         subCondition = (u32(layerCode[startIndex]) & 1008) >> 4;
-        if (subCondition == 2 || subCondition == 4) { *featureIndex++; }
+        if (subCondition == 2 || subCondition == 4) { featureIndex++; }
         index++;
         index += u32(layerCode[index]) >> 10;
         endIndex = index + 1;
@@ -445,6 +452,7 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndex: ptr<f
 
   // update index to the next Layer property
   *indexPtr = featureSize + decodeOffset;
+  *featureIndexPtr = featureIndex;
 
   // if lch: convert back to rgb
   if (color && layer.useLCH != 0.) { res = LCH2RGB(res); }
@@ -454,48 +462,65 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndex: ptr<f
   return res;
 }
 
-fn getSaturation (saturation: f32) -> f32 {
-  var mutSaturation = saturation;
-  mutSaturation = clamp(mutSaturation, -1., 1.);
-  if (mutSaturation > 0.) {
-    return 1. - 1. / (1.001 - mutSaturation);
-  } else {
-    return -mutSaturation;
-  }
-}
-
-fn getContrast (contrast: f32) -> f32 {
-  var mutContrast = contrast;
-  mutContrast = clamp(mutContrast, -1., 1.);
-  if (mutContrast > 0.) {
-    return 1. / (1. - mutContrast);
-  } else {
-    return 1. + mutContrast;
-  }
-}
+const Inputs = array<vec2<f32>, 6>(
+  vec2(-1., -1.),
+  vec2(1., -1.),
+  vec2(-1., 1.),
+  vec2(1., -1.),
+  vec2(1., 1.),
+  vec2(-1., 1.)
+);
 
 @vertex
 fn vMain(
+  @builtin(vertex_index) VertexIndex: u32,
   @location(0) position : vec2<f32>
 ) -> VertexOutput {
   var output : VertexOutput;
 
-  // set where we are on the texture
-  var pos = position / 8192.;
-  output.texcoord = pos;
+  var extent = Inputs[VertexIndex];
 
+  if (
+    position.x < bounds.bottomLeft.x ||
+    position.x > bounds.topRight.x ||
+    position.y < bounds.bottomLeft.y ||
+    position.y > bounds.topRight.y
+  ) { return output; }
+  // set color
+  // prep layer index and feature index positions
   var index = 0u;
   var featureIndex = 0u;
+  // decode attributes
+  var radius = decodeFeature(false, &index, &featureIndex)[0] * view.devicePixelRatio;
+  var strokeWidth = decodeFeature(false, &index, &featureIndex)[0] * view.devicePixelRatio;
+  var opacity = decodeFeature(false, &index, &featureIndex)[0];
+  var color = decodeFeature(true, &index, &featureIndex);
+  var stroke = decodeFeature(true, &index, &featureIndex);
+  color = vec4<f32>(color.rgb * color.a * opacity, color.a * opacity);
+  stroke = vec4<f32>(stroke.rgb * stroke.a * opacity, stroke.a * opacity);
 
-  output.opacity = decodeFeature(false, &index, &featureIndex)[0];
-  output.saturation = decodeFeature(false, &index, &featureIndex)[0];
-  output.contrast = decodeFeature(false, &index, &featureIndex)[0];
+  // get position
+  var outPos = getPos(position);
+  var zero = getZero();
+  // adjust by w
+  outPos /= outPos.w;
+  zero /= zero.w;
+  // if point is behind sphere, drop it.
+  if (outPos.z > zero.z) { color.a = 0.; }
+  // move to specific corner of quad
+  let outPosXY = outPos.xy + extent * (radius + strokeWidth) / vec2<f32>(view.aspectX, view.aspectY);
 
+  // set paint properties
+  output.radius = radius;
+  output.color = color;
+  output.stroke = stroke;
+  output.strokeWidth = strokeWidth;
+  // set extent
+  output.extent = extent;
+  // set antialias factor
+  output.antialiasFactor = -1. / ((radius + strokeWidth) / view.devicePixelRatio);
   // set position
-  var tmpPos = getPos(position);
-  tmpPos /= tmpPos.w;
-  tmpPos.z = layer.depthPos;
-  output.Position = vec4(tmpPos.xy, layer.depthPos, 1.);
+  output.Position = vec4<f32>(outPosXY, layer.depthPos, 1.0);
 
   return output;
 }
@@ -504,17 +529,20 @@ fn vMain(
 fn fMain(
   output : VertexOutput
 ) -> @location(0) vec4<f32> {
-  var color = textureSample(rasterTexture, rasterSampler, output.texcoord);
+  if (output.color.a < 0.01) { discard; }
+  var extentLength = length(output.extent);
 
-  // saturation
-  var average = (color.r + color.g + color.b) / 3.0;
-  var sat = (average - color.rgb) * -getSaturation(output.saturation);
-  color = vec4<f32>(color.rgb + sat, color.a);
-  // contrast
-  var contrast = (color.rgb - 0.5) * getContrast(output.contrast) + 0.5;
-  color = vec4<f32>(contrast, color.a);
-  // opacity
-  color *= output.opacity * rasterFade;
+  var opacityT = smoothstep(0., output.antialiasFactor, extentLength - 1.);
+  if (opacityT < 0.01) { discard; }
 
-  return color;
+  var colorT = 0.;
+  if (output.strokeWidth >= 0.01) {
+    colorT = smoothstep(
+      output.antialiasFactor,
+      0.,
+      extentLength - output.radius / (output.radius + output.strokeWidth)
+    );
+  }
+
+  return opacityT * mix(output.color, output.stroke, colorT);
 }

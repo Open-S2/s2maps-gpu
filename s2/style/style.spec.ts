@@ -390,6 +390,10 @@ export interface HeatmapLayerDefinition extends LayerDefinitionBase {
 export interface HeatmapWorkflowLayerGuide extends LayerWorkflowGuideBase {
   colorRamp: WebGLTexture
 }
+export interface HeatmapWorkflowLayerGuideGPU extends HeatmapWorkflowLayerGuide {
+  layerBuffer: GPUBuffer
+  layerCodeBuffer: GPUBuffer
+}
 export interface HeatmapWorkerLayer extends LayerWorkerBase {
   type: 'heatmap'
   getCode: BuildCodeFunction
@@ -483,6 +487,10 @@ export interface PointLayerDefinition extends LayerDefinitionBase {
 export interface PointWorkflowLayerGuide extends LayerWorkflowGuideBase {
   interactive: boolean
   cursor: Cursor
+}
+export interface PointWorkflowLayerGuideGPU extends PointWorkflowLayerGuide {
+  layerBuffer: GPUBuffer
+  layerCodeBuffer: GPUBuffer
 }
 export interface PointWorkerLayer extends LayerWorkerBase {
   type: 'point'

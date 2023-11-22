@@ -68,14 +68,14 @@ export default async function heatmapProgram (context: Context): Promise<Heatmap
       const { gl, context } = this
       const { featureGuideBuffer } = heatmapData
       // prep buffers
-      const vertexA = new Int16Array(heatmapData.vertexBuffer)
+      const vertexA = new Float32Array(heatmapData.vertexBuffer)
       const weightA = new Float32Array(heatmapData.weightBuffer)
       // Create a starting vertex array object (attribute state)
       const vao = context.buildVAO()
 
       // bind buffers to the vertex array object
       // Create the feature index buffer
-      const vertexBuffer = context.bindEnableVertexAttr(vertexA, 1, 2, gl.SHORT, false, 4, 0, true)
+      const vertexBuffer = context.bindEnableVertexAttr(vertexA, 1, 2, gl.FLOAT, false, 8, 0, true)
       const weightBuffer = context.bindEnableVertexAttr(weightA, 2, 1, gl.FLOAT, false, 4, 0, true)
       this.#bindExtentBuffer()
 
@@ -280,7 +280,7 @@ export default async function heatmapProgram (context: Context): Promise<Heatmap
       // setup offsets and draw
       gl.bindVertexArray(vao)
       gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer)
-      gl.vertexAttribPointer(1, 2, gl.SHORT, false, 4, offset * 4)
+      gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 8, offset * 8)
       gl.bindBuffer(gl.ARRAY_BUFFER, weightBuffer)
       gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 4, offset * 4)
       gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, count)

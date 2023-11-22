@@ -196,7 +196,7 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
       const fl: number = _vertices.length
       for (let f = 0; f < fl; f++) {
         vertices.push(_vertices[f])
-        if (featureType === 'point' && f % 2 === 0) ids.push(...feature.idRGB)
+        if (featureType === 'point' && f % 2 === 0) ids.push(...feature.idRGB, 255)
       }
       // build weights if heatmap
       if (featureType === 'heatmap') {
@@ -222,9 +222,9 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
     }
 
     // Upon building the batches, convert to buffers and ship.
-    const vertexBuffer = new Int16Array(vertices).buffer
+    const vertexBuffer = new Float32Array(vertices).buffer
     const weightBuffer = new Float32Array(weights).buffer
-    const fillIDBuffer = new Uint8Array(ids).buffer // pre-store each id as an rgb value
+    const idBuffer = new Uint8ClampedArray(ids).buffer // pre-store each id as an rgb value
     const featureGuideBuffer = new Float32Array(featureGuide).buffer
     // ship the vector data.
     if (type === 'point') {
@@ -234,10 +234,10 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
         sourceName,
         tileID,
         vertexBuffer,
-        fillIDBuffer,
+        idBuffer,
         featureGuideBuffer
       }
-      postMessage(data, [vertexBuffer, fillIDBuffer, featureGuideBuffer])
+      postMessage(data, [vertexBuffer, idBuffer, featureGuideBuffer])
     } else {
       const data: HeatmapData = {
         mapID,
@@ -246,10 +246,10 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
         tileID,
         vertexBuffer,
         weightBuffer,
-        fillIDBuffer,
+        idBuffer,
         featureGuideBuffer
       }
-      postMessage(data, [vertexBuffer, weightBuffer, fillIDBuffer, featureGuideBuffer])
+      postMessage(data, [vertexBuffer, weightBuffer, idBuffer, featureGuideBuffer])
     }
   }
 }

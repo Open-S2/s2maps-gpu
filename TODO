@@ -3,6 +3,11 @@
 
 // TODO PART 1:
 
+// GPU:
+// * destoy assets correctly
+// * check against context when setting pipeline... we don't need to set the same pipeline over and over again.
+// * Some Workflows can be added async from the painter
+
 // TODO PART 2:
 // * webgl1 -> sorting by featureCode does NOT work now because only webgl1 Code is shipped (just ).
 // * parent tiles update on new data?

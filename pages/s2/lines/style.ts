@@ -17,7 +17,7 @@ const style: StyleDefinition = {
       source: 'countries',
       type: 'line',
       color: '#bbd3de',
-      width: 2
+      width: 5
     }
   ]
 }

@@ -55,17 +55,17 @@ export default async function pointProgram (context: Context): Promise<PointProg
 
     buildSource (pointData: PointData, tile: Tile): void {
       const { gl, context } = this
-      const { vertexBuffer: vertexB, fillIDBuffer: fillIDB, featureGuideBuffer } = pointData
+      const { vertexBuffer: vertexB, idBuffer: idB, featureGuideBuffer } = pointData
       // prep buffers
-      const vertexA = new Int16Array(vertexB)
-      const fillIDA = new Uint8Array(fillIDB)
+      const vertexA = new Float32Array(vertexB)
+      const idA = new Uint8Array(idB)
       // Create a starting vertex array object (attribute state)
       const vao = context.buildVAO()
 
       // bind buffers to the vertex array object
       // Create the feature index buffer
-      const vertexBuffer = context.bindEnableVertexAttr(vertexA, 1, 2, gl.SHORT, false, 4, 0, true)
-      const fillIDBuffer = context.bindEnableVertexAttr(fillIDA, 2, 3, gl.UNSIGNED_BYTE, true, 0, 0, true)
+      const vertexBuffer = context.bindEnableVertexAttr(vertexA, 1, 2, gl.FLOAT, false, 8, 0, true)
+      const idBuffer = context.bindEnableVertexAttr(idA, 2, 3, gl.UNSIGNED_BYTE, true, 0, 0, true)
 
       // bind the extentBuffer
       this.#bindExtentBuffer()
@@ -73,7 +73,7 @@ export default async function pointProgram (context: Context): Promise<PointProg
       const source: PointSource = {
         type: 'point',
         vertexBuffer,
-        fillIDBuffer,
+        idBuffer,
         vao
       }
 
@@ -224,7 +224,7 @@ export default async function pointProgram (context: Context): Promise<PointProg
       // setup offsets and draw
       gl.bindVertexArray(vao)
       gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer)
-      gl.vertexAttribPointer(1, 2, gl.SHORT, false, 4, offset * 4)
+      gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 8, offset * 8)
       gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, count)
     }
   }

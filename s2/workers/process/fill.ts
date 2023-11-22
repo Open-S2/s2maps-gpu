@@ -9,7 +9,7 @@ import type {
   S2VectorMultiPoly,
   S2VectorPoly
 } from 's2-vector-tile'
-import type { TileRequest } from '../worker.spec'
+import type { FillData, TileRequest } from '../worker.spec'
 import type {
   FillLayerDefinition,
   FillWorkerLayer
@@ -269,20 +269,21 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     // Upon building the batches, convert to buffers and ship.
     const vertexBuffer = new Float32Array(vertices).buffer
     const indexBuffer = new Uint32Array(indices).buffer
-    const fillIDBuffer = new Uint32Array(ids).buffer // pre-store each id as an rgb value
+    const idBuffer = new Uint8ClampedArray(ids).buffer // pre-store each id as an rgb value
     const codeTypeBuffer = new Uint32Array(codeType).buffer
     const featureGuideBuffer = new Float32Array(featureGuide).buffer
     // ship the vector data.
-    postMessage({
+    const message: FillData = {
       mapID,
       type: 'fill',
       sourceName,
       tileID,
       vertexBuffer,
       indexBuffer,
-      fillIDBuffer,
+      idBuffer,
       codeTypeBuffer,
       featureGuideBuffer
-    }, [vertexBuffer, indexBuffer, fillIDBuffer, codeTypeBuffer, featureGuideBuffer])
+    }
+    postMessage(message, [vertexBuffer, indexBuffer, idBuffer, codeTypeBuffer, featureGuideBuffer])
   }
 }

@@ -42,6 +42,11 @@ export default class SkyboxWorkflow implements SkyboxWorkflowSpec {
     this.pipeline = await this.#getPipeline()
   }
 
+  destroy (): void {
+    this.#matrixBuffer.destroy()
+    this.#cubeMap.destroy()
+  }
+
   updateStyle (style: StyleDefinition, camera: Camera): void {
     const { context } = this
     const { device } = context

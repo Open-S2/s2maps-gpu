@@ -465,8 +465,6 @@ export default class Camera {
     return tile
   }
 
-  /* DRAW */
-
   _draw (): void {
     const { style, painter, projector } = this
     // prep tiles

@@ -423,7 +423,7 @@ export interface FillData extends WorkerMessageBase {
   type: 'fill'
   vertexBuffer: ArrayBuffer
   indexBuffer: ArrayBuffer
-  fillIDBuffer: ArrayBuffer
+  idBuffer: ArrayBuffer
   codeTypeBuffer: ArrayBuffer
   featureGuideBuffer: ArrayBuffer
 }
@@ -484,7 +484,7 @@ export interface SensorData extends WorkerMessageBase {
 export interface PointData extends WorkerMessageBase {
   type: 'point'
   vertexBuffer: ArrayBuffer
-  fillIDBuffer: ArrayBuffer
+  idBuffer: ArrayBuffer
   featureGuideBuffer: ArrayBuffer
 }
 
@@ -492,7 +492,7 @@ export interface HeatmapData extends WorkerMessageBase {
   type: 'heatmap'
   vertexBuffer: ArrayBuffer
   weightBuffer: ArrayBuffer
-  fillIDBuffer: ArrayBuffer
+  idBuffer: ArrayBuffer
   featureGuideBuffer: ArrayBuffer
 }
 

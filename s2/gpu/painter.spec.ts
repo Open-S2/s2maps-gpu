@@ -40,11 +40,6 @@ export interface Painter {
   injectSpriteImage: (data: SpriteImageMessage) => void
   setColorMode: (mode: 0 | 1 | 2 | 3 | 4) => void
   delete: () => void
-  injectFrameUniforms: (matrix: Float32Array, view: Float32Array, aspect: Float32Array) => void
   paint: (projector: Projector, tiles: Tile[]) => void
-  // paintInteractive: (tiles: Tile[]) => void
-  // paintMasks: (tiles: Tile[]) => void
-  // paintFeatures: (features: FeatureBase[], interactive: boolean) => void
-  // paintHeatmap: (features: HeatmapFeatureBase[]) => HeatmapFeatureBase
-  // paintGlyphFilter: (glyphFeatures: GlyphFeatureBase[]) => void
+  paintInteractive: (tiles: Tile[]) => void
 }
