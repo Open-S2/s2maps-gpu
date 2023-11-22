@@ -16,7 +16,7 @@ export interface FillSource {
   type: 'fill'
   vertexBuffer: WebGLBuffer
   indexBuffer: WebGLBuffer
-  fillIDBuffer: WebGLBuffer
+  idBuffer: WebGLBuffer
   codeTypeBuffer: WebGLBuffer
   vao: WebGLVertexArrayObject
 }
@@ -41,7 +41,7 @@ export interface HeatmapSource {
 
 export interface LineSource {
   type: 'line'
-  // fillIDBuffer: WebGLBuffer
+  // idBuffer: WebGLBuffer
   vertexBuffer: WebGLBuffer
   lengthSoFarBuffer?: WebGLBuffer
   vao: WebGLVertexArrayObject
@@ -50,7 +50,7 @@ export interface LineSource {
 export interface PointSource {
   type: 'point'
   vertexBuffer: WebGLBuffer
-  fillIDBuffer: WebGLBuffer
+  idBuffer: WebGLBuffer
   vao: WebGLVertexArrayObject
 }
 

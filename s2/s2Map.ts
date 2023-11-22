@@ -273,12 +273,12 @@ export default class S2Map extends EventTarget {
     } else if (type === 'info') {
       if (this.info !== undefined) this.info.injectInfo(data.json)
     } else if (offscreen !== undefined) {
-      if (type === 'fill') offscreen.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.fillIDBuffer, data.codeTypeBuffer, data.featureGuideBuffer])
+      if (type === 'fill') offscreen.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.idBuffer, data.codeTypeBuffer, data.featureGuideBuffer])
       else if (type === 'line') offscreen.postMessage(data, [data.vertexBuffer, data.featureGuideBuffer])
       else if (type === 'glyph') offscreen.postMessage(data, [data.glyphFilterBuffer, data.glyphFilterIDBuffer, data.glyphQuadBuffer, data.glyphQuadIDBuffer, data.glyphColorBuffer, data.featureGuideBuffer])
       else if (type === 'glyphimages') offscreen.postMessage(data, data.images.map(i => i.data) as Transferable[])
       else if (type === 'raster') offscreen.postMessage(data, [data.image as Transferable])
-      else if (type === 'point') offscreen.postMessage(data, [data.vertexBuffer, data.featureGuideBuffer])
+      else if (type === 'point') offscreen.postMessage(data, [data.vertexBuffer, data.idBuffer, data.featureGuideBuffer])
       else if (type === 'heatmap') offscreen.postMessage(data, [data.vertexBuffer, data.weightBuffer, data.featureGuideBuffer])
       else if (type === 'interactive') offscreen.postMessage(data, [data.interactiveGuideBuffer, data.interactiveDataBuffer])
       else offscreen.postMessage(data)

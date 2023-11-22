@@ -2,7 +2,9 @@
 import { WebGPUContext } from './context'
 import {
   FillWorkflow,
+  HeatmapWorkflow,
   LineWorkflow,
+  PointWorkflow,
   RasterWorkflow,
   ShadeWorkflow,
   SkyboxWorkflow,
@@ -13,9 +15,9 @@ import type { MapOptions } from 'ui/s2mapUI'
 import type {
   FeatureBase,
   // GlyphFeature,
-  // HeatmapFeature,
+  HeatmapFeature,
+  Workflow,
   WorkflowImports,
-  WorkflowKey,
   WorkflowType,
   Workflows
 } from './workflows/workflow.spec'
@@ -30,7 +32,6 @@ export default class Painter {
   context: WebGPUContext
   workflows: Workflows = {}
   dirty = true
-  currPipeline?: WorkflowKey
   constructor (context: GPUCanvasContext, options: MapOptions) {
     this.context = new WebGPUContext(context, options, this)
   }
@@ -54,8 +55,8 @@ export default class Painter {
       raster: new RasterWorkflow(context),
       // sensor: async () => {},
       line: new LineWorkflow(context),
-      // point: async () => {},
-      // heatmap: async () => {},
+      point: new PointWorkflow(context),
+      heatmap: new HeatmapWorkflow(context),
       shade: new ShadeWorkflow(context),
       // glyph: async () => {},
       // glyphFilter: async () => {},
@@ -121,43 +122,37 @@ export default class Painter {
     this.context.setColorBlindMode(mode)
   }
 
-  delete (): void {
-    // const { context, pipelines } = this
-    // for (const pipelineName in pipelines) pipelines[pipelineName].delete()
-    // context.delete()
-  }
-
   injectTimeCache (timeCache: TimeCache): void {
     this.workflows.sensor?.injectTimeCache(timeCache)
   }
 
-  injectFrameUniforms (matrix: Float32Array, view: Float32Array, aspect: Float32Array): void {
+  injectSpriteImage (data: SpriteImageMessage): void {
+    // const { glyph } = this.workflows
+    // glyph?.injectSpriteImage(data)
   }
 
   // usePipeline (pipelineName: PipelineType): void | Pipeline {
   // }
 
-  resize (_width: number, _height: number): void {
-    const { context } = this
-    context.resize()
-    // // If we are using the text pipeline, update the text pipeline's framebuffer component's sizes
-    // this.pipelines.glyphFilter?.resize()
-    // this.pipelines.heatmap?.resize()
+  resize (width: number, height: number): void {
+    this.context.resize((): void => {
+      // If any workflows are using the resize method, call it
+      for (const workflow of Object.values(this.workflows) as Workflow[]) workflow.resize?.(width, height)
+    })
     // notify that the painter is dirty
     this.dirty = true
   }
 
   paint (projector: Projector, tiles: Tile[]): void {
-    const { context } = this
-    // PREPARE PHASE
-    this.currPipeline = undefined
+    const { context, workflows } = this
     // prep mask id's
     tiles.forEach((tile, index) => { tile.tmpMaskID = index + 1 })
     // prep all tile's features to draw
     const features = tiles.flatMap(tile => tile.featureGuides.filter(f => f.type !== 'heatmap'))
-    // draw heatmap data if applicable
-    // const heatmapFeatures = tiles.flatMap(tile => tile.featureGuides.filter(f => f.type === 'heatmap') as HeatmapFeatureGuide[])
-    // if (heatmapFeatures.length > 0) features.push(this.paintHeatmap(heatmapFeatures))
+    // draw heatmap data if applicable, and a singular feature for the main render thread to draw the texture to the screen
+    const heatmapFeatures = tiles.flatMap(tile => tile.featureGuides.filter((f): f is HeatmapFeature => f.type === 'heatmap'))
+    const heatmapFeature = workflows.heatmap?.textureDraw(heatmapFeatures)
+    if (heatmapFeature !== undefined) features.push(heatmapFeature)
     // sort features
     features.sort(featureSort)
     // Mercator: the tile needs to update it's matrix at all zooms.
@@ -170,6 +165,7 @@ export default class Painter {
     // prep glyph features for drawing box filters
     // const glyphFeatures = features.filter(feature => feature.type === 'glyph' && !feature.overdraw) as GlyphFeature[]
     // glyphFeatures.forEach(feature => feature.drawFilter())
+
     // setup for the next frame, creating new encoders
     context.newScene(projector.view, projector.getMatrix('m'))
 
@@ -177,7 +173,7 @@ export default class Painter {
     // draw masks
     for (const { mask } of tiles) mask.draw()
     // draw the wallpaper
-    this.workflows.background?.draw(projector)
+    workflows.background?.draw(projector)
     // paint opaque fills
     const opaqueFillFeatures = features.filter(f => f.opaque).reverse()
     for (const feature of opaqueFillFeatures) feature.draw()
@@ -189,31 +185,12 @@ export default class Painter {
     context.finish()
   }
 
-  // paintInteractive (tiles: Tile[]): void {
-  // }
+  paintInteractive (tiles: Tile[]): void {}
 
-  // // run through tiles and draw the masks, inject depthPos and
-  // flushInvert (tiles: Array<Tile>, pipeline: Pipeline, depthPos: number) {
-  // }
-
-  // paintHeatmap (features: HeatmapFeature[]): HeatmapFeature {
-  //   return features[0]
-  // }
-
-  // paintGlyphFilter (glyphFeatures: GlyphFeature[]): void {}
-
-  // getScreen (): Uint8ClampedArray {
-  // }
-
-  // _paintGlyphFilter (glyphFilterPipeline: GlyphFilterPipeline, glyphFeatures: Array<FeatureGuide>, mode: 1 | 2) {
-  // }
-
-  // injectGlyphImages (maxHeight: number, images: GlyphImages) {
-  // }
-
-  injectSpriteImage (data: SpriteImageMessage): void {
-    // const { glyph } = this.workflows
-    // glyph?.injectSpriteImage(data)
+  delete (): void {
+    const { context, workflows } = this
+    for (const workflow of Object.values(workflows) as Workflow[]) workflow.destroy()
+    context.destroy()
   }
 }
 

@@ -197,11 +197,16 @@ class Tile implements TileBase {
   // cleanup after itself. When a tile is deleted, it's adventageous to cleanup GPU cache.
   delete (): void {
     // remove all features
+    for (const feature of this.featureGuides) {
+      if ('destroy' in feature) feature.destroy()
+    }
     this.featureGuides = []
     this.interactiveGuide = new Map()
+    if ('destroy' in this.mask) this.mask.destroy()
   }
 
   deleteSources (sourceNames: string[]): void {
+    // TODO: run 'destroy' on each feature and their sources if filtered
     this.featureGuides = this.featureGuides.filter(fg => {
       const fgSourceName = fg.sourceName.split(':')[0]
       return !sourceNames.includes(fgSourceName)
@@ -313,7 +318,6 @@ export class WMTile extends Tile implements WMTileSpec {
     const offset = llToTilePx([lon, lat], [this.zoom, this.i, this.j])
 
     this.matrix = projector.getMatrix(scale, offset)
-    // if WebGPU mask, we need to update the position buffer
-    super.setScreenPositions(projector)
+    // TODO: if WebGPU mask, we need to update the matrix buffer
   }
 }

@@ -12,21 +12,18 @@ const DEPTH_ESPILON = 1 / Math.pow(2, 20)
 
 export default class WebGPUContext {
   ready = false
-  #resizeNextFrame = false
+  // constants/semi-constants
+  type: GPUType = 3 // specifying that we are using a WebGPUContext
   renderer = '' // ex: AMD Radeon Pro 560 OpenGL Engine (https://github.com/pmndrs/detect-gpu)
   gpu: GPUCanvasContext
   device!: GPUDevice
   presentation!: { width: number, height: number, depthOrArrayLayers: number }
   painter: Painter
   #adapter!: GPUAdapter
-  #renderTarget?: GPUTexture
-  #depthStencilTexture!: GPUTexture
-  #renderPassDescriptor!: GPURenderPassDescriptor
   devicePixelRatio: number
   interactive = false
-  format!: GPUTextureFormat
+  format: GPUTextureFormat = 'bgra8unorm'
   masks = new Map<number, MaskSource>()
-  type: GPUType = 3 // specifying that we are using a WebGPUContext
   sampleCount = 4
   clearColorRGBA: [r: number, g: number, b: number, a: number] = [0, 0, 0, 0]
   // manage buffers, layouts, and bind groups
@@ -35,12 +32,24 @@ export default class WebGPUContext {
   frameBindGroupLayout!: GPUBindGroupLayout
   featureBindGroupLayout!: GPUBindGroupLayout
   frameBufferBindGroup!: GPUBindGroup
+  nullTexture!: GPUTexture
+  #renderTarget?: GPUTexture
+  #depthStencilTexture!: GPUTexture
+  #renderPassDescriptor!: GPURenderPassDescriptor
   // frame specific variables
   commandEncoder!: GPUCommandEncoder
   passEncoder!: GPURenderPassEncoder
+  #resizeNextFrame = false
+  #resizeCB?: () => void
   // track current states
   colorMode: ColorMode = 0
   stencilRef = -1
+  // common modes
+  defaultBlend: GPUBlendState = {
+    color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+    alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' }
+  }
+
   constructor (context: GPUCanvasContext, options: MapOptions, painter: Painter) {
     const { canvasMultiplier } = options
     this.gpu = context
@@ -165,8 +174,9 @@ export default class WebGPUContext {
     // if (featureID > 0) return featureID
   }
 
-  resize (): void {
+  resize (cb: () => void): void {
     this.#resizeNextFrame = true
+    this.#resizeCB = cb
   }
 
   #resize (): void {
@@ -198,16 +208,18 @@ export default class WebGPUContext {
       format: 'depth24plus-stencil8',
       usage: GPUTextureUsage.RENDER_ATTACHMENT
     })
+    // if #resizeCB is defined, call it
+    if (this.#resizeCB !== undefined) {
+      this.#resizeCB()
+      this.#resizeCB = undefined
+    }
     // update the device pixel ratio
     this.setDevicePixelRatio()
   }
 
   setInteractive (interactive: boolean): void {
     this.interactive = interactive
-    this.resizeInteract()
   }
-
-  resizeInteract (): void {}
 
   // the zoom determines the number of divisions necessary to maintain a visually
   // asthetic spherical shape. As we zoom in, the tiles are practically flat,
@@ -246,6 +258,13 @@ export default class WebGPUContext {
       draw: () => {
         this.setStencilReference(tile.tmpMaskID)
         this.painter.workflows.fill?.drawMask(tileMaskSource)
+      },
+      destroy: () => {
+        uniformBuffer.destroy()
+        positionBuffer.destroy()
+        layerBuffer.destroy()
+        layerCodeBuffer.destroy()
+        featureCodeBuffer.destroy()
       }
     }
 
@@ -296,6 +315,8 @@ export default class WebGPUContext {
     this.frameBufferBindGroup = this.buildGroup('Frame BindGroup', this.frameBindGroupLayout, [this.#viewUniformBuffer, this.#matrixUniformBuffer])
     // setup per feature uniforms layout
     this.featureBindGroupLayout = this.buildLayout('Feature', ['uniform', 'uniform', 'uniform', 'read-only-storage', 'read-only-storage'])
+    // setup null variables
+    this.nullTexture = this.buildTexture(new Uint8Array([0, 0, 0, 0]), 1, 1)
   }
 
   buildTexture (
@@ -393,5 +414,14 @@ export default class WebGPUContext {
         resource: { buffer }
       }))
     })
+  }
+
+  destroy (): void {
+    this.#viewUniformBuffer.destroy()
+    this.#matrixUniformBuffer.destroy()
+    this.#renderTarget?.destroy()
+    this.#depthStencilTexture.destroy()
+    this.nullTexture.destroy()
+    this.device.destroy()
   }
 }

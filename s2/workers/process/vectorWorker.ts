@@ -94,7 +94,7 @@ export default class VectorWorker {
 
     // Upon building the batches, convert to buffers and ship.
     const interactiveGuideBuffer = new Uint32Array(interactiveGuide).buffer
-    const interactiveDataBuffer = new Uint8Array(interactiveData).buffer
+    const interactiveDataBuffer = new Uint8ClampedArray(interactiveData).buffer
     // ship the vector data.
     postMessage({
       mapID,

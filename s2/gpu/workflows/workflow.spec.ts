@@ -42,7 +42,7 @@ export interface MaskSource {
   type: 'mask'
   vertexBuffer: GPUBuffer
   indexBuffer: GPUBuffer
-  fillIDBuffer: GPUBuffer
+  idBuffer: GPUBuffer
   codeTypeBuffer: GPUBuffer
   count: number
   offset: number
@@ -51,7 +51,7 @@ export interface TileMaskSource {
   type: 'mask'
   vertexBuffer: GPUBuffer
   indexBuffer: GPUBuffer
-  fillIDBuffer: GPUBuffer
+  idBuffer: GPUBuffer
   codeTypeBuffer: GPUBuffer
   bindGroup: GPUBindGroup
   uniformBuffer: GPUBuffer
@@ -59,14 +59,16 @@ export interface TileMaskSource {
   count: number
   offset: number
   draw: () => void
+  destroy: () => void
 }
 
 export interface FillSource {
   type: 'fill'
   vertexBuffer: GPUBuffer
   indexBuffer: GPUBuffer
-  fillIDBuffer: GPUBuffer
+  idBuffer: GPUBuffer
   codeTypeBuffer: GPUBuffer
+  destroy: () => void
 }
 
 export interface GlyphSource {
@@ -76,25 +78,28 @@ export interface GlyphSource {
   glyphQuadBuffer: GPUBuffer
   glyphQuadIDBuffer: GPUBuffer
   glyphColorBuffer: GPUBuffer
+  destroy: () => void
 }
 
 export interface HeatmapSource {
   type: 'heatmap'
   vertexBuffer: GPUBuffer
   weightBuffer: GPUBuffer
+  destroy: () => void
 }
 
 export interface LineSource {
   type: 'line'
-  typeBuffer: GPUBuffer
   vertexBuffer: GPUBuffer
   lengthSoFarBuffer: GPUBuffer
+  destroy: () => void
 }
 
 export interface PointSource {
   type: 'point'
   vertexBuffer: GPUBuffer
-  fillIDBuffer: GPUBuffer
+  idBuffer: GPUBuffer
+  destroy: () => void
 }
 
 // Uses MaskSource vao, count, and offset
@@ -106,11 +111,13 @@ export interface RasterSource {
   indexBuffer: GPUBuffer
   count: number
   offset: number
+  destroy: () => void
 }
 
 export interface SensorSource {
   texture?: GPUTexture
   delete?: undefined
+  destroy: () => void
 }
 
 export type FeatureSource = MaskSource | FillSource | LineSource | PointSource | HeatmapSource | RasterSource | GlyphSource
@@ -128,6 +135,7 @@ export interface FeatureBase {
   featureCode: number[]
   bindGroup: GPUBindGroup
   draw: () => void
+  destroy: () => void
 }
 
 // tile, parent, layerIndex, layerUniforms, layerCode, featureCode
@@ -169,6 +177,7 @@ export interface HeatmapFeature extends FeatureBase {
   offset: number
   colorRamp: WebGLTexture
   bounds?: [number, number, number, number]
+  heatmapBindGroup: GPUBindGroup
 }
 
 // ** LINE **
@@ -191,6 +200,7 @@ export interface PointFeature extends FeatureBase {
   count: number
   offset: number
   bounds?: [number, number, number, number]
+  pointBindGroup: GPUBindGroup
 }
 
 // ** RASTER **
@@ -249,9 +259,9 @@ export interface WorkflowImports {
   fill: FillWorkflow
   // glyphFilter: () => Promise<{ default: (context: WebGPUContext) => Promise<GlyphFilterWorkflow> }>
   // glyph: () => Promise<{ default: (context: WebGPUContext) => Promise<GlyphWorkflow> }>
-  // heatmap: () => Promise<{ default: (context: WebGPUContext) => Promise<HeatmapWorkflow> }>
+  heatmap: HeatmapWorkflow
   line: LineWorkflow
-  // point: () => Promise<{ default: (context: WebGPUContext) => Promise<PointWorkflow> }>
+  point: PointWorkflow
   raster: RasterWorkflow
   // hillshade: () => Promise<{ default: (context: WebGPUContext) => Promise<HillshadeWorkflow> }>
   // sensor: () => Promise<{ default: (context: WebGPUContext) => Promise<SensorWorkflow> }>
@@ -267,6 +277,8 @@ export type WorkflowType = 'fill' | 'glyph' | 'heatmap' | 'line' | 'point' | 'ra
 export interface Workflow {
   context: WebGPUContext
   setup: () => Promise<void>
+  destroy: () => void
+  resize?: (width: number, height: number) => void
 }
 
 export interface FillWorkflow extends Workflow {
@@ -289,6 +301,7 @@ export interface GlyphWorkflow extends Workflow {
 export interface HeatmapWorkflow extends Workflow {
   buildSource: (heatmapData: HeatmapData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: HeatmapLayerStyle) => HeatmapLayerDefinition
+  textureDraw: (features: HeatmapFeature[]) => HeatmapFeature | undefined
 }
 
 export interface LineWorkflow extends Workflow {

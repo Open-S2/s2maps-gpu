@@ -41,6 +41,10 @@ export default class WallpaperWorkflow implements WallpaperWorkflowSpec {
     this.pipeline = await this.#getPipeline()
   }
 
+  destroy (): void {
+    this.#uniformBuffer.destroy()
+  }
+
   updateStyle (style: StyleDefinition): void {
     const { scheme, context } = this
     const { device } = context

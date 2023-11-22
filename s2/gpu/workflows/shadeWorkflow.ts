@@ -30,6 +30,12 @@ export default class ShadeWorkflow implements ShadeWorkflowSpec {
     this.pipeline = await this.#getPipeline()
   }
 
+  destroy (): void {
+    const { layerBuffer, layerCodeBuffer } = this.#layerDefinition
+    layerBuffer.destroy()
+    layerCodeBuffer.destroy()
+  }
+
   buildLayerDefinition (layerBase: LayerDefinitionBase, layer: ShadeLayerStyle): ShadeLayerDefinitionGPU {
     const { context } = this
     const { lch, layerIndex } = layerBase
@@ -44,7 +50,7 @@ export default class ShadeWorkflow implements ShadeWorkflowSpec {
     // 4) store the layerDefinition and return
     this.#layerDefinition = {
       ...layerBase,
-      type: 'shade',
+      type: 'shade' as const,
       // layout
       color,
       // GPU buffers
@@ -70,7 +76,7 @@ export default class ShadeWorkflow implements ShadeWorkflowSpec {
       [mask.uniformBuffer, mask.positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
     )
     const feature: ShadeFeature = {
-      type: 'shade',
+      type: 'shade' as const,
       maskLayer: true,
       sourceName: 'mask',
       source: mask,
@@ -84,6 +90,9 @@ export default class ShadeWorkflow implements ShadeWorkflowSpec {
       draw: () => {
         context.setStencilReference(tile.tmpMaskID)
         this.draw(feature)
+      },
+      destroy: () => {
+        featureCodeBuffer.destroy()
       }
     }
     tile.addFeatures([feature])
