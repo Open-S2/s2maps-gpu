@@ -301,7 +301,7 @@ export interface GlyphWorkflow extends Workflow {
 export interface HeatmapWorkflow extends Workflow {
   buildSource: (heatmapData: HeatmapData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: HeatmapLayerStyle) => HeatmapLayerDefinition
-  textureDraw: (features: HeatmapFeature[]) => HeatmapFeature | undefined
+  textureDraw: (features: HeatmapFeature[]) => HeatmapFeature[] | undefined
 }
 
 export interface LineWorkflow extends Workflow {

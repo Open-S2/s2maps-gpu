@@ -323,9 +323,10 @@ export default class WebGPUContext {
     imageData: null | ArrayBufferView | ImageBitmap,
     width: number,
     height: number,
-    depthOrArrayLayers = 1
+    depthOrArrayLayers = 1,
+    format: GPUTextureFormat = this.format
   ): GPUTexture {
-    const { device, format } = this
+    const { device } = this
     const texture = device.createTexture({
       size: { width, height, depthOrArrayLayers },
       format, // Equivalent to WebGL's gl.RGBA

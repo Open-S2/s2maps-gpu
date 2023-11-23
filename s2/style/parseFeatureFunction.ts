@@ -1,4 +1,5 @@
 import parseFilter from './parseFilter'
+import getEasingFunction from './easingFunctions'
 
 import type {
   DataCondition,
@@ -77,7 +78,8 @@ function dataRangeFunction<T extends NotNullOrObject, U> (
   dataRange: DataRangeEase<NumberColor<T>> | DataRangeStep<ValueType<T>>,
   cb: Callback<T, U>
 ): LayerWorkerFunction<U> {
-  const { key, ranges } = dataRange
+  const { key, ranges, ease, base } = dataRange
+  const easeFunction = getEasingFunction<U>(ease, base)
 
   const parsedRanges = ranges.map(({ stop, input }) => {
     return {
@@ -90,15 +92,19 @@ function dataRangeFunction<T extends NotNullOrObject, U> (
     const dataInput = (properties[key] !== undefined && !isNaN(properties[key] as number))
       ? +(properties[key] as number)
       : 0
-    if (dataInput <= parsedRanges[0].stop) {
+    if (dataInput <= parsedRanges[0].stop) { // less then or equal to first stop
       return parsedRanges[0].input(code, properties, dataInput)
-    } else if (dataInput >= parsedRanges[parsedRanges.length - 1].stop) {
+    } else if (dataInput >= parsedRanges[parsedRanges.length - 1].stop) { // greater then or equal to last stop
       return parsedRanges[parsedRanges.length - 1].input(code, properties, dataInput)
-    } else {
+    } else { // somewhere inbetween two stops. lets interpolate
       let i = 0
       while (parsedRanges[i] !== undefined && parsedRanges[i].stop <= dataInput) i++
       if (parsedRanges.length === i) i--
-      return parsedRanges[i - 1].input(code, properties, dataInput)
+      const startValue = parsedRanges[i - 1].input(code, properties, dataInput)
+      const startStop = parsedRanges[i - 1].stop
+      const endValue = parsedRanges[i].input(code, properties, dataInput)
+      const endStop = parsedRanges[i].stop
+      return easeFunction(dataInput, startStop, endStop, startValue, endValue)
     }
   }
 }
@@ -108,7 +114,8 @@ function inputRangeFunction<T extends NotNullOrObject, U> (
   inputRange: InputRangeEase<NumberColor<T>> | InputRangeStep<ValueType<T>>,
   cb: Callback<T, U>
 ): LayerWorkerFunction<U> {
-  const { ranges } = inputRange
+  const { ranges, ease, base } = inputRange
+  const easeFunction = getEasingFunction<U>(ease, base)
 
   // first ensure each result property is parsed:
   const parsedRanges = ranges.map(({ stop, input }) => {
@@ -127,7 +134,11 @@ function inputRangeFunction<T extends NotNullOrObject, U> (
       let i = 0
       while (parsedRanges[i] !== undefined && parsedRanges[i].stop <= zoom) i++
       if (parsedRanges.length === i) i--
-      return parsedRanges[i - 1].input(code, properties, zoom)
+      const startValue = parsedRanges[i - 1].input(code, properties, zoom)
+      const startStop = parsedRanges[i - 1].stop
+      const endValue = parsedRanges[i].input(code, properties, zoom)
+      const endStop = parsedRanges[i].stop
+      return easeFunction(zoom, startStop, endStop, startValue, endValue)
     }
   }
 }

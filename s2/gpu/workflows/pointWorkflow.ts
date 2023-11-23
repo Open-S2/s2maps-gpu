@@ -231,10 +231,9 @@ export default class PointWorkflow implements PointWorkflowSpec {
     })
   }
 
-  draw (featureGuide: PointFeature): void {
+  draw ({ bindGroup, pointBindGroup, source, count, offset }: PointFeature): void {
     // get current source data
     const { passEncoder } = this.context
-    const { bindGroup, pointBindGroup, source, count, offset } = featureGuide
     const { vertexBuffer } = source
 
     // setup pipeline, bind groups, & buffers

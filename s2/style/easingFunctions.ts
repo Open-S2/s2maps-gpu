@@ -4,9 +4,10 @@ import Color, { interpolate } from './color'
 
 export type EaseType = 'lin' | 'expo' | 'quad' | 'cubic' | 'step'
 
-export type EaseFunction = (zoom: number, start: number, end: number, startValue: number | Color, endValue: number | Color) => number | Color
+export type ValueType = string | number | boolean | bigint | Color
+export type EaseFunction<T> = (zoom: number, start: number, end: number, startValue: T, endValue: T) => T
 
-export default function getEasingFunction (easeType: EaseType, base = 1): EaseFunction {
+export default function getEasingFunction<T> (easeType: EaseType = 'lin', base = 1): EaseFunction<T> {
   const func = (easeType === 'lin')
     ? linear
     : (easeType === 'expo')
@@ -16,11 +17,11 @@ export default function getEasingFunction (easeType: EaseType, base = 1): EaseFu
             : (easeType === 'cubic')
                 ? cubic
                 : step
-  return (zoom: number, start: number, end: number, startValue: number | Color, endValue: number | Color): number | Color => {
+  return (zoom: number, start: number, end: number, startValue: T, endValue: T): T => {
     const t = func(zoom, start, end, base)
 
-    if (typeof startValue === 'number' && typeof endValue === 'number') return startValue + t * (endValue - startValue)
-    else if (startValue instanceof Color && endValue instanceof Color) return interpolate(startValue, endValue, t)
+    if (typeof startValue === 'number' && typeof endValue === 'number') return startValue + t * (endValue - startValue) as T
+    else if (startValue instanceof Color && endValue instanceof Color) return interpolate(startValue, endValue, t) as T
     else return startValue
   }
 }

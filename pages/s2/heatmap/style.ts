@@ -24,7 +24,7 @@ const style: StyleDefinition = {
       name: 'country-fill',
       source: 'countries',
       type: 'fill',
-      invert: true,
+      invert: false,
       opaque: false,
       color: '#eaf1f4'
     },
@@ -34,12 +34,6 @@ const style: StyleDefinition = {
       type: 'line',
       color: '#bbd3de',
       width: 1.25
-    },
-    {
-      name: 'shade',
-      source: 'mask',
-      type: 'shade',
-      maxzoom: 2
     },
     {
       name: 'earthquakes-heat',
@@ -109,6 +103,12 @@ const style: StyleDefinition = {
           ]
         }
       }
+    },
+    {
+      name: 'shade',
+      source: 'mask',
+      type: 'shade',
+      maxzoom: 2
     }
   ]
 }

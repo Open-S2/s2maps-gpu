@@ -2,10 +2,15 @@ const PI = 3.141592653589793238;
 
 struct VertexOutput {
   @builtin(position) Position : vec4<f32>,
-  @location(0) extent : vec4<f32>,
+  @location(0) extent : vec2<f32>,
   @location(1) opacity : f32,
   @location(2) strength : f32,
 };
+
+struct TextureOutput {
+  @builtin(position) Position: vec4<f32>,
+  @location(0) extent: vec2<f32>,
+}
 
 struct ViewUniforms {
   cBlind: f32, // colorblind support
@@ -70,8 +75,7 @@ struct Bounds {
 @binding(0) @group(2) var<uniform> bounds: Bounds;
 @binding(1) @group(2) var imageSampler: sampler;
 @binding(2) @group(2) var imageTexture: texture_2d<f32>;
-@binding(3) @group(2) var colorRampSampler: sampler;
-@binding(4) @group(2) var colorRamp: texture_2d<f32>;
+@binding(3) @group(2) var colorRamp: texture_2d<f32>;
 
 fn LCH2LAB (lch: vec4<f32>) -> vec4<f32> { // r -> l ; g -> c ; b -> h
   var h = lch.b * (PI / 180.);
@@ -463,7 +467,7 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndexPtr: pt
   return res;
 }
 
-const Inputs = array<vec2<f32>, 6>(
+const Extents = array<vec2<f32>, 6>(
   vec2(-1., -1.),
   vec2(1., -1.),
   vec2(-1., 1.),
@@ -472,17 +476,17 @@ const Inputs = array<vec2<f32>, 6>(
   vec2(-1., 1.)
 );
 
-const ZERO 0.00196078431372549; // 1. / 255. / 2.
-const GAUSS_COEF 0.3989422804014327;
+const ZERO = 0.00196078431372549; // 1. / 255. / 2.
+const GAUSS_COEF = 0.3989422804014327;
 
 @vertex
-(
+fn vTexture(
   @builtin(vertex_index) VertexIndex: u32,
   @location(0) position : vec2<f32>,
   @location(1) weight : f32,
 ) -> VertexOutput {
   var output : VertexOutput;
-  var extent = Inputs[VertexIndex];
+  var extent = Extents[VertexIndex];
   var outPosXY = vec2<f32>(0., 0.);
 
   if (
@@ -495,13 +499,13 @@ const GAUSS_COEF 0.3989422804014327;
   var index = 0u;
   var featureIndex = 0u;
   // decode attributes
-  var radius = decodeFeature(false, &index, &featureIndex)[0] * uDevicePixelRatio * 2.;
+  var radius = decodeFeature(false, &index, &featureIndex)[0] * view.devicePixelRatio * 2.;
   output.opacity = decodeFeature(false, &index, &featureIndex)[0];
   var intensity = decodeFeature(false, &index, &featureIndex)[0];
 
   // prep position & zero
   var outPos = getPos(position);
-  vec4 zero = getZero();
+  var zero = getZero();
   // adjust by w
   outPos /= outPos.w;
   zero /= zero.w;
@@ -523,11 +527,11 @@ const GAUSS_COEF 0.3989422804014327;
   // set position
   output.Position = vec4<f32>(outPosXY, 0.0, 1.0);
 
-  return output
+  return output;
 }
 
 @fragment
-fn fMain(
+fn fTexture(
   output : VertexOutput
 ) -> @location(0) vec4<f32> {
   var d = -0.5 * 3. * 3. * dot(output.extent, output.extent);
@@ -536,17 +540,25 @@ fn fMain(
 }
 
 @vertex
-fn vTexture(
+fn vMain(
   @builtin(vertex_index) VertexIndex: u32
-) -> @builtin(position) vec4<f32> {
-  return vec4<f32>(Inputs[VertexIndex] * 0.5 + 0.5, layer.depthPos, 1.);
+) -> TextureOutput {
+  var output: TextureOutput;
+
+  var input = Extents[VertexIndex];
+  output.Position = vec4<f32>(input, layer.depthPos, 1.);
+  output.extent = input * 0.5 + 0.5;
+  // invert the y
+  output.extent.y = 1. - output.extent.y;
+
+  return output;
 }
 
 @fragment
-fn fTexture(
-  @builtin(position) position : vec4<f32>
+fn fMain(
+  output: TextureOutput,
 ) -> @location(0) vec4<f32> {
-  var t = textureSample(imageTexture, imageSampler, position.xy).r;
+  var t = textureSample(imageTexture, imageSampler, output.extent).r;
   if (t < 0.01) { discard; }
-  return textureSample(colorRamp, colorRampSampler, vec2(t, view.cBlind / 4.));
+  return textureSample(colorRamp, imageSampler, vec2<f32>(t, view.cBlind / 4.));
 }

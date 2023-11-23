@@ -275,10 +275,9 @@ export default class LineWorkflow implements LineWorkflowSpec {
     })
   }
 
-  draw (featureGuide: LineFeature): void {
+  draw ({ bindGroup, lineBindGroup, source, count, offset }: LineFeature): void {
     // get current source data
     const { passEncoder } = this.context
-    const { bindGroup, lineBindGroup, source, count, offset } = featureGuide
     const { vertexBuffer } = source
 
     // setup pipeline, bind groups, & buffers

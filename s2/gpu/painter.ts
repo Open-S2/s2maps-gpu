@@ -152,7 +152,7 @@ export default class Painter {
     // draw heatmap data if applicable, and a singular feature for the main render thread to draw the texture to the screen
     const heatmapFeatures = tiles.flatMap(tile => tile.featureGuides.filter((f): f is HeatmapFeature => f.type === 'heatmap'))
     const heatmapFeature = workflows.heatmap?.textureDraw(heatmapFeatures)
-    if (heatmapFeature !== undefined) features.push(heatmapFeature)
+    if (heatmapFeature !== undefined) features.push(...heatmapFeature)
     // sort features
     features.sort(featureSort)
     // Mercator: the tile needs to update it's matrix at all zooms.
