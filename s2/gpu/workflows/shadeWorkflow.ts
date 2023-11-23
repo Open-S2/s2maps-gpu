@@ -160,10 +160,9 @@ export default class ShadeWorkflow implements ShadeWorkflowSpec {
     })
   }
 
-  draw (feature: ShadeFeature): void {
+  draw ({ source, bindGroup }: ShadeFeature): void {
     const { context, pipeline } = this
     const { passEncoder } = context
-    const { source, bindGroup } = feature
     const { vertexBuffer, indexBuffer, count, offset } = source
     // setup pipeline, bind groups, & buffers
     passEncoder.setPipeline(pipeline)

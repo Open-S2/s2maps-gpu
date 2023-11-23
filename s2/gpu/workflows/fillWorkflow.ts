@@ -315,11 +315,13 @@ export default class FillWorkflow implements FillWorkflowSpec {
     if (invert) this.drawMask(tile.mask, featureGuide)
   }
 
-  drawMask (maskSource: TileMaskSource, featureGuide?: FillFeature): void {
+  drawMask (
+    { vertexBuffer, indexBuffer, idBuffer, codeTypeBuffer, bindGroup, count, offset }: TileMaskSource,
+    featureGuide?: FillFeature
+  ): void {
     const { context, maskPipeline, maskFillPipeline } = this
     // get current source data
     const { passEncoder } = context
-    const { vertexBuffer, indexBuffer, idBuffer, codeTypeBuffer, bindGroup, count, offset } = maskSource
     // setup pipeline, bind groups, & buffers
     passEncoder.setPipeline(featureGuide === undefined ? maskPipeline : maskFillPipeline)
     passEncoder.setBindGroup(1, featureGuide?.bindGroup ?? bindGroup)

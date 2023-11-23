@@ -8,8 +8,8 @@ export function buildColorRamp (
 ): Uint8ClampedArray {
   const { round } = Math
   // create ramp image
-  // RGBA * 4 height (base color, protanopia, deuteranopia, tritanopia) * 255 width
-  const rampImage = new Uint8ClampedArray(4 * 4 * 256)
+  // (4) RGBA * (5) height (base color, protanopia, deuteranopia, tritanopia, greyscale) * (255) width
+  const rampImage = new Uint8ClampedArray(4 * 5 * 256)
   // prep colors
   let getColor
   if (typeof ramp === 'string') {

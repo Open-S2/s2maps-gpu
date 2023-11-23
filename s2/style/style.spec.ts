@@ -390,9 +390,13 @@ export interface HeatmapLayerDefinition extends LayerDefinitionBase {
 export interface HeatmapWorkflowLayerGuide extends LayerWorkflowGuideBase {
   colorRamp: WebGLTexture
 }
-export interface HeatmapWorkflowLayerGuideGPU extends HeatmapWorkflowLayerGuide {
+export interface HeatmapWorkflowLayerGuideGPU extends LayerWorkflowGuideBase {
+  colorRamp: GPUTexture
   layerBuffer: GPUBuffer
   layerCodeBuffer: GPUBuffer
+  textureBindGroup: GPUBindGroup
+  renderTarget: GPUTexture
+  renderPassDescriptor: GPURenderPassDescriptor
 }
 export interface HeatmapWorkerLayer extends LayerWorkerBase {
   type: 'heatmap'

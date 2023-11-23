@@ -245,10 +245,9 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
     })
   }
 
-  draw (featureGuide: RasterFeature): void {
+  draw ({ bindGroup, rasterBindGroup, source }: RasterFeature): void {
     // get current source data
     const { passEncoder } = this.context
-    const { bindGroup, rasterBindGroup, source } = featureGuide
     const { vertexBuffer, indexBuffer, count, offset } = source
 
     // setup pipeline, bind groups, & buffers

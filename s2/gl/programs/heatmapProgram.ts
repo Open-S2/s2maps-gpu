@@ -36,7 +36,7 @@ export default async function heatmapProgram (context: Context): Promise<Heatmap
       // inject Program
       super(context)
       // build shaders
-      if (type === 1) this.buildShaders(vert1, frag1, { aExtent: 0, aPos: 1 })
+      if (type === 1) this.buildShaders(vert1, frag1, { aExtent: 0, aPos: 1, aWeight: 2 })
       else this.buildShaders(vert2, frag2)
       // activate so we can setup samplers
       this.use()
@@ -70,6 +70,8 @@ export default async function heatmapProgram (context: Context): Promise<Heatmap
       // prep buffers
       const vertexA = new Float32Array(heatmapData.vertexBuffer)
       const weightA = new Float32Array(heatmapData.weightBuffer)
+      // console.log('weightA', weightA)
+      // 55: [0.6499999761581421, 0.675000011920929, 0.5249999761581421, 0.5874999761581421, 0.612500011920929, 0.612500011920929, 0.625, 0.612500011920929, 0.612500011920929, 0.512499988079071, 0.625, 0.5625, 0.612500011920929, 0.625, 0.5249999761581421, 0.612500011920929, 0.6000000238418579, 0.625, 0.574999988079071, 0.550000011920929, 0.625, 0.625,
       // Create a starting vertex array object (attribute state)
       const vao = context.buildVAO()
 

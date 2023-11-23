@@ -28,23 +28,24 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
     arrayStride: 4,
     stepMode: 'instance',
     attributes: [{
-      shaderLocation: 0,
+      shaderLocation: 1,
       offset: 0,
       format: 'float32'
     }]
   }
 ]
 
+// TODO: The texture target should just have a single float channel?
+
 export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
   context: WebGPUContext
   layerGuides = new Map<number, HeatmapWorkflowLayerGuideGPU>()
   pipeline!: GPURenderPipeline
-  texturePipeline!: GPURenderPipeline
   module!: GPUShaderModule
-  #renderTarget!: GPUTexture
+  texturePipeline!: GPURenderPipeline
+  #defaultSampler!: GPUSampler
   #heatmapBindGroupLayout!: GPUBindGroupLayout
   #heatmapTextureBindGroupLayout!: GPUBindGroupLayout
-  #renderPassDescriptor!: GPURenderPassDescriptor
   constructor (context: WebGPUContext) {
     this.context = context
   }
@@ -52,67 +53,51 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
   async setup (): Promise<void> {
     const { context } = this
     const { device } = context
-    this.#heatmapTextureBindGroupLayout = context.buildLayout('Heatmap BindGroupLayout', ['uniform'], GPUShaderStage.VERTEX)
+    this.#defaultSampler = context.buildSampler()
+    this.#heatmapTextureBindGroupLayout = context.buildLayout('Heatmap Texture BindGroupLayout', ['uniform'], GPUShaderStage.VERTEX)
     this.#heatmapBindGroupLayout = device.createBindGroupLayout({
       label: 'Heatmap BindGroupLayout',
       entries: [
-        {
-          binding: 0,
-          visibility: GPUShaderStage.VERTEX,
-          buffer: { type: 'uniform', hasDynamicOffset: false, minBindingSize: 0 }
-        },
-        {
+        { // sampler
           binding: 1,
           visibility: GPUShaderStage.FRAGMENT,
           sampler: { type: 'filtering' }
         },
-        {
+        { // render target
           binding: 2,
           visibility: GPUShaderStage.FRAGMENT,
           texture: { sampleType: 'float' }
         },
-        {
+        { // color ramp
           binding: 3,
-          visibility: GPUShaderStage.FRAGMENT,
-          sampler: { type: 'filtering' }
-        },
-        {
-          binding: 4,
           visibility: GPUShaderStage.FRAGMENT,
           texture: { sampleType: 'float' }
         }
       ]
     })
-    this.module = device.createShaderModule({ code: shaderCode })
 
+    this.module = device.createShaderModule({ code: shaderCode })
     this.pipeline = await this.#getPipeline('screen')
     this.texturePipeline = await this.#getPipeline('texture')
   }
 
   resize (): void {
-    const { device, presentation, sampleCount, format } = this.context
-    if (this.#renderTarget !== undefined) this.#renderTarget.destroy()
-    this.#renderTarget = device.createTexture({
-      size: presentation,
-      sampleCount,
-      format,
-      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING
-    })
-    // setup render pass descriptor
-    this.#renderPassDescriptor = {
-      colorAttachments: [{
-        view: this.#renderTarget.createView(),
-        clearValue: { r: 0, g: 0, b: 0, a: 0 },
-        loadOp: 'clear',
-        storeOp: 'store'
-      }]
+    for (const layerGuide of this.layerGuides.values()) {
+      if (layerGuide.renderTarget !== undefined) layerGuide.renderTarget.destroy()
+      layerGuide.renderTarget = this.#buildLayerRenderTarget()
+      // setup render pass descriptor
+      layerGuide.renderPassDescriptor = this.#buildLayerPassDescriptor(layerGuide.renderTarget)
+      // set up bind group
+      layerGuide.textureBindGroup = this.#buildLayerBindGroup(layerGuide.renderTarget, layerGuide.colorRamp)
     }
   }
 
   destroy (): void {
-    for (const { layerBuffer, layerCodeBuffer } of this.layerGuides.values()) {
+    for (const { colorRamp, layerBuffer, layerCodeBuffer, renderTarget } of this.layerGuides.values()) {
+      colorRamp.destroy()
       layerBuffer.destroy()
       layerCodeBuffer.destroy()
+      renderTarget.destroy()
     }
   }
 
@@ -151,6 +136,8 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
     // 3) Setup layer buffers in GPU
     const layerBuffer = context.buildStaticGPUBuffer('Layer Uniform Buffer', 'float', [context.getDepthPosition(layerIndex), ~~lch], GPUBufferUsage.UNIFORM)
     const layerCodeBuffer = context.buildStaticGPUBuffer('Layer Code Buffer', 'float', [...layerCode, ...Array(128 - layerCode.length).fill(0)], GPUBufferUsage.STORAGE)
+    const colorRampTexture = context.buildTexture(buildColorRamp(colorRamp, lch), 256, 5, 1, 'rgba8unorm')
+    const renderTarget = this.#buildLayerRenderTarget()
     // 4) Store layer guide
     this.layerGuides.set(layerIndex, {
       sourceName: source,
@@ -159,10 +146,54 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
       layerBuffer,
       layerCodeBuffer,
       lch,
-      colorRamp: context.buildTexture(buildColorRamp(colorRamp, lch), 256, 4)
+      colorRamp: colorRampTexture,
+      renderTarget,
+      renderPassDescriptor: this.#buildLayerPassDescriptor(renderTarget),
+      textureBindGroup: this.#buildLayerBindGroup(renderTarget, colorRampTexture)
     })
 
     return layerDefinition
+  }
+
+  #buildLayerRenderTarget (): GPUTexture {
+    const { device, presentation, format } = this.context
+    return device.createTexture({
+      size: presentation,
+      // sampleCount,
+      format,
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING
+    })
+  }
+
+  #buildLayerPassDescriptor (renderTarget: GPUTexture): GPURenderPassDescriptor {
+    return {
+      colorAttachments: [{
+        view: renderTarget.createView(),
+        clearValue: { r: 0, g: 0, b: 0, a: 0 },
+        loadOp: 'clear',
+        storeOp: 'store'
+      }]
+    }
+  }
+
+  #buildLayerBindGroup (renderTarget: GPUTexture, colorRamp: GPUTexture): GPUBindGroup {
+    return this.context.device.createBindGroup({
+      layout: this.#heatmapBindGroupLayout,
+      entries: [
+        {
+          binding: 1,
+          resource: this.#defaultSampler
+        },
+        {
+          binding: 2,
+          resource: renderTarget.createView()
+        },
+        { // color ramp
+          binding: 3,
+          resource: colorRamp.createView()
+        }
+      ]
+    })
   }
 
   buildSource (heatmapData: HeatmapData, tile: Tile): void {
@@ -208,7 +239,7 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
       const heatmapUniformBuffer = context.buildStaticGPUBuffer('Heatmap Uniform Buffer', 'float', [0, 0, 8192, 8192], GPUBufferUsage.UNIFORM)
       const heatmapBindGroup = context.buildGroup(
         'Heatmap BindGroup',
-        this.#heatmapBindGroupLayout,
+        this.#heatmapTextureBindGroupLayout,
         [heatmapUniformBuffer]
       )
       const featureCodeBuffer = context.buildStaticGPUBuffer('Feature Code Buffer', 'float', [...featureCode, ...Array(64 - featureCode.length).fill(0)], GPUBufferUsage.STORAGE)
@@ -282,17 +313,21 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
         entryPoint: isScreen ? 'fMain' : 'fTexture',
         targets: [{
           format,
-          blend: defaultBlend
+          blend: isScreen
+            ? defaultBlend
+            : {
+                color: { srcFactor: 'one', dstFactor: 'one' },
+                alpha: { srcFactor: 'one', dstFactor: 'one' }
+              }
         }]
       },
       primitive: {
         topology: 'triangle-list',
         cullMode: 'none'
       },
-      multisample: { count: sampleCount },
+      multisample: { count: isScreen ? sampleCount : undefined },
       depthStencil: isScreen
-        ? undefined
-        : {
+        ? {
             depthWriteEnabled: true,
             depthCompare: 'less',
             format: 'depth24plus-stencil8',
@@ -301,42 +336,65 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
             stencilReadMask: 0xFFFFFFFF,
             stencilWriteMask: 0xFFFFFFFF
           }
+        : undefined
     })
   }
 
-  textureDraw (features: HeatmapFeature[]): HeatmapFeature | undefined {
+  textureDraw (features: HeatmapFeature[]): HeatmapFeature[] | undefined {
     if (features.length === 0) return undefined
     const { context } = this
-    const { device } = context
+    const { device, frameBufferBindGroup } = context
 
-    // set encoders
-    const commandEncoder = device.createCommandEncoder()
-    const passEncoder = commandEncoder.beginRenderPass(this.#renderPassDescriptor)
-
-    passEncoder.setPipeline(this.texturePipeline)
-    for (const { bindGroup, heatmapBindGroup, source, count, offset } of features) {
-      const { vertexBuffer, weightBuffer } = source
-      // setup pipeline, bind groups, & buffers
-      passEncoder.setBindGroup(1, bindGroup)
-      passEncoder.setBindGroup(2, heatmapBindGroup)
-      passEncoder.setVertexBuffer(0, vertexBuffer)
-      passEncoder.setVertexBuffer(1, weightBuffer)
-      // draw
-      passEncoder.draw(6, count, 0, offset)
+    const output: HeatmapFeature[] = []
+    // group by layerIndex
+    const layerFeatures = new Map<number, HeatmapFeature[]>()
+    for (const feature of features) {
+      const { layerIndex } = feature
+      const layer = layerFeatures.get(layerIndex)
+      if (layer === undefined) {
+        layerFeatures.set(layerIndex, [feature])
+        output.push(feature)
+      } else layer.push(feature)
     }
-    // finish
-    passEncoder.end()
-    device.queue.submit([commandEncoder.finish()])
 
-    return features[0]
+    // draw each layer to their own render target
+    for (const [layerIndex, features] of layerFeatures.entries()) {
+      const layerGuide = this.layerGuides.get(layerIndex)
+      if (layerGuide === undefined) continue
+      // set encoders
+      const commandEncoder = device.createCommandEncoder()
+      const passEncoder = commandEncoder.beginRenderPass(layerGuide.renderPassDescriptor)
+
+      passEncoder.setPipeline(this.texturePipeline)
+      passEncoder.setBindGroup(0, frameBufferBindGroup)
+      for (const { bindGroup, heatmapBindGroup, source, count, offset } of features) {
+        const { vertexBuffer, weightBuffer } = source
+        // setup pipeline, bind groups, & buffers
+        passEncoder.setBindGroup(1, bindGroup)
+        passEncoder.setBindGroup(2, heatmapBindGroup)
+        passEncoder.setVertexBuffer(0, vertexBuffer)
+        passEncoder.setVertexBuffer(1, weightBuffer)
+        // draw
+        passEncoder.draw(6, count, 0, offset)
+      }
+      // finish
+      passEncoder.end()
+      device.queue.submit([commandEncoder.finish()])
+    }
+
+    return output
   }
 
-  draw (_featureGuide: HeatmapFeature): void {
+  draw ({ bindGroup, layerIndex }: HeatmapFeature): void {
     // get current source data
     const { passEncoder } = this.context
+    const layerGuide = this.layerGuides.get(layerIndex)
+    if (layerGuide === undefined) return
     // setup pipeline, bind groups, & buffers
     passEncoder.setPipeline(this.pipeline)
+    passEncoder.setBindGroup(1, bindGroup)
+    passEncoder.setBindGroup(2, layerGuide.textureBindGroup)
     // draw a screen quad
-    passEncoder.draw(6, 1)
+    passEncoder.draw(6)
   }
 }
