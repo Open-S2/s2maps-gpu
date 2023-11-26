@@ -24,7 +24,7 @@ const style: StyleDefinition = {
       name: 'country-fill',
       source: 'countries',
       type: 'fill',
-      invert: false,
+      invert: true,
       opaque: false,
       color: '#eaf1f4'
     },

@@ -145,6 +145,8 @@ export default class Painter {
 
   paint (projector: Projector, tiles: Tile[]): void {
     const { context, workflows } = this
+    // setup for the next frame
+    context.newScene(projector.view, projector.getMatrix('m'))
     // prep mask id's
     tiles.forEach((tile, index) => { tile.tmpMaskID = index + 1 })
     // prep all tile's features to draw
@@ -165,9 +167,6 @@ export default class Painter {
     // prep glyph features for drawing box filters
     // const glyphFeatures = features.filter(feature => feature.type === 'glyph' && !feature.overdraw) as GlyphFeature[]
     // glyphFeatures.forEach(feature => feature.drawFilter())
-
-    // setup for the next frame, creating new encoders
-    context.newScene(projector.view, projector.getMatrix('m'))
 
     // DRAW PHASE
     // draw masks

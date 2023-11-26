@@ -116,8 +116,8 @@ export default class LineWorkflow implements LineWorkflowSpec {
       layerCode.push(...encodeLayerAttribute(paint, lch))
     }
     // 3) Setup layer buffers in GPU
-    const layerBuffer = context.buildStaticGPUBuffer('Layer Uniform Buffer', 'float', [context.getDepthPosition(layerIndex), ~~lch], GPUBufferUsage.UNIFORM)
-    const layerCodeBuffer = context.buildStaticGPUBuffer('Layer Code Buffer', 'float', [...layerCode, ...Array(128 - layerCode.length).fill(0)], GPUBufferUsage.STORAGE)
+    const layerBuffer = context.buildGPUBuffer('Layer Uniform Buffer', new Float32Array([context.getDepthPosition(layerIndex), ~~lch]), GPUBufferUsage.UNIFORM)
+    const layerCodeBuffer = context.buildGPUBuffer('Layer Code Buffer', new Float32Array(layerCode), GPUBufferUsage.STORAGE)
     // if dashed, build a texture
     const { length, image } = buildDashImage(dasharray)
     const dashTexture = length > 0 ? this.context.buildTexture(image, length, 4) : undefined
@@ -178,14 +178,14 @@ export default class LineWorkflow implements LineWorkflowSpec {
       if (layerGuide === undefined) continue
       const { sourceName, layerBuffer, layerCodeBuffer, lch, dashed, dashTexture, interactive } = layerGuide
 
-      const lineUniformBuffer = context.buildStaticGPUBuffer('Line Uniform Buffer', 'float', [cap, ~~dashed], GPUBufferUsage.UNIFORM)
+      const lineUniformBuffer = context.buildGPUBuffer('Line Uniform Buffer', new Float32Array([cap, ~~dashed]), GPUBufferUsage.UNIFORM)
       const lineBindGroup = context.buildGroup(
         'Line BindGroup',
         this.#lineBindGroupLayout,
         [lineUniformBuffer]
       )
 
-      const featureCodeBuffer = context.buildStaticGPUBuffer('Feature Code Buffer', 'float', [...featureCode, ...Array(64 - featureCode.length).fill(0)], GPUBufferUsage.STORAGE)
+      const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array(featureCode), GPUBufferUsage.STORAGE)
       const bindGroup = context.buildGroup(
         'Feature BindGroup',
         context.featureBindGroupLayout,
@@ -265,7 +265,7 @@ export default class LineWorkflow implements LineWorkflowSpec {
       multisample: { count: sampleCount },
       depthStencil: {
         depthWriteEnabled: true,
-        depthCompare: 'less',
+        depthCompare: 'less-equal',
         format: 'depth24plus-stencil8',
         stencilFront: stencilState,
         stencilBack: stencilState,

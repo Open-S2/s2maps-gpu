@@ -34,10 +34,10 @@ export default function buildMask (division: number, context: WebGPUContext): Ma
   // return the mask
   const maskSource: MaskSource = {
     type: 'mask',
-    vertexBuffer: context.buildStaticGPUBuffer('mask vertex buffer', 'float', vertices, GPUBufferUsage.VERTEX),
-    indexBuffer: context.buildStaticGPUBuffer('mask index buffer', 'uint', indices, GPUBufferUsage.INDEX),
-    idBuffer: context.buildStaticGPUBuffer('mask fill id buffer', 'uint', Array(vertices.length / 2).fill(0), GPUBufferUsage.VERTEX),
-    codeTypeBuffer: context.buildStaticGPUBuffer('mask code type buffer', 'uint', Array(vertices.length / 2).fill(0), GPUBufferUsage.VERTEX),
+    vertexBuffer: context.buildGPUBuffer('mask vertex buffer', new Float32Array(vertices), GPUBufferUsage.VERTEX),
+    indexBuffer: context.buildGPUBuffer('mask index buffer', new Uint32Array(indices), GPUBufferUsage.INDEX),
+    idBuffer: context.buildGPUBuffer('mask fill id buffer', new Uint32Array([0]), GPUBufferUsage.VERTEX),
+    codeTypeBuffer: context.buildGPUBuffer('mask code type buffer', new Uint32Array([0]), GPUBufferUsage.VERTEX),
     count: indices.length,
     offset: 0
   }

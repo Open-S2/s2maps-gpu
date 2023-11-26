@@ -65,10 +65,10 @@ struct Bounds {
 // layer data can be created upon style invocation. This data is static and will not change
 // unless the style is edited.
 @binding(2) @group(1) var<uniform> layer: LayerUniforms;
-@binding(3) @group(1) var<storage, read> layerCode: array<f32, 128>;
+@binding(3) @group(1) var<storage, read> layerCode: array<f32>;
 // ** FEATURE DATA **
 // every feature will have it's own code to parse it's attribute data in real time
-@binding(4) @group(1) var<storage, read> featureCode: array<f32, 64>;
+@binding(4) @group(1) var<storage, read> featureCode: array<f32>;
 // ** POINT DATA **
 @binding(0) @group(2) var<uniform> bounds: Bounds;
 

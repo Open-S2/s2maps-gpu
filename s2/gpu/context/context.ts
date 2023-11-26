@@ -24,7 +24,7 @@ export default class WebGPUContext {
   interactive = false
   format: GPUTextureFormat = 'bgra8unorm'
   masks = new Map<number, MaskSource>()
-  sampleCount = 4
+  sampleCount = 1
   clearColorRGBA: [r: number, g: number, b: number, a: number] = [0, 0, 0, 0]
   // manage buffers, layouts, and bind groups
   #viewUniformBuffer!: GPUBuffer
@@ -115,28 +115,6 @@ export default class WebGPUContext {
   setDevicePixelRatio (devicePixelRatio?: number): void {
     if (devicePixelRatio !== undefined) this.devicePixelRatio = devicePixelRatio
     this.device.queue.writeBuffer(this.#viewUniformBuffer, 11 * 4, new Float32Array([this.devicePixelRatio]))
-  }
-
-  // TODO: This naming convention sucks and doesn't properly explain what's going on
-  buildStaticGPUBuffer (
-    label: string,
-    type: 'float' | 'uint' | 'int',
-    inputArray: ArrayLike<number>,
-    usage: number
-  ): GPUBuffer {
-    // prep buffer
-    const gpuBuffer = this.device.createBuffer({
-      label,
-      size: inputArray.length * 4,
-      usage,
-      mappedAtCreation: true
-    })
-    const arrayBuffer = gpuBuffer.getMappedRange()
-    const buffer = type === 'float' ? new Float32Array(arrayBuffer) : type === 'uint' ? new Uint32Array(arrayBuffer) : new Int32Array(arrayBuffer)
-    buffer.set(inputArray)
-    gpuBuffer.unmap()
-
-    return gpuBuffer
   }
 
   // https://programmer.ink/think/several-best-practices-of-webgpu.html
@@ -236,13 +214,13 @@ export default class WebGPUContext {
     }
 
     // tile binding
-    const uniformBuffer = this.buildStaticGPUBuffer('Tile Uniform Buffer', 'float', tile.uniforms, GPUBufferUsage.UNIFORM)
-    const positionBuffer = this.buildStaticGPUBuffer('Tile Position Buffer', 'float', [...tile.bottom, ...tile.top], GPUBufferUsage.UNIFORM)
+    const uniformBuffer = this.buildGPUBuffer('Tile Uniform Buffer', new Float32Array(tile.uniforms), GPUBufferUsage.UNIFORM)
+    const positionBuffer = this.buildGPUBuffer('Tile Position Buffer', new Float32Array([...tile.bottom, ...tile.top]), GPUBufferUsage.UNIFORM)
     // layer binding
-    const layerBuffer = this.buildStaticGPUBuffer('Layer Uniform Buffer', 'float', [1, 0], GPUBufferUsage.UNIFORM)
-    const layerCodeBuffer = this.buildStaticGPUBuffer('Layer Code Buffer', 'float', Array(128).fill(0), GPUBufferUsage.STORAGE)
+    const layerBuffer = this.buildGPUBuffer('Layer Uniform Buffer', new Float32Array([1, 0]), GPUBufferUsage.UNIFORM)
+    const layerCodeBuffer = this.buildGPUBuffer('Layer Code Buffer', new Float32Array([0]), GPUBufferUsage.STORAGE)
     // feature binding
-    const featureCodeBuffer = this.buildStaticGPUBuffer('Feature Code Buffer', 'float', Array(64).fill(0), GPUBufferUsage.STORAGE)
+    const featureCodeBuffer = this.buildGPUBuffer('Feature Code Buffer', new Float32Array([0]), GPUBufferUsage.STORAGE)
     // store the group
     const bindGroup = this.buildGroup(
       'Feature BindGroup',

@@ -103,8 +103,8 @@ export default class FillWorkflow implements FillWorkflowSpec {
       layerCode.push(...encodeLayerAttribute(paint, lch))
     }
     // 3) Setup layer buffers in GPU
-    const layerBuffer = context.buildStaticGPUBuffer('Layer Uniform Buffer', 'float', [context.getDepthPosition(layerIndex), ~~lch], GPUBufferUsage.UNIFORM)
-    const layerCodeBuffer = context.buildStaticGPUBuffer('Layer Code Buffer', 'float', [...layerCode, ...Array(128 - layerCode.length).fill(0)], GPUBufferUsage.STORAGE)
+    const layerBuffer = context.buildGPUBuffer('Layer Uniform Buffer', new Float32Array([context.getDepthPosition(layerIndex), ~~lch]), GPUBufferUsage.UNIFORM)
+    const layerCodeBuffer = context.buildGPUBuffer('Layer Code Buffer', new Float32Array(layerCode), GPUBufferUsage.STORAGE)
     // 4) Store layer guide
     this.layerGuides.set(layerIndex, {
       sourceName: source,
@@ -131,7 +131,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
     const layer = this.layerGuides.get(layerIndex)
     if (layer === undefined) return
     const { sourceName, layerBuffer, layerCodeBuffer, lch, invert, opaque, interactive } = layer
-    const featureCodeBuffer = context.buildStaticGPUBuffer('Feature Code Buffer', 'float', Array(64).fill(0), GPUBufferUsage.STORAGE)
+    const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array([0]), GPUBufferUsage.STORAGE)
     const bindGroup = context.buildGroup(
       'Feature BindGroup',
       context.featureBindGroupLayout,
@@ -208,7 +208,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
 
       // TODO: we need to create two features if interactive is true.
 
-      const featureCodeBuffer = context.buildStaticGPUBuffer('Feature Code Buffer', 'float', [...featureCode, ...Array(64 - featureCode.length).fill(0)], GPUBufferUsage.STORAGE)
+      const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array(featureCode), GPUBufferUsage.STORAGE)
       const bindGroup = context.buildGroup(
         'Feature BindGroup',
         context.featureBindGroupLayout,
@@ -255,10 +255,10 @@ export default class FillWorkflow implements FillWorkflowSpec {
     const maskFill = type === 'mask-fill'
 
     const stencilState: GPUStencilFaceState = {
-      compare: (mask || invert) ? 'always' : 'equal',
+      compare: (mask) ? 'always' : 'equal',
       failOp: 'keep',
-      depthFailOp: invert ? 'invert' : 'keep',
-      passOp: invert ? 'invert' : 'replace'
+      depthFailOp: 'keep',
+      passOp: 'replace'
     }
 
     return await device.createRenderPipelineAsync({

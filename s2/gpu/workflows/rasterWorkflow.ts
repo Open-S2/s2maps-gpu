@@ -67,8 +67,8 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
       layerCode.push(...encodeLayerAttribute(paint, lch))
     }
     // 3) Setup layer buffers in GPU
-    const layerBuffer = context.buildStaticGPUBuffer('Layer Uniform Buffer', 'float', [context.getDepthPosition(layerIndex), ~~lch], GPUBufferUsage.UNIFORM)
-    const layerCodeBuffer = context.buildStaticGPUBuffer('Layer Code Buffer', 'float', [...layerCode, ...Array(128 - layerCode.length).fill(0)], GPUBufferUsage.STORAGE)
+    const layerBuffer = context.buildGPUBuffer('Layer Uniform Buffer', new Float32Array([context.getDepthPosition(layerIndex), ~~lch]), GPUBufferUsage.UNIFORM)
+    const layerCodeBuffer = context.buildGPUBuffer('Layer Code Buffer', new Float32Array(layerCode), GPUBufferUsage.STORAGE)
     // 4) Store layer guide
     this.layerGuides.set(layerIndex, {
       sourceName: source,
@@ -121,7 +121,7 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
       if (layerGuide === undefined) continue
       const { layerBuffer, layerCodeBuffer, resampling, fadeDuration, lch } = layerGuide
 
-      const rasterFadeBuffer = context.buildStaticGPUBuffer('Raster Uniform Buffer', 'float', [1], GPUBufferUsage.UNIFORM)
+      const rasterFadeBuffer = context.buildGPUBuffer('Raster Uniform Buffer', new Float32Array([1]), GPUBufferUsage.UNIFORM)
       const sampler = context.buildSampler(resampling, false)
       const rasterBindGroup = context.device.createBindGroup({
         label: 'Raster BindGroup',
@@ -141,7 +141,7 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
           }
         ]
       })
-      const featureCodeBuffer = context.buildStaticGPUBuffer('Feature Code Buffer', 'float', [...code, ...Array(64 - code.length).fill(0)], GPUBufferUsage.STORAGE)
+      const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array(code.length > 0 ? code : [0]), GPUBufferUsage.STORAGE)
       const bindGroup = context.buildGroup(
         'Feature BindGroup',
         context.featureBindGroupLayout,

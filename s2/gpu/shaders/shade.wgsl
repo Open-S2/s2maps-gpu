@@ -60,7 +60,7 @@ struct LayerUniforms {
 // layer data can be created upon style invocation. This data is static and will not change
 // unless the style is edited.
 @binding(2) @group(1) var<uniform> layer: LayerUniforms;
-@binding(3) @group(1) var<storage, read> layerCode: array<f32, 128>;
+@binding(3) @group(1) var<storage, read> layerCode: array<f32>;
 
 fn stToUV (s: f32) -> f32 {
   var mutS = s;
