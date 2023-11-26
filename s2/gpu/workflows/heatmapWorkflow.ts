@@ -134,8 +134,8 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
       layerCode.push(...encodeLayerAttribute(paint, lch))
     }
     // 3) Setup layer buffers in GPU
-    const layerBuffer = context.buildStaticGPUBuffer('Layer Uniform Buffer', 'float', [context.getDepthPosition(layerIndex), ~~lch], GPUBufferUsage.UNIFORM)
-    const layerCodeBuffer = context.buildStaticGPUBuffer('Layer Code Buffer', 'float', [...layerCode, ...Array(128 - layerCode.length).fill(0)], GPUBufferUsage.STORAGE)
+    const layerBuffer = context.buildGPUBuffer('Layer Uniform Buffer', new Float32Array([context.getDepthPosition(layerIndex), ~~lch]), GPUBufferUsage.UNIFORM)
+    const layerCodeBuffer = context.buildGPUBuffer('Layer Code Buffer', new Float32Array(layerCode), GPUBufferUsage.STORAGE)
     const colorRampTexture = context.buildTexture(buildColorRamp(colorRamp, lch), 256, 5, 1, 'rgba8unorm')
     const renderTarget = this.#buildLayerRenderTarget()
     // 4) Store layer guide
@@ -236,13 +236,13 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
       if (layerGuide === undefined) continue
       const { sourceName, lch, colorRamp, layerBuffer, layerCodeBuffer } = layerGuide
 
-      const heatmapUniformBuffer = context.buildStaticGPUBuffer('Heatmap Uniform Buffer', 'float', [0, 0, 8192, 8192], GPUBufferUsage.UNIFORM)
+      const heatmapUniformBuffer = context.buildGPUBuffer('Heatmap Uniform Buffer', new Float32Array([0, 0, 8192, 8192]), GPUBufferUsage.UNIFORM)
       const heatmapBindGroup = context.buildGroup(
         'Heatmap BindGroup',
         this.#heatmapTextureBindGroupLayout,
         [heatmapUniformBuffer]
       )
-      const featureCodeBuffer = context.buildStaticGPUBuffer('Feature Code Buffer', 'float', [...featureCode, ...Array(64 - featureCode.length).fill(0)], GPUBufferUsage.STORAGE)
+      const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array(featureCode), GPUBufferUsage.STORAGE)
       const bindGroup = context.buildGroup(
         'Feature BindGroup',
         context.featureBindGroupLayout,

@@ -78,8 +78,8 @@ export default class PointWorkflow implements PointWorkflowSpec {
       layerCode.push(...encodeLayerAttribute(paint, lch))
     }
     // 3) Setup layer buffers in GPU
-    const layerBuffer = context.buildStaticGPUBuffer('Layer Uniform Buffer', 'float', [context.getDepthPosition(layerIndex), ~~lch], GPUBufferUsage.UNIFORM)
-    const layerCodeBuffer = context.buildStaticGPUBuffer('Layer Code Buffer', 'float', [...layerCode, ...Array(128 - layerCode.length).fill(0)], GPUBufferUsage.STORAGE)
+    const layerBuffer = context.buildGPUBuffer('Layer Uniform Buffer', new Float32Array([context.getDepthPosition(layerIndex), ~~lch]), GPUBufferUsage.UNIFORM)
+    const layerCodeBuffer = context.buildGPUBuffer('Layer Code Buffer', new Float32Array(layerCode), GPUBufferUsage.STORAGE)
     // 4) Store layer guide
     this.layerGuides.set(layerIndex, {
       sourceName: source,
@@ -137,13 +137,13 @@ export default class PointWorkflow implements PointWorkflowSpec {
       if (layerGuide === undefined) continue
       const { sourceName, lch, interactive, layerBuffer, layerCodeBuffer } = layerGuide
 
-      const pointUniformBuffer = context.buildStaticGPUBuffer('Point Uniform Buffer', 'float', [0, 0, 8192, 8192], GPUBufferUsage.UNIFORM)
+      const pointUniformBuffer = context.buildGPUBuffer('Point Uniform Buffer', new Float32Array([0, 0, 8192, 8192]), GPUBufferUsage.UNIFORM)
       const pointBindGroup = context.buildGroup(
         'Point BindGroup',
         this.#pointBindGroupLayout,
         [pointUniformBuffer]
       )
-      const featureCodeBuffer = context.buildStaticGPUBuffer('Feature Code Buffer', 'float', [...featureCode, ...Array(64 - featureCode.length).fill(0)], GPUBufferUsage.STORAGE)
+      const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array(featureCode), GPUBufferUsage.STORAGE)
       const bindGroup = context.buildGroup(
         'Feature BindGroup',
         context.featureBindGroupLayout,
@@ -221,7 +221,7 @@ export default class PointWorkflow implements PointWorkflowSpec {
       multisample: { count: sampleCount },
       depthStencil: {
         depthWriteEnabled: true,
-        depthCompare: 'less',
+        depthCompare: 'less-equal',
         format: 'depth24plus-stencil8',
         stencilFront: stencilState,
         stencilBack: stencilState,
