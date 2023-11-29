@@ -317,9 +317,13 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     } else {
       // prepare
       rtree.clear()
-      const res = []
+      const res: GlyphObject[] = []
       // remove empty features; sort the features before running the collisions
-      features = features.filter(feature => feature.field.length)
+      features = features.filter(feature => {
+        // corner case: sometimes the feature field could just be a group of empty codes
+        for (const code of feature.fieldCodes) if (code >= 33) return true
+        return false
+      })
       features = features.sort(featureSort)
       for (const feature of features) {
         // PRE: If icon, remap the features fieldCodes and inject color
@@ -329,6 +333,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
         // Step 2: check the rtree if we want to pre filter
         if (feature.overdraw || !rtree.collides(feature)) res.push(feature)
       }
+      this.features = res
       this.#flush(mapID, sourceName, tile.id)
     }
     // clear the features and lists for the next tile
@@ -355,14 +360,13 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
   }
 
   #flush (mapID: string, sourceName: string, tileID: bigint): void {
+    if (this.features.length === 0) return
     if (this.gpuType === 3) this.#flush3(mapID, sourceName, tileID)
     else this.#flush2(mapID, sourceName, tileID)
   }
 
   #flush2 (mapID: string, sourceName: string, tileID: bigint): void {
-    let { features } = this
-    // TODO: Is this necessary? we sorted earlier
-    features = features.sort(featureSort)
+    const { features } = this
 
     // setup draw thread variables
     const glyphFilterVertices: number[] = []
@@ -457,17 +461,13 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
   }
 
   #flush3 (mapID: string, sourceName: string, tileID: bigint): void {
-    let { features } = this
-    // TODO: Is this necessary? we sorted earlier
-    features = features.sort(featureSort)
+    const { features } = this
 
     // ID => { index: resultIndex, count: how many share the same resultIndex }
     let currIndex = 0
-    const resultIndexMap = new Map<number, { index: number, count: number }>()
+    const resultIndexMap = new Map<number, number>()
     for (const { id } of features) {
-      const result = resultIndexMap.get(id)
-      if (result === undefined) resultIndexMap.set(id, { index: currIndex++, count: 1 })
-      else result.count++
+      if (!resultIndexMap.has(id)) resultIndexMap.set(id, currIndex++)
     }
 
     // setup draw thread variables
@@ -511,14 +511,14 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
         quadCount = 0
       }
       // update filters index, store it, and store the ID, hiding the count inside the id
-      const resultMap = resultIndexMap.get(id) ?? { index: 0, count: 0 }
-      glyphFilterVertices.push(...filter, storeAsFloat32(resultMap.index), storeAsFloat32(id + (resultMap.count << 24)))
+      const resultMap = resultIndexMap.get(id) ?? 0
+      glyphFilterVertices.push(...filter, storeAsFloat32(resultMap), storeAsFloat32(id))
       filterCount++
       glyphQuads.push(...quads)
       const qCount = quads.length / QUAD_SIZE
       quadCount += qCount
       // add the feature's index for each quad
-      for (let i = 0; i < qCount; i++) glyphQuadIDs.push(resultMap.index)
+      for (let i = 0; i < qCount; i++) glyphQuadIDs.push(resultMap)
       // add color data
       if (color.length > 0) glyphColors.push(...feature.color.map(c => c / 255))
       else for (let i = 0; i < qCount; i++) glyphColors.push(1, 1, 1, 1)

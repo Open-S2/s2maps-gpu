@@ -89,13 +89,15 @@ export default function buildGlyphQuads (
   // build bbox given current size
   // const bbox = [anchorOffsetX, anchorOffsetY, maxWidth + anchorOffsetX, maxHeight + anchorOffsetY]
   // set minX, maxX, minY, maxY in the feature
-  feature.minX = (s * 1024) + adjustX + (anchorOffsetX * size)
-  feature.minY = (t * 1024) + adjustY + (anchorOffsetY * size)
-  feature.maxX = feature.minX + (maxWidth * size)
-  feature.maxY = feature.minY + (maxHeight * size)
+  feature.minX = (s * 1_024) + adjustX + (anchorOffsetX * size) - padding[0]
+  feature.minY = (t * 1_024) + adjustY + (anchorOffsetY * size) - padding[1]
+  feature.maxX = feature.minX + (maxWidth * size) + (padding[0] * 2)
+  feature.maxY = feature.minY + (maxHeight * size) + (padding[1] * 2)
   // store the filter
   feature.filter = [s * 8_192, t * 8_192, anchorOffsetX, anchorOffsetY, ...padding, maxWidth, maxHeight]
 }
+// var XY = ((container.xy * size) - padding) / uAspect; // setup the xy positional change in pixels
+//   var WH = ((container.wh * size) + (padding * 2)) / uAspect;
 
 // MYANMAR MEDIALS go after the characters they are attached to
 function adjustMedials (fieldCodes: number[]): number[] {

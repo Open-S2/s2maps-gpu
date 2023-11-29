@@ -301,6 +301,7 @@ export interface GlyphLayerStyle extends LayerStyleBase {
   // properties
   overdraw?: boolean
   interactive?: boolean
+  viewCollisions?: boolean
   cursor?: Cursor
 }
 export interface GlyphLayerDefinition extends LayerDefinitionBase {
@@ -329,12 +330,14 @@ export interface GlyphLayerDefinition extends LayerDefinitionBase {
   // properties
   overdraw: boolean
   interactive: boolean
+  viewCollisions: boolean
   cursor: Cursor
 }
 export interface GlyphWorkflowLayerGuide extends LayerWorkflowGuideBase {
   interactive: boolean
   cursor: Cursor
   overdraw: boolean
+  viewCollisions: boolean
 }
 export interface GlyphWorkflowLayerGuideGPU extends GlyphWorkflowLayerGuide {
   layerBuffer: GPUBuffer

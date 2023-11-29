@@ -164,6 +164,7 @@ export interface GlyphFeature extends FeatureBase {
   overdraw: boolean
   isIcon: boolean
   interactive: boolean
+  viewCollisions: boolean
   bounds?: [number, number, number, number]
   size?: number
   strokeWidth?: number
