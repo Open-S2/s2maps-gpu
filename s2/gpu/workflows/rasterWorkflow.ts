@@ -127,18 +127,9 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
         label: 'Raster BindGroup',
         layout: this.#rasterBindGroupLayout,
         entries: [
-          {
-            binding: 0,
-            resource: { buffer: rasterFadeBuffer }
-          },
-          {
-            binding: 1,
-            resource: sampler
-          },
-          {
-            binding: 2,
-            resource: source.texture.createView()
-          }
+          { binding: 0, resource: { buffer: rasterFadeBuffer } },
+          { binding: 1, resource: sampler },
+          { binding: 2, resource: source.texture.createView() }
         ]
       })
       const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array(code.length > 0 ? code : [0]), GPUBufferUsage.STORAGE)
@@ -186,21 +177,12 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
     this.#rasterBindGroupLayout = context.device.createBindGroupLayout({
       label: 'Raster BindGroupLayout',
       entries: [
-        {
-          binding: 0,
-          visibility: GPUShaderStage.FRAGMENT,
-          buffer: { type: 'uniform', hasDynamicOffset: false, minBindingSize: 0 }
-        },
-        {
-          binding: 1,
-          visibility: GPUShaderStage.FRAGMENT,
-          sampler: { type: 'filtering' }
-        },
-        {
-          binding: 2,
-          visibility: GPUShaderStage.FRAGMENT,
-          texture: { sampleType: 'float' }
-        }
+        // uniforms
+        { binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform', hasDynamicOffset: false, minBindingSize: 0 } },
+        // sampler
+        { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+        // texture
+        { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } }
       ]
     })
 
@@ -216,6 +198,7 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
     }
 
     return await device.createRenderPipelineAsync({
+      label: 'Raster Pipeline',
       layout,
       vertex: {
         module,

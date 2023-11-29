@@ -247,6 +247,7 @@ export default class LineWorkflow implements LineWorkflowSpec {
     }
 
     return await device.createRenderPipelineAsync({
+      label: 'Line Pipeline',
       layout,
       vertex: {
         module,

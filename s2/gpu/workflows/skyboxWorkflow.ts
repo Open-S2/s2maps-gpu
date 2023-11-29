@@ -68,18 +68,9 @@ export default class SkyboxWorkflow implements SkyboxWorkflowSpec {
       label: 'Skybox BindGroup',
       layout: this.#skyboxBindGroupLayout,
       entries: [
-        {
-          binding: 0,
-          resource: { buffer: this.#matrixBuffer }
-        },
-        {
-          binding: 1,
-          resource: this.#sampler
-        },
-        {
-          binding: 2,
-          resource: this.#cubeMap.createView({ dimension: 'cube' })
-        }
+        { binding: 0, resource: { buffer: this.#matrixBuffer } },
+        { binding: 1, resource: this.#sampler },
+        { binding: 2, resource: this.#cubeMap.createView({ dimension: 'cube' }) }
       ]
     })
     // request each face and assign to cube map
@@ -96,30 +87,23 @@ export default class SkyboxWorkflow implements SkyboxWorkflowSpec {
     this.#skyboxBindGroupLayout = device.createBindGroupLayout({
       label: 'Skybox BindGroupLayout',
       entries: [
-        { // matrix
-          binding: 0,
-          visibility: GPUShaderStage.VERTEX,
-          buffer: { type: 'uniform', hasDynamicOffset: false, minBindingSize: 0 }
-        },
-        { // sampler
-          binding: 1,
-          visibility: GPUShaderStage.FRAGMENT,
-          sampler: { type: 'filtering' }
-        },
-        { // texture
-          binding: 2,
-          visibility: GPUShaderStage.FRAGMENT,
-          texture: { sampleType: 'float', viewDimension: 'cube' }
-        }
+        // matrix
+        { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform', hasDynamicOffset: false, minBindingSize: 0 } },
+        // sampler
+        { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+        // texture
+        { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: 'cube' } }
       ]
     })
 
-    const module = device.createShaderModule({ code: shaderCode })
+    const module = device.createShaderModule({ label: 'Skybox Shader Module', code: shaderCode })
     const layout = device.createPipelineLayout({
+      label: 'Skybox Pipeline Layout',
       bindGroupLayouts: [frameBindGroupLayout, this.#skyboxBindGroupLayout]
     })
 
     return await device.createRenderPipelineAsync({
+      label: 'Skybox Pipeline',
       layout,
       vertex: {
         module,

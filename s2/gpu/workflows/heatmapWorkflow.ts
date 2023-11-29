@@ -58,21 +58,12 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
     this.#heatmapBindGroupLayout = device.createBindGroupLayout({
       label: 'Heatmap BindGroupLayout',
       entries: [
-        { // sampler
-          binding: 1,
-          visibility: GPUShaderStage.FRAGMENT,
-          sampler: { type: 'filtering' }
-        },
-        { // render target
-          binding: 2,
-          visibility: GPUShaderStage.FRAGMENT,
-          texture: { sampleType: 'float' }
-        },
-        { // color ramp
-          binding: 3,
-          visibility: GPUShaderStage.FRAGMENT,
-          texture: { sampleType: 'float' }
-        }
+        // sampler
+        { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+        // render target
+        { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+        // color ramp
+        { binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } }
       ]
     })
 
@@ -180,18 +171,9 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
     return this.context.device.createBindGroup({
       layout: this.#heatmapBindGroupLayout,
       entries: [
-        {
-          binding: 1,
-          resource: this.#defaultSampler
-        },
-        {
-          binding: 2,
-          resource: renderTarget.createView()
-        },
-        { // color ramp
-          binding: 3,
-          resource: colorRamp.createView()
-        }
+        { binding: 1, resource: this.#defaultSampler },
+        { binding: 2, resource: renderTarget.createView() },
+        { binding: 3, resource: colorRamp.createView() }
       ]
     })
   }
@@ -302,6 +284,7 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
     }
 
     return await device.createRenderPipelineAsync({
+      label: `Heatmap ${type} Pipeline`,
       layout,
       vertex: {
         module,

@@ -35,6 +35,7 @@ import type {
 } from 'workers/worker.spec'
 import type { TileGPU as Tile } from 'source/tile.spec'
 import type Projector from 'ui/camera/projector'
+import type { GlyphImages } from 'workers/source/glyphSource'
 
 // SOURCES
 
@@ -74,9 +75,8 @@ export interface FillSource {
 export interface GlyphSource {
   type: 'glyph'
   glyphFilterBuffer: GPUBuffer
-  glyphFilterIDBuffer: GPUBuffer
   glyphQuadBuffer: GPUBuffer
-  glyphQuadIDBuffer: GPUBuffer
+  glyphQuadIndexBuffer: GPUBuffer
   glyphColorBuffer: GPUBuffer
   destroy: () => void
 }
@@ -167,6 +167,10 @@ export interface GlyphFeature extends FeatureBase {
   bounds?: [number, number, number, number]
   size?: number
   strokeWidth?: number
+  glyphBindGroup: GPUBindGroup
+  glyphStrokeBindGroup: GPUBindGroup
+  glyphFilterBindGroup: GPUBindGroup
+  glyphUniformBuffer: GPUBuffer
 }
 
 // ** HEATMAP **
@@ -241,7 +245,6 @@ export type Features =
 
 export interface Workflows {
   fill?: FillWorkflow
-  glyphFilter?: GlyphFilterWorkflow
   glyph?: GlyphWorkflow
   heatmap?: HeatmapWorkflow
   line?: LineWorkflow
@@ -256,23 +259,23 @@ export interface Workflows {
 }
 
 export interface WorkflowImports {
-  fill: FillWorkflow
+  fill: () => FillWorkflow
   // glyphFilter: () => Promise<{ default: (context: WebGPUContext) => Promise<GlyphFilterWorkflow> }>
-  // glyph: () => Promise<{ default: (context: WebGPUContext) => Promise<GlyphWorkflow> }>
-  heatmap: HeatmapWorkflow
-  line: LineWorkflow
-  point: PointWorkflow
-  raster: RasterWorkflow
+  glyph: () => GlyphWorkflow
+  heatmap: () => HeatmapWorkflow
+  line: () => LineWorkflow
+  point: () => PointWorkflow
+  raster: () => RasterWorkflow
   // hillshade: () => Promise<{ default: (context: WebGPUContext) => Promise<HillshadeWorkflow> }>
   // sensor: () => Promise<{ default: (context: WebGPUContext) => Promise<SensorWorkflow> }>
-  shade: ShadeWorkflow
-  wallpaper: WallpaperWorkflow
-  skybox: SkyboxWorkflow
+  shade: () => ShadeWorkflow
+  wallpaper: () => WallpaperWorkflow
+  skybox: () => SkyboxWorkflow
 }
 
 export type WorkflowKey = keyof Workflow
 
-export type WorkflowType = 'fill' | 'glyph' | 'heatmap' | 'line' | 'point' | 'raster' | 'hillshade' | 'sensor' | 'shade' | 'skybox' | 'wallpaper'
+export type WorkflowType = 'fill' | 'heatmap' | 'line' | 'point' | 'raster' | 'shade' | 'skybox' | 'wallpaper'
 
 export interface Workflow {
   context: WebGPUContext
@@ -290,12 +293,11 @@ export interface FillWorkflow extends Workflow {
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: FillLayerStyle) => FillLayerDefinition
 }
 
-export interface GlyphFilterWorkflow extends Workflow {
-}
-
 export interface GlyphWorkflow extends Workflow {
   buildSource: (glyphData: GlyphData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: GlyphLayerStyle) => GlyphLayerDefinition
+  injectImages: (maxHeight: number, images: GlyphImages) => void
+  computeFilters: (features: GlyphFeature[]) => void
 }
 
 export interface HeatmapWorkflow extends Workflow {

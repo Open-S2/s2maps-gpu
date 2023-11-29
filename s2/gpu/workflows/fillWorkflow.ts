@@ -55,8 +55,9 @@ export default class FillWorkflow implements FillWorkflowSpec {
 
   async setup (): Promise<void> {
     const { device, frameBindGroupLayout, featureBindGroupLayout } = this.context
-    this.#shaderModule = device.createShaderModule({ code: shaderCode })
+    this.#shaderModule = device.createShaderModule({ label: 'Fill Shader Module', code: shaderCode })
     this.#pipelineLayout = device.createPipelineLayout({
+      label: 'Fill Pipeline Layout',
       bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout]
     })
     this.maskPipeline = await this.#getPipeline('mask')
@@ -262,6 +263,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
     }
 
     return await device.createRenderPipelineAsync({
+      label: `Fill ${type} Pipeline`,
       layout: this.#pipelineLayout,
       vertex: {
         module: this.#shaderModule,

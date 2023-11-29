@@ -2,10 +2,10 @@ const PI = 3.141592653589793238;
 
 struct VertexOutput {
   @builtin(position) Position: vec4<f32>,
-  @location(0) texcoord: vec2<f32>,
-  @location(1) opacity: f32,
-  @location(2) saturation: f32,
-  @location(3) contrast: f32,
+  @location(0) color: vec4<f32>,
+  @location(1) texcoord: vec2<f32>,
+  @location(2) buf: f32,
+  @location(3) gamma: f32,
 };
 
 struct ViewUniforms {
@@ -37,12 +37,55 @@ struct TilePosition {
   bottomLeft: vec2<f32>,
   bottomRight: vec2<f32>,
   topLeft: vec2<f32>,
-  topRight: vec2<f32>
+  topRight: vec2<f32>,
 };
 
 struct LayerUniforms {
   depthPos: f32,
   useLCH: f32, // use LCH coloring or RGB if false
+};
+
+struct GlyphUniforms {
+  indexOffset: u32, // where to start searching the collisionResults array
+  // TODO: drawType should be local to the glyph
+  // drawType: f32, // 0 -> MTSDF, 1 -> SDF, 2 -> RAW_IMAGE
+  isIcon: f32,
+  overdraw: f32,
+  deltaTime: f32, // time since last frame
+  deltaDuration: f32, // duration of an animation cycle
+};
+
+struct Bounds {
+  left: f32,
+  bottom: f32,
+  right: f32,
+  top: f32,
+};
+
+struct GlyphContainer {
+  st: vec2<f32>, // s & t position relative to the tile's 0-1 bounds
+  xy: vec2<f32>, // xy starting position of the glyph box relative to the final computed position
+  pad: vec2<f32>, // padding around the container
+  wh: vec2<f32>, // width & height of the container
+  index: u32, // index in the collision result array without offset (needed because some Containers share indexes)
+  id: u32, // identifier - the last 8 bits explain how many containers it shares with
+};
+
+struct BBox {
+  left: f32,
+  bottom: f32,
+  right: f32,
+  top: f32,
+};
+
+// Collisions can be with the S2 sphere, tile bounds, or other containers.
+struct CollisionResultAtomic {
+  collided: atomic<u32>, // 1 for collision, 0 for no collision.
+  opacity: f32, // Opacity value, ranges between 0.0 and 1.0
+};
+struct CollisionResult {
+  collided: u32, // 1 for collision, 0 for no collision.
+  opacity: f32, // Opacity value, ranges between 0.0 and 1.0
 };
 
 // ** FRAME DATA **
@@ -62,10 +105,19 @@ struct LayerUniforms {
 // ** FEATURE DATA **
 // every feature will have it's own code to parse it's attribute data in real time
 @binding(4) @group(1) var<storage, read> featureCode: array<f32>;
-// ** RASTER DATA **
-@binding(0) @group(2) var<uniform> rasterFade: f32;
-@binding(1) @group(2) var rasterSampler: sampler;
-@binding(2) @group(2) var rasterTexture: texture_2d<f32>;
+// ** GLYPH DATA **
+@binding(0) @group(2) var<uniform> bounds: Bounds;
+@binding(1) @group(2) var<uniform> glyph: GlyphUniforms;
+@binding(2) @group(2) var glyphSampler: sampler;
+@binding(3) @group(2) var glyphTexture: texture_2d<f32>;
+// containers are mapped to bboxes.
+// indexes of containers and bboxes are the same and map to the location in collisionResults
+@binding(4) @group(2) var<storage, read> containers: array<GlyphContainer>;
+@binding(5) @group(2) var<storage, read_write> bboxes: array<BBox>;
+@binding(6) @group(2) var<storage, read_write> collisionResults: array<CollisionResult>;
+// @binding(7) @group(2) var<storage, read_write> collisionResultsAtomic: array<CollisionResultAtomic>;
+@binding(8) @group(2) var<storage, read> collisionResultsReadOnly: array<CollisionResult>;
+@binding(9) @group(2) var<uniform> isStroke: f32; // 1 for stroke, 0 for fill
 
 fn LCH2LAB (lch: vec4<f32>) -> vec4<f32> { // r -> l ; g -> c ; b -> h
   var h = lch.b * (PI / 180.);
@@ -180,6 +232,48 @@ fn cBlindAdjust (rgba: vec4<f32>) -> vec4<f32> {
   );
 }
 
+// y = e^x OR y = Math.pow(2, 10 * x)
+fn exponentialInterpolation (inputVal: f32, start: f32, end: f32, base: f32) -> f32 {
+  // grab change
+  var diff = end - start;
+  if (diff == 0.) { return 0.; }
+  // refine base value
+  var mutBase = base;
+  if (mutBase <= 0.) { mutBase = 0.1; }
+  else if (mutBase > 2.) { mutBase = 2.; }
+  // grab diff
+  var progress = inputVal - start;
+  // linear case
+  if (mutBase == 1.) { return progress / diff; }
+  // solve
+  return (pow(mutBase, progress) - 1.) / (pow(mutBase, diff) - 1.);
+}
+
+fn interpolateColor (color1: vec4<f32>, color2: vec4<f32>, t: f32) -> vec4<f32> {
+  // dummy check
+  if (t == 0.) { return color1; }
+  else if (t == 1.) { return color2; }
+  var hue = 0.;
+  // LCH interpolation
+  if (layer.useLCH != 0.) { // create proper hue translation
+    var dh = 0.;
+    if (color2[0] > color1[0] && color2[0] - color1[0] > 180.) { dh = color2[0] - color1[0] + 360.; }
+    else if (color2[0] < color1[0] && color1[0] - color2[0] > 180.) { dh = color2[0] + 360. - color1[0]; }
+    else { dh = color2[0] - color1[0]; }
+    hue = color1[0] + t * dh;
+  } else { // otherwise red
+    hue = color1[0] + t * (color2[0] - color1[0]);
+  }
+  // saturation or green
+  var sat = color1[1] + t * (color2[1] - color1[1]);
+  // luminosity or blue
+  var lbv = color1[2] + t * (color2[2] - color1[2]);
+  // alpha
+  var alpha = color1[3] + t * (color2[3] - color1[3]);
+  // create the new color
+  return vec4<f32>(hue, sat, lbv, alpha);
+}
+
 fn stToUV (s: f32) -> f32 {
   var mutS = s;
   // compressed VTs are extended, so we must squeeze them back to [0,1]
@@ -246,48 +340,6 @@ fn getZero () -> vec4<f32> {
   } else { return vec4<f32>(0., 0., 1., 1.); }
 }
 
-// y = e^x OR y = Math.pow(2, 10 * x)
-fn exponentialInterpolation (inputVal: f32, start: f32, end: f32, base: f32) -> f32 {
-  // grab change
-  var diff = end - start;
-  if (diff == 0.) { return 0.; }
-  // refine base value
-  var mutBase = base;
-  if (mutBase <= 0.) { mutBase = 0.1; }
-  else if (mutBase > 2.) { mutBase = 2.; }
-  // grab diff
-  var progress = inputVal - start;
-  // linear case
-  if (mutBase == 1.) { return progress / diff; }
-  // solve
-  return (pow(mutBase, progress) - 1.) / (pow(mutBase, diff) - 1.);
-}
-
-fn interpolateColor (color1: vec4<f32>, color2: vec4<f32>, t: f32) -> vec4<f32> {
-  // dummy check
-  if (t == 0.) { return color1; }
-  else if (t == 1.) { return color2; }
-  var hue = 0.;
-  // LCH interpolation
-  if (layer.useLCH != 0.) { // create proper hue translation
-    var dh = 0.;
-    if (color2[0] > color1[0] && color2[0] - color1[0] > 180.) { dh = color2[0] - color1[0] + 360.; }
-    else if (color2[0] < color1[0] && color1[0] - color2[0] > 180.) { dh = color2[0] + 360. - color1[0]; }
-    else { dh = color2[0] - color1[0]; }
-    hue = color1[0] + t * dh;
-  } else { // otherwise red
-    hue = color1[0] + t * (color2[0] - color1[0]);
-  }
-  // saturation or green
-  var sat = color1[1] + t * (color2[1] - color1[1]);
-  // luminosity or blue
-  var lbv = color1[2] + t * (color2[2] - color1[2]);
-  // alpha
-  var alpha = color1[3] + t * (color2[3] - color1[3]);
-  // create the new color
-  return vec4<f32>(hue, sat, lbv, alpha);
-}
-
 fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndexPtr: ptr<function, u32>) -> vec4<f32> {
   let uInputs = array<f32, 10>(view.zoom, view.lon, view.lat, view.bearing, view.pitch, view.time, view.aspectX, view.aspectY, view.featureState, view.curFeature);
   // prep result and variables
@@ -342,12 +394,11 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndexPtr: pt
       // now that we have the inputVal, we iterate through and find a match
       conditionInput = layerCode[index];
       loop {
-        if (inputVal == conditionInput) { break; }
+        // if we found condition, move on; if we hit the default, than the value does not exist
+        if (inputVal == conditionInput || conditionInput == 0.) { break; }
         // increment index & find length
         index += (u32(layerCode[index + 1]) >> 10) + 1;
         conditionInput = layerCode[index];
-        // if we hit the default, than the value does not exist
-        if (conditionInput == 0.) { break; }
       }
       index++; // increment to conditionEncoding
       // now add subCondition to be parsed
@@ -457,48 +508,98 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndexPtr: pt
   return res;
 }
 
-fn getSaturation (saturation: f32) -> f32 {
-  var mutSaturation = saturation;
-  mutSaturation = clamp(mutSaturation, -1., 1.);
-  if (mutSaturation > 0.) {
-    return 1. - 1. / (1.001 - mutSaturation);
-  } else {
-    return -mutSaturation;
-  }
+fn median(r: f32, g: f32, b: f32) -> f32 {
+  return max(min(r, g), min(max(r, g), b));
 }
 
-fn getContrast (contrast: f32) -> f32 {
-  var mutContrast = contrast;
-  mutContrast = clamp(mutContrast, -1., 1.);
-  if (mutContrast > 0.) {
-    return 1. / (1. - mutContrast);
-  } else {
-    return 1. + mutContrast;
-  }
-}
+const UVs = array<vec2<f32>, 6>(
+  vec2(0., 0.),
+  vec2(1., 0.),
+  vec2(0., 1.),
+  vec2(1., 0.),
+  vec2(1., 1.),
+  vec2(0., 1.)
+);
+
+const MAX_GAMMA = 0.105;
+const MIN_GAMMA = 0.0525;
+const ICON_GAMMA = 0.08;
+
+/* DRAW PASS */
 
 @vertex
 fn vMain(
-  @location(0) position: vec2<f32>
+  @builtin(vertex_index) VertexIndex: u32,
+  @location(0) st: vec2<f32>,
+  @location(1) xy: vec2<f32>,
+  @location(2) offset: vec2<f32>,
+  @location(3) wh: vec2<f32>,
+  @location(4) texXY: vec2<f32>,
+  @location(5) texWH: vec2<f32>,
+  @location(6) collisionIndex: u32, // index to check in collisionResults
+  @location(7) iconColor: vec4<f32>,
 ) -> VertexOutput {
   var output: VertexOutput;
+  let uv = UVs[VertexIndex];
+  let uIsIcon = glyph.isIcon == 1.;
 
-  // set where we are on the texture
-  var pos = position / 8192.;
-  output.texcoord = pos;
+  // check if collision then we just return
+  if (collisionResultsReadOnly[collisionIndex + glyph.indexOffset].collided == 1u) { return output; }
+
+  // setup position
+  var tmpPos = getPos(st);
+  tmpPos /= tmpPos.w;
+  var tmpPosXY = tmpPos.xy;
 
   var index = 0u;
   var featureIndex = 0u;
 
-  output.opacity = decodeFeature(false, &index, &featureIndex)[0];
-  output.saturation = decodeFeature(false, &index, &featureIndex)[0];
-  output.contrast = decodeFeature(false, &index, &featureIndex)[0];
+  // decode properties
+  var tmpSize = decodeFeature(false, &index, &featureIndex)[0];
+  if (uIsIcon) { tmpSize = decodeFeature(false, &index, &featureIndex)[0]; }
+  else { _ = decodeFeature(false, &index, &featureIndex)[0]; }
+  var size = tmpSize * view.devicePixelRatio * 2.;
+  // color
+  var color = vec4<f32>(0.);
+  if (uIsIcon) {
+    color = cBlindAdjust(iconColor);
+  } else {
+    color = decodeFeature(true, &index, &featureIndex);
+  }
+  // stroke properties
+  output.buf = 0.5;
+  if (isStroke == 1.) {
+    var strokeWidth = decodeFeature(false, &index, &featureIndex)[0];
+    if (strokeWidth > 0.) {
+      color = decodeFeature(true, &index, &featureIndex);
+      output.buf = 1. - clamp(0.5 + (strokeWidth / 2.), 0.5, 0.999); // strokeWidth is 0->1
+    } else { return output; }
+  }
+  output.color = vec4<f32>(color.rgb * color.a, color.a);
 
-  // set position
-  var tmpPos = getPos(position);
-  tmpPos /= tmpPos.w;
-  tmpPos.z = layer.depthPos;
-  output.Position = vec4(tmpPos.xy, layer.depthPos, 1.);
+  // set gamma based upon size
+  output.gamma = ICON_GAMMA;
+  if (!uIsIcon) {
+    output.gamma = max(
+      MIN_GAMMA,
+      min(
+        MAX_GAMMA,
+        ((MAX_GAMMA - MIN_GAMMA) / (15. - 30.)) * (tmpSize - 15.) + MAX_GAMMA
+      )
+    );
+  }
+
+  // add x-y offset as well as use the UV to map the quad
+  let uAspect = vec2<f32>(view.aspectX, view.aspectY);
+  var XY = (xy + (offset * size)) / uAspect; // setup the xy positional change in pixels
+  var quad = (wh * size) / uAspect * uv;
+  tmpPosXY += XY + quad;
+  // set texture position (don't bother wasting time looking up if drawing "interactive quad")
+  var uTexSize = vec2<f32>(textureDimensions(glyphTexture));
+  output.texcoord = (texXY / uTexSize) + (texWH / uTexSize * uv);
+  // output.texcoord = uv;
+
+  output.Position = vec4(tmpPosXY, layer.depthPos, 1.0);
 
   return output;
 }
@@ -507,17 +608,126 @@ fn vMain(
 fn fMain(
   output: VertexOutput
 ) -> @location(0) vec4<f32> {
-  var color = textureSample(rasterTexture, rasterSampler, output.texcoord);
+  if (output.color.a < 0.01) { discard; }
+  let tex = textureSample(glyphTexture, glyphSampler, output.texcoord);
+  if (tex.a < 0.01) { discard; }
+  var opacityS = smoothstep(output.buf - output.gamma, output.buf + output.gamma, median(tex.r, tex.g, tex.b));
+  return opacityS * output.color;
+  // return output.color;
+}
 
-  // saturation
-  var average = (color.r + color.g + color.b) / 3.0;
-  var sat = (average - color.rgb) * -getSaturation(output.saturation);
-  color = vec4<f32>(color.rgb + sat, color.a);
-  // contrast
-  var contrast = (color.rgb - 0.5) * getContrast(output.contrast) + 0.5;
-  color = vec4<f32>(contrast, color.a);
-  // opacity
-  color *= output.opacity * rasterFade;
+/* COMPUTE FILTER PASSES */
 
-  return color;
+fn boxesOverlap(a: BBox, b: BBox) -> bool {
+  if (a.left >= b.right || b.left >= a.right) { return false; }
+  else if (a.top <= b.bottom || b.top <= a.bottom) { return false; }
+  return true;
+}
+
+// PASS 1: reset collision state to 0 for all results
+@compute @workgroup_size(64)
+fn reset(@builtin(global_invocation_id) global_id: vec3<u32>) {
+  // reset collision state
+  collisionResults[global_id.x].collided = 0u;
+}
+
+// PASS 2: Get positional data for each glyph and store in bboxes
+@compute @workgroup_size(64)
+fn boxes(@builtin(global_invocation_id) global_id: vec3<u32>) {
+  let container = containers[global_id.x];
+  let bbox = &bboxes[global_id.x];
+  var position = getPos(container.st);
+  let zero = getZero();
+  // adjust by w to match zero
+  position /= position.w;
+
+  // First check that we don't already have collisions
+  var hasCollision: bool = false;
+  // Case 1: The point lies behind the sphere (if s2)
+  if (tile.isS2 == 1. && position.z > zero.z) {
+    hasCollision = true;
+  } else if ( // Case 2: The point lies outside the bounds of the tile (if a child tile)
+    position.x < bounds.left ||
+    position.x > bounds.right ||
+    position.y < bounds.bottom ||
+    position.y > bounds.top
+  ) {
+    hasCollision = true;
+  }
+
+  if (hasCollision) {
+    // update collision state
+    collisionResults[container.index + glyph.indexOffset].collided = 0u;
+    (*bbox).left = 0.;
+    (*bbox).bottom = 0.;
+    (*bbox).right = 0.;
+    (*bbox).top = 0.;
+    return;
+  }
+
+  // figure out the size of the glyph
+  var index = 0u;
+  var featureIndex = 0u;
+  // grab the size
+  var size = decodeFeature(false, &index, &featureIndex)[0] * view.devicePixelRatio;
+
+  let uAspect = vec2<f32>(view.aspectX, view.aspectY);
+  // create width & height, adding padding to the total size
+  var wh = (container.wh * size + (container.pad * 2.)) / uAspect;
+  // find the bottom left position
+  var bottomLeft = position.xy + (container.xy * size / uAspect);
+  // find the top right position
+  var topRight = bottomLeft + wh;
+  // store
+  (*bbox).left = bottomLeft.x;
+  (*bbox).bottom = bottomLeft.y;
+  (*bbox).right = topRight.x;
+  (*bbox).top = topRight.y;
+}
+
+// PASS 3: Check for collisions between computed bboxes
+@compute @workgroup_size(64)
+fn test(@builtin(global_invocation_id) global_id: vec3<u32>) {
+  let bboxLength = arrayLength(&bboxes);
+  if (global_id.x >= bboxLength) { return; }
+  let box = bboxes[global_id.x];
+  let container = containers[global_id.x];
+  let boxIndex = container.index + glyph.indexOffset;
+
+  // Test for collisions
+  var hasCollision: bool = false;
+  // Case 1: Bbox has already "collided" with either the S2 sphere or tile bounds
+  if (collisionResults[boxIndex].collided == 1u) {
+    hasCollision = true;
+  } else { // Case 2: Check against other BBoxes at an index before this one
+    var i = 0u;
+    loop {
+      if (i >= bboxLength || i >= boxIndex) { break; }
+      let other = bboxes[i];
+      let otherIndex = containers[i].index + glyph.indexOffset;
+      // don't check against other boxes with the same index
+      if (otherIndex == boxIndex) { i++; continue; }
+      // check if collision, then check the lower indexed glyph isn't already collided with something else
+      if (boxesOverlap(other, box) && collisionResults[otherIndex].collided != 1u) {
+        hasCollision = true;
+        // update collision state
+        collisionResults[otherIndex].collided = 1u;
+        break;
+      }
+      i++;
+    }
+  }
+
+  // prep an opacity change using deltaTime and deltaDuration
+  // NOTE: Currently it goes to 0 or 1 in a single frame until we support animations
+  // last 8 bits of container.id are the number of containers that share the same index with this one
+  let changeMultipler = 1. / f32(container.id >> 24);
+  let opacityChange = glyph.deltaTime / glyph.deltaDuration / changeMultipler;
+  if (hasCollision) {
+    // Decrease opacity, but not below 0.0
+    collisionResults[boxIndex].opacity = max(collisionResults[boxIndex].opacity - opacityChange, 0.);
+  } else {
+    // Increase opacity, but not above 1.0
+    collisionResults[boxIndex].opacity = min(collisionResults[boxIndex].opacity + opacityChange, 1.);
+  }
 }

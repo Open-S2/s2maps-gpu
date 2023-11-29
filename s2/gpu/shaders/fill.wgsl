@@ -1,8 +1,8 @@
 const PI = 3.141592653589793238;
 
 struct VertexOutput {
-  @builtin(position) Position : vec4<f32>,
-  @location(0) color : vec4<f32>,
+  @builtin(position) Position: vec4<f32>,
+  @location(0) color: vec4<f32>,
 };
 
 struct ViewUniforms {
@@ -281,10 +281,11 @@ fn interpolateColor (color1: vec4<f32>, color2: vec4<f32>, t: f32) -> vec4<f32> 
   return vec4<f32>(hue, sat, lbv, alpha);
 }
 
-fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndex: ptr<function, u32>) -> vec4<f32> {
+fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndexPtr: ptr<function, u32>) -> vec4<f32> {
   let uInputs = array<f32, 10>(view.zoom, view.lon, view.lat, view.bearing, view.pitch, view.time, view.aspectX, view.aspectY, view.featureState, view.curFeature);
   // prep result and variables
   var index = u32(*indexPtr);
+  var featureIndex = u32(*featureIndexPtr);
   var decodeOffset = index;
   var startingOffset = index;
   var featureSize = u32(layerCode[index]) >> 10;
@@ -328,17 +329,18 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndex: ptr<f
       var inputVal = 0.;
       var conditionInput = 0.;
       if (condition == 2) {
-        inputVal = featureCode[*featureIndex];
-        *featureIndex++;
+        inputVal = featureCode[featureIndex];
+        featureIndex++;
       } else { inputVal = uInputs[(conditionSet & 14) >> 1]; }
       // now that we have the inputVal, we iterate through and find a match
       conditionInput = layerCode[index];
-      while (inputVal != conditionInput || conditionInput != 0.) {
+      loop {
+        if (inputVal == conditionInput) { break; }
         // increment index & find length
         index += (u32(layerCode[index + 1]) >> 10) + 1;
         conditionInput = layerCode[index];
         // if we hit the default, than the value does not exist
-        // if (conditionInput == 0.) break;
+        if (conditionInput == 0.) { break; }
       }
       index++; // increment to conditionEncoding
       // now add subCondition to be parsed
@@ -349,7 +351,7 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndex: ptr<f
       // get interpolation & base
       var interpolationType = conditionSet & 1;
       var inputType = (conditionSet & 14) >> 1;
-      var base = 1.0f;
+      var base = 1.;
       if (interpolationType == 1) {
         base = layerCode[index];
         index++;
@@ -363,8 +365,8 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndex: ptr<f
       var subCondition = 0u;
       // grab the inputVal value
       if (condition == 4) {
-        inputVal = featureCode[*featureIndex];
-        *featureIndex++;
+        inputVal = featureCode[featureIndex];
+        featureIndex++;
       } else { inputVal = uInputs[inputType]; }
       // create a start point
       end = layerCode[index];
@@ -376,7 +378,7 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndex: ptr<f
         // subCondition was a data-condition or data-range, and if so,
         // we must move past the featureCode that was stored there
         subCondition = (u32(layerCode[startIndex]) & 1008) >> 4;
-        if (subCondition == 2 || subCondition == 4) { *featureIndex++; }
+        if (subCondition == 2 || subCondition == 4) { featureIndex++; }
         // increment to subCondition
         index++;
         // increment by subConditions length
@@ -416,7 +418,7 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndex: ptr<f
         // subCondition was a data-condition or data-range, and if so,
         // we must move past the featureCode that was stored there
         subCondition = (u32(layerCode[startIndex]) & 1008) >> 4;
-        if (subCondition == 2 || subCondition == 4) { *featureIndex++; }
+        if (subCondition == 2 || subCondition == 4) { featureIndex++; }
         index++;
         index += u32(layerCode[index]) >> 10;
         endIndex = index + 1;
@@ -438,6 +440,7 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndex: ptr<f
 
   // update index to the next Layer property
   *indexPtr = featureSize + decodeOffset;
+  *featureIndexPtr = featureIndex;
 
   // if lch: convert back to rgb
   if (color && layer.useLCH != 0.) { res = LCH2RGB(res); }
@@ -449,11 +452,11 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndex: ptr<f
 
 @vertex
 fn vMain(
-  @location(0) position : vec2<f32>,
-  @location(1) featureID : u32,
-  @location(2) codeType : u32,
+  @location(0) position: vec2<f32>,
+  @location(1) featureID: u32,
+  @location(2) codeType: u32,
 ) -> VertexOutput {
-  var output : VertexOutput;
+  var output: VertexOutput;
 
   // setup position
   var tmpPos = getPos(position);
@@ -482,7 +485,7 @@ fn vMain(
 
 @fragment
 fn fMain(
-  output : VertexOutput
+  output: VertexOutput
 ) -> @location(0) vec4<f32> {
   return output.color;
 }

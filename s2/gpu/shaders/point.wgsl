@@ -1,8 +1,8 @@
 const PI = 3.141592653589793238;
 
 struct VertexOutput {
-  @builtin(position) Position : vec4<f32>,
-  @location(0) color : vec4<f32>,
+  @builtin(position) Position: vec4<f32>,
+  @location(0) color: vec4<f32>,
   @location(1) extent: vec2<f32>,
   @location(2) stroke: vec4<f32>,
   @location(3) radius: f32,
@@ -474,9 +474,9 @@ const Inputs = array<vec2<f32>, 6>(
 @vertex
 fn vMain(
   @builtin(vertex_index) VertexIndex: u32,
-  @location(0) position : vec2<f32>
+  @location(0) position: vec2<f32>
 ) -> VertexOutput {
-  var output : VertexOutput;
+  var output: VertexOutput;
 
   var extent = Inputs[VertexIndex];
 
@@ -527,7 +527,7 @@ fn vMain(
 
 @fragment
 fn fMain(
-  output : VertexOutput
+  output: VertexOutput
 ) -> @location(0) vec4<f32> {
   if (output.color.a < 0.01) { discard; }
   var extentLength = length(output.extent);

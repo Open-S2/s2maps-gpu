@@ -117,6 +117,7 @@ export default class ShadeWorkflow implements ShadeWorkflowSpec {
     }
 
     return await device.createRenderPipelineAsync({
+      label: 'Shade Pipeline',
       layout,
       vertex: {
         module,

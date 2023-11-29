@@ -124,7 +124,7 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
       ], true)
       // create id buffer
       const glyphQuadIDs = new Uint8Array(glyphData.glyphQuadIDBuffer)
-      const glyphQuadIDBuffer = context.bindEnableVertexAttr(glyphQuadIDs, 7, 3, gl.UNSIGNED_BYTE, true, 3, 0, true)
+      const glyphQuadIDBuffer = context.bindEnableVertexAttr(glyphQuadIDs, 7, 4, gl.UNSIGNED_BYTE, true, 4, 0, true)
       // create the vertex and color buffers
       const glyphColorVerts = new Uint8Array(glyphData.glyphColorBuffer)
       const glyphColorBuffer = context.bindEnableVertexAttr(glyphColorVerts, 8, 4, gl.UNSIGNED_BYTE, true, 4, 0, true)
@@ -450,7 +450,7 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
       gl.vertexAttribPointer(5, 2, gl.FLOAT, false, 48, 32 + (offset * 48)) // texture x, y
       gl.vertexAttribPointer(6, 2, gl.FLOAT, false, 48, 40 + (offset * 48)) // width, height
       gl.bindBuffer(gl.ARRAY_BUFFER, glyphQuadIDBuffer)
-      gl.vertexAttribPointer(7, 3, gl.UNSIGNED_BYTE, true, 3, offset * 3)
+      gl.vertexAttribPointer(7, 4, gl.UNSIGNED_BYTE, true, 4, offset * 4)
       gl.bindBuffer(gl.ARRAY_BUFFER, glyphColorBuffer)
       gl.vertexAttribPointer(8, 4, gl.UNSIGNED_BYTE, true, 4, offset * 4)
       // draw. If type is "text" than draw the stroke first, then fill

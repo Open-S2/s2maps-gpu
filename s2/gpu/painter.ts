@@ -2,6 +2,7 @@
 import { WebGPUContext } from './context'
 import {
   FillWorkflow,
+  GlyphWorkflow,
   HeatmapWorkflow,
   LineWorkflow,
   PointWorkflow,
@@ -14,7 +15,7 @@ import {
 import type { MapOptions } from 'ui/s2mapUI'
 import type {
   FeatureBase,
-  // GlyphFeature,
+  GlyphFeature,
   HeatmapFeature,
   Workflow,
   WorkflowImports,
@@ -49,56 +50,26 @@ export default class Painter {
 
   async buildWorkflows (buildSet: Set<WorkflowType>): Promise<void> {
     const { workflows, context } = this
-    const promises: Array<Promise<void>> = []
     const programCases: WorkflowImports = {
-      fill: new FillWorkflow(context),
-      raster: new RasterWorkflow(context),
-      // sensor: async () => {},
-      line: new LineWorkflow(context),
-      point: new PointWorkflow(context),
-      heatmap: new HeatmapWorkflow(context),
-      shade: new ShadeWorkflow(context),
-      // glyph: async () => {},
-      // glyphFilter: async () => {},
-      wallpaper: new WallpaperWorkflow(context),
-      skybox: new SkyboxWorkflow(context)
+      fill: () => new FillWorkflow(context),
+      raster: () => new RasterWorkflow(context),
+      // sensor: () => new SensorWorkflow(context),
+      line: () => new LineWorkflow(context),
+      point: () => new PointWorkflow(context),
+      heatmap: () => new HeatmapWorkflow(context),
+      shade: () => new ShadeWorkflow(context),
+      glyph: () => new GlyphWorkflow(context),
+      wallpaper: () => new WallpaperWorkflow(context),
+      skybox: () => new SkyboxWorkflow(context)
     }
-    const programKeys: Array<keyof Omit<Workflows, 'background'>> = []
-    for (const program of buildSet) {
-      if (program in workflows) continue
-      if (program === 'glyph') programKeys.push('glyphFilter')
-      programKeys.push(program)
-    }
-    // actually import the programs
-    for (const key of programKeys) {
-      promises.push(new Promise((resolve, reject) => {
-        // @ts-expect-error - just ignore for now
-        if (typeof programCases[key] === 'function') {
-          // @ts-expect-error - just ignore for now
-          programCases[key]()
-            // @ts-expect-error - just ignore for now
-            .then(async ({ default: pModule }) => {
-              workflows[key] = await pModule(context)
-              resolve()
-            })
-            .catch((err: Error) => { reject(err) })
-        } else {
-          // @ts-expect-error - just ignore for now
-          workflows[key] = programCases[key]
-          resolve()
-        }
-      }))
+    const promises: Array<Promise<void>> = []
+    for (const set of buildSet) {
+      // @ts-expect-error - typescript can't handle matching the workflow to the module
+      const workflow = workflows[set] = programCases[set]()
+      if (set === 'wallpaper' || set === 'skybox') workflows.background = workflows[set]
+      promises.push(workflow.setup())
     }
     await Promise.allSettled(promises)
-    if (workflows.glyphFilter !== undefined && workflows.glyph !== undefined) {
-      // TODO:
-      // const glyph = workflows.glyph
-      // glyph.injectFilter(workflows.glyphFilter)
-    }
-    for (const [key, workflow] of Object.entries(workflows)) {
-      if (key === 'wallpaper' || key === 'skybox') workflows.background = workflows[key]
-      await workflow.setup()
-    }
   }
 
   getScreen (): Uint8ClampedArray {
@@ -113,8 +84,7 @@ export default class Painter {
   }
 
   injectGlyphImages (maxHeight: number, images: GlyphImages): void {
-    // const { glyph } = this.workflows
-    // glyph.injectImages(maxHeight, images)
+    this.workflows.glyph?.injectImages(maxHeight, images)
   }
 
   setColorMode (mode: ColorMode): void {
@@ -165,8 +135,8 @@ export default class Painter {
     featureTiles = featureTiles.filter((tile, index) => featureTiles.findIndex(t => t.id === tile.id) === index)
     for (const tile of featureTiles) tile.setScreenPositions(projector)
     // prep glyph features for drawing box filters
-    // const glyphFeatures = features.filter(feature => feature.type === 'glyph' && !feature.overdraw) as GlyphFeature[]
-    // glyphFeatures.forEach(feature => feature.drawFilter())
+    const glyphFeatures = features.filter((f): f is GlyphFeature => f.type === 'glyph')
+    workflows.glyph?.computeFilters(glyphFeatures)
 
     // DRAW PHASE
     // draw masks

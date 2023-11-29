@@ -22,7 +22,7 @@ export default class WebGPUContext {
   #adapter!: GPUAdapter
   devicePixelRatio: number
   interactive = false
-  format: GPUTextureFormat = 'bgra8unorm'
+  format: GPUTextureFormat = 'rgba8unorm'
   masks = new Map<number, MaskSource>()
   sampleCount = 1
   clearColorRGBA: [r: number, g: number, b: number, a: number] = [0, 0, 0, 0]
@@ -123,18 +123,42 @@ export default class WebGPUContext {
   //                  which avoids extra buffer replication operation.)
   buildGPUBuffer (
     label: string,
-    inputArray: BufferSource,
-    usage: number
+    inputArray: BufferSource | SharedArrayBuffer,
+    usage: number,
+    size = inputArray.byteLength
   ): GPUBuffer {
     // prep buffer
     const gpuBuffer = this.device.createBuffer({
       label,
-      size: inputArray.byteLength,
+      size,
       usage: usage | GPUBufferUsage.COPY_DST
     })
     this.device.queue.writeBuffer(gpuBuffer, 0, inputArray)
 
     return gpuBuffer
+  }
+
+  buildPaddedBuffer (
+    input: ArrayBuffer,
+    width: number,
+    height: number
+  ): { data: Uint8Array, width: number, height: number } {
+    const alignment = this.device.limits.minUniformBufferOffsetAlignment
+    const bytesPerRow = Math.ceil(width * 4 / alignment) * alignment
+    const paddedBufferSize = bytesPerRow * height
+    const paddedSpriteData = new Uint8Array(paddedBufferSize)
+    for (let y = 0; y < height; y++) {
+      paddedSpriteData.set(
+        new Uint8Array(input, y * width * 4, width * 4),
+        y * bytesPerRow
+      )
+    }
+
+    return {
+      data: paddedSpriteData,
+      width: bytesPerRow,
+      height
+    }
   }
 
   getFeatureAtMousePosition (x: number, y: number): undefined | number {
@@ -289,30 +313,12 @@ export default class WebGPUContext {
     // setup position uniforms
     this.#viewUniformBuffer = this.buildGPUBuffer('View Uniform Buffer', new Float32Array(12), GPUBufferUsage.UNIFORM)
     this.#matrixUniformBuffer = this.buildGPUBuffer('Matrix Uniform Buffer', new Float32Array(16), GPUBufferUsage.UNIFORM)
-    this.frameBindGroupLayout = this.buildLayout('Frame', ['uniform', 'uniform'], GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT)
+    this.frameBindGroupLayout = this.buildLayout('Frame', ['uniform', 'uniform'], GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT | GPUShaderStage.COMPUTE)
     this.frameBufferBindGroup = this.buildGroup('Frame BindGroup', this.frameBindGroupLayout, [this.#viewUniformBuffer, this.#matrixUniformBuffer])
     // setup per feature uniforms layout
-    this.featureBindGroupLayout = this.buildLayout('Feature', ['uniform', 'uniform', 'uniform', 'read-only-storage', 'read-only-storage'])
+    this.featureBindGroupLayout = this.buildLayout('Feature', ['uniform', 'uniform', 'uniform', 'read-only-storage', 'read-only-storage'], GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT | GPUShaderStage.COMPUTE)
     // setup null variables
     this.nullTexture = this.buildTexture(new Uint8Array([0, 0, 0, 0]), 1, 1)
-  }
-
-  buildTexture (
-    imageData: null | ArrayBufferView | ImageBitmap,
-    width: number,
-    height: number,
-    depthOrArrayLayers = 1,
-    format: GPUTextureFormat = this.format
-  ): GPUTexture {
-    const { device } = this
-    const texture = device.createTexture({
-      size: { width, height, depthOrArrayLayers },
-      format, // Equivalent to WebGL's gl.RGBA
-      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT
-    })
-    if (imageData !== null) this.uploadTextureData(texture, imageData, width, height)
-
-    return texture
   }
 
   buildSampler (
@@ -327,39 +333,67 @@ export default class WebGPUContext {
     })
   }
 
-  uploadTextureData (
-    texture: GPUTexture,
-    imageData: ArrayBufferView | ImageBitmap,
+  buildTexture (
+    imageData: null | GPUTexture | BufferSource | SharedArrayBuffer | ImageBitmap,
     width: number,
     height: number,
+    depthOrArrayLayers = 1,
+    format: GPUTextureFormat = this.format,
     origin = { x: 0, y: 0, z: 0 },
-    depthOrArrayLayers = 1
+    commandEncoder?: GPUCommandEncoder
+  ): GPUTexture {
+    const { device } = this
+    const texture = device.createTexture({
+      size: { width, height, depthOrArrayLayers },
+      format, // Equivalent to WebGL's gl.RGBA
+      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT
+    })
+    // NOTE: It is assumed that the imageData's width and height are the same as the texture's width and height
+    // if not, and the source is a BufferSource or SharedArrayBuffer, it will probably fail
+    if (imageData !== null) this.uploadTextureData(texture, imageData, width, height, origin, depthOrArrayLayers, commandEncoder)
+
+    return texture
+  }
+
+  uploadTextureData (
+    texture: GPUTexture,
+    imageData: GPUTexture | BufferSource | SharedArrayBuffer | ImageBitmap,
+    width: number, // width of source data
+    height: number, // width of height data
+    origin = { x: 0, y: 0, z: 0 },
+    depthOrArrayLayers = 1,
+    commandEncoder?: GPUCommandEncoder
   ): void {
     const { device } = this
-    if (imageData instanceof ImageBitmap) {
+    if (imageData instanceof GPUTexture) {
+      const cE = commandEncoder ?? device.createCommandEncoder()
+      // For GPUTexture, use 'copyTextureToTexture'
+      cE.copyTextureToTexture(
+        { texture: imageData },
+        { texture, origin },
+        { width: imageData.width, height: imageData.height, depthOrArrayLayers }
+      )
+      if (commandEncoder === undefined) device.queue.submit([cE.finish()])
+    } else if (imageData instanceof ImageBitmap) {
       // For ImageBitmap, use 'copyExternalImageToTexture'
       device.queue.copyExternalImageToTexture(
-        { source: imageData },
+        { source: imageData }, // flipY: true
         { texture, origin },
-        { width, height }
+        { width: imageData.width, height: imageData.height, depthOrArrayLayers }
       )
     } else {
+      const alignment = this.device.limits.minUniformBufferOffsetAlignment
       // For ArrayBufferView, use a buffer to upload
-      const buffer = device.createBuffer({
-        size: imageData.byteLength,
-        usage: GPUBufferUsage.COPY_SRC,
-        mappedAtCreation: true
-      })
-      new Uint8Array(buffer.getMappedRange()).set(new Uint8Array(imageData.buffer))
-      buffer.unmap()
-
-      const commandEncoder = device.createCommandEncoder()
-      commandEncoder.copyBufferToTexture(
-        { buffer, bytesPerRow: Math.max(256, width * 4) },
-        { texture },
+      const buffer = this.buildGPUBuffer('Texture Data', imageData, GPUBufferUsage.COPY_SRC)
+      const cE = commandEncoder ?? device.createCommandEncoder()
+      cE.copyBufferToTexture(
+        { buffer, bytesPerRow: Math.max(alignment, width * 4), rowsPerImage: height },
+        { texture, origin },
         { width, height, depthOrArrayLayers }
       )
-      device.queue.submit([commandEncoder.finish()])
+      if (commandEncoder === undefined) device.queue.submit([cE.finish()])
+      // TODO: Find a way to cleanup the buffer if commandEncoder is outside this function
+      // buffer.destroy()
     }
   }
 

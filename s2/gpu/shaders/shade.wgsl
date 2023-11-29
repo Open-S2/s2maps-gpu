@@ -1,6 +1,6 @@
 struct VertexOutput {
-  @builtin(position) Position : vec4<f32>,
-  @location(0) localPos : vec4<f32>,
+  @builtin(position) Position: vec4<f32>,
+  @location(0) localPos: vec4<f32>,
 };
 
 struct ViewUniforms {

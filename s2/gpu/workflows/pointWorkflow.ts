@@ -200,6 +200,7 @@ export default class PointWorkflow implements PointWorkflowSpec {
     }
 
     return await device.createRenderPipelineAsync({
+      label: 'Point Render Pipeline',
       layout,
       vertex: {
         module,

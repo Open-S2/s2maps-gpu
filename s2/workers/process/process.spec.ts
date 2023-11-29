@@ -43,7 +43,7 @@ export interface FeatureBase {
   gl2Code: number[]
 }
 export interface InteractiveFeatureBase extends FeatureBase {
-  idRGB: [number, number, number]
+  idRGB: [number, number, number, number]
 }
 
 export type GlyphFeature = GlyphObject

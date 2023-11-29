@@ -157,7 +157,7 @@ export default async function glyphFilterProgram (context: Context): Promise<Gly
       gl.vertexAttribPointer(4, 2, gl.FLOAT, false, 36, 24 + (filterOffset * 36)) // width, height
       gl.vertexAttribPointer(5, 1, gl.FLOAT, false, 36, 32 + (filterOffset * 36)) // index
       gl.bindBuffer(gl.ARRAY_BUFFER, glyphFilterIDBuffer)
-      gl.vertexAttribPointer(6, 3, gl.UNSIGNED_BYTE, true, 3, filterOffset * 3)
+      gl.vertexAttribPointer(6, 4, gl.UNSIGNED_BYTE, true, 4, filterOffset * 4)
       // draw based upon mode
       if (mode === 1) gl.drawArraysInstanced(gl.POINTS, 0, 2, filterCount)
       else gl.drawArraysInstanced(gl.POINTS, 0, 1, filterCount)

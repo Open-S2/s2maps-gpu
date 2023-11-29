@@ -3,6 +3,7 @@ import React from 'react'
 /* REACT MODULES */
 import Map from '../../../components/map'
 /* STYLES */
+// import style from './style.json'
 import style from './style'
 
 import type { S2Map } from '../../../s2'
@@ -16,7 +17,7 @@ export default function Glyphs (): React.JSX.Element {
     <div className='pages'>
       <Map
         style={style}
-        opts={{ zoomController: false }}
+        opts={{ zoomController: false, contextType: 3 }}
         ready={ready}
         noAPIKey
       />
