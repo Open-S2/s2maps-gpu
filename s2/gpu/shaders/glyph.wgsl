@@ -8,6 +8,11 @@ struct VertexOutput {
   @location(3) gamma: f32,
 };
 
+struct TestOutput {
+  @builtin(position) Position: vec4<f32>,
+  @location(0) color: vec4<f32>,
+};
+
 struct ViewUniforms {
   cBlind: f32, // colorblind support
   zoom: f32, // exact zoom
@@ -62,6 +67,10 @@ struct Bounds {
   top: f32,
 };
 
+// TODO: Store ID in the collision result array??? That way we can check the end of the ID
+// TODO - IDEA: One more compute shader that runs through each GlyphContainer and checks the collisionResults
+// TODO - IDEA: If the collisionResults is 0 or 1, then we update the last 8 bits +- a change value
+// to see if it's a shared container (and how many containers it shares with for opacity change)
 struct GlyphContainer {
   st: vec2<f32>, // s & t position relative to the tile's 0-1 bounds
   xy: vec2<f32>, // xy starting position of the glyph box relative to the final computed position
@@ -72,20 +81,11 @@ struct GlyphContainer {
 };
 
 struct BBox {
+  index: u32, 
   left: f32,
   bottom: f32,
   right: f32,
   top: f32,
-};
-
-// Collisions can be with the S2 sphere, tile bounds, or other containers.
-struct CollisionResultAtomic {
-  collided: atomic<u32>, // 1 for collision, 0 for no collision.
-  opacity: f32, // Opacity value, ranges between 0.0 and 1.0
-};
-struct CollisionResult {
-  collided: u32, // 1 for collision, 0 for no collision.
-  opacity: f32, // Opacity value, ranges between 0.0 and 1.0
 };
 
 // ** FRAME DATA **
@@ -110,13 +110,12 @@ struct CollisionResult {
 @binding(1) @group(2) var<uniform> glyph: GlyphUniforms;
 @binding(2) @group(2) var glyphSampler: sampler;
 @binding(3) @group(2) var glyphTexture: texture_2d<f32>;
-// containers are mapped to bboxes.
-// indexes of containers and bboxes are the same and map to the location in collisionResults
+// the bbox index is the container position + the glyph indexOffset
+// the collision result index is the container's index value + the glyph indexOffset
 @binding(4) @group(2) var<storage, read> containers: array<GlyphContainer>;
 @binding(5) @group(2) var<storage, read_write> bboxes: array<BBox>;
-@binding(6) @group(2) var<storage, read_write> collisionResults: array<CollisionResult>;
-// @binding(7) @group(2) var<storage, read_write> collisionResultsAtomic: array<CollisionResultAtomic>;
-@binding(8) @group(2) var<storage, read> collisionResultsReadOnly: array<CollisionResult>;
+@binding(6) @group(2) var<storage, read_write> collisionResults: array<atomic<u32>>;
+@binding(8) @group(2) var<storage, read> collisionResultsReadOnly: array<u32>;
 @binding(9) @group(2) var<uniform> isStroke: f32; // 1 for stroke, 0 for fill
 
 fn LCH2LAB (lch: vec4<f32>) -> vec4<f32> { // r -> l ; g -> c ; b -> h
@@ -544,7 +543,7 @@ fn vMain(
   let uIsIcon = glyph.isIcon == 1.;
 
   // check if collision then we just return
-  if (collisionResultsReadOnly[collisionIndex + glyph.indexOffset].collided == 1u) { return output; }
+  if (collisionResultsReadOnly[collisionIndex + glyph.indexOffset] != 0u) { return output; }
 
   // setup position
   var tmpPos = getPos(st);
@@ -560,12 +559,8 @@ fn vMain(
   else { _ = decodeFeature(false, &index, &featureIndex)[0]; }
   var size = tmpSize * view.devicePixelRatio * 2.;
   // color
-  var color = vec4<f32>(0.);
-  if (uIsIcon) {
-    color = cBlindAdjust(iconColor);
-  } else {
-    color = decodeFeature(true, &index, &featureIndex);
-  }
+  var color = decodeFeature(true, &index, &featureIndex);
+  if (uIsIcon) { color = cBlindAdjust(iconColor); }
   // stroke properties
   output.buf = 0.5;
   if (isStroke == 1.) {
@@ -616,6 +611,78 @@ fn fMain(
   // return output.color;
 }
 
+/* TEST PASS */
+
+const TestPos = array<vec2<f32>, 8>(
+  // 1
+  vec2(0., 0.),
+  vec2(1., 0.),
+  // 2
+  vec2(1., 0.),
+  vec2(1., 1.),
+  // 3
+  vec2(1., 1.),
+  vec2(0., 1.),
+  // 4
+  vec2(0., 1.),
+  vec2(0., 0.)
+);
+
+@vertex
+fn vTest(
+  @builtin(vertex_index) VertexIndex: u32,
+  @location(0) st: vec2<f32>,
+  @location(1) xy: vec2<f32>,
+  @location(2) pad: vec2<f32>,
+  @location(3) wh: vec2<f32>,
+  @location(4) collisionIndex: u32, // index to check in collisionResults
+) -> TestOutput {
+  var output: TestOutput;
+  let uv = TestPos[VertexIndex];
+  let uIsIcon = glyph.isIcon == 1.;
+
+  // check if collision then we just return
+  var color = vec4<f32>(1., 0., 0., 1.); // Collsion is red
+  let collision = collisionResultsReadOnly[collisionIndex + glyph.indexOffset];
+  if (collision == 0u) { // No collision is green
+    color = vec4<f32>(0., 1., 0., 1.);
+  } else if (collision == 2u) { // Out of bounds is blue
+    color = vec4<f32>(0., 0., 1., 0.15);
+  }
+
+  // setup position
+  var tmpPos = getPos(st);
+  tmpPos /= tmpPos.w;
+  var tmpPosXY = tmpPos.xy;
+
+  var index = 0u;
+  var featureIndex = 0u;
+
+  // decode properties
+  var tmpSize = decodeFeature(false, &index, &featureIndex)[0];
+  if (uIsIcon) { tmpSize = decodeFeature(false, &index, &featureIndex)[0]; }
+  var size = tmpSize * view.devicePixelRatio * 2.;
+
+  let uAspect = vec2<f32>(view.aspectX, view.aspectY);
+  var padding = pad * view.devicePixelRatio * 2.;
+  var XY = ((xy * size) - padding) / uAspect; // setup the xy positional change in pixels
+  var WH = ((wh * size) + (padding * 2)) / uAspect;
+  tmpPosXY += XY + (WH * uv);
+
+  output.color = color;
+  output.Position = vec4<f32>(tmpPosXY, layer.depthPos, 1.0);
+
+  return output;
+}
+
+@fragment
+fn fTest(
+  output: TestOutput
+) -> @location(0) vec4<f32> {
+  if (output.color.a < 0.01) { discard; }
+  return output.color;
+}
+
 /* COMPUTE FILTER PASSES */
 
 fn boxesOverlap(a: BBox, b: BBox) -> bool {
@@ -624,22 +691,26 @@ fn boxesOverlap(a: BBox, b: BBox) -> bool {
   return true;
 }
 
-// PASS 1: reset collision state to 0 for all results
-@compute @workgroup_size(64)
-fn reset(@builtin(global_invocation_id) global_id: vec3<u32>) {
-  // reset collision state
-  collisionResults[global_id.x].collided = 0u;
-}
-
-// PASS 2: Get positional data for each glyph and store in bboxes
+// PASS 1: Get positional data for each glyph and store in bboxes.
+// Find early collisions (behind S2 sphere or outside tile bounds)
 @compute @workgroup_size(64)
 fn boxes(@builtin(global_invocation_id) global_id: vec3<u32>) {
+  if (global_id.x >= arrayLength(&containers)) { return; }
   let container = containers[global_id.x];
-  let bbox = &bboxes[global_id.x];
+  let bboxIndex = global_id.x + glyph.indexOffset;
+  let resultIndex = container.index + glyph.indexOffset;
+  let bbox = &bboxes[bboxIndex];
   var position = getPos(container.st);
   let zero = getZero();
   // adjust by w to match zero
   position /= position.w;
+
+  // reset bbox
+  (*bbox).index = resultIndex;
+  (*bbox).left = 0.;
+  (*bbox).bottom = 0.;
+  (*bbox).right = 0.;
+  (*bbox).top = 0.;
 
   // First check that we don't already have collisions
   var hasCollision: bool = false;
@@ -647,37 +718,36 @@ fn boxes(@builtin(global_invocation_id) global_id: vec3<u32>) {
   if (tile.isS2 == 1. && position.z > zero.z) {
     hasCollision = true;
   } else if ( // Case 2: The point lies outside the bounds of the tile (if a child tile)
-    position.x < bounds.left ||
-    position.x > bounds.right ||
-    position.y < bounds.bottom ||
-    position.y > bounds.top
+    container.st.x < bounds.left ||
+    container.st.x > bounds.right ||
+    container.st.y < bounds.bottom ||
+    container.st.y > bounds.top
   ) {
     hasCollision = true;
   }
 
   if (hasCollision) {
     // update collision state
-    collisionResults[container.index + glyph.indexOffset].collided = 0u;
-    (*bbox).left = 0.;
-    (*bbox).bottom = 0.;
-    (*bbox).right = 0.;
-    (*bbox).top = 0.;
+    atomicStore(&collisionResults[resultIndex], 2u);
     return;
   }
+  // otherwise no collision
+  atomicStore(&collisionResults[resultIndex], 0u);
 
   // figure out the size of the glyph
   var index = 0u;
   var featureIndex = 0u;
   // grab the size
-  var size = decodeFeature(false, &index, &featureIndex)[0] * view.devicePixelRatio;
+  var size = decodeFeature(false, &index, &featureIndex)[0] * view.devicePixelRatio * 2.;
 
+  // build bbox
+  // tmpPosXY += XY + (WH * uv);
   let uAspect = vec2<f32>(view.aspectX, view.aspectY);
-  // create width & height, adding padding to the total size
-  var wh = (container.wh * size + (container.pad * 2.)) / uAspect;
-  // find the bottom left position
-  var bottomLeft = position.xy + (container.xy * size / uAspect);
-  // find the top right position
-  var topRight = bottomLeft + wh;
+  var padding = container.pad  * view.devicePixelRatio * 2.;
+  var XY = ((container.xy * size) - padding) / uAspect; // setup the xy positional change in pixels
+  var WH = ((container.wh * size) + (padding * 2)) / uAspect;
+  var bottomLeft = position.xy + XY;
+  var topRight = bottomLeft + WH;
   // store
   (*bbox).left = bottomLeft.x;
   (*bbox).bottom = bottomLeft.y;
@@ -685,49 +755,39 @@ fn boxes(@builtin(global_invocation_id) global_id: vec3<u32>) {
   (*bbox).top = topRight.y;
 }
 
-// PASS 3: Check for collisions between computed bboxes
+// PASS 2: Check for collisions between computed bboxes
 @compute @workgroup_size(64)
 fn test(@builtin(global_invocation_id) global_id: vec3<u32>) {
-  let bboxLength = arrayLength(&bboxes);
-  if (global_id.x >= bboxLength) { return; }
-  let box = bboxes[global_id.x];
-  let container = containers[global_id.x];
-  let boxIndex = container.index + glyph.indexOffset;
+  let bboxIndex = global_id.x;
+  if (bboxIndex >= arrayLength(&bboxes)) { return; }
+  let box = bboxes[bboxIndex];
+  let resultIndex = box.index;
 
   // Test for collisions
-  var hasCollision: bool = false;
   // Case 1: Bbox has already "collided" with either the S2 sphere or tile bounds
-  if (collisionResults[boxIndex].collided == 1u) {
-    hasCollision = true;
-  } else { // Case 2: Check against other BBoxes at an index before this one
+  if (atomicLoad(&collisionResults[resultIndex]) != 0u) {
+    // TODO: overdraw needs to be stored inside the bbox
+  } else if (glyph.overdraw == 0.) { // Case 2: Check against other BBoxes at an index before this one if overdraw is off
     var i = 0u;
     loop {
-      if (i >= bboxLength || i >= boxIndex) { break; }
-      let other = bboxes[i];
-      let otherIndex = containers[i].index + glyph.indexOffset;
-      // don't check against other boxes with the same index
-      if (otherIndex == boxIndex) { i++; continue; }
-      // check if collision, then check the lower indexed glyph isn't already collided with something else
-      if (boxesOverlap(other, box) && collisionResults[otherIndex].collided != 1u) {
-        hasCollision = true;
+      if (i >= bboxIndex) { break; }
+      let testBox = bboxes[i];
+      // faster way to check if testBox is empty
+      if (testBox.left == 0. && testBox.right == 0.) { i++; continue; }
+      let otherResultIndex = testBox.index;
+      // 1) don't check against other boxes with the same index
+      // 2) check if collision
+      // 3) then check the lower indexed filter result isn't already collided with something else
+      if (
+        otherResultIndex != resultIndex &&
+        boxesOverlap(testBox, box) &&
+        atomicLoad(&collisionResults[otherResultIndex]) == 0u
+      ) {
         // update collision state
-        collisionResults[otherIndex].collided = 1u;
+        atomicStore(&collisionResults[resultIndex], 1u);
         break;
       }
       i++;
     }
-  }
-
-  // prep an opacity change using deltaTime and deltaDuration
-  // NOTE: Currently it goes to 0 or 1 in a single frame until we support animations
-  // last 8 bits of container.id are the number of containers that share the same index with this one
-  let changeMultipler = 1. / f32(container.id >> 24);
-  let opacityChange = glyph.deltaTime / glyph.deltaDuration / changeMultipler;
-  if (hasCollision) {
-    // Decrease opacity, but not below 0.0
-    collisionResults[boxIndex].opacity = max(collisionResults[boxIndex].opacity - opacityChange, 0.);
-  } else {
-    // Increase opacity, but not above 1.0
-    collisionResults[boxIndex].opacity = min(collisionResults[boxIndex].opacity + opacityChange, 1.);
   }
 }
