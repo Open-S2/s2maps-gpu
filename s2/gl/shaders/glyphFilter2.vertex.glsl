@@ -7,7 +7,7 @@ layout (location = 2) in vec2 aXY; // float [x, y]    (INSTANCED)
 layout (location = 3) in vec2 aPad; // float [x, y]   (INSTANCED)
 layout (location = 4) in vec2 aWH; // float [w, h]    (INSTANCED)
 layout (location = 5) in float aIndex; // float index (INSTANCED)
-layout (location = 6) in vec3 aID; // [r, g, b]       (INSTANCED)
+layout (location = 6) in vec4 aID; // [r, g, b, a]    (INSTANCED)
 
 out vec4 vColor;
 
@@ -79,7 +79,7 @@ void main () {
     // set point size
     gl_PointSize = 3.;
     // set color to id
-    vColor = vec4(aID, 1.);
+    vColor = aID;
     // grab the current bbox
     int curIndex = int(aIndex + uIndexOffset);
     vec4 curBbox = getBbox(curIndex);

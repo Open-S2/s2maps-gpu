@@ -38,10 +38,21 @@ const style: StyleDefinition = {
       textAnchor: 'center',
       textOffset: [0, 0],
       textPadding: [1, 1],
-      textSize: 12,
+      // textSize: {
+      //   inputRange: {
+      //     type: 'zoom',
+      //     ease: 'lin',
+      //     ranges: [
+      //       { stop: 0, input: 14 },
+      //       { stop: 3, input: 22 }
+      //     ]
+      //   }
+      // },
+      textSize: 14,
       textFill: '#1a73e7',
       textStroke: 'rgba(255, 255, 255, 0.75)',
-      textStrokeWidth: 0.5
+      textStrokeWidth: 0.5,
+      overdraw: false
     }
   ]
 }

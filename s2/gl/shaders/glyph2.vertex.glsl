@@ -22,7 +22,7 @@ layout (location = 3) in vec2 aOffset; // float [xOffset, yOffset]   (INSTANCED)
 layout (location = 4) in vec2 aWH; // float [width, height]          (INSTANCED)
 layout (location = 5) in vec2 aTexXY; // float [x, y]                (INSTANCED)
 layout (location = 6) in vec2 aTexWH; // float [width, height]       (INSTANCED)
-layout (location = 7) in vec3 aID; // [r, g, b]                      (INSTANCED)
+layout (location = 7) in vec4 aID; // [r, g, b, a]                   (INSTANCED)
 layout (location = 8) in vec4 aColor; // [r, g, b, a]                (INSTANCED)
 
 out float vBuf;
@@ -58,9 +58,9 @@ void main () {
     // Check the "glyphFilter" result texture at current glPos to see if the aID matches
     // if not, we stop right here for color (discard)
     inputID = texture(uFeatures, vec2(glPos / 2. + 0.5));
-    if (aID != inputID.rgb) shouldDraw = false;
+    if (aID.rgb != inputID.rgb) shouldDraw = false;
   } else if (uInteractive) {
-    inputID = vec4(aID, 1.);
+    inputID = aID;
   }
   // move on if not drawing
   if (!shouldDraw) return;

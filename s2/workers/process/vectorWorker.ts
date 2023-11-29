@@ -10,7 +10,7 @@ import type { Callback } from 'style/parseFeatureFunction'
 
 export type CodeDesignInput<T extends NotNullOrObject> = [
   T | Property<T>,
-  Callback<T, [number, number, number, number]>
+  Callback<T, [r: number, g: number, b: number, a: number]>
 ] | [T | Property<T>]
 
 // export interface CodeDesignInputRange<T> {
@@ -18,8 +18,8 @@ export type CodeDesignInput<T extends NotNullOrObject> = [
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type CodeDesign<T = any> = Array<CodeDesignInput<ValueType<T>>>
 
-export const colorFunc = (lch: boolean): Callback<string, [number, number, number, number]> => {
-  return (i: string): [number, number, number, number] => {
+export const colorFunc = (lch: boolean): Callback<string, [r: number, g: number, b: number, a: number]> => {
+  return (i: string): [r: number, g: number, b: number, a: number] => {
     const color = new Color(i)
     return lch ? color.getLCH() : color.getRGB()
   }
@@ -57,9 +57,9 @@ export default class VectorWorker {
   }
 
   buildCode (design: CodeDesign<NotNullOrObject>): BuildCodeFunction {
-    const featureFunctions: Array<LayerWorkerFunction<number | [number, number, number, number]>> = []
+    const featureFunctions: Array<LayerWorkerFunction<number | [r: number, g: number, b: number, a: number]>> = []
     for (const [input, cb] of design) {
-      featureFunctions.push(parseFeatureFunction<NotNullOrObject, [number, number, number, number]>(input, cb))
+      featureFunctions.push(parseFeatureFunction<NotNullOrObject, [r: number, g: number, b: number, a: number]>(input, cb))
     }
 
     return (zoom: number, properties: Properties): [number[], number[]] => {
@@ -107,6 +107,6 @@ export default class VectorWorker {
   }
 }
 
-export function idToRGB (id: number): [number, number, number] {
-  return [id & 255, (id >> 8) & 255, (id >> 16) & 255]
+export function idToRGB (id: number): [r: number, g: number, b: number, a: number] {
+  return [id & 255, (id >> 8) & 255, (id >> 16) & 255, 0]
 }

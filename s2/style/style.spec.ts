@@ -336,6 +336,10 @@ export interface GlyphWorkflowLayerGuide extends LayerWorkflowGuideBase {
   cursor: Cursor
   overdraw: boolean
 }
+export interface GlyphWorkflowLayerGuideGPU extends GlyphWorkflowLayerGuide {
+  layerBuffer: GPUBuffer
+  layerCodeBuffer: GPUBuffer
+}
 export interface GlyphWorkerLayer extends LayerWorkerBase {
   type: 'glyph'
   textGetCode: BuildCodeFunction

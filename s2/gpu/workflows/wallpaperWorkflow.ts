@@ -47,7 +47,6 @@ export default class WallpaperWorkflow implements WallpaperWorkflowSpec {
 
   updateStyle (style: StyleDefinition): void {
     const { scheme, context } = this
-    const { device } = context
     const { background, fade1, fade2, halo } = style.wallpaper ?? {}
     // inject wallpaper into scheme
     if (background !== undefined) scheme.background = new Color(background)
@@ -57,16 +56,7 @@ export default class WallpaperWorkflow implements WallpaperWorkflowSpec {
     // inject uniforms
     this.#updateUniforms()
     // build the bind group
-    this.#bindGroup = device.createBindGroup({
-      label: 'Wallpaper BindGroup',
-      layout: this.#wallpaperBindGroupLayout,
-      entries: [
-        {
-          binding: 0,
-          resource: { buffer: this.#uniformBuffer }
-        }
-      ]
-    })
+    this.#bindGroup = context.buildGroup('Wallpaper', this.#wallpaperBindGroupLayout, [this.#uniformBuffer])
   }
 
   #updateScale (projector: Projector): void {

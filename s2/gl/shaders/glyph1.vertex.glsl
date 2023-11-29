@@ -12,7 +12,7 @@ attribute vec2 aWH; // float [width, height]          (INSTANCED)
 attribute vec2 aTexXY; // float [x, y]                (INSTANCED)
 attribute vec2 aTexWH; // float [width, height]       (INSTANCED)
 attribute vec4 aColor; // [r, g, b, a]                (INSTANCED)
-attribute vec3 aID; // float ID                       (INSTANCED)
+attribute vec4 aID; // float ID                       (INSTANCED)
 
 varying float vBuf;
 varying float vGamma;
@@ -57,9 +57,9 @@ void main () {
     // Check the "glyphFilter" result texture at current glPos to see if the aID matches
     // if not, we stop right here for color (discard)
     inputID = texture2D(uFeatures, vec2(glPos / 2. + 0.5));
-    if (aID != inputID.rgb) shouldDraw = false;
+    if (aID.rgb != inputID.rgb) shouldDraw = false;
   } else if (uInteractive) {
-    inputID = vec4(aID, 1.);
+    inputID = aID;
   }
   // move on if not drawing
   if (!shouldDraw) return;

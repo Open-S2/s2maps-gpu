@@ -6,7 +6,7 @@ attribute vec2 aXY; // float [x, y]    (INSTANCED)
 attribute vec2 aPad; // float [x, y]   (INSTANCED)
 attribute vec2 aWH; // float [w, h]    (INSTANCED)
 attribute float aIndex; // float index (INSTANCED)
-attribute vec3 aID; // float ID        (INSTANCED)
+attribute vec4 aID; // float ID        (INSTANCED)
 
 varying vec4 vColor;
 
@@ -110,7 +110,7 @@ void main () {
     // set point size
     gl_PointSize = 3.;
     // set color to id
-    vColor = vec4(aID, 1.);
+    vColor = aID;
     // grab the current bbox
     int curIndex = int(aIndex + uIndexOffset);
     vec4 curBbox = getBbox(float(curIndex));

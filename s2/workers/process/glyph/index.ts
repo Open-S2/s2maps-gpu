@@ -155,8 +155,9 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
 
         const glyph: GlyphObject = {
           // organization parameters
+          id,
           idRGB,
-          type: (type === 'text') ? 0 : 1,
+          type,
           overdraw,
           layerIndex,
           gl2Code,
@@ -180,7 +181,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
           // prep color, quads, and filter
           color: [],
           quads: [],
-          filter: [],
+          filter: [0, 0, 0, 0, 0, 0, 0, 0],
           // prep for rtree test
           children: [],
           treeHeight: 1,
@@ -322,7 +323,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       features = features.sort(featureSort)
       for (const feature of features) {
         // PRE: If icon, remap the features fieldCodes and inject color
-        if (feature.type === 1) this.#mapIcon(feature)
+        if (feature.type === 'icon') this.#mapIcon(feature)
         // Step 1: prebuild the glyph positions and bbox
         buildGlyphQuads(feature, glyphMap)
         // Step 2: check the rtree if we want to pre filter
@@ -354,6 +355,11 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
   }
 
   #flush (mapID: string, sourceName: string, tileID: bigint): void {
+    if (this.gpuType === 3) this.#flush3(mapID, sourceName, tileID)
+    else this.#flush2(mapID, sourceName, tileID)
+  }
+
+  #flush2 (mapID: string, sourceName: string, tileID: bigint): void {
     let { features } = this
     // TODO: Is this necessary? we sorted earlier
     features = features.sort(featureSort)
@@ -378,14 +384,14 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     // iterate features, store as we go
     for (const feature of features) {
       const { idRGB, type, layerIndex, code, color, quads, filter } = feature
-      // if there is a change in layer index or
+      // if there is a change in layer index or not the same feature set
       if (
         (quadCount > 0 || filterCount > 0) &&
         (curlayerIndex !== layerIndex || codeStr !== code.toString() || curType !== type)
       ) {
         // store featureGuide
         featureGuide.push(
-          curlayerIndex, curType, filterOffset, filterCount,
+          curlayerIndex, ~~(curType === 'icon'), filterOffset, filterCount,
           quadOffset, quadCount, encoding.length, ...encoding
         )
         // update to new codes
@@ -402,8 +408,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
         indexPos = 0
       }
       // store the quads and colors
-      filter[8] = indexPos++
-      glyphFilterVertices.push(...filter)
+      glyphFilterVertices.push(...filter, indexPos++)
       glyphFilterIDs.push(...idRGB)
       filterCount++
       glyphQuads.push(...quads)
@@ -418,7 +423,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     // store last set
     if (quadCount > 0 || filterCount > 0) {
       featureGuide.push(
-        curlayerIndex, curType, filterOffset, filterCount,
+        curlayerIndex, ~~(curType === 'icon'), filterOffset, filterCount,
         quadOffset, quadCount, encoding.length, ...encoding
       )
     }
@@ -450,4 +455,118 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       [glyphFilterBuffer, glyphFilterIDBuffer, glyphQuadBuffer, glyphQuadIDBuffer, glyphColorBuffer, featureGuideBuffer]
     )
   }
+
+  #flush3 (mapID: string, sourceName: string, tileID: bigint): void {
+    let { features } = this
+    // TODO: Is this necessary? we sorted earlier
+    features = features.sort(featureSort)
+
+    // ID => { index: resultIndex, count: how many share the same resultIndex }
+    let currIndex = 0
+    const resultIndexMap = new Map<number, { index: number, count: number }>()
+    for (const { id } of features) {
+      const result = resultIndexMap.get(id)
+      if (result === undefined) resultIndexMap.set(id, { index: currIndex++, count: 1 })
+      else result.count++
+    }
+
+    // setup draw thread variables
+    const glyphFilterVertices: number[] = []
+    const glyphQuads: number[] = []
+    const glyphQuadIDs: number[] = []
+    const glyphColors: number[] = []
+    const featureGuide: number[] = []
+    // run through features and store
+    let curlayerIndex = features[0].layerIndex
+    let curType = features[0].type
+    let encoding: number[] = features[0].code
+    let codeStr: string = features[0].code.toString()
+    let filterOffset = 0
+    let quadOffset = 0
+    let filterCount = 0
+    let quadCount = 0
+    // iterate features, store as we go
+    for (const feature of features) {
+      const { id, type, layerIndex, code, color, quads, filter } = feature
+      // if there is a change in layer index or
+      if (
+        (quadCount > 0 || filterCount > 0) &&
+        (curlayerIndex !== layerIndex || codeStr !== code.toString())
+      ) {
+        // store featureGuide
+        featureGuide.push(
+          curlayerIndex, ~~(curType === 'icon'), filterOffset, filterCount,
+          quadOffset, quadCount, encoding.length, ...encoding
+        )
+        // update to new codes
+        curlayerIndex = layerIndex
+        codeStr = code.toString()
+        curType = type
+        encoding = code
+        // update offests
+        filterOffset += filterCount
+        quadOffset += quadCount
+        // reset counts
+        filterCount = 0
+        quadCount = 0
+      }
+      // update filters index, store it, and store the ID, hiding the count inside the id
+      const resultMap = resultIndexMap.get(id) ?? { index: 0, count: 0 }
+      glyphFilterVertices.push(...filter, storeAsFloat32(resultMap.index), storeAsFloat32(id + (resultMap.count << 24)))
+      filterCount++
+      glyphQuads.push(...quads)
+      const qCount = quads.length / QUAD_SIZE
+      quadCount += qCount
+      // add the feature's index for each quad
+      for (let i = 0; i < qCount; i++) glyphQuadIDs.push(resultMap.index)
+      // add color data
+      if (color.length > 0) glyphColors.push(...feature.color.map(c => c / 255))
+      else for (let i = 0; i < qCount; i++) glyphColors.push(1, 1, 1, 1)
+    }
+    // store last set
+    if (quadCount > 0 || filterCount > 0) {
+      featureGuide.push(
+        curlayerIndex, ~~(curType === 'icon'), filterOffset, filterCount,
+        quadOffset, quadCount, encoding.length, ...encoding
+      )
+    }
+
+    // filter data
+    const glyphFilterBuffer = new Float32Array(glyphFilterVertices).buffer
+    // unused by WebGPU
+    const glyphFilterIDBuffer = new Uint8ClampedArray([0]).buffer
+    // quad draw data
+    const glyphQuadBuffer = new Float32Array(glyphQuads).buffer
+    // actually an index buffer not ID buffer
+    const glyphQuadIDBuffer = new Uint32Array(glyphQuadIDs).buffer
+    const glyphColorBuffer = new Float32Array(glyphColors).buffer
+    const featureGuideBuffer = new Float32Array(featureGuide).buffer
+
+    const message: GlyphData = {
+      mapID,
+      type: 'glyph' as const,
+      sourceName,
+      tileID,
+      glyphFilterBuffer,
+      glyphFilterIDBuffer,
+      glyphQuadBuffer,
+      glyphQuadIDBuffer,
+      glyphColorBuffer,
+      featureGuideBuffer
+    }
+    // ship the data
+    postMessage(
+      message,
+      [glyphFilterBuffer, glyphFilterIDBuffer, glyphQuadBuffer, glyphQuadIDBuffer, glyphColorBuffer, featureGuideBuffer]
+    )
+  }
+}
+
+function storeAsFloat32 (u32value: number): number {
+  const buffer = new ArrayBuffer(4)
+  const u32View = new Uint32Array(buffer)
+  const f32View = new Float32Array(buffer)
+
+  u32View[0] = u32value
+  return f32View[0]
 }

@@ -23,7 +23,7 @@ struct WallpaperUniforms {
 }
 
 struct VertexOutput {
-  @builtin(position) Position : vec4<f32>,
+  @builtin(position) Position: vec4<f32>,
   @location(0) screenPos: vec2<f32>,
   @location(1) fade1: vec4<f32>,
   @location(2) fade2: vec4<f32>,

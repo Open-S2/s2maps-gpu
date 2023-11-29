@@ -1,4 +1,5 @@
 export { default as FillWorkflow } from './fillWorkflow'
+export { default as GlyphWorkflow } from './glyphWorkflow'
 export { default as HeatmapWorkflow } from './heatmapWorkflow'
 export { default as LineWorkflow } from './lineWorkflow'
 export { default as PointWorkflow } from './pointWorkflow'

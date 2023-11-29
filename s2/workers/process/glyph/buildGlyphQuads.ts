@@ -45,7 +45,7 @@ export default function buildGlyphQuads (
   for (const unicode of fieldCodes) {
     // word-wrap if line break or length exceeds max allowed.
     if (
-      type === 0 && // is text
+      type === 'text' && // is text
       (unicode === 10 || unicode === 13 || (unicode === 32 && wordWrap !== 0 && cursorX >= wordWrap))
     ) {
       cursorX = 0
@@ -94,7 +94,7 @@ export default function buildGlyphQuads (
   feature.maxX = feature.minX + (maxWidth * size)
   feature.maxY = feature.minY + (maxHeight * size)
   // store the filter
-  feature.filter = [s * 8_192, t * 8_192, anchorOffsetX, anchorOffsetY, ...padding, maxWidth, maxHeight, 0]
+  feature.filter = [s * 8_192, t * 8_192, anchorOffsetX, anchorOffsetY, ...padding, maxWidth, maxHeight]
 }
 
 // MYANMAR MEDIALS go after the characters they are attached to

@@ -15,7 +15,8 @@ export type GlyphData = [string, string] // [family, char]
 
 export interface GlyphObject extends Node {
   // organization parameters
-  idRGB: [number, number, number] // [red, green, blue]
+  id: number
+  idRGB: [r: number, g: number, b: number, a: number]
   layerIndex: number
   gl2Code: number[]
   code: number[]
@@ -26,22 +27,24 @@ export interface GlyphObject extends Node {
   fieldCodes: Unicode[]
   anchor: Anchor // 0 => center ; 1 => top; 2 => topRight ; 3 => right ; 4 => bottomRight ; 5 => bottom ; 6 => bottomLeft ; 7 => left ; 8 => topLeft
   wordWrap: number // 0 means no word wrap
-  offset: [number, number]
-  padding: [number, number]
+  offset: [x: number, y: number]
+  padding: [x: number, y: number]
   align: Alignment
   kerning: number
   lineHeight: number
-  type: 0 | 1 // (0: text, 1: icon)
+  type: 'text' | 'icon'
   // paint
   size: number
   // tile's position
   s: number
   t: number
   // if icon (type === 1) add to color
+  // grouped sets of: [r, g, b, a]
   color: number[]
-  // building quads and filter
-  quads: number[] // [s, t, xOffset, yOffset, xPos, yPos, width, height, texX, texY, texWidth, texHeight]
-  filter: number[] // [s, t, anchorOffsetX, anchorOffsetY, paddingX, paddingY, maxWidth, maxHeight, index]
+  // grouped sets of: [s, t, xOffset, yOffset, xPos, yPos, width, height, texX, texY, texWidth, texHeight]
+  quads: number[]
+  // [s, t, anchorOffsetX, anchorOffsetY, paddingX, paddingY, maxWidth, maxHeight, index]
+  filter: [s: number, t: number, anchorOffsetX: number, anchorOffsetY: number, paddingX: number, paddingY: number, maxWidth: number, maxHeight: number]
 }
 
 export interface Glyph {
@@ -66,6 +69,7 @@ export type ColorMap = Record<string, Record<number, Color>>
 
 export type FamilyMap = Record<Unicode, Glyph>
 
+// family name => unicode => glyph
 export type GlyphMap = Record<string, FamilyMap>
 
 export type IconMap = Record<string, Record<string, Array<{ glyphID: Unicode, colorID: number }>>>

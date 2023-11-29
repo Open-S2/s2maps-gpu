@@ -1,10 +1,10 @@
 const PI = 3.141592653589793238;
 
 struct VertexOutput {
-  @builtin(position) Position : vec4<f32>,
-  @location(0) extent : vec2<f32>,
-  @location(1) opacity : f32,
-  @location(2) strength : f32,
+  @builtin(position) Position: vec4<f32>,
+  @location(0) extent: vec2<f32>,
+  @location(1) opacity: f32,
+  @location(2) strength: f32,
 };
 
 struct TextureOutput {
@@ -482,10 +482,10 @@ const GAUSS_COEF = 0.3989422804014327;
 @vertex
 fn vTexture(
   @builtin(vertex_index) VertexIndex: u32,
-  @location(0) position : vec2<f32>,
-  @location(1) weight : f32,
+  @location(0) position: vec2<f32>,
+  @location(1) weight: f32,
 ) -> VertexOutput {
-  var output : VertexOutput;
+  var output: VertexOutput;
   var extent = Extents[VertexIndex];
   var outPosXY = vec2<f32>(0., 0.);
 
@@ -532,7 +532,7 @@ fn vTexture(
 
 @fragment
 fn fTexture(
-  output : VertexOutput
+  output: VertexOutput
 ) -> @location(0) vec4<f32> {
   var d = -0.5 * 3. * 3. * dot(output.extent, output.extent);
   var val = output.strength * exp(d);
