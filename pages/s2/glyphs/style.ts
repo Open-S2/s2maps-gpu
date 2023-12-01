@@ -44,7 +44,8 @@ const style: StyleDefinition = {
           ease: 'lin',
           ranges: [
             { stop: 0, input: 14 },
-            { stop: 3, input: 22 }
+            { stop: 3, input: 22 },
+            { stop: 4, input: 24 }
           ]
         }
       },

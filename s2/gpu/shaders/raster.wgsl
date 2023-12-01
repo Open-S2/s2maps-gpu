@@ -288,29 +288,29 @@ fn interpolateColor (color1: vec4<f32>, color2: vec4<f32>, t: f32) -> vec4<f32> 
   return vec4<f32>(hue, sat, lbv, alpha);
 }
 
-fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndexPtr: ptr<function, u32>) -> vec4<f32> {
+fn decodeFeature (color: bool, indexPtr: ptr<function, i32>, featureIndexPtr: ptr<function, i32>) -> vec4<f32> {
   let uInputs = array<f32, 10>(view.zoom, view.lon, view.lat, view.bearing, view.pitch, view.time, view.aspectX, view.aspectY, view.featureState, view.curFeature);
   // prep result and variables
-  var index = u32(*indexPtr);
-  var featureIndex = u32(*featureIndexPtr);
+  var index = i32(*indexPtr);
+  var featureIndex = i32(*featureIndexPtr);
   var decodeOffset = index;
   var startingOffset = index;
-  var featureSize = u32(layerCode[index]) >> 10;
+  var featureSize = i32(layerCode[index]) >> 10;
   var res = vec4<f32>(-1., -1., -1., -1.);
-  var conditionStack = array<u32, 6>();
+  var conditionStack = array<i32, 6>();
   var tStack = array<f32, 6>();
-  var stackIndex = 1u; // start at 1 because our loop decrements this at start
+  var stackIndex = i32(1); // start at 1 because our loop decrements this at start
   conditionStack[0] = index;
-  var len = 0u;
-  var conditionSet = 0u;
-  var condition = 0u;
+  var len = 0;
+  var conditionSet = 0;
+  var condition = 0;
 
   loop {
     stackIndex--;
     // pull out current stackIndex condition an decode
     index = conditionStack[stackIndex];
     startingOffset = index;
-    conditionSet = u32(layerCode[index]);
+    conditionSet = i32(layerCode[index]);
     len = conditionSet >> 10;
     condition = (conditionSet & 1008) >> 4;
     index++;
@@ -318,7 +318,7 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndexPtr: pt
     if (condition == 0) {
     } else if (condition == 1) { // value
       if (res[0] == -1.) {
-        for (var i = 0u; i < len - 1; i++) {
+        for (var i = 0; i < len - 1; i++) {
           res[i] = f32(layerCode[index + i]);
         }
       } else {
@@ -326,7 +326,7 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndexPtr: pt
           var val = vec4<f32>(layerCode[index], layerCode[index + 1], layerCode[index + 2], layerCode[index + 3]);
           res = interpolateColor(res, val, tStack[stackIndex]);
         } else {
-          for (var i = 0u; i < len - 1; i++) {
+          for (var i = 0; i < len - 1; i++) {
             res[i] = res[i] + tStack[stackIndex] * (layerCode[index + i] - res[i]);
           }
         }
@@ -341,12 +341,10 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndexPtr: pt
       } else { inputVal = uInputs[(conditionSet & 14) >> 1]; }
       // now that we have the inputVal, we iterate through and find a match
       conditionInput = layerCode[index];
-      loop {
-        if (inputVal == conditionInput) { break; }
+      while (inputVal != conditionInput) {
         // increment index & find length
-        index += (u32(layerCode[index + 1]) >> 10) + 1;
+        index += (i32(layerCode[index + 1]) >> 10) + 1;
         conditionInput = layerCode[index];
-        // if we hit the default, than the value does not exist
         if (conditionInput == 0.) { break; }
       }
       index++; // increment to conditionEncoding
@@ -367,9 +365,9 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndexPtr: pt
       var inputVal = 0.;
       var start = 0.;
       var end = 0.;
-      var startIndex = 0u;
-      var endIndex = 0u;
-      var subCondition = 0u;
+      var startIndex = 0;
+      var endIndex = 0;
+      var subCondition = 0;
       // grab the inputVal value
       if (condition == 4) {
         inputVal = featureCode[featureIndex];
@@ -384,12 +382,12 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndexPtr: pt
         // if current sub condition is an input-range, we must check if if the "start"
         // subCondition was a data-condition or data-range, and if so,
         // we must move past the featureCode that was stored there
-        subCondition = (u32(layerCode[startIndex]) & 1008) >> 4;
+        subCondition = (i32(layerCode[startIndex]) & 1008) >> 4;
         if (subCondition == 2 || subCondition == 4) { featureIndex++; }
         // increment to subCondition
         index++;
         // increment by subConditions length
-        index += u32(layerCode[index]) >> 10;
+        index += i32(layerCode[index]) >> 10;
         // set new start and end
         start = end;
         startIndex = endIndex;
@@ -424,10 +422,10 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, u32>, featureIndexPtr: pt
         // if current sub condition is an input-range, we must check if if the "start"
         // subCondition was a data-condition or data-range, and if so,
         // we must move past the featureCode that was stored there
-        subCondition = (u32(layerCode[startIndex]) & 1008) >> 4;
+        subCondition = (i32(layerCode[startIndex]) & 1008) >> 4;
         if (subCondition == 2 || subCondition == 4) { featureIndex++; }
         index++;
-        index += u32(layerCode[index]) >> 10;
+        index += i32(layerCode[index]) >> 10;
         endIndex = index + 1;
       }
     } else if (condition == 6) { // feature-state
@@ -487,8 +485,8 @@ fn vMain(
   var pos = position / 8192.;
   output.texcoord = pos;
 
-  var index = 0u;
-  var featureIndex = 0u;
+  var index = 0;
+  var featureIndex = 0;
 
   output.opacity = decodeFeature(false, &index, &featureIndex)[0];
   output.saturation = decodeFeature(false, &index, &featureIndex)[0];

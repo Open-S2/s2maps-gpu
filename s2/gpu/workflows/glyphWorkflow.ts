@@ -103,7 +103,6 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
         { binding: 4, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } }, // containers
         { binding: 5, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }, // bboxes
         { binding: 6, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } } // collision results
-        // { binding: 7, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } } // collision results atomic
       ]
     })
     this.#glyphFilterPipelineLayout = device.createPipelineLayout({
@@ -116,8 +115,8 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
         { binding: 1, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } }, // glyph uniforms
         { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } }, // sampler
         { binding: 3, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } }, // texture
-        { binding: 8, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } }, // collision results
-        { binding: 9, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } } // isStroke
+        { binding: 7, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } }, // collision results
+        { binding: 8, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } } // isStroke
       ]
     })
     this.#glyphPipelineLayout = device.createPipelineLayout({
@@ -149,9 +148,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     // upload each image to texture
     for (const { posX, posY, width, height, data } of images) {
       // first make sure width is a multiple of 256
-      // console.log('data', new Uint8ClampedArray(data), width, height)
       const paddedData = context.buildPaddedBuffer(data, width, height)
-      // console.log('paddedData', paddedData)
       context.uploadTextureData(this.#texture, paddedData.data, width, height, { x: posX, y: posY, z: 0 }, 1, cE)
     }
     device.queue.submit([cE.finish()])
@@ -307,8 +304,8 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
           { binding: 1, resource: { buffer: glyphUniformBuffer } },
           { binding: 2, resource: this.#defaultSampler },
           { binding: 3, resource: this.#texture.createView() },
-          { binding: 8, resource: { buffer: this.#glyphFilterResultBuffer } },
-          { binding: 9, resource: { buffer: glyphIsNotStrokeBuffer } }
+          { binding: 7, resource: { buffer: this.#glyphFilterResultBuffer } },
+          { binding: 8, resource: { buffer: glyphIsNotStrokeBuffer } }
         ]
       })
       const glyphStrokeBindGroup = context.device.createBindGroup({
@@ -318,8 +315,8 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
           { binding: 1, resource: { buffer: glyphUniformBuffer } },
           { binding: 2, resource: this.#defaultSampler },
           { binding: 3, resource: this.#texture.createView() },
-          { binding: 8, resource: { buffer: this.#glyphFilterResultBuffer } },
-          { binding: 9, resource: { buffer: glyphIsStrokeBuffer } }
+          { binding: 7, resource: { buffer: this.#glyphFilterResultBuffer } },
+          { binding: 8, resource: { buffer: glyphIsStrokeBuffer } }
         ]
       })
       const glyphFilterBindGroup = context.device.createBindGroup({
@@ -331,7 +328,6 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
           { binding: 4, resource: { buffer: source.glyphFilterBuffer } },
           { binding: 5, resource: { buffer: this.#glyphBBoxesBuffer } },
           { binding: 6, resource: { buffer: this.#glyphFilterResultBuffer } }
-          // { binding: 7, resource: { buffer: this.#glyphFilterResultBuffer } }
         ]
       })
       const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array(featureCode), GPUBufferUsage.STORAGE)
@@ -436,7 +432,6 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
   }
 
   computeFilters (features: GlyphFeature[]): void {
-    // features = features.filter(f => f.tile.face === 4)
     if (features.length === 0) return
     const { context, bboxPipeline, testPipeline } = this
     const { device, frameBufferBindGroup } = context
