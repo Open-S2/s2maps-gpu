@@ -265,8 +265,7 @@ export default class S2MapUI extends Camera {
   // for interaction with features on the screen
   onCanvasMouseMove (x: number, y: number): void {
     if (!this._interactive) return
-    this.mousePosition[0] = x
-    this.mousePosition[1] = y
+    this._setMousePosition(x, y)
     this.mouseMoved = true
     this.render()
   }
@@ -275,8 +274,7 @@ export default class S2MapUI extends Camera {
     this.dragPan.onTouchStart(touches)
     if (!this._interactive || touches.length > 1) return
     const { x, y } = touches[0]
-    this.mousePosition[0] = x
-    this.mousePosition[1] = y
+    this._setMousePosition(x, y)
     this.mouseMoved = true
     this.render()
   }
@@ -328,7 +326,7 @@ export default class S2MapUI extends Camera {
       // if mouse movement, check feature at position
       if (this.mouseMoved && !projectorDirty) {
         this.mouseMoved = false
-        this._onCanvasMouseMove()
+        void this._onCanvasMouseMove()
       }
     })
   }

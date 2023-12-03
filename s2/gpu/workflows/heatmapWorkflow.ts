@@ -374,7 +374,7 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
     const layerGuide = this.layerGuides.get(layerIndex)
     if (layerGuide === undefined) return
     // setup pipeline, bind groups, & buffers
-    passEncoder.setPipeline(this.pipeline)
+    this.context.setRenderPipeline(this.pipeline)
     passEncoder.setBindGroup(1, bindGroup)
     passEncoder.setBindGroup(2, layerGuide.textureBindGroup)
     // draw a screen quad

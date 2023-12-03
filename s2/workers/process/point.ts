@@ -196,7 +196,7 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
       const fl: number = _vertices.length
       for (let f = 0; f < fl; f++) {
         vertices.push(_vertices[f])
-        if (featureType === 'point' && f % 2 === 0) ids.push(...feature.idRGB, 255)
+        if (featureType === 'point' && f % 2 === 0) ids.push(...feature.idRGB)
       }
       // build weights if heatmap
       if (featureType === 'heatmap') {

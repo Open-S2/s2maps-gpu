@@ -16,6 +16,7 @@ const style: StyleDefinition = {
       name: 'land-points',
       source: 'countries',
       type: 'point',
+      interactive: true,
       color: {
         dataCondition: {
           conditions: [

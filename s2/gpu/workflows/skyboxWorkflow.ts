@@ -167,7 +167,7 @@ export default class SkyboxWorkflow implements SkyboxWorkflowSpec {
     // update  matrix if necessary
     if (projector.dirty) this.#updateMatrix(projector)
     // setup pipeline, bind groups, & buffers
-    passEncoder.setPipeline(this.pipeline)
+    this.context.setRenderPipeline(this.pipeline)
     passEncoder.setBindGroup(1, this.#bindGroup)
     // draw the quad
     passEncoder.draw(6)

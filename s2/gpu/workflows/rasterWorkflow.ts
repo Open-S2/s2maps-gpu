@@ -234,7 +234,7 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
     const { vertexBuffer, indexBuffer, count, offset } = source
 
     // setup pipeline, bind groups, & buffers
-    passEncoder.setPipeline(this.pipeline)
+    this.context.setRenderPipeline(this.pipeline)
     passEncoder.setBindGroup(1, bindGroup)
     passEncoder.setBindGroup(2, rasterBindGroup)
     passEncoder.setVertexBuffer(0, vertexBuffer)

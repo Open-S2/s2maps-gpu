@@ -36,7 +36,6 @@ export default function buildMask (division: number, context: WebGPUContext): Ma
     type: 'mask',
     vertexBuffer: context.buildGPUBuffer('mask vertex buffer', new Float32Array(vertices), GPUBufferUsage.VERTEX),
     indexBuffer: context.buildGPUBuffer('mask index buffer', new Uint32Array(indices), GPUBufferUsage.INDEX),
-    idBuffer: context.buildGPUBuffer('mask fill id buffer', new Uint32Array([0]), GPUBufferUsage.VERTEX),
     codeTypeBuffer: context.buildGPUBuffer('mask code type buffer', new Uint32Array([0]), GPUBufferUsage.VERTEX),
     count: indices.length,
     offset: 0

@@ -154,7 +154,31 @@ export default class Painter {
     context.finish()
   }
 
-  paintInteractive (tiles: Tile[]): void {}
+  computeInteractive (tiles: Tile[]): void {
+    const interactiveFeatures = tiles
+      .flatMap(tile => tile.featureGuides)
+      .filter(feature => feature.interactive === true)
+      .sort(featureSort)
+      .reverse()
+    if (interactiveFeatures.length > 0) {
+      // prepare & compute
+      this.context.clearInteractBuffer()
+      this.#computeInteractive(interactiveFeatures)
+    }
+  }
+
+  #computeInteractive (features: FeatureBase[]): void {
+    const { device, frameBufferBindGroup } = this.context
+    // prepare
+    const commandEncoder = device.createCommandEncoder()
+    const computePass = this.context.computePass = commandEncoder.beginComputePass()
+    computePass.setBindGroup(0, frameBufferBindGroup)
+    // compute
+    for (const feature of features) feature.compute?.()
+    // finish
+    computePass.end()
+    device.queue.submit([commandEncoder.finish()])
+  }
 
   delete (): void {
     const { context, workflows } = this

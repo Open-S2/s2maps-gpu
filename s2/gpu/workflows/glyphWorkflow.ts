@@ -75,12 +75,15 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
   testRenderPipeline!: GPURenderPipeline
   bboxPipeline!: GPUComputePipeline
   testPipeline!: GPUComputePipeline
+  interactivePipeline!: GPUComputePipeline
   #defaultSampler!: GPUSampler
   #texture!: GPUTexture
   #glyphBindGroupLayout!: GPUBindGroupLayout
   #glyphPipelineLayout!: GPUPipelineLayout
   #glyphFilterBindGroupLayout!: GPUBindGroupLayout
   #glyphFilterPipelineLayout!: GPUPipelineLayout
+  #glyphInteractiveBindGroupLayout!: GPUBindGroupLayout
+  #glyphInteractivePiplineLayout!: GPUPipelineLayout
   #glyphBBoxesBuffer!: GPUBuffer
   #glyphFilterResultBuffer!: GPUBuffer
   constructor (context: WebGPUContext) {
@@ -89,7 +92,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
 
   async setup (): Promise<void> {
     const { context } = this
-    const { device, frameBindGroupLayout, featureBindGroupLayout } = context
+    const { device, frameBindGroupLayout, featureBindGroupLayout, interactiveBindGroupLayout } = context
     this.module = device.createShaderModule({ label: 'Glyph Shader Module', code: shaderCode })
     this.#defaultSampler = context.buildSampler()
     this.#texture = context.buildTexture(null, 2048, 200, 1, 'rgba8unorm')
@@ -105,9 +108,22 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
         { binding: 6, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } } // collision results
       ]
     })
+    this.#glyphInteractiveBindGroupLayout = device.createBindGroupLayout({
+      label: 'Glyph Interactive BindGroupLayout',
+      entries: [
+        { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } }, // uniforms
+        { binding: 4, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } }, // containers
+        { binding: 5, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }, // bboxes
+        { binding: 7, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } } // collision results
+      ]
+    })
     this.#glyphFilterPipelineLayout = device.createPipelineLayout({
       label: 'Glyph Filter Pipeline Layout',
       bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.#glyphFilterBindGroupLayout]
+    })
+    this.#glyphInteractivePiplineLayout = device.createPipelineLayout({
+      label: 'Glyph Interactive Pipeline Layout',
+      bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.#glyphInteractiveBindGroupLayout, interactiveBindGroupLayout]
     })
     this.#glyphBindGroupLayout = device.createBindGroupLayout({
       label: 'Glyph BindGroupLayout',
@@ -122,10 +138,11 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     this.#glyphPipelineLayout = device.createPipelineLayout({
       bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.#glyphBindGroupLayout]
     })
-    this.pipeline = this.#getPipeline()
-    this.testRenderPipeline = this.#getPipeline(true)
-    this.bboxPipeline = this.#getComputePipeline('boxes')
-    this.testPipeline = this.#getComputePipeline('test')
+    this.pipeline = await this.#getPipeline()
+    this.testRenderPipeline = await this.#getPipeline(true)
+    this.bboxPipeline = await this.#getComputePipeline('boxes')
+    this.testPipeline = await this.#getComputePipeline('test')
+    this.interactivePipeline = await this.#getComputePipeline('interactive')
   }
 
   destroy (): void {
@@ -274,6 +291,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
 
   #buildFeatures (source: GlyphSource, tile: Tile, featureGuideArray: Float32Array): void {
     const { context } = this
+    const { device } = context
     const { mask } = tile
     const features: GlyphFeature[] = []
 
@@ -297,7 +315,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
       const glyphUniformBuffer = context.buildGPUBuffer('Glyph Uniform Buffer', new Float32Array([0, isIcon, ~~overdraw, 1, 1]), GPUBufferUsage.UNIFORM)
       const glyphIsStrokeBuffer = context.buildGPUBuffer('Glyph Bounds Buffer', new Float32Array([1]), GPUBufferUsage.UNIFORM)
       const glyphIsNotStrokeBuffer = context.buildGPUBuffer('Glyph Bounds Buffer', new Float32Array([0]), GPUBufferUsage.UNIFORM)
-      const glyphBindGroup = context.device.createBindGroup({
+      const glyphBindGroup = device.createBindGroup({
         label: 'Glyph BindGroup',
         layout: this.#glyphBindGroupLayout,
         entries: [
@@ -308,7 +326,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
           { binding: 8, resource: { buffer: glyphIsNotStrokeBuffer } }
         ]
       })
-      const glyphStrokeBindGroup = context.device.createBindGroup({
+      const glyphStrokeBindGroup = device.createBindGroup({
         label: 'Glyph Stroke BindGroup',
         layout: this.#glyphBindGroupLayout,
         entries: [
@@ -319,7 +337,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
           { binding: 8, resource: { buffer: glyphIsStrokeBuffer } }
         ]
       })
-      const glyphFilterBindGroup = context.device.createBindGroup({
+      const glyphFilterBindGroup = device.createBindGroup({
         label: 'GlyphFilter BindGroup',
         layout: this.#glyphFilterBindGroupLayout,
         entries: [
@@ -328,6 +346,16 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
           { binding: 4, resource: { buffer: source.glyphFilterBuffer } },
           { binding: 5, resource: { buffer: this.#glyphBBoxesBuffer } },
           { binding: 6, resource: { buffer: this.#glyphFilterResultBuffer } }
+        ]
+      })
+      const glyphInteractiveBindGroup = device.createBindGroup({
+        label: 'Glyph Interactive BindGroup',
+        layout: this.#glyphInteractiveBindGroupLayout,
+        entries: [
+          { binding: 1, resource: { buffer: glyphUniformBuffer } },
+          { binding: 4, resource: { buffer: source.glyphFilterBuffer } },
+          { binding: 5, resource: { buffer: this.#glyphBBoxesBuffer } },
+          { binding: 7, resource: { buffer: this.#glyphFilterResultBuffer } }
         ]
       })
       const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array(featureCode), GPUBufferUsage.STORAGE)
@@ -357,8 +385,10 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
         glyphBindGroup,
         glyphStrokeBindGroup,
         glyphFilterBindGroup,
+        glyphInteractiveBindGroup,
         glyphUniformBuffer,
         draw: () => { this.draw(feature) },
+        compute: () => { this.computeInteractive(feature) },
         destroy: () => {
           glyphBoundsBuffer.destroy()
           glyphUniformBuffer.destroy()
@@ -377,7 +407,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
   // https://programmer.ink/think/several-best-practices-of-webgpu.html
   // BEST PRACTICE 6: it is recommended to create pipeline asynchronously (we don't want to because we WANT to block the main thread)
   // BEST PRACTICE 7: explicitly define pipeline layouts
-  #getPipeline (isTest = false): GPURenderPipeline {
+  async #getPipeline (isTest = false): Promise<GPURenderPipeline> {
     const { context, module } = this
     const { device, format, defaultBlend, sampleCount } = context
 
@@ -388,8 +418,8 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
       passOp: 'replace'
     }
 
-    return device.createRenderPipeline({
-      label: 'Glyph Pipeline',
+    return await device.createRenderPipelineAsync({
+      label: `Glyph Pipeline ${isTest ? 'Test' : 'Main'}`,
       layout: this.#glyphPipelineLayout,
       vertex: {
         module,
@@ -399,10 +429,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
       fragment: {
         module,
         entryPoint: isTest ? 'fTest' : 'fMain',
-        targets: [{
-          format,
-          blend: defaultBlend
-        }]
+        targets: [{ format, blend: defaultBlend }]
       },
       primitive: {
         topology: isTest ? 'line-list' : 'triangle-list',
@@ -421,12 +448,12 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     })
   }
 
-  #getComputePipeline (entryPoint: 'boxes' | 'test'): GPUComputePipeline {
+  async #getComputePipeline (entryPoint: 'boxes' | 'test' | 'interactive'): Promise<GPUComputePipeline> {
     const { context, module } = this
 
-    return context.device.createComputePipeline({
+    return await context.device.createComputePipelineAsync({
       label: `Glyph Filter ${entryPoint} Compute Pipeline`,
-      layout: this.#glyphFilterPipelineLayout,
+      layout: entryPoint === 'interactive' ? this.#glyphInteractivePiplineLayout : this.#glyphFilterPipelineLayout,
       compute: { module, entryPoint }
     })
   }
@@ -435,12 +462,6 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     if (features.length === 0) return
     const { context, bboxPipeline, testPipeline } = this
     const { device, frameBufferBindGroup } = context
-    // update the glyphUniformBuffer's indexOffset for each feature
-    let filterCountOffset = 0
-    for (const { glyphUniformBuffer, filterCount } of features) {
-      context.device.queue.writeBuffer(glyphUniformBuffer, 0, new Uint32Array([filterCountOffset]))
-      filterCountOffset += filterCount
-    }
     // prepare
     const commandEncoder = device.createCommandEncoder()
     const computePass = commandEncoder.beginComputePass()
@@ -448,22 +469,36 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
 
     // Step 1: build bboxes
     computePass.setPipeline(bboxPipeline)
-    for (const { bindGroup, glyphFilterBindGroup, filterCount } of features) {
-      // set bind group
+    let filterCountOffset = 0
+    for (const { glyphUniformBuffer, bindGroup, glyphFilterBindGroup, filterCount } of features) {
+      // update the glyphUniformBuffer's indexOffset for each feature
+      device.queue.writeBuffer(glyphUniformBuffer, 0, new Uint32Array([filterCountOffset]))
+      // set bind groups
       computePass.setBindGroup(1, bindGroup)
       computePass.setBindGroup(2, glyphFilterBindGroup)
-      // draw
       computePass.dispatchWorkgroups(Math.ceil(filterCount / 64))
+      filterCountOffset += filterCount
     }
     // Step 2: test bboxes against each other
     computePass.setPipeline(testPipeline)
-    // draw
     computePass.dispatchWorkgroups(Math.ceil(filterCountOffset / 64))
 
     // finish
     computePass.end()
     device.queue.submit([commandEncoder.finish()])
-    // void this.#logResultBuffer()
+  }
+
+  computeInteractive (feature: GlyphFeature): void {
+    const { interactiveBindGroup, computePass } = this.context
+    const { bindGroup, glyphInteractiveBindGroup, filterCount } = feature
+    // set pipeline
+    this.context.setComputePipeline(this.interactivePipeline)
+    // set bind groups
+    computePass.setBindGroup(1, bindGroup)
+    computePass.setBindGroup(2, glyphInteractiveBindGroup)
+    computePass.setBindGroup(3, interactiveBindGroup)
+    // draw
+    computePass.dispatchWorkgroups(Math.ceil(filterCount / 64))
   }
 
   draw ({
@@ -484,7 +519,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     const { glyphQuadBuffer, glyphFilterBuffer, glyphQuadIndexBuffer, glyphColorBuffer } = source
 
     // setup pipeline, bind groups, & buffers
-    passEncoder.setPipeline(pipeline)
+    context.setRenderPipeline(pipeline)
     passEncoder.setBindGroup(1, bindGroup)
     passEncoder.setVertexBuffer(0, glyphQuadBuffer)
     passEncoder.setVertexBuffer(1, glyphQuadBuffer)
@@ -501,9 +536,9 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     }
     passEncoder.setBindGroup(2, glyphBindGroup)
     passEncoder.draw(6, count, 0, offset)
-    // draw test
+    // draw test if needed
     if (viewCollisions) {
-      passEncoder.setPipeline(this.testRenderPipeline)
+      context.setRenderPipeline(this.testRenderPipeline)
       passEncoder.setVertexBuffer(0, glyphFilterBuffer)
       passEncoder.setVertexBuffer(1, glyphFilterBuffer)
       passEncoder.setVertexBuffer(2, glyphFilterBuffer)
@@ -512,34 +547,4 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
       passEncoder.draw(8, filterCount, 0, filterOffset)
     }
   }
-
-  // async #logResultBuffer (): Promise<void> {
-  //   const { context } = this
-  //   const { device } = context
-  //   const bufferSize = 2_000 * 2 * 4
-  //   const readbackBuffer = device.createBuffer({
-  //     size: bufferSize,
-  //     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
-  //   })
-  //   const commandEncoder = device.createCommandEncoder()
-  //   commandEncoder.copyBufferToBuffer(this.#glyphFilterResultBuffer, 0, readbackBuffer, 0, bufferSize)
-  //   const commands = commandEncoder.finish()
-  //   device.queue.submit([commands])
-  //   await readFromGPUBuffer(readbackBuffer)
-  // }
 }
-
-// async function readFromGPUBuffer (readbackBuffer: GPUBuffer): Promise<void> {
-//   // Ensure the GPU operations are complete
-//   await readbackBuffer.mapAsync(GPUMapMode.READ)
-
-//   // Create a new Float32Array view on the mapped buffer
-//   const arrayBuffer = readbackBuffer.getMappedRange()
-//   const data = new Uint32Array(arrayBuffer)
-
-//   // Log the data
-//   console.log(data)
-
-//   // Unmap the buffer when done
-//   // readbackBuffer.unmap()
-// }

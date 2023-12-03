@@ -22,18 +22,10 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
       format: 'float32x2'
     }]
   },
-  { // id
-    arrayStride: 4,
-    attributes: [{
-      shaderLocation: 1,
-      offset: 0,
-      format: 'uint32'
-    }]
-  },
   { // code
     arrayStride: 4,
     attributes: [{
-      shaderLocation: 2,
+      shaderLocation: 1,
       offset: 0,
       format: 'uint32'
     }]
@@ -43,6 +35,7 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
 export default class FillWorkflow implements FillWorkflowSpec {
   context: WebGPUContext
   layerGuides = new Map<number, FillWorkflowLayerGuideGPU>()
+  interactivePipeline!: GPUComputePipeline
   maskPipeline!: GPURenderPipeline
   fillPipeline!: GPURenderPipeline
   maskFillPipeline!: GPURenderPipeline
@@ -64,6 +57,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
     this.fillPipeline = await this.#getPipeline('fill')
     this.maskFillPipeline = await this.#getPipeline('mask-fill')
     this.invertPipeline = await this.#getPipeline('invert')
+    // this.interactivePipeline = this.#getComputePipeline()
   }
 
   destroy (): void {
@@ -245,6 +239,20 @@ export default class FillWorkflow implements FillWorkflowSpec {
     tile.addFeatures(features)
   }
 
+  async #getComputePipeline (): Promise<GPUComputePipeline> {
+    const { context } = this
+    const { device } = context
+
+    return await device.createComputePipelineAsync({
+      label: 'Interactive Pipeline',
+      layout: this.#pipelineLayout,
+      compute: {
+        module: this.#shaderModule,
+        entryPoint: 'cInteractive'
+      }
+    })
+  }
+
   // https://programmer.ink/think/several-best-practices-of-webgpu.html
   // BEST PRACTICE 6: it is recommended to create pipeline asynchronously
   // BEST PRACTICE 7: explicitly define pipeline layouts
@@ -301,37 +309,45 @@ export default class FillWorkflow implements FillWorkflowSpec {
     // get current source data
     const { passEncoder } = this.context
     const { tile, invert, bindGroup, source, count, offset } = featureGuide
-    const { vertexBuffer, indexBuffer, idBuffer, codeTypeBuffer } = source
+    const { vertexBuffer, indexBuffer, codeTypeBuffer } = source
     const pipeline = invert ? this.invertPipeline : this.fillPipeline
 
     // setup pipeline, bind groups, & buffers
-    passEncoder.setPipeline(pipeline)
+    this.context.setRenderPipeline(pipeline)
     passEncoder.setBindGroup(1, bindGroup)
     passEncoder.setVertexBuffer(0, vertexBuffer)
     passEncoder.setIndexBuffer(indexBuffer, 'uint32')
-    passEncoder.setVertexBuffer(1, idBuffer)
-    passEncoder.setVertexBuffer(2, codeTypeBuffer)
+    passEncoder.setVertexBuffer(1, codeTypeBuffer)
     // draw
-    passEncoder.drawIndexed(count, 1, offset, 0, 0)
+    passEncoder.drawIndexed(count, 1, offset)
 
     if (invert) this.drawMask(tile.mask, featureGuide)
   }
 
   drawMask (
-    { vertexBuffer, indexBuffer, idBuffer, codeTypeBuffer, bindGroup, count, offset }: TileMaskSource,
+    { vertexBuffer, indexBuffer, codeTypeBuffer, bindGroup, count, offset }: TileMaskSource,
     featureGuide?: FillFeature
   ): void {
     const { context, maskPipeline, maskFillPipeline } = this
     // get current source data
     const { passEncoder } = context
     // setup pipeline, bind groups, & buffers
-    passEncoder.setPipeline(featureGuide === undefined ? maskPipeline : maskFillPipeline)
+    this.context.setRenderPipeline(featureGuide === undefined ? maskPipeline : maskFillPipeline)
     passEncoder.setBindGroup(1, featureGuide?.bindGroup ?? bindGroup)
     passEncoder.setVertexBuffer(0, vertexBuffer)
     passEncoder.setIndexBuffer(indexBuffer, 'uint32')
-    passEncoder.setVertexBuffer(1, idBuffer)
-    passEncoder.setVertexBuffer(2, codeTypeBuffer)
+    passEncoder.setVertexBuffer(1, codeTypeBuffer)
     // draw
-    passEncoder.drawIndexed(count, 1, offset, 0, 0)
+    passEncoder.drawIndexed(count, 1, offset)
+  }
+
+  computeInteractive (features: FillFeature[]): void {
+    const { computePass } = this.context
+    this.context.setComputePipeline(this.interactivePipeline)
+    for (const { bindGroup, count } of features) {
+      // set bind group & draw
+      computePass.setBindGroup(1, bindGroup)
+      computePass.dispatchWorkgroups(Math.ceil(count / 64))
+    }
   }
 }

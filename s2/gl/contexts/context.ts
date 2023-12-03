@@ -106,7 +106,7 @@ export default class Context implements ContextSpec {
     gl.renderbufferStorage(gl.RENDERBUFFER, gl.STENCIL_INDEX8, width, height)
   }
 
-  getFeatureAtMousePosition (x: number, y: number): undefined | number {
+  async getFeatureAtMousePosition (x: number, y: number): Promise<undefined | number> {
     const { gl, interactFramebuffer, featurePoint } = this
     // bind the feature framebuffer
     gl.bindFramebuffer(gl.FRAMEBUFFER, interactFramebuffer)

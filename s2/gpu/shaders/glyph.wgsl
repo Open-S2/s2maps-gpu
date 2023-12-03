@@ -23,6 +23,8 @@ struct ViewUniforms {
   time: f32,
   aspectX: f32,
   aspectY: f32,
+  mouseX: f32,
+  mouseY: f32,
   featureState: f32,
   curFeature: f32,
   devicePixelRatio: f32,
@@ -117,6 +119,9 @@ struct BBox {
 @binding(6) @group(2) var<storage, read_write> collisionResults: array<atomic<u32>>;
 @binding(7) @group(2) var<storage, read> collisionResultsReadOnly: array<u32>;
 @binding(8) @group(2) var<uniform> isStroke: f32; // 1 for stroke, 0 for fill
+// ** Interactive Data **
+@binding(0) @group(3) var<storage, read_write> resultIndex: atomic<u32>;
+@binding(1) @group(3) var<storage, read_write> results: array<u32>;
 
 fn LCH2LAB (lch: vec4<f32>) -> vec4<f32> { // r -> l ; g -> c ; b -> h
   var h = lch.b * (PI / 180.);
@@ -788,5 +793,26 @@ fn test(@builtin(global_invocation_id) global_id: vec3<u32>) {
       }
       i++;
     }
+  }
+}
+
+@compute @workgroup_size(64)
+fn interactive(@builtin(global_invocation_id) global_id: vec3<u32>) {
+  // iterate through each GlyphContainer and see if the mouse is inside the bbox
+  if (global_id.x >= arrayLength(&containers)) { return; }
+  let container = containers[global_id.x];
+  let bboxIndex = global_id.x + glyph.indexOffset;
+  let box = bboxes[bboxIndex];
+  
+  if (collisionResultsReadOnly[box.index] != 0u) { return; }
+
+  // check if mouse is inside box
+  if (
+    view.mouseX >= box.left &&
+    view.mouseX <= box.right &&
+    view.mouseY >= box.bottom &&
+    view.mouseY <= box.top
+  ) {
+    results[atomicAdd(&resultIndex, 1u)] = container.id;
   }
 }

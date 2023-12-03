@@ -43,7 +43,6 @@ export interface MaskSource {
   type: 'mask'
   vertexBuffer: GPUBuffer
   indexBuffer: GPUBuffer
-  idBuffer: GPUBuffer
   codeTypeBuffer: GPUBuffer
   count: number
   offset: number
@@ -52,7 +51,6 @@ export interface TileMaskSource {
   type: 'mask'
   vertexBuffer: GPUBuffer
   indexBuffer: GPUBuffer
-  idBuffer: GPUBuffer
   codeTypeBuffer: GPUBuffer
   bindGroup: GPUBindGroup
   uniformBuffer: GPUBuffer
@@ -136,6 +134,7 @@ export interface FeatureBase {
   bindGroup: GPUBindGroup
   draw: () => void
   destroy: () => void
+  compute?: () => void
 }
 
 // tile, parent, layerIndex, layerUniforms, layerCode, featureCode
@@ -171,6 +170,7 @@ export interface GlyphFeature extends FeatureBase {
   glyphBindGroup: GPUBindGroup
   glyphStrokeBindGroup: GPUBindGroup
   glyphFilterBindGroup: GPUBindGroup
+  glyphInteractiveBindGroup: GPUBindGroup
   glyphUniformBuffer: GPUBuffer
 }
 
@@ -206,6 +206,7 @@ export interface PointFeature extends FeatureBase {
   offset: number
   bounds?: [number, number, number, number]
   pointBindGroup: GPUBindGroup
+  pointInteractiveBindGroup: GPUBindGroup
 }
 
 // ** RASTER **

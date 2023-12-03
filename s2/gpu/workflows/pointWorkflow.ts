@@ -29,13 +29,18 @@ export default class PointWorkflow implements PointWorkflowSpec {
   context: WebGPUContext
   layerGuides = new Map<number, PointWorkflowLayerGuideGPU>()
   pipeline!: GPURenderPipeline
+  interactivePipeline!: GPUComputePipeline
+  #pointInteractiveBindGroupLayout!: GPUBindGroupLayout
   #pointBindGroupLayout!: GPUBindGroupLayout
+  module!: GPUShaderModule
   constructor (context: WebGPUContext) {
     this.context = context
   }
 
   async setup (): Promise<void> {
+    this.module = this.context.device.createShaderModule({ code: shaderCode })
     this.pipeline = await this.#getPipeline()
+    this.interactivePipeline = await this.#getComputePipeline()
   }
 
   destroy (): void {
@@ -101,8 +106,8 @@ export default class PointWorkflow implements PointWorkflowSpec {
     // prep buffers
     const source: PointSource = {
       type: 'point' as const,
-      vertexBuffer: context.buildGPUBuffer('Point Vertex Buffer', new Float32Array(vertexBuffer), GPUBufferUsage.VERTEX),
-      idBuffer: context.buildGPUBuffer('Point Index Buffer', new Uint32Array(idBuffer), GPUBufferUsage.VERTEX),
+      vertexBuffer: context.buildGPUBuffer('Point Vertex Buffer', new Float32Array(vertexBuffer), GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE),
+      idBuffer: context.buildGPUBuffer('Point Index Buffer', new Uint32Array(idBuffer), GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE),
       destroy: () => {
         const { vertexBuffer, idBuffer } = source
         vertexBuffer.destroy()
@@ -145,9 +150,15 @@ export default class PointWorkflow implements PointWorkflowSpec {
       )
       const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array(featureCode), GPUBufferUsage.STORAGE)
       const bindGroup = context.buildGroup(
-        'Feature BindGroup',
+        'Point Feature BindGroup',
         context.featureBindGroupLayout,
         [mask.uniformBuffer, mask.positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
+      )
+      const pointInteractiveBuffer = context.buildGPUBuffer('Point Interactive Buffer', new Uint32Array([offset, count]), GPUBufferUsage.UNIFORM)
+      const pointInteractiveBindGroup = context.buildGroup(
+        'Point Interactive BindGroup',
+        this.#pointInteractiveBindGroupLayout,
+        [pointUniformBuffer, pointInteractiveBuffer, source.vertexBuffer, source.idBuffer]
       )
 
       const feature: PointFeature = {
@@ -163,12 +174,15 @@ export default class PointWorkflow implements PointWorkflowSpec {
         interactive,
         bindGroup,
         pointBindGroup,
+        pointInteractiveBindGroup,
         draw: () => {
           context.setStencilReference(tile.tmpMaskID)
           this.draw(feature)
         },
+        compute: () => { this.computeInteractive(feature) },
         destroy: () => {
           pointUniformBuffer.destroy()
+          pointInteractiveBuffer.destroy()
           featureCodeBuffer.destroy()
         }
       }
@@ -183,12 +197,11 @@ export default class PointWorkflow implements PointWorkflowSpec {
   // BEST PRACTICE 6: it is recommended to create pipeline asynchronously
   // BEST PRACTICE 7: explicitly define pipeline layouts
   async #getPipeline (): Promise<GPURenderPipeline> {
-    const { context } = this
+    const { module, context } = this
     const { device, format, defaultBlend, sampleCount, frameBindGroupLayout, featureBindGroupLayout } = context
 
     this.#pointBindGroupLayout = context.buildLayout('Point', ['uniform'], GPUShaderStage.VERTEX)
 
-    const module = device.createShaderModule({ code: shaderCode })
     const layout = device.createPipelineLayout({
       bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.#pointBindGroupLayout]
     })
@@ -200,7 +213,7 @@ export default class PointWorkflow implements PointWorkflowSpec {
     }
 
     return await device.createRenderPipelineAsync({
-      label: 'Point Render Pipeline',
+      label: 'Point Pipeline',
       layout,
       vertex: {
         module,
@@ -232,17 +245,52 @@ export default class PointWorkflow implements PointWorkflowSpec {
     })
   }
 
+  async #getComputePipeline (): Promise<GPUComputePipeline> {
+    const { context, module } = this
+    const { device, frameBindGroupLayout, featureBindGroupLayout, interactiveBindGroupLayout } = context
+
+    this.#pointInteractiveBindGroupLayout = device.createBindGroupLayout({
+      label: 'Glyph Interactive BindGroupLayout',
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } }, // bounds
+        { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } }, // interactive offset & count
+        { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } }, // positions
+        { binding: 3, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } } // ids
+      ]
+    })
+
+    const layout = device.createPipelineLayout({
+      bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.#pointInteractiveBindGroupLayout, interactiveBindGroupLayout]
+    })
+
+    return await context.device.createComputePipelineAsync({
+      label: 'Point Interactive Compute Pipeline',
+      layout,
+      compute: { module, entryPoint: 'interactive' }
+    })
+  }
+
   draw ({ bindGroup, pointBindGroup, source, count, offset }: PointFeature): void {
     // get current source data
     const { passEncoder } = this.context
     const { vertexBuffer } = source
 
     // setup pipeline, bind groups, & buffers
-    passEncoder.setPipeline(this.pipeline)
+    this.context.setRenderPipeline(this.pipeline)
     passEncoder.setBindGroup(1, bindGroup)
     passEncoder.setBindGroup(2, pointBindGroup)
     passEncoder.setVertexBuffer(0, vertexBuffer)
     // draw
     passEncoder.draw(6, count, 0, offset)
+  }
+
+  computeInteractive ({ bindGroup, pointInteractiveBindGroup, count }: PointFeature): void {
+    const { interactiveBindGroup, computePass } = this.context
+    this.context.setComputePipeline(this.interactivePipeline)
+    // set bind group & draw
+    computePass.setBindGroup(1, bindGroup)
+    computePass.setBindGroup(2, pointInteractiveBindGroup)
+    computePass.setBindGroup(3, interactiveBindGroup)
+    computePass.dispatchWorkgroups(Math.ceil(count / 64))
   }
 }

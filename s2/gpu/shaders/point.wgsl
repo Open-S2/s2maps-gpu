@@ -20,6 +20,8 @@ struct ViewUniforms {
   time: f32,
   aspectX: f32,
   aspectY: f32,
+  mouseX: f32,
+  mouseY: f32,
   featureState: f32,
   curFeature: f32,
   devicePixelRatio: f32,
@@ -48,8 +50,15 @@ struct LayerUniforms {
 };
 
 struct Bounds {
-  bottomLeft: vec2<f32>,
-  topRight: vec2<f32>,
+  left: f32,
+  bottom: f32,
+  right: f32,
+  top: f32,
+};
+
+struct Interactive {
+  offset: u32,
+  count: u32,
 };
 
 // ** FRAME DATA **
@@ -71,6 +80,12 @@ struct Bounds {
 @binding(4) @group(1) var<storage, read> featureCode: array<f32>;
 // ** POINT DATA **
 @binding(0) @group(2) var<uniform> bounds: Bounds;
+@binding(1) @group(2) var<uniform> interactiveAttributes: Interactive;
+@binding(2) @group(2) var<storage, read> interactivePos: array<vec2<f32>>;
+@binding(3) @group(2) var<storage, read> interactiveID: array<u32>;
+// ** INTERACTIVE DATA **
+@binding(0) @group(3) var<storage, read_write> resultIndex: atomic<u32>;
+@binding(1) @group(3) var<storage, read_write> results: array<u32>;
 
 fn LCH2LAB (lch: vec4<f32>) -> vec4<f32> { // r -> l ; g -> c ; b -> h
   var h = lch.b * (PI / 180.);
@@ -479,10 +494,10 @@ fn vMain(
   var extent = Inputs[VertexIndex];
 
   if (
-    position.x < bounds.bottomLeft.x ||
-    position.x > bounds.topRight.x ||
-    position.y < bounds.bottomLeft.y ||
-    position.y > bounds.topRight.y
+    position.x < bounds.left ||
+    position.x > bounds.right ||
+    position.y < bounds.bottom ||
+    position.y > bounds.top
   ) { return output; }
   // set color
   // prep layer index and feature index positions
@@ -543,4 +558,42 @@ fn fMain(
   }
 
   return opacityT * mix(output.color, output.stroke, colorT);
+}
+
+@compute @workgroup_size(64)
+fn interactive(@builtin(global_invocation_id) global_id: vec3<u32>) {
+  let id = global_id.x + interactiveAttributes.offset;
+  if (global_id.x >= interactiveAttributes.count) { return; }
+  var tilePos = interactivePos[id];
+  var pos = getPos(tilePos);
+  let zero = getZero();
+  let featureID = interactiveID[id];
+
+  // adjust by w
+  pos /= pos.w;
+  // if point is behind sphere, drop it.
+  if (pos.z > zero.z) { return; }
+  // if point outside bounds, drop it.
+  if (
+    tilePos.x < bounds.left ||
+    tilePos.x > bounds.right ||
+    tilePos.y < bounds.bottom ||
+    tilePos.y > bounds.top
+  ) { return; }
+
+  // grab radius
+  var index = 0;
+  var featureIndex = 0;
+  let radius = decodeFeature(false, &index, &featureIndex)[0] * view.devicePixelRatio;
+  let strokeWidth = decodeFeature(false, &index, &featureIndex)[0] * view.devicePixelRatio;
+  // convert to screen space for x and y
+  let aspect = vec2<f32>(view.aspectX, view.aspectY);
+  let posScreen = (pos.xy + 1.) / 2. * aspect;
+  let mouse = (vec2<f32>(view.mouseX, view.mouseY) + 1.) / 2. * aspect;
+
+  // if mouseX,mouseY is outside of point+radius, drop it.
+  if (length(posScreen - mouse) > (radius + strokeWidth)) { return; }
+
+  // otherwise add results
+  results[atomicAdd(&resultIndex, 1u)] = featureID;
 }

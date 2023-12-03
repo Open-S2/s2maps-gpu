@@ -19,6 +19,8 @@ struct ViewUniforms {
   time: f32,
   aspectX: f32,
   aspectY: f32,
+  mouseX: f32,
+  mouseY: f32,
   featureState: f32,
   curFeature: f32,
   devicePixelRatio: f32,

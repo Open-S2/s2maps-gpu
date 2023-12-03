@@ -166,7 +166,7 @@ export default class ShadeWorkflow implements ShadeWorkflowSpec {
     const { passEncoder } = context
     const { vertexBuffer, indexBuffer, count, offset } = source
     // setup pipeline, bind groups, & buffers
-    passEncoder.setPipeline(pipeline)
+    this.context.setRenderPipeline(pipeline)
     passEncoder.setBindGroup(1, bindGroup)
     passEncoder.setVertexBuffer(0, vertexBuffer)
     passEncoder.setIndexBuffer(indexBuffer, 'uint32')

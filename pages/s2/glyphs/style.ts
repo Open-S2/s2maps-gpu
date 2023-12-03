@@ -33,6 +33,7 @@ const style: StyleDefinition = {
       name: 'poi-labels',
       source: 'countries',
       type: 'glyph',
+      interactive: true,
       textFamily: 'robotoMedium',
       textField: '?!Uname',
       textAnchor: 'center',
@@ -54,7 +55,7 @@ const style: StyleDefinition = {
       textStroke: 'rgba(255, 255, 255, 0.75)',
       textStrokeWidth: 0.5,
       overdraw: false,
-      viewCollisions: false
+      viewCollisions: true
     }
   ]
 }

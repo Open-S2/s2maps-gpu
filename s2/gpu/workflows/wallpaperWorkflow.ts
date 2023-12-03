@@ -96,6 +96,7 @@ export default class WallpaperWorkflow implements WallpaperWorkflowSpec {
     })
 
     return await device.createRenderPipelineAsync({
+      label: 'Wallpaper Pipeline',
       layout,
       vertex: {
         module,
@@ -126,7 +127,7 @@ export default class WallpaperWorkflow implements WallpaperWorkflowSpec {
     // update scale if needed
     if (projector.dirty) this.#updateScale(projector)
     // setup pipeline, bind groups, & buffers
-    passEncoder.setPipeline(this.pipeline)
+    this.context.setRenderPipeline(this.pipeline)
     passEncoder.setBindGroup(1, this.#bindGroup)
     // draw the quad
     passEncoder.draw(6)
