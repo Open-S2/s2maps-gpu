@@ -239,7 +239,7 @@ export interface Context {
   resize: () => void
   setInteractive: (interactive: boolean) => void
   resizeInteract: () => void
-  getFeatureAtMousePosition: (x: number, y: number) => undefined | number
+  getFeatureAtMousePosition: (x: number, y: number) => Promise<undefined | number>
   delete: () => void
 
   /** CONSTRUCTION **/

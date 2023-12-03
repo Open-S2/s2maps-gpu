@@ -41,5 +41,5 @@ export interface Painter {
   setColorMode: (mode: 0 | 1 | 2 | 3 | 4) => void
   delete: () => void
   paint: (projector: Projector, tiles: Tile[]) => void
-  paintInteractive: (tiles: Tile[]) => void
+  computeInteractive: (tiles: Tile[]) => void
 }

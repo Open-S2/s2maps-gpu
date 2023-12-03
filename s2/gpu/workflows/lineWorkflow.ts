@@ -282,7 +282,7 @@ export default class LineWorkflow implements LineWorkflowSpec {
     const { vertexBuffer } = source
 
     // setup pipeline, bind groups, & buffers
-    passEncoder.setPipeline(this.pipeline)
+    this.context.setRenderPipeline(this.pipeline)
     passEncoder.setBindGroup(1, bindGroup)
     passEncoder.setBindGroup(2, lineBindGroup)
     passEncoder.setVertexBuffer(0, vertexBuffer) // prev

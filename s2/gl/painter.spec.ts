@@ -59,7 +59,7 @@ export interface Painter {
   injectFrameUniforms: (matrix: Float32Array, view: Float32Array, aspect: [number, number]) => void
   injectTimeCache: (timeCache: TimeCache) => void
   paint: (projector: Projector, tiles: Tile[]) => void
-  paintInteractive: (tiles: Tile[]) => void
+  computeInteractive: (tiles: Tile[]) => void
   paintMasks: (tiles: Tile[]) => void
   paintFeatures: (features: FeatureGuide[], interactive: boolean) => void
   paintHeatmap: (features: HeatmapFeatureGuide[]) => HeatmapFeatureGuide

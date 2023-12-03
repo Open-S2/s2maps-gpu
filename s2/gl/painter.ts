@@ -196,7 +196,7 @@ export default class Painter implements PainterSpec {
     context.cleanup()
   }
 
-  paintInteractive (tiles: Tile[]): void {
+  computeInteractive (tiles: Tile[]): void {
     const interactiveFeatures = tiles
       .flatMap(tile => tile.featureGuides)
       .filter(feature => feature.interactive === true)

@@ -15,6 +15,8 @@ struct ViewUniforms {
   time: f32,
   aspectX: f32,
   aspectY: f32,
+  mouseX: f32,
+  mouseY: f32,
   featureState: f32,
   curFeature: f32,
   devicePixelRatio: f32,
@@ -42,6 +44,12 @@ struct LayerUniforms {
   useLCH: f32, // use LCH coloring or RGB if false
 };
 
+struct Triangle {
+  a: vec2<f32>,
+  b: vec2<f32>,
+  c: vec2<f32>,
+};
+
 // ** FRAME DATA **
 // frame data is updated at the beginning of each new frame
 @binding(0) @group(0) var<uniform> view: ViewUniforms;
@@ -59,6 +67,11 @@ struct LayerUniforms {
 // ** FEATURE DATA **
 // every feature will have it's own code to parse it's attribute data in real time
 @binding(4) @group(1) var<storage, read> featureCode: array<f32>;
+// ** Interactive Data **
+@binding(0) @group(2) var<storage, read_write> resultIndex: atomic<u32>;
+@binding(1) @group(2) var<storage, read_write> results: array<u32>;
+@binding(0) @group(3) var<storage, read_write> interactiveData: array<Triangle>;
+@binding(1) @group(3) var<storage, read_write> interactiveID: array<u32>; // ID of the feature
 
 fn LCH2LAB (lch: vec4<f32>) -> vec4<f32> { // r -> l ; g -> c ; b -> h
   var h = lch.b * (PI / 180.);
@@ -451,8 +464,7 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, i32>, featureIndexPtr: pt
 @vertex
 fn vMain(
   @location(0) position: vec2<f32>,
-  @location(1) featureID: u32,
-  @location(2) codeType: u32,
+  @location(1) codeType: u32,
 ) -> VertexOutput {
   var output: VertexOutput;
 
@@ -479,4 +491,31 @@ fn fMain(
   output: VertexOutput
 ) -> @location(0) vec4<f32> {
   return output.color;
+}
+
+@compute @workgroup_size(64)
+fn cInteractive(@builtin(global_invocation_id) global_id: vec3<u32>) {
+  let id = global_id.x;
+  if (id >= arrayLength(&interactiveID)) { return; }
+  let featureID = interactiveID[id];
+  let triangle = interactiveData[id];
+
+  // get Position of each triangle vertex
+  var a = getPos(triangle.a);
+  var b = getPos(triangle.b);
+  var c = getPos(triangle.c);
+  // convert to clip space
+  a /= a.w;
+  b /= b.w;
+  c /= c.w;
+  // find the area of the triangle
+  let area = abs((b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y));
+  // find the barycentric coordinates of the point
+  let s = ((a.y - c.y) * (view.mouseX - c.x) + (c.x - a.x) * (view.mouseY - c.y)) / area;
+  let t = ((c.y - a.y) * (view.mouseX - c.x) + (a.x - c.x) * (view.mouseY - c.y)) / area;
+  let u = 1. - s - t;
+  // if the point is in the triangle, we add it to the results
+  if (s >= 0. && t >= 0. && u >= 0.) {
+    results[atomicAdd(&resultIndex, 1u)] = featureID;
+  }
 }

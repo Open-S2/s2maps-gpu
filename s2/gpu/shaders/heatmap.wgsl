@@ -22,6 +22,8 @@ struct ViewUniforms {
   time: f32,
   aspectX: f32,
   aspectY: f32,
+  mouseX: f32,
+  mouseY: f32,
   featureState: f32,
   curFeature: f32,
   devicePixelRatio: f32,
@@ -50,8 +52,10 @@ struct LayerUniforms {
 };
 
 struct Bounds {
-  bottomLeft: vec2<f32>,
-  topRight: vec2<f32>,
+  left: f32,
+  bottom: f32,
+  right: f32,
+  top: f32,
 };
 
 // ** FRAME DATA **
@@ -488,10 +492,10 @@ fn vTexture(
   var outPosXY = vec2<f32>(0., 0.);
 
   if (
-    position.x < bounds.bottomLeft.x ||
-    position.x > bounds.topRight.x ||
-    position.y < bounds.bottomLeft.y ||
-    position.y > bounds.topRight.y
+    position.x < bounds.left ||
+    position.x > bounds.right ||
+    position.y < bounds.bottom ||
+    position.y > bounds.top
   ) { return output; }
   // prep layer index and feature index positions
   var index = 0;

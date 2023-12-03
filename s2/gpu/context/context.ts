@@ -27,23 +27,30 @@ export default class WebGPUContext {
   sampleCount = 1
   clearColorRGBA: [r: number, g: number, b: number, a: number] = [0, 0, 0, 0]
   // manage buffers, layouts, and bind groups
+  #interactiveReadBuffer!: GPUBuffer
+  #interactiveIndexBuffer!: GPUBuffer
+  #interactiveResultBuffer!: GPUBuffer
+  interactiveBindGroupLayout!: GPUBindGroupLayout
+  interactiveBindGroup!: GPUBindGroup
   #viewUniformBuffer!: GPUBuffer
   #matrixUniformBuffer!: GPUBuffer
   frameBindGroupLayout!: GPUBindGroupLayout
   featureBindGroupLayout!: GPUBindGroupLayout
   frameBufferBindGroup!: GPUBindGroup
-  nullTexture!: GPUTexture
   #renderTarget?: GPUTexture
   #depthStencilTexture!: GPUTexture
   #renderPassDescriptor!: GPURenderPassDescriptor
   // frame specific variables
   commandEncoder!: GPUCommandEncoder
   passEncoder!: GPURenderPassEncoder
+  computePass!: GPUComputePassEncoder
   #resizeNextFrame = false
   #resizeCB?: () => void
   // track current states
   colorMode: ColorMode = 0
   stencilRef = -1
+  currPipeline: undefined | GPURenderPipeline | GPUComputePipeline
+  findingFeature = false
   // common modes
   defaultBlend: GPUBlendState = {
     color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
@@ -65,11 +72,7 @@ export default class WebGPUContext {
     const device = this.device = await this.#adapter.requestDevice()
     // configure context
     const format = this.format = navigator.gpu.getPreferredCanvasFormat()
-    this.gpu.configure({
-      device,
-      format,
-      alphaMode: 'premultiplied'
-    })
+    this.gpu.configure({ device, format, alphaMode: 'premultiplied' })
     // prep uniform/storage buffers
     this.#buildContextStorageGroupsAndLayouts()
     // set size
@@ -79,6 +82,8 @@ export default class WebGPUContext {
   }
 
   newScene (view: Float32Array, matrix: Float32Array): void {
+    // reset current pipeline
+    this.currPipeline = undefined
     // reset stencil ref
     this.stencilRef = -1
     // if a resize was called, let's do that first
@@ -97,9 +102,25 @@ export default class WebGPUContext {
     this.passEncoder.setBindGroup(0, this.frameBufferBindGroup)
   }
 
+  clearInteractBuffer (): void {
+    this.device.queue.writeBuffer(this.#interactiveIndexBuffer, 0, new Uint32Array([0]))
+  }
+
   finish (): void {
     this.passEncoder.end()
     this.device.queue.submit([this.commandEncoder.finish()])
+  }
+
+  setRenderPipeline (pipeline: GPURenderPipeline): void {
+    if (this.currPipeline?.label === pipeline.label) return
+    this.currPipeline = pipeline
+    this.passEncoder.setPipeline(pipeline)
+  }
+
+  setComputePipeline (pipeline: GPUComputePipeline): void {
+    if (this.currPipeline?.label === pipeline.label) return
+    this.currPipeline = pipeline
+    this.computePass.setPipeline(pipeline)
   }
 
   setClearColor (clearColor: [r: number, g: number, b: number, a: number]): void {
@@ -114,7 +135,7 @@ export default class WebGPUContext {
 
   setDevicePixelRatio (devicePixelRatio?: number): void {
     if (devicePixelRatio !== undefined) this.devicePixelRatio = devicePixelRatio
-    this.device.queue.writeBuffer(this.#viewUniformBuffer, 11 * 4, new Float32Array([this.devicePixelRatio]))
+    this.device.queue.writeBuffer(this.#viewUniformBuffer, 13 * 4, new Float32Array([this.devicePixelRatio]))
   }
 
   // https://programmer.ink/think/several-best-practices-of-webgpu.html
@@ -161,19 +182,34 @@ export default class WebGPUContext {
     }
   }
 
-  getFeatureAtMousePosition (x: number, y: number): undefined | number {
-    return undefined
-    // const { gl, interactFramebuffer, featurePoint } = this
-    // // bind the feature framebuffer
-    // gl.bindFramebuffer(gl.FRAMEBUFFER, interactFramebuffer)
-    // // grab the data
-    // gl.readPixels(x, gl.canvas.height - y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, featurePoint)
+  // TODO: Track if we are awaiting a result, and if so, drop the request
+  async getFeatureAtMousePosition (_x: number, _y: number): Promise<undefined | number> {
+    const { device } = this
+    let result: undefined | number
+    // if we are already finding a feature, return undefined
+    if (this.findingFeature) return result
 
-    // if (featurePoint[3] !== 255) return
-    // // create the actual feature id
-    // const featureID = featurePoint[0] + (featurePoint[1] << 8) + (featurePoint[2] << 16)
-    // // return if we found something
-    // if (featureID > 0) return featureID
+    // first read the index buffer and result buffer into the read buffer
+    const commandEncoder = device.createCommandEncoder()
+    commandEncoder.copyBufferToBuffer(this.#interactiveIndexBuffer, 0, this.#interactiveReadBuffer, 0, 4)
+    commandEncoder.copyBufferToBuffer(this.#interactiveResultBuffer, 0, this.#interactiveReadBuffer, 4, 200)
+    device.queue.submit([commandEncoder.finish()])
+
+    // read the results
+    this.findingFeature = true
+    await this.#interactiveReadBuffer.mapAsync(GPUMapMode.READ)
+    this.findingFeature = false
+    const arrayBuffer = this.#interactiveReadBuffer.getMappedRange()
+    const data = new Uint32Array(arrayBuffer)
+    // grab the index
+    const index = data[0]
+    // TODO: in the future we can return all the results; for now the first one
+    // if the index is 0, we didn't hit anything
+    if (index !== 0) result = data[index]
+
+    // unmap before we return the result
+    this.#interactiveReadBuffer.unmap()
+    return result
   }
 
   resize (cb: () => void): void {
@@ -310,15 +346,19 @@ export default class WebGPUContext {
   }
 
   #buildContextStorageGroupsAndLayouts (): void {
+    // setup interactive buffers
+    this.#interactiveIndexBuffer = this.buildGPUBuffer('Interactive Index Buffer', new Uint32Array(1), GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC)
+    this.#interactiveResultBuffer = this.buildGPUBuffer('Interactive Result Buffer', new Uint32Array(50), GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC)
+    this.#interactiveReadBuffer = this.buildGPUBuffer('Interactive Read Buffer', new Uint32Array(51), GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ)
+    this.interactiveBindGroupLayout = this.buildLayout('Interactive', ['storage', 'storage'], GPUShaderStage.COMPUTE)
+    this.interactiveBindGroup = this.buildGroup('Interactive BindGroup', this.interactiveBindGroupLayout, [this.#interactiveIndexBuffer, this.#interactiveResultBuffer])
     // setup position uniforms
-    this.#viewUniformBuffer = this.buildGPUBuffer('View Uniform Buffer', new Float32Array(12), GPUBufferUsage.UNIFORM)
+    this.#viewUniformBuffer = this.buildGPUBuffer('View Uniform Buffer', new Float32Array(14), GPUBufferUsage.UNIFORM)
     this.#matrixUniformBuffer = this.buildGPUBuffer('Matrix Uniform Buffer', new Float32Array(16), GPUBufferUsage.UNIFORM)
     this.frameBindGroupLayout = this.buildLayout('Frame', ['uniform', 'uniform'], GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT | GPUShaderStage.COMPUTE)
     this.frameBufferBindGroup = this.buildGroup('Frame BindGroup', this.frameBindGroupLayout, [this.#viewUniformBuffer, this.#matrixUniformBuffer])
     // setup per feature uniforms layout
     this.featureBindGroupLayout = this.buildLayout('Feature', ['uniform', 'uniform', 'uniform', 'read-only-storage', 'read-only-storage'], GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT | GPUShaderStage.COMPUTE)
-    // setup null variables
-    this.nullTexture = this.buildTexture(new Uint8Array([0, 0, 0, 0]), 1, 1)
   }
 
   buildSampler (
@@ -434,7 +474,8 @@ export default class WebGPUContext {
     this.#matrixUniformBuffer.destroy()
     this.#renderTarget?.destroy()
     this.#depthStencilTexture.destroy()
-    this.nullTexture.destroy()
+    this.#interactiveIndexBuffer.destroy()
+    this.#interactiveResultBuffer.destroy()
     this.device.destroy()
   }
 }

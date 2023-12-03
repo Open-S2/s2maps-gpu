@@ -28,10 +28,10 @@ export interface ResizeDimensions {
 export default class Camera {
   readonly parent?: S2Map
   id: string
-  #canvas: HTMLCanvasElement
+  readonly #canvas: HTMLCanvasElement
   _canDraw = false // let the render sequence know if the painter is ready to paint
   _interactive = false // allow the user to make visual changes to the map, whether that be zooming, panning, or dragging
-  #scrollZoom = true // allow the user to scroll over the canvas and cause a zoom change
+  readonly #scrollZoom // allow the user to scroll over the canvas and cause a zoom change
   style: Style
   projector: Projector
   painter!: GLPainter & GPUPainter
@@ -224,6 +224,12 @@ export default class Camera {
     }
   }
 
+  _setMousePosition (posX: number, posY: number): void {
+    this.mousePosition = [posX, posY]
+    this.projector.setMousePosition(posX, posY)
+    this.painter.dirty = true
+  }
+
   #onClick ({ detail }: ClickEvent): void {
     const { projector, currFeature, parent } = this
     // get lon lat of cursor
@@ -267,9 +273,9 @@ export default class Camera {
     else this.parent?.dispatchEvent(new CustomEvent('pos', { detail: { zoom, lon, lat } }))
   }
 
-  _onCanvasMouseMove (): void {
+  async _onCanvasMouseMove (): Promise<void> {
     if (!this.style.interactive) return
-    const featureID = this.painter.context.getFeatureAtMousePosition(...this.mousePosition)
+    const featureID = await this.painter.context.getFeatureAtMousePosition(...this.mousePosition)
     // if we found an ID and said feature is not the same as the current, we dive down
     // @ts-expect-error isNaN can check for properties that are not numbers
     if (isNaN(featureID) && this.currFeature !== null) {
@@ -479,7 +485,7 @@ export default class Camera {
     // draw the interactive elements if there was no movement/zoom change
     if (style.interactive && !projector.dirty && this.wasDirtyLastFrame) {
       this.wasDirtyLastFrame = false
-      painter.paintInteractive(tiles as any)
+      painter.computeInteractive(tiles as any)
     }
     // cleanup
     painter.dirty = false

@@ -26,25 +26,6 @@ export interface ProjectionConfig {
   zoomOffset?: number
 }
 
-// export type View = [
-//   zoom: number,
-//   lon: number,
-//   lat: number,
-//   bearing: number,
-//   pitch: number,
-//   time: number,
-//   featureState: number,
-//   currFeature: number,
-//   extension: number,
-//   extension: number,
-//   extension: number,
-//   extension: number,
-//   extension: number,
-//   extension: number,
-//   extension: number,
-//   extension: number
-// ]
-
 export type MatrixType = 'm' | 'km' // meters or kilometers
 
 export default class Projector {
@@ -58,7 +39,8 @@ export default class Projector {
   zTranslateEnd = 1.001
   zoomEnd = 5
   positionalZoom = true
-  view: Float32Array = new Float32Array(10) // [zoom, lon, lat, bearing, pitch, time, aspectX, aspectY, featureState, currFeature]
+  // [zoom, lon, lat, bearing, pitch, time, aspectX, aspectY, mouseX, mouseY, featureState, currFeature]
+  view: Float32Array = new Float32Array(12)
   aspect: [number, number] = [400, 300] // default canvas width x height
   matrices: { [key in MatrixType]?: Float32Array } = {}
   eye: XYZ = [0, 0, 0] // [x, y, z] only z should change for visual effects
@@ -97,13 +79,20 @@ export default class Projector {
     }
   }
 
+  /// Input is the pixel position (0->width, 0->height). Convert to -1->1 for the GPU
+  setMousePosition (x: number, y: number): void {
+    const [width, height] = this.aspect
+    this.view[8] = (x / width) * 2 - 1
+    this.view[9] = (y / height) * -2 + 1
+  }
+
   setFeatureState (state: 0 | 1 | 2): void {
-    this.view[6] = state
+    this.view[10] = state
     this.dirty = true
   }
 
   setCurrentFeature (id: number): void {
-    this.view[7] = id
+    this.view[11] = id
     this.dirty = true
   }
 
