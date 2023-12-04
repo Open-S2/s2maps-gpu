@@ -18,7 +18,7 @@ const style: StyleDefinition = {
       type: 'fill',
       opaque: false,
       color: '#b4c1c6',
-      interactive: true
+      interactive: false
     }
   ]
 }
