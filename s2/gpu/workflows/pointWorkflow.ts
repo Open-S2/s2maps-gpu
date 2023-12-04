@@ -250,7 +250,7 @@ export default class PointWorkflow implements PointWorkflowSpec {
     const { device, frameBindGroupLayout, featureBindGroupLayout, interactiveBindGroupLayout } = context
 
     this.#pointInteractiveBindGroupLayout = device.createBindGroupLayout({
-      label: 'Glyph Interactive BindGroupLayout',
+      label: 'Point Interactive BindGroupLayout',
       entries: [
         { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } }, // bounds
         { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } }, // interactive offset & count

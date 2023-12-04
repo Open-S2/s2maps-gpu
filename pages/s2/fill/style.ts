@@ -17,7 +17,8 @@ const style: StyleDefinition = {
       source: 'countries',
       type: 'fill',
       opaque: false,
-      color: '#b4c1c6'
+      color: '#b4c1c6',
+      interactive: true
     }
   ]
 }

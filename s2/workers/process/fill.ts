@@ -250,7 +250,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
         ids[idRGBIndex] = idRGB[0]
         ids[idRGBIndex + 1] = idRGB[1]
         ids[idRGBIndex + 2] = idRGB[2]
-        ids[idRGBIndex + 3] = 255
+        ids[idRGBIndex + 3] = 0
       }
       // update previous layerIndex
       curlayerIndex = layerIndex
