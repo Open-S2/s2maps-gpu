@@ -44,10 +44,15 @@ struct LayerUniforms {
   useLCH: f32, // use LCH coloring or RGB if false
 };
 
-struct Triangle {
-  a: vec2<f32>,
-  b: vec2<f32>,
-  c: vec2<f32>,
+struct Interactive {
+  offset: u32,
+  count: u32,
+};
+
+struct TriangleIndexes {
+  a: u32,
+  b: u32,
+  c: u32,
 };
 
 // ** FRAME DATA **
@@ -70,8 +75,10 @@ struct Triangle {
 // ** Interactive Data **
 @binding(0) @group(2) var<storage, read_write> resultIndex: atomic<u32>;
 @binding(1) @group(2) var<storage, read_write> results: array<u32>;
-@binding(0) @group(3) var<storage, read_write> interactiveData: array<Triangle>;
-@binding(1) @group(3) var<storage, read_write> interactiveID: array<u32>; // ID of the feature
+@binding(0) @group(3) var<uniform> interactiveAttributes: Interactive;
+@binding(1) @group(3) var<storage, read> interactivePos: array<vec2<f32>>;
+@binding(2) @group(3) var<storage, read> interactiveIndex: array<TriangleIndexes>;
+@binding(3) @group(3) var<storage, read> interactiveID: array<u32>; // ID of the feature
 
 fn LCH2LAB (lch: vec4<f32>) -> vec4<f32> { // r -> l ; g -> c ; b -> h
   var h = lch.b * (PI / 180.);
@@ -494,25 +501,29 @@ fn fMain(
 }
 
 @compute @workgroup_size(64)
-fn cInteractive(@builtin(global_invocation_id) global_id: vec3<u32>) {
-  let id = global_id.x;
-  if (id >= arrayLength(&interactiveID)) { return; }
+fn interactive(@builtin(global_invocation_id) global_id: vec3<u32>) {
+  let id = global_id.x + interactiveAttributes.offset;
+  if (global_id.x >= interactiveAttributes.count) { return; }
+  let index = interactiveIndex[id];
   let featureID = interactiveID[id];
-  let triangle = interactiveData[id];
 
   // get Position of each triangle vertex
-  var a = getPos(triangle.a);
-  var b = getPos(triangle.b);
-  var c = getPos(triangle.c);
+  var a = getPos(interactivePos[index.a]);
+  var b = getPos(interactivePos[index.b]);
+  var c = getPos(interactivePos[index.c]);
   // convert to clip space
   a /= a.w;
   b /= b.w;
   c /= c.w;
+
   // find the area of the triangle
-  let area = abs((b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y));
+  let area = (b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y);
+  let absArea = abs(area);
+  // CW triangles are back facing so we drop
+  if (area < 0.) { return; }
   // find the barycentric coordinates of the point
-  let s = ((a.y - c.y) * (view.mouseX - c.x) + (c.x - a.x) * (view.mouseY - c.y)) / area;
-  let t = ((c.y - a.y) * (view.mouseX - c.x) + (a.x - c.x) * (view.mouseY - c.y)) / area;
+  let s = 1 / (2 * absArea) * (a.y * c.x - a.x * c.y + (c.y - a.y) * view.mouseX + (a.x - c.x) * view.mouseY);
+  let t = 1 / (2 * absArea) * (a.x * b.y - a.y * b.x + (a.y - b.y) * view.mouseX + (b.x - a.x) * view.mouseY);
   let u = 1. - s - t;
   // if the point is in the triangle, we add it to the results
   if (s >= 0. && t >= 0. && u >= 0.) {

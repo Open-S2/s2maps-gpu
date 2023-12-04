@@ -42,6 +42,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
   invertPipeline!: GPURenderPipeline
   #shaderModule!: GPUShaderModule
   #pipelineLayout!: GPUPipelineLayout
+  #fillInteractiveBindGroupLayout!: GPUBindGroupLayout
   constructor (context: WebGPUContext) {
     this.context = context
   }
@@ -57,7 +58,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
     this.fillPipeline = await this.#getPipeline('fill')
     this.maskFillPipeline = await this.#getPipeline('mask-fill')
     this.invertPipeline = await this.#getPipeline('invert')
-    // this.interactivePipeline = this.#getComputePipeline()
+    this.interactivePipeline = this.#getComputePipeline()
   }
 
   destroy (): void {
@@ -132,6 +133,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
       context.featureBindGroupLayout,
       [mask.uniformBuffer, mask.positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
     )
+
     const feature: FillFeature = {
       type: 'fill' as const,
       sourceName,
@@ -164,9 +166,9 @@ export default class FillWorkflow implements FillWorkflowSpec {
     // prep buffers
     const source: FillSource = {
       type: 'fill' as const,
-      vertexBuffer: context.buildGPUBuffer('Fill Vertex Buffer', new Float32Array(vertexBuffer), GPUBufferUsage.VERTEX),
-      indexBuffer: context.buildGPUBuffer('Fill Index Buffer', new Uint32Array(indexBuffer), GPUBufferUsage.INDEX),
-      idBuffer: context.buildGPUBuffer('Fill ID Buffer', new Uint32Array(idBuffer), GPUBufferUsage.VERTEX),
+      vertexBuffer: context.buildGPUBuffer('Fill Vertex Buffer', new Float32Array(vertexBuffer), GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE),
+      indexBuffer: context.buildGPUBuffer('Fill Index Buffer', new Uint32Array(indexBuffer), GPUBufferUsage.INDEX | GPUBufferUsage.STORAGE),
+      idBuffer: context.buildGPUBuffer('Fill ID Buffer', new Uint32Array(idBuffer), GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE),
       codeTypeBuffer: context.buildGPUBuffer('Fill Code Type Buffer', new Uint32Array(codeTypeBuffer), GPUBufferUsage.VERTEX),
       destroy: () => {
         const { vertexBuffer, indexBuffer, idBuffer, codeTypeBuffer } = source
@@ -201,16 +203,20 @@ export default class FillWorkflow implements FillWorkflowSpec {
       if (layerGuide === undefined) continue
       const { sourceName, layerBuffer, layerCodeBuffer, lch, invert, opaque, interactive } = layerGuide
 
-      // TODO: we need to create two features if interactive is true.
-
       const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array(featureCode), GPUBufferUsage.STORAGE)
       const bindGroup = context.buildGroup(
         'Feature BindGroup',
         context.featureBindGroupLayout,
         [mask.uniformBuffer, mask.positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
       )
+      const fillInteractiveBuffer = context.buildGPUBuffer('Fill Interactive Buffer', new Uint32Array([offset / 3, count / 3]), GPUBufferUsage.UNIFORM)
+      const fillInteractiveBindGroup = context.buildGroup(
+        'Fill Interactive BindGroup',
+        this.#fillInteractiveBindGroupLayout,
+        [fillInteractiveBuffer, source.vertexBuffer, source.indexBuffer, source.idBuffer]
+      )
 
-      const feature = {
+      const feature: FillFeature = {
         type: 'fill' as const,
         maskLayer: false,
         source,
@@ -225,32 +231,21 @@ export default class FillWorkflow implements FillWorkflowSpec {
         lch,
         interactive,
         bindGroup,
+        fillInteractiveBindGroup,
         draw: () => {
           context.setStencilReference(tile.tmpMaskID)
           this.draw(feature)
         },
+        compute: () => { this.computeInteractive(feature) },
         destroy: () => {
           featureCodeBuffer.destroy()
+          fillInteractiveBuffer.destroy()
         }
       }
       features.push(feature)
     }
 
     tile.addFeatures(features)
-  }
-
-  async #getComputePipeline (): Promise<GPUComputePipeline> {
-    const { context } = this
-    const { device } = context
-
-    return await device.createComputePipelineAsync({
-      label: 'Interactive Pipeline',
-      layout: this.#pipelineLayout,
-      compute: {
-        module: this.#shaderModule,
-        entryPoint: 'cInteractive'
-      }
-    })
   }
 
   // https://programmer.ink/think/several-best-practices-of-webgpu.html
@@ -305,6 +300,34 @@ export default class FillWorkflow implements FillWorkflowSpec {
     })
   }
 
+  #getComputePipeline (): GPUComputePipeline {
+    const { context } = this
+    const { device, frameBindGroupLayout, featureBindGroupLayout, interactiveBindGroupLayout } = context
+
+    this.#fillInteractiveBindGroupLayout = device.createBindGroupLayout({
+      label: 'Fill Interactive BindGroupLayout',
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } }, // interactive offset & count
+        { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } }, // positions
+        { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } }, // indexes
+        { binding: 3, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } } // ids
+      ]
+    })
+
+    const layout = device.createPipelineLayout({
+      bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, interactiveBindGroupLayout, this.#fillInteractiveBindGroupLayout]
+    })
+
+    return device.createComputePipeline({
+      label: 'Fill Interactive Pipeline',
+      layout,
+      compute: {
+        module: this.#shaderModule,
+        entryPoint: 'interactive'
+      }
+    })
+  }
+
   draw (featureGuide: FillFeature): void {
     // get current source data
     const { passEncoder } = this.context
@@ -341,13 +364,13 @@ export default class FillWorkflow implements FillWorkflowSpec {
     passEncoder.drawIndexed(count, 1, offset)
   }
 
-  computeInteractive (features: FillFeature[]): void {
-    const { computePass } = this.context
+  computeInteractive ({ bindGroup, fillInteractiveBindGroup, count }: FillFeature): void {
+    const { computePass, interactiveBindGroup } = this.context
     this.context.setComputePipeline(this.interactivePipeline)
-    for (const { bindGroup, count } of features) {
-      // set bind group & draw
-      computePass.setBindGroup(1, bindGroup)
-      computePass.dispatchWorkgroups(Math.ceil(count / 64))
-    }
+    // set bind group & draw
+    computePass.setBindGroup(1, bindGroup)
+    computePass.setBindGroup(2, interactiveBindGroup)
+    if (fillInteractiveBindGroup !== undefined) computePass.setBindGroup(3, fillInteractiveBindGroup)
+    computePass.dispatchWorkgroups(Math.ceil(count / 3 / 64))
   }
 }

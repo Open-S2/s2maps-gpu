@@ -149,6 +149,7 @@ export interface FillFeature extends FeatureBase {
   invert: boolean
   interactive: boolean
   opaque: boolean
+  fillInteractiveBindGroup?: GPUBindGroup
 }
 
 // ** GLYPH + GLYPH FILTER **
