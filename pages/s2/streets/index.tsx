@@ -1,23 +1,25 @@
 /* MODULES */
 import React from 'react'
-// import { useEffect, useState } from 'react'
 /* REACT MODULES */
 import Map from '../../../components/map'
 /* STYLES */
-import styles from '../../styles/Countries.module.css'
-import style from './style.json'
+import style from './style'
 
-import type { NextPage } from 'next'
+import type { S2Map } from '../../../s2'
 
-const StreetsExample: NextPage = () => {
+function ready (s2map: S2Map): void {
+  console.log('ready', s2map)
+}
+
+export default function Streets (): React.JSX.Element {
   return (
-    <div className={styles.countries}>
+    <div className='pages'>
       <Map
         style={style}
         opts={{ zoomController: false }}
+        ready={ready}
+        noAPIKey
       />
     </div>
   )
 }
-
-export default StreetsExample

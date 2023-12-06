@@ -12,8 +12,8 @@ dependencies:
     specifier: ^2.0.10
     version: 2.0.10
   unicode-shaper-zig:
-    specifier: 0.1.3
-    version: 0.1.3
+    specifier: 0.1.4
+    version: 0.1.4
 
 devDependencies:
   '@maplibre/maplibre-gl-style-spec':
@@ -7622,8 +7622,8 @@ packages:
     engines: {node: '>=4'}
     dev: true
 
-  /unicode-shaper-zig@0.1.3:
-    resolution: {integrity: sha512-2Gqs7Nbzl9eP3LVulowtGd87062Dz+b3ncBl4L82ABo7yWgi17TnEemeiwkxtSPWtyJkQZg+pGbjCfPr/RDv1A==}
+  /unicode-shaper-zig@0.1.4:
+    resolution: {integrity: sha512-oDkVH3HBVjishMLx/kHhnzlyRmuPEP0AvLymu/+AP6ggTbGj51pR6LJdl/Z3C0z/36uiIxL7GOFRqktZqn79qQ==}
     dev: false
 
   /union-value@1.0.1:
