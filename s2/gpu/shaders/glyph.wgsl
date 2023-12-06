@@ -53,7 +53,7 @@ struct LayerUniforms {
 };
 
 struct GlyphUniforms {
-  indexOffset: u32, // where to start searching the collisionResults array
+  sourceIndexOffset: u32, // where to start searching the collisionResults array
   // TODO: drawType should be local to the glyph
   // drawType: f32, // 0 -> MTSDF, 1 -> SDF, 2 -> RAW_IMAGE
   isIcon: f32,
@@ -67,6 +67,12 @@ struct Bounds {
   bottom: f32,
   right: f32,
   top: f32,
+};
+
+struct Attributes {
+  offset: u32,
+  count: u32,
+  isStroke: u32, // 1 for stroke, 0 for fill
 };
 
 // TODO: Store ID in the collision result array??? That way we can check the end of the ID
@@ -118,7 +124,7 @@ struct BBox {
 @binding(5) @group(2) var<storage, read_write> bboxes: array<BBox>;
 @binding(6) @group(2) var<storage, read_write> collisionResults: array<atomic<u32>>;
 @binding(7) @group(2) var<storage, read> collisionResultsReadOnly: array<u32>;
-@binding(8) @group(2) var<uniform> isStroke: f32; // 1 for stroke, 0 for fill
+@binding(8) @group(2) var<uniform> attributes: Attributes;
 // ** Interactive Data **
 @binding(0) @group(3) var<storage, read_write> resultIndex: atomic<u32>;
 @binding(1) @group(3) var<storage, read_write> results: array<u32>;
@@ -547,7 +553,7 @@ fn vMain(
   let uIsIcon = glyph.isIcon == 1.;
 
   // check if collision then we just return
-  if (collisionResultsReadOnly[collisionIndex + glyph.indexOffset] != 0u) { return output; }
+  if (collisionResultsReadOnly[collisionIndex + glyph.sourceIndexOffset] != 0u) { return output; }
 
   // setup position
   var tmpPos = getPos(st);
@@ -567,7 +573,7 @@ fn vMain(
   if (uIsIcon) { color = cBlindAdjust(iconColor); }
   // stroke properties
   output.buf = 0.5;
-  if (isStroke == 1.) {
+  if (attributes.isStroke == 1u) {
     var strokeWidth = decodeFeature(false, &index, &featureIndex)[0];
     if (strokeWidth > 0.) {
       color = decodeFeature(true, &index, &featureIndex);
@@ -647,7 +653,7 @@ fn vTest(
 
   // check if collision then we just return
   var color = vec4<f32>(1., 0., 0., 1.); // Collsion is red
-  let collision = collisionResultsReadOnly[collisionIndex + glyph.indexOffset];
+  let collision = collisionResultsReadOnly[collisionIndex + glyph.sourceIndexOffset];
   if (collision == 0u) { // No collision is green
     color = vec4<f32>(0., 1., 0., 1.);
   } else if (collision == 2u) { // Out of bounds is blue
@@ -699,10 +705,11 @@ fn boxesOverlap(a: BBox, b: BBox) -> bool {
 // Find early collisions (behind S2 sphere or outside tile bounds)
 @compute @workgroup_size(64)
 fn boxes(@builtin(global_invocation_id) global_id: vec3<u32>) {
-  if (global_id.x >= arrayLength(&containers)) { return; }
-  let container = containers[global_id.x];
-  let bboxIndex = global_id.x + glyph.indexOffset;
-  let resultIndex = container.index + glyph.indexOffset;
+  if (global_id.x >= attributes.count) { return; }
+  let containerIndex = global_id.x + attributes.offset;
+  let container = containers[containerIndex];
+  let bboxIndex = containerIndex + glyph.sourceIndexOffset;
+  let collideIndex = container.index + glyph.sourceIndexOffset;
   let bbox = &bboxes[bboxIndex];
   var position = getPos(container.st);
   let zero = getZero();
@@ -710,7 +717,7 @@ fn boxes(@builtin(global_invocation_id) global_id: vec3<u32>) {
   position /= position.w;
 
   // reset bbox
-  (*bbox).index = resultIndex;
+  (*bbox).index = collideIndex;
   (*bbox).left = 0.;
   (*bbox).bottom = 0.;
   (*bbox).right = 0.;
@@ -732,11 +739,11 @@ fn boxes(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
   if (hasCollision) {
     // update collision state
-    atomicStore(&collisionResults[resultIndex], 2u);
+    atomicStore(&collisionResults[collideIndex], 2u);
     return;
   }
   // otherwise no collision
-  atomicStore(&collisionResults[resultIndex], 0u);
+  atomicStore(&collisionResults[collideIndex], 0u);
 
   // figure out the size of the glyph
   var index = 0;
@@ -765,11 +772,13 @@ fn test(@builtin(global_invocation_id) global_id: vec3<u32>) {
   let bboxIndex = global_id.x;
   if (bboxIndex >= arrayLength(&bboxes)) { return; }
   let box = bboxes[bboxIndex];
-  let resultIndex = box.index;
+  let collideIndex = box.index;
+
+  if (box.left == 0. && box.right == 0.) { return; }
 
   // Test for collisions
   // Case 1: Bbox has already "collided" with either the S2 sphere or tile bounds
-  if (atomicLoad(&collisionResults[resultIndex]) != 0u) {
+  if (atomicLoad(&collisionResults[collideIndex]) != 0u) {
     // TODO: overdraw needs to be stored inside the bbox
   } else if (glyph.overdraw == 0.) { // Case 2: Check against other BBoxes at an index before this one if overdraw is off
     var i = 0u;
@@ -783,12 +792,12 @@ fn test(@builtin(global_invocation_id) global_id: vec3<u32>) {
       // 2) check if collision
       // 3) then check the lower indexed filter result isn't already collided with something else
       if (
-        otherResultIndex != resultIndex &&
+        otherResultIndex != collideIndex &&
         boxesOverlap(testBox, box) &&
         atomicLoad(&collisionResults[otherResultIndex]) == 0u
       ) {
         // update collision state
-        atomicStore(&collisionResults[resultIndex], 1u);
+        atomicStore(&collisionResults[collideIndex], 1u);
         break;
       }
       i++;
@@ -798,10 +807,11 @@ fn test(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
 @compute @workgroup_size(64)
 fn interactive(@builtin(global_invocation_id) global_id: vec3<u32>) {
+  if (global_id.x >= attributes.count) { return; }
+  let containerIndex = global_id.x + attributes.offset;
   // iterate through each GlyphContainer and see if the mouse is inside the bbox
-  if (global_id.x >= arrayLength(&containers)) { return; }
-  let container = containers[global_id.x];
-  let bboxIndex = global_id.x + glyph.indexOffset;
+  let container = containers[containerIndex];
+  let bboxIndex = containerIndex + glyph.sourceIndexOffset;
   let box = bboxes[bboxIndex];
   
   if (collisionResultsReadOnly[box.index] != 0u) { return; }

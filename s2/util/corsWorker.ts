@@ -10,9 +10,7 @@ export class CorsWorker extends Worker {
     if (+process.env.CORS !== 1) {
       super(url, options)
     } else {
-      const webpackWorkerOrigin = `__webpack_worker_origin__ = ${JSON.stringify(
-        url.origin
-      )}`
+      const webpackWorkerOrigin = `__webpack_worker_origin__ = ${JSON.stringify(url.origin)}`
       const importScripts = `importScripts(${JSON.stringify(url.toString())})`
       const objectURL = URL.createObjectURL(
         new Blob([`${webpackWorkerOrigin};\n${importScripts}`], {

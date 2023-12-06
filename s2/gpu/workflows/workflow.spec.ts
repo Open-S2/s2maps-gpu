@@ -76,6 +76,8 @@ export interface GlyphSource {
   glyphQuadBuffer: GPUBuffer
   glyphQuadIndexBuffer: GPUBuffer
   glyphColorBuffer: GPUBuffer
+  indexOffset: number // tracks the offset of the glyphFilterBuffer relative to all sources being processed
+  filterLength: number // tracks the length of the glyphFilterBuffer
   destroy: () => void
 }
 

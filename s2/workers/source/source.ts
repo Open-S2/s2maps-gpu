@@ -173,8 +173,7 @@ export default class Source {
     // setup parentLayers
     const parentLayers: ParentLayers = {}
     // iterate over layers and found any data doesn't exist at current zoom but the style asks for
-    for (let l = 0, ll = styleLayers.length; l < ll; l++) {
-      const { layer, layerIndex, maxzoom } = styleLayers[l]
+    for (const { layer, layerIndex, maxzoom } of styleLayers) {
       const sourceLayer = layers[layer]
       const sourceLayerMaxZoom = sourceLayer?.maxzoom
       if (

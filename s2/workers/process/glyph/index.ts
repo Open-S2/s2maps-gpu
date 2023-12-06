@@ -491,7 +491,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       // if there is a change in layer index or
       if (
         (quadCount > 0 || filterCount > 0) &&
-        (curlayerIndex !== layerIndex || codeStr !== code.toString())
+        (curlayerIndex !== layerIndex || codeStr !== code.toString() || curType !== type)
       ) {
         // store featureGuide
         featureGuide.push(

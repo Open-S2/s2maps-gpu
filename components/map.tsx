@@ -1,8 +1,10 @@
 /* MODULES */
 import React, { useEffect, useRef, useState } from 'react'
 
-import type { Ready, S2Map, StyleDefinition } from '../s2/index'
+import type { S2Map, StyleDefinition } from '../s2/index'
 import type { MapOptions } from '../s2/ui/s2mapUI'
+
+export type Ready = (s2map: S2Map) => void
 
 const { NEXT_PUBLIC_API_KEY } = process.env
 
@@ -37,7 +39,7 @@ function Map (props: MapProps): JSX.Element {
       if (s2map.current != null) { s2map.current.delete(); s2map.current = undefined }
       window.removeEventListener('resize', resize, false)
       window.removeEventListener('orientationchange', resize, false)
-    } // eslint-disable-next-line
+    }
   }, [])
 
   return (
@@ -69,17 +71,22 @@ function prepCanvas (
       // projection: 'blend',
       // colorBlindController: (typeof opts.zoomController === 'boolean') ? opts.zoomController : true,
       zoomController: opts?.zoomController
-    }, ready)
+    })
     // assign events
     if (mouseenter !== undefined) {
       s2map.current.addEventListener('mouseenter', (
-        ({ detail }: CustomEvent) => { mouseenter(detail) }) as EventListener
-      )
+        ({ detail }: CustomEvent) => { mouseenter(detail) }
+      ) as EventListener)
     }
     if (mouseleave !== undefined) {
       s2map.current.addEventListener('mouseleave', (
         ({ detail }: CustomEvent) => { mouseleave(detail) }) as EventListener
       )
+    }
+    if (ready !== undefined) {
+      s2map.current.addEventListener('ready', (
+        ({ detail }: CustomEvent) => { ready(detail) }
+      ) as EventListener)
     }
   })
     .catch((err) => { throw err })

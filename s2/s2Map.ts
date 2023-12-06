@@ -18,18 +18,16 @@ import type {
 
 export type ColorMode = 0 | 1 | 2 | 3 | 4
 
-export type Ready = (s2map: S2Map) => void
-
 declare global {
   interface Window { S2Map: typeof S2Map }
 }
 
 // S2Map is called by the user and includes the API to interact with the mapping engine
 export default class S2Map extends EventTarget {
-  #container?: HTMLElement
+  readonly #container?: HTMLElement
   #canvasContainer!: HTMLElement
   #navigationContainer!: HTMLElement
-  #canvasMultiplier: number
+  readonly #canvasMultiplier: number
   _canvas: HTMLCanvasElement
   #attributionPopup?: HTMLDivElement
   #compass?: HTMLElement
@@ -42,14 +40,12 @@ export default class S2Map extends EventTarget {
   offscreen?: Worker
   info?: Info
   id: string = Math.random().toString(36).replace('0.', '')
-  #ready?: Ready
   constructor (
     options: MapOptions = {
       canvasMultiplier: window.devicePixelRatio ?? 2,
       interactive: true,
       style: {}
-    },
-    ready?: Ready
+    }
   ) {
     super()
     options.canvasMultiplier = this.#canvasMultiplier = Math.max(2, options.canvasMultiplier ?? 2)
@@ -71,14 +67,11 @@ export default class S2Map extends EventTarget {
     this._canvas = options.canvas ?? this.#setupContainer(options)
     // create map via a webworker if possible, otherwise just load it in directly
     void this.#setupCanvas(this._canvas, options)
-    // store ready for later use
-    this.#ready = ready
   }
 
   ready (): void {
     this.#onCanvasReady()
-    // TODO: FIX THIS
-    // this.#ready?.(this)
+    this.dispatchEvent(new CustomEvent('ready', { detail: this }))
   }
 
   /* BUILD */
@@ -116,13 +109,11 @@ export default class S2Map extends EventTarget {
         tmpContext = document.createElement('canvas').getContext(name)
         return tmpContext !== null
       }
-      // TODO: ADD 3 when webgpu is ready
       options.contextType = (tryContext('webgpu'))
         ? 3
         : (!isSafari && tryContext('webgl2'))
             ? 2
             : 1
-      // options.contextType = tryContext('webgl2') ? 2 : 1
     }
     // @ts-expect-error - if webgl2 context was found, lose the context
     if (isBrowser && options.contextType === 2) tmpContext?.getExtension('WEBGL_lose_context').loseContext()

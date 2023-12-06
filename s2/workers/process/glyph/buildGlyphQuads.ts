@@ -97,7 +97,7 @@ export default function buildGlyphQuads (
   feature.filter = [s * 8_192, t * 8_192, anchorOffsetX, anchorOffsetY, ...padding, maxWidth, maxHeight]
 }
 // var XY = ((container.xy * size) - padding) / uAspect; // setup the xy positional change in pixels
-//   var WH = ((container.wh * size) + (padding * 2)) / uAspect;
+// var WH = ((container.wh * size) + (padding * 2)) / uAspect;
 
 // MYANMAR MEDIALS go after the characters they are attached to
 function adjustMedials (fieldCodes: number[]): number[] {
