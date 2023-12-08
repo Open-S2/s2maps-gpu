@@ -17,7 +17,7 @@ import type {
   WorkerLayer
 } from 'style/style.spec'
 import type { JSONVectorTile } from '../source/json-vt/tile'
-import type { IDGen, Workers } from './process.spec'
+import type { IDGen, VectorWorker, Workers } from './process.spec'
 import type { ColorMap as ColorMapResponse, IconMap as IconMapResponse } from '../source/glyphSource'
 import ImageStore from './imageStore'
 
@@ -132,11 +132,13 @@ export default class ProcessManager {
     sourceName: string,
     layers: Record<number, number>
   ): void {
+    const { imageStore } = this
+    // first see if any data was missing. If so, we may need to wait for it to be processed
+    const wait = imageStore.processMissingData(mapID, sourceName)
+    // flush each worker
     for (const worker of Object.values(this.workers)) {
-      worker.flush(mapID, tile, sourceName)
+      void (worker as VectorWorker).flush(mapID, tile, sourceName, wait)
     }
-    // cleanup imageStore
-    this.imageStore.flush()
 
     const msg: FlushData = { type: 'flush', tileID: tile.id, mapID, layers }
     postMessage(msg)

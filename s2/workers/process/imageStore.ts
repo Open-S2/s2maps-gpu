@@ -25,7 +25,7 @@ export type IconMap = Record<string, IconMapResponse>
 export interface GlyphStore {
   glyphFamilyCount: number
   processed: number
-  flush: () => void
+  resolve: () => void
 }
 
 export type IconList = Record<string, Set<string>>
@@ -52,35 +52,44 @@ export default class ImageStore {
   addMissingChars (
     field: Unicode[],
     family: string
-  ): void {
+  ): boolean {
     const { glyphMap, glyphList } = this
+    let missing = false
     if (glyphMap[family] === undefined) glyphMap[family] = {}
     if (glyphList[family] === undefined) glyphList[family] = new Set()
     const familyList = glyphList[family]
     const familyMap = glyphMap[family]
     for (const unicode of field) {
-      if (familyMap[unicode] === undefined) familyList.add(unicode)
+      if (familyMap[unicode] === undefined) {
+        familyList.add(unicode)
+        missing = true
+      }
     }
+    return missing
   }
 
   addMissingIcons (
     field: string,
     family: string
-  ): void {
+  ): boolean {
     const { glyphMap, iconList, iconMap } = this
+    let missing = false
     if (glyphMap[family] === undefined) glyphMap[family] = {}
     if (iconMap[family] === undefined) iconMap[family] = {}
     if (iconList[family] === undefined) iconList[family] = new Set()
     const familyList = iconList[family]
     const familyMap = iconMap[family]
-    if (familyMap[field] === undefined) familyList.add(field)
+    if (familyMap[field] === undefined) {
+      familyList.add(field)
+      missing = true
+    }
+    return missing
   }
 
-  processMissingData (
+  async processMissingData (
     mapID: string,
-    sourceName: string,
-    flush: () => void
-  ): boolean {
+    sourceName: string
+  ): Promise<void> {
     const { idGen, iconList, sourceWorker, glyphStore, glyphList: _glyphList } = this
     const { workerID } = idGen
     // build glyphList and iconList to ship to the source thread
@@ -104,10 +113,14 @@ export default class ImageStore {
         iconList
       }
       sourceWorker.postMessage(requestMessage, Object.values(glyphList))
-      glyphStore.set(reqID, { glyphFamilyCount, processed: 0, flush })
-      return true
+      await new Promise<void>(resolve => {
+        glyphStore.set(reqID, { glyphFamilyCount, processed: 0, resolve })
+      })
     }
-    return false
+    await new Promise<void>(resolve => { resolve() })
+    // cleanup for next request set
+    this.iconList = {}
+    this.glyphList = {}
   }
 
   #getMissingLength (): number {
@@ -135,8 +148,7 @@ export default class ImageStore {
     // If we have all data, we now process the built glyphs
     if (store.glyphFamilyCount === store.processed) {
       this.glyphStore.delete(reqID)
-      // build
-      store.flush()
+      store.resolve()
     }
   }
 
@@ -184,10 +196,5 @@ export default class ImageStore {
       }
     }
     return nullGlyph
-  }
-
-  flush (): void {
-    this.iconList = {}
-    this.glyphList = {}
   }
 }

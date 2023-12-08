@@ -46,6 +46,8 @@ export interface GlyphObject extends Node {
   quads: number[]
   // [s, t, anchorOffsetX, anchorOffsetY, paddingX, paddingY, maxWidth, maxHeight, index]
   filter: [s: number, t: number, anchorOffsetX: number, anchorOffsetY: number, paddingX: number, paddingY: number, maxWidth: number, maxHeight: number]
+  // missing chars or icons so it neeeds to wait for data
+  missing: boolean
 }
 
 export interface Glyph {

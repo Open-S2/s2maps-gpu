@@ -136,12 +136,12 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
     return true
   }
 
-  flush (mapID: string, tile: TileRequest, sourceName: string): void {
+  async flush (mapID: string, tile: TileRequest, sourceName: string, wait: Promise<void>): Promise<void> {
     this.#flush(mapID, sourceName, tile.id, 'point')
     this.#flush(mapID, sourceName, tile.id, 'heatmap')
     this.features.point = []
     this.features.heatmap = []
-    super.flush(mapID, tile, sourceName)
+    await super.flush(mapID, tile, sourceName, wait)
   }
 
   #flush (mapID: string, sourceName: string, tileID: bigint, type: 'point' | 'heatmap'): void {
