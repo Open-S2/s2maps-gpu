@@ -37,6 +37,7 @@ export default class WebGPUContext {
   interactiveBindGroupLayout!: GPUBindGroupLayout
   interactiveBindGroup!: GPUBindGroup
   maskPatternBindGroupLayout!: GPUBindGroupLayout
+  defaultSampler!: GPUSampler
   patternSampler!: GPUSampler
   #viewUniformBuffer!: GPUBuffer
   #matrixUniformBuffer!: GPUBuffer
@@ -381,6 +382,7 @@ export default class WebGPUContext {
         { binding: 6, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } } // pattern texture
       ]
     })
+    this.defaultSampler = this.buildSampler()
     this.patternSampler = this.buildSampler('linear', true)
   }
 
