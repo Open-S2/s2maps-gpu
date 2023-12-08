@@ -19,6 +19,7 @@ import type {
 import type { JSONVectorTile } from '../source/json-vt/tile'
 import type { IDGen, Workers } from './process.spec'
 import type { ColorMap as ColorMapResponse, IconMap as IconMapResponse } from '../source/glyphSource'
+import ImageStore from './imageStore'
 
 // 32bit: 4,294,967,295 --- 24bit: 16,777,216 --- 22bit: 4,194,304 --- 16bit: 65,535 --- 7bit: 128
 export const ID_MAX_SIZE = 1 << 22
@@ -32,6 +33,7 @@ export default class ProcessManager {
   textDecoder: TextDecoder = new TextDecoder()
   layers: Record<string, WorkerLayer[]> = {}
   workers: Workers = {}
+  imageStore = new ImageStore()
 
   _buildIDGen (totalWorkers: number): void {
     this.idGen = buildIDGen(this.id, totalWorkers)
@@ -59,16 +61,18 @@ export default class ProcessManager {
   }
 
   #buildWorkers (names: Set<LayerType>): void {
-    const { idGen, gpuType, workers, sourceWorker } = this
+    const { idGen, gpuType, workers, sourceWorker, imageStore } = this
+    // setup imageStore
+    imageStore.setup(idGen, sourceWorker)
     for (const name of names) {
       if (name === 'fill') {
-        workers.fill = new FillWorker(idGen, gpuType)
+        workers.fill = new FillWorker(idGen, gpuType, imageStore)
       } else if (name === 'line') {
         workers.line = new LineWorker(idGen, gpuType)
       } else if (name === 'point' || name === 'heatmap') {
         workers.point = workers.heatmap = new PointWorker(idGen, gpuType)
       } else if (name === 'glyph') {
-        workers.glyph = new GlyphWorker(idGen, gpuType, sourceWorker)
+        workers.glyph = new GlyphWorker(idGen, gpuType, sourceWorker, imageStore)
       } else if (
         (name === 'raster' || name === 'sensor' || name === 'hillshade') &&
         this.workers.raster === undefined
@@ -128,11 +132,11 @@ export default class ProcessManager {
     sourceName: string,
     layers: Record<number, number>
   ): void {
-    const { workers } = this
-    for (const worker of Object.values(workers)) {
-      if (!('flush' in worker)) continue
+    for (const worker of Object.values(this.workers)) {
       worker.flush(mapID, tile, sourceName)
     }
+    // cleanup imageStore
+    this.imageStore.flush()
 
     const msg: FlushData = { type: 'flush', tileID: tile.id, mapID, layers }
     postMessage(msg)
@@ -159,7 +163,7 @@ export default class ProcessManager {
     icons?: IconMapResponse,
     colors?: ColorMapResponse
   ): void {
-    this.workers.glyph?.processGlyphResponse(reqID, glyphMetadata, familyName, icons, colors)
+    this.imageStore.processGlyphResponse(reqID, glyphMetadata, familyName, icons, colors)
   }
 }
 

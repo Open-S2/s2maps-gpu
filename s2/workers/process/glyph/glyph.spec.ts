@@ -1,5 +1,6 @@
 import type { Alignment, Anchor } from 'style/style.spec'
-import type { TileRequest } from 'workers/worker.spec'
+
+export type Unicode = number
 
 export interface Node {
   children: Node[]
@@ -58,29 +59,3 @@ export interface Glyph {
   height: number // height of glyph relative to 0->1
   advanceWidth: number // how far to move the cursor
 }
-
-export type Unicode = number
-
-export type Color = [number, number, number, number]
-
-export type Colors = Color[]
-
-export type ColorMap = Record<string, Record<number, Color>>
-
-export type FamilyMap = Record<Unicode, Glyph>
-
-// family name => unicode => glyph
-export type GlyphMap = Record<string, FamilyMap>
-
-export type IconMap = Record<string, Record<string, Array<{ glyphID: Unicode, colorID: number }>>>
-
-export interface GlyphStore {
-  features: GlyphObject[]
-  tile: TileRequest
-  glyphFamilyCount: number
-  processed: number
-}
-
-export type IconList = Record<string, Set<string>>
-
-export type GlyphList = Record<string, Set<Unicode>>

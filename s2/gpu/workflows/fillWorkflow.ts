@@ -48,16 +48,16 @@ export default class FillWorkflow implements FillWorkflowSpec {
   }
 
   async setup (): Promise<void> {
-    const { device, frameBindGroupLayout, featureBindGroupLayout } = this.context
+    const { device, frameBindGroupLayout, featureBindGroupLayout, maskPatternBindGroupLayout } = this.context
     this.#shaderModule = device.createShaderModule({ label: 'Fill Shader Module', code: shaderCode })
     this.#pipelineLayout = device.createPipelineLayout({
       label: 'Fill Pipeline Layout',
-      bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout]
+      bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, maskPatternBindGroupLayout]
     })
-    this.maskPipeline = await this.#getPipeline('mask')
-    this.fillPipeline = await this.#getPipeline('fill')
-    this.maskFillPipeline = await this.#getPipeline('mask-fill')
-    this.invertPipeline = await this.#getPipeline('invert')
+    this.maskPipeline = this.#getPipeline('mask')
+    this.fillPipeline = this.#getPipeline('fill')
+    this.maskFillPipeline = this.#getPipeline('mask-fill')
+    this.invertPipeline = this.#getPipeline('invert')
     this.interactivePipeline = this.#getComputePipeline()
   }
 
@@ -73,7 +73,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
     const { context } = this
     const { source, layerIndex, lch } = layerBase
     // PRE) get layer base
-    let { color, opacity, invert, opaque, interactive, cursor } = layer
+    let { color, opacity, pattern, patternFamily, invert, opaque, interactive, cursor } = layer
     invert = invert ?? false
     opaque = opaque ?? false
     interactive = interactive ?? false
@@ -81,12 +81,16 @@ export default class FillWorkflow implements FillWorkflowSpec {
     // 1) build definition
     color = color ?? 'rgb(0, 0, 0)'
     opacity = opacity ?? 1
+    patternFamily = patternFamily ?? '__images'
     const layerDefinition: FillLayerDefinition = {
       ...layerBase,
       type: 'fill' as const,
       // paint
       color,
       opacity,
+      // layout
+      pattern,
+      patternFamily,
       // propreties
       invert,
       interactive,
@@ -111,6 +115,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
       lch,
       invert,
       opaque,
+      pattern: pattern !== undefined,
       interactive
     })
 
@@ -133,6 +138,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
       context.featureBindGroupLayout,
       [mask.uniformBuffer, mask.positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
     )
+    const fillTexturePositions = context.buildGPUBuffer('Fill Texture Positions', new Float32Array([0, 0, 0, 0]), GPUBufferUsage.UNIFORM)
 
     const feature: FillFeature = {
       type: 'fill' as const,
@@ -149,12 +155,17 @@ export default class FillWorkflow implements FillWorkflowSpec {
       interactive,
       featureCode: [0],
       bindGroup,
+      fillPatternBindGroup: context.createPatternBindGroup(fillTexturePositions),
       draw: () => {
         context.setStencilReference(tile.tmpMaskID)
         this.drawMask(mask, feature)
       },
+      updateSharedTexture: () => {
+        feature.fillPatternBindGroup = context.createPatternBindGroup(fillTexturePositions)
+      },
       destroy: () => {
         featureCodeBuffer.destroy()
+        fillTexturePositions.destroy()
       }
     }
     tile.addFeatures([feature])
@@ -193,11 +204,14 @@ export default class FillWorkflow implements FillWorkflowSpec {
       // grab the size, layerIndex, count, and offset, and update the index
       const [layerIndex, count, offset, encodingSize] = featureGuideArray.slice(i, i + 4)
       i += 4
-      // If webgl1, we pull out the color and opacity otherwise build featureCode
+      // build featureCode
       let featureCode: number[] = [0]
       if (encodingSize > 0) featureCode = [...featureGuideArray.slice(i, i + encodingSize)]
       // update index
       i += encodingSize
+      // get the pattern
+      const [texX, texY, texW, texH] = featureGuideArray.slice(i, i + 4)
+      i += 4
 
       const layerGuide = this.layerGuides.get(layerIndex)
       if (layerGuide === undefined) continue
@@ -209,6 +223,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
         context.featureBindGroupLayout,
         [mask.uniformBuffer, mask.positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
       )
+      const fillTexturePositions = context.buildGPUBuffer('Fill Texture Positions', new Float32Array([texX, texY, texW, texH]), GPUBufferUsage.UNIFORM)
       const fillInteractiveBuffer = context.buildGPUBuffer('Fill Interactive Buffer', new Uint32Array([offset / 3, count / 3]), GPUBufferUsage.UNIFORM)
       const fillInteractiveBindGroup = context.buildGroup(
         'Fill Interactive BindGroup',
@@ -231,15 +246,20 @@ export default class FillWorkflow implements FillWorkflowSpec {
         lch,
         interactive,
         bindGroup,
+        fillPatternBindGroup: context.createPatternBindGroup(fillTexturePositions),
         fillInteractiveBindGroup,
         draw: () => {
           context.setStencilReference(tile.tmpMaskID)
           this.draw(feature)
         },
         compute: () => { this.computeInteractive(feature) },
+        updateSharedTexture: () => {
+          feature.fillPatternBindGroup = context.createPatternBindGroup(fillTexturePositions)
+        },
         destroy: () => {
           featureCodeBuffer.destroy()
           fillInteractiveBuffer.destroy()
+          fillTexturePositions.destroy()
         }
       }
       features.push(feature)
@@ -251,7 +271,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
   // https://programmer.ink/think/several-best-practices-of-webgpu.html
   // BEST PRACTICE 6: it is recommended to create pipeline asynchronously
   // BEST PRACTICE 7: explicitly define pipeline layouts
-  async #getPipeline (type: 'fill' | 'mask' | 'invert' | 'mask-fill'): Promise<GPURenderPipeline> {
+  #getPipeline (type: 'fill' | 'mask' | 'invert' | 'mask-fill'): GPURenderPipeline {
     const { context } = this
     const { device, format, defaultBlend, sampleCount } = context
     const invert = type === 'invert'
@@ -265,7 +285,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
       passOp: 'replace'
     }
 
-    return await device.createRenderPipelineAsync({
+    return device.createRenderPipeline({
       label: `Fill ${type} Pipeline`,
       layout: this.#pipelineLayout,
       vertex: {
@@ -315,7 +335,8 @@ export default class FillWorkflow implements FillWorkflowSpec {
     })
 
     const layout = device.createPipelineLayout({
-      bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, interactiveBindGroupLayout, this.#fillInteractiveBindGroupLayout]
+      label: 'Fill Interactive Pipeline Layout',
+      bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.#fillInteractiveBindGroupLayout, interactiveBindGroupLayout]
     })
 
     return device.createComputePipeline({
@@ -331,13 +352,14 @@ export default class FillWorkflow implements FillWorkflowSpec {
   draw (featureGuide: FillFeature): void {
     // get current source data
     const { passEncoder } = this.context
-    const { tile, invert, bindGroup, source, count, offset } = featureGuide
+    const { tile, invert, bindGroup, fillPatternBindGroup, source, count, offset } = featureGuide
     const { vertexBuffer, indexBuffer, codeTypeBuffer } = source
     const pipeline = invert ? this.invertPipeline : this.fillPipeline
 
     // setup pipeline, bind groups, & buffers
     this.context.setRenderPipeline(pipeline)
     passEncoder.setBindGroup(1, bindGroup)
+    passEncoder.setBindGroup(2, fillPatternBindGroup)
     passEncoder.setVertexBuffer(0, vertexBuffer)
     passEncoder.setIndexBuffer(indexBuffer, 'uint32')
     passEncoder.setVertexBuffer(1, codeTypeBuffer)
@@ -348,7 +370,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
   }
 
   drawMask (
-    { vertexBuffer, indexBuffer, codeTypeBuffer, bindGroup, count, offset }: TileMaskSource,
+    { vertexBuffer, indexBuffer, codeTypeBuffer, bindGroup, fillPatternBindGroup, count, offset }: TileMaskSource,
     featureGuide?: FillFeature
   ): void {
     const { context, maskPipeline, maskFillPipeline } = this
@@ -357,6 +379,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
     // setup pipeline, bind groups, & buffers
     this.context.setRenderPipeline(featureGuide === undefined ? maskPipeline : maskFillPipeline)
     passEncoder.setBindGroup(1, featureGuide?.bindGroup ?? bindGroup)
+    passEncoder.setBindGroup(2, featureGuide?.fillPatternBindGroup ?? fillPatternBindGroup)
     passEncoder.setVertexBuffer(0, vertexBuffer)
     passEncoder.setIndexBuffer(indexBuffer, 'uint32')
     passEncoder.setVertexBuffer(1, codeTypeBuffer)

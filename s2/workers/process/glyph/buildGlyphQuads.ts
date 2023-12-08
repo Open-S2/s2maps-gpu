@@ -1,5 +1,6 @@
 import type { Alignment, Anchor } from 'style/style.spec'
-import type { GlyphMap, GlyphObject } from './glyph.spec'
+import type { GlyphObject } from './glyph.spec'
+import type { GlyphMap } from '../imageStore'
 
 // [s, t, xOffset, yOffset, xPos, yPos, width, height, texX, texY, texWidth, texHeight, id]
 export type Quad = number[]

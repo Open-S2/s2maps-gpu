@@ -6,6 +6,7 @@ struct VertexOutput {
   @location(1) texcoord: vec2<f32>,
   @location(2) buf: f32,
   @location(3) gamma: f32,
+  @location(4) isIcon: f32,
 };
 
 struct TestOutput {
@@ -551,6 +552,7 @@ fn vMain(
   var output: VertexOutput;
   let uv = UVs[VertexIndex];
   let uIsIcon = glyph.isIcon == 1.;
+  output.isIcon = glyph.isIcon;
 
   // check if collision then we just return
   if (collisionResultsReadOnly[collisionIndex + glyph.sourceIndexOffset] != 0u) { return output; }
@@ -613,8 +615,13 @@ fn vMain(
 fn fMain(
   output: VertexOutput
 ) -> @location(0) vec4<f32> {
-  if (output.color.a < 0.01) { discard; }
+  let noAlpha = output.color.a < 0.01;
+  let isIcon = output.isIcon == 1.;
+  if (noAlpha && !isIcon) { discard; }
   let tex = textureSample(glyphTexture, glyphSampler, output.texcoord);
+  // noAlpha for icons means it's a raw image, so we draw the pixels as they are
+  if (noAlpha && isIcon) { return tex; }
+  // otherwise we draw the MTSDF
   if (tex.a < 0.01) { discard; }
   var opacityS = smoothstep(output.buf - output.gamma, output.buf + output.gamma, median(tex.r, tex.g, tex.b));
   return opacityS * output.color;
@@ -750,6 +757,7 @@ fn boxes(@builtin(global_invocation_id) global_id: vec3<u32>) {
   var featureIndex = 0;
   // grab the size
   var size = decodeFeature(false, &index, &featureIndex)[0] * view.devicePixelRatio * 2.;
+  if (glyph.isIcon == 1.) { size = decodeFeature(false, &index, &featureIndex)[0] * view.devicePixelRatio * 2.; }
 
   // build bbox
   // tmpPosXY += XY + (WH * uv);

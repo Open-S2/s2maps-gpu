@@ -2,7 +2,7 @@
 import type Session from './session'
 
 import type TexturePack from './texturePack'
-import type { Color, Colors } from '../process/glyph/glyph.spec'
+import type { Color, Colors } from '../process/imageStore'
 import type { GlyphImageData, GlyphResponseMessage } from 'workers/worker.spec'
 
 type Unicode = number
@@ -299,7 +299,7 @@ export default class GlyphSource {
     for (const request of requests) {
       promises.push(this._fetch(request, mapID).then(glyphsBuf => {
         if (glyphsBuf === undefined) return
-        const images = []
+        const images: GlyphImages = []
         const dv = new DataView(glyphsBuf)
         const size = dv.byteLength - 1
         let pos = 0

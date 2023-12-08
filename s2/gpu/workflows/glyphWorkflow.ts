@@ -10,9 +10,8 @@ import type {
   GlyphWorkflowLayerGuideGPU,
   LayerDefinitionBase
 } from 'style/style.spec'
-import type { GlyphData, SpriteImageMessage } from 'workers/worker.spec'
+import type { GlyphData } from 'workers/worker.spec'
 import type { TileGPU as Tile } from 'source/tile.spec'
-import type { GlyphImages } from 'workers/source/glyphSource'
 
 // st (0), xy (1), offsetXY (2), wh (3), texXY (4), texWH (5)
 const SUB_SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [0, 1, 2, 3, 4, 5].map(i => ({
@@ -77,7 +76,6 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
   testPipeline!: GPUComputePipeline
   interactivePipeline!: GPUComputePipeline
   #defaultSampler!: GPUSampler
-  #texture!: GPUTexture
   #glyphBindGroupLayout!: GPUBindGroupLayout
   #glyphPipelineLayout!: GPUPipelineLayout
   #glyphFilterBindGroupLayout!: GPUBindGroupLayout
@@ -95,7 +93,6 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     const { device, frameBindGroupLayout, featureBindGroupLayout, interactiveBindGroupLayout } = context
     this.module = device.createShaderModule({ label: 'Glyph Shader Module', code: shaderCode })
     this.#defaultSampler = context.buildSampler()
-    this.#texture = context.buildTexture(null, 2048, 200, 1, 'rgba8unorm')
     this.#glyphBBoxesBuffer = context.buildGPUBuffer('Glyph BBoxes Buffer', new Float32Array(Array(2_000 * 5).fill(0)), GPUBufferUsage.STORAGE)
     this.#glyphFilterResultBuffer = context.buildGPUBuffer('Glyph Filter Result Buffer', new Float32Array(Array(2_000).fill(0)), GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC)
     this.#glyphFilterBindGroupLayout = device.createBindGroupLayout({
@@ -154,39 +151,6 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     }
     this.#glyphBBoxesBuffer.destroy()
     this.#glyphFilterResultBuffer.destroy()
-    this.#texture.destroy()
-  }
-
-  injectImages (maxHeight: number, images: GlyphImages): void {
-    const { context } = this
-    const { device } = context
-    // first increase texture size if needed
-    this.#increaseTextureSize(maxHeight)
-    // setup a command encoder to upload images all in one go
-    const cE = device.createCommandEncoder()
-    // upload each image to texture
-    for (const { posX, posY, width, height, data } of images) {
-      // first make sure width is a multiple of 256
-      const paddedData = context.buildPaddedBuffer(data, width, height)
-      context.uploadTextureData(this.#texture, paddedData.data, width, height, { x: posX, y: posY, z: 0 }, 1, cE)
-    }
-    device.queue.submit([cE.finish()])
-  }
-
-  injectSpriteImage (message: SpriteImageMessage): void {
-    const { image, offsetX, offsetY, width, height, maxHeight } = message
-    // first increase texture size if needed
-    this.#increaseTextureSize(maxHeight)
-    // then update texture
-    this.context.uploadTextureData(this.#texture, image, width, height, { x: offsetX, y: offsetY, z: 0 })
-  }
-
-  #increaseTextureSize (newHeight: number): void {
-    const { width, height } = this.#texture
-    if (newHeight <= height) return
-    const newTexture = this.context.buildTexture(this.#texture, width, newHeight, 1, 'rgba8unorm', undefined)
-    this.#texture.destroy()
-    this.#texture = newTexture
   }
 
   // programs helps design the appropriate layer parameters
@@ -322,28 +286,8 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
       const glyphUniformBuffer = context.buildGPUBuffer('Glyph Uniform Buffer', new Float32Array([0, isIcon, ~~overdraw, 1, 1]), GPUBufferUsage.UNIFORM)
       const glyphAttributeBuffer = context.buildGPUBuffer('Glyph Bounds Buffer', new Uint32Array([filterOffset, filterCount, 1]), GPUBufferUsage.UNIFORM)
       const glyphAttributeNoStrokeBuffer = context.buildGPUBuffer('Glyph Bounds Buffer', new Uint32Array([filterOffset, filterCount, 0]), GPUBufferUsage.UNIFORM)
-      const glyphBindGroup = device.createBindGroup({
-        label: 'Glyph BindGroup',
-        layout: this.#glyphBindGroupLayout,
-        entries: [
-          { binding: 1, resource: { buffer: glyphUniformBuffer } },
-          { binding: 2, resource: this.#defaultSampler },
-          { binding: 3, resource: this.#texture.createView() },
-          { binding: 7, resource: { buffer: this.#glyphFilterResultBuffer } },
-          { binding: 8, resource: { buffer: glyphAttributeNoStrokeBuffer } }
-        ]
-      })
-      const glyphStrokeBindGroup = device.createBindGroup({
-        label: 'Glyph Stroke BindGroup',
-        layout: this.#glyphBindGroupLayout,
-        entries: [
-          { binding: 1, resource: { buffer: glyphUniformBuffer } },
-          { binding: 2, resource: this.#defaultSampler },
-          { binding: 3, resource: this.#texture.createView() },
-          { binding: 7, resource: { buffer: this.#glyphFilterResultBuffer } },
-          { binding: 8, resource: { buffer: glyphAttributeBuffer } }
-        ]
-      })
+      const glyphBindGroup = this.#createGlyphBindGroup(glyphUniformBuffer, glyphAttributeNoStrokeBuffer)
+      const glyphStrokeBindGroup = this.#createGlyphBindGroup(glyphUniformBuffer, glyphAttributeBuffer)
       const glyphFilterBindGroup = device.createBindGroup({
         label: 'GlyphFilter BindGroup',
         layout: this.#glyphFilterBindGroupLayout,
@@ -398,6 +342,10 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
         glyphUniformBuffer,
         draw: () => { this.draw(feature) },
         compute: () => { this.computeInteractive(feature) },
+        updateSharedTexture: () => {
+          feature.glyphBindGroup = this.#createGlyphBindGroup(glyphUniformBuffer, glyphAttributeBuffer)
+          feature.glyphStrokeBindGroup = this.#createGlyphBindGroup(glyphUniformBuffer, glyphAttributeNoStrokeBuffer)
+        },
         destroy: () => {
           glyphBoundsBuffer.destroy()
           glyphUniformBuffer.destroy()
@@ -411,6 +359,21 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     }
 
     tile.addFeatures(features)
+  }
+
+  #createGlyphBindGroup (glyphUniformBuffer: GPUBuffer, glyphAttributeBuffer: GPUBuffer): GPUBindGroup {
+    const { device, sharedTexture } = this.context
+    return device.createBindGroup({
+      label: 'Glyph Stroke BindGroup',
+      layout: this.#glyphBindGroupLayout,
+      entries: [
+        { binding: 1, resource: { buffer: glyphUniformBuffer } },
+        { binding: 2, resource: this.#defaultSampler },
+        { binding: 3, resource: sharedTexture.createView() },
+        { binding: 7, resource: { buffer: this.#glyphFilterResultBuffer } },
+        { binding: 8, resource: { buffer: glyphAttributeBuffer } }
+      ]
+    })
   }
 
   // https://programmer.ink/think/several-best-practices-of-webgpu.html

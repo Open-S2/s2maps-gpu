@@ -126,6 +126,16 @@ export interface DataRangeStep<T extends NotNullOrObject> {
   }>
 }
 
+export interface DataRangeStepOnlyStep<T extends NotNullOrObject> {
+  key: string // the objects[key] -> value used as position on range
+  ease: 'step'
+  base?: number // 0 -> 2
+  ranges: Array<{
+    stop: number
+    input: T | PropertyOnlyStep<T>
+  }>
+}
+
 export interface InputRangeEase<T extends number | string> {
   type: 'zoom' | 'lon' | 'lat' | 'angle' | 'pitch'
   ease?: EaseType
@@ -161,6 +171,14 @@ export interface Property<T extends NotNullOrObject> {
   dataCondition?: DataCondition<ValueType<T>>
   dataRange?: DataRangeEase<NumberColor<T>> | DataRangeStep<ValueType<T>>
   inputRange?: InputRangeEase<NumberColor<T>> | InputRangeStep<ValueType<T>>
+  featureState?: FeatureState<ValueType<T>>
+  fallback?: T | Property<T>
+}
+
+export interface PropertyOnlyStep<T extends NotNullOrObject> {
+  dataCondition?: DataCondition<ValueType<T>>
+  dataRange?: DataRangeStepOnlyStep<ValueType<T>>
+  inputRange?: InputRangeStep<ValueType<T>>
   featureState?: FeatureState<ValueType<T>>
   fallback?: T | Property<T>
 }
@@ -231,6 +249,9 @@ export interface FillLayerStyle extends LayerStyleBase {
   // paint
   color?: string | Property<string>
   opacity?: number | Property<number>
+  // layout
+  pattern?: string | PropertyOnlyStep<string>
+  patternFamily?: string | Property<string>
   // properties
   invert?: boolean
   interactive?: boolean
@@ -242,6 +263,9 @@ export interface FillLayerDefinition extends LayerDefinitionBase {
   // paint
   color: string | Property<string>
   opacity: number | Property<number>
+  // layout
+  pattern?: string | Property<string>
+  patternFamily: string | Property<string>
   // properties
   invert: boolean
   interactive: boolean
@@ -252,8 +276,7 @@ export interface FillWorkflowLayerGuide extends LayerWorkflowGuideBase {
   invert: boolean
   opaque: boolean
   interactive: boolean
-  color?: LayerWorkerFunction<[number, number, number, number]>
-  opacity?: LayerWorkerFunction<number[]>
+  pattern: boolean
 }
 export interface FillWorkflowLayerGuideGPU extends FillWorkflowLayerGuide {
   layerBuffer: GPUBuffer
@@ -266,6 +289,8 @@ export interface FillWorkerLayer extends LayerWorkerBase {
   interactive: boolean
   cursor: Cursor
   opaque: boolean
+  pattern?: LayerWorkerFunction<string>
+  patternFamily: LayerWorkerFunction<string>
 }
 
 /** GLYPH **/
@@ -671,6 +696,7 @@ export interface StylePackage {
   icons: Icons
   glyphs: Glyphs
   sprites: Sprites
+  images: Record<string, string>
   layers: LayerDefinition[]
   minzoom: number
   maxzoom: number
@@ -732,6 +758,7 @@ export interface StyleDefinition {
   fonts?: Fonts
   icons?: Icons
   sprites?: Sprites
+  images?: Record<string, string>
   skybox?: SkyboxStyle
   wallpaper?: WallpaperStyle
   layers?: LayerStyle[]

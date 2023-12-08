@@ -12,37 +12,26 @@ import parseFilter from 'style/parseFilter'
 import parseFeatureFunction from 'style/parseFeatureFunction'
 
 import type {
-  ColorMap,
-  Glyph,
-  GlyphList,
-  GlyphMap,
   GlyphObject,
-  GlyphStore,
-  IconList,
-  IconMap,
   Unicode
 } from './glyph.spec'
-import type { ColorMap as ColorMapResponse, IconMap as IconMapResponse } from 'workers/source/glyphSource'
-import type { GlyphData, GlyphRequestMessage, TileRequest } from 'workers/worker.spec'
+import type { GlyphData, TileRequest } from 'workers/worker.spec'
 import type { GlyphFeature, GlyphWorker as GlyphWorkerSpec, IDGen, VTFeature } from '../process.spec'
 import type { Alignment, Anchor, GPUType, GlyphLayerDefinition, GlyphWorkerLayer } from 'style/style.spec'
 import type { CodeDesign } from '../vectorWorker'
 import type { S2VectorPoints } from 's2-vector-tile'
+import type ImageStore from '../imageStore'
 
 export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec {
   rtree: RTree = new RTree()
-  glyphMap: GlyphMap = {}
-  iconMap: IconMap = {}
-  colorMap: ColorMap = {}
-  iconList: IconList = {}
-  glyphList: GlyphList = {}
-  glyphStore = new Map<string, GlyphStore>()
+  imageStore: ImageStore
   features: GlyphFeature[] = []
   sourceWorker: MessagePort
   uShaper = new UnicodeShaper(uShaperWASM)
-  constructor (idGen: IDGen, gpuType: GPUType, sourceWorker: MessagePort) {
+  constructor (idGen: IDGen, gpuType: GPUType, sourceWorker: MessagePort, imageStore: ImageStore) {
     super(idGen, gpuType)
     this.sourceWorker = sourceWorker
+    this.imageStore = imageStore
   }
 
   setupLayer (glyphLayer: GlyphLayerDefinition): GlyphWorkerLayer {
@@ -111,7 +100,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     feature: VTFeature,
     glyphLayer: GlyphWorkerLayer
   ): boolean {
-    const { gpuType } = this
+    const { gpuType, imageStore } = this
     // creating both a text and icon version as applicable
     const { type, extent, properties } = feature
     if (type !== 1) return false
@@ -137,15 +126,15 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
         let field = coalesceField(glyphLayer[`${type}Field`](deadCode, properties, zoom), properties)
         // pre-process and shape the unicodes
         if (field.length === 0) continue
-        field = this.uShaper.shapeString(field)
         let fieldCodes: Unicode[] = []
         const family = glyphLayer[`${type}Family`](deadCode, properties, zoom)
         // if icon, convert field to list of codes, otherwise create a unicode array
-        if (type === 'icon') {
-          this.#addMissingIcons(field, family)
-        } else {
+        if (type === 'text') {
+          field = this.uShaper.shapeString(field)
           fieldCodes = field.split('').map(char => char.charCodeAt(0))
-          this.#addMissingChars(fieldCodes, family)
+          imageStore.addMissingChars(fieldCodes, family)
+        } else {
+          imageStore.addMissingIcons(field, family)
         }
         // for rtree tests
         const size = glyphLayer[`${type}Size`](deadCode, properties, zoom)
@@ -200,154 +189,64 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     return true
   }
 
-  #addMissingChars (
-    field: Unicode[],
-    family: string
-  ): void {
-    const { glyphMap, glyphList } = this
-    if (glyphMap[family] === undefined) glyphMap[family] = {}
-    if (glyphList[family] === undefined) glyphList[family] = new Set()
-    const familyList = glyphList[family]
-    const familyMap = glyphMap[family]
-    for (const unicode of field) {
-      if (familyMap[unicode] === undefined) familyList.add(unicode)
-    }
-  }
-
-  #addMissingIcons (
-    field: string,
-    family: string
-  ): void {
-    const { glyphMap, iconList, iconMap } = this
-    if (glyphMap[family] === undefined) glyphMap[family] = {}
-    if (iconMap[family] === undefined) iconMap[family] = {}
-    if (iconList[family] === undefined) iconList[family] = new Set()
-    const familyList = iconList[family]
-    const familyMap = iconMap[family]
-    if (familyMap[field] === undefined) familyList.add(field)
-  }
-
-  // the source worker completed the request, here are the unicode properties
-  processGlyphResponse (
-    reqID: string,
-    glyphMetadata: ArrayBuffer,
-    familyName: string,
-    icons?: IconMapResponse,
-    colors?: ColorMapResponse
-  ): void {
-    const [mapID, sourceName] = reqID.split(':')
-    // pull in the features and delete the reference
-    const store = this.glyphStore.get(reqID)
-    if (store === undefined) return
-    store.processed++
-    // store our response glyphs
-    this.#importGlyphs(familyName, new Float32Array(glyphMetadata))
-    // if icons, store icons
-    if (icons !== undefined && colors !== undefined) this.#importIconMetadata(familyName, icons, colors)
-    // If we have all data, we now process the built glyphs
-    if (store.glyphFamilyCount === store.processed) {
-      this.glyphStore.delete(reqID)
-      const { features, tile } = store
-      this.features = features
-      // build
-      this.flush(mapID, tile, sourceName)
-    }
-  }
-
-  // a response from the sourceThread for glyph data
-  // [unicode, texX, texY, texW, texH, xOffset, yOffset, advanceWidth, ...]
-  #importGlyphs (familyName: string, glyphs: Float32Array): void {
-    const familyMap = this.glyphMap[familyName]
-    for (let i = 0, gl = glyphs.length; i < gl; i += 10) {
-      const code = glyphs[i]
-      const glyph: Glyph = {
-        texX: glyphs[i + 1],
-        texY: glyphs[i + 2],
-        texW: glyphs[i + 3],
-        texH: glyphs[i + 4],
-        xOffset: glyphs[i + 5],
-        yOffset: glyphs[i + 6],
-        width: glyphs[i + 7],
-        height: glyphs[i + 8],
-        advanceWidth: glyphs[i + 9]
-      }
-      familyMap[code] = glyph
-    }
-  }
-
-  #importIconMetadata (familyName: string, icons: IconMapResponse, colors: ColorMapResponse): void {
-    // store icon metadata
-    const iconMap = this.iconMap[familyName]
-    for (const icon in icons) iconMap[icon] = icons[icon]
-    // store colors
-    if (this.colorMap[familyName] === undefined) this.colorMap[familyName] = []
-    const colorMap = this.colorMap[familyName]
-    for (const color in colors) colorMap[parseInt(color)] = colors[color]
-  }
-
   flush (mapID: string, tile: TileRequest, sourceName: string): number {
-    const { sourceWorker, iconList, glyphList: _glyphList, glyphStore, rtree, glyphMap, idGen } = this
-    const { workerID } = idGen
-    let { features } = this
+    const { imageStore } = this
+    const features = this.features
     const featureLength = features.length
     if (featureLength === 0) return 0
-    // if iconList or glyphList is non-zero, we need to request the glyphs and wait
-    const glyphFamilyCount = Object.keys(_glyphList).length + Object.keys(iconList).length
-    if (glyphFamilyCount > 0) {
-      // randome string of numbers and letters 7 characters long
-      const reqID = `${mapID}:${sourceName}:${Math.random().toString(36).substring(2, 9)}`
-      // build glyphList and iconList to ship to the source thread
-      // prep glyphList for transfer
-      const glyphList: Record<string, ArrayBuffer> = {}
-      for (const family in _glyphList) {
-        const list = [..._glyphList[family]].sort((a, b) => a - b)
-        glyphList[family] = (new Uint16Array(list)).buffer
+    // check if we need to wait for a response of missing data
+    const hasMissing = imageStore.processMissingData(
+      mapID,
+      sourceName,
+      () => {
+        this.#flushReadyFeatures(mapID, tile, sourceName, features)
       }
-      // send off and prep for response
-      const requestMessage: GlyphRequestMessage = {
-        type: 'glyphrequest',
-        mapID,
-        workerID,
-        reqID,
-        glyphList,
-        iconList
-      }
-      sourceWorker.postMessage(requestMessage, Object.values(glyphList))
-      glyphStore.set(reqID, { features, tile, glyphFamilyCount, processed: 0 })
-    } else {
-      // prepare
-      rtree.clear()
-      const res: GlyphObject[] = []
-      // remove empty features; sort the features before running the collisions
-      features = features.filter(feature => {
-        // corner case: sometimes the feature field could just be a group of empty codes
-        for (const code of feature.fieldCodes) if (code >= 33) return true
-        return false
-      })
-      features = features.sort(featureSort)
-      for (const feature of features) {
-        // PRE: If icon, remap the features fieldCodes and inject color
-        if (feature.type === 'icon') this.#mapIcon(feature)
-        // Step 1: prebuild the glyph positions and bbox
-        buildGlyphQuads(feature, glyphMap)
-        // Step 2: check the rtree if we want to pre filter
-        if (feature.overdraw || !rtree.collides(feature)) res.push(feature)
-      }
-      this.features = res
-      this.#flush(mapID, sourceName, tile.id)
-    }
-    // clear the features and lists for the next tile
-    this.features = []
-    this.iconList = {}
-    this.glyphList = {}
+    )
+    // otherwise, flush now
+    if (!hasMissing) this.#flushReadyFeatures(mapID, tile, sourceName, features)
     // finish the flush
     super.flush(mapID, tile, sourceName)
+
+    // cleanup
+    this.features = []
 
     return featureLength
   }
 
+  // actually flushing because the glyph response came back (if needed)
+  // and all glyphs are ready to be processed
+  #flushReadyFeatures (
+    mapID: string,
+    tile: TileRequest,
+    sourceName: string,
+    features: GlyphFeature[]
+  ): void {
+    const { imageStore, rtree } = this
+    // prepare
+    rtree.clear()
+    const res: GlyphObject[] = []
+    // remove empty features; sort the features before running the collisions
+    features = features.filter(feature => {
+      if (feature.type === 'icon') return true
+      // corner case: sometimes the feature field could just be a group of empty codes
+      for (const code of feature.fieldCodes) if (code >= 33) return true
+      return false
+    })
+    features = features.sort(featureSort)
+    for (const feature of features) {
+      // PRE: If icon, remap the features fieldCodes and inject color
+      if (feature.type === 'icon') this.#mapIcon(feature)
+      // Step 1: prebuild the glyph positions and bbox
+      buildGlyphQuads(feature, imageStore.glyphMap)
+      // Step 2: check the rtree if we want to pre filter
+      if (feature.overdraw || !rtree.collides(feature)) res.push(feature)
+    }
+    this.features = res
+    this.#flush(mapID, sourceName, tile.id)
+  }
+
   #mapIcon (feature: GlyphObject): void {
-    const { iconMap, colorMap } = this
+    const { iconMap, colorMap } = this.imageStore
     const { family, field } = feature
     const icon = iconMap[family][field]
     const colors = colorMap[family]
@@ -520,7 +419,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       // add the feature's index for each quad
       for (let i = 0; i < qCount; i++) glyphQuadIDs.push(resultMap)
       // add color data
-      if (color.length > 0) glyphColors.push(...feature.color.map(c => c / 255))
+      if (color.length > 0) glyphColors.push(...color.map(c => c / 255))
       else for (let i = 0; i < qCount; i++) glyphColors.push(1, 1, 1, 1)
     }
     // store last set

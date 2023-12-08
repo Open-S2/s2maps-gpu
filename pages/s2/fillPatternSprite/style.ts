@@ -2,7 +2,7 @@ import type { StyleDefinition } from '../../../s2/style/style.spec'
 
 const style: StyleDefinition = {
   version: 1,
-  name: 'S2 Sprites',
+  name: 'S2 Fill Pattern using Sprites',
   center: [-122.4585607773497, 37.778443127730476],
   zoom: -0.5,
   minzoom: -0.5,
@@ -15,31 +15,22 @@ const style: StyleDefinition = {
   },
   layers: [
     {
-      name: 'background',
+      name: 'country-fill',
+      source: 'countries',
       type: 'fill',
-      source: 'mask',
       opaque: true,
-      color: '#fff'
+      color: '#e0e0d1'
     },
     {
       name: 'country-fill',
       source: 'countries',
       type: 'fill',
-      invert: true,
+      pattern: 'star_15',
+      patternFamily: 'streets',
       opaque: false,
-      color: '#b4c1c6'
-    },
-    {
-      name: 'poi-labels',
-      source: 'countries',
-      type: 'glyph',
-      iconFamily: 'streets',
-      iconField: 'amusement_park_15',
-      iconAnchor: 'center',
-      iconSize: 1,
-      iconOffset: [0, 0],
-      iconPadding: [0, 0],
-      viewCollisions: true
+      color: 'rgba(164, 202, 214, 0.5)',
+      opacity: 0.1,
+      interactive: false
     }
   ]
 }

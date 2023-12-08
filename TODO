@@ -5,7 +5,6 @@
 
 // GPU:
 // * destoy assets correctly
-// * check against context when setting pipeline... we don't need to set the same pipeline over and over again.
 // * Some Workflows can be added async from the painter
 
 // TODO PART 2:
@@ -90,7 +89,5 @@
 
 // 6) API 100%
 // 7) Website ready
-// 9) WebGPU support
-// 10) Support glyphs + icons
 // 11) Support glyphs along path
 // 12) Support dashed lines
