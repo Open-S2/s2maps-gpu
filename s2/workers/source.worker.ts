@@ -328,7 +328,8 @@ export default class SourceWorker {
 
   #deleteSource (mapID: string, sourceNames: string[]): void {
     for (const sourceName of sourceNames) {
-      this.sources[mapID][sourceName] = undefined as any
+      // @ts-expect-error - we are deleting the source
+      this.sources[mapID][sourceName] = undefined
     }
   }
 }

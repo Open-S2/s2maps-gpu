@@ -134,7 +134,7 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
     return true
   }
 
-  flush (mapID: string, tile: TileRequest, sourceName: string): void {
+  async flush (mapID: string, tile: TileRequest, sourceName: string): Promise<void> {
     if (this.features.length === 0) return
     this.#flush(mapID, sourceName, tile.id)
     this.features = []

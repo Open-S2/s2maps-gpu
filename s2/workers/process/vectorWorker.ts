@@ -52,7 +52,7 @@ export default class VectorWorker {
     })
   }
 
-  flush (mapID: string, tile: TileRequest, sourceName: string): void {
+  async flush (mapID: string, tile: TileRequest, sourceName: string, _wait: Promise<void>): Promise<void> {
     this.postInteractive(mapID, sourceName, tile.id)
   }
 

@@ -52,6 +52,7 @@ export interface FillFeature extends InteractiveFeatureBase {
   indices: number[]
   pattern?: string
   patternFamily: string
+  missing: boolean
 }
 
 export interface LineFeature extends InteractiveFeatureBase {
@@ -81,12 +82,12 @@ export interface VectorWorker {
   idGen: IDGen
   gpuType: GPUType
   _addInteractiveFeature: (id: number, properties: Properties, workerLayer: InteractiveWorkerLayer) => void
-  flush: (mapID: string, tile: TileRequest, sourceName: string) => void
+  flush: (mapID: string, tile: TileRequest, sourceName: string, wait: Promise<void>) => Promise<void>
   postInteractive: (mapID: string, sourceName: string, tileID: bigint) => void
 }
 
 export interface FillWorker extends VectorWorker {
-  features: FillFeature[]
+  featureStore: Map<bigint, FillFeature[]>
   invertLayers: Map<number, FillWorkerLayer>
   setupLayer: (layer: FillLayerDefinition) => FillWorkerLayer
   buildFeature: (tile: TileRequest, feature: VTFeature, sourceLayer: FillWorkerLayer) => boolean

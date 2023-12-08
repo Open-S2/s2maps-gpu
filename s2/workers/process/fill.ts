@@ -28,7 +28,7 @@ import type ImageStore from './imageStore'
 const MAX_FEATURE_BATCH_SIZE = 1 << 6 // 64
 
 export default class FillWorker extends VectorWorker implements FillWorkerSpec {
-  features: FillFeature[] = []
+  featureStore = new Map<bigint, FillFeature[]>()
   invertLayers = new Map<number, FillWorkerLayer>()
   imageStore: ImageStore
   constructor (idGen: IDGen, gpuType: GPUType, imageStore: ImageStore) {
@@ -86,7 +86,8 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     // get pattern
     const pattern = fillLayer.pattern?.([], properties, zoom)
     const patternFamily = fillLayer.patternFamily([], properties, zoom)
-    if (pattern !== undefined) imageStore.addMissingIcons(pattern, patternFamily)
+    let missing = false
+    if (pattern !== undefined) missing = imageStore.addMissingIcons(pattern, patternFamily)
     // only accept polygons and multipolygons
     if (type !== 3 && type !== 4) return false
     const hasParent = tile.parent !== undefined
@@ -151,63 +152,55 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
       gl2Code,
       pattern,
       patternFamily,
-      idRGB: idToRGB(id)
+      idRGB: idToRGB(id),
+      missing
     }
 
     // if interactive, store interactive properties
     if (interactive) this._addInteractiveFeature(id, properties, fillLayer)
 
-    this.features.push(fillFeature)
+    if (!this.featureStore.has(tile.id)) this.featureStore.set(tile.id, [] as FillFeature[])
+    const features = this.featureStore.get(tile.id) as FillFeature[]
+    features.push(fillFeature)
     return true
   }
 
-  flush (mapID: string, tile: TileRequest, sourceName: string): void {
-    const { imageStore } = this
-    const features = this.features
+  async flush (mapID: string, tile: TileRequest, sourceName: string, wait: Promise<void>): Promise<void> {
+    const features = this.featureStore.get(tile.id) ?? []
     // If `invertLayers` is non-empty, we should check if `features`
     // does not have said invert layers. If it doesn't, we need to add
     // a dummy feature that is empty for said layers.
     for (const [layerIndex, fillWorkerLayer] of this.invertLayers) {
       if (fillWorkerLayer.source !== sourceName) continue
-      if (!this.features.some(feature => feature.layerIndex === layerIndex)) {
+      if (!features.some(feature => feature.layerIndex === layerIndex)) {
         this.#buildInvertFeature(tile, fillWorkerLayer)
       }
     }
 
-    if (this.features.length !== 0) {
+    if (features.length !== 0) {
       // check if we need to wait for a response of missing data
-      const hasMissing = imageStore.processMissingData(
-        mapID,
-        sourceName,
-        () => {
-          this.#flushReadyFeatures(mapID, tile, sourceName, features)
-        }
-      )
-      // otherwise, flush now
-      if (!hasMissing) this.#flushReadyFeatures(mapID, tile, sourceName, features)
+      const missing = features.some(feature => feature.missing)
+      if (missing) await wait
+      this.#flush(mapID, sourceName, tile.id)
     }
     // finish the flush
-    this.features = []
-    super.flush(mapID, tile, sourceName)
-  }
-
-  #flushReadyFeatures (
-    mapID: string,
-    tile: TileRequest,
-    sourceName: string,
-    features: FillFeature[]
-  ): void {
-    this.features = features
-    this.#flush(mapID, sourceName, tile.id)
+    await super.flush(mapID, tile, sourceName, wait)
+    this.featureStore.delete(tile.id)
   }
 
   // NOTE: You can not build invert features that require properties data
   #buildInvertFeature (tile: TileRequest, fillWorkerLayer: FillWorkerLayer): void {
-    const { gpuType } = this
+    const { gpuType, imageStore } = this
     const { zoom } = tile
     const { getCode, minzoom, maxzoom, layerIndex } = fillWorkerLayer
     // respect zoom range
     if (zoom < minzoom || zoom > maxzoom) return
+    // get pattern
+    const pattern = fillWorkerLayer.pattern?.([], {}, zoom)
+    const patternFamily = fillWorkerLayer.patternFamily([], {}, zoom)
+    // get if missing
+    let missing = false
+    if (pattern !== undefined) missing = imageStore.addMissingIcons(pattern, patternFamily)
     // build feature
     const id = this.idGen.getNum()
     const [gl1Code, gl2Code] = getCode(zoom, {})
@@ -217,15 +210,20 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
       layerIndex,
       code: gpuType === 1 ? gl1Code : gl2Code,
       gl2Code,
-      patternFamily: '',
-      idRGB: idToRGB(id)
+      pattern,
+      patternFamily,
+      idRGB: idToRGB(id),
+      missing
     }
 
-    this.features.push(feature)
+    if (!this.featureStore.has(tile.id)) this.featureStore.set(tile.id, [] as FillFeature[])
+    const features = this.featureStore.get(tile.id) as FillFeature[]
+    features.push(feature)
   }
 
   #flush (mapID: string, sourceName: string, tileID: bigint): void {
-    const { features } = this
+    const features = this.featureStore.get(tileID) ?? []
+    if (features.length === 0) return
     // now that we have created all triangles, let's merge into bundled buffer sets
     // for the main thread to build VAOs.
 

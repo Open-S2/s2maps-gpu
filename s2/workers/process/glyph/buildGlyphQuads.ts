@@ -35,7 +35,7 @@ export default function buildGlyphQuads (
   const adjustX = offset[0]
   const adjustY = offset[1]
   // update field codes if it contains joining characters
-  fieldCodes = adjustMedials(fieldCodes)
+  if (type === 'text') fieldCodes = adjustMedials(fieldCodes)
   // setup variable
   const rows: Array<[number, number, number]> = [] // a row: [glyph count, rowMaxWidth]
   let rowCount = 0
