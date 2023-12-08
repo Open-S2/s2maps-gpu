@@ -7,6 +7,8 @@ import type { MaskSource, TileMaskSource } from 'gpu/workflows/workflow.spec'
 import type { ColorMode } from 's2Map'
 import type { Painter } from 'gpu/painter.spec'
 import type { TileBase as Tile } from 'source/tile.spec'
+import type { GlyphImages } from 'workers/source/glyphSource'
+import type { SpriteImageMessage } from 'workers/worker.spec'
 
 const DEPTH_ESPILON = 1 / Math.pow(2, 20)
 
@@ -27,11 +29,15 @@ export default class WebGPUContext {
   sampleCount = 1
   clearColorRGBA: [r: number, g: number, b: number, a: number] = [0, 0, 0, 0]
   // manage buffers, layouts, and bind groups
+  nullTexture!: GPUTexture
+  sharedTexture!: GPUTexture
   #interactiveReadBuffer!: GPUBuffer
   #interactiveIndexBuffer!: GPUBuffer
   #interactiveResultBuffer!: GPUBuffer
   interactiveBindGroupLayout!: GPUBindGroupLayout
   interactiveBindGroup!: GPUBindGroup
+  maskPatternBindGroupLayout!: GPUBindGroupLayout
+  patternSampler!: GPUSampler
   #viewUniformBuffer!: GPUBuffer
   #matrixUniformBuffer!: GPUBuffer
   frameBindGroupLayout!: GPUBindGroupLayout
@@ -265,7 +271,7 @@ export default class WebGPUContext {
   // 0, 1 => 16  ;  2, 3 => 8  ;  4, 5 => 4  ;  6, 7 => 2  ;  8+ => 1
   // context stores masks so we don't keep recreating them and put excess stress and memory on the GPU
   getMask (division: number, tile: Tile): TileMaskSource {
-    const { masks } = this
+    const { masks, nullTexture } = this
     // check if we have a mask for this level
     let mask = masks.get(division)
     if (mask === undefined) {
@@ -287,12 +293,15 @@ export default class WebGPUContext {
       this.featureBindGroupLayout,
       [uniformBuffer, positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
     )
+    // pattern binding
+    const fillTexturePositions = this.buildGPUBuffer('Fill Texture Positions', new Float32Array([0, 0, 0, 0]), GPUBufferUsage.UNIFORM)
 
     const tileMaskSource: TileMaskSource = {
       ...mask,
       bindGroup,
       uniformBuffer,
       positionBuffer,
+      fillPatternBindGroup: this.createPatternBindGroup(fillTexturePositions, nullTexture),
       draw: () => {
         this.setStencilReference(tile.tmpMaskID)
         this.painter.workflows.fill?.drawMask(tileMaskSource)
@@ -303,6 +312,7 @@ export default class WebGPUContext {
         layerBuffer.destroy()
         layerCodeBuffer.destroy()
         featureCodeBuffer.destroy()
+        fillTexturePositions.destroy()
       }
     }
 
@@ -346,6 +356,10 @@ export default class WebGPUContext {
   }
 
   #buildContextStorageGroupsAndLayouts (): void {
+    // setup a null texture
+    this.nullTexture = this.buildTexture(null, 1, 1, 1, this.format)
+    // setup shared texture
+    this.sharedTexture = this.buildTexture(null, 2048, 200, 1, 'rgba8unorm')
     // setup interactive buffers
     this.#interactiveIndexBuffer = this.buildGPUBuffer('Interactive Index Buffer', new Uint32Array(1), GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC)
     this.#interactiveResultBuffer = this.buildGPUBuffer('Interactive Result Buffer', new Uint32Array(50), GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC)
@@ -359,6 +373,15 @@ export default class WebGPUContext {
     this.frameBufferBindGroup = this.buildGroup('Frame BindGroup', this.frameBindGroupLayout, [this.#viewUniformBuffer, this.#matrixUniformBuffer])
     // setup per feature uniforms layout
     this.featureBindGroupLayout = this.buildLayout('Feature', ['uniform', 'uniform', 'uniform', 'read-only-storage', 'read-only-storage'], GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT | GPUShaderStage.COMPUTE)
+    this.maskPatternBindGroupLayout = this.device.createBindGroupLayout({
+      label: 'Mask Interactive BindGroupLayout',
+      entries: [
+        { binding: 4, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } }, // pattern x,y,w,h
+        { binding: 5, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } }, // pattern sampler
+        { binding: 6, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } } // pattern texture
+      ]
+    })
+    this.patternSampler = this.buildSampler('linear', true)
   }
 
   buildSampler (
@@ -469,7 +492,55 @@ export default class WebGPUContext {
     })
   }
 
+  injectImages (maxHeight: number, images: GlyphImages): boolean {
+    const { device } = this
+    // first increase texture size if needed
+    const resized = this.#increaseTextureSize(maxHeight)
+    // setup a command encoder to upload images all in one go
+    const cE = device.createCommandEncoder()
+    // upload each image to texture
+    for (const { posX, posY, width, height, data } of images) {
+      // first make sure width is a multiple of 256
+      const paddedData = this.buildPaddedBuffer(data, width, height)
+      this.uploadTextureData(this.sharedTexture, paddedData.data, width, height, { x: posX, y: posY, z: 0 }, 1, cE)
+    }
+    device.queue.submit([cE.finish()])
+    return resized
+  }
+
+  injectSpriteImage (message: SpriteImageMessage): boolean {
+    const { image, offsetX, offsetY, width, height, maxHeight } = message
+    // first increase texture size if needed
+    const resized = this.#increaseTextureSize(maxHeight)
+    // then update texture
+    this.uploadTextureData(this.sharedTexture, image, width, height, { x: offsetX, y: offsetY, z: 0 })
+    return resized
+  }
+
+  #increaseTextureSize (newHeight: number): boolean {
+    const { width, height } = this.sharedTexture
+    if (newHeight <= height) return false
+    const newTexture = this.buildTexture(this.sharedTexture, width, newHeight, 1, 'rgba8unorm', undefined)
+    this.sharedTexture.destroy()
+    this.sharedTexture = newTexture
+    return true
+  }
+
+  createPatternBindGroup (fillTexturePositions: GPUBuffer, texture = this.sharedTexture): GPUBindGroup {
+    const { device, maskPatternBindGroupLayout, patternSampler } = this
+    return device.createBindGroup({
+      label: 'Fill Pattern BindGroup',
+      layout: maskPatternBindGroupLayout,
+      entries: [
+        { binding: 4, resource: { buffer: fillTexturePositions } },
+        { binding: 5, resource: patternSampler },
+        { binding: 6, resource: texture.createView() }
+      ]
+    })
+  }
+
   destroy (): void {
+    this.sharedTexture.destroy()
     this.#viewUniformBuffer.destroy()
     this.#matrixUniformBuffer.destroy()
     this.#renderTarget?.destroy()

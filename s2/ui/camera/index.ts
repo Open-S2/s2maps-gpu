@@ -18,7 +18,7 @@ import { type StyleDefinition, type TimeSeriesStyle } from 'style/style.spec'
 
 import type S2Map from 's2Map'
 import type { FlushData, InteractiveObject, ReadyMessageGL, TileRequest, TileWorkerMessage } from 'workers/worker.spec'
-import type { Tile as TileSpec } from 'source/tile.spec'
+import type { TileGPU, Tile as TileSpec } from 'source/tile.spec'
 
 export interface ResizeDimensions {
   width: number
@@ -362,8 +362,8 @@ export default class Camera {
 
     if (type === 'interactive') this.#injectInteractiveData(data.tileID, data.interactiveGuideBuffer, data.interactiveDataBuffer)
     else if (type === 'flush') this.#injectFlush(data)
-    else if (type === 'glyphimages') this.painter.injectGlyphImages(data.maxHeight, data.images)
-    else if (type === 'spriteimage') this.painter.injectSpriteImage(data)
+    else if (type === 'glyphimages') this.painter.injectGlyphImages(data.maxHeight, data.images, this.tileCache.getAll() as TileGPU[])
+    else if (type === 'spriteimage') this.painter.injectSpriteImage(data, this.tileCache.getAll() as TileGPU[])
     else if (type === 'timesource') this._addTimeSource(data.sourceName, data.interval)
     else {
       // 1) grab the tile

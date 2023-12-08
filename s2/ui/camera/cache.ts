@@ -33,6 +33,10 @@ export default class Cache<U, T extends CachedObject> extends Map<U, T> {
     return values
   }
 
+  getAll (): T[] {
+    return this.getBatch(this.order)
+  }
+
   delete (key: U): boolean {
     this.order.splice(this.order.indexOf(key), 1)
     const value = super.get(key)

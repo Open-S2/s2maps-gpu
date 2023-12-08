@@ -36,8 +36,8 @@ export interface Painter {
   buildWorkflows: (buildSet: Set<WorkflowType>) => Promise<void>
   resize: (width: number, height: number) => void
   getScreen: () => Uint8ClampedArray
-  injectGlyphImages: (maxHeight: number, images: GlyphImages) => void
-  injectSpriteImage: (data: SpriteImageMessage) => void
+  injectGlyphImages: (maxHeight: number, images: GlyphImages, tiles: Tile[]) => void
+  injectSpriteImage: (data: SpriteImageMessage, tiles: Tile[]) => void
   setColorMode: (mode: 0 | 1 | 2 | 3 | 4) => void
   delete: () => void
   paint: (projector: Projector, tiles: Tile[]) => void

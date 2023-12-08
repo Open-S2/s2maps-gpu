@@ -3,6 +3,8 @@ const PI = 3.141592653589793238;
 struct VertexOutput {
   @builtin(position) Position: vec4<f32>,
   @location(0) color: vec4<f32>,
+  @location(1) alpha: f32,
+  @location(2) uv: vec2<f32>,
 };
 
 struct ViewUniforms {
@@ -55,6 +57,13 @@ struct TriangleIndexes {
   c: u32,
 };
 
+struct Pattern {
+  texX: f32,
+  texY: f32,
+  texW: f32,
+  texH: f32,
+};
+
 // ** FRAME DATA **
 // frame data is updated at the beginning of each new frame
 @binding(0) @group(0) var<uniform> view: ViewUniforms;
@@ -72,13 +81,17 @@ struct TriangleIndexes {
 // ** FEATURE DATA **
 // every feature will have it's own code to parse it's attribute data in real time
 @binding(4) @group(1) var<storage, read> featureCode: array<f32>;
+// ** FILL DATA **
+@binding(0) @group(2) var<uniform> interactiveAttributes: Interactive;
+@binding(1) @group(2) var<storage, read> interactivePos: array<vec2<f32>>;
+@binding(2) @group(2) var<storage, read> interactiveIndex: array<TriangleIndexes>;
+@binding(3) @group(2) var<storage, read> interactiveID: array<u32>; // ID of the feature
+@binding(4) @group(2) var<uniform> pattern: Pattern;
+@binding(5) @group(2) var patternSampler: sampler;
+@binding(6) @group(2) var patternTexture: texture_2d<f32>;
 // ** Interactive Data **
-@binding(0) @group(2) var<storage, read_write> resultIndex: atomic<u32>;
-@binding(1) @group(2) var<storage, read_write> results: array<u32>;
-@binding(0) @group(3) var<uniform> interactiveAttributes: Interactive;
-@binding(1) @group(3) var<storage, read> interactivePos: array<vec2<f32>>;
-@binding(2) @group(3) var<storage, read> interactiveIndex: array<TriangleIndexes>;
-@binding(3) @group(3) var<storage, read> interactiveID: array<u32>; // ID of the feature
+@binding(0) @group(3) var<storage, read_write> resultIndex: atomic<u32>;
+@binding(1) @group(3) var<storage, read_write> results: array<u32>;
 
 fn LCH2LAB (lch: vec4<f32>) -> vec4<f32> { // r -> l ; g -> c ; b -> h
   var h = lch.b * (PI / 180.);
@@ -479,6 +492,7 @@ fn vMain(
   var tmpPos = getPos(position);
   tmpPos /= tmpPos.w;
   output.Position = vec4(tmpPos.xy, layer.depthPos, 1.0);
+  output.uv = tmpPos.xy;
 
   // set color
   // prep layer index and feature index positions
@@ -486,9 +500,9 @@ fn vMain(
   var featureIndex = i32(codeType);
   // decode color
   var color = decodeFeature(true, &index, &featureIndex);
-  color.a *= decodeFeature(false, &index, &featureIndex)[0];
-  color = vec4<f32>(color.rgb * color.a, color.a);
+  color = vec4(color.rgb * color.a, color.a);
   output.color = color;
+  output.alpha = decodeFeature(false, &index, &featureIndex)[0];
 
   return output;
 }
@@ -497,7 +511,29 @@ fn vMain(
 fn fMain(
   output: VertexOutput
 ) -> @location(0) vec4<f32> {
-  return output.color;
+  if (pattern.texW == 0. || pattern.texH == 0.) { return output.color * output.alpha; }
+  // handle pattern case
+  let pos = (output.uv + 1.) / 2.; // Convert from clip space to [0, 1] range
+  let textureSize = vec2<f32>(textureDimensions(patternTexture, 0)); // Texture size
+  // Calculate the texture region in normalized coordinates
+  let regionX = pattern.texX / textureSize.x;
+  let regionY = pattern.texY / textureSize.y;
+  let regionWidth = pattern.texW / textureSize.x;
+  let regionHeight = pattern.texH / textureSize.y;
+  // Scale UV coordinates for tiling
+  let tileFactorX = view.aspectX / (regionWidth * textureSize.x);
+  let tileFactorY = view.aspectY / (regionHeight * textureSize.y);
+  // Calculate UV coordinates within the specified region
+  let uv = vec2(
+    ((pos.x * tileFactorX) % 1.0) * regionWidth + regionX,
+    ((pos.y * tileFactorY) % 1.0) * regionHeight + regionY
+  );
+
+  let textureColor = textureSample(patternTexture, patternSampler, uv);
+  var blendedColor = textureColor * textureColor.a + output.color * (1.0 - textureColor.a);
+  blendedColor *= output.alpha;
+
+  return blendedColor;
 }
 
 @compute @workgroup_size(64)

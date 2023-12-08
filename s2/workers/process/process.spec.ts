@@ -24,7 +24,6 @@ import type {
 import type { Properties } from 'geometry'
 import type { JSONVectorFeature } from '../source/json-vt/tile'
 import type { GlyphObject } from './glyph/glyph.spec'
-import type { ColorMap as ColorMapResponse, IconMap as IconMapResponse } from '../source/glyphSource'
 
 export interface IDGen {
   workerID: number
@@ -51,6 +50,8 @@ export type GlyphFeature = GlyphObject
 export interface FillFeature extends InteractiveFeatureBase {
   vertices: number[]
   indices: number[]
+  pattern?: string
+  patternFamily: string
 }
 
 export interface LineFeature extends InteractiveFeatureBase {
@@ -106,13 +107,6 @@ export interface HeatmapWorker extends PointWorker {
 
 export interface GlyphWorker extends VectorWorker {
   setupLayer: (layer: GlyphLayerDefinition) => GlyphWorkerLayer
-  processGlyphResponse: (
-    reqID: string,
-    glyphMetadata: ArrayBuffer,
-    familyName: string,
-    icons?: IconMapResponse,
-    colors?: ColorMapResponse
-  ) => void
   buildFeature: (tile: TileRequest, feature: VTFeature, sourceLayer: GlyphWorkerLayer) => boolean
 }
 

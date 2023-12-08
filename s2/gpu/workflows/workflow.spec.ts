@@ -35,7 +35,6 @@ import type {
 } from 'workers/worker.spec'
 import type { TileGPU as Tile } from 'source/tile.spec'
 import type Projector from 'ui/camera/projector'
-import type { GlyphImages } from 'workers/source/glyphSource'
 
 // SOURCES
 
@@ -53,6 +52,7 @@ export interface TileMaskSource {
   indexBuffer: GPUBuffer
   codeTypeBuffer: GPUBuffer
   bindGroup: GPUBindGroup
+  fillPatternBindGroup: GPUBindGroup
   uniformBuffer: GPUBuffer
   positionBuffer: GPUBuffer
   count: number
@@ -137,6 +137,7 @@ export interface FeatureBase {
   draw: () => void
   destroy: () => void
   compute?: () => void
+  updateSharedTexture?: () => void
 }
 
 // tile, parent, layerIndex, layerUniforms, layerCode, featureCode
@@ -151,6 +152,7 @@ export interface FillFeature extends FeatureBase {
   invert: boolean
   interactive: boolean
   opaque: boolean
+  fillPatternBindGroup: GPUBindGroup
   fillInteractiveBindGroup?: GPUBindGroup
 }
 
@@ -301,7 +303,6 @@ export interface FillWorkflow extends Workflow {
 export interface GlyphWorkflow extends Workflow {
   buildSource: (glyphData: GlyphData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: GlyphLayerStyle) => GlyphLayerDefinition
-  injectImages: (maxHeight: number, images: GlyphImages) => void
   computeFilters: (features: GlyphFeature[]) => void
 }
 

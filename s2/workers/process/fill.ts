@@ -3,6 +3,7 @@ import VectorWorker, { colorFunc, idToRGB } from './vectorWorker'
 import { earclip } from 'earclip'
 import { featureSort, scaleShiftClip } from './util'
 import parseFilter from 'style/parseFilter'
+import parseFeatureFunction from 'style/parseFeatureFunction'
 
 import type {
   S2VectorGeometry,
@@ -12,24 +13,32 @@ import type {
 import type { FillData, TileRequest } from '../worker.spec'
 import type {
   FillLayerDefinition,
-  FillWorkerLayer
+  FillWorkerLayer,
+  GPUType
 } from 'style/style.spec'
 import type {
   FillFeature,
   FillWorker as FillWorkerSpec,
+  IDGen,
   VTFeature
 } from './process.spec'
 import type { CodeDesign } from './vectorWorker'
+import type ImageStore from './imageStore'
 
 const MAX_FEATURE_BATCH_SIZE = 1 << 6 // 64
 
 export default class FillWorker extends VectorWorker implements FillWorkerSpec {
   features: FillFeature[] = []
   invertLayers = new Map<number, FillWorkerLayer>()
+  imageStore: ImageStore
+  constructor (idGen: IDGen, gpuType: GPUType, imageStore: ImageStore) {
+    super(idGen, gpuType)
+    this.imageStore = imageStore
+  }
 
   setupLayer (fillLayer: FillLayerDefinition): FillWorkerLayer {
     const {
-      name, layerIndex, source, layer, minzoom, maxzoom,
+      name, layerIndex, source, layer, minzoom, maxzoom, pattern, patternFamily,
       filter, color, opacity, invert, interactive, cursor, opaque, lch
     } = fillLayer
 
@@ -50,6 +59,8 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
       maxzoom,
       filter: parseFilter(filter),
       getCode: this.buildCode(design),
+      pattern: pattern !== undefined ? parseFeatureFunction<string, string>(pattern) : undefined,
+      patternFamily: parseFeatureFunction<string, string>(patternFamily),
       invert,
       interactive,
       cursor,
@@ -66,12 +77,16 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     feature: VTFeature,
     fillLayer: FillWorkerLayer
   ): boolean {
-    const { gpuType } = this
+    const { gpuType, imageStore } = this
     // pull data
     const { zoom, division } = tile
     const { extent, properties } = feature
     let { type } = feature
     const { getCode, interactive, layerIndex } = fillLayer
+    // get pattern
+    const pattern = fillLayer.pattern?.([], properties, zoom)
+    const patternFamily = fillLayer.patternFamily([], properties, zoom)
+    if (pattern !== undefined) imageStore.addMissingIcons(pattern, patternFamily)
     // only accept polygons and multipolygons
     if (type !== 3 && type !== 4) return false
     const hasParent = tile.parent !== undefined
@@ -134,6 +149,8 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
       layerIndex,
       code: gpuType === 1 ? gl1Code : gl2Code,
       gl2Code,
+      pattern,
+      patternFamily,
       idRGB: idToRGB(id)
     }
 
@@ -145,6 +162,8 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
   }
 
   flush (mapID: string, tile: TileRequest, sourceName: string): void {
+    const { imageStore } = this
+    const features = this.features
     // If `invertLayers` is non-empty, we should check if `features`
     // does not have said invert layers. If it doesn't, we need to add
     // a dummy feature that is empty for said layers.
@@ -156,11 +175,30 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     }
 
     if (this.features.length !== 0) {
-      this.#flush(mapID, sourceName, tile.id)
-      this.features = []
+      // check if we need to wait for a response of missing data
+      const hasMissing = imageStore.processMissingData(
+        mapID,
+        sourceName,
+        () => {
+          this.#flushReadyFeatures(mapID, tile, sourceName, features)
+        }
+      )
+      // otherwise, flush now
+      if (!hasMissing) this.#flushReadyFeatures(mapID, tile, sourceName, features)
     }
     // finish the flush
+    this.features = []
     super.flush(mapID, tile, sourceName)
+  }
+
+  #flushReadyFeatures (
+    mapID: string,
+    tile: TileRequest,
+    sourceName: string,
+    features: FillFeature[]
+  ): void {
+    this.features = features
+    this.#flush(mapID, sourceName, tile.id)
   }
 
   // NOTE: You can not build invert features that require properties data
@@ -179,6 +217,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
       layerIndex,
       code: gpuType === 1 ? gl1Code : gl2Code,
       gl2Code,
+      patternFamily: '',
       idRGB: idToRGB(id)
     }
 
@@ -207,8 +246,10 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     let encodingIndexes: Record<string, number> = { '': 0 }
     let encodingIndex = 0
     let curlayerIndex = features[0].layerIndex
+    let curPattern = features[0].pattern
+    let curPatternFamily = features[0].patternFamily
 
-    for (const { code, layerIndex, vertices: _vertices, indices: _indices, idRGB } of features) {
+    for (const { code, layerIndex, vertices: _vertices, indices: _indices, idRGB, pattern, patternFamily } of features) {
       // on layer change or max encoding size, we have to setup a new featureGuide, encodings, and encodingIndexes
       if (
         curlayerIndex !== layerIndex ||
@@ -222,6 +263,9 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
           encodings.length,
           ...encodings
         ) // layerIndex, count, offset, encoding size, encodings
+        // describe pattern
+        const { texX, texY, texW, texH } = this.imageStore.getPattern(patternFamily, pattern)
+        featureGuide.push(texX, texY, texW, texH)
         // update variables for reset
         indicesOffset = indices.length
         encodings = []
@@ -252,8 +296,10 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
         ids[idRGBIndex + 2] = idRGB[2]
         ids[idRGBIndex + 3] = 0
       }
-      // update previous layerIndex
+      // update previous layerIndex and pattern
       curlayerIndex = layerIndex
+      curPattern = pattern
+      curPatternFamily = patternFamily
     }
     // store the very last featureGuide batch
     if (indices.length - indicesOffset > 0) {
@@ -264,6 +310,9 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
         encodings.length,
         ...encodings
       ) // layerIndex, count, offset, encoding size, encodings
+      // describe pattern
+      const { texX, texY, texW, texH } = this.imageStore.getPattern(curPatternFamily, curPattern)
+      featureGuide.push(texX, texY, texW, texH)
     }
 
     // Upon building the batches, convert to buffers and ship.

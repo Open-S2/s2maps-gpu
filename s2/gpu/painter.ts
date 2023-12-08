@@ -83,22 +83,27 @@ export default class Painter {
     return new Uint8ClampedArray()
   }
 
-  injectGlyphImages (maxHeight: number, images: GlyphImages): void {
-    this.workflows.glyph?.injectImages(maxHeight, images)
-  }
-
   setColorMode (mode: ColorMode): void {
     this.dirty = true
     this.context.setColorBlindMode(mode)
   }
 
-  injectTimeCache (timeCache: TimeCache): void {
-    this.workflows.sensor?.injectTimeCache(timeCache)
+  injectGlyphImages (maxHeight: number, images: GlyphImages, tiles: Tile[]): void {
+    const textureResized = this.context.injectImages(maxHeight, images)
+    if (textureResized) {
+      for (const feature of tiles.flatMap(tile => tile.featureGuides)) feature.updateSharedTexture?.()
+    }
   }
 
-  injectSpriteImage (data: SpriteImageMessage): void {
-    // const { glyph } = this.workflows
-    // glyph?.injectSpriteImage(data)
+  injectSpriteImage (data: SpriteImageMessage, tiles: Tile[]): void {
+    const textureResized = this.context.injectSpriteImage(data)
+    if (textureResized) {
+      for (const feature of tiles.flatMap(tile => tile.featureGuides)) feature.updateSharedTexture?.()
+    }
+  }
+
+  injectTimeCache (timeCache: TimeCache): void {
+    this.workflows.sensor?.injectTimeCache(timeCache)
   }
 
   // usePipeline (pipelineName: PipelineType): void | Pipeline {

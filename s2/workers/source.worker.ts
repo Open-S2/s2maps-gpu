@@ -1,12 +1,14 @@
 /* eslint-env worker */
 import {
   GlyphSource,
+  ImageSource,
   JSONSource,
   LocalSource,
   MarkerSource,
   S2TilesSource,
   Session,
   Source,
+  SpriteSource,
   TexturePack
 } from './source'
 import s2mapsURL from '../util/s2mapsURL'
@@ -25,7 +27,6 @@ import type {
 } from 'style/style.spec'
 import type { MarkerDefinition } from './source/markerSource'
 import type { SourceWorkerMessages, TileRequest } from './worker.spec'
-import SpriteSource from './source/spriteSource'
 
 /**
   SOURCE WORKER
@@ -68,6 +69,7 @@ export default class SourceWorker {
   glyphs: Record<string, GlyphSource> = {} // path is key again
   sprites: Record<string, SpriteSource> = {}
   texturePack: TexturePack = new TexturePack()
+  images: ImageSource = new ImageSource('__images', '', this.texturePack, this.session)
 
   onMessage ({ data, ports }: MessageEvent<SourceWorkerMessages>): void {
     const { type } = data
@@ -110,12 +112,12 @@ export default class SourceWorker {
     // create the source map, if sources already exists, we are dumping the old sources
     this.sources[mapID] = {}
     // pull style data
-    const { sources, layers, fonts, icons, glyphs, sprites, analytics, apiKey } = style
+    const { sources, layers, fonts, icons, glyphs, sprites, images, analytics, apiKey } = style
     this.layers[mapID] = layers
     // create a session with the style
     this.session.loadStyle(mapID, analytics, apiKey)
     // now build sources
-    void this.#buildSources(mapID, sources, layers, fonts, icons, glyphs, sprites)
+    void this.#buildSources(mapID, sources, layers, fonts, icons, glyphs, sprites, images)
   }
 
   #addLayer (
@@ -165,7 +167,8 @@ export default class SourceWorker {
     fonts: Fonts = {},
     icons: Icons = {},
     glyphs: Glyphs = {},
-    sprites: Sprites = {}
+    sprites: Sprites = {},
+    images: Record<string, string> = {}
   ): Promise<void> {
     // sources
     for (const [name, source] of Object.entries(sources)) {
@@ -177,11 +180,15 @@ export default class SourceWorker {
         this.#createGlyphSource(mapID, name, source.path, source.fallback)
       } else { this.#createGlyphSource(mapID, name, source) }
     }
-
+    // sprites
     for (const [name, source] of Object.entries(sprites)) {
       if (typeof source === 'object') {
         this.#createSpriteSheet(mapID, name, source.path, source.fallback, source.fileType)
       } else { this.#createSpriteSheet(mapID, name, source) }
+    }
+    // images
+    for (const [name, href] of Object.entries(images)) {
+      void this.images.addImage(mapID, name, href)
     }
 
     // add in glyph and sprite fallbacks
@@ -290,7 +297,8 @@ export default class SourceWorker {
     }
     // iterate all icon requests
     for (const [name, icons] of Object.entries(iconList)) {
-      (this.sprites[name] ?? this.glyphs[name])?.iconRequest(icons, mapID, reqID, workers[workerID])
+      if (name === '__images') void this.images.iconRequest(icons, mapID, reqID, workers[workerID])
+      else void (this.sprites[name] ?? this.glyphs[name])?.iconRequest(icons, mapID, reqID, workers[workerID])
     }
   }
 
