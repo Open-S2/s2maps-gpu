@@ -1,7 +1,7 @@
 import { project } from '../mat4'
 import { llToTile, llToTilePx, neighborsXY, toID } from 'geometry/webMerc'
+import { boxIntersects, pointBoundaries } from 'geometry'
 
-import type { XYZ } from 'geometry'
 import type Projector from '../'
 
 // Due to the nature of the Web Mercator design, it's easiest to store an MVP matrix for each tile
@@ -38,7 +38,10 @@ export default function getTilesInView (
     const tl = project(matrix, [0, 1, 0])
     const tr = project(matrix, [1, 1, 0])
     // check if the tile is in view
-    if (boxIntersects(bl, br, tl, tr)) {
+    if (
+      pointBoundaries(bl, br, tl, tr) ||
+      boxIntersects(bl, br, tl, tr)
+    ) {
       // if the tile is in view, add it to the list
       tiles.push(toID(zCheck, xCheck, yCheck))
       // add the surounding tiles we have not checked
@@ -77,14 +80,4 @@ function tileMatrix (projector: Projector, tileZoom: number, tileX: number, tile
   const offset = llToTilePx([lon, lat], [tileZoom, tileX, tileY], 1)
 
   return projector.getMatrix(scale, offset)
-}
-
-function boxIntersects (bl: XYZ, br: XYZ, tl: XYZ, tr: XYZ): boolean {
-  // return true if any of the four corners are inside -1 to 1 for both x and y
-  return (
-    (bl[0] >= -1 && bl[0] <= 1 && bl[1] >= -1 && bl[1] <= 1) ||
-    (br[0] >= -1 && br[0] <= 1 && br[1] >= -1 && br[1] <= 1) ||
-    (tl[0] >= -1 && tl[0] <= 1 && tl[1] >= -1 && tl[1] <= 1) ||
-    (tr[0] >= -1 && tr[0] <= 1 && tr[1] >= -1 && tr[1] <= 1)
-  )
 }
