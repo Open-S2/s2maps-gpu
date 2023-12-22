@@ -4,15 +4,18 @@ import UnicodeShaper from 'unicode-shaper-zig'
 import uShaperWASM from 'unicode-shaper-zig/u-shaper.wasm'
 import VectorWorker, { colorFunc, idToRGB } from '../vectorWorker'
 import featureSort from '../util/featureSort'
-import buildGlyphQuads, { QUAD_SIZE } from './buildGlyphQuads'
-import RTree from './rtree'
+import { QUAD_SIZE, buildGlyphPointQuads } from './buildGlyphQuads'
+import CollisionTester from './collisionTester'
 import { scaleShiftClip } from '../util'
 import coalesceField from 'style/coalesceField'
 import parseFilter from 'style/parseFilter'
 import parseFeatureFunction from 'style/parseFeatureFunction'
 
 import type {
+  GlyphBase,
   GlyphObject,
+  GlyphPath,
+  GlyphPoint,
   Unicode
 } from './glyph.spec'
 import type { GlyphData, TileRequest } from 'workers/worker.spec'
@@ -23,7 +26,7 @@ import type { S2VectorPoints } from 's2-vector-tile'
 import type ImageStore from '../imageStore'
 
 export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec {
-  rtree: RTree = new RTree()
+  collisionTest: CollisionTester = new CollisionTester()
   imageStore: ImageStore
   featureStore = new Map<bigint, GlyphObject[]>()
   sourceWorker: MessagePort
@@ -103,94 +106,115 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     const { gpuType, imageStore, featureStore } = this
     if (!featureStore.has(tile.id)) featureStore.set(tile.id, [])
     // creating both a text and icon version as applicable
-    const { type, extent, properties } = feature
-    if (type !== 1) return false
+    const { type: featureType, extent, properties } = feature
     const geometry = feature.loadGeometry?.()
     if (geometry === undefined) return false
     // preprocess geometry
-    const clip = scaleShiftClip(geometry, type, extent, tile) as S2VectorPoints
+    const clip = scaleShiftClip(geometry, featureType, extent, tile)
     const { idGen } = this
     const { layerIndex, overdraw, interactive } = glyphLayer
     const { zoom } = tile
     if (clip.length === 0) return false
 
     // build out all the individual s,t tile positions from the feature geometry
-    for (const point of clip) {
-      const id = idGen.getNum()
-      const idRGB = idToRGB(id)
-      for (const type of ['icon', 'text'] as Array<'icon' | 'text'>) { // icon FIRST incase text draws over the icon
-        if (glyphLayer[`${type}Size`] === undefined) continue
+    const id = idGen.getNum()
+    const idRGB = idToRGB(id)
+    for (const type of ['icon', 'text'] as Array<'icon' | 'text'>) { // icon FIRST incase text draws over the icon
+      if (glyphLayer[`${type}Size`] === undefined) continue
 
-        // build all layout and paint parameters
-        // per tile properties
-        const deadCode: number[] = []
-        let field = coalesceField(glyphLayer[`${type}Field`](deadCode, properties, zoom), properties)
-        // pre-process and shape the unicodes
-        if (field.length === 0) continue
-        let fieldCodes: Unicode[] = []
-        const family = glyphLayer[`${type}Family`](deadCode, properties, zoom)
-        // if icon, convert field to list of codes, otherwise create a unicode array
-        let missing = false
-        if (type === 'text') {
-          field = this.uShaper.shapeString(field)
-          fieldCodes = field.split('').map(char => char.charCodeAt(0))
-          missing ||= imageStore.addMissingChars(fieldCodes, family)
-        } else {
-          missing ||= imageStore.addMissingIcons(field, family)
+      // build all layout and paint parameters
+      // per tile properties
+      const deadCode: number[] = []
+      let field = coalesceField(glyphLayer[`${type}Field`](deadCode, properties, zoom), properties)
+      // pre-process and shape the unicodes
+      if (field.length === 0) continue
+      let fieldCodes: Unicode[] = []
+      const family = glyphLayer[`${type}Family`](deadCode, properties, zoom)
+      // if icon, convert field to list of codes, otherwise create a unicode array
+      let missing = false
+      if (type === 'text') {
+        field = this.uShaper.shapeString(field)
+        fieldCodes = field.split('').map(char => char.charCodeAt(0))
+        missing ||= imageStore.addMissingChars(fieldCodes, family)
+      } else {
+        missing ||= imageStore.addMissingIcons(field, family)
+      }
+      // for rtree tests
+      const size = glyphLayer[`${type}Size`](deadCode, properties, zoom)
+
+      // grab codes
+      const [gl1Code, gl2Code] = glyphLayer[`${type}GetCode`](zoom, properties)
+
+      // prep glyph object
+      const glyphBase: GlyphBase = {
+        // organization parameters
+        id,
+        idRGB,
+        type,
+        overdraw,
+        layerIndex,
+        gl2Code,
+        code: gpuType === 1 ? gl1Code : gl2Code,
+        // layout
+        family,
+        field,
+        fieldCodes,
+        offset: glyphLayer[`${type}Offset`](deadCode, properties, zoom),
+        padding: glyphLayer[`${type}Padding`](deadCode, properties, zoom),
+        kerning: (type === 'text') ? glyphLayer.textKerning(deadCode, properties, zoom) : 0,
+        lineHeight: (type === 'text') ? glyphLayer.textLineHeight(deadCode, properties, zoom) : 0,
+        anchor: glyphLayer[`${type}Anchor`](deadCode, properties, zoom) as Anchor,
+        wordWrap: (type === 'text') ? glyphLayer.textWordWrap(deadCode, properties, zoom) : 0,
+        align: (type === 'text') ? glyphLayer.textAlign(deadCode, properties, zoom) : 'center',
+        // paint
+        size,
+        // prep color, quads
+        color: [],
+        quads: [],
+        // track if this feature is missing char or icon data
+        missing
+      }
+
+      // prep store
+      const store = featureStore.get(tile.id) as GlyphFeature[]
+      if (featureType === 1) {
+        for (const point of clip as S2VectorPoints) {
+          const glyph: GlyphPoint = {
+            ...glyphBase,
+            glyphType: 'point',
+            // tile position
+            s: point[0] / extent,
+            t: point[1] / extent,
+            filter: [0, 0, 0, 0, 0, 0, 0, 0],
+            // node proeprties
+            minX: Infinity,
+            minY: Infinity,
+            maxX: -Infinity,
+            maxY: -Infinity
+          }
+          store.push(glyph)
         }
-        // for rtree tests
-        const size = glyphLayer[`${type}Size`](deadCode, properties, zoom)
-
-        // grab codes
-        const [gl1Code, gl2Code] = glyphLayer[`${type}GetCode`](zoom, properties)
-
-        const glyph: GlyphObject = {
-          // organization parameters
-          id,
-          idRGB,
-          type,
-          overdraw,
-          layerIndex,
-          gl2Code,
-          code: gpuType === 1 ? gl1Code : gl2Code,
-          // layout
-          family,
-          field,
-          fieldCodes,
-          offset: glyphLayer[`${type}Offset`](deadCode, properties, zoom),
-          padding: glyphLayer[`${type}Padding`](deadCode, properties, zoom),
-          anchor: glyphLayer[`${type}Anchor`](deadCode, properties, zoom) as Anchor,
-          wordWrap: (type === 'text') ? glyphLayer.textWordWrap(deadCode, properties, zoom) : 0,
-          align: (type === 'text') ? glyphLayer.textAlign(deadCode, properties, zoom) : 'center',
-          kerning: (type === 'text') ? glyphLayer.textKerning(deadCode, properties, zoom) : 0,
-          lineHeight: (type === 'text') ? glyphLayer.textLineHeight(deadCode, properties, zoom) : 0,
-          // paint
-          size,
-          // tile position
-          s: point[0] / extent,
-          t: point[1] / extent,
-          // prep color, quads, and filter
-          color: [],
-          quads: [],
-          filter: [0, 0, 0, 0, 0, 0, 0, 0],
-          // prep for rtree test
-          children: [],
-          treeHeight: 1,
-          leaf: true,
-          minX: Infinity,
-          minY: Infinity,
-          maxX: -Infinity,
-          maxY: -Infinity,
-          // track if this feature is missing char or icon data
-          missing
+      } else {
+        // path type
+        const glyph: GlyphPath = {
+          ...glyphBase,
+          glyphType: 'path',
+          // store geometry data and type to properly build later
+          geometry: clip,
+          geometryType: featureType,
+          // ensure wordWrap is 0
+          wordWrap: 0,
+          // setup filters
+          filters: [],
+          // node Properties
+          nodes: []
         }
-        // store
-        const store = featureStore.get(tile.id) as GlyphFeature[]
         store.push(glyph)
-        // if interactive, store interactive properties
-        if (interactive) this._addInteractiveFeature(id, properties, glyphLayer)
       }
     }
+
+    // if interactive, store interactive properties
+    if (interactive) this._addInteractiveFeature(id, properties, glyphLayer)
     return true
   }
 
@@ -215,9 +239,9 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     sourceName: string,
     features: GlyphFeature[]
   ): void {
-    const { imageStore, rtree } = this
+    const { imageStore, collisionTest } = this
     // prepare
-    rtree.clear()
+    collisionTest.clear()
     const res: GlyphObject[] = []
     // remove empty features; sort the features before running the collisions
     features = features.filter(feature => {
@@ -231,10 +255,14 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       // PRE: If icon, remap the features fieldCodes and inject color
       if (feature.type === 'icon') this.#mapIcon(feature)
       // Step 1: prebuild the glyph positions and bbox
-      buildGlyphQuads(feature, imageStore.glyphMap)
-      // Step 2: check the rtree if we want to pre filter
-      if (feature.overdraw || !rtree.collides(feature)) res.push(feature)
+      if (feature.glyphType === 'point') buildGlyphPointQuads(feature, imageStore.glyphMap)
+      // else buildGlyphLineQuads(feature, imageStore.glyphMap)
+      // Step 2: check the collisionTest if we want to pre filter
+      if (feature.overdraw || !collisionTest.collides(feature)) res.push(feature)
     }
+    // replace the features with the filtered set
+    this.featureStore.set(tile.id, res)
+    // Step 3: flush the features
     this.#flush(mapID, sourceName, tile.id)
   }
 
@@ -254,13 +282,15 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
   #flush (mapID: string, sourceName: string, tileID: bigint): void {
     const features = this.featureStore.get(tileID) ?? []
     if (features.length === 0) return
-    if (this.gpuType === 3) this.#flush3(mapID, sourceName, tileID, features)
-    else this.#flush2(mapID, sourceName, tileID, features)
+    const pointFeatures = features.filter(f => f.glyphType === 'point') as GlyphPoint[]
+    if (this.gpuType === 3) {
+      this.#flushPoints3(mapID, sourceName, tileID, pointFeatures)
+    } else this.#flushPoints2(mapID, sourceName, tileID, pointFeatures)
     // cleanup
     this.featureStore.delete(tileID)
   }
 
-  #flush2 (mapID: string, sourceName: string, tileID: bigint, features: GlyphObject[]): void {
+  #flushPoints2 (mapID: string, sourceName: string, tileID: bigint, features: GlyphPoint[]): void {
     // setup draw thread variables
     const glyphFilterVertices: number[] = []
     const glyphFilterIDs: number[] = []
@@ -280,6 +310,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     let indexPos = 0
     // iterate features, store as we go
     for (const feature of features) {
+      if (feature.glyphType !== 'point') continue
       const { idRGB, type, layerIndex, code, color, quads, filter } = feature
       // if there is a change in layer index or not the same feature set
       if (
@@ -353,7 +384,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     )
   }
 
-  #flush3 (mapID: string, sourceName: string, tileID: bigint, features: GlyphObject[]): void {
+  #flushPoints3 (mapID: string, sourceName: string, tileID: bigint, features: GlyphPoint[]): void {
     // ID => { index: resultIndex, count: how many share the same resultIndex }
     let currIndex = 0
     const resultIndexMap = new Map<number, number>()
@@ -378,6 +409,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     let quadCount = 0
     // iterate features, store as we go
     for (const feature of features) {
+      if (feature.glyphType !== 'point') continue
       const { id, type, layerIndex, code, color, quads, filter } = feature
       // if there is a change in layer index or
       if (

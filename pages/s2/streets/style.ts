@@ -4,7 +4,7 @@ const style: StyleDefinition = {
   version: 1,
   name: 's2maps-streets-v1',
   center: [-111.88683599228256, 40.76645913667518],
-  zoom: 0,
+  zoom: 12,
   minzoom: -0.5,
   maxzoom: 18.99,
   sources: {

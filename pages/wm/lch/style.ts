@@ -9,7 +9,7 @@ const style: StyleDefinition = {
   minzoom: 0,
   maxzoom: 6.9,
   sources: {
-    planet: '/tiles/merc/osm'
+    planet: '/tiles/wm/osm'
   },
   fonts: {},
   layers: [

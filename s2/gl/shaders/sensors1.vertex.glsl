@@ -8,8 +8,7 @@ varying vec2 vExtent;
 
 void main () {
   // set where we are on the texture
-  vec2 pos = aPos / 8192.;
-  vExtent = pos;
+  vExtent = aPos;
   // set position
   gl_Position = getPos(aPos);
 }

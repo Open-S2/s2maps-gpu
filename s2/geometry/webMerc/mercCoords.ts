@@ -1,24 +1,9 @@
-import { A, EARTH_RADIUS, MAXEXTENT, degToRad, isFloat, radToDeg } from '../util'
+import { A, EARTH_RADIUS, MAXEXTENT, degToRad, radToDeg } from '../util'
 
 import type { Point, Sources } from './mercProj.spec'
 import type { BBox } from '../proj.spec'
 
-/** CONSTANTS **/
-// { tileSize => { zoom => [Bc, Cc, Zc, Ac] } }
-type Cache = Record<number, Record<number, BBox>>
-const CACHE: Cache = {}
-
-function getCache (zoom: number, tileSize: number): BBox {
-  if (zoom < 0 || zoom > 30) throw Error('Invalid zoom level')
-  if (isFloat(zoom)) return buildSizes(zoom, tileSize)
-  if (CACHE[tileSize] === undefined) CACHE[tileSize] = {}
-  if (!Array.isArray(CACHE[tileSize][zoom])) {
-    CACHE[tileSize][zoom] = buildSizes(zoom, tileSize)
-  }
-  return CACHE[tileSize][zoom]
-}
-
-function buildSizes (zoom: number, tileSize: number): BBox {
+function getZoomSize (zoom: number, tileSize: number): BBox {
   const size = tileSize * Math.pow(2, zoom)
   return [
     size / 360,
@@ -37,17 +22,13 @@ export function llToPX (
   antiMeridian = false,
   tileSize = 512
 ): Point {
-  const { min, max, sin, log, round } = Math
-  const [Bc, Cc, Zc, Ac] = getCache(zoom, tileSize)
+  const { min, max, sin, log } = Math
+  const [Bc, Cc, Zc, Ac] = getZoomSize(zoom, tileSize)
   const expansion = antiMeridian ? 2 : 1
   const d = Zc
-  const f = min(max(sin(degToRad(ll[1])), -0.9999), 0.9999)
+  const f = min(max(sin(degToRad(ll[1])), -0.999999999999), 0.999999999999)
   let x = d + ll[0] * Bc
   let y = d + 0.5 * log((1 + f) / (1 - f)) * (-Cc)
-  if (!isFloat(zoom)) {
-    x = round(x)
-    y = round(y)
-  }
   if (x > Ac * expansion) x = Ac * expansion
   if (y > Ac) y = Ac
 
@@ -63,7 +44,7 @@ export function pxToLL (
   tileSize = 512
 ): Point {
   const { atan, exp, PI } = Math
-  const [Bc, Cc, Zc] = getCache(zoom, tileSize)
+  const [Bc, Cc, Zc] = getZoomSize(zoom, tileSize)
   const g = (px[1] - Zc) / (-Cc)
   const lon = (px[0] - Zc) / Bc
   const lat = radToDeg(2 * atan(exp(g)) - 0.5 * PI)
@@ -132,6 +113,7 @@ export function llToTilePx (ll: Point, tile: [zoom: number, x: number, y: number
   const px = llToPX(ll, zoom, false, tileSize)
   const tileXStart = x * tileSize
   const tileYStart = y * tileSize
+
   return [(px[0] - tileXStart) / tileSize, (px[1] - tileYStart) / tileSize]
 }
 
@@ -162,21 +144,21 @@ export function xyzToBBOX (
   // if tmsStyle, the y is inverted
   if (tmsStyle) y = (Math.pow(2, zoom) - 1) - y
   // Use +y to make sure it's a number to avoid inadvertent concatenation.
-  const ll: Point = [x * tileSize, (+y + 1) * tileSize] // lower left
+  const bl: Point = [x * tileSize, (y + 1) * tileSize] // bottom left
   // Use +x to make sure it's a number to avoid inadvertent concatenation.
-  const ur: Point = [(x + 1) * tileSize, y * tileSize] // upper right
+  const tr: Point = [(x + 1) * tileSize, y * tileSize] // top right
   // to pixel-coordinates
-  const pxLL = pxToLL(ll, zoom, tileSize)
-  const pxUR = pxToLL(ur, zoom, tileSize)
+  const pxBL = pxToLL(bl, zoom, tileSize)
+  const pxTR = pxToLL(tr, zoom, tileSize)
 
   // If web mercator requested reproject to 900913.
   if (source === '900913') {
     return [
-      ...llToMerc(pxLL),
-      ...llToMerc(pxUR)
+      ...llToMerc(pxBL),
+      ...llToMerc(pxTR)
     ]
   }
-  return [...pxLL, ...pxUR]
+  return [...pxBL, ...pxTR]
 }
 
 /**
@@ -193,19 +175,19 @@ export function bboxToXYZBounds (
   tileSize = 512
 ): { minX: number, maxX: number, minY: number, maxY: number } {
   const { min, max, pow, floor } = Math
-  let ll: Point = [bbox[0], bbox[1]] // lower left
-  let ur: Point = [bbox[2], bbox[3]] // upper right
+  let bl: Point = [bbox[0], bbox[1]] // bottom left
+  let tr: Point = [bbox[2], bbox[3]] // top right
 
   if (source === '900913') {
-    ll = llToMerc(ll)
-    ur = llToMerc(ur)
+    bl = llToMerc(bl)
+    tr = llToMerc(tr)
   }
 
-  const pxLL = llToPX(ll, zoom, false, tileSize)
-  const pxUR = llToPX(ur, zoom, false, tileSize)
-  // Y = 0 for XYZ is the top hence minY uses pxUR[1].
-  const x = [floor(pxLL[0] / tileSize), floor((pxUR[0] - 1) / tileSize)]
-  const y = [floor(pxUR[1] / tileSize), floor((pxLL[1] - 1) / tileSize)]
+  const pxBL = llToPX(bl, zoom, false, tileSize)
+  const pxTR = llToPX(tr, zoom, false, tileSize)
+  // Y = 0 for XYZ is the top hence minY uses pxTR[1].
+  const x = [floor(pxBL[0] / tileSize), floor((pxTR[0] - 1) / tileSize)]
+  const y = [floor(pxTR[1] / tileSize), floor((pxBL[1] - 1) / tileSize)]
 
   const bounds = {
     minX: min(...x) < 0 ? 0 : min(...x),

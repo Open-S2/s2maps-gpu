@@ -1,5 +1,7 @@
+import { findPointsAlongLine, flattenGeometry } from '../util'
+
 import type { Alignment, Anchor } from 'style/style.spec'
-import type { GlyphObject } from './glyph.spec'
+import type { GlyphPath, GlyphPoint } from './glyph.spec'
 import type { GlyphMap } from '../imageStore'
 
 // [s, t, xOffset, yOffset, xPos, yPos, width, height, texX, texY, texWidth, texHeight, id]
@@ -21,8 +23,9 @@ export const MYANMAR_MEDIALS = [4155, 4156, 4157, 4158, 4190, 4191, 4192, 4226]
 // multiplied by "size"
 // NOTE: Just put the glyph offsets + word-wrap-y offset provided at first,
 // add in the excess anchor offset AFTER we know the bbox size
-export default function buildGlyphQuads (
-  feature: GlyphObject,
+// TODO: https://blog.mapbox.com/beautifying-map-labels-with-better-line-breaking-2a6ce3ed432
+export function buildGlyphPointQuads (
+  feature: GlyphPoint,
   glyphMap: GlyphMap
 ): void {
   const { max } = Math
@@ -32,12 +35,11 @@ export default function buildGlyphQuads (
   } = feature
   let { fieldCodes } = feature
   const familyMap = glyphMap[family]
-  const adjustX = offset[0]
-  const adjustY = offset[1]
+  const [adjustX, adjustY] = offset
   // update field codes if it contains joining characters
   if (type === 'text') fieldCodes = adjustMedials(fieldCodes)
   // setup variable
-  const rows: Array<[number, number, number]> = [] // a row: [glyph count, rowMaxWidth]
+  const rows: Array<[number, number, number]> = [] // a row: [glyph count, rowMaxWidth, rowMaxHeight]
   let rowCount = 0
   let rowWidth = 0
   let rowHeight = 0
@@ -67,7 +69,7 @@ export default function buildGlyphQuads (
     const yPos = yOffset
     if (texW > 0 && texH > 0) {
       // store quad
-      quads.push(s * 8_192, t * 8_192, adjustX, adjustY, xPos, yPos, width, height, texX, texY, texW, texH)
+      quads.push(s, t, adjustX, adjustY, xPos, yPos, width, height, texX, texY, texW, texH)
       // update number of glyphs and draw box height
       rowCount++
       rowHeight = max(rowHeight, height)
@@ -87,19 +89,90 @@ export default function buildGlyphQuads (
   // now adjust all glyphs and max-values by the anchor and alignment
   const [anchorOffsetX, anchorOffsetY] = anchorOffset(anchor, maxWidth, maxHeight)
   updateoffset(quads, anchorOffsetX, anchorOffsetY)
-  // build bbox given current size
-  // const bbox = [anchorOffsetX, anchorOffsetY, maxWidth + anchorOffsetX, maxHeight + anchorOffsetY]
+
   // set minX, maxX, minY, maxY in the feature
-  feature.minX = (s * 1_024) + adjustX + (anchorOffsetX * size) - padding[0]
-  feature.minY = (t * 1_024) + adjustY + (anchorOffsetY * size) - padding[1]
+  feature.minX = (s * 768) + adjustX + (anchorOffsetX * size) - padding[0]
+  feature.minY = (t * 768) + adjustY + (anchorOffsetY * size) - padding[1]
   feature.maxX = feature.minX + (maxWidth * size) + (padding[0] * 2)
   feature.maxY = feature.minY + (maxHeight * size) + (padding[1] * 2)
   // store the filter
-  feature.filter = [s * 8_192, t * 8_192, anchorOffsetX, anchorOffsetY, ...padding, maxWidth, maxHeight]
+  feature.filter = [s, t, anchorOffsetX, anchorOffsetY, ...padding, maxWidth, maxHeight]
 }
-// var XY = ((container.xy * size) - padding) / uAspect; // setup the xy positional change in pixels
-// var WH = ((container.wh * size) + (padding * 2)) / uAspect;
 
+// IDEATION: https://blog.mapbox.com/map-label-placement-in-mapbox-gl-c6f843a7caaa
+export function buildGlyphPathQuads (
+  feature: GlyphPath,
+  glyphMap: GlyphMap
+): void {
+  const { max } = Math
+  const {
+    size, offset, padding, family, anchor, geometry,
+    geometryType, align, kerning, type, quads
+  } = feature
+  let { fieldCodes } = feature
+  const familyMap = glyphMap[family]
+  const [adjustX, adjustY] = offset
+  // update field codes if it contains joining characters
+  if (type === 'text') fieldCodes = adjustMedials(fieldCodes)
+  // first replace all newlines with spaces
+  fieldCodes = fieldCodes.map(unicode => {
+    if (unicode === 10 || unicode === 13) return 32
+    else return unicode
+  })
+  // setup variable
+  let maxWidth = 0
+  let maxHeight = 0
+  let cursorX = 0
+  // first run builds maxWidth and maxHeight
+  for (const unicode of fieldCodes) {
+    const unicodeData = familyMap[unicode]
+    if (unicodeData === undefined) continue
+    const { texW, texH, xOffset, width, height, advanceWidth } = unicodeData
+    maxHeight = max(maxHeight, height)
+    const xPos = cursorX + xOffset
+    if (texW > 0 && texH > 0) maxHeight = max(maxHeight, height)
+    // always update rowWidth by advanceWidth
+    maxWidth = max(maxWidth, xPos + width, xPos + advanceWidth)
+    // advance cursor position
+    cursorX += advanceWidth + kerning
+  }
+  // reset cursor
+  cursorX = 0
+  // grab geometry lines
+  const lines = flattenGeometry(geometry, geometryType)
+  if (lines.length === 0) return
+  // build points for each line
+  const points = findPointsAlongLine(lines, maxWidth)
+  // TODO: given the geometry, check if the line is long enough to fit the glyph
+  // TODO: given the geometry, find the anchor points to place the glyph
+  // TODO: build the filters + x,y,r for each set of glyphs
+  // run through string using the glyphSet as a guide to build the quads
+  for (const [s, t] of points) {
+    for (const unicode of fieldCodes) {
+      // grab the unicode information
+      const unicodeData = familyMap[unicode]
+      if (unicodeData === undefined) continue
+      const { texX, texY, texW, texH, xOffset, yOffset, width, height, advanceWidth } = unicodeData
+      // prep x-y positions
+      const xPos = cursorX + xOffset
+      const yPos = yOffset
+      if (texW > 0 && texH > 0) {
+        // store quad
+        quads.push(s, t, adjustX, adjustY, xPos, yPos, width, height, texX, texY, texW, texH)
+      }
+      // advance cursor position
+      cursorX += advanceWidth + kerning
+    }
+    // adjust text based upon center-align or right-align
+    alignText(align, quads, [[0, maxWidth, 0]], maxWidth)
+    // now adjust all glyphs and max-values by the anchor and alignment
+    const [anchorOffsetX, anchorOffsetY] = anchorOffset(anchor, maxWidth, maxHeight)
+    updateoffset(quads, anchorOffsetX, anchorOffsetY)
+    // last step is to build the filter container for both worker and render filtering
+  }
+}
+
+// NOTE: Tempporary solution; remove whne zig module implements more languages
 // MYANMAR MEDIALS go after the characters they are attached to
 function adjustMedials (fieldCodes: number[]): number[] {
   for (let i = 1, fl = fieldCodes.length; i < fl; i++) {

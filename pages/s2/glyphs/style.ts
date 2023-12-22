@@ -54,6 +54,7 @@ const style: StyleDefinition = {
       textFill: '#1a73e7',
       textStroke: 'rgba(255, 255, 255, 0.75)',
       textStrokeWidth: 0.5,
+      textWordWrap: 8,
       overdraw: false,
       viewCollisions: true
     }

@@ -11,6 +11,7 @@ import type {
   PointLayerStyle,
   Property,
   RasterLayerStyle,
+  SourceMetadata,
   Sources,
   Sprites,
   StyleDefinition
@@ -67,7 +68,7 @@ function convertSources (input: Record<string, SourceSpecification>): Sources {
       continue
     }
     if (type === 'geojson') {
-      const { data, maxzoom, cluster, clusterRadius, clusterMaxZoom, clusterMinPoints, clusterProperties } = value
+      const { data, maxzoom, cluster, clusterRadius, clusterMaxZoom } = value
       sources[name] = {
         path: '',
         extension: 'geojson',
@@ -75,11 +76,9 @@ function convertSources (input: Record<string, SourceSpecification>): Sources {
         type: 'json',
         maxzoom,
         cluster,
-        clusterRadius,
-        clusterMaxZoom,
-        clusterMinPoints,
-        clusterProperties: clusterProperties as Record<string, unknown>
-      }
+        radius: clusterRadius,
+        maxzoom: clusterMaxZoom
+      } satisfies SourceMetadata
     } else {
       const { url, tiles, minzoom, maxzoom, bounds } = value
       if (url === undefined && !Array.isArray(tiles)) throw new Error(`Source ${name} has no url`)
@@ -249,9 +248,9 @@ function convertLayerHillshade (input?: HillshadeLayerSpecification): HillshadeL
     minzoom,
     maxzoom,
     opacity: (layout.visibility === 'none') ? 0 : 1,
-    illuminateDirection: convertPropertyValueSpecification(paint['hillshade-illumination-direction']),
-    exaggeration: convertPropertyValueSpecification(paint['hillshade-exaggeration']),
-    color: convertPropertyValueSpecification(paint['hillshade-shadow-color']),
+    azimuth: convertPropertyValueSpecification(paint['hillshade-illumination-direction']),
+    intensity: convertPropertyValueSpecification(paint['hillshade-exaggeration']),
+    shadowColor: convertPropertyValueSpecification(paint['hillshade-shadow-color']),
     highlightColor: convertPropertyValueSpecification(paint['hillshade-highlight-color']),
     accentColor: convertPropertyValueSpecification(paint['hillshade-accent-color'])
   }

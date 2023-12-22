@@ -73,7 +73,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
     const { context } = this
     const { source, layerIndex, lch } = layerBase
     // PRE) get layer base
-    let { color, opacity, pattern, patternFamily, invert, opaque, interactive, cursor } = layer
+    let { color, opacity, pattern, patternFamily, patternMovement, invert, opaque, interactive, cursor } = layer
     invert = invert ?? false
     opaque = opaque ?? false
     interactive = interactive ?? false
@@ -82,6 +82,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
     color = color ?? 'rgb(0, 0, 0)'
     opacity = opacity ?? 1
     patternFamily = patternFamily ?? '__images'
+    patternMovement = patternMovement ?? false
     const layerDefinition: FillLayerDefinition = {
       ...layerBase,
       type: 'fill' as const,
@@ -91,6 +92,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
       // layout
       pattern,
       patternFamily,
+      patternMovement,
       // propreties
       invert,
       interactive,
@@ -138,7 +140,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
       context.featureBindGroupLayout,
       [mask.uniformBuffer, mask.positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
     )
-    const fillTexturePositions = context.buildGPUBuffer('Fill Texture Positions', new Float32Array([0, 0, 0, 0]), GPUBufferUsage.UNIFORM)
+    const fillTexturePositions = context.buildGPUBuffer('Fill Texture Positions', new Float32Array([0, 0, 0, 0, 0]), GPUBufferUsage.UNIFORM)
 
     const feature: FillFeature = {
       type: 'fill' as const,
@@ -210,8 +212,8 @@ export default class FillWorkflow implements FillWorkflowSpec {
       // update index
       i += encodingSize
       // get the pattern
-      const [texX, texY, texW, texH] = featureGuideArray.slice(i, i + 4)
-      i += 4
+      const [texX, texY, texW, texH, patternMovement] = featureGuideArray.slice(i, i + 5)
+      i += 5
 
       const layerGuide = this.layerGuides.get(layerIndex)
       if (layerGuide === undefined) continue
@@ -223,7 +225,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
         context.featureBindGroupLayout,
         [mask.uniformBuffer, mask.positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
       )
-      const fillTexturePositions = context.buildGPUBuffer('Fill Texture Positions', new Float32Array([texX, texY, texW, texH]), GPUBufferUsage.UNIFORM)
+      const fillTexturePositions = context.buildGPUBuffer('Fill Texture Positions', new Float32Array([texX, texY, texW, texH, patternMovement]), GPUBufferUsage.UNIFORM)
       const fillInteractiveBuffer = context.buildGPUBuffer('Fill Interactive Buffer', new Uint32Array([offset / 3, count / 3]), GPUBufferUsage.UNIFORM)
       const fillInteractiveBindGroup = context.buildGroup(
         'Fill Interactive BindGroup',
@@ -273,7 +275,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
   // BEST PRACTICE 7: explicitly define pipeline layouts
   #getPipeline (type: 'fill' | 'mask' | 'invert' | 'mask-fill'): GPURenderPipeline {
     const { context } = this
-    const { device, format, defaultBlend, sampleCount } = context
+    const { device, format, defaultBlend, sampleCount, projection } = context
     const invert = type === 'invert'
     const mask = type === 'mask'
     const maskFill = type === 'mask-fill'
@@ -304,7 +306,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
       },
       primitive: {
         topology: (mask || maskFill) ? 'triangle-strip' : 'triangle-list',
-        cullMode: 'back',
+        cullMode: projection === 'S2' ? 'back' : 'front',
         stripIndexFormat: (mask || maskFill) ? 'uint32' : undefined
       },
       multisample: { count: sampleCount },

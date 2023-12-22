@@ -3,7 +3,7 @@ import { parent as parentID, toIJ } from 'geometry/id'
 
 import type { Session } from '.'
 import type { ParentLayers, TileRequest } from '../worker.spec'
-import type { Attributions, Format, LayerDefinition, Projection } from 'style/style.spec'
+import type { Attributions, Format, LayerDefinition, Projection, SourceMetadata, SourceType } from 'style/style.spec'
 
 export type LayerMetaData = Record<string, { // layer
   minzoom: number
@@ -11,24 +11,9 @@ export type LayerMetaData = Record<string, { // layer
   fields?: Record<string, Array<string | number | boolean>> // max fields size of 50
 }>
 
-export type FaceBounds = Record<number, Record<number, [number, number, number, number]>>
+// export type FaceBounds = Record<number, Record<number, [number, number, number, number]>>
 
-export type SourceType = 'vector' | 'json' | 'raster' | 'raster-dem' | 'sensor' | 'overlay'
-
-export interface Metadata {
-  type: SourceType
-  extension: string
-  fileType?: 'json' | 's2json' | 'pbf' | 'png' | 'jpg' | 'webp'
-  encoding?: 'gz' | 'br' | 'none'
-  size?: number
-  format?: Format | 'pbf'
-  attributions?: Attributions
-  interval?: number
-  minzoom?: number
-  maxzoom?: number
-  faces?: number[]
-  layers?: LayerMetaData
-}
+export interface Metadata extends Omit<SourceMetadata, 'path'> {}
 
 export default class Source {
   ready = false
@@ -67,8 +52,8 @@ export default class Source {
   }
 
   // if this function runs, we assume default tile source
-  async build (mapID: string, metadata?: Metadata): Promise<void> {
-    if (metadata === undefined) metadata = await this._fetch(`${this.path}/metadata.json`, mapID, true) as Metadata
+  async build (mapID: string, metadata?: SourceMetadata): Promise<void> {
+    if (metadata === undefined) metadata = await this._fetch(`${this.path}/metadata.json`, mapID, true) as SourceMetadata
     if (metadata === undefined) {
       this.active = false
       console.error(`FAILED TO extrapolate ${this.path} metadata`)
@@ -91,7 +76,8 @@ export default class Source {
       this.layers = metadata.layers
     }
     // time series data check
-    if (metadata.format !== undefined && metadata.format !== 'pbf') {
+    if (metadata.scheme !== undefined) this.format = 'zxy'
+    else if (metadata.format !== undefined && metadata.format !== 'pbf') {
       this.format = metadata.format
       this.isTimeFormat = metadata.format === 'tfzxy'
     }
@@ -236,7 +222,7 @@ export default class Source {
     worker.postMessage({ mapID, type: 'jsondata', tile, sourceName, data }, [data])
   }
 
-  async _fetch (path: string, mapID: string, json = false): Promise<ArrayBuffer | Metadata | undefined> {
+  async _fetch (path: string, mapID: string, json = false): Promise<ArrayBuffer | SourceMetadata | undefined> {
     const headers: { Authorization?: string } = {}
     if (this.needsToken) {
       const Authorization = await this.session.requestSessionToken(mapID)

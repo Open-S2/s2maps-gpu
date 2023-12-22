@@ -43,7 +43,7 @@ export default class JSONSource extends Source {
       const vectorTile = json.getTile(id)
       // prep worker
       const worker = session.requestWorker()
-      if (vectorTile?.layers?.default === undefined) { this._flush(mapID, tile, name); return }
+      if (Object.values(vectorTile?.layers ?? {}).length === 0) { this._flush(mapID, tile, name); return }
       // compress
       const data = (textEncoder.encode(JSON.stringify(vectorTile))).buffer
       // send off

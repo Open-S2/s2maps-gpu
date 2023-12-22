@@ -217,7 +217,7 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
         textAlign, textKerning, textLineHeight, iconFamily, iconField, iconAnchor,
         iconOffset, iconPadding,
         // properties
-        interactive, cursor, overdraw
+        interactive, cursor, overdraw, viewCollisions
       } = layer
       textSize = textSize ?? 16
       iconSize = iconSize ?? 16
@@ -227,6 +227,7 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
       interactive = interactive ?? false
       cursor = cursor ?? 'default'
       overdraw = overdraw ?? false
+      viewCollisions = viewCollisions ?? false
       // 1) build definition
       const layerDefinition: GlyphLayerDefinition = {
         ...layerBase,
@@ -252,6 +253,8 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
         iconAnchor: iconAnchor ?? 'center',
         iconOffset: iconOffset ?? [0, 0],
         iconPadding: iconPadding ?? [0, 0],
+        // properties
+        viewCollisions,
         interactive,
         cursor,
         overdraw
@@ -270,7 +273,8 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
         lch,
         interactive,
         cursor,
-        overdraw
+        overdraw,
+        viewCollisions
       })
 
       return layerDefinition

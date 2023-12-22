@@ -201,8 +201,8 @@ export default class Camera {
       if (!keepCache && !tileIDs.includes(key)) { // just remove the tile for simplicity
         this.tileCache.delete(key)
       } else { // add to tileRequests
-        const { id, face, zoom, i, j, bbox, division, size } = tile
-        tileRequests.push({ id, face, zoom, i, j, bbox, division, size })
+        const { id, face, zoom, i, j, bbox, type, division, size } = tile
+        tileRequests.push({ id, face, zoom, i, j, bbox, type, division, size })
         if (!awaitReplace) tile.deleteSources(sourceNames)
       }
     })

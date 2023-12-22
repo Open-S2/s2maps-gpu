@@ -11,7 +11,6 @@ float STtoUV (in float s) {
 }
 
 vec4 STtoXYZ (in vec2 st) { // x -> s, y -> t
-  st /= 8192.;
   int face = int(uFaceST[0]);
   // prep xyz
   vec3 xyz;
@@ -37,10 +36,6 @@ vec4 STtoXYZ (in vec2 st) { // x -> s, y -> t
 }
 
 vec4 getPosLocal (in vec2 pos) {
-  pos /= 8192.;
-  if (!uIsS2) {
-    return uMatrix * vec4(pos, 0, 1);
-  }
   // find position following s
   vec2 deltaBottom = uBottom.zw - uBottom.xy;
   vec2 deltaTop = uTop.zw - uTop.xy;
@@ -53,19 +48,17 @@ vec4 getPosLocal (in vec2 pos) {
 }
 
 vec4 getPos (in vec2 pos) {
-  if (!uIsS2) {
-    pos /= 8192.;
-    return uMatrix * vec4(pos, 0, 1);
-  } else if (uFaceST[1] < 12.) {
-    return uMatrix * STtoXYZ(pos);
-  } else {
+  if (!uIsS2 || uFaceST[1] >= 12.) {
     return getPosLocal(pos);
+  } else {
+    return uMatrix * STtoXYZ(pos);
   }
-  // return uMatrix * STtoXYZ(pos);
 }
 
 vec4 getZero () {
-  if (uFaceST[1] < 12.) {
+  if (!uIsS2 || uFaceST[1] >= 12.) {
+    return vec4(0., 0., 1., 1.);
+  } else  {
     return uMatrix * vec4(0., 0., 0., 1.);
-  } else { return vec4(0., 0., 1., 1.); }
+  }
 }

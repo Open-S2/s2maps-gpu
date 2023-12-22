@@ -4,6 +4,7 @@ import type { Properties } from 'geometry/proj.spec'
 import type { Filter, FilterFunction } from 'style/parseFilter'
 import type { EaseType } from './easingFunctions'
 import type { MapOptions } from 'ui/s2mapUI'
+import type { ClusterOptions } from 'workers/source/pointCluster'
 
 export type { Properties } from 'geometry/proj.spec'
 export type { Filter } from './parseFilter'
@@ -24,16 +25,18 @@ export type LayerMetaData = Record<string, { // layer
 }>
 
 export type Attributions = Record<string, string>
-
-// MUST have
-export interface SourceMetadata {
+export type FaceBounds = Record<number, Record<number, [number, number, number, number]>>
+export type SourceType = 'vector' | 'json' | 'raster' | 'raster-dem' | 'sensor' | 'overlay'
+export interface SourceMetadata extends ClusterOptions {
   path: string
-  type: 'vector' | 'json' | 'raster' | 'raster-dem' | 'sensor'
+  type: SourceType
   extension: string
   fileType?: 'json' | 's2json' | 'pbf' | 'png' | 'jpg' | 'webp'
   encoding?: 'gz' | 'br' | 'none'
   bounds?: [minX: number, minY: number, maxX: number, maxY: number]
-  format?: Format
+  faceBounds?: FaceBounds
+  format?: Format | 'pbf'
+  scheme?: 'xyz' | 'tms'
   size?: number // required by raster type sources
   attributions?: Attributions
   interval?: number
@@ -45,10 +48,6 @@ export interface SourceMetadata {
   // used by geojson sources
   data?: unknown
   cluster?: boolean
-  clusterRadius?: number
-  clusterMaxZoom?: number
-  clusterMinPoints?: number
-  clusterProperties?: Record<string, unknown>
 }
 export type Source = string | SourceMetadata
 export type Sources = Record<string, Source> // address to source or source itself
@@ -251,7 +250,8 @@ export interface FillLayerStyle extends LayerStyleBase {
   opacity?: number | Property<number>
   // layout
   pattern?: string | PropertyOnlyStep<string>
-  patternFamily?: string | Property<string>
+  patternMovement?: boolean | PropertyOnlyStep<boolean>
+  patternFamily?: string | PropertyOnlyStep<string>
   // properties
   invert?: boolean
   interactive?: boolean
@@ -264,8 +264,9 @@ export interface FillLayerDefinition extends LayerDefinitionBase {
   color: string | Property<string>
   opacity: number | Property<number>
   // layout
-  pattern?: string | Property<string>
-  patternFamily: string | Property<string>
+  pattern?: string | PropertyOnlyStep<string>
+  patternMovement: boolean | PropertyOnlyStep<boolean>
+  patternFamily: string | PropertyOnlyStep<string>
   // properties
   invert: boolean
   interactive: boolean
@@ -273,6 +274,8 @@ export interface FillLayerDefinition extends LayerDefinitionBase {
   opaque: boolean
 }
 export interface FillWorkflowLayerGuide extends LayerWorkflowGuideBase {
+  color?: LayerWorkerFunction<[number, number, number, number]>
+  opacity?: LayerWorkerFunction<number[]>
   invert: boolean
   opaque: boolean
   interactive: boolean
@@ -291,6 +294,7 @@ export interface FillWorkerLayer extends LayerWorkerBase {
   opaque: boolean
   pattern?: LayerWorkerFunction<string>
   patternFamily: LayerWorkerFunction<string>
+  patternMovement: LayerWorkerFunction<boolean>
 }
 
 /** GLYPH **/
@@ -474,13 +478,15 @@ export interface LineLayerDefinition extends LayerDefinitionBase {
 }
 export interface LineWorkflowLayerGuide extends LayerWorkflowGuideBase {
   dashed: boolean
-  dashTexture?: WebGLTexture
+  dashCount: number
+  dashTexture: WebGLTexture
   interactive: boolean
   cursor: Cursor
 }
 export interface LineWorkflowLayerGuideGPU extends LineWorkflowLayerGuide {
   layerBuffer: GPUBuffer
   layerCodeBuffer: GPUBuffer
+  dashTexture: GPUTexture
 }
 export interface LineWorkerLayer extends LayerWorkerBase {
   type: 'line'
@@ -574,27 +580,31 @@ export interface HillshadeLayerStyle extends LayerStyleBase {
   type: 'hillshade'
   // paint
   opacity?: number | Property<number>
-  exaggeration?: number | Property<number>
-  color?: string | Property<string>
+  intensity?: number | Property<number>
+  shadowColor?: string | Property<string>
   highlightColor?: string | Property<string>
   accentColor?: string | Property<string>
   // layout
-  illuminateDirection?: number | Property<number>
+  azimuth?: number | Property<number>
   fadeDuration?: number
 }
 export interface HillshadeLayerDefinition extends LayerDefinitionBase {
   type: 'hillshade'
   // paint
   opacity: number | Property<number>
-  exaggeration: number | Property<number>
-  color: string | Property<string>
+  intensity: number | Property<number>
+  shadowColor: string | Property<string>
   highlightColor: string | Property<string>
   accentColor: string | Property<string>
   // layout
-  illuminateDirection: number | Property<number>
+  azimuth: number | Property<number>
 }
 export interface HillshadeWorkflowLayerGuide extends LayerWorkflowGuideBase {
   fadeDuration: number
+}
+export interface HillshadeWorkflowLayerGuideGPU extends HillshadeWorkflowLayerGuide {
+  layerBuffer: GPUBuffer
+  layerCodeBuffer: GPUBuffer
 }
 export interface HillshadeWorkerLayer extends LayerWorkerBaseRaster {
   type: 'hillshade'
@@ -656,7 +666,7 @@ export interface ShadeWorkerLayer extends LayerWorkerBase {
 export type LayerStyle =
   UnkownLayerStyle | FillLayerStyle | GlyphLayerStyle | HeatmapLayerStyle |
   LineLayerStyle | PointLayerStyle | RasterLayerStyle | SensorLayerStyle |
-  ShadeLayerStyle
+  ShadeLayerStyle | HillshadeLayerStyle
 export type LayerDefinition =
   FillLayerDefinition | GlyphLayerDefinition | HeatmapLayerDefinition |
   LineLayerDefinition | PointLayerDefinition | RasterLayerDefinition |

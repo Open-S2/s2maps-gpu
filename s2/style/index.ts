@@ -42,11 +42,13 @@ export default class Style {
     }
     if (typeof style !== 'object') throw Error('style must be an object')
     this.dirty = true
-    // build programs that don't exist yet
+    // inform the projection
+    this.camera.painter.context.setProjection(style.projection ?? 'S2')
+    // build programs that don't exist yet (depends on projection)
     await this.#buildWorkflows(style)
     // build layer definitions
     this.#buildLayers(style.layers)
-    // build layers let us know if we have an interactive layer or not
+    // built layers let us know if we have an interactive layer or not (depends on layers)
     this.camera.painter.context.setInteractive(this.interactive)
     // build time series if exists
     if (style.timeSeries !== undefined) this.camera.buildTimeCache(style.timeSeries)
@@ -153,9 +155,9 @@ export default class Style {
     const tileRequests: TileRequest[] = []
     tiles.forEach(tile => {
       // grab request values
-      const { id, face, i, j, zoom, bbox, division, size } = tile
+      const { id, face, i, j, zoom, type, bbox, division, size } = tile
       // build tileRequests
-      tileRequests.push({ id, face, i, j, zoom, bbox, division, size })
+      tileRequests.push({ id, face, i, j, zoom, type, bbox, division, size })
     })
     // send the tiles over to the worker pool manager to split the workload
     if (webworker) {

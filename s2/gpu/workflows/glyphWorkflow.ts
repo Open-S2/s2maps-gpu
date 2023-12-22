@@ -278,7 +278,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
       if (layerGuide === undefined) continue
       const { sourceName, layerBuffer, layerCodeBuffer, lch, interactive, overdraw, viewCollisions } = layerGuide
 
-      const glyphBoundsBuffer = context.buildGPUBuffer('Glyph Bounds Buffer', new Float32Array([0, 0, 8192, 8192]), GPUBufferUsage.UNIFORM)
+      const glyphBoundsBuffer = context.buildGPUBuffer('Glyph Bounds Buffer', new Float32Array([0, 0, 1, 1]), GPUBufferUsage.UNIFORM)
       const glyphUniformBuffer = context.buildGPUBuffer('Glyph Uniform Buffer', new Float32Array([0, isIcon, ~~overdraw, 1, 1]), GPUBufferUsage.UNIFORM)
       const glyphAttributeBuffer = context.buildGPUBuffer('Glyph Bounds Buffer', new Uint32Array([filterOffset, filterCount, 1]), GPUBufferUsage.UNIFORM)
       const glyphAttributeNoStrokeBuffer = context.buildGPUBuffer('Glyph Bounds Buffer', new Uint32Array([filterOffset, filterCount, 0]), GPUBufferUsage.UNIFORM)

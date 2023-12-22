@@ -165,8 +165,6 @@ export default async function rasterProgram (context: Context): Promise<RasterPr
       const { mask } = parent ?? tile
       const { vao, count, offset } = mask
       context.setDepthRange(layerIndex)
-      if (tile.type === 'S2') context.enableCullFace()
-      else context.disableCullFace()
       // set fade
       gl.uniform1f(uFade, 1)
       // set feature code (webgl 1 we store the opacity, webgl 2 we store layerCode lookups)

@@ -1,7 +1,5 @@
 import type { Properties } from '../proj.spec'
 
-export const kLimitIJ = 1 << 30
-
 export type Face = 0 | 1 | 2 | 3 | 4 | 5
 
 /** S2 GEOMETRY **/

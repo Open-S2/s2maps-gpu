@@ -148,7 +148,7 @@ export default class RasterWorker implements RasterWorkerSpec {
         type: 'hillshade',
         tileID: id,
         built,
-        size,
+        size: built ? (image as ImageBitmap).width : size,
         sourceName,
         featureGuides: HillshadeFeatureGuides,
         image
@@ -157,4 +157,6 @@ export default class RasterWorker implements RasterWorkerSpec {
       postMessage(hillshadeData, [image])
     }
   }
+
+  async flush (mapID: string, tile: TileRequest, sourceName: string): Promise<void> {}
 }

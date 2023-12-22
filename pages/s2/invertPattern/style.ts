@@ -19,6 +19,7 @@ const style: StyleDefinition = {
       source: 'countries',
       type: 'fill',
       pattern: 'pattern',
+      patternMovement: true,
       opaque: false,
       color: '#b4c1c6',
       invert: true,

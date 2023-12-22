@@ -399,7 +399,9 @@ export default class S2Map extends EventTarget {
 
   #onMouseMove (e: MouseEvent): void {
     const { map, offscreen } = this
-    const { movementX, movementY } = e
+    let { movementX, movementY } = e
+    movementX *= this.#canvasMultiplier
+    movementY *= this.#canvasMultiplier
     offscreen?.postMessage({ type: 'mousemove', movementX, movementY })
     map?.dragPan.onMouseMove(movementX, movementY)
   }

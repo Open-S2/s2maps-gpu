@@ -158,20 +158,24 @@ export default class Painter implements PainterSpec {
     this.injectFrameUniforms(matrix, view, aspect)
     // prep mask id's
     tiles.forEach((tile, index) => { tile.tmpMaskID = index + 1 })
-    // prep all tile's features to draw
-    const features = tiles.flatMap(tile => tile.featureGuides.filter(f => f.type !== 'heatmap'))
-    // draw heatmap data if applicable
-    const heatmapFeatures = tiles.flatMap(tile => tile.featureGuides.filter(f => f.type === 'heatmap') as HeatmapFeatureGuide[])
-    if (heatmapFeatures.length > 0) features.push(this.paintHeatmap(heatmapFeatures))
-    // sort features
-    features.sort(featureSort)
+
+    const allFeatures = tiles.flatMap(tile => tile.featureGuides)
     // Mercator: the tile needs to update it's matrix at all zooms.
     // S2: all features tiles past zoom 12 must set screen positions
-    let featureTiles = features
+    let featureTiles = allFeatures
       .flatMap(({ parent, tile }) => parent !== undefined ? [parent, tile] : [tile])
     // remove all duplicates of tiles by their id
     featureTiles = featureTiles.filter((tile, index) => featureTiles.findIndex(t => t.id === tile.id) === index)
     for (const tile of featureTiles) tile.setScreenPositions(projector)
+
+    // prep all tile's features to draw
+    const features = allFeatures.filter(f => f.type !== 'heatmap')
+
+    // draw heatmap data if applicable
+    const heatmapFeatures = allFeatures.filter(f => f.type === 'heatmap') as HeatmapFeatureGuide[]
+    if (heatmapFeatures.length > 0) features.push(this.paintHeatmap(heatmapFeatures))
+    // sort features
+    features.sort(featureSort)
     // prep glyph features for drawing box filters
     const glyphFeatures = features.filter(feature => feature.type === 'glyph' && !feature.overdraw) as GlyphFeatureGuide[]
     // use text boxes to filter out overlap

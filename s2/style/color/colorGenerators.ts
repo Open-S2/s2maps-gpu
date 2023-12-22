@@ -50,35 +50,44 @@ export function buildColorRamp (
 }
 
 export function buildDashImage (
-  dasharray: Array<[number, string]>
-): { length: number, image: Uint8ClampedArray } {
+  dasharray: Array<[number, string]>,
+  devicePixelRatio: number
+): { length: number, dashCount: number, image: Uint8ClampedArray } {
   const { round } = Math
-  // RGBA * 4 height (base color, protanopia, deuteranopia, tritanopia) * found width
-  const length = dasharray.reduce((total, current) => total + current[0], 0)
-  const dashImage = new Uint8ClampedArray(4 * 4 * length)
+  // RGBA * 5 height (base color, protanopia, deuteranopia, tritanopia, grayscale) * found width
+  const dashCount = dasharray.reduce((total, current) => total + (current[0] * devicePixelRatio), 0)
+  // increase length to be divisible by 256
+  const length = Math.ceil(dashCount / 256) * 256
+  const dashImage = new Uint8ClampedArray(4 * 5 * length)
 
   // convert all strings to colors
-  const colorDashes: Array<[number, Color]> = dasharray.map(([size, str]) => [size, new Color(str)])
+  const colorDashes: Array<[number, Color]> = dasharray.map(
+    ([size, str]) => [size * devicePixelRatio, new Color(str)]
+  )
 
-  const rampMap: Array<undefined | ColorBlindAdjust> = [undefined, 'protanopia', 'deuteranopia', 'tritanopia']
+  const rampMap: Array<undefined | ColorBlindAdjust> = [undefined, 'protanopia', 'deuteranopia', 'tritanopia', 'greyscale']
   for (let t = 0, tl = rampMap.length; t < tl; t++) {
     const type = rampMap[t]
     const offset = t * length * 4
     let pos = 0
-    for (const [size, color] of colorDashes) {
+    let dashPosition = 0
+    while (pos < length) {
+      const [size, color] = colorDashes[dashPosition % colorDashes.length]
+      const [r, g, b, a] = color.getRGB(false, type)
       for (let i = 0; i < size; i++) {
-        const [r, g, b, a] = color.getRGB(false, type)
-        const idx = (++pos << 2) + offset
+        const idx = (pos++ << 2) + offset
         dashImage[idx] = round(r * a)
         dashImage[idx + 1] = round(g * a)
         dashImage[idx + 2] = round(b * a)
         dashImage[idx + 3] = round(a * 255)
       }
+      dashPosition++
     }
   }
 
   return {
     length,
+    dashCount,
     image: dashImage
   }
 }

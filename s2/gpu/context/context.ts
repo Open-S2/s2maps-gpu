@@ -1,7 +1,7 @@
 /* eslint-env browser */
 import buildMask from './buildMask'
 
-import type { GPUType } from 'style/style.spec'
+import type { GPUType, Projection } from 'style/style.spec'
 import type { MapOptions } from 'ui/s2mapUI'
 import type { MaskSource, TileMaskSource } from 'gpu/workflows/workflow.spec'
 import type { ColorMode } from 's2Map'
@@ -24,6 +24,7 @@ export default class WebGPUContext {
   #adapter!: GPUAdapter
   devicePixelRatio: number
   interactive = false
+  projection: Projection = 'S2'
   format: GPUTextureFormat = 'rgba8unorm'
   masks = new Map<number, MaskSource>()
   sampleCount = 1
@@ -142,7 +143,7 @@ export default class WebGPUContext {
 
   setDevicePixelRatio (devicePixelRatio?: number): void {
     if (devicePixelRatio !== undefined) this.devicePixelRatio = devicePixelRatio
-    this.device.queue.writeBuffer(this.#viewUniformBuffer, 13 * 4, new Float32Array([this.devicePixelRatio]))
+    this.device.queue.writeBuffer(this.#viewUniformBuffer, 15 * 4, new Float32Array([this.devicePixelRatio]))
   }
 
   // https://programmer.ink/think/several-best-practices-of-webgpu.html
@@ -266,6 +267,10 @@ export default class WebGPUContext {
     this.interactive = interactive
   }
 
+  setProjection (projection: Projection): void {
+    this.projection = projection
+  }
+
   // the zoom determines the number of divisions necessary to maintain a visually
   // asthetic spherical shape. As we zoom in, the tiles are practically flat,
   // so division is less useful.
@@ -282,7 +287,7 @@ export default class WebGPUContext {
 
     // tile binding
     const uniformBuffer = this.buildGPUBuffer('Tile Uniform Buffer', new Float32Array(tile.uniforms), GPUBufferUsage.UNIFORM)
-    const positionBuffer = this.buildGPUBuffer('Tile Position Buffer', new Float32Array([...tile.bottom, ...tile.top]), GPUBufferUsage.UNIFORM)
+    const positionBuffer = this.buildGPUBuffer('Tile Position Buffer', tile.bottomTop, GPUBufferUsage.UNIFORM)
     // layer binding
     const layerBuffer = this.buildGPUBuffer('Layer Uniform Buffer', new Float32Array([1, 0]), GPUBufferUsage.UNIFORM)
     const layerCodeBuffer = this.buildGPUBuffer('Layer Code Buffer', new Float32Array([0]), GPUBufferUsage.STORAGE)
@@ -295,7 +300,7 @@ export default class WebGPUContext {
       [uniformBuffer, positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
     )
     // pattern binding
-    const fillTexturePositions = this.buildGPUBuffer('Fill Texture Positions', new Float32Array([0, 0, 0, 0]), GPUBufferUsage.UNIFORM)
+    const fillTexturePositions = this.buildGPUBuffer('Fill Texture Positions', new Float32Array([0, 0, 0, 0, 0]), GPUBufferUsage.UNIFORM)
 
     const tileMaskSource: TileMaskSource = {
       ...mask,
@@ -358,9 +363,9 @@ export default class WebGPUContext {
 
   #buildContextStorageGroupsAndLayouts (): void {
     // setup a null texture
-    this.nullTexture = this.buildTexture(null, 1, 1, 1, this.format)
+    this.nullTexture = this.buildTexture(null, 1, 1)
     // setup shared texture
-    this.sharedTexture = this.buildTexture(null, 2048, 200, 1, 'rgba8unorm')
+    this.sharedTexture = this.buildTexture(null, 2048, 200)
     // setup interactive buffers
     this.#interactiveIndexBuffer = this.buildGPUBuffer('Interactive Index Buffer', new Uint32Array(1), GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC)
     this.#interactiveResultBuffer = this.buildGPUBuffer('Interactive Result Buffer', new Uint32Array(50), GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC)
@@ -368,7 +373,7 @@ export default class WebGPUContext {
     this.interactiveBindGroupLayout = this.buildLayout('Interactive', ['storage', 'storage'], GPUShaderStage.COMPUTE)
     this.interactiveBindGroup = this.buildGroup('Interactive BindGroup', this.interactiveBindGroupLayout, [this.#interactiveIndexBuffer, this.#interactiveResultBuffer])
     // setup position uniforms
-    this.#viewUniformBuffer = this.buildGPUBuffer('View Uniform Buffer', new Float32Array(14), GPUBufferUsage.UNIFORM)
+    this.#viewUniformBuffer = this.buildGPUBuffer('View Uniform Buffer', new Float32Array(16), GPUBufferUsage.UNIFORM)
     this.#matrixUniformBuffer = this.buildGPUBuffer('Matrix Uniform Buffer', new Float32Array(16), GPUBufferUsage.UNIFORM)
     this.frameBindGroupLayout = this.buildLayout('Frame', ['uniform', 'uniform'], GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT | GPUShaderStage.COMPUTE)
     this.frameBufferBindGroup = this.buildGroup('Frame BindGroup', this.frameBindGroupLayout, [this.#viewUniformBuffer, this.#matrixUniformBuffer])
@@ -377,22 +382,23 @@ export default class WebGPUContext {
     this.maskPatternBindGroupLayout = this.device.createBindGroupLayout({
       label: 'Mask Interactive BindGroupLayout',
       entries: [
-        { binding: 4, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } }, // pattern x,y,w,h
+        { binding: 4, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } }, // pattern x,y,w,h,movement
         { binding: 5, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } }, // pattern sampler
-        { binding: 6, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } } // pattern texture
+        { binding: 6, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } } // pattern texture
       ]
     })
     this.defaultSampler = this.buildSampler()
-    this.patternSampler = this.buildSampler('linear', true)
+    this.patternSampler = this.buildSampler('linear', true, true)
   }
 
   buildSampler (
     filter: 'linear' | 'nearest' = 'linear',
-    repeat = false
+    repeatU = false,
+    repeatV = false
   ): GPUSampler {
     return this.device.createSampler({
-      addressModeU: repeat ? 'repeat' : 'clamp-to-edge',
-      addressModeV: repeat ? 'repeat' : 'clamp-to-edge',
+      addressModeU: repeatU ? 'repeat' : 'clamp-to-edge',
+      addressModeV: repeatV ? 'repeat' : 'clamp-to-edge',
       magFilter: filter,
       minFilter: filter
     })
@@ -403,8 +409,9 @@ export default class WebGPUContext {
     width: number,
     height: number,
     depthOrArrayLayers = 1,
-    format: GPUTextureFormat = this.format,
-    origin = { x: 0, y: 0, z: 0 },
+    srcOrigin = { x: 0, y: 0 },
+    dstOrigin = { x: 0, y: 0, z: 0 },
+    format: GPUTextureFormat = 'rgba8unorm',
     commandEncoder?: GPUCommandEncoder
   ): GPUTexture {
     const { device } = this
@@ -415,7 +422,7 @@ export default class WebGPUContext {
     })
     // NOTE: It is assumed that the imageData's width and height are the same as the texture's width and height
     // if not, and the source is a BufferSource or SharedArrayBuffer, it will probably fail
-    if (imageData !== null) this.uploadTextureData(texture, imageData, width, height, origin, depthOrArrayLayers, commandEncoder)
+    if (imageData !== null) this.uploadTextureData(texture, imageData, width, height, srcOrigin, dstOrigin, depthOrArrayLayers, commandEncoder)
 
     return texture
   }
@@ -423,9 +430,10 @@ export default class WebGPUContext {
   uploadTextureData (
     texture: GPUTexture,
     imageData: GPUTexture | BufferSource | SharedArrayBuffer | ImageBitmap,
-    width: number, // width of source data
-    height: number, // width of height data
-    origin = { x: 0, y: 0, z: 0 },
+    width: number, // width of copy size
+    height: number, // height of copy size
+    srcOrigin = { x: 0, y: 0 },
+    dstOrigin = { x: 0, y: 0, z: 0 },
     depthOrArrayLayers = 1,
     commandEncoder?: GPUCommandEncoder
   ): void {
@@ -434,17 +442,17 @@ export default class WebGPUContext {
       const cE = commandEncoder ?? device.createCommandEncoder()
       // For GPUTexture, use 'copyTextureToTexture'
       cE.copyTextureToTexture(
-        { texture: imageData },
-        { texture, origin },
+        { texture: imageData, origin: srcOrigin }, // flipY: true
+        { texture, origin: dstOrigin },
         { width: imageData.width, height: imageData.height, depthOrArrayLayers }
       )
       if (commandEncoder === undefined) device.queue.submit([cE.finish()])
     } else if (imageData instanceof ImageBitmap) {
       // For ImageBitmap, use 'copyExternalImageToTexture'
       device.queue.copyExternalImageToTexture(
-        { source: imageData }, // flipY: true
-        { texture, origin },
-        { width: imageData.width, height: imageData.height, depthOrArrayLayers }
+        { source: imageData, origin: srcOrigin }, // flipY: true
+        { texture, origin: dstOrigin },
+        { width, height, depthOrArrayLayers }
       )
     } else {
       const alignment = this.device.limits.minUniformBufferOffsetAlignment
@@ -453,7 +461,7 @@ export default class WebGPUContext {
       const cE = commandEncoder ?? device.createCommandEncoder()
       cE.copyBufferToTexture(
         { buffer, bytesPerRow: Math.max(alignment, width * 4), rowsPerImage: height },
-        { texture, origin },
+        { texture, origin: dstOrigin },
         { width, height, depthOrArrayLayers }
       )
       if (commandEncoder === undefined) device.queue.submit([cE.finish()])
@@ -474,7 +482,7 @@ export default class WebGPUContext {
       entries: bindings.map((type, index) => ({
         binding: index,
         visibility,
-        buffer: { type, hasDynamicOffset: false, minBindingSize: 0 }
+        buffer: { type }
       }))
     })
   }
@@ -504,7 +512,7 @@ export default class WebGPUContext {
     for (const { posX, posY, width, height, data } of images) {
       // first make sure width is a multiple of 256
       const paddedData = this.buildPaddedBuffer(data, width, height)
-      this.uploadTextureData(this.sharedTexture, paddedData.data, width, height, { x: posX, y: posY, z: 0 }, 1, cE)
+      this.uploadTextureData(this.sharedTexture, paddedData.data, width, height, undefined, { x: posX, y: posY, z: 0 }, 1, cE)
     }
     device.queue.submit([cE.finish()])
     return resized
@@ -515,14 +523,14 @@ export default class WebGPUContext {
     // first increase texture size if needed
     const resized = this.#increaseTextureSize(maxHeight)
     // then update texture
-    this.uploadTextureData(this.sharedTexture, image, width, height, { x: offsetX, y: offsetY, z: 0 })
+    this.uploadTextureData(this.sharedTexture, image, width, height, { x: 0, y: 0 }, { x: offsetX, y: offsetY, z: 0 })
     return resized
   }
 
   #increaseTextureSize (newHeight: number): boolean {
     const { width, height } = this.sharedTexture
     if (newHeight <= height) return false
-    const newTexture = this.buildTexture(this.sharedTexture, width, newHeight, 1, 'rgba8unorm', undefined)
+    const newTexture = this.buildTexture(this.sharedTexture, width, newHeight)
     this.sharedTexture.destroy()
     this.sharedTexture = newTexture
     return true

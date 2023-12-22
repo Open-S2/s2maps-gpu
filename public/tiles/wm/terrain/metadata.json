@@ -1,0 +1,17 @@
+{
+    "format": "webp",
+    "name": "Terrain-DEM",
+    "description": "height = -10000 + ((R * 256 * 256 + G * 256 + B) * 0.1)",
+    "minzoom": 0,
+    "maxzoom": 5,
+    "scheme": "xyz",
+    "type": "raster",
+    "extension": "webp",
+    "encoding": "none",
+    "bounds": [
+        -180,
+        -85,
+        180,
+        85
+    ]
+}

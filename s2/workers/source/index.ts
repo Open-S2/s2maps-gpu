@@ -1,3 +1,4 @@
+export { default as ClusterSource } from './clusterSource'
 export { default as GlyphSource } from './glyphSource'
 export { default as ImageSource } from './imageSource'
 export { default as LocalSource } from './localSource'

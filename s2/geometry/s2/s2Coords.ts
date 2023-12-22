@@ -1,8 +1,9 @@
-import { kLimitIJ } from './s2Proj.spec'
 import { degToRad, radToDeg } from '../util'
 
 import type { Face } from './s2Proj.spec'
 import type { BBox, XYZ } from '../proj.spec'
+
+export const kLimitIJ = 1 << 30
 
 export function linearSTtoUV (s: number): number {
   return 2 * s - 1

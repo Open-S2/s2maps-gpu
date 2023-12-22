@@ -69,22 +69,18 @@ export function contains (parentID: bigint, childID: bigint): boolean {
   const [pz, px, py] = fromID(parentID)
   const [cz, cx, cy] = fromID(childID)
   if (pz > cz) return false
-  else if (pz === cz) return px === cx && py === cy
-  else {
-    const diff = cz - pz
-    const mask = (1 << diff) - 1
-    return (px === (cx & ~mask)) && (py === (cy & ~mask))
-  }
+  // Calculate the difference of child at the parent's level
+  const diff = cz - pz
+  // check if x and y match adjusting child x,y to parent's level
+  return px === cx >> diff && py === cy >> diff
 }
 
 /** Given a Tile ID, check if the zoom is 0 or not */
 export function isFace (id: bigint): boolean {
-  const [z] = fromID(id)
-  return z === 0
+  return fromID(id)[0] === 0
 }
 
 /** Get the zoom from the tile ID */
 export function level (id: bigint): number {
-  const [z] = fromID(id)
-  return z
+  return fromID(id)[0]
 }

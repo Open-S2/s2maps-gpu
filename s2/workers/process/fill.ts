@@ -39,7 +39,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
   setupLayer (fillLayer: FillLayerDefinition): FillWorkerLayer {
     const {
       name, layerIndex, source, layer, minzoom, maxzoom, pattern, patternFamily,
-      filter, color, opacity, invert, interactive, cursor, opaque, lch
+      patternMovement, filter, color, opacity, invert, interactive, cursor, opaque, lch
     } = fillLayer
 
     // build featureCode design
@@ -61,6 +61,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
       getCode: this.buildCode(design),
       pattern: pattern !== undefined ? parseFeatureFunction<string, string>(pattern) : undefined,
       patternFamily: parseFeatureFunction<string, string>(patternFamily),
+      patternMovement: parseFeatureFunction<boolean>(patternMovement),
       invert,
       interactive,
       cursor,
@@ -86,6 +87,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     // get pattern
     const pattern = fillLayer.pattern?.([], properties, zoom)
     const patternFamily = fillLayer.patternFamily([], properties, zoom)
+    const patternMovement = fillLayer.patternMovement([], properties, zoom)
     let missing = false
     if (pattern !== undefined) missing = imageStore.addMissingIcons(pattern, patternFamily)
     // only accept polygons and multipolygons
@@ -120,15 +122,14 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
         for (const poly of clip as S2VectorMultiPoly) polys.push(poly)
       } else { polys.push(clip as S2VectorPoly) }
       // create multiplier
-      const multiplier = 8_192 / extent
+      const multiplier = 1 / extent
       // process
-      const { round } = Math
       for (const poly of polys) {
         // create triangle mesh
         const data = earclip(poly, extent / division, vertices.length / 2)
         // store vertices
         for (let i = 0, vl = data.vertices.length; i < vl; i++) {
-          vertices.push(round(data.vertices[i] * multiplier))
+          vertices.push(data.vertices[i] * multiplier)
         }
         // store indices
         for (let i = 0, il = data.indices.length; i < il; i++) {
@@ -152,6 +153,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
       gl2Code,
       pattern,
       patternFamily,
+      patternMovement,
       idRGB: idToRGB(id),
       missing
     }
@@ -198,6 +200,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     // get pattern
     const pattern = fillWorkerLayer.pattern?.([], {}, zoom)
     const patternFamily = fillWorkerLayer.patternFamily([], {}, zoom)
+    const patternMovement = fillWorkerLayer.patternMovement([], {}, zoom)
     // get if missing
     let missing = false
     if (pattern !== undefined) missing = imageStore.addMissingIcons(pattern, patternFamily)
@@ -205,13 +208,14 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     const id = this.idGen.getNum()
     const [gl1Code, gl2Code] = getCode(zoom, {})
     const feature: FillFeature = {
-      vertices: [0, 0, 8_192, 0, 8_192, 8_192, 0, 8_192],
+      vertices: [0, 0, 1, 0, 1, 1, 0, 1],
       indices: [0, 2, 1, 2, 0, 3],
       layerIndex,
       code: gpuType === 1 ? gl1Code : gl2Code,
       gl2Code,
       pattern,
       patternFamily,
+      patternMovement,
       idRGB: idToRGB(id),
       missing
     }
@@ -246,8 +250,9 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     let curlayerIndex = features[0].layerIndex
     let curPattern = features[0].pattern
     let curPatternFamily = features[0].patternFamily
+    let curPatternMovement = features[0].patternMovement
 
-    for (const { code, layerIndex, vertices: _vertices, indices: _indices, idRGB, pattern, patternFamily } of features) {
+    for (const { code, layerIndex, vertices: _vertices, indices: _indices, idRGB, pattern, patternFamily, patternMovement } of features) {
       // on layer change or max encoding size, we have to setup a new featureGuide, encodings, and encodingIndexes
       if (
         curlayerIndex !== layerIndex ||
@@ -263,7 +268,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
         ) // layerIndex, count, offset, encoding size, encodings
         // describe pattern
         const { texX, texY, texW, texH } = this.imageStore.getPattern(patternFamily, pattern)
-        featureGuide.push(texX, texY, texW, texH)
+        featureGuide.push(texX, texY, texW, texH, patternMovement ? 1 : 0)
         // update variables for reset
         indicesOffset = indices.length
         encodings = []
@@ -298,6 +303,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
       curlayerIndex = layerIndex
       curPattern = pattern
       curPatternFamily = patternFamily
+      curPatternMovement = patternMovement
     }
     // store the very last featureGuide batch
     if (indices.length - indicesOffset > 0) {
@@ -310,7 +316,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
       ) // layerIndex, count, offset, encoding size, encodings
       // describe pattern
       const { texX, texY, texW, texH } = this.imageStore.getPattern(curPatternFamily, curPattern)
-      featureGuide.push(texX, texY, texW, texH)
+      featureGuide.push(texX, texY, texW, texH, curPatternMovement ? 1 : 0)
     }
 
     // Upon building the batches, convert to buffers and ship.

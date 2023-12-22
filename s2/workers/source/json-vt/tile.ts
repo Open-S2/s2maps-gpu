@@ -194,7 +194,7 @@ function addFeature (tile: JSONTile, feature: FeatureVector, tolerance: number):
               : 1,
       properties: feature.properties
     }
-    const layerName = feature.properties._layer as string ?? 'default'
+    const layerName = feature.properties.__layer as string ?? 'default'
     if (tile.layers[layerName] === undefined) {
       tile.layers[layerName] = {
         extent: tile.extent,

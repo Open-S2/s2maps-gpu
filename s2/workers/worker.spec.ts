@@ -2,6 +2,7 @@ import type {
   Analytics,
   Attributions,
   LayerDefinition,
+  Projection,
   StyleDefinition,
   StylePackage
 } from 'style/style.spec'
@@ -39,6 +40,7 @@ export interface TileRequest {
   zoom: number
   i: number
   j: number
+  type: Projection
   bbox: [left: number, bottom: number, right: number, top: number]
   division: number
   size: number

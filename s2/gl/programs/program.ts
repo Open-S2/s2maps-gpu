@@ -113,11 +113,11 @@ export default class Program implements ProgramSpec {
 
   setTileUniforms (tile: TileGL): void {
     const { gl, uniforms } = this
-    const { type } = tile
+    const { type, bottomTop } = tile
+    this.setTilePos(bottomTop)
     if (type === 'S2') {
-      const { faceST, bottom, top } = tile
+      const { faceST } = tile
       this.setFaceST(faceST)
-      this.setTilePos(bottom, top)
       gl.uniform1i(uniforms.uIsS2, 1)
     } else {
       const { matrix } = tile
@@ -175,11 +175,11 @@ export default class Program implements ProgramSpec {
     this.gl.uniform1fv(uniforms.uFaceST, faceST)
   }
 
-  setTilePos (bottom: number[], top: number[]): void {
+  setTilePos (bottomTop: Float32Array): void {
     const { uniforms, gl } = this
     if (uniforms.uBottom === undefined || uniforms.uTop === undefined) return
-    gl.uniform4fv(uniforms.uBottom, bottom)
-    gl.uniform4fv(uniforms.uTop, top)
+    gl.uniform4fv(uniforms.uBottom, bottomTop.subarray(0, 4))
+    gl.uniform4fv(uniforms.uTop, bottomTop.subarray(4, 8))
   }
 
   setLayerCode (layerCode: number[], lch = false): void {

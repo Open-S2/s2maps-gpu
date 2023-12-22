@@ -16,7 +16,7 @@ export default function Background (): React.JSX.Element {
     <div className='pages'>
       <Map
         style={style}
-        opts={{ zoomController: false }}
+        opts={{ zoomController: false, contextType: 2 }}
         ready={ready}
         noAPIKey
       />

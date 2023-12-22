@@ -5,11 +5,11 @@ const style: StyleDefinition = {
   projection: 'WM',
   name: 'webmercator background',
   center: [0, 0],
-  zoom: 0.95,
+  zoom: -0.5,
   minzoom: 0,
   maxzoom: 6.9,
   sources: {
-    planet: '/tiles/merc/osm'
+    planet: '/tiles/wm/osm'
   },
   fonts: {},
   layers: [
@@ -18,15 +18,6 @@ const style: StyleDefinition = {
       type: 'fill',
       source: 'mask',
       opaque: true,
-      color: '#fff'
-    },
-    {
-      name: 'water-fill',
-      source: 'planet',
-      layer: 'water',
-      type: 'fill',
-      invert: false,
-      opaque: false,
       color: '#b4c1c6'
     }
   ]
