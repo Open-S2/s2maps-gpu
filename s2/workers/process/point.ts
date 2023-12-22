@@ -94,11 +94,10 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
 
     const weight = (type === 'heatmap') && layer.weight([], properties, zoom)
     // create multiplier
-    const multiplier = 8192 / extent
+    const multiplier = 1 / extent
     // if weight, then it is a heatmap and we add weight data
-    const { round } = Math
     for (const point of clip) {
-      vertices.push(round(point[0] * multiplier), round(point[1] * multiplier))
+      vertices.push(point[0] * multiplier, point[1] * multiplier)
       if (weight !== false) weights.push(weight)
     }
 

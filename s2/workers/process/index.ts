@@ -9,9 +9,11 @@ import type { VectorTile } from 's2-vector-tile'
 import type { FlushData, TileRequest } from '../worker.spec'
 import type {
   GPUType,
+  HillshadeWorkerLayer,
   LayerDefinition,
   LayerType,
   RasterWorkerLayer,
+  SensorWorkerLayer,
   StylePackage,
   VectorWorkerLayer,
   WorkerLayer
@@ -77,7 +79,7 @@ export default class ProcessManager {
         (name === 'raster' || name === 'sensor' || name === 'hillshade') &&
         this.workers.raster === undefined
       ) {
-        workers.sensor = workers.raster = new RasterWorker(gpuType)
+        workers.hillshade = workers.sensor = workers.raster = new RasterWorker(gpuType)
       }
     }
   }
@@ -153,7 +155,7 @@ export default class ProcessManager {
   ): void {
     const subSourceName = sourceName.split(':')[0]
     // filter layers to source
-    const sourceLayers = this.layers[mapID].filter(layer => layer.source === subSourceName) as RasterWorkerLayer[]
+    const sourceLayers = this.layers[mapID].filter(layer => layer.source === subSourceName) as Array<RasterWorkerLayer | SensorWorkerLayer | HillshadeWorkerLayer>
 
     void this.workers.raster?.buildTile(mapID, sourceName, sourceLayers, tile, data, size)
   }

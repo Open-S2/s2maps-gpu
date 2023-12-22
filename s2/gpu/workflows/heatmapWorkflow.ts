@@ -43,7 +43,6 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
   pipeline!: GPURenderPipeline
   module!: GPUShaderModule
   texturePipeline!: GPURenderPipeline
-  #defaultSampler!: GPUSampler
   #heatmapBindGroupLayout!: GPUBindGroupLayout
   #heatmapTextureBindGroupLayout!: GPUBindGroupLayout
   constructor (context: WebGPUContext) {
@@ -53,7 +52,6 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
   async setup (): Promise<void> {
     const { context } = this
     const { device } = context
-    this.#defaultSampler = context.buildSampler()
     this.#heatmapTextureBindGroupLayout = context.buildLayout('Heatmap Texture BindGroupLayout', ['uniform'], GPUShaderStage.VERTEX)
     this.#heatmapBindGroupLayout = device.createBindGroupLayout({
       label: 'Heatmap BindGroupLayout',
@@ -127,7 +125,7 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
     // 3) Setup layer buffers in GPU
     const layerBuffer = context.buildGPUBuffer('Layer Uniform Buffer', new Float32Array([context.getDepthPosition(layerIndex), ~~lch]), GPUBufferUsage.UNIFORM)
     const layerCodeBuffer = context.buildGPUBuffer('Layer Code Buffer', new Float32Array(layerCode), GPUBufferUsage.STORAGE)
-    const colorRampTexture = context.buildTexture(buildColorRamp(colorRamp, lch), 256, 5, 1, 'rgba8unorm')
+    const colorRampTexture = context.buildTexture(buildColorRamp(colorRamp, lch), 256, 5)
     const renderTarget = this.#buildLayerRenderTarget()
     // 4) Store layer guide
     this.layerGuides.set(layerIndex, {
@@ -171,7 +169,7 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
     return this.context.device.createBindGroup({
       layout: this.#heatmapBindGroupLayout,
       entries: [
-        { binding: 1, resource: this.#defaultSampler },
+        { binding: 1, resource: this.context.defaultSampler },
         { binding: 2, resource: renderTarget.createView() },
         { binding: 3, resource: colorRamp.createView() }
       ]
@@ -218,7 +216,7 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
       if (layerGuide === undefined) continue
       const { sourceName, lch, colorRamp, layerBuffer, layerCodeBuffer } = layerGuide
 
-      const heatmapUniformBuffer = context.buildGPUBuffer('Heatmap Uniform Buffer', new Float32Array([0, 0, 8192, 8192]), GPUBufferUsage.UNIFORM)
+      const heatmapUniformBuffer = context.buildGPUBuffer('Heatmap Uniform Buffer', new Float32Array([0, 0, 1, 1]), GPUBufferUsage.UNIFORM)
       const heatmapBindGroup = context.buildGroup(
         'Heatmap BindGroup',
         this.#heatmapTextureBindGroupLayout,
@@ -304,10 +302,7 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
               }
         }]
       },
-      primitive: {
-        topology: 'triangle-list',
-        cullMode: 'none'
-      },
+      primitive: { topology: 'triangle-list', cullMode: 'none' },
       multisample: { count: isScreen ? sampleCount : undefined },
       depthStencil: isScreen
         ? {

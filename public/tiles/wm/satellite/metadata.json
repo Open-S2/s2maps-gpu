@@ -1,0 +1,16 @@
+{
+    "bounds": [
+        -180,
+        -85,
+        180,
+        85
+    ],
+    "name": "Mapbox Satellite",
+    "scheme": "xyz",
+    "format": "zxy",
+    "type": "raster",
+    "extension": "webp",
+    "encoding": "none",
+    "minzoom": 0,
+    "maxzoom": 5
+}

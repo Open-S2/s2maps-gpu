@@ -13,8 +13,7 @@ out float vContrast;
 
 void main () {
   // set where we are on the texture
-  vec2 pos = aPos / 8192.;
-  vTexcoord = pos;
+  vTexcoord = aPos;
 
   int index = 0;
   int featureIndex = 0;

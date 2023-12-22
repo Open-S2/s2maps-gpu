@@ -115,12 +115,12 @@ function convertLines (
   }
 }
 
-function projectX (x: number, projection: Projection): number {
+export function projectX (x: number, projection: Projection): number {
   if (projection === 'S2') return x
   return x / 360 + 0.5
 }
 
-function projectY (y: number, projection: Projection): number {
+export function projectY (y: number, projection: Projection): number {
   if (projection === 'S2') return y
   const sin = Math.sin(y * Math.PI / 180)
   const y2 = 0.5 - 0.25 * Math.log((1 + sin) / (1 - sin)) / Math.PI

@@ -41,16 +41,16 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
       offset: 4 * 4, // 4 elements of 4 bytes
       format: 'float32x2'
     }]
+  },
+  { // lengthSoFar
+    arrayStride: 4,
+    stepMode: 'instance',
+    attributes: [{
+      shaderLocation: 3,
+      offset: 0,
+      format: 'float32'
+    }]
   }
-  // { // lengthSoFar
-  //   arrayStride: 4,
-  //   stepMode: 'instance',
-  //   attributes: [{
-  //     shaderLocation: 3,
-  //     offset: 0,
-  //     format: 'float32'
-  //   }]
-  // }
 ]
 
 export default class LineWorkflow implements LineWorkflowSpec {
@@ -77,6 +77,7 @@ export default class LineWorkflow implements LineWorkflowSpec {
   // programs helps design the appropriate layer parameters
   buildLayerDefinition (layerBase: LayerDefinitionBase, layer: LineLayerStyle): LineLayerDefinition {
     const { context } = this
+    const { devicePixelRatio, nullTexture } = context
     const { source, layerIndex, lch } = layerBase
     // PRE) get layer base
     let {
@@ -116,11 +117,11 @@ export default class LineWorkflow implements LineWorkflowSpec {
       layerCode.push(...encodeLayerAttribute(paint, lch))
     }
     // 3) Setup layer buffers in GPU
+    const { length, dashCount, image } = buildDashImage(dasharray, devicePixelRatio)
     const layerBuffer = context.buildGPUBuffer('Layer Uniform Buffer', new Float32Array([context.getDepthPosition(layerIndex), ~~lch]), GPUBufferUsage.UNIFORM)
     const layerCodeBuffer = context.buildGPUBuffer('Layer Code Buffer', new Float32Array(layerCode), GPUBufferUsage.STORAGE)
     // if dashed, build a texture
-    const { length, image } = buildDashImage(dasharray)
-    const dashTexture = length > 0 ? this.context.buildTexture(image, length, 4) : undefined
+    const dashTexture = length > 0 ? context.buildTexture(image, length, 5) : nullTexture
     this.layerGuides.set(layerIndex, {
       sourceName: source,
       layerIndex,
@@ -129,6 +130,7 @@ export default class LineWorkflow implements LineWorkflowSpec {
       layerCodeBuffer,
       lch,
       dashed,
+      dashCount,
       dashTexture,
       interactive,
       cursor
@@ -176,14 +178,18 @@ export default class LineWorkflow implements LineWorkflowSpec {
 
       const layerGuide = this.layerGuides.get(layerIndex)
       if (layerGuide === undefined) continue
-      const { sourceName, layerBuffer, layerCodeBuffer, lch, dashed, dashTexture, interactive } = layerGuide
+      const { sourceName, layerBuffer, layerCodeBuffer, lch, dashed, dashCount, dashTexture, interactive } = layerGuide
 
-      const lineUniformBuffer = context.buildGPUBuffer('Line Uniform Buffer', new Float32Array([cap, ~~dashed]), GPUBufferUsage.UNIFORM)
-      const lineBindGroup = context.buildGroup(
-        'Line BindGroup',
-        this.#lineBindGroupLayout,
-        [lineUniformBuffer]
-      )
+      const lineUniformBuffer = context.buildGPUBuffer('Line Uniform Buffer', new Float32Array([cap, ~~dashed, dashCount]), GPUBufferUsage.UNIFORM)
+      const lineBindGroup = context.device.createBindGroup({
+        label: 'Line BindGroup',
+        layout: this.#lineBindGroupLayout,
+        entries: [
+          { binding: 0, resource: { buffer: lineUniformBuffer } },
+          { binding: 1, resource: context.defaultSampler },
+          { binding: 2, resource: dashTexture.createView() }
+        ]
+      })
 
       const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array(featureCode), GPUBufferUsage.STORAGE)
       const bindGroup = context.buildGroup(
@@ -233,7 +239,17 @@ export default class LineWorkflow implements LineWorkflowSpec {
     const { device, format, defaultBlend, sampleCount, frameBindGroupLayout, featureBindGroupLayout } = context
 
     // prep line uniforms
-    this.#lineBindGroupLayout = context.buildLayout('Line', ['uniform'], GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT)
+    this.#lineBindGroupLayout = context.device.createBindGroupLayout({
+      label: 'Line BindGroupLayout',
+      entries: [
+        // uniforms
+        { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+        // sampler
+        { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+        // texture
+        { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } }
+      ]
+    })
 
     const module = device.createShaderModule({ code: shaderCode })
     const layout = device.createPipelineLayout({
@@ -279,7 +295,7 @@ export default class LineWorkflow implements LineWorkflowSpec {
   draw ({ bindGroup, lineBindGroup, source, count, offset }: LineFeature): void {
     // get current source data
     const { passEncoder } = this.context
-    const { vertexBuffer } = source
+    const { vertexBuffer, lengthSoFarBuffer } = source
 
     // setup pipeline, bind groups, & buffers
     this.context.setRenderPipeline(this.pipeline)
@@ -288,7 +304,7 @@ export default class LineWorkflow implements LineWorkflowSpec {
     passEncoder.setVertexBuffer(0, vertexBuffer) // prev
     passEncoder.setVertexBuffer(1, vertexBuffer) // curr
     passEncoder.setVertexBuffer(2, vertexBuffer) // next
-    // passEncoder.setVertexBuffer(3, lengthSoFarBuffer, offset * 4)
+    passEncoder.setVertexBuffer(3, lengthSoFarBuffer)
     // draw
     passEncoder.draw(9, count, 0, offset)
   }

@@ -74,7 +74,7 @@ function addNeighbors (
 function tileMatrix (projector: Projector, tileZoom: number, tileX: number, tileY: number): Float32Array {
   const { zoom, lon, lat } = projector
   const scale = Math.pow(2, zoom - tileZoom)
-  const offset = llToTilePx([lon, lat], [tileZoom, tileX, tileY], projector.tileSize)
+  const offset = llToTilePx([lon, lat], [tileZoom, tileX, tileY], 1)
 
   return projector.getMatrix(scale, offset)
 }

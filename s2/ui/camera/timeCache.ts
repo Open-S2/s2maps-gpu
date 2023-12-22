@@ -145,8 +145,8 @@ export default class TimeCache extends Cache<string, SensorSource> {
       // place a temporary source in the cache
       // this will be replaced by the source data when it arrives
       this.set(timeID, {})
-      const { id, face, i, j, zoom, bbox, division, size } = tile
-      tileRequests.push({ id, face, i, j, zoom, bbox, division, size, time })
+      const { id, face, i, j, zoom, bbox, type, division, size } = tile
+      tileRequests.push({ id, face, i, j, zoom, bbox, type, division, size, time })
     }
     // get list of current tiles in view
     if (tileRequests.length > 0) {

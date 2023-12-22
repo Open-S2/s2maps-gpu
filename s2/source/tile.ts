@@ -20,12 +20,10 @@ import type { BBox, Face, XYZ } from 'geometry'
 import type { FlushData, InteractiveObject } from 'workers/worker.spec'
 import type { LayerDefinition, Projection } from 'style/style.spec'
 import type {
-  Bottom,
   Corners,
   FaceST,
   S2Tile as S2TileSpec,
   TileBase,
-  Top,
   WMTile as WMTileSpec
 } from './tile.spec'
 
@@ -54,9 +52,8 @@ class Tile implements TileBase {
   context: ContextGL | WebGPUContext
   interactiveGuide = new Map<number, InteractiveObject>()
   rendered = false
-  uniforms: Float32Array = new Float32Array(7) // [isS2, face, zoom, sLow, tLow, deltaS, deltaT]
-  bottom: Bottom = [0, 0, 0, 0]
-  top: Top = [0, 0, 0, 0]
+  uniforms = new Float32Array(7) // [isS2, face, zoom, sLow, tLow, deltaS, deltaT]
+  bottomTop = new Float32Array(8)
   // WebGPU specific properties
   bindGroup!: GPUBindGroup
   uniformBuffer!: GPUBuffer
@@ -95,11 +92,10 @@ class Tile implements TileBase {
   }
 
   setScreenPositions (_: Projector): void {
-    const { context, mask, bottom, top } = this
+    const { context, mask, bottomTop } = this
     // if WebGPU mask, we need to update the position buffer
     if ('positionBuffer' in mask && 'device' in context) {
-      // TODO: We shouldn't need to create a new Float32Array buffer every time
-      context.device.queue.writeBuffer(mask.positionBuffer, 0, new Float32Array([...bottom, ...top]))
+      context.device.queue.writeBuffer(mask.positionBuffer, 0, bottomTop)
     }
   }
 
@@ -116,8 +112,8 @@ class Tile implements TileBase {
     let jShift = 0
     while (zoom > parentZoom) {
       const div = 1 << (zoom - parentZoom)
-      if (i % 2 !== 0) iShift += 8_192 / div
-      if (j % 2 !== 0) jShift += 8_192 / div
+      if (i % 2 !== 0) iShift += 1 / div
+      if (j % 2 !== 0) jShift += 1 / div
       // decrement
       i = i >> 1
       j = j >> 1
@@ -125,7 +121,7 @@ class Tile implements TileBase {
     }
 
     // build the bounds bbox
-    return [0 + iShift, 0 + jShift, 8_192 / scale + iShift, 8_192 / scale + jShift]
+    return [0 + iShift, 0 + jShift, 1 / scale + iShift, 1 / scale + jShift]
   }
 
   addFeatures (features: Array<FeatureGuideGL | FeatureBaseGPU>): void {
@@ -218,8 +214,6 @@ export class S2Tile extends Tile implements S2TileSpec {
   type = 'S2' as const
   faceST: FaceST
   corners?: Corners
-  bottom: Bottom = [0, 0, 0, 0]
-  top: Top = [0, 0, 0, 0]
   constructor (
     context: ContextGL | WebGPUContext,
     id: bigint,
@@ -276,14 +270,14 @@ export class S2Tile extends Tile implements S2TileSpec {
       const [tlX, tlY] = project(matrix, topLeft.map((n, i) => n - eyeKM[i]) as XYZ)
       const [trX, trY] = project(matrix, topRight.map((n, i) => n - eyeKM[i]) as XYZ)
       // store for eventual uniform "upload"
-      this.bottom[0] = blX
-      this.bottom[1] = blY
-      this.bottom[2] = brX
-      this.bottom[3] = brY
-      this.top[0] = tlX
-      this.top[1] = tlY
-      this.top[2] = trX
-      this.top[3] = trY
+      this.bottomTop[0] = blX
+      this.bottomTop[1] = blY
+      this.bottomTop[2] = brX
+      this.bottomTop[3] = brY
+      this.bottomTop[4] = tlX
+      this.bottomTop[5] = tlY
+      this.bottomTop[6] = trX
+      this.bottomTop[7] = trY
       // if WebGPU mask, we need to update the position buffer
       super.setScreenPositions(projector)
     }
@@ -315,9 +309,36 @@ export class WMTile extends Tile implements WMTileSpec {
   setScreenPositions (projector: Projector): void {
     const { zoom, lon, lat } = projector
     const scale = Math.pow(2, zoom - this.zoom)
-    const offset = llToTilePx([lon, lat], [this.zoom, this.i, this.j])
+    const offset = llToTilePx([lon, lat], [this.zoom, this.i, this.j], 1)
 
     this.matrix = projector.getMatrix(scale, offset)
-    // TODO: if WebGPU mask, we need to update the matrix buffer
+    // console.log(this.zoom, this.i, this.j, offset, this.matrix)
+
+    // build bottomTop
+    const { matrix } = this
+    const bl = project(matrix, [0, 0, 0])
+    const br = project(matrix, [1, 0, 0])
+    const tl = project(matrix, [0, 1, 0])
+    const tr = project(matrix, [1, 1, 0])
+    // console.log(this.i, this.j)
+    // console.log(matrix)
+    // console.log(offset)
+    // console.log(bbox)
+    // console.log(bl, br, tl, tr)
+    // store for eventual uniform "upload"
+    this.bottomTop[0] = bl[0]
+    this.bottomTop[1] = bl[1]
+    this.bottomTop[2] = br[0]
+    this.bottomTop[3] = br[1]
+    this.bottomTop[4] = tl[0]
+    this.bottomTop[5] = tl[1]
+    this.bottomTop[6] = tr[0]
+    this.bottomTop[7] = tr[1]
+
+    super.setScreenPositions(projector)
   }
 }
+
+// [0.8380928039550781, 0, 0, 0, 0, -2.4331727027893066, 0, 0, 0, 0, 0.0010000000474974513, 0, 0.32410621643066406, -0.33741262555122375, 0.0010000000474974513, 1
+// 32 25 -> [0.61328125, -0.138671875] -> (3) [-0.5139865875244141, -0.33741262555122375, 0.0010000000474974513] (3) [0.32410621643066406, -0.33741262555122375, 0.0010000000474974513] (3) [-0.5139865875244141, -2.7705853283405304, 0.0010000000474974513] (3) [0.32410621643066406, -2.7705853283405304, 0.0010000000474974513]
+// 33 25 -> [-0.38671875, -0.138671875] -> (3) [0.32410621643066406, -0.33741262555122375, 0.0010000000474974513] (3) [1.1621990203857422, -0.33741262555122375, 0.0010000000474974513] (3) [0.32410621643066406, -2.7705853283405304, 0.0010000000474974513] (3) [1.1621990203857422, -2.7705853283405304, 0.0010000000474974513]

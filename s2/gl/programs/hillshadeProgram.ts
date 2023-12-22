@@ -54,13 +54,9 @@ export default async function sensorProgram (context: Context): Promise<Hillshad
         size,
         size
       )
-
       // create the soruce
-      const source: RasterSource = {
-        type: 'raster',
-        texture
-      }
-
+      const source: RasterSource = { type: 'raster', texture }
+      // build features
       this.#buildFeatures(source, hillshadeData, tile)
     }
 
@@ -116,28 +112,31 @@ export default async function sensorProgram (context: Context): Promise<Hillshad
     buildLayerDefinition (layerBase: LayerDefinitionBase, layer: HillshadeLayerStyle): HillshadeLayerDefinition {
       const { source, layerIndex, lch } = layerBase
       // PRE) get layer properties
-      let { color, accentColor, highlightColor, opacity, exaggeration, illuminateDirection, fadeDuration } = layer
-      color = color ?? '#000'
+      let { shadowColor, accentColor, highlightColor, opacity, intensity, azimuth, fadeDuration } = layer
+      shadowColor = shadowColor ?? '#000'
       accentColor = accentColor ?? '#000'
       highlightColor = highlightColor ?? '#fff'
       opacity = opacity ?? 1
-      exaggeration = exaggeration ?? 1
-      illuminateDirection = illuminateDirection ?? 0
+      intensity = intensity ?? 1
+      azimuth = azimuth ?? 0
       fadeDuration = fadeDuration ?? 300
       // 1) build definition
       const layerDefinition: HillshadeLayerDefinition = {
         ...layerBase,
         type: 'hillshade',
-        color,
+        shadowColor,
         accentColor,
         highlightColor,
-        illuminateDirection,
+        azimuth,
         opacity,
-        exaggeration
+        intensity
       }
       // 2) Store layer workflow, building code if webgl2
       const layerCode: number[] = []
-      layerCode.push(...encodeLayerAttribute(opacity, lch))
+      for (const paint of [opacity, shadowColor, accentColor, highlightColor, intensity, azimuth]) {
+        layerCode.push(...encodeLayerAttribute(paint, lch))
+      }
+      // 3) Store layer guide
       this.layerGuides.set(layerIndex, {
         sourceName: source,
         layerIndex,
@@ -190,8 +189,6 @@ export default async function sensorProgram (context: Context): Promise<Hillshad
       const { mask } = parent ?? tile
       const { vao, count, offset } = mask
       context.setDepthRange(layerIndex)
-      if (tile.type === 'S2') context.enableCullFace()
-      else context.disableCullFace()
       // set fade
       gl.uniform1f(uFade, 1)
       // set feature code (webgl 1 we store the opacity, webgl 2 we store layerCode lookups)

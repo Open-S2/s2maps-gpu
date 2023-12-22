@@ -232,6 +232,15 @@ export interface SensorFeature extends FeatureBase {
   getTextures: () => SensorTextureDefinition
 }
 
+// ** HILLSHADE **
+export interface HillshadeFeature extends FeatureBase {
+  type: 'hillshade'
+  source: RasterSource
+  fadeDuration: number
+  fadeStartTime: number
+  hillshadeBindGroup: GPUBindGroup
+}
+
 export interface ShadeFeature extends FeatureBase {
   tile: Tile
   layerIndex: number
@@ -246,7 +255,7 @@ export interface ShadeFeature extends FeatureBase {
 export type Features =
   FillFeature | GlyphFeature | HeatmapFeature |
   LineFeature | PointFeature | RasterFeature |
-  SensorFeature | ShadeFeature
+  SensorFeature | ShadeFeature | HillshadeFeature
 
 // WORKFLOWS
 
@@ -267,13 +276,12 @@ export interface Workflows {
 
 export interface WorkflowImports {
   fill: () => FillWorkflow
-  // glyphFilter: () => Promise<{ default: (context: WebGPUContext) => Promise<GlyphFilterWorkflow> }>
   glyph: () => GlyphWorkflow
   heatmap: () => HeatmapWorkflow
   line: () => LineWorkflow
   point: () => PointWorkflow
   raster: () => RasterWorkflow
-  // hillshade: () => Promise<{ default: (context: WebGPUContext) => Promise<HillshadeWorkflow> }>
+  hillshade: () => HillshadeWorkflow
   // sensor: () => Promise<{ default: (context: WebGPUContext) => Promise<SensorWorkflow> }>
   shade: () => ShadeWorkflow
   wallpaper: () => WallpaperWorkflow
@@ -282,7 +290,7 @@ export interface WorkflowImports {
 
 export type WorkflowKey = keyof Workflow
 
-export type WorkflowType = 'fill' | 'heatmap' | 'line' | 'point' | 'raster' | 'shade' | 'skybox' | 'wallpaper'
+export type WorkflowType = 'fill' | 'glyph' | 'heatmap' | 'line' | 'point' | 'raster' | 'hillshade' | 'sensor' | 'shade' | 'skybox' | 'wallpaper'
 
 export interface Workflow {
   context: WebGPUContext

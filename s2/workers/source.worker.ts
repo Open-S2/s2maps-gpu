@@ -1,5 +1,6 @@
 /* eslint-env worker */
 import {
+  ClusterSource,
   GlyphSource,
   ImageSource,
   JSONSource,
@@ -19,6 +20,7 @@ import type {
   Glyphs,
   Icons,
   LayerDefinition,
+  SourceMetadata,
   Sources,
   SpriteFileType,
   Sprites,
@@ -59,7 +61,7 @@ import type { SourceWorkerMessages, TileRequest } from './worker.spec'
   (now - timestamp) / 1000 = seconds passed
 **/
 
-type SourceMap = Record<string, Record<string, Source | S2TilesSource | JSONSource | LocalSource | MarkerSource>>
+type SourceMap = Record<string, Record<string, Source | S2TilesSource | JSONSource | ClusterSource | LocalSource | MarkerSource>>
 
 export default class SourceWorker {
   workers: Array<MessageChannel['port2']> = []
@@ -203,7 +205,7 @@ export default class SourceWorker {
   #createSource (mapID: string, name: string, input: StyleSource, layers: LayerDefinition[]): void {
     const { session } = this
     // prepare variables to build appropriate source type
-    let metadata
+    let metadata: SourceMetadata | undefined
     if (typeof input === 'object') {
       metadata = input
       input = input.path
@@ -213,10 +215,14 @@ export default class SourceWorker {
     const path = s2mapsURL(input)
     // create the proper source type
     let source
-    if (fileType === 's2tiles') source = new S2TilesSource(name, layers, path, needsToken, session)
-    else if (fileType === 'json' || fileType === 's2json' || fileType === 'geojson') source = new JSONSource(name, layers, path, needsToken, session)
-    else if (input === 'tile') source = new LocalSource()
-    else source = new Source(name, layers, path, needsToken, session) // default -> folder structure
+    if (fileType === 's2tiles') {
+      source = new S2TilesSource(name, layers, path, needsToken, session)
+    } else if (fileType === 'json' || fileType === 's2json' || fileType === 'geojson') {
+      if (metadata?.cluster ?? false) source = new ClusterSource(name, layers, path, needsToken, session)
+      else source = new JSONSource(name, layers, path, needsToken, session)
+    } else if (input === 'tile') {
+      source = new LocalSource()
+    } else source = new Source(name, layers, path, needsToken, session) // default -> folder structure
     // store & build
     this.sources[mapID][name] = source
     void source.build(mapID, metadata)

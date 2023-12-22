@@ -16,7 +16,7 @@ export interface MarkerDefinition {
 
 interface MarkerProperties {
   [key: string]: any
-  _markerID: number
+  __markerID: number
 }
 
 export interface Marker {
@@ -56,7 +56,7 @@ export default class MarkerSource {
         if (this.idGen >= Number.MAX_SAFE_INTEGER) this.idGen = 0
       }
       // store
-      properties._markerID = id
+      properties.__markerID = id
       this[face].set(id, { properties: properties as MarkerProperties, geometry: [s, t] })
     }
   }

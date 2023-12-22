@@ -12,9 +12,9 @@ export default function buildMask (division: number, context: WebGPUContext): Ma
   // now we can build out the vertices and indices
   // vertices
   for (let j = 0; j <= division; j++) {
-    t = 8_192 / division * j
+    t = 1 / division * j
     for (let i = 0; i <= division; i++) {
-      s = 8_192 / division * i
+      s = 1 / division * i
       vertices.push(s, t)
     }
   }

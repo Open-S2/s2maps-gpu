@@ -52,6 +52,7 @@ export interface FillFeature extends InteractiveFeatureBase {
   indices: number[]
   pattern?: string
   patternFamily: string
+  patternMovement: boolean
   missing: boolean
 }
 

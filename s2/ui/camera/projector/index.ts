@@ -39,8 +39,8 @@ export default class Projector {
   zTranslateEnd = 1.001
   zoomEnd = 5
   positionalZoom = true
-  // [zoom, lon, lat, bearing, pitch, time, aspectX, aspectY, mouseX, mouseY, featureState, currFeature]
-  view: Float32Array = new Float32Array(12)
+  // [zoom, lon, lat, bearing, pitch, time, aspectX, aspectY, mouseX, mouseY, deltaMouseX, deltaMouseY, featureState, currFeature]
+  view: Float32Array = new Float32Array(14)
   aspect: [number, number] = [400, 300] // default canvas width x height
   matrices: { [key in MatrixType]?: Float32Array } = {}
   eye: XYZ = [0, 0, 0] // [x, y, z] only z should change for visual effects
@@ -68,6 +68,9 @@ export default class Projector {
     if (webworker === true) this.webworker = true
     if (noClamp === true) this.noClamp = true
     this.camera = camera
+    // setup deltaMouse positions to middle of 0 and 2^32
+    this.view[10] = 2 ** 11
+    this.view[11] = 2 ** 11
   }
 
   /* API */
@@ -87,12 +90,12 @@ export default class Projector {
   }
 
   setFeatureState (state: 0 | 1 | 2): void {
-    this.view[10] = state
+    this.view[12] = state
     this.dirty = true
   }
 
   setCurrentFeature (id: number): void {
-    this.view[11] = id
+    this.view[13] = id
     this.dirty = true
   }
 
@@ -217,6 +220,7 @@ export default class Projector {
     multiplierX?: number,
     multiplierY?: number
   ): void {
+    this.#setMove(movementX, movementY)
     const { lon, lat, tileSize, projection } = this
     let { bearing } = this
     const { abs, max, min, PI, sin, cos } = Math
@@ -224,8 +228,8 @@ export default class Projector {
     const tileScale = tileSize / 512
     const isS2 = projection === 'S2'
     // setup multipliers
-    if (multiplierX === undefined) multiplierX = isS2 ? (6.5 * 360) : 0.75
-    if (multiplierY === undefined) multiplierY = isS2 ? (6.5 * 180) : 0.75
+    if (multiplierX === undefined) multiplierX = isS2 ? (13 * 360) : 1.5
+    if (multiplierY === undefined) multiplierY = isS2 ? (13 * 180) : 1.5
     if (!isS2) {
       multiplierX *= tileScale
       multiplierY *= tileScale
@@ -299,6 +303,17 @@ export default class Projector {
 
   /* INTERNAL FUNCTIONS */
 
+  #setMove (movementX: number, movementY: number): void {
+    const { view, aspect } = this
+    const maxValue = 2 ** 11
+    const midValue = 2 ** 10
+    view[10] -= movementX / aspect[0]
+    view[11] += movementY / aspect[1]
+    // if we ever hit the min-max values, we reset to the middle
+    if (view[10] < 0 || view[10] > maxValue) view[10] = midValue
+    if (view[11] < 0 || view[11] > maxValue) view[11] = midValue
+  }
+
   #setLonLat (lon: number, lat: number): void {
     if (!this.noClamp) {
       lon = this.clampDeg(lon)
@@ -333,6 +348,8 @@ export default class Projector {
     bearing = this.clampDeg(bearing)
     if (this.bearing !== bearing) {
       this.bearing = bearing
+      // update view
+      this.view[3] = this.bearing
       // cleanup for next render
       this.reset()
       return true
@@ -343,6 +360,8 @@ export default class Projector {
   #setPitch (pitch: number): boolean {
     if (this.pitch !== pitch) {
       this.pitch = pitch
+      // update view
+      this.view[4] = this.pitch
       // cleanup for next render
       this.reset()
       return true
@@ -408,14 +427,6 @@ export default class Projector {
 
   // * WEB MERCATOR
 
-  getMatrixWM (scale: number | MatrixType, offset: Point): Float32Array {
-    if (typeof scale !== 'number') return mat4.create()
-    // updated matrix
-    const matrix = this.#getMatrixWM(scale, offset)
-
-    return mat4.clone(matrix)
-  }
-
   getTilesInViewWM (): bigint[] { // (S2CellIDs)
     const { zoom, zoomOffset, lon, lat } = this
     return getTilesWM(zoom + zoomOffset, this, lon, lat)
@@ -424,7 +435,6 @@ export default class Projector {
   // TODO: Rebuild this -_-
   getTilesAtPositionWM (lon: number, lat: number, zoom: number, bearing: number, pitch: number): bigint[] { // (S2CellIDs)
     const { zoomOffset } = this
-    // const matrix = this.#getMatrixWM(1, [0, 0], bearing, pitch)
     return getTilesWM(zoom + zoomOffset, this, lon, lat)
   }
 
@@ -444,7 +454,6 @@ export default class Projector {
     // multiply projection matrix by view matrix
     matrix = mat4.multiply(matrix, view)
 
-    // temp matrix for tile 0,0,0
     // adjust by position
     mat4.translate(matrix, [-offsetX, -offsetY, 0])
 
@@ -458,7 +467,7 @@ export default class Projector {
     // adjust aspect ratio by zoom
     const multpl = 1 / multiplier / (tileSize * scale)
     // create projection
-    mat4.ortho(matrix, aspect[0] * multpl, aspect[1] * multpl, 100_000)
+    mat4.ortho(matrix, aspect[0] * multpl, aspect[1] * multpl, 1_000)
 
     return matrix
   }

@@ -7,6 +7,7 @@ struct VertexOutput {
   @location(2) norm: vec2<f32>,
   @location(3) center: vec2<f32>,
   @location(4) drawType: f32,
+  @location(5) lengthSoFar: f32,
 };
 
 struct ViewUniforms {
@@ -21,6 +22,8 @@ struct ViewUniforms {
   aspectY: f32,
   mouseX: f32,
   mouseY: f32,
+  deltaMouseX: f32,
+  deltaMouseY: f32,
   featureState: f32,
   curFeature: f32,
   devicePixelRatio: f32,
@@ -51,6 +54,7 @@ struct LayerUniforms {
 struct LineUniforms {
   cap: f32,
   dashed: f32, // bool
+  dashCount: f32,
 };
 
 // ** FRAME DATA **
@@ -72,6 +76,8 @@ struct LineUniforms {
 @binding(4) @group(1) var<storage, read> featureCode: array<f32>;
 // ** LINE DATA **
 @binding(0) @group(2) var<uniform> line: LineUniforms;
+@binding(1) @group(2) var dashSampler: sampler;
+@binding(2) @group(2) var dashTexture: texture_2d<f32>;
 
 fn LCH2LAB (lch: vec4<f32>) -> vec4<f32> { // r -> l ; g -> c ; b -> h
   var h = lch.b * (PI / 180.);
@@ -187,29 +193,25 @@ fn cBlindAdjust (rgba: vec4<f32>) -> vec4<f32> {
 }
 
 fn stToUV (s: f32) -> f32 {
-  var mutS = s;
   // compressed VTs are extended, so we must squeeze them back to [0,1]
-  if (mutS >= 0.5) { return (1. / 3.) * (4. * mutS * mutS - 1.); }
-  else { return (1. / 3.) * (1. - 4. * (1. - mutS) * (1. - mutS)); }
+  if (s >= 0.5) { return (1. / 3.) * (4. * s * s - 1.); }
+  else { return (1. / 3.) * (1. - 4. * (1. - s) * (1. - s)); }
 }
 
 fn stToXYZ (st: vec2<f32>) -> vec4<f32> { // x -> s, y -> t
-  var mutST = st;
-  mutST /= 8192.;
-  let face = tile.face;
   // prep xyz
   var xyz = vec3<f32>();
   // convert to uv
   let uv = vec2<f32>(
-    stToUV(tile.deltaS * mutST.x + tile.sLow), // deltaS * sPos + sLow
-    stToUV(tile.deltaT * mutST.y + tile.tLow) // deltaT * tPos + tLow
+    stToUV(tile.deltaS * st.x + tile.sLow), // deltaS * sPos + sLow
+    stToUV(tile.deltaT * st.y + tile.tLow) // deltaT * tPos + tLow
   ); // x -> u, y -> v
   // convert uv to xyz according to face
-  if (face == 0.) { xyz = vec3(uv.x, uv.y, 1.); }
-  else if (face == 1.) { xyz = vec3(1., uv.y, -uv.x); }
-  else if (face == 2.) { xyz = vec3(-uv.y, 1., -uv.x); }
-  else if (face == 3.) { xyz = vec3(-uv.y, -uv.x, -1.); }
-  else if (face == 4.) { xyz = vec3(-1., -uv.x, uv.y); }
+  if (tile.face == 0.) { xyz = vec3(uv.x, uv.y, 1.); }
+  else if (tile.face == 1.) { xyz = vec3(1., uv.y, -uv.x); }
+  else if (tile.face == 2.) { xyz = vec3(-uv.y, 1., -uv.x); }
+  else if (tile.face == 3.) { xyz = vec3(-uv.y, -uv.x, -1.); }
+  else if (tile.face == 4.) { xyz = vec3(-1., -uv.x, uv.y); }
   else { xyz = vec3(uv.x, -1., uv.y); }
   // normalize data
   xyz = normalize(xyz) * 6371.0088;
@@ -218,38 +220,31 @@ fn stToXYZ (st: vec2<f32>) -> vec4<f32> { // x -> s, y -> t
 }
 
 fn getPosLocal (pos: vec2<f32>) -> vec4<f32> {
-  var mutPos = pos;
-  mutPos /= 8192.;
-  if (tile.isS2 == 0.) {
-    return matrix * vec4(mutPos, 0, 1);
-  }
   // find position following s
   var deltaBottom = tilePos.bottomRight - tilePos.bottomLeft;
   var deltaTop = tilePos.topRight - tilePos.topLeft;
-  var bottomPosS = tilePos.bottomLeft + deltaBottom * mutPos.x;
-  var topPosS = tilePos.topLeft + deltaTop * mutPos.x;
+  var bottomPosS = tilePos.bottomLeft + deltaBottom * pos.x;
+  var topPosS = tilePos.topLeft + deltaTop * pos.x;
   // using s positions, find t
   var deltaS = topPosS - bottomPosS;
-  var res = bottomPosS + deltaS * mutPos.y;
+  var res = bottomPosS + deltaS * pos.y;
   return vec4(res, 0., 1.);
 }
 
 fn getPos (pos: vec2<f32>) -> vec4<f32> {
-  var mutPos = pos;
-  if (tile.isS2 == 0.) {
-    mutPos /= 8192.;
-    return matrix * vec4<f32>(mutPos, 0., 1.);
-  } else if (view.zoom < 12.) {
-    return matrix * stToXYZ(mutPos);
+  if (tile.isS2 == 0. || view.zoom >= 12.) {
+    return getPosLocal(pos);
   } else {
-    return getPosLocal(mutPos);
+    return matrix * stToXYZ(pos);
   }
 }
 
 fn getZero () -> vec4<f32> {
-  if (view.zoom < 12.) {
+  if (tile.isS2 == 0. || view.zoom >= 12.) {
+    return vec4<f32>(0., 0., 1., 1.);
+  } else {
     return matrix * vec4<f32>(0., 0., 0., 1.);
-  } else { return vec4<f32>(0., 0., 1., 1.); }
+  }
 }
 
 // y = e^x OR y = Math.pow(2, 10 * x)
@@ -482,16 +477,21 @@ fn vMain(
   @location(0) inPrev: vec2<f32>,
   @location(1) inCurr: vec2<f32>,
   @location(2) inNext: vec2<f32>,
-  // @location(3) lengthSoFar: f32,
+  @location(3) lengthSoFar: f32,
 ) -> VertexOutput {
   var output: VertexOutput;
   let drawType = DrawTypes[VertexIndex];
+
+  // set default lengthSoFar
+  let zoomScale = pow(2., view.zoom - tile.zoom);
+  // TODO: 762 should be tile size
+  output.lengthSoFar = lengthSoFar * 762 * zoomScale;
 
   // return output;
   // prep layer index and feature index positions
   var index = 0;
   var featureIndex = 0;
-  var aspectAdjust = vec2<f32>(view.aspectX / view.aspectY, 1.);
+  let aspectAdjust = vec2<f32>(view.aspectX / view.aspectY, 1.);
   // decode color
   var color = vec4<f32>(0.);
   color = decodeFeature(true, &index, &featureIndex);
@@ -561,15 +561,17 @@ fn vMain(
         ((drawType == 5. || drawType == 6.) && isCCW(prevScreen, currScreen, nextScreen))
       ) { normal *= -1.; }
       // adjust screen if necessary
-      if (drawType == 3. || drawType == 4.) { screen = next.xy; }
+      if (drawType == 3. || drawType == 4.) {
+        screen = next.xy;
+        // also increment lengthSoFar
+        let screenDistance = length((next.xy - curr.xy) * uAspect);
+        // convert screenDistance to pixels
+        output.lengthSoFar += screenDistance;
+      }
       // set position
       pos = vec4<f32>(screen + normal * width / uAspect, 0., 1.);
     }
   }
-  // handle dashed lines if necessary
-  // if (uDashed) {
-
-  // }
   // tell the fragment the normal vector
   output.norm = normal;
   output.Position = vec4(pos.xy, layer.depthPos, 1.0);
@@ -601,5 +603,11 @@ fn fMain(
   var wAlpha = clamp(min(dist - (startWidth - blur), endWidth - dist) / blur, 0., 1.);
   if (wAlpha == 0.) { discard; }
 
-  return output.color * wAlpha;
+  var color = output.color;
+  if (line.dashed != 0.) {
+    // get texture length
+    let textureSize = vec2<f32>(textureDimensions(dashTexture));
+    color = textureSample(dashTexture, dashSampler, vec2<f32>((output.lengthSoFar % line.dashCount) / textureSize.x, view.cBlind / 4.));
+  }
+  return color * wAlpha;
 }

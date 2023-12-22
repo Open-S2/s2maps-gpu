@@ -146,7 +146,7 @@ export interface ProgramSpec {
   setInputs: (inputs: Float32Array) => void
   setAspect: (aspect: [number, number]) => void
   setFaceST: (faceST: number[]) => void
-  setTilePos: (bottom: number[], top: number[]) => void
+  setTilePos: (bottomTop: Float32Array) => void
   setLayerCode: (layerCode: number[], lch: boolean) => void
   setInteractive: (interactive: boolean) => void
   setFeatureCode: (featureCode: number[]) => void

@@ -21,8 +21,8 @@ export interface Corners {
 }
 
 export type FaceST = [face: number, zoom: number, sLow: number, deltaS: number, tLow: number, deltaT: number]
-export type Bottom = [bottomLeftX: number, bottomLeftY: number, bottomRightX: number, bottomRightY: number]
-export type Top = [topLeftX: number, topLeftY: number, topRightX: number, topRightY: number]
+// export type Bottom = [bottomLeftX: number, bottomLeftY: number, bottomRightX: number, bottomRightY: number]
+// export type Top = [topLeftX: number, topLeftY: number, topRightX: number, topRightY: number]
 
 // tiles are designed to create mask geometry and store prebuilt layer data handed off by the worker pool
 // whenever rerenders are called, they will access these tile objects for the layer data / vaos
@@ -42,8 +42,7 @@ export interface TileBase {
   interactiveGuide: Map<number, InteractiveObject>
   uniforms: Float32Array
   rendered: boolean
-  bottom: Bottom
-  top: Top
+  bottomTop: Float32Array
 
   flush: (data: FlushData) => void
   removeLayer: (index: number) => void

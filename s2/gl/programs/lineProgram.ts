@@ -108,14 +108,15 @@ export default async function lineProgram (context: Context): Promise<LineProgra
         }
       }
       // if dashed, build a texture
-      const { length, image } = buildDashImage(dasharray)
-      const dashTexture = length > 0 ? context.buildTexture(image, length, 4, true) : undefined
+      const { length, dashCount, image } = buildDashImage(dasharray, context.devicePixelRatio)
+      const dashTexture = length > 0 ? context.buildTexture(image, length, 4, true) : this.nullTexture
       this.layerGuides.set(layerIndex, {
         sourceName: source,
         layerIndex,
         layerCode,
         lch,
         dashed,
+        dashCount,
         dashTexture,
         interactive,
         cursor

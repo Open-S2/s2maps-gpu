@@ -13,9 +13,9 @@ export default function buildMask (division: number, context: WebGL2Context | We
   // now we can build out the vertices and indices
   // vertices
   for (let j = 0; j <= division; j++) {
-    t = 8_192 / division * j
+    t = 1 / division * j
     for (let i = 0; i <= division; i++) {
-      s = 8_192 / division * i
+      s = 1 / division * i
       vertices.push(s, t)
     }
   }
@@ -33,13 +33,13 @@ export default function buildMask (division: number, context: WebGL2Context | We
   }
 
   // setup arrays
-  const vertexArray = new Int16Array(vertices)
+  const vertexArray = new Float32Array(vertices)
   const indexArray = new Uint32Array(indices)
 
   // setup vertex array object
   const vao = context.buildVAO()
   // Create a vertex buffer
-  const vertexBuffer = context.bindEnableVertexAttr(vertexArray, 0, 2, gl.SHORT, false, 0, 0)
+  const vertexBuffer = context.bindEnableVertexAttr(vertexArray, 0, 2, gl.FLOAT, false, 0, 0)
   // Create an index buffer
   const indexBuffer = context.bindElementArray(indexArray)
   // flush vao

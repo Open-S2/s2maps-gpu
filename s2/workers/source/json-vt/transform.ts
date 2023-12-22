@@ -62,7 +62,7 @@ export default function transformTile (tile: JSONTile, extent: number): JSONVect
   return { zoom, i, j, layers, extent }
 }
 
-function transformPoint (
+export function transformPoint (
   i: number,
   j: number,
   extent: number,

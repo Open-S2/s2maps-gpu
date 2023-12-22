@@ -3,7 +3,7 @@ import buildMask from './buildMask'
 
 import type { MapOptions } from 'ui/s2mapUI'
 import type { Context as ContextSpec, MaskSource } from './context.spec'
-import type { GPUType } from 'style/style.spec'
+import type { GPUType, Projection } from 'style/style.spec'
 import type { BBox } from 'geometry'
 
 const DEPTH_ESPILON = 1 / Math.pow(2, 16)
@@ -24,6 +24,7 @@ export default class Context implements ContextSpec {
   zLow = 0
   zHigh = 1
   type: GPUType = 1
+  projection: Projection = 'S2'
   clearColorRGBA: [r: number, g: number, b: number, a: number] = [0, 0, 0, 0]
   featurePoint: Uint8Array = new Uint8Array(4)
   masks = new Map<number, MaskSource>() // <zoom, mask>
@@ -32,7 +33,7 @@ export default class Context implements ContextSpec {
   interactTexture!: WebGLTexture
   stencilBuffer!: WebGLRenderbuffer
   interactFramebuffer!: WebGLFramebuffer
-  defaultBounds: BBox = [0, 0, 8192, 8192]
+  defaultBounds: BBox = [0, 0, 1, 1]
   constructor (context: WebGLRenderingContext | WebGL2RenderingContext, options: MapOptions) {
     const { canvasMultiplier } = options
     const gl = this.gl = context
@@ -86,6 +87,13 @@ export default class Context implements ContextSpec {
   setInteractive (interactive: boolean): void {
     this.interactive = interactive
     this.resizeInteract()
+  }
+
+  setProjection (projection: Projection): void {
+    const { gl } = this
+    this.projection = projection
+    if (projection === 'S2') gl.cullFace(gl.BACK)
+    else gl.cullFace(gl.FRONT)
   }
 
   resizeInteract (): void {

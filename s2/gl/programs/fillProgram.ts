@@ -42,19 +42,27 @@ export default async function fillProgram (context: Context): Promise<FillProgra
       const { type } = this
       const { source, layerIndex, lch } = layerBase
       // PRE) get layer base
-      let { color, opacity, invert, opaque, interactive, cursor } = layer
+      let { color, opacity, invert, opaque, pattern, patternFamily, patternMovement, interactive, cursor } = layer
       invert = invert ?? false
       opaque = opaque ?? false
       interactive = interactive ?? false
       cursor = cursor ?? 'default'
       color = color ?? 'rgb(0, 0, 0)'
       opacity = opacity ?? 1
+      patternFamily = patternFamily ?? '__images'
+      patternMovement = patternMovement ?? false
       // 1) Build layer definition
       const layerDefinition: FillLayerDefinition = {
         ...layerBase,
         type: 'fill',
+        // paint
         color,
         opacity,
+        // layout
+        pattern,
+        patternFamily,
+        patternMovement,
+        // properties
         invert,
         interactive,
         opaque,
@@ -77,6 +85,7 @@ export default async function fillProgram (context: Context): Promise<FillProgra
         invert,
         opaque,
         interactive,
+        pattern: pattern !== undefined,
         color: isGL1Mask ? parseFeatureFunction<string, [number, number, number, number]>(color, colorFunc(lch)) : undefined,
         opacity: isGL1Mask ? parseFeatureFunction<number, number[]>(opacity, (i: number) => [i]) : undefined
       })
@@ -216,8 +225,7 @@ export default async function fillProgram (context: Context): Promise<FillProgra
       // ensure proper context state
       context.defaultBlend()
       context.enableDepthTest()
-      if (tile.type === 'S2') context.enableCullFace()
-      else context.disableCullFace()
+      context.enableCullFace()
       context.enableStencilTest()
       context.lessDepth()
       context.setDepthRange(layerIndex)

@@ -122,7 +122,7 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
       const { layerBuffer, layerCodeBuffer, resampling, fadeDuration, lch } = layerGuide
 
       const rasterFadeBuffer = context.buildGPUBuffer('Raster Uniform Buffer', new Float32Array([1]), GPUBufferUsage.UNIFORM)
-      const sampler = context.buildSampler(resampling, false)
+      const sampler = context.buildSampler(resampling)
       const rasterBindGroup = context.device.createBindGroup({
         label: 'Raster BindGroup',
         layout: this.#rasterBindGroupLayout,
@@ -171,14 +171,14 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
   // BEST PRACTICE 7: explicitly define pipeline layouts
   async #getPipeline (): Promise<GPURenderPipeline> {
     const { context } = this
-    const { device, format, sampleCount, frameBindGroupLayout, featureBindGroupLayout } = context
+    const { device, format, projection, sampleCount, frameBindGroupLayout, featureBindGroupLayout } = context
 
     // prep raster uniforms
     this.#rasterBindGroupLayout = context.device.createBindGroupLayout({
       label: 'Raster BindGroupLayout',
       entries: [
         // uniforms
-        { binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform', hasDynamicOffset: false, minBindingSize: 0 } },
+        { binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
         // sampler
         { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
         // texture
@@ -212,7 +212,7 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
       },
       primitive: {
         topology: 'triangle-strip',
-        cullMode: 'back',
+        cullMode: projection === 'S2' ? 'back' : 'front',
         stripIndexFormat: 'uint32'
       },
       multisample: { count: sampleCount },

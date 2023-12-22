@@ -88,7 +88,7 @@ export default class SkyboxWorkflow implements SkyboxWorkflowSpec {
       label: 'Skybox BindGroupLayout',
       entries: [
         // matrix
-        { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform', hasDynamicOffset: false, minBindingSize: 0 } },
+        { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
         // sampler
         { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
         // texture
@@ -138,7 +138,7 @@ export default class SkyboxWorkflow implements SkyboxWorkflowSpec {
     if (data === undefined) return
     const image = await createImageBitmap(data)
     // upload to texture
-    context.uploadTextureData(this.#cubeMap, image, image.width, image.height, { x: 0, y: 0, z: index })
+    context.uploadTextureData(this.#cubeMap, image, image.width, image.height, undefined, { x: 0, y: 0, z: index })
     // set the projector as dirty to ensure a proper initial render
     camera.projector.reset()
     // call the full re-render

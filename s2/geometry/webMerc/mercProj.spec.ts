@@ -16,6 +16,48 @@ export interface Feature {
   geometry: Geometry
 }
 
+export interface PointFeature {
+  type: 'Feature'
+  id?: number
+  properties: Properties
+  geometry: PointGeometry
+}
+
+export interface MultiPointFeature {
+  type: 'Feature'
+  id?: number
+  properties: Properties
+  geometry: MultiPointGeometry
+}
+
+export interface LineStringFeature {
+  type: 'Feature'
+  id?: number
+  properties: Properties
+  geometry: LineStringGeometry
+}
+
+export interface MultiLineStringFeature {
+  type: 'Feature'
+  id?: number
+  properties: Properties
+  geometry: MultiLineStringGeometry
+}
+
+export interface PolygonFeature {
+  type: 'Feature'
+  id?: number
+  properties: Properties
+  geometry: PolygonGeometry
+}
+
+export interface MultiPolygonFeature {
+  type: 'Feature'
+  id?: number
+  properties: Properties
+  geometry: MultiPolygonGeometry
+}
+
 export type GeometryType =
   'Point' | 'MultiPoint' | 'LineString' |
   'MultiLineString' | 'Polygon' | 'MultiPolygon'

@@ -9,7 +9,7 @@ const style: StyleDefinition = {
   minzoom: 0,
   maxzoom: 7,
   sources: {
-    planet: '/tiles/merc/osm',
+    planet: '/tiles/wm/osm',
     earthquakes: '/geojson/earthquakes.geojson'
   },
   fonts: {},
@@ -36,27 +36,13 @@ const style: StyleDefinition = {
       layer: 'boundary',
       filter: {
         or: [
-          {
-            key: 'admin_level',
-            comparator: 'has',
-            value: [3, 4, 5, 6, 7, 8, 9, 10]
-          },
-          {
-            key: 'maritime',
-            comparator: '==',
-            value: 0
-          }
+          { key: 'admin_level', comparator: 'has', value: [3, 4, 5, 6, 7, 8, 9, 10] },
+          { key: 'maritime', comparator: '==', value: 0 }
         ]
       },
       type: 'line',
       color: '#bbd3de',
       width: 1.85
-    },
-    {
-      name: 'shade',
-      source: 'mask',
-      type: 'shade',
-      maxzoom: 2
     },
     {
       name: 'earthquakes-heat',
@@ -65,30 +51,12 @@ const style: StyleDefinition = {
       minzoom: 0,
       maxzoom: 8,
       colorRamp: [
-        {
-          stop: 0,
-          color: 'rgba(33,102,172,0)'
-        },
-        {
-          stop: 0.2,
-          color: 'rgba(103,169,207, 0.85)'
-        },
-        {
-          stop: 0.4,
-          color: 'rgb(209,229,240)'
-        },
-        {
-          stop: 0.6,
-          color: 'rgb(253,219,199)'
-        },
-        {
-          stop: 0.8,
-          color: 'rgb(239,138,98)'
-        },
-        {
-          stop: 1,
-          color: 'rgb(178,24,43)'
-        }
+        { stop: 0, color: 'rgba(33,102,172,0)' },
+        { stop: 0.2, color: 'rgba(103,169,207, 0.85)' },
+        { stop: 0.4, color: 'rgb(209,229,240)' },
+        { stop: 0.6, color: 'rgb(253,219,199)' },
+        { stop: 0.8, color: 'rgb(239,138,98)' },
+        { stop: 1, color: 'rgb(178,24,43)' }
       ],
       weight: {
         dataRange: {

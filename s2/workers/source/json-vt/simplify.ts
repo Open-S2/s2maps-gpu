@@ -24,7 +24,6 @@ export default function simplify (
     } else if (d === maxSqDist) {
       // a workaround to ensure we choose a pivot close to the middle of the list,
       // reducing recursion depth, for certain degenerate inputs
-      // https://github.com/mapbox/geojson-vt/issues/104
       const posToMid = Math.abs(i - mid)
       if (posToMid < minPosToMid) {
         index = i

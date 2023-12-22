@@ -4,6 +4,7 @@ import {
   FillWorkflow,
   GlyphWorkflow,
   HeatmapWorkflow,
+  HillshadeWorkflow,
   LineWorkflow,
   PointWorkflow,
   RasterWorkflow,
@@ -57,6 +58,7 @@ export default class Painter {
       line: () => new LineWorkflow(context),
       point: () => new PointWorkflow(context),
       heatmap: () => new HeatmapWorkflow(context),
+      hillshade: () => new HillshadeWorkflow(context),
       shade: () => new ShadeWorkflow(context),
       glyph: () => new GlyphWorkflow(context),
       wallpaper: () => new WallpaperWorkflow(context),
@@ -124,21 +126,26 @@ export default class Painter {
     context.newScene(projector.view, projector.getMatrix('m'))
     // prep mask id's
     tiles.forEach((tile, index) => { tile.tmpMaskID = index + 1 })
-    // prep all tile's features to draw
-    const features = tiles.flatMap(tile => tile.featureGuides.filter(f => f.type !== 'heatmap'))
-    // draw heatmap data if applicable, and a singular feature for the main render thread to draw the texture to the screen
-    const heatmapFeatures = tiles.flatMap(tile => tile.featureGuides.filter((f): f is HeatmapFeature => f.type === 'heatmap'))
-    const heatmapFeature = workflows.heatmap?.textureDraw(heatmapFeatures)
-    if (heatmapFeature !== undefined) features.push(...heatmapFeature)
-    // sort features
-    features.sort(featureSort)
+
+    const allFeatures = tiles.flatMap(tile => tile.featureGuides)
     // Mercator: the tile needs to update it's matrix at all zooms.
     // S2: all features tiles past zoom 12 must set screen positions
-    let featureTiles = features
+    let featureTiles = allFeatures
       .flatMap(({ parent, tile }) => parent !== undefined ? [parent, tile] : [tile])
     // remove all duplicates of tiles by their id
     featureTiles = featureTiles.filter((tile, index) => featureTiles.findIndex(t => t.id === tile.id) === index)
     for (const tile of featureTiles) tile.setScreenPositions(projector)
+
+    // prep all tile's features to draw
+    const features = allFeatures.filter(f => f.type !== 'heatmap')
+    // draw heatmap data if applicable, and a singular feature for the main render thread to draw the texture to the screen
+    const heatmapFeatures = allFeatures.filter((f): f is HeatmapFeature => f.type === 'heatmap')
+
+    // compute heatmap data
+    const heatmapFeature = workflows.heatmap?.textureDraw(heatmapFeatures)
+    if (heatmapFeature !== undefined) features.push(...heatmapFeature)
+    // sort features
+    features.sort(featureSort)
     // prep glyph features for drawing box filters
     const glyphFeatures = features.filter((f): f is GlyphFeature => f.type === 'glyph')
     workflows.glyph?.computeFilters(glyphFeatures)

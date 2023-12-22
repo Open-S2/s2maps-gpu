@@ -142,7 +142,7 @@ export default class PointWorkflow implements PointWorkflowSpec {
       if (layerGuide === undefined) continue
       const { sourceName, lch, interactive, layerBuffer, layerCodeBuffer } = layerGuide
 
-      const pointUniformBuffer = context.buildGPUBuffer('Point Uniform Buffer', new Float32Array([0, 0, 8192, 8192]), GPUBufferUsage.UNIFORM)
+      const pointUniformBuffer = context.buildGPUBuffer('Point Uniform Buffer', new Float32Array([0, 0, 1, 1]), GPUBufferUsage.UNIFORM)
       const pointBindGroup = context.buildGroup(
         'Point BindGroup',
         this.#pointBindGroupLayout,
