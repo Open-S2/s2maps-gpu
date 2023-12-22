@@ -2,8 +2,9 @@ import { project } from '../mat4'
 import { bboxST, neighborsIJ } from 'geometry/s2/s2Coords'
 import { fromLonLat, fromSTGL, mul, normalize, toIJ } from 'geometry/s2/s2Point'
 import { fromFace, fromIJ, parent } from 'geometry/s2/s2CellID'
+import { boxIntersects, lessThanZero, pointBoundaries } from 'geometry'
 
-import type { Face, XYZ } from 'geometry'
+import type { Face } from 'geometry'
 
 const ZERO_TILES = [fromFace(0), fromFace(1), fromFace(2), fromFace(3), fromFace(4), fromFace(5)]
 
@@ -77,42 +78,4 @@ function addNeighbors (
       checkList.push([nFace, nI, nJ])
     }
   }
-}
-
-function lessThanZero (zero: number, bl: number, br: number, tl: number, tr: number): boolean {
-  if (bl < zero || br < zero || tl < zero || tr < zero) return true
-  return false
-}
-
-function pointBoundaries (bl: XYZ, br: XYZ, tl: XYZ, tr: XYZ): boolean {
-  return (tl[0] <= 1 && tl[0] >= -1 && tl[1] <= 1 && tl[1] >= -1) ||
-    (tr[0] <= 1 && tr[0] >= -1 && tr[1] <= 1 && tr[1] >= -1) ||
-    (bl[0] <= 1 && bl[0] >= -1 && bl[1] <= 1 && bl[1] >= -1) ||
-    (br[0] <= 1 && br[0] >= -1 && br[1] <= 1 && br[1] >= -1)
-}
-
-function boxIntersects (bl: XYZ, br: XYZ, tl: XYZ, tr: XYZ): boolean {
-  return boxIntersect(tl, bl) || // leftLine
-    boxIntersect(br, tr) || // rightLine
-    boxIntersect(bl, br) || // bottomLine
-    boxIntersect(tr, tl) // topLine
-}
-
-function boxIntersect (p1: XYZ, p2: XYZ): boolean {
-  if (
-    lineIntersect(p1[0], p1[1], p2[0], p2[1], -1, -1, -1, 1) || // leftLineBox
-    lineIntersect(p1[0], p1[1], p2[0], p2[1], 1, -1, 1, 1) || // rightLineBox
-    lineIntersect(p1[0], p1[1], p2[0], p2[1], -1, -1, 1, -1) || // bottomLineBox
-    lineIntersect(p1[0], p1[1], p2[0], p2[1], -1, 1, 1, 1) // topLineBox
-  ) return true
-  return false
-}
-
-function lineIntersect (x1: number, y1: number, x2: number, y2: number,
-  x3: number, y3: number, x4: number, y4: number): boolean {
-  const denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)
-  if (denom === 0) return false
-  const lambda = ((y4 - y3) * (x4 - x1) + (x3 - x4) * (y4 - y1)) / denom
-  const gamma = ((y1 - y2) * (x4 - x1) + (x2 - x1) * (y4 - y1)) / denom
-  return (lambda > 0 && lambda < 1) && (gamma > 0 && gamma < 1)
 }

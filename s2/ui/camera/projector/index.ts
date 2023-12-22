@@ -297,8 +297,8 @@ export default class Projector {
       const matrix = this.#getMatrixS2('m', false, lon, lat, zoom, bearing, pitch)
       return getTilesS2(zoom + zoomOffset, matrix, lon, lat, radius)
     }
-    // TODO: Web Mercator
-    return []
+    // TODO: bearing and pitch without editing the projection?
+    return getTilesWM(zoom + zoomOffset, this, lon, lat)
   }
 
   /* INTERNAL FUNCTIONS */
@@ -425,16 +425,10 @@ export default class Projector {
     return matrix
   }
 
-  // * WEB MERCATOR
+  // * WM
 
   getTilesInViewWM (): bigint[] { // (S2CellIDs)
     const { zoom, zoomOffset, lon, lat } = this
-    return getTilesWM(zoom + zoomOffset, this, lon, lat)
-  }
-
-  // TODO: Rebuild this -_-
-  getTilesAtPositionWM (lon: number, lat: number, zoom: number, bearing: number, pitch: number): bigint[] { // (S2CellIDs)
-    const { zoomOffset } = this
     return getTilesWM(zoom + zoomOffset, this, lon, lat)
   }
 

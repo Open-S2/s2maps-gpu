@@ -19,7 +19,3 @@ export function radToDeg (radians: number): number {
 export function degToRad (deg: number): number {
   return deg * Math.PI / 180
 }
-
-export function isFloat (n: number): boolean {
-  return n % 1 !== 0
-}
