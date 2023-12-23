@@ -580,24 +580,24 @@ export interface HillshadeLayerStyle extends LayerStyleBase {
   type: 'hillshade'
   // paint
   opacity?: number | Property<number>
-  intensity?: number | Property<number>
+  azimuth?: number | Property<number>
+  altitude?: number | Property<number>
   shadowColor?: string | Property<string>
   highlightColor?: string | Property<string>
   accentColor?: string | Property<string>
   // layout
-  azimuth?: number | Property<number>
   fadeDuration?: number
 }
 export interface HillshadeLayerDefinition extends LayerDefinitionBase {
   type: 'hillshade'
   // paint
   opacity: number | Property<number>
-  intensity: number | Property<number>
+  azimuth: number | Property<number>
+  altitude: number | Property<number>
   shadowColor: string | Property<string>
   highlightColor: string | Property<string>
   accentColor: string | Property<string>
   // layout
-  azimuth: number | Property<number>
 }
 export interface HillshadeWorkflowLayerGuide extends LayerWorkflowGuideBase {
   fadeDuration: number
@@ -605,6 +605,9 @@ export interface HillshadeWorkflowLayerGuide extends LayerWorkflowGuideBase {
 export interface HillshadeWorkflowLayerGuideGPU extends HillshadeWorkflowLayerGuide {
   layerBuffer: GPUBuffer
   layerCodeBuffer: GPUBuffer
+  textureBindGroup: GPUBindGroup
+  renderTarget: GPUTexture
+  renderPassDescriptor: GPURenderPassDescriptor
 }
 export interface HillshadeWorkerLayer extends LayerWorkerBaseRaster {
   type: 'hillshade'

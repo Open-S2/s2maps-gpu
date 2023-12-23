@@ -10,7 +10,7 @@ const style: StyleDefinition = {
   maxzoom: 6.9,
   sources: {
     planet: '/tiles/wm/osm',
-    terrain: '/tiles/wm/terrain'
+    terrain: '/tiles/wm/terrain-v2'
   },
   layers: [
     {
@@ -26,11 +26,11 @@ const style: StyleDefinition = {
       name: 'terrain-hillshade',
       source: 'terrain',
       type: 'hillshade',
-      intensity: 0.5,
+      altitude: 70,
       shadowColor: '#000000',
       highlightColor: '#ffffff',
       accentColor: '#000000',
-      azimuth: 285
+      azimuth: 315
     }
   ]
 }
