@@ -112,13 +112,13 @@ export default async function sensorProgram (context: Context): Promise<Hillshad
     buildLayerDefinition (layerBase: LayerDefinitionBase, layer: HillshadeLayerStyle): HillshadeLayerDefinition {
       const { source, layerIndex, lch } = layerBase
       // PRE) get layer properties
-      let { shadowColor, accentColor, highlightColor, opacity, intensity, azimuth, fadeDuration } = layer
+      let { shadowColor, accentColor, highlightColor, opacity, azimuth, altitude, fadeDuration } = layer
       shadowColor = shadowColor ?? '#000'
       accentColor = accentColor ?? '#000'
       highlightColor = highlightColor ?? '#fff'
       opacity = opacity ?? 1
-      intensity = intensity ?? 1
-      azimuth = azimuth ?? 0
+      azimuth = azimuth ?? 315
+      altitude = altitude ?? 45
       fadeDuration = fadeDuration ?? 300
       // 1) build definition
       const layerDefinition: HillshadeLayerDefinition = {
@@ -128,12 +128,12 @@ export default async function sensorProgram (context: Context): Promise<Hillshad
         accentColor,
         highlightColor,
         azimuth,
-        opacity,
-        intensity
+        altitude,
+        opacity
       }
       // 2) Store layer workflow, building code if webgl2
       const layerCode: number[] = []
-      for (const paint of [opacity, shadowColor, accentColor, highlightColor, intensity, azimuth]) {
+      for (const paint of [opacity, shadowColor, accentColor, highlightColor, azimuth]) {
         layerCode.push(...encodeLayerAttribute(paint, lch))
       }
       // 3) Store layer guide

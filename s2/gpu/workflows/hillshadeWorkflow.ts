@@ -27,20 +27,59 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
 export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
   context: WebGPUContext
   layerGuides = new Map<number, HillshadeWorkflowLayerGuideGPU>()
+  module!: GPUShaderModule
   pipeline!: GPURenderPipeline
-  #hillshadeBindGroupLayout!: GPUBindGroupLayout
+  texturePipeline!: GPURenderPipeline
+  #hillshadeRenderTargetBindGroupLayout!: GPUBindGroupLayout
+  #hillshadeFeatureBindGroupLayout!: GPUBindGroupLayout
   constructor (context: WebGPUContext) {
     this.context = context
   }
 
   async setup (): Promise<void> {
-    this.pipeline = await this.#getPipeline()
+    const { context } = this
+    const { device } = context
+    // prep hillshade uniforms
+    this.#hillshadeFeatureBindGroupLayout = context.device.createBindGroupLayout({
+      label: 'Hillshade Texture BindGroupLayout',
+      entries: [
+        // uniform
+        { binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+        // sampler
+        { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+        // texture
+        { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } }
+      ]
+    })
+    this.#hillshadeRenderTargetBindGroupLayout = context.device.createBindGroupLayout({
+      label: 'Hillshade BindGroupLayout',
+      entries: [
+        // float texture
+        { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'unfilterable-float' } }
+      ]
+    })
+    this.module = device.createShaderModule({ code: shaderCode })
+    // create pipelines
+    this.pipeline = this.#getPipeline('screen')
+    this.texturePipeline = this.#getPipeline('texture')
+  }
+
+  resize (): void {
+    for (const layerGuide of this.layerGuides.values()) {
+      if (layerGuide.renderTarget !== undefined) layerGuide.renderTarget.destroy()
+      layerGuide.renderTarget = this.#buildLayerRenderTarget()
+      // setup render pass descriptor
+      layerGuide.renderPassDescriptor = this.#buildLayerPassDescriptor(layerGuide.renderTarget)
+      // set up bind group
+      layerGuide.textureBindGroup = this.#buildLayerBindGroup(layerGuide.renderTarget)
+    }
   }
 
   destroy (): void {
-    for (const { layerBuffer, layerCodeBuffer } of this.layerGuides.values()) {
+    for (const { layerBuffer, layerCodeBuffer, renderTarget } of this.layerGuides.values()) {
       layerBuffer.destroy()
       layerCodeBuffer.destroy()
+      renderTarget.destroy()
     }
   }
 
@@ -49,13 +88,13 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
     const { context } = this
     const { source, layerIndex, lch } = layerBase
     // PRE) get layer properties
-    let { shadowColor, accentColor, highlightColor, opacity, intensity, azimuth, fadeDuration } = layer
+    let { shadowColor, accentColor, highlightColor, opacity, azimuth, altitude, fadeDuration } = layer
     shadowColor = shadowColor ?? '#000'
     accentColor = accentColor ?? '#000'
     highlightColor = highlightColor ?? '#fff'
     opacity = opacity ?? 1
-    intensity = intensity ?? 1
-    azimuth = azimuth ?? 0
+    azimuth = azimuth ?? 315
+    altitude = altitude ?? 45
     fadeDuration = fadeDuration ?? 300
     // 1) build definition
     const layerDefinition: HillshadeLayerDefinition = {
@@ -65,17 +104,18 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
       accentColor,
       highlightColor,
       azimuth,
-      opacity,
-      intensity
+      altitude,
+      opacity
     }
     // 2) Store layer workflow
     const layerCode: number[] = []
-    for (const paint of [opacity, shadowColor, accentColor, highlightColor, intensity, azimuth]) {
+    for (const paint of [opacity, shadowColor, accentColor, highlightColor, azimuth, altitude]) {
       layerCode.push(...encodeLayerAttribute(paint, lch))
     }
     // 3) Setup layer buffers in GPU
     const layerBuffer = context.buildGPUBuffer('Layer Uniform Buffer', new Float32Array([context.getDepthPosition(layerIndex), ~~lch]), GPUBufferUsage.UNIFORM)
     const layerCodeBuffer = context.buildGPUBuffer('Layer Code Buffer', new Float32Array(layerCode), GPUBufferUsage.STORAGE)
+    const renderTarget = this.#buildLayerRenderTarget()
     // 4) Store layer guide
     this.layerGuides.set(layerIndex, {
       sourceName: source,
@@ -84,7 +124,10 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
       lch,
       fadeDuration: fadeDuration ?? 300,
       layerBuffer,
-      layerCodeBuffer
+      layerCodeBuffer,
+      renderTarget,
+      renderPassDescriptor: this.#buildLayerPassDescriptor(renderTarget),
+      textureBindGroup: this.#buildLayerBindGroup(renderTarget)
     })
 
     return layerDefinition
@@ -132,10 +175,11 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
       if (layerGuide === undefined) continue
       const { layerBuffer, layerCodeBuffer, fadeDuration, lch } = layerGuide
 
+      // TODO: support hillshadeFadeBuffer
       const hillshadeFadeBuffer = context.buildGPUBuffer('Hillshade Uniform Buffer', new Float32Array([1]), GPUBufferUsage.UNIFORM)
       const hillshadeBindGroup = context.device.createBindGroup({
         label: 'Hillshade BindGroup',
-        layout: this.#hillshadeBindGroupLayout,
+        layout: this.#hillshadeFeatureBindGroupLayout,
         entries: [
           { binding: 0, resource: { buffer: hillshadeFadeBuffer } },
           { binding: 1, resource: context.defaultSampler },
@@ -177,11 +221,10 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
   }
 
   #buildLayerRenderTarget (): GPUTexture {
-    const { device, presentation, format } = this.context
+    const { device, presentation } = this.context
     return device.createTexture({
       size: presentation,
-      // sampleCount,
-      format,
+      format: 'r32float',
       usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING
     })
   }
@@ -197,80 +240,129 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
     }
   }
 
+  #buildLayerBindGroup (renderTarget: GPUTexture): GPUBindGroup {
+    return this.context.device.createBindGroup({
+      layout: this.#hillshadeRenderTargetBindGroupLayout,
+      entries: [
+        { binding: 0, resource: renderTarget.createView() }
+      ]
+    })
+  }
+
   // https://programmer.ink/think/several-best-practices-of-webgpu.html
   // BEST PRACTICE 6: it is recommended to create pipeline asynchronously
   // BEST PRACTICE 7: explicitly define pipeline layouts
-  async #getPipeline (): Promise<GPURenderPipeline> {
-    const { context } = this
-    const { device, format, projection, sampleCount, frameBindGroupLayout, featureBindGroupLayout } = context
+  #getPipeline (type: 'texture' | 'screen'): GPURenderPipeline {
+    const { context, module } = this
+    const { device, format, defaultBlend, projection, sampleCount, frameBindGroupLayout, featureBindGroupLayout } = context
+    const isScreen = type === 'screen'
 
-    // prep hillshade uniforms
-    this.#hillshadeBindGroupLayout = context.device.createBindGroupLayout({
-      label: 'Hillshade BindGroupLayout',
-      entries: [
-        // uniforms
-        { binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
-        // sampler
-        { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
-        // texture
-        { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } }
-      ]
-    })
-
-    const module = device.createShaderModule({ code: shaderCode })
-    const layout = device.createPipelineLayout({
-      bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.#hillshadeBindGroupLayout]
-    })
+    const layout = isScreen
+      ? device.createPipelineLayout({
+        bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.#hillshadeFeatureBindGroupLayout, this.#hillshadeRenderTargetBindGroupLayout]
+      })
+      : device.createPipelineLayout({
+        bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.#hillshadeFeatureBindGroupLayout]
+      })
     const stencilState: GPUStencilFaceState = {
-      compare: 'equal',
+      compare: isScreen ? 'equal' : 'always',
       failOp: 'keep',
       depthFailOp: 'keep',
       passOp: 'replace'
     }
 
-    return await device.createRenderPipelineAsync({
-      label: 'Hillshade Pipeline',
+    return device.createRenderPipeline({
+      label: `Hillshade ${type} Pipeline`,
       layout,
       vertex: {
         module,
-        entryPoint: 'vMain',
-        buffers: SHADER_BUFFER_LAYOUT
+        entryPoint: isScreen ? 'vMain' : 'vTexture',
+        buffers: isScreen ? undefined : SHADER_BUFFER_LAYOUT
       },
       fragment: {
         module,
-        entryPoint: 'fMain',
-        targets: [{ format }]
+        entryPoint: isScreen ? 'fMain' : 'fTexture',
+        targets: [{
+          format: isScreen ? format : 'r32float',
+          blend: isScreen ? defaultBlend : undefined
+        }]
       },
       primitive: {
         topology: 'triangle-strip',
-        cullMode: projection === 'S2' ? 'back' : 'front',
+        cullMode: isScreen ? 'none' : projection === 'S2' ? 'back' : 'front',
         stripIndexFormat: 'uint32'
       },
       multisample: { count: sampleCount },
-      depthStencil: {
-        depthWriteEnabled: true,
-        depthCompare: 'less',
-        format: 'depth24plus-stencil8',
-        stencilFront: stencilState,
-        stencilBack: stencilState,
-        stencilReadMask: 0xFFFFFFFF,
-        stencilWriteMask: 0xFFFFFFFF
-      }
+      depthStencil: isScreen
+        ? {
+            depthWriteEnabled: true,
+            depthCompare: 'less',
+            format: 'depth24plus-stencil8',
+            stencilFront: stencilState,
+            stencilBack: stencilState,
+            stencilReadMask: 0xFFFFFFFF,
+            stencilWriteMask: 0xFFFFFFFF
+          }
+        : undefined
     })
   }
 
-  draw ({ bindGroup, hillshadeBindGroup, source }: HillshadeFeature): void {
+  textureDraw (features: HillshadeFeature[]): HillshadeFeature[] | undefined {
+    if (features.length === 0) return undefined
+    const { context } = this
+    const { device, frameBufferBindGroup } = context
+
+    const output: HillshadeFeature[] = []
+    // group by layerIndex
+    const layerFeatures = new Map<number, HillshadeFeature[]>()
+    for (const feature of features) {
+      const { layerIndex } = feature
+      const layer = layerFeatures.get(layerIndex)
+      if (layer === undefined) {
+        layerFeatures.set(layerIndex, [feature])
+        output.push(feature)
+      } else layer.push(feature)
+    }
+
+    // draw each layer to their own render target
+    for (const [layerIndex, features] of layerFeatures.entries()) {
+      const layerGuide = this.layerGuides.get(layerIndex)
+      if (layerGuide === undefined) continue
+      // set encoders
+      const commandEncoder = device.createCommandEncoder()
+      const passEncoder = commandEncoder.beginRenderPass(layerGuide.renderPassDescriptor)
+
+      passEncoder.setPipeline(this.texturePipeline)
+      passEncoder.setBindGroup(0, frameBufferBindGroup)
+      for (const { bindGroup, hillshadeBindGroup, source } of features) {
+        const { vertexBuffer, indexBuffer, count, offset } = source
+        // setup pipeline, bind groups, & buffers
+        passEncoder.setBindGroup(1, bindGroup)
+        passEncoder.setBindGroup(2, hillshadeBindGroup)
+        passEncoder.setVertexBuffer(0, vertexBuffer)
+        passEncoder.setIndexBuffer(indexBuffer, 'uint32')
+        // draw
+        passEncoder.drawIndexed(count, 1, offset, 0, 0)
+      }
+      // finish
+      passEncoder.end()
+      device.queue.submit([commandEncoder.finish()])
+    }
+
+    return output
+  }
+
+  draw ({ bindGroup, hillshadeBindGroup, layerIndex }: HillshadeFeature): void {
     // get current source data
     const { passEncoder } = this.context
-    const { vertexBuffer, indexBuffer, count, offset } = source
-
+    const layerGuide = this.layerGuides.get(layerIndex)
+    if (layerGuide === undefined) return
     // setup pipeline, bind groups, & buffers
     this.context.setRenderPipeline(this.pipeline)
     passEncoder.setBindGroup(1, bindGroup)
     passEncoder.setBindGroup(2, hillshadeBindGroup)
-    passEncoder.setVertexBuffer(0, vertexBuffer)
-    passEncoder.setIndexBuffer(indexBuffer, 'uint32')
-    // draw
-    passEncoder.drawIndexed(count, 1, offset, 0, 0)
+    passEncoder.setBindGroup(3, layerGuide.textureBindGroup)
+    // draw a screen quad
+    passEncoder.draw(6)
   }
 }
