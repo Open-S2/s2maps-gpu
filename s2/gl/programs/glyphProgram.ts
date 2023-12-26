@@ -375,7 +375,6 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
     }
 
     injectSpriteImage (data: SpriteImageMessage): void {
-      console.log('injectSpriteImage!!!!!!')
       const { gl } = this
       const { image, built, offsetX, offsetY, width, height, maxHeight } = data
       // increase texture size if necessary
