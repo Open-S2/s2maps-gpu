@@ -18,12 +18,10 @@ import type {
 } from 'style/style.spec'
 import type { HillshadeProgram as HillshadeProgramSpec, HillshadeProgramUniforms } from './program.spec'
 
-export default async function sensorProgram (context: Context): Promise<HillshadeProgramSpec> {
+export default async function hillshadeProgram (context: Context): Promise<HillshadeProgramSpec> {
   const Program = await import('./program').then(m => m.default)
 
   class HillshadeProgram extends Program implements HillshadeProgramSpec {
-    texture!: WebGLTexture
-    framebuffer!: WebGLFramebuffer
     layerGuides = new Map<number, HillshadeWorkflowLayerGuide>()
     declare uniforms: { [key in HillshadeProgramUniforms]: WebGLUniformLocation }
     constructor (context: Context) {
@@ -39,8 +37,6 @@ export default async function sensorProgram (context: Context): Promise<Hillshad
       // set sampler positions
       const { uTexture } = this.uniforms
       gl.uniform1i(uTexture, 0)
-      // build heatmap texture + FBO
-      this.#setupFBO()
     }
 
     buildSource (hillshadeData: HillshadeData, tile: Tile): void {
@@ -51,30 +47,12 @@ export default async function sensorProgram (context: Context): Promise<Hillshad
       // setup texture params
       const texture = context.buildTexture(
         built ? image as ImageBitmap : new Uint8ClampedArray(image as ArrayBuffer),
-        size,
         size
       )
       // create the soruce
-      const source: RasterSource = { type: 'raster', texture }
+      const source: RasterSource = { type: 'raster', texture, size }
       // build features
       this.#buildFeatures(source, hillshadeData, tile)
-    }
-
-    #setupFBO (): void {
-      const { gl, context } = this
-
-      const texture = this.texture = context.buildTexture(null, gl.canvas.width, gl.canvas.height)
-      // create framebuffer
-      const framebuffer = gl.createFramebuffer()
-      if (framebuffer === null) throw new Error('Failed to create framebuffer')
-      this.framebuffer = framebuffer
-      // bind framebuffer
-      gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer)
-      // attach texture
-      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0)
-
-      // we are finished, so go back to our main buffer
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null)
     }
 
     #buildFeatures (source: RasterSource, hillshadeData: HillshadeData, tile: Tile): void {
@@ -88,8 +66,18 @@ export default async function sensorProgram (context: Context): Promise<Hillshad
         if (layerGuide === undefined) continue
         const { fadeDuration, lch, layerCode } = layerGuide
         let opacity = 1
+        let shadowColor: [number, number, number, number] | undefined
+        let accentColor: [number, number, number, number] | undefined
+        let highlightColor: [number, number, number, number] | undefined
+        let azimuth: number | undefined
+        let altitude: number | undefined
         if (this.type === 1) {
           opacity = code[0]
+          shadowColor = code.slice(1, 5) as [number, number, number, number]
+          accentColor = code.slice(5, 9) as [number, number, number, number]
+          highlightColor = code.slice(9, 13) as [number, number, number, number]
+          azimuth = code[13]
+          altitude = code[14]
         }
         features.push({
           type: 'hillshade',
@@ -102,7 +90,12 @@ export default async function sensorProgram (context: Context): Promise<Hillshad
           featureCode: code,
           fadeDuration,
           fadeStartTime: Date.now(),
-          opacity
+          opacity,
+          shadowColor,
+          accentColor,
+          highlightColor,
+          azimuth,
+          altitude
         })
       }
 
@@ -110,6 +103,7 @@ export default async function sensorProgram (context: Context): Promise<Hillshad
     }
 
     buildLayerDefinition (layerBase: LayerDefinitionBase, layer: HillshadeLayerStyle): HillshadeLayerDefinition {
+      const { type } = this
       const { source, layerIndex, lch } = layerBase
       // PRE) get layer properties
       let { shadowColor, accentColor, highlightColor, opacity, azimuth, altitude, fadeDuration } = layer
@@ -133,8 +127,10 @@ export default async function sensorProgram (context: Context): Promise<Hillshad
       }
       // 2) Store layer workflow, building code if webgl2
       const layerCode: number[] = []
-      for (const paint of [opacity, shadowColor, accentColor, highlightColor, azimuth]) {
-        layerCode.push(...encodeLayerAttribute(paint, lch))
+      if (type === 2) {
+        for (const paint of [opacity, shadowColor, accentColor, highlightColor, azimuth, altitude]) {
+          layerCode.push(...encodeLayerAttribute(paint, lch))
+        }
       }
       // 3) Store layer guide
       this.layerGuides.set(layerIndex, {
@@ -148,28 +144,9 @@ export default async function sensorProgram (context: Context): Promise<Hillshad
       return layerDefinition
     }
 
-    setupTextureDraw (): void {
-      const { gl, context, uniforms } = this
-      // attach and clear framebuffer
-      gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer)
-      // ensure null textures
-      gl.activeTexture(gl.TEXTURE0)
-      gl.bindTexture(gl.TEXTURE_2D, this.texture)
-      // set draw state
-      gl.uniform1f(uniforms.uDrawState, 0)
-      // setup context
-      context.defaultBlend()
-      context.clearColorBuffer()
-      context.disableCullFace()
-      context.disableDepthTest()
-      context.disableStencilTest()
-    }
-
     use (): void {
       super.use()
-      const { gl, context, uniforms } = this
-      // set draw state
-      gl.uniform1f(uniforms.uDrawState, 1)
+      const { context } = this
       // setup context
       context.defaultBlend()
       context.enableDepthTest()
@@ -181,19 +158,28 @@ export default async function sensorProgram (context: Context): Promise<Hillshad
     draw (featureGuide: HillshadeFeatureGuide): void {
       // grab gl from the context
       const { type, gl, context, uniforms } = this
-      const { uFade, uOpacity } = uniforms
+      const { uFade, uTexLength, uOpacity, uShadowColor, uAccentColor, uHighlightColor, uAzimuth, uAltitude } = uniforms
+      const { PI, min, max } = Math
 
       // get current source data
-      const { tile, parent, source, layerIndex, featureCode, opacity } = featureGuide
-      const { texture } = source
-      const { mask } = parent ?? tile
-      const { vao, count, offset } = mask
+      const {
+        tile, parent, source, layerIndex, featureCode,
+        opacity, shadowColor, accentColor, highlightColor, azimuth, altitude
+      } = featureGuide
+      const { texture, size } = source
+      const { vao, count, offset } = (parent ?? tile).mask
       context.setDepthRange(layerIndex)
       // set fade
       gl.uniform1f(uFade, 1)
       // set feature code (webgl 1 we store the opacity, webgl 2 we store layerCode lookups)
       if (type === 1) {
+        gl.uniform1f(uTexLength, size)
         gl.uniform1f(uOpacity, opacity ?? 1)
+        gl.uniform4fv(uShadowColor, shadowColor ?? [0, 0, 0, 1])
+        gl.uniform4fv(uAccentColor, accentColor ?? [0, 0, 0, 1])
+        gl.uniform4fv(uHighlightColor, highlightColor ?? [1, 1, 1, 1])
+        gl.uniform1f(uAzimuth, min(max(azimuth ?? 315, 0), 360) * PI / 180)
+        gl.uniform1f(uAltitude, min(max(altitude ?? 45, 0), 90) / 90)
       } else { this.setFeatureCode(featureCode) }
       // bind vao
       gl.bindVertexArray(vao)

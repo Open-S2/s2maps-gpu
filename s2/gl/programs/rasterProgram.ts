@@ -51,6 +51,7 @@ export default async function rasterProgram (context: Context): Promise<RasterPr
 
     // programs helps design the appropriate layer parameters
     buildLayerDefinition (layerBase: LayerDefinitionBase, layer: RasterLayerStyle): RasterLayerDefinition {
+      const { type } = this
       const { source, layerIndex, lch } = layerBase
       // PRE) get layer base
       let { opacity, saturation, contrast, resampling, fadeDuration } = layer
@@ -67,8 +68,10 @@ export default async function rasterProgram (context: Context): Promise<RasterPr
       }
       // 2) Store layer workflow, building code if webgl2
       const layerCode: number[] = []
-      for (const paint of [opacity, saturation, contrast]) {
-        layerCode.push(...encodeLayerAttribute(paint, lch))
+      if (type === 2) {
+        for (const paint of [opacity, saturation, contrast]) {
+          layerCode.push(...encodeLayerAttribute(paint, lch))
+        }
       }
       this.layerGuides.set(layerIndex, {
         sourceName: source,
@@ -90,15 +93,11 @@ export default async function rasterProgram (context: Context): Promise<RasterPr
       // setup texture params
       const texture = context.buildTexture(
         built ? image as ImageBitmap : new Uint8ClampedArray(image as ArrayBuffer),
-        size,
         size
       )
 
       // Extend mask
-      const rasterSource: RasterSource = {
-        type: 'raster',
-        texture
-      }
+      const rasterSource: RasterSource = { type: 'raster', texture, size }
 
       this.#buildFeatures(rasterSource, rasterData, tile)
     }
@@ -162,8 +161,7 @@ export default async function rasterProgram (context: Context): Promise<RasterPr
         opacity, contrast, saturation, resampling
       } = featureGuide
       const { texture } = source
-      const { mask } = parent ?? tile
-      const { vao, count, offset } = mask
+      const { vao, count, offset } = (parent ?? tile).mask
       context.setDepthRange(layerIndex)
       // set fade
       gl.uniform1f(uFade, 1)

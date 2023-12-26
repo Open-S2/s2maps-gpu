@@ -12,6 +12,7 @@ out vec2 vNorm;
 out vec2 vCenter;
 out vec4 vColor;
 out float vDrawType;
+out float vLengthSoFar;
 
 // POSITION TYPES:
 // 0 -> curr
@@ -26,7 +27,6 @@ out float vDrawType;
 uniform float uDevicePixelRatio;
 uniform vec2 uAspect;
 uniform float uCap; // 0 -> butt (no cap) ; 1 -> round ; 2 -> square
-// uniform bool uDashed;
 
 @import "./decodeFeature2.glsl"
 @import "./getPos.glsl"
@@ -73,6 +73,8 @@ void main () {
   vec2 normal;
   vec4 pos = vec4(0.);
 
+  vLengthSoFar = aLengthSoFar * pow(2., uInputs[0] - uFaceST[1]);
+
   if (
     uIsS2 == false ||
     (curr.z < zero.z && next.z < zero.z)
@@ -109,15 +111,17 @@ void main () {
         ((aType == 5. || aType == 6.) && isCCW(prevScreen, currScreen, nextScreen))
       ) normal *= -1.;
       // adjust screen if necessary
-      if (aType == 3. || aType == 4.) screen = next.xy;
+      if (aType == 3. || aType == 4.) {
+        screen = next.xy;
+        // also increment lengthSoFar
+        float screenDistance = length((next.xy - curr.xy) * uAspect);
+        // convert screenDistance to pixels
+        vLengthSoFar += screenDistance;
+      }
       // set position
       pos = vec4(screen + normal * width / uAspect, 0., 1.);
     }
   }
-  // handle dashed lines if necessary
-  // if (uDashed) {
-
-  // }
   // tell the fragment the normal vector
   vNorm = normal;
   gl_Position = pos;

@@ -39,7 +39,7 @@ export interface OptionsComputed {
 const DEFAULT_OPTIONS: OptionsComputed = {
   minzoom: 0, // min zoom to generate clusters on
   maxzoom: 16, // max zoom level to cluster the points on
-  radius: 40, // cluster radius in pixels
+  radius: 50, // cluster radius in pixels
   extent: 512, // tile extent (radius is calculated relative to it)
   nodeSize: 64 // size of the KD-tree leaf node, effects performance
 }

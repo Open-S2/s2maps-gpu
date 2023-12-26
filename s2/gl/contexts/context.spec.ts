@@ -43,7 +43,7 @@ export interface LineSource {
   type: 'line'
   // idBuffer: WebGLBuffer
   vertexBuffer: WebGLBuffer
-  lengthSoFarBuffer?: WebGLBuffer
+  lengthSoFarBuffer: WebGLBuffer
   vao: WebGLVertexArrayObject
 }
 
@@ -58,6 +58,7 @@ export interface PointSource {
 export interface RasterSource {
   type: 'raster'
   texture: WebGLTexture
+  size: number
 }
 
 export interface SensorSource {
@@ -90,6 +91,9 @@ export interface FillFeatureGuide extends FeatureGuideBase {
   count: number
   offset: number
   invert: boolean
+  texXY: [x: number, y: number]
+  texWH: [w: number, h: number]
+  patternMovement: boolean
   interactive: boolean
   opaque: boolean
   color?: number[] // webgl1
@@ -141,7 +145,9 @@ export interface LineFeatureGuide extends FeatureGuideBase {
   count: number
   offset: number
   dashed: boolean
-  dashTexture?: WebGLTexture
+  dashCount: number
+  dashLength: number
+  dashTexture: WebGLTexture
   cap: number
   color?: [number, number, number, number] // webgl1
   opacity?: number // webgl1
@@ -182,6 +188,11 @@ export interface HillshadeFeatureGuide extends FeatureGuideBase {
   fadeDuration: number
   fadeStartTime: number
   opacity?: number // webgl1
+  shadowColor?: [number, number, number, number] // webgl1
+  accentColor?: [number, number, number, number] // webgl1
+  highlightColor?: [number, number, number, number] // webgl1
+  azimuth?: number // webgl1
+  altitude?: number // webgl1
 }
 
 // ** SENSOR **
@@ -234,6 +245,7 @@ export interface Context {
   stencilBuffer?: WebGLRenderbuffer
   interactFramebuffer?: WebGLFramebuffer
   defaultBounds: BBox
+  nullTexture: WebGLTexture
 
   // SETUP INTERACTIVE BUFFER
   resize: () => void
@@ -261,7 +273,7 @@ export interface Context {
   buildTexture: (
     imageData: null | ArrayBufferView | ImageBitmap,
     width: number,
-    height: number,
+    height?: number,
     repeat?: boolean
   ) => WebGLTexture
   updateTexture: (

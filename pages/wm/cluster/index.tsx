@@ -16,7 +16,7 @@ export default function Cluster (): React.JSX.Element {
     <div className='pages'>
       <Map
         style={style}
-        opts={{ zoomController: false, contextType: 3 }}
+        opts={{ zoomController: false }}
         ready={ready}
         noAPIKey
       />

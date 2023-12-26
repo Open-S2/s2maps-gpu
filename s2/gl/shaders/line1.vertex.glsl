@@ -11,7 +11,7 @@ varying vec2 vNorm;
 varying vec2 vCenter;
 varying vec4 vColor;
 varying float vDrawType;
-// varying float lengthSoFar;
+varying float vLengthSoFar;
 
 // POSITION TYPES:
 // 0 -> curr
@@ -29,8 +29,8 @@ uniform float uCap; // 0 -> butt (no cap) ; 1 -> round ; 2 -> square
 uniform vec4 uColor;
 uniform float uOpacity;
 uniform float uWidth;
-// uniform bool uDashed;
 
+uniform float uInputs[16];
 @import "./color1.glsl"
 @import "./getPos.glsl"
 
@@ -77,6 +77,8 @@ void main () {
   vec2 normal;
   vec4 pos = vec4(0.);
 
+  vLengthSoFar = aLengthSoFar * pow(2., uInputs[0] - uFaceST[1]);
+
   if (
     uIsS2 == false ||
     (curr.z < zero.z && next.z < zero.z)
@@ -113,7 +115,13 @@ void main () {
         ((aType == 5. || aType == 6.) && isCCW(prevScreen, currScreen, nextScreen))
       ) normal *= -1.;
       // adjust screen if necessary
-      if (aType == 3. || aType == 4.) screen = next.xy;
+      if (aType == 3. || aType == 4.) {
+        screen = next.xy;
+        // also increment lengthSoFar
+        float screenDistance = length((next.xy - curr.xy) * uAspect);
+        // convert screenDistance to pixels
+        vLengthSoFar += screenDistance;
+      }
       // set position
       pos = vec4(screen + normal * width / uAspect, 0., 1.);
     }

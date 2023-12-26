@@ -1,10 +1,5 @@
 const PI = 3.141592653589793238;
 
-struct TextureOutput {
-  @builtin(position) Position: vec4<f32>,
-  @location(0) extent: vec2<f32>,
-}
-
 struct VertexOutput {
   @builtin(position) Position: vec4<f32>,
   @location(0) extent: vec2<f32>,
@@ -79,8 +74,6 @@ struct LayerUniforms {
 @binding(0) @group(2) var<uniform> hillshadeFade: f32;
 @binding(1) @group(2) var imageSampler: sampler;
 @binding(2) @group(2) var demTexture: texture_2d<f32>;
-// ** POST PROCESSING DATA **
-@binding(0) @group(3) var imageTexture: texture_2d<f32>;
 
 fn LCH2LAB (lch: vec4<f32>) -> vec4<f32> { // r -> l ; g -> c ; b -> h
   var h = lch.b * (PI / 180.);
@@ -451,49 +444,25 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, i32>, featureIndexPtr: pt
   return res;
 }
 
+// https://pro.arcgis.com/en/pro-app/latest/tool-reference/3d-analyst/how-hillshade-works.htm
+// https://github.com/maplibre/maplibre-gl-js/blob/99d946a4993650db35f4668bc36927ee5214872e/src/shaders/hillshade_prepare.fragment.glsl
+
+fn getElevation(
+  uv: vec2<f32>,
+) -> f32 {
+  var color = textureSample(demTexture, imageSampler, uv);
+  return -10000. + ((color.r * 256. * 256. + color.g * 256. + color.b) * 0.1);
+}
+
 @vertex
-fn vTexture(
+fn vMain(
   @location(0) position: vec2<f32>
-) -> TextureOutput {
-  var output: TextureOutput;
+) -> VertexOutput {
+  var output: VertexOutput;
   var tmpPos = getPos(position);
   tmpPos /= tmpPos.w;
   output.Position = vec4(tmpPos.xy, layer.depthPos, 1.);
   output.extent = position;
-  return output;
-}
-
-@fragment
-fn fTexture(
-  output: TextureOutput
-) -> @location(0) f32 {
-  var color = textureSample(demTexture, imageSampler, output.extent);
-  return -10000. + ((color.r * 256. * 256. + color.g * 256. + color.b) * 0.1);
-}
-
-const Extents = array<vec2<f32>, 6>(
-  vec2(-1., -1.),
-  vec2(1., -1.),
-  vec2(-1., 1.),
-  vec2(1., -1.),
-  vec2(1., 1.),
-  vec2(-1., 1.)
-);
-
-@vertex
-fn vMain(
-  @builtin(vertex_index) VertexIndex: u32
-) -> VertexOutput {
-  var output: VertexOutput;
-  let extent = Extents[VertexIndex];
-  output.Position = vec4<f32>(extent, layer.depthPos, 1.);
-  let uAspect = vec2<f32>(view.aspectX, view.aspectY);
-  // set where we are on the texture
-  output.extent = extent * 0.5 + 0.5;
-  // invert the y
-  output.extent.y = 1. - output.extent.y;
-  // apply aspect ratio
-  output.extent *= uAspect;
 
   var index = 0;
   var featureIndex = 0;
@@ -502,15 +471,15 @@ fn vMain(
   output.shadowColor = decodeFeature(true, &index, &featureIndex);
   output.accentColor = decodeFeature(true, &index, &featureIndex);
   output.highlightColor = decodeFeature(true, &index, &featureIndex);
-  output.azimuth = min(max(decodeFeature(false, &index, &featureIndex)[0], 0.), 360.) * PI / 180;
+  output.azimuth = min(max(decodeFeature(false, &index, &featureIndex)[0], 0.), 360.) * PI / 180.;
   output.altitude = min(max(decodeFeature(false, &index, &featureIndex)[0], 0.), 90.) / 90.;
 
-  output.exaggeration = 0.;
-  if (view.zoom < 15.0) {
-    var exaggerationFactor = 0.3;
-    if (view.zoom < 2.0) { exaggerationFactor = 0.4; } else if (view.zoom < 4.5) { exaggerationFactor = 0.35; }
-    output.exaggeration = (view.zoom - 15.0) * exaggerationFactor;
-  }
+  // output.exaggeration = 0.;
+  // if (view.zoom < 15.0) {
+  //   var exaggerationFactor = 0.3;
+  //   if (view.zoom < 2.0) { exaggerationFactor = 0.4; } else if (view.zoom < 4.5) { exaggerationFactor = 0.35; }
+  //   output.exaggeration = (view.zoom - 15.0) * exaggerationFactor;
+  // }
 
   return output;
 }
@@ -520,57 +489,61 @@ fn fMain(
   output: VertexOutput
 ) -> @location(0) vec4<f32> {
   // load 3x3 window
-  let texCoord = vec2<i32>(output.extent);
-  let a = textureLoad(imageTexture, texCoord + vec2<i32>(-1, -1), 0).r;
-  let b = textureLoad(imageTexture, texCoord + vec2<i32>(0, -1), 0).r;
-  let c = textureLoad(imageTexture, texCoord + vec2<i32>(1, -1), 0).r;
-  let d = textureLoad(imageTexture, texCoord + vec2<i32>(-1, 0), 0).r;
-  let e = textureLoad(imageTexture, texCoord, 0).r;
-  let f = textureLoad(imageTexture, texCoord + vec2<i32>(1, 0), 0).r;
-  let g = textureLoad(imageTexture, texCoord + vec2<i32>(-1, 1), 0).r;
-  let h = textureLoad(imageTexture, texCoord + vec2<i32>(0, 1), 0).r;
-  let i = textureLoad(imageTexture, texCoord + vec2<i32>(1, 1), 0).r;
+  let texLength = f32(textureDimensions(demTexture).x);
+  let cellSize = 1. / texLength;
+  // adjust extent to go from 0-1 to not include the edges since the texture is oversized
+  let uv = output.extent * ((texLength - 2.) / texLength) + cellSize;
+  // cellSize is the length of 0->514; create a uv variable that is extent,
+  let a = getElevation(uv + vec2<f32>(-cellSize, -cellSize));
+  let b = getElevation(uv + vec2<f32>(0., -cellSize));
+  let c = getElevation(uv + vec2<f32>(cellSize, -cellSize));
+  let d = getElevation(uv + vec2<f32>(-cellSize, 0.));
+  let e = getElevation(uv);
+  let f = getElevation(uv + vec2<f32>(cellSize, 0.));
+  let g = getElevation(uv + vec2<f32>(-cellSize, cellSize));
+  let h = getElevation(uv + vec2<f32>(0., cellSize));
+  let i = getElevation(uv + vec2<f32>(cellSize, cellSize));
 
-  let dzDx = ((c + f + f + i) - (a + d + d + g)) / pow(2., output.exaggeration + (19.2562 - view.zoom));
+  // let multiplier = pow(2., output.exaggeration + (19.2562 - view.zoom));
+  let dzDx = (c + f + f + i) - (a + d + d + g);
   let dzDy = (g + h + h + i) - (a + b + b + c);
 
   // We divide the slope by a scale factor based on the cosin of the pixel's approximate latitude
-    // to account for mercator projection distortion. see #4807 for details
-    // TODO:
-    // let scaleFactor = cos(radians((u_latrange[0] - u_latrange[1]) * (1. - v_pos.y) + u_latrange[1]));
-    let scaleFactor = 20.;
-    // We also multiply the slope by an arbitrary z-factor of 1.25
-    let slope = atan(1.25 * length(vec2(dzDx, dzDy)) / scaleFactor);
-    // let aspect = deriv.x != 0. ? atan(dzDy, -dzDy) : PI / 2. * (dzDy > 0. ? 1. : -1.);
-    var aspectDelta = -1.;
-    if (dzDy > 0.) { aspectDelta = 1.; }
-    var aspect = PI / 2. * aspectDelta;
-    if (dzDx != 0.) { aspect = atan2(dzDy, -dzDx); }
+  // to account for mercator projection distortion. see #4807 for details
+  // TODO:
+  // let scaleFactor = cos(radians((u_latrange[0] - u_latrange[1]) * (1. - v_pos.y) + u_latrange[1]));
+  let scaleFactor = 10.;
+  // We also multiply the slope by an arbitrary z-factor of 1.25
+  let slope = atan(1.25 * length(vec2<f32>(dzDx, dzDy)) / scaleFactor);
+  var aspectDelta = -1.;
+  if (dzDy > 0.) { aspectDelta = 1.; }
+  var aspect = PI / 2. * aspectDelta;
+  if (dzDx != 0.) { aspect = atan2(dzDy, -dzDx); }
 
-    // We add PI to make this property match the global light object, which adds PI/2 to the light's azimuthal
-    // position property to account for 0deg corresponding to north/the top of the viewport in the style spec
-    // and the original shader was written to accept (-illuminationDirection - 90) as the azimuthal.
-    let azimuth = output.azimuth + PI;
+  // We add PI to make this property match the global light object, which adds PI/2 to the light's azimuthal
+  // position property to account for 0deg corresponding to north/the top of the viewport in the style spec
+  // and the original shader was written to accept (-illuminationDirection - 90) as the azimuthal.
+  let azimuth = output.azimuth + PI;
 
-    // We scale the slope exponentially based on altitude, using a calculation similar to
-    // the exponential interpolation function in the style spec:
-    // src/style-spec/expression/definitions/interpolate.js#L217-L228
-    // so that higher altitude values create more opaque hillshading.
-    let base = 1.875 - output.altitude * 1.75;
-    let maxValue = 0.5 * PI;
-    var scaledSlope = slope;
-    if (output.altitude != 0.5) {
-      scaledSlope = ((pow(base, slope) - 1.) / (pow(base, maxValue) - 1.)) * maxValue;
-    }
+  // We scale the slope exponentially based on altitude, using a calculation similar to
+  // the exponential interpolation function in the style spec:
+  // src/style-spec/expression/definitions/interpolate.js#L217-L228
+  // so that higher altitude values create more opaque hillshading.
+  let base = 1.875 - output.altitude * 1.75;
+  let maxValue = 0.5 * PI;
+  var scaledSlope = slope;
+  if (output.altitude != 0.5) {
+    scaledSlope = ((pow(base, slope) - 1.) / (pow(base, maxValue) - 1.)) * maxValue;
+  }
 
-    // The accent color is calculated with the cosine of the slope while the shade color is calculated with the sine
-    // so that the accent color's rate of change eases in while the shade color's eases out.
-    let accent = cos(scaledSlope);
-    // We multiply both the accent and shade color by a clamped altitude value
-    // so that intensities >= 0.5 do not additionally affect the color values
-    // while altitude values < 0.5 make the overall color more transparent.
-    let accentColor = (1. - accent) * output.accentColor * clamp(output.altitude * 2., 0., 1.);
-    let shade = abs((((aspect + azimuth) / PI + 0.5) % 2.) - 1.);
-    let shadeColor = mix(output.shadowColor, output.highlightColor, shade) * sin(scaledSlope) * clamp(output.altitude * 2., 0., 1.);
-    return (accentColor * (1. - shadeColor.a) + shadeColor) * output.opacity * hillshadeFade;
+  // The accent color is calculated with the cosine of the slope while the shade color is calculated with the sine
+  // so that the accent color's rate of change eases in while the shade color's eases out.
+  // We multiply both the accent and shade color by a clamped altitude value
+  // so that intensities >= 0.5 do not additionally affect the color values
+  // while altitude values < 0.5 make the overall color more transparent.
+  let clampedAltitude = clamp(output.altitude * 2., 0., 1.);
+  let accentColor = output.accentColor * (1. - cos(scaledSlope)) * clampedAltitude;
+  let shade = abs((((aspect + azimuth) / PI + 0.5) % 2.) - 1.);
+  let shadeColor = mix(output.shadowColor, output.highlightColor, shade) * sin(scaledSlope) * clampedAltitude;
+  return (accentColor * (1. - shadeColor.a) + shadeColor) * output.opacity * hillshadeFade;
 }

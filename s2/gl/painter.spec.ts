@@ -15,6 +15,7 @@ import type {
   HillshadeProgram,
   LineProgram,
   PointProgram,
+  Program,
   RasterProgram,
   SensorProgram,
   ShadeProgram,
@@ -38,17 +39,18 @@ export interface Painter {
 
   buildFeatureData: (tile: Tile, data: PainterData) => void
   useWorkflow: (
-    ((programName: 'fill') => FillProgram) &
-    ((programName: 'glyph') => GlyphProgram | undefined) &
-    ((programName: 'heatmap') => HeatmapProgram | undefined) &
-    ((programName: 'line') => LineProgram | undefined) &
-    ((programName: 'point') => PointProgram | undefined) &
-    ((programName: 'raster') => RasterProgram | undefined) &
-    ((programName: 'hillshade') => HillshadeProgram | undefined) &
-    ((programName: 'sensor') => SensorProgram | undefined) &
-    ((programName: 'shade') => ShadeProgram | undefined) &
-    ((programName: 'glyphFilter') => GlyphFilterProgram | undefined) &
-    ((programName: 'background') => WallpaperProgram | SkyboxProgram | undefined)
+    ((programName: 'fill') => FillProgram) |
+    ((programName: 'glyph') => GlyphProgram | undefined) |
+    ((programName: 'heatmap') => HeatmapProgram | undefined) |
+    ((programName: 'line') => LineProgram | undefined) |
+    ((programName: 'point') => PointProgram | undefined) |
+    ((programName: 'raster') => RasterProgram | undefined) |
+    ((programName: 'hillshade') => HillshadeProgram | undefined) |
+    ((programName: 'sensor') => SensorProgram | undefined) |
+    ((programName: 'shade') => ShadeProgram | undefined) |
+    ((programName: 'glyphFilter') => GlyphFilterProgram | undefined) |
+    ((programName: 'background') => WallpaperProgram | SkyboxProgram | undefined) |
+    ((programName: WorkflowKey) => Program | undefined)
   )
   buildWorkflows: (buildSet: Set<WorkflowType>) => Promise<void>
   resize: (width: number, height: number) => void

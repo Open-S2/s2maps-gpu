@@ -91,7 +91,6 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
 
     const texture = context.buildTexture(
       built ? image as ImageBitmap : new Uint8ClampedArray(image as ArrayBuffer),
-      size,
       size
     )
     // prep buffers

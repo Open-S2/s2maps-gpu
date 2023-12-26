@@ -48,6 +48,8 @@ export default class JSONSource extends Source {
       const data = (textEncoder.encode(JSON.stringify(vectorTile))).buffer
       // send off
       worker.postMessage({ mapID, type: 'jsondata', tile, sourceName: name, data }, [data])
+    } else {
+      this._flush(mapID, tile, name)
     }
   }
 }

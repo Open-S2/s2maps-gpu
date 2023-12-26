@@ -11,6 +11,7 @@ export const EPSILON = 1.0e-10
 // 900913 (Web Mercator) properties.
 export const A = 6378137.0
 export const MAXEXTENT = 20037508.342789244
+export const MAXLAT = 85.0511287798
 
 export function radToDeg (radians: number): number {
   return radians * 180 / Math.PI

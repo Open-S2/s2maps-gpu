@@ -18,7 +18,6 @@ import type {
   FeatureBase,
   GlyphFeature,
   HeatmapFeature,
-  HillshadeFeature,
   Workflow,
   WorkflowImports,
   WorkflowType,
@@ -109,9 +108,6 @@ export default class Painter {
     this.workflows.sensor?.injectTimeCache(timeCache)
   }
 
-  // usePipeline (pipelineName: PipelineType): void | Pipeline {
-  // }
-
   resize (width: number, height: number): void {
     this.context.resize((): void => {
       // If any workflows are using the resize method, call it
@@ -141,14 +137,10 @@ export default class Painter {
     const features = allFeatures.filter(f => f.type !== 'heatmap')
     // draw heatmap data if applicable, and a singular feature for the main render thread to draw the texture to the screen
     const heatmapFeatures = allFeatures.filter((f): f is HeatmapFeature => f.type === 'heatmap')
-    const hillshadeFeatures = allFeatures.filter((f): f is HillshadeFeature => f.type === 'hillshade')
 
     // compute heatmap data
     const heatmapFeature = workflows.heatmap?.textureDraw(heatmapFeatures)
     if (heatmapFeature !== undefined) features.push(...heatmapFeature)
-    // compute hillshade data
-    const hillshadeFeature = workflows.hillshade?.textureDraw(hillshadeFeatures)
-    if (hillshadeFeature !== undefined) features.push(...hillshadeFeature)
     // sort features
     features.sort(featureSort)
     // prep glyph features for drawing box filters

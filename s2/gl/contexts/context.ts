@@ -34,11 +34,13 @@ export default class Context implements ContextSpec {
   stencilBuffer!: WebGLRenderbuffer
   interactFramebuffer!: WebGLFramebuffer
   defaultBounds: BBox = [0, 0, 1, 1]
+  nullTexture!: WebGLTexture
   constructor (context: WebGLRenderingContext | WebGL2RenderingContext, options: MapOptions) {
     const { canvasMultiplier } = options
     const gl = this.gl = context
     this.devicePixelRatio = canvasMultiplier ?? 1
     this.#buildInteractFramebuffer()
+    this.#buildNullTexture()
     // lastly grab the renderers id
     const debugRendererInfo = context.getExtension('WEBGL_debug_renderer_info')
     if (debugRendererInfo !== undefined) this.renderer = cleanRenderer(context.getParameter(debugRendererInfo.UNMASKED_RENDERER_WEBGL))
@@ -53,6 +55,12 @@ export default class Context implements ContextSpec {
     gl.enable(gl.BLEND)
     this.blendState = true
     this.defaultBlend()
+  }
+
+  // SETUP NULL TEXTURE
+
+  #buildNullTexture (): void {
+    this.nullTexture = this.buildTexture(null, 1)
   }
 
   // SETUP INTERACTIVE BUFFER
@@ -240,7 +248,7 @@ export default class Context implements ContextSpec {
   buildTexture (
     imageData: null | ArrayBufferView | ImageBitmap,
     width: number,
-    height: number,
+    height: number = width,
     repeat = false
   ): WebGLTexture {
     const { gl } = this

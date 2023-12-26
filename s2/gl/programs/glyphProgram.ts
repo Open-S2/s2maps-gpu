@@ -375,6 +375,7 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
     }
 
     injectSpriteImage (data: SpriteImageMessage): void {
+      console.log('injectSpriteImage!!!!!!')
       const { gl } = this
       const { image, built, offsetX, offsetY, width, height, maxHeight } = data
       // increase texture size if necessary
@@ -382,7 +383,6 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
       // do not premultiply
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0)
       // setup texture
-
       const texture = context.buildTexture(
         built ? image as ImageBitmap : new Uint8ClampedArray(image as ArrayBuffer),
         width,

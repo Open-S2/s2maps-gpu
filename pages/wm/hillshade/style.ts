@@ -14,6 +14,13 @@ const style: StyleDefinition = {
   },
   layers: [
     {
+      name: 'background',
+      type: 'fill',
+      source: 'mask',
+      opaque: true,
+      color: '#cbe5be'
+    },
+    {
       name: 'water-fill',
       source: 'planet',
       layer: 'water',
@@ -26,11 +33,11 @@ const style: StyleDefinition = {
       name: 'terrain-hillshade',
       source: 'terrain',
       type: 'hillshade',
-      altitude: 70,
-      shadowColor: '#000000',
-      highlightColor: '#ffffff',
-      accentColor: '#000000',
-      azimuth: 315
+      altitude: 30,
+      shadowColor: '#000',
+      highlightColor: '#fff',
+      accentColor: 'rgba(0, 0, 0, 0.5)',
+      azimuth: 287
     }
   ]
 }

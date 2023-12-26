@@ -130,6 +130,7 @@ export default class LineWorkflow implements LineWorkflowSpec {
       layerCodeBuffer,
       lch,
       dashed,
+      dashLength: length,
       dashCount,
       dashTexture,
       interactive,

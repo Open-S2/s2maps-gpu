@@ -483,9 +483,7 @@ fn vMain(
   let drawType = DrawTypes[VertexIndex];
 
   // set default lengthSoFar
-  let zoomScale = pow(2., view.zoom - tile.zoom);
-  // TODO: 762 should be tile size
-  output.lengthSoFar = lengthSoFar * 762 * zoomScale;
+  output.lengthSoFar = lengthSoFar * pow(2., view.zoom - tile.zoom);
 
   // return output;
   // prep layer index and feature index positions
@@ -574,7 +572,7 @@ fn vMain(
   }
   // tell the fragment the normal vector
   output.norm = normal;
-  output.Position = vec4(pos.xy, layer.depthPos, 1.0);
+  output.Position = vec4<f32>(pos.xy, layer.depthPos, 1.0);
 
   return output;
 }
@@ -606,8 +604,8 @@ fn fMain(
   var color = output.color;
   if (line.dashed != 0.) {
     // get texture length
-    let textureSize = vec2<f32>(textureDimensions(dashTexture));
-    color = textureSample(dashTexture, dashSampler, vec2<f32>((output.lengthSoFar % line.dashCount) / textureSize.x, view.cBlind / 4.));
+    let texLength = f32(textureDimensions(dashTexture).x);
+    color = textureSample(dashTexture, dashSampler, vec2<f32>((output.lengthSoFar % line.dashCount) / texLength, view.cBlind / 4.));
   }
   return color * wAlpha;
 }

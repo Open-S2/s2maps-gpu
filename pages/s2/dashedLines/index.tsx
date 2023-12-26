@@ -16,7 +16,7 @@ export default function Lines (): React.JSX.Element {
     <div className='pages'>
       <Map
         style={style}
-        opts={{ zoomController: false, contextType: 3 }}
+        opts={{ zoomController: false, contextType: 2 }}
         ready={ready}
         noAPIKey
       />

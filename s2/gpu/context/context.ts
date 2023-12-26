@@ -407,7 +407,7 @@ export default class WebGPUContext {
   buildTexture (
     imageData: null | GPUTexture | BufferSource | SharedArrayBuffer | ImageBitmap,
     width: number,
-    height: number,
+    height: number = width,
     depthOrArrayLayers = 1,
     srcOrigin = { x: 0, y: 0 },
     dstOrigin = { x: 0, y: 0, z: 0 },

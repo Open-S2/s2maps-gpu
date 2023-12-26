@@ -5,10 +5,14 @@ varying vec2 vNorm;
 varying vec2 vCenter;
 varying vec4 vColor;
 varying float vDrawType;
-// varying float lengthSoFar;
+varying float vLengthSoFar;
 
 uniform float uDevicePixelRatio;
-// uniform sampler2D uDashArray;
+uniform float uDashCount;
+uniform float uCBlind;
+uniform bool uDashed;
+uniform float uTexLength;
+uniform sampler2D uDashTexture;
 
 void main () {
   // Calculate the distance of the pixel from the line in pixels.
@@ -28,5 +32,11 @@ void main () {
   float wAlpha = clamp(min(dist - (startWidth - blur), endWidth - dist) / blur, 0., 1.);
   if (wAlpha == 0.) discard;
 
-  gl_FragColor = vColor * wAlpha;
+  vec4 color = vColor;
+
+  if (uDashed) {
+    color = texture2D(uDashTexture, vec2(mod(vLengthSoFar, uDashCount) / uTexLength, uCBlind / 4.));
+  }
+
+  gl_FragColor = color * wAlpha;
 }

@@ -479,6 +479,7 @@ export interface LineLayerDefinition extends LayerDefinitionBase {
 export interface LineWorkflowLayerGuide extends LayerWorkflowGuideBase {
   dashed: boolean
   dashCount: number
+  dashLength: number
   dashTexture: WebGLTexture
   interactive: boolean
   cursor: Cursor
@@ -605,9 +606,6 @@ export interface HillshadeWorkflowLayerGuide extends LayerWorkflowGuideBase {
 export interface HillshadeWorkflowLayerGuideGPU extends HillshadeWorkflowLayerGuide {
   layerBuffer: GPUBuffer
   layerCodeBuffer: GPUBuffer
-  textureBindGroup: GPUBindGroup
-  renderTarget: GPUTexture
-  renderPassDescriptor: GPURenderPassDescriptor
 }
 export interface HillshadeWorkerLayer extends LayerWorkerBaseRaster {
   type: 'hillshade'
