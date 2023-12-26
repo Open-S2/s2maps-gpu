@@ -200,8 +200,8 @@ export default async function heatmapProgram (context: Context): Promise<Heatmap
     #setupFBO (): void {
       const { gl, context } = this
 
-      this.nullTextureA = context.buildTexture(null, 1, 1)
-      this.nullTextureB = context.buildTexture(null, 1, 1)
+      this.nullTextureA = context.buildTexture(null, 1)
+      this.nullTextureB = context.buildTexture(null, 1)
 
       const texture = this.texture = context.buildTexture(null, gl.canvas.width, gl.canvas.height)
       // create framebuffer

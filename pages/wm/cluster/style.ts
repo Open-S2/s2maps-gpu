@@ -14,7 +14,8 @@ const style: StyleDefinition = {
       type: 'json',
       path: '/geojson/earthquakes.geojson',
       extension: 'geojson',
-      cluster: true
+      cluster: true,
+      radius: 75
     }
   },
   layers: [
@@ -49,14 +50,14 @@ const style: StyleDefinition = {
           conditions: [
             {
               filter: { key: '__sum', comparator: '>', value: 750 },
-              input: 40
+              input: 80
             },
             {
               filter: { key: '__sum', comparator: '>', value: 100 },
-              input: 30
+              input: 60
             }
           ],
-          fallback: 20
+          fallback: 40
         }
       }
     }

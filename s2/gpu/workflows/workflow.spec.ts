@@ -338,7 +338,6 @@ export interface RasterWorkflow extends Workflow {
 export interface HillshadeWorkflow extends Workflow {
   buildSource: (rasterData: HillshadeData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: HillshadeLayerStyle) => HillshadeLayerDefinition
-  textureDraw: (features: HillshadeFeature[]) => HillshadeFeature[] | undefined
 }
 
 export interface SensorWorkflow extends Workflow {

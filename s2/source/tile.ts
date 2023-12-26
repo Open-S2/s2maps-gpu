@@ -58,6 +58,7 @@ class Tile implements TileBase {
   bindGroup!: GPUBindGroup
   uniformBuffer!: GPUBuffer
   positionBuffer!: GPUBuffer
+  state: 'loading' | 'loaded' | 'deleted' = 'loading'
   constructor (
     context: ContextGL | WebGPUContext,
     id: bigint,
@@ -192,6 +193,7 @@ class Tile implements TileBase {
 
   // cleanup after itself. When a tile is deleted, it's adventageous to cleanup GPU cache.
   delete (): void {
+    this.state = 'deleted'
     // remove all features
     for (const feature of this.featureGuides) {
       if ('destroy' in feature) feature.destroy()
@@ -312,7 +314,6 @@ export class WMTile extends Tile implements WMTileSpec {
     const offset = llToTilePx([lon, lat], [this.zoom, this.i, this.j], 1)
 
     this.matrix = projector.getMatrix(scale, offset)
-    // console.log(this.zoom, this.i, this.j, offset, this.matrix)
 
     // build bottomTop
     const { matrix } = this
@@ -320,11 +321,6 @@ export class WMTile extends Tile implements WMTileSpec {
     const br = project(matrix, [1, 0, 0])
     const tl = project(matrix, [0, 1, 0])
     const tr = project(matrix, [1, 1, 0])
-    // console.log(this.i, this.j)
-    // console.log(matrix)
-    // console.log(offset)
-    // console.log(bbox)
-    // console.log(bl, br, tl, tr)
     // store for eventual uniform "upload"
     this.bottomTop[0] = bl[0]
     this.bottomTop[1] = bl[1]

@@ -217,7 +217,6 @@ export interface HeatmapProgram extends ProgramSpec {
 export interface LineProgram extends ProgramSpec {
   curTexture: number
   typeBuffer?: WebGLBuffer
-  nullTexture: WebGLTexture
   layerGuides: Map<number, LineWorkflowLayerGuide>
   uniforms: { [key in LineProgramUniforms]: WebGLUniformLocation }
 
@@ -247,8 +246,6 @@ export interface RasterProgram extends ProgramSpec {
 }
 
 export interface HillshadeProgram extends ProgramSpec {
-  texture: WebGLTexture
-  framebuffer: WebGLFramebuffer
   layerGuides: Map<number, HillshadeWorkflowLayerGuide>
   uniforms: { [key in HillshadeProgramUniforms]: WebGLUniformLocation }
 
@@ -417,11 +414,13 @@ export enum LineProgramUniforms {
   uCBlind = 'uCBlind',
   uCap = 'uCap',
   uDashed = 'uDashed',
+  uDashCount = 'uDashCount',
   uDashArray = 'uDashArray',
   uSize = 'uSize', // WEBGL1
   uColor = 'uColor', // WEBGL1
   uOpacity = 'uOpacity', // WEBGL1
-  uWidth = 'uWidth' // WEBGL1
+  uWidth = 'uWidth', // WEBGL1
+  uTexLength = 'uTexLength' // WEBGL1
 }
 
 export enum PointProgramUniforms {
@@ -475,8 +474,13 @@ export enum HillshadeProgramUniforms {
   uCBlind = 'uCBlind',
   uFade = 'uFade',
   uTexture = 'uTexture',
-  uDrawState = 'uDrawState',
   uOpacity = 'uOpacity', // WEBGL1
+  uShadowColor = 'uShadowColor', // WEBGL1
+  uHighlightColor = 'uHighlightColor', // WEBGL1
+  uAccentColor = 'uAccentColor', // WEBGL1
+  uAzimuth = 'uAzimuth', // WEBGL1
+  uAltitude = 'uAltitude', // WEBGL1
+  uTexLength = 'uTexLength' // WEBGL1
 }
 
 export enum SensorProgramUniforms {

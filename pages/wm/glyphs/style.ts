@@ -24,7 +24,13 @@ const style: StyleDefinition = {
     },
     {
       name: 'poi-labels',
-      source: 'countries',
+      filter: {
+        key: 'class',
+        comparator: '==',
+        value: 'country'
+      },
+      source: 'planet',
+      layer: 'place',
       type: 'glyph',
       interactive: false,
       textFamily: 'robotoMedium',

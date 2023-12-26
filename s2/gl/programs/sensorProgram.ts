@@ -69,7 +69,6 @@ export default async function sensorProgram (context: Context): Promise<SensorPr
       // setup texture params
       const texture = context.buildTexture(
         built ? image as ImageBitmap : new Uint8ClampedArray(image as ArrayBuffer),
-        size,
         size
       )
 

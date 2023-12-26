@@ -1,5 +1,6 @@
 /* eslint-env worker */
 // import { isSafari } util/polyfill'
+import { colorFunc } from './vectorWorker'
 import parseFeatureFunction from 'style/parseFeatureFunction'
 
 import type { HillshadeData, RasterData, RasterDataGuide, SensorData, TileRequest } from '../worker.spec'
@@ -43,6 +44,15 @@ export default class RasterWorker implements RasterWorkerSpec {
       design.push(
         [saturation],
         [contrast]
+      )
+    } else if (type === 'hillshade') {
+      const { shadowColor, accentColor, highlightColor, azimuth, altitude, lch } = layerDefinition
+      design.push(
+        [shadowColor, colorFunc(lch)],
+        [accentColor, colorFunc(lch)],
+        [highlightColor, colorFunc(lch)],
+        [azimuth],
+        [altitude]
       )
     }
 

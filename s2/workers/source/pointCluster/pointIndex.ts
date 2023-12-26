@@ -30,6 +30,7 @@ export default class PointIndex<T> {
 
   /** Perform indexing of the added points. */
   sort (): void {
+    if (this.#sorted) return
     // kd-sort both arrays for efficient search
     this.#sort(this.nodeSize, 0, this.points.length - 1, 0)
     this.#sorted = true
@@ -37,15 +38,15 @@ export default class PointIndex<T> {
 
   /** Search the index for items within a given bounding box. */
   range (minX: number, minY: number, maxX: number, maxY: number): Array<Point<T>> {
-    if (!this.#sorted) this.sort()
+    this.sort()
 
     const { nodeSize } = this
-    const stack: Array<[number, number, number]> = [[0, this.points.length - 1, 0]]
+    const stack: Array<[left: number, right: number, axis: number]> = [[0, this.points.length - 1, 0]]
     const result: Array<Point<T>> = [] // ids of items that are in range
 
     // recursively search for items in range in the kd-sorted arrays
     while (stack.length > 0) {
-      const [axis, right, left] = stack.pop() as [number, number, number]
+      const [left, right, axis] = stack.pop() as [left: number, right: number, axis: number]
 
       // if we reached "tree node", search linearly
       if (right - left <= nodeSize) {
@@ -74,16 +75,16 @@ export default class PointIndex<T> {
 
   /** Search the index for items within a given radius. */
   radius (qx: number, qy: number, r: number): Array<Point<T>> {
-    if (!this.#sorted) this.sort()
+    this.sort()
 
     const { nodeSize, points } = this
-    const stack: Array<[number, number, number]> = [[0, points.length - 1, 0]] // left, right, axis
+    const stack: Array<[left: number, right: number, axis: number]> = [[0, points.length - 1, 0]] // left, right, axis
     const result: Array<Point<T>> = [] // ids of items that are in range
     const r2 = r * r
 
     // recursively search for items within radius in the kd-sorted arrays
     while (stack.length > 0) {
-      const [left, right, axis] = stack.pop() as [number, number, number]
+      const [left, right, axis] = stack.pop() as [left: number, right: number, axis: number]
 
       // if we reached "tree node", search linearly
       if (right - left <= nodeSize) {

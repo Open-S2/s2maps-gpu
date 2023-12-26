@@ -124,7 +124,7 @@ export default class Source {
     if ( // massive quality check to not over burden servers / lambdas with duds
       active && // we have the correct properties to make proper requests
       minzoom <= zoom && maxzoom >= zoom && // check zoom bounds
-      (faces.has(face)) // check the face exists
+      faces.has(face) // check the face exists
     ) {
       // request
       void this._tileRequest(mapID, tile, name)

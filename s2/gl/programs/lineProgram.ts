@@ -25,7 +25,6 @@ export default async function lineProgram (context: Context): Promise<LineProgra
   class LineProgram extends Program implements LineProgramSpec {
     curTexture = -1
     typeBuffer?: WebGLBuffer
-    nullTexture: WebGLTexture
     layerGuides = new Map<number, LineWorkflowLayerGuide>()
     declare uniforms: { [key in LineProgramUniforms]: WebGLUniformLocation }
     constructor (context: Context) {
@@ -39,8 +38,8 @@ export default async function lineProgram (context: Context): Promise<LineProgra
       // activate so we can setup samplers
       this.use()
       // create the null texture align with line
-      this.nullTexture = context.buildTexture(null, 1, 1)
-      gl.bindTexture(gl.TEXTURE_2D, this.nullTexture)
+      gl.activeTexture(gl.TEXTURE0)
+      gl.bindTexture(gl.TEXTURE_2D, context.nullTexture)
       // set device pixel ratio
       this.setDevicePixelRatio(devicePixelRatio)
     }
@@ -109,7 +108,7 @@ export default async function lineProgram (context: Context): Promise<LineProgra
       }
       // if dashed, build a texture
       const { length, dashCount, image } = buildDashImage(dasharray, context.devicePixelRatio)
-      const dashTexture = length > 0 ? context.buildTexture(image, length, 4, true) : this.nullTexture
+      const dashTexture = length > 0 ? context.buildTexture(image, length, 5) : context.nullTexture
       this.layerGuides.set(layerIndex, {
         sourceName: source,
         layerIndex,
@@ -117,6 +116,7 @@ export default async function lineProgram (context: Context): Promise<LineProgra
         lch,
         dashed,
         dashCount,
+        dashLength: length,
         dashTexture,
         interactive,
         cursor
@@ -145,9 +145,7 @@ export default async function lineProgram (context: Context): Promise<LineProgra
         [2, 2, gl.FLOAT, false, 24, 8],
         [3, 2, gl.FLOAT, false, 24, 16]
       ], true)
-      const lengthSoFarBuffer = lengthSoFarA.byteLength > 0
-        ? context.bindEnableVertexAttr(lengthSoFarA, 4, 1, gl.FLOAT, false, 0, 0)
-        : undefined
+      const lengthSoFarBuffer = context.bindEnableVertexAttr(lengthSoFarA, 4, 1, gl.FLOAT, false, 0, 0)
       // const fillIDBuffer = context.bindEnableVertexAttr(fillIDA, 6, 3, gl.UNSIGNED_BYTE, true, 0, 0)
 
       // bind the typeBuffer
@@ -197,7 +195,7 @@ export default async function lineProgram (context: Context): Promise<LineProgra
 
         const layerGuide = this.layerGuides.get(layerIndex)
         if (layerGuide === undefined) continue
-        const { sourceName, layerCode, lch, dashed, dashTexture, interactive } = layerGuide
+        const { sourceName, layerCode, lch, dashed, dashCount, dashLength, dashTexture, interactive } = layerGuide
 
         features.push({
           type: 'line',
@@ -207,6 +205,8 @@ export default async function lineProgram (context: Context): Promise<LineProgra
           offset,
           sourceName,
           dashed,
+          dashCount,
+          dashLength,
           dashTexture,
           cap,
           layerIndex,
@@ -226,31 +226,35 @@ export default async function lineProgram (context: Context): Promise<LineProgra
 
     use (): void {
       const { context } = this
+      const { gl } = context
       // setup context
       context.defaultBlend()
       context.disableCullFace()
       context.enableDepthTest()
       context.enableStencilTest()
       context.lequalDepth()
+      gl.activeTexture(gl.TEXTURE0)
       super.use()
     }
 
     draw (featureGuide: LineFeatureGuide, _interactive = false): void {
       // grab context
       const { gl, context, type, uniforms } = this
-      const { uCap, uDashed, uColor, uOpacity, uWidth } = uniforms
+      const { uCap, uDashed, uDashCount, uTexLength, uColor, uOpacity, uWidth } = uniforms
       // get current source data
       const {
-        count, offset, layerIndex, featureCode, source, cap, dashed, dashTexture, color, opacity, width
+        count, offset, layerIndex, featureCode, source, cap, dashed, dashCount, dashLength, dashTexture, color, opacity, width
       } = featureGuide
-      const { vao, vertexBuffer } = source
+      const { vao, vertexBuffer, lengthSoFarBuffer } = source
       context.setDepthRange(layerIndex)
       // set cap and dashed
       gl.uniform1f(uCap, cap)
       gl.uniform1i(uDashed, ~~dashed)
       // ensure a dash texture is mapped, if feature isn't dashed, use nullTexture
-      if (dashed && dashTexture !== undefined && this.curTexture !== layerIndex) {
+      if (dashed && this.curTexture !== layerIndex) {
         this.curTexture = layerIndex
+        gl.uniform1f(uTexLength, dashLength)
+        gl.uniform1f(uDashCount, dashCount)
         gl.bindTexture(gl.TEXTURE_2D, dashTexture)
       }
       // set feature code
@@ -266,6 +270,8 @@ export default async function lineProgram (context: Context): Promise<LineProgra
       gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 24, 0 + (offset * 24))
       gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 24, 8 + (offset * 24))
       gl.vertexAttribPointer(3, 2, gl.FLOAT, false, 24, 16 + (offset * 24))
+      gl.bindBuffer(gl.ARRAY_BUFFER, lengthSoFarBuffer)
+      gl.vertexAttribPointer(4, 1, gl.FLOAT, false, 4, offset * 4)
       // draw elements
       gl.drawArraysInstanced(gl.TRIANGLES, 0, 9, count) // gl.drawArraysInstancedANGLE(mode, first, count, primcount)
     }

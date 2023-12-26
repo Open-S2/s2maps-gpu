@@ -54,11 +54,11 @@ export default class FillWorkflow implements FillWorkflowSpec {
       label: 'Fill Pipeline Layout',
       bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, maskPatternBindGroupLayout]
     })
-    this.maskPipeline = this.#getPipeline('mask')
-    this.fillPipeline = this.#getPipeline('fill')
-    this.maskFillPipeline = this.#getPipeline('mask-fill')
-    this.invertPipeline = this.#getPipeline('invert')
-    this.interactivePipeline = this.#getComputePipeline()
+    this.maskPipeline = await this.#getPipeline('mask')
+    this.fillPipeline = await this.#getPipeline('fill')
+    this.maskFillPipeline = await this.#getPipeline('mask-fill')
+    this.invertPipeline = await this.#getPipeline('invert')
+    this.interactivePipeline = await this.#getComputePipeline()
   }
 
   destroy (): void {
@@ -273,7 +273,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
   // https://programmer.ink/think/several-best-practices-of-webgpu.html
   // BEST PRACTICE 6: it is recommended to create pipeline asynchronously
   // BEST PRACTICE 7: explicitly define pipeline layouts
-  #getPipeline (type: 'fill' | 'mask' | 'invert' | 'mask-fill'): GPURenderPipeline {
+  async #getPipeline (type: 'fill' | 'mask' | 'invert' | 'mask-fill'): Promise<GPURenderPipeline> {
     const { context } = this
     const { device, format, defaultBlend, sampleCount, projection } = context
     const invert = type === 'invert'
@@ -287,7 +287,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
       passOp: 'replace'
     }
 
-    return device.createRenderPipeline({
+    return await device.createRenderPipelineAsync({
       label: `Fill ${type} Pipeline`,
       layout: this.#pipelineLayout,
       vertex: {
@@ -322,7 +322,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
     })
   }
 
-  #getComputePipeline (): GPUComputePipeline {
+  async #getComputePipeline (): Promise<GPUComputePipeline> {
     const { context } = this
     const { device, frameBindGroupLayout, featureBindGroupLayout, interactiveBindGroupLayout } = context
 
@@ -341,7 +341,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
       bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.#fillInteractiveBindGroupLayout, interactiveBindGroupLayout]
     })
 
-    return device.createComputePipeline({
+    return await device.createComputePipelineAsync({
       label: 'Fill Interactive Pipeline',
       layout,
       compute: {

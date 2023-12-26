@@ -429,9 +429,8 @@ export default class Camera {
       if (newTiles.length > 0) style.requestTiles(newTiles)
       // given the S2CellID, find them in cache and return them
       this.tilesInView = tileCache.getBatch(tilesInView)
-
-      return this.tilesInView
-    } else { return this.tilesInView }
+    }
+    return this.tilesInView
   }
 
   createFutureTiles (tileIDs: bigint[]): void {

@@ -2,7 +2,7 @@
 import type Camera from '..'
 import * as mat4 from './mat4'
 import { getTilesS2, getTilesWM } from './getTiles'
-import cursorToLonLatS2 from './cursorToLonLat'
+import { cursorToLonLatS2, cursorToLonLatWM } from './cursorToLonLat'
 import { fromLonLatGL, mul, normalize } from 'geometry/s2/s2Point'
 import { degToRad } from 'geometry'
 import { mercatorLatScale } from 'geometry/webMerc'
@@ -260,10 +260,9 @@ export default class Projector {
 
   // x and y are the distances from the center of the screen
   cursorToLonLat (xOffset: number, yOffset: number): undefined | [lon: number, lat: number] {
-    const { projection, lon, lat, zoom, tileSize } = this
+    const { projection, lon, lat, zoom, tileSize, multiplier } = this
     if (projection === 'S2') return cursorToLonLatS2(lon, lat, xOffset, yOffset, (tileSize * Math.pow(2, zoom)) / 2)
-    // TODO: Web Mercator
-    return [0, 0]
+    return cursorToLonLatWM(lon, lat, xOffset, yOffset, zoom, tileSize / multiplier)
   }
 
   // S2 -> type of meters or kilometers

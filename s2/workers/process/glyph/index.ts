@@ -133,7 +133,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       // if icon, convert field to list of codes, otherwise create a unicode array
       let missing = false
       if (type === 'text') {
-        field = this.uShaper.shapeString(field)
+        try { field = this.uShaper.shapeString(field) } catch (err) { console.error(field, err) }
         fieldCodes = field.split('').map(char => char.charCodeAt(0))
         missing ||= imageStore.addMissingChars(fieldCodes, family)
       } else {
@@ -282,10 +282,10 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
   #flush (mapID: string, sourceName: string, tileID: bigint): void {
     const features = this.featureStore.get(tileID) ?? []
     if (features.length === 0) return
-    const pointFeatures = features.filter(f => f.glyphType === 'point') as GlyphPoint[]
+    const glyphFeatures = features.filter(f => f.glyphType === 'point') as GlyphPoint[]
     if (this.gpuType === 3) {
-      this.#flushPoints3(mapID, sourceName, tileID, pointFeatures)
-    } else this.#flushPoints2(mapID, sourceName, tileID, pointFeatures)
+      this.#flushPoints3(mapID, sourceName, tileID, glyphFeatures)
+    } else this.#flushPoints2(mapID, sourceName, tileID, glyphFeatures)
     // cleanup
     this.featureStore.delete(tileID)
   }

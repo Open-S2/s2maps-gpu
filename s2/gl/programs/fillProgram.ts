@@ -115,6 +115,9 @@ export default async function fillProgram (context: Context): Promise<FillProgra
         layerCode,
         lch,
         invert,
+        texXY: [0, 0],
+        texWH: [1, 1],
+        patternMovement: false,
         opaque,
         interactive,
         featureCode: [0],
@@ -182,11 +185,15 @@ export default async function fillProgram (context: Context): Promise<FillProgra
             color.push(...featureGuideArray.slice(idx, idx + 4))
             opacity.push(featureGuideArray[idx + 4])
           }
+          if (color.length === 0) color = undefined
+          if (opacity.length === 0) opacity = undefined
         } else {
           if (encodingSize > 0) featureCode = [...featureGuideArray.slice(i, i + encodingSize)]
         }
         // update index
         i += encodingSize
+        const [texX, texY, texW, texH, patternMovement] = featureGuideArray.slice(i, i + 5)
+        i += 5
 
         const layerGuide = this.layerGuides.get(layerIndex)
         if (layerGuide === undefined) continue
@@ -201,6 +208,9 @@ export default async function fillProgram (context: Context): Promise<FillProgra
           offset,
           sourceName,
           invert,
+          texXY: [texX, texY],
+          texWH: [texW, texH],
+          patternMovement: patternMovement > 0,
           layerIndex,
           opaque,
           layerCode,
@@ -220,8 +230,9 @@ export default async function fillProgram (context: Context): Promise<FillProgra
       // grab context
       const { gl, context, type, uniforms } = this
       // get current source data
-      const { source, tile, count, offset, layerIndex, color, opacity, invert, featureCode, mode } = featureGuide
+      const { source, tile, parent, count, offset, layerIndex, color, opacity, invert, featureCode, mode } = featureGuide
       const { vao } = source
+      const { mask } = parent ?? tile
       // ensure proper context state
       context.defaultBlend()
       context.enableDepthTest()
@@ -244,7 +255,7 @@ export default async function fillProgram (context: Context): Promise<FillProgra
       // If invert reset color mask & draw a full tile mask
       if (invert) {
         gl.colorMask(true, true, true, true)
-        this.drawMask(tile.mask)
+        this.drawMask(mask)
       }
     }
 

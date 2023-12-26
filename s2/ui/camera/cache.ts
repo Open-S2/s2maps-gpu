@@ -40,14 +40,12 @@ export default class Cache<U, T extends CachedObject> extends Map<U, T> {
   delete (key: U): boolean {
     this.order.splice(this.order.indexOf(key), 1)
     const value = super.get(key)
-    if (value !== undefined && typeof value.delete === 'function') value.delete()
+    value?.delete?.()
     return super.delete(key)
   }
 
   deleteAll (): void {
-    for (const [, value] of this) {
-      if (typeof value === 'object' && typeof value.delete === 'function') value.delete()
-    }
+    for (const [, value] of this) value?.delete?.()
     super.clear()
     this.order = []
   }

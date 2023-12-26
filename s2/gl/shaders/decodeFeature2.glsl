@@ -1,4 +1,5 @@
-uniform float uInputs[16]; // [zoom, lon, lat, angle, pitch, time, featureState, curFeature, ...extensions]
+// [zoom, lon, lat, bearing, pitch, time, aspectX, aspectY, mouseX, mouseY, deltaMouseX, deltaMouseY, featureState, currFeature, ...extensions]
+uniform float uInputs[16];
 uniform float uLayerCode[128];
 uniform float uFeatureCode[64];
 

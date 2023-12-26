@@ -43,6 +43,7 @@ export interface TileBase {
   uniforms: Float32Array
   rendered: boolean
   bottomTop: Float32Array
+  state: 'loading' | 'loaded' | 'deleted'
 
   flush: (data: FlushData) => void
   removeLayer: (index: number) => void

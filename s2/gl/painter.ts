@@ -245,13 +245,14 @@ export default class Painter implements PainterSpec {
     const { context } = this
     // setup variables
     let curLayer = -1
-    let program: Program
+    let program: Program | undefined
     // run through the features, and upon tile, layer, or program change, adjust accordingly
     for (const feature of features) {
       const { tile, parent, layerIndex, type, layerCode, lch } = feature
       const { tmpMaskID } = tile
       // set program
-      program = this.useWorkflow(type as any) // TODO: Maybe there is a way for this to properly check
+      program = this.useWorkflow(type as any | undefined) // TODO: Maybe there is a way for this to properly check
+      if (program === undefined) throw new Error(`Program ${type} not found`)
       // set stencil
       context.stencilFuncEqual(tmpMaskID)
       // update layerCode if the current layer has changed
@@ -304,7 +305,6 @@ export default class Painter implements PainterSpec {
     const { width, height } = canvas
     const pixels = new Uint8ClampedArray(width * height * 4)
     gl.readPixels(0, 0, width, height, RGBA, UNSIGNED_BYTE, pixels)
-    // console.log(pixels)
 
     return pixels
   }

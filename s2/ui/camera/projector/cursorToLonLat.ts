@@ -1,3 +1,5 @@
+import { MAXLAT, llToPX, pxToLL } from 'geometry'
+
 // https://github.com/proj4js/proj4js/blob/master/lib/projections/ortho.js
 const EPSLN = 1.0e-10
 const D2R = 0.01745329251994329577 // eslint-disable-line
@@ -5,7 +7,7 @@ const R2D = 57.29577951308232088 // eslint-disable-line
 
 // centerLon and centerlat is where the center of the sphere is currently located
 // x is the distance from center
-export default function cursorToLonLat (
+export function cursorToLonLatS2 (
   centerLon: number,
   centerLat: number,
   xOffset: number,
@@ -40,6 +42,26 @@ export default function cursorToLonLat (
     lon = adjustLon(centerLon + atan2((xOffset * sinz), rh * cosP14 * cosz - yOffset * sinP14 * sinz))
   }
   return [lon * R2D, lat * R2D]
+}
+
+export function cursorToLonLatWM (
+  lon: number,
+  lat: number,
+  xOffset: number,
+  yOffset: number,
+  zoom: number,
+  tileSize: number
+): undefined | [lon: number, lat: number] {
+  // grab the px position of lon lat
+  const px = llToPX([lon, lat], zoom, false, tileSize)
+  // if px + offset is outside of min and max, return undefined
+  // adjust by the offset
+  px[0] += xOffset
+  px[1] -= yOffset
+  // convert back to lon lat
+  const ll = pxToLL(px, zoom, tileSize)
+  if (ll[0] > 180 || ll[0] < -180 || ll[1] > MAXLAT || ll[1] < -MAXLAT) return
+  return ll
 }
 
 function asinz (x: number): number {
