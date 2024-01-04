@@ -13,12 +13,22 @@ in float vAzimuth;
 in float vAltitude;
 uniform sampler2D uTexture;
 uniform float uFade;
+// [offset, zFactor, rMul, gMul, bMul, aMul]
+uniform float uUnpack[6];
 
 out vec4 fragColor;
 
 float getElevation (in vec2 uv) {
   vec4 color = texture(uTexture, uv);
-  return -10000. + ((color.r * 256. * 256. + color.g * 256. + color.b) * 0.1);
+  return uUnpack[0] + (
+    (
+      color.r * uUnpack[2] +
+      color.g * uUnpack[3] +
+      color.b * uUnpack[4] +
+      color.a * uUnpack[5]
+    )
+    * uUnpack[1]
+  );
 }
 
 void main () {

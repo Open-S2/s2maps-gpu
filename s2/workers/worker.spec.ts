@@ -43,7 +43,6 @@ export interface TileRequest {
   type: Projection
   bbox: [left: number, bottom: number, right: number, top: number]
   division: number
-  size: number
   time?: number
   parent?: ParentLayer
   layerIndexes?: number[]

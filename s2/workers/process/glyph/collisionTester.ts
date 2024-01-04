@@ -13,7 +13,6 @@ export default class CollisionTester {
    * If there is a collision, return true
    */
   collides (node: Node): boolean {
-    if (this.nodes.length === 0) this.nodes.push(node)
     let collision = false
     for (const existing of this.nodes) {
       if (this.#collides(node, existing)) {

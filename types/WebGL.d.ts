@@ -612,7 +612,12 @@ interface WebGLRenderingContext {
   texParameterf: (target: number, pname: number, param: number) => void
   texParameteri: (target: number, pname: number, param: number) => void
 
-  texSubImage2D: ((target: number, level: number, xoffset: number, yoffset: number, width: number, height: number, format: number, type: number, pixels: ArrayBufferView) => void) & ((target: number, level: number, xoffset: number, yoffset: number, format: number, type: number, pixels: ImageData) => void) & ((target: number, level: number, xoffset: number, yoffset: number, format: number, type: number, image: HTMLImageElement) => void) & ((target: number, level: number, xoffset: number, yoffset: number, format: number, type: number, canvas: HTMLCanvasElement) => void) & ((target: number, level: number, xoffset: number, yoffset: number, format: number, type: number, video: HTMLVideoElement) => void) // May throw DOMException
+  texSubImage2D:
+  ((target: number, level: number, xoffset: number, yoffset: number, width: number, height: number, format: number, type: number, pixels: ArrayBufferView) => void) &
+  ((target: number, level: number, xoffset: number, yoffset: number, format: number, type: number, pixels: ImageData | ImageBitmap) => void) &
+  ((target: number, level: number, xoffset: number, yoffset: number, format: number, type: number, image: HTMLImageElement) => void) &
+  ((target: number, level: number, xoffset: number, yoffset: number, format: number, type: number, canvas: HTMLCanvasElement) => void) &
+  ((target: number, level: number, xoffset: number, yoffset: number, format: number, type: number, video: HTMLVideoElement) => void) // May throw DOMException
 
   uniform1f: (location: WebGLUniformLocation, x: number) => void
   uniform1fv: ((location: WebGLUniformLocation, v: Float32Array) => void) & ((location: WebGLUniformLocation, v: number[]) => void)

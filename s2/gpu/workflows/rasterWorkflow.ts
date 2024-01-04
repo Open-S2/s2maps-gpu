@@ -3,7 +3,11 @@ import shaderCode from '../shaders/raster.wgsl'
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
 
 import type { WebGPUContext } from '../context'
-import type { RasterFeature, RasterSource, RasterWorkflow as RasterWorkflowSpec } from './workflow.spec'
+import type {
+  RasterFeature as RasterFeatureSpec,
+  RasterSource,
+  RasterWorkflow as RasterWorkflowSpec
+} from './workflow.spec'
 import type {
   LayerDefinitionBase,
   RasterLayerDefinition,
@@ -24,11 +28,93 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
   }
 ]
 
+export class RasterFeature implements RasterFeatureSpec {
+  type = 'raster' as const
+  sourceName: string
+  fadeDuration: number
+  bindGroup: GPUBindGroup
+  rasterBindGroup: GPUBindGroup
+  constructor (
+    public layerGuide: RasterWorkflowLayerGuideGPU,
+    public workflow: RasterWorkflowSpec,
+    public tile: Tile,
+    public source: RasterSource,
+    public layerIndex: number,
+    public featureCode: number[],
+    public rasterFadeBuffer: GPUBuffer,
+    public featureCodeBuffer: GPUBuffer,
+    public fadeStartTime = Date.now(),
+    public parent?: Tile
+  ) {
+    const { sourceName, fadeDuration } = layerGuide
+    this.sourceName = sourceName
+    this.fadeDuration = fadeDuration
+    this.bindGroup = this.#buildBindGroup()
+    this.rasterBindGroup = this.#buildRasterBindGroup()
+  }
+
+  draw (): void {
+    const { tile, workflow } = this
+    workflow.context.setStencilReference(tile.tmpMaskID)
+    workflow.draw(this)
+  }
+
+  destroy (): void {
+    const { rasterFadeBuffer, featureCodeBuffer } = this
+    rasterFadeBuffer.destroy()
+    featureCodeBuffer.destroy()
+  }
+
+  duplicate (tile: Tile, parent: Tile): RasterFeature {
+    const {
+      layerGuide, workflow, source, layerIndex,
+      featureCode, rasterFadeBuffer, featureCodeBuffer, fadeStartTime
+    } = this
+    const { context } = workflow
+    const cE = context.device.createCommandEncoder()
+    const newRasterFadeBuffer = context.duplicateGPUBuffer(rasterFadeBuffer, cE)
+    const newFeatureCodeBuffer = context.duplicateGPUBuffer(featureCodeBuffer, cE)
+    context.device.queue.submit([cE.finish()])
+    return new RasterFeature(
+      layerGuide, workflow, tile, source, layerIndex, featureCode,
+      newRasterFadeBuffer, newFeatureCodeBuffer, fadeStartTime, parent
+    )
+  }
+
+  #buildBindGroup (): GPUBindGroup {
+    const { workflow, tile, parent, layerGuide, featureCodeBuffer } = this
+    const { context } = workflow
+    const { mask } = parent ?? tile
+    const { layerBuffer, layerCodeBuffer } = layerGuide
+    return context.buildGroup(
+      'Raster Feature BindGroup',
+      context.featureBindGroupLayout,
+      [mask.uniformBuffer, mask.positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
+    )
+  }
+
+  #buildRasterBindGroup (): GPUBindGroup {
+    const { source, workflow, rasterFadeBuffer, layerGuide } = this
+    const { context, rasterBindGroupLayout } = workflow
+    const { resampling } = layerGuide
+    const sampler = context.buildSampler(resampling)
+    return context.device.createBindGroup({
+      label: 'Raster BindGroup',
+      layout: rasterBindGroupLayout,
+      entries: [
+        { binding: 0, resource: { buffer: rasterFadeBuffer } },
+        { binding: 1, resource: sampler },
+        { binding: 2, resource: source.texture.createView() }
+      ]
+    })
+  }
+}
+
 export default class RasterWorkflow implements RasterWorkflowSpec {
   context: WebGPUContext
   layerGuides = new Map<number, RasterWorkflowLayerGuideGPU>()
   pipeline!: GPURenderPipeline
-  #rasterBindGroupLayout!: GPUBindGroupLayout
+  rasterBindGroupLayout!: GPUBindGroupLayout
   constructor (context: WebGPUContext) {
     this.context = context
   }
@@ -109,56 +195,20 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
 
   #buildFeatures (source: RasterSource, rasterData: RasterData, tile: Tile): void {
     const { context } = this
-    const { sourceName, featureGuides } = rasterData
-    const { mask } = tile
+    const { featureGuides } = rasterData
     // for each layer that maches the source, build the feature
-
-    const features: RasterFeature[] = []
+    const features: RasterFeatureSpec[] = []
 
     for (const { code, layerIndex } of featureGuides) {
       const layerGuide = this.layerGuides.get(layerIndex)
       if (layerGuide === undefined) continue
-      const { layerBuffer, layerCodeBuffer, resampling, fadeDuration, lch } = layerGuide
 
       const rasterFadeBuffer = context.buildGPUBuffer('Raster Uniform Buffer', new Float32Array([1]), GPUBufferUsage.UNIFORM)
-      const sampler = context.buildSampler(resampling)
-      const rasterBindGroup = context.device.createBindGroup({
-        label: 'Raster BindGroup',
-        layout: this.#rasterBindGroupLayout,
-        entries: [
-          { binding: 0, resource: { buffer: rasterFadeBuffer } },
-          { binding: 1, resource: sampler },
-          { binding: 2, resource: source.texture.createView() }
-        ]
-      })
       const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array(code.length > 0 ? code : [0]), GPUBufferUsage.STORAGE)
-      const bindGroup = context.buildGroup(
-        'Feature BindGroup',
-        context.featureBindGroupLayout,
-        [mask.uniformBuffer, mask.positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
+      const feature = new RasterFeature(
+        layerGuide, this, tile, source, layerIndex,
+        code, rasterFadeBuffer, featureCodeBuffer
       )
-
-      const feature: RasterFeature = {
-        type: 'raster' as const,
-        tile,
-        source,
-        sourceName,
-        layerIndex,
-        lch,
-        featureCode: code,
-        fadeDuration,
-        bindGroup,
-        rasterBindGroup,
-        fadeStartTime: Date.now(),
-        draw: () => {
-          context.setStencilReference(tile.tmpMaskID)
-          this.draw(feature)
-        },
-        destroy: () => {
-          rasterFadeBuffer.destroy()
-          featureCodeBuffer.destroy()
-        }
-      }
       features.push(feature)
     }
 
@@ -170,10 +220,10 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
   // BEST PRACTICE 7: explicitly define pipeline layouts
   async #getPipeline (): Promise<GPURenderPipeline> {
     const { context } = this
-    const { device, format, projection, sampleCount, frameBindGroupLayout, featureBindGroupLayout } = context
+    const { device, format, defaultBlend, projection, sampleCount, frameBindGroupLayout, featureBindGroupLayout } = context
 
     // prep raster uniforms
-    this.#rasterBindGroupLayout = context.device.createBindGroupLayout({
+    this.rasterBindGroupLayout = context.device.createBindGroupLayout({
       label: 'Raster BindGroupLayout',
       entries: [
         // uniforms
@@ -187,7 +237,7 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
 
     const module = device.createShaderModule({ code: shaderCode })
     const layout = device.createPipelineLayout({
-      bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.#rasterBindGroupLayout]
+      bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.rasterBindGroupLayout]
     })
     const stencilState: GPUStencilFaceState = {
       compare: 'equal',
@@ -207,7 +257,10 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
       fragment: {
         module,
         entryPoint: 'fMain',
-        targets: [{ format }]
+        targets: [{
+          format,
+          blend: defaultBlend
+        }]
       },
       primitive: {
         topology: 'triangle-strip',
@@ -227,17 +280,16 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
     })
   }
 
-  draw ({ bindGroup, rasterBindGroup, source }: RasterFeature): void {
+  draw ({ bindGroup, rasterBindGroup, source }: RasterFeatureSpec): void {
     // get current source data
     const { passEncoder } = this.context
     const { vertexBuffer, indexBuffer, count, offset } = source
-
     // setup pipeline, bind groups, & buffers
     this.context.setRenderPipeline(this.pipeline)
-    passEncoder.setBindGroup(1, bindGroup)
-    passEncoder.setBindGroup(2, rasterBindGroup)
     passEncoder.setVertexBuffer(0, vertexBuffer)
     passEncoder.setIndexBuffer(indexBuffer, 'uint32')
+    passEncoder.setBindGroup(1, bindGroup)
+    passEncoder.setBindGroup(2, rasterBindGroup)
     // draw
     passEncoder.drawIndexed(count, 1, offset, 0, 0)
   }

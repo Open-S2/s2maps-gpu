@@ -224,12 +224,14 @@ export default class S2MapUI extends Camera {
     requestAnimationFrame(() => {
       if (this.#fullyRenderedScreen()) {
         // assuming the screen is ready for a screen shot we ask for a draw
-        const screen = this.painter.getScreen()
-        if (this.webworker) {
-          postMessage({ type: 'screenshot', screen })
-        } else {
-          this.parent?.dispatchEvent(new CustomEvent('screenshot', { detail: screen }))
-        }
+        this.painter.getScreen()
+          .then(screen => {
+            if (this.webworker) {
+              postMessage({ type: 'screenshot', screen })
+            } else {
+              this.parent?.dispatchEvent(new CustomEvent('screenshot', { detail: screen }))
+            }
+          })
       } else { this.screenshot() }
     })
   }

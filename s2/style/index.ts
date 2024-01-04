@@ -14,7 +14,7 @@ import type { WorkflowType as GLWorkflowType } from 'gl/programs/program.spec'
 import type { WorkflowType as GPUWorkflowType } from 'gpu/workflows/workflow.spec'
 import type Camera from 'ui/camera'
 import type { MapOptions } from 'ui/s2mapUI'
-import type { Tile } from 'source/tile.spec'
+import type { TileShared as Tile } from 'source/tile.spec'
 
 // PRE) If style is a string (url), ship it off to Source Worker to fetch the style
 // 1) Build programs necessary to render the style
@@ -62,7 +62,7 @@ export default class Style {
     const { maskLayers, camera } = this
     for (const maskLayer of maskLayers) {
       const workflow = camera.painter.workflows[maskLayer.type]
-      workflow?.buildMaskFeature(maskLayer as any, tile as any)
+      workflow?.buildMaskFeature(maskLayer as any, tile)
     }
   }
 
@@ -155,9 +155,9 @@ export default class Style {
     const tileRequests: TileRequest[] = []
     tiles.forEach(tile => {
       // grab request values
-      const { id, face, i, j, zoom, type, bbox, division, size } = tile
+      const { id, face, i, j, zoom, type, bbox, division } = tile
       // build tileRequests
-      tileRequests.push({ id, face, i, j, zoom, type, bbox, division, size })
+      tileRequests.push({ id, face, i, j, zoom, type, bbox, division })
     })
     // send the tiles over to the worker pool manager to split the workload
     if (webworker) {
@@ -199,8 +199,9 @@ export default class Style {
   }
 
   #buildAnalytics (): Analytics {
-    const { gl, gpu, renderer, type } = this.camera.painter.context
-    const { width, height } = (gl ?? gpu).canvas
+    const { context } = this.camera.painter
+    const { renderer, type, presentation } = context
+    const { width, height } = presentation
     return {
       gpu: renderer,
       context: type,

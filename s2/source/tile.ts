@@ -5,16 +5,6 @@ import { fromID, llToTilePx } from 'geometry/webMerc'
 import { fromSTGL, mul, normalize } from 'geometry/s2/s2Point'
 import { level, toIJ } from 'geometry/s2/s2CellID'
 
-import type {
-  Context as ContextGL,
-  FeatureGuide as FeatureGuideGL,
-  MaskSource as MaskSourceGL
-} from 'gl/contexts/context.spec'
-import type WebGPUContext from 'gpu/context/context'
-import type {
-  FeatureBase as FeatureBaseGPU,
-  TileMaskSource as MaskSourceGPU
-} from 'gpu/workflows/workflow.spec'
 import type Projector from 'ui/camera/projector'
 import type { BBox, Face, XYZ } from 'geometry'
 import type { FlushData, InteractiveObject } from 'workers/worker.spec'
@@ -22,70 +12,73 @@ import type { LayerDefinition, Projection } from 'style/style.spec'
 import type {
   Corners,
   FaceST,
-  S2Tile as S2TileSpec,
-  TileBase,
-  WMTile as WMTileSpec
+  SharedContext,
+  SharedFeatureGuide,
+  SharedMaskSource,
+  TileGL,
+  TileGPU,
+  TileBase as TileSpec
 } from './tile.spec'
+import type { WebGPUContext } from 'gpu/context'
+import type { WebGL2Context, WebGLContext } from 'gl'
 
 export function createTile (
   projection: Projection,
-  context: ContextGL | WebGPUContext,
-  id: bigint,
-  size = 512
-): S2Tile | WMTile {
-  if (projection === 'S2') return new S2Tile(context, id, size)
-  else return new WMTile(context, id, size)
+  context: WebGPUContext | WebGLContext | WebGL2Context,
+  id: bigint
+): TileGL & TileGPU {
+  const Tile = projection === 'S2' ? S2Tile : WMTile
+  return new Tile(context as unknown as SharedContext, id) as unknown as TileGL & TileGPU
 }
 
-class Tile implements TileBase {
+class Tile<C extends SharedContext, F extends SharedFeatureGuide, M extends SharedMaskSource>
+implements TileSpec<C, F, M> {
   id: bigint
   face: Face = 0
   i = 0
   j = 0
   zoom = 0
-  size: number
   division = 1
   tmpMaskID = 0
-  mask: MaskSourceGL | MaskSourceGPU
+  mask: M
   bbox: BBox = [0, 0, 0, 0]
-  featureGuides: Array<FeatureGuideGL | FeatureBaseGPU> = []
-  context: ContextGL | WebGPUContext
+  featureGuides: F[] = []
+  context: C
   interactiveGuide = new Map<number, InteractiveObject>()
   rendered = false
   uniforms = new Float32Array(7) // [isS2, face, zoom, sLow, tLow, deltaS, deltaT]
   bottomTop = new Float32Array(8)
-  // WebGPU specific properties
-  bindGroup!: GPUBindGroup
-  uniformBuffer!: GPUBuffer
-  positionBuffer!: GPUBuffer
   state: 'loading' | 'loaded' | 'deleted' = 'loading'
-  constructor (
-    context: ContextGL | WebGPUContext,
-    id: bigint,
-    size = 512
-  ) {
+  type: 'S2' | 'WM' = 'S2'
+  faceST!: FaceST
+  matrix!: Float32Array
+  constructor (context: C, id: bigint) {
     this.context = context
     this.id = id
-    this.size = size
-    // grab mask
-    this.mask = context.getMask(1, this)
+    this.mask = context.getMask(1, this as any) as M
   }
 
   // inject references to featureGuide from each parentTile. Sometimes if we zoom really fast, we inject
   // a parents' parent or deeper, so we need to reflect that in the tile property.
-  injectParentTile (parent: Tile, layers: LayerDefinition[]): void {
+  injectParentTile (parent: TileSpec<C, F, M>, layers: LayerDefinition[]): void {
     // feature guides
     for (const feature of parent.featureGuides) {
-      if ('maskLayer' in feature && feature.maskLayer) continue // ignore mask features
+      if (feature.maskLayer ?? false) continue // ignore mask features
       const { maxzoom } = layers[feature.layerIndex]
       const actualParent = feature.parent ?? parent
       if (this.zoom <= maxzoom) {
-        this.featureGuides.push({
-          ...feature,
-          tile: this as any, // TODO: Maybe TS actually has a sane way to solve this problem.
-          parent: actualParent as any,
-          bounds: this.#buildBounds(actualParent as any)
-        })
+        const bounds = this.#buildBounds(actualParent)
+        if (feature.duplicate !== undefined) {
+          // @ts-expect-error - there is no easy way to solve this typescript error
+          this.featureGuides.push(feature.duplicate(this, actualParent, bounds))
+        } else {
+          this.featureGuides.push({
+            ...feature,
+            tile: this,
+            parent: actualParent,
+            bounds
+          })
+        }
       }
     }
     // interactive guides
@@ -95,15 +88,15 @@ class Tile implements TileBase {
   setScreenPositions (_: Projector): void {
     const { context, mask, bottomTop } = this
     // if WebGPU mask, we need to update the position buffer
-    if ('positionBuffer' in mask && 'device' in context) {
-      context.device.queue.writeBuffer(mask.positionBuffer, 0, bottomTop)
+    if (mask.positionBuffer !== undefined) {
+      context.device?.queue.writeBuffer(mask.positionBuffer, 0, bottomTop)
     }
   }
 
   // currently this is for glyphs, points, and heatmaps. By sharing glyph data with children,
   // the glyphs will be rendered 4 or even more times. To alleviate this, we can set boundaries
   // of what points will be considered
-  #buildBounds (parent: S2Tile): [number, number, number, number] {
+  #buildBounds (parent: TileSpec<C, F, M>): BBox {
     let { i, j, zoom } = this
     const parentZoom = parent.zoom
     // get the scale
@@ -125,7 +118,7 @@ class Tile implements TileBase {
     return [0 + iShift, 0 + jShift, 1 / scale + iShift, 1 / scale + jShift]
   }
 
-  addFeatures (features: Array<FeatureGuideGL | FeatureBaseGPU>): void {
+  addFeatures (features: F[]): void {
     // filter parent tiles that were added
     const layerIndexes = new Set(features.map(f => f.layerIndex))
     this.featureGuides = this.featureGuides.filter(f => !(
@@ -149,7 +142,7 @@ class Tile implements TileBase {
         fg.parent !== undefined &&
         // corner-case: empty data/missing tile -> flushes ALL layers,
         // but that layer MAY BE inverted so we don't kill it.
-        !('invert' in fg && fg.invert)
+        !(fg.invert ?? false)
       )
     })
   }
@@ -195,12 +188,10 @@ class Tile implements TileBase {
   delete (): void {
     this.state = 'deleted'
     // remove all features
-    for (const feature of this.featureGuides) {
-      if ('destroy' in feature) feature.destroy()
-    }
+    for (const feature of this.featureGuides) feature.destroy?.()
     this.featureGuides = []
     this.interactiveGuide = new Map()
-    if ('destroy' in this.mask) this.mask.destroy()
+    this.mask.destroy?.()
   }
 
   deleteSources (sourceNames: string[]): void {
@@ -212,16 +203,13 @@ class Tile implements TileBase {
   }
 }
 
-export class S2Tile extends Tile implements S2TileSpec {
+export class S2Tile<C extends SharedContext, F extends SharedFeatureGuide, M extends SharedMaskSource>
+  extends Tile<C, F, M> {
   type = 'S2' as const
   faceST: FaceST
   corners?: Corners
-  constructor (
-    context: ContextGL | WebGPUContext,
-    id: bigint,
-    size = 512
-  ) {
-    super(context, id, size)
+  constructor (context: C, id: bigint) {
+    super(context, id)
     const { max, min, floor } = Math
     const zoom = this.zoom = level(id)
     const [face, i, j] = toIJ(id, zoom)
@@ -244,7 +232,7 @@ export class S2Tile extends Tile implements S2TileSpec {
     // build division
     this.division = 16 / (1 << max(min(floor(zoom / 2), 4), 0))
     // grab mask
-    if (this.division !== 1) this.mask = context.getMask(this.division, this)
+    if (this.division !== 1) this.mask = context.getMask(this.division, this as any) as M
   }
 
   #buildCorners (): void {
@@ -286,15 +274,12 @@ export class S2Tile extends Tile implements S2TileSpec {
   }
 }
 
-export class WMTile extends Tile implements WMTileSpec {
+export class WMTile<C extends SharedContext, F extends SharedFeatureGuide, M extends SharedMaskSource>
+  extends Tile<C, F, M> {
   type = 'WM' as const
-  matrix: Float32Array = new Float32Array(16)
-  constructor (
-    context: ContextGL | WebGPUContext,
-    id: bigint,
-    size = 512
-  ) {
-    super(context, id, size)
+  matrix = new Float32Array(16)
+  constructor (context: C, id: bigint) {
+    super(context, id)
     const [zoom, i, j] = fromID(id)
     this.i = i
     this.j = j
@@ -334,7 +319,3 @@ export class WMTile extends Tile implements WMTileSpec {
     super.setScreenPositions(projector)
   }
 }
-
-// [0.8380928039550781, 0, 0, 0, 0, -2.4331727027893066, 0, 0, 0, 0, 0.0010000000474974513, 0, 0.32410621643066406, -0.33741262555122375, 0.0010000000474974513, 1
-// 32 25 -> [0.61328125, -0.138671875] -> (3) [-0.5139865875244141, -0.33741262555122375, 0.0010000000474974513] (3) [0.32410621643066406, -0.33741262555122375, 0.0010000000474974513] (3) [-0.5139865875244141, -2.7705853283405304, 0.0010000000474974513] (3) [0.32410621643066406, -2.7705853283405304, 0.0010000000474974513]
-// 33 25 -> [-0.38671875, -0.138671875] -> (3) [0.32410621643066406, -0.33741262555122375, 0.0010000000474974513] (3) [1.1621990203857422, -0.33741262555122375, 0.0010000000474974513] (3) [0.32410621643066406, -2.7705853283405304, 0.0010000000474974513] (3) [1.1621990203857422, -2.7705853283405304, 0.0010000000474974513]

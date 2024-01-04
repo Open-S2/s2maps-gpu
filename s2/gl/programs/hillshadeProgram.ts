@@ -14,7 +14,8 @@ import type {
   HillshadeLayerDefinition,
   HillshadeLayerStyle,
   HillshadeWorkflowLayerGuide,
-  LayerDefinitionBase
+  LayerDefinitionBase,
+  UnpackData
 } from 'style/style.spec'
 import type { HillshadeProgram as HillshadeProgramSpec, HillshadeProgramUniforms } from './program.spec'
 
@@ -64,7 +65,7 @@ export default async function hillshadeProgram (context: Context): Promise<Hills
       for (const { code, layerIndex } of featureGuides) {
         const layerGuide = this.layerGuides.get(layerIndex)
         if (layerGuide === undefined) continue
-        const { fadeDuration, lch, layerCode } = layerGuide
+        const { fadeDuration, lch, layerCode, unpack } = layerGuide
         let opacity = 1
         let shadowColor: [number, number, number, number] | undefined
         let accentColor: [number, number, number, number] | undefined
@@ -95,7 +96,8 @@ export default async function hillshadeProgram (context: Context): Promise<Hills
           accentColor,
           highlightColor,
           azimuth,
-          altitude
+          altitude,
+          unpack
         })
       }
 
@@ -106,7 +108,7 @@ export default async function hillshadeProgram (context: Context): Promise<Hills
       const { type } = this
       const { source, layerIndex, lch } = layerBase
       // PRE) get layer properties
-      let { shadowColor, accentColor, highlightColor, opacity, azimuth, altitude, fadeDuration } = layer
+      let { unpack, shadowColor, accentColor, highlightColor, opacity, azimuth, altitude, fadeDuration } = layer
       shadowColor = shadowColor ?? '#000'
       accentColor = accentColor ?? '#000'
       highlightColor = highlightColor ?? '#fff'
@@ -114,6 +116,8 @@ export default async function hillshadeProgram (context: Context): Promise<Hills
       azimuth = azimuth ?? 315
       altitude = altitude ?? 45
       fadeDuration = fadeDuration ?? 300
+      // defaults to mapbox unpack
+      unpack = unpack ?? { offset: -10000, zFactor: 0.1, aMultiplier: 0, bMultiplier: 1, gMultiplier: 256, rMultiplier: 256 * 256 }
       // 1) build definition
       const layerDefinition: HillshadeLayerDefinition = {
         ...layerBase,
@@ -123,7 +127,8 @@ export default async function hillshadeProgram (context: Context): Promise<Hills
         highlightColor,
         azimuth,
         altitude,
-        opacity
+        opacity,
+        unpack
       }
       // 2) Store layer workflow, building code if webgl2
       const layerCode: number[] = []
@@ -133,12 +138,14 @@ export default async function hillshadeProgram (context: Context): Promise<Hills
         }
       }
       // 3) Store layer guide
+      const unpackData: UnpackData = [unpack.offset, unpack.zFactor, unpack.rMultiplier, unpack.gMultiplier, unpack.bMultiplier, unpack.aMultiplier]
       this.layerGuides.set(layerIndex, {
         sourceName: source,
         layerIndex,
         layerCode,
         lch,
-        fadeDuration
+        fadeDuration,
+        unpack: unpackData
       })
 
       return layerDefinition
@@ -158,12 +165,12 @@ export default async function hillshadeProgram (context: Context): Promise<Hills
     draw (featureGuide: HillshadeFeatureGuide): void {
       // grab gl from the context
       const { type, gl, context, uniforms } = this
-      const { uFade, uTexLength, uOpacity, uShadowColor, uAccentColor, uHighlightColor, uAzimuth, uAltitude } = uniforms
+      const { uFade, uTexLength, uUnpack, uOpacity, uShadowColor, uAccentColor, uHighlightColor, uAzimuth, uAltitude } = uniforms
       const { PI, min, max } = Math
 
       // get current source data
       const {
-        tile, parent, source, layerIndex, featureCode,
+        tile, parent, source, layerIndex, featureCode, unpack,
         opacity, shadowColor, accentColor, highlightColor, azimuth, altitude
       } = featureGuide
       const { texture, size } = source
@@ -171,6 +178,7 @@ export default async function hillshadeProgram (context: Context): Promise<Hills
       context.setDepthRange(layerIndex)
       // set fade
       gl.uniform1f(uFade, 1)
+      gl.uniform1fv(uUnpack, unpack)
       // set feature code (webgl 1 we store the opacity, webgl 2 we store layerCode lookups)
       if (type === 1) {
         gl.uniform1f(uTexLength, size)

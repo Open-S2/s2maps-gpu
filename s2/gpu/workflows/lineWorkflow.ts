@@ -4,7 +4,11 @@ import encodeLayerAttribute from 'style/encodeLayerAttribute'
 import { buildDashImage } from 'style/color'
 
 import type { WebGPUContext } from '../context'
-import type { LineFeature, LineSource, LineWorkflow as LineWorkflowSpec } from './workflow.spec'
+import type {
+  LineFeature as LineFeatureSpec,
+  LineSource,
+  LineWorkflow as LineWorkflowSpec
+} from './workflow.spec'
 import type {
   LayerDefinitionBase,
   LineLayerDefinition,
@@ -53,12 +57,97 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
   }
 ]
 
+export class LineFeature implements LineFeatureSpec {
+  type = 'line' as const
+  sourceName: string
+  interactive: boolean
+  dashed: boolean
+  bindGroup: GPUBindGroup
+  lineBindGroup: GPUBindGroup
+  constructor (
+    public workflow: LineWorkflowSpec,
+    public layerGuide: LineWorkflowLayerGuideGPU,
+    public source: LineSource,
+    public tile: Tile,
+    public count: number,
+    public offset: number,
+    public featureCode: number[],
+    public layerIndex: number,
+    public dashTexture: GPUTexture,
+    public featureCodeBuffer: GPUBuffer,
+    public lineUniformBuffer: GPUBuffer,
+    public cap: number,
+    public parent?: Tile
+  ) {
+    const { sourceName, interactive, dashed } = layerGuide
+    this.sourceName = sourceName
+    this.interactive = interactive
+    this.dashed = dashed
+    this.bindGroup = this.#buildBindGroup()
+    this.lineBindGroup = this.#buildLineBindGroup()
+  }
+
+  draw (): void {
+    const { tile, workflow } = this
+    workflow.context.setStencilReference(tile.tmpMaskID)
+    workflow.draw(this)
+  }
+
+  destroy (): void {
+    const { featureCodeBuffer, lineUniformBuffer } = this
+    featureCodeBuffer.destroy()
+    lineUniformBuffer.destroy()
+  }
+
+  duplicate (tile: Tile, parent: Tile): LineFeature {
+    const {
+      workflow, layerGuide, source, count, offset, featureCode,
+      layerIndex, dashTexture, featureCodeBuffer, lineUniformBuffer, cap
+    } = this
+    const { context } = workflow
+    const cE = context.device.createCommandEncoder()
+    const newFeatureCodeBuffer = context.duplicateGPUBuffer(featureCodeBuffer, cE)
+    const newLineUniformBuffer = context.duplicateGPUBuffer(lineUniformBuffer, cE)
+    context.device.queue.submit([cE.finish()])
+    return new LineFeature(
+      workflow, layerGuide, source, tile, count, offset, featureCode,
+      layerIndex, dashTexture, newFeatureCodeBuffer, newLineUniformBuffer, cap, parent
+    )
+  }
+
+  #buildBindGroup (): GPUBindGroup {
+    const { workflow, tile, parent, layerGuide, featureCodeBuffer } = this
+    const { context } = workflow
+    const { mask } = parent ?? tile
+    const { layerBuffer, layerCodeBuffer } = layerGuide
+    return context.buildGroup(
+      'Line Feature BindGroup',
+      context.featureBindGroupLayout,
+      [mask.uniformBuffer, mask.positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
+    )
+  }
+
+  #buildLineBindGroup (): GPUBindGroup {
+    const { workflow, lineUniformBuffer, layerGuide } = this
+    const { context, lineBindGroupLayout } = workflow
+    const { dashTexture } = layerGuide
+    return context.device.createBindGroup({
+      label: 'Line BindGroup',
+      layout: lineBindGroupLayout,
+      entries: [
+        { binding: 0, resource: { buffer: lineUniformBuffer } },
+        { binding: 1, resource: context.defaultSampler },
+        { binding: 2, resource: dashTexture.createView() }
+      ]
+    })
+  }
+}
+
 export default class LineWorkflow implements LineWorkflowSpec {
   context: WebGPUContext
   layerGuides = new Map<number, LineWorkflowLayerGuideGPU>()
   pipeline!: GPURenderPipeline
-  curTexture = -1
-  #lineBindGroupLayout!: GPUBindGroupLayout
+  lineBindGroupLayout!: GPUBindGroupLayout
   constructor (context: WebGPUContext) {
     this.context = context
   }
@@ -160,8 +249,7 @@ export default class LineWorkflow implements LineWorkflowSpec {
 
   #buildFeatures (source: LineSource, tile: Tile, featureGuideArray: Float32Array): void {
     const { context } = this
-    const { mask } = tile
-    const features: LineFeature[] = []
+    const features: LineFeatureSpec[] = []
 
     const lgl = featureGuideArray.length
     let i = 0
@@ -179,53 +267,14 @@ export default class LineWorkflow implements LineWorkflowSpec {
 
       const layerGuide = this.layerGuides.get(layerIndex)
       if (layerGuide === undefined) continue
-      const { sourceName, layerBuffer, layerCodeBuffer, lch, dashed, dashCount, dashTexture, interactive } = layerGuide
+      const { dashed, dashCount, dashTexture } = layerGuide
 
       const lineUniformBuffer = context.buildGPUBuffer('Line Uniform Buffer', new Float32Array([cap, ~~dashed, dashCount]), GPUBufferUsage.UNIFORM)
-      const lineBindGroup = context.device.createBindGroup({
-        label: 'Line BindGroup',
-        layout: this.#lineBindGroupLayout,
-        entries: [
-          { binding: 0, resource: { buffer: lineUniformBuffer } },
-          { binding: 1, resource: context.defaultSampler },
-          { binding: 2, resource: dashTexture.createView() }
-        ]
-      })
-
       const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array(featureCode), GPUBufferUsage.STORAGE)
-      const bindGroup = context.buildGroup(
-        'Feature BindGroup',
-        context.featureBindGroupLayout,
-        [mask.uniformBuffer, mask.positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
+      const feature = new LineFeature(
+        this, layerGuide, source, tile, count, offset, featureCode,
+        layerIndex, dashTexture, featureCodeBuffer, lineUniformBuffer, cap
       )
-
-      const feature = {
-        type: 'line' as const,
-        maskLayer: false,
-        source,
-        tile,
-        parent: undefined,
-        dashed,
-        dashTexture,
-        count,
-        offset,
-        sourceName,
-        layerIndex,
-        featureCode,
-        lch,
-        interactive,
-        cap,
-        bindGroup,
-        lineBindGroup,
-        draw: () => {
-          context.setStencilReference(tile.tmpMaskID)
-          this.draw(feature)
-        },
-        destroy: () => {
-          lineUniformBuffer.destroy()
-          featureCodeBuffer.destroy()
-        }
-      }
       features.push(feature)
     }
 
@@ -240,7 +289,7 @@ export default class LineWorkflow implements LineWorkflowSpec {
     const { device, format, defaultBlend, sampleCount, frameBindGroupLayout, featureBindGroupLayout } = context
 
     // prep line uniforms
-    this.#lineBindGroupLayout = context.device.createBindGroupLayout({
+    this.lineBindGroupLayout = context.device.createBindGroupLayout({
       label: 'Line BindGroupLayout',
       entries: [
         // uniforms
@@ -254,7 +303,7 @@ export default class LineWorkflow implements LineWorkflowSpec {
 
     const module = device.createShaderModule({ code: shaderCode })
     const layout = device.createPipelineLayout({
-      bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.#lineBindGroupLayout]
+      bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.lineBindGroupLayout]
     })
     const stencilState: GPUStencilFaceState = {
       compare: 'equal',
@@ -293,7 +342,7 @@ export default class LineWorkflow implements LineWorkflowSpec {
     })
   }
 
-  draw ({ bindGroup, lineBindGroup, source, count, offset }: LineFeature): void {
+  draw ({ bindGroup, lineBindGroup, source, count, offset }: LineFeatureSpec): void {
     // get current source data
     const { passEncoder } = this.context
     const { vertexBuffer, lengthSoFarBuffer } = source

@@ -19,7 +19,7 @@ import {
 } from '../../../s2/geometry/webmerc/mercCoords'
 import { describe, expect, it, test } from 'vitest'
 
-import type { BBox } from '../../../s2/geometry/proj.spec'
+import type { BBox } from '../../../s2/geometry'
 
 describe('llToPX', () => {
   it('PX with int zoom value converts', () => {

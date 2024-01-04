@@ -74,15 +74,8 @@ export default class Painter {
     await Promise.allSettled(promises)
   }
 
-  getScreen (): Uint8ClampedArray {
-    // const { gl } = this.context
-    // const { canvas, RGBA, UNSIGNED_BYTE } = gl
-    // const { width, height } = canvas
-    // const pixels = new Uint8ClampedArray(width * height * 4)
-    // gl.readPixels(0, 0, width, height, RGBA, UNSIGNED_BYTE, pixels)
-
-    // return pixels
-    return new Uint8ClampedArray()
+  async getScreen (): Promise<Uint8ClampedArray> {
+    return await this.context.getRenderData()
   }
 
   setColorMode (mode: ColorMode): void {

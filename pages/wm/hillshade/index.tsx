@@ -11,15 +11,16 @@ function ready (s2map: S2Map): void {
   console.log('ready', s2map)
 }
 
-export default function Fill (): React.JSX.Element {
+export default function Hillshade (): React.JSX.Element {
   return (
     <div className='pages'>
       <Map
         style={style}
-        opts={{ zoomController: false, contextType: 1 }}
+        opts={{ zoomController: false, contextType: 3 }}
         ready={ready}
         noAPIKey
       />
+      <a className='mapboxLogo' href='http://mapbox.com/about/maps' target='_blank' rel='noreferrer' />
     </div>
   )
 }

@@ -6,7 +6,7 @@ import type { MapOptions } from 'ui/s2mapUI'
 import type { MaskSource, TileMaskSource } from 'gpu/workflows/workflow.spec'
 import type { ColorMode } from 's2Map'
 import type { Painter } from 'gpu/painter.spec'
-import type { TileBase as Tile } from 'source/tile.spec'
+import type { Tile } from 'source/tile.spec'
 import type { GlyphImages } from 'workers/source/glyphSource'
 import type { SpriteImageMessage } from 'workers/worker.spec'
 
@@ -153,16 +153,24 @@ export default class WebGPUContext {
   buildGPUBuffer (
     label: string,
     inputArray: BufferSource | SharedArrayBuffer,
-    usage: number,
+    inUsage: number,
     size = inputArray.byteLength
   ): GPUBuffer {
     // prep buffer
-    const gpuBuffer = this.device.createBuffer({
-      label,
-      size,
-      usage: usage | GPUBufferUsage.COPY_DST
-    })
+    const containsMapRead = (inUsage & GPUBufferUsage.MAP_READ) === 1
+    const usage = inUsage | GPUBufferUsage.COPY_DST | (containsMapRead ? 0 : GPUBufferUsage.COPY_SRC)
+    const gpuBuffer = this.device.createBuffer({ label, size, usage })
     this.device.queue.writeBuffer(gpuBuffer, 0, inputArray)
+
+    return gpuBuffer
+  }
+
+  duplicateGPUBuffer (inputBuffer: GPUBuffer, commandEncoder: GPUCommandEncoder): GPUBuffer {
+    const { label, usage, size } = inputBuffer
+    const { device } = this
+    // prep buffer
+    const gpuBuffer = device.createBuffer({ label, size, usage })
+    commandEncoder.copyBufferToBuffer(inputBuffer, 0, gpuBuffer, 0, size)
 
     return gpuBuffer
   }
@@ -190,7 +198,6 @@ export default class WebGPUContext {
     }
   }
 
-  // TODO: Track if we are awaiting a result, and if so, drop the request
   async getFeatureAtMousePosition (_x: number, _y: number): Promise<undefined | number> {
     const { device } = this
     let result: undefined | number
@@ -468,6 +475,49 @@ export default class WebGPUContext {
       // TODO: Find a way to cleanup the buffer if commandEncoder is outside this function
       // buffer.destroy()
     }
+  }
+
+  async getRenderData (): Promise<Uint8ClampedArray> {
+    const { gpu, presentation } = this
+    const target = this.#renderTarget ?? gpu.getCurrentTexture()
+    return await this.downloadTextureData(target, presentation.width, presentation.height)
+  }
+
+  async downloadTextureData (texture: GPUTexture, width: number, height: number): Promise<Uint8ClampedArray> {
+    const { device } = this
+    // Create a buffer to store the read data
+    const buffer = device.createBuffer({
+      size: width * height * 4, // 4 bytes per pixel (RGBA)
+      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
+    })
+
+    // Create a command encoder
+    const commandEncoder = device.createCommandEncoder()
+
+    // Copy the texture to the buffer
+    commandEncoder.copyTextureToBuffer(
+      { texture },
+      { buffer, bytesPerRow: width * 4 },
+      { width, height, depthOrArrayLayers: 1 }
+    )
+
+    // Submit the commands to the GPU
+    const gpuCommands = commandEncoder.finish()
+    device.queue.submit([gpuCommands])
+
+    // Wait for the GPU to finish executing the commands
+    await buffer.mapAsync(GPUMapMode.READ)
+
+    // Create a new Uint8ClampedArray view of the buffer's contents
+    const arrayBuffer = buffer.getMappedRange()
+    const data = new Uint8ClampedArray(arrayBuffer)
+
+    // Create a copy of the data to return
+    const result = new Uint8ClampedArray(data)
+    // Unmap the buffer
+    buffer.unmap()
+
+    return result
   }
 
   // https://programmer.ink/think/several-best-practices-of-webgpu.html

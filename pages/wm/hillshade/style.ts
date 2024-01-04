@@ -3,11 +3,12 @@ import type { StyleDefinition } from '../../../s2/style/style.spec'
 const style: StyleDefinition = {
   version: 1,
   projection: 'WM',
-  name: 'WM Fill',
+  name: 'WM Hillshade',
   center: [0, 0],
-  zoom: -0.5,
-  minzoom: 0,
+  zoom: 0.5,
+  minzoom: 0.5,
   maxzoom: 6.9,
+  zoomOffset: 0.5,
   sources: {
     planet: '/tiles/wm/osm',
     terrain: '/tiles/wm/terrain-v2'

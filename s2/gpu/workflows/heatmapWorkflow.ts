@@ -4,7 +4,11 @@ import encodeLayerAttribute from 'style/encodeLayerAttribute'
 import { buildColorRamp } from 'style/color'
 
 import type { WebGPUContext } from '../context'
-import type { HeatmapFeature, HeatmapSource, HeatmapWorkflow as HeatmapWorkflowSpec } from './workflow.spec'
+import type {
+  HeatmapFeature as HeatmapFeatureSpec,
+  HeatmapSource,
+  HeatmapWorkflow as HeatmapWorkflowSpec
+} from './workflow.spec'
 import type {
   HeatmapLayerDefinition,
   HeatmapLayerStyle,
@@ -13,6 +17,7 @@ import type {
 } from 'style/style.spec'
 import type { HeatmapData } from 'workers/worker.spec'
 import type { TileGPU as Tile } from 'source/tile.spec'
+import type { BBox } from 'geometry'
 
 const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
   { // pos
@@ -35,6 +40,78 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
   }
 ]
 
+export class HeatmapFeature implements HeatmapFeatureSpec {
+  type = 'heatmap' as const
+  sourceName: string
+  bindGroup: GPUBindGroup
+  heatmapBindGroup: GPUBindGroup
+  constructor (
+    public workflow: HeatmapWorkflow,
+    public source: HeatmapSource,
+    public layerGuide: HeatmapWorkflowLayerGuideGPU,
+    public tile: Tile,
+    public count: number,
+    public offset: number,
+    public layerIndex: number,
+    public featureCode: number[],
+    public heatmapBoundsBuffer: GPUBuffer,
+    public featureCodeBuffer: GPUBuffer,
+    public parent?: Tile
+  ) {
+    const { sourceName } = layerGuide
+    this.sourceName = sourceName
+    this.bindGroup = this.#buildBindGroup()
+    this.heatmapBindGroup = this.#buildHeatmapBindGroup()
+  }
+
+  draw (): void {
+    const { tile, workflow } = this
+    workflow.context.setStencilReference(tile.tmpMaskID)
+    workflow.draw(this)
+  }
+
+  destroy (): void {
+    const { heatmapBoundsBuffer, featureCodeBuffer } = this
+    heatmapBoundsBuffer.destroy()
+    featureCodeBuffer.destroy()
+  }
+
+  duplicate (tile: Tile, parent: Tile, bounds: BBox): HeatmapFeature {
+    const { workflow, source, layerGuide, count, offset, layerIndex, featureCode, featureCodeBuffer } = this
+    const { context } = workflow
+    const cE = context.device.createCommandEncoder()
+    const newFeatureCodeBuffer = context.duplicateGPUBuffer(featureCodeBuffer, cE)
+    const newHeatmapBoundsBuffer = context.buildGPUBuffer('Heatmap Uniform Buffer', new Float32Array(bounds), GPUBufferUsage.UNIFORM)
+    context.device.queue.submit([cE.finish()])
+    return new HeatmapFeature(
+      workflow, source, layerGuide, tile, count, offset, layerIndex, featureCode,
+      newHeatmapBoundsBuffer, newFeatureCodeBuffer, parent
+    )
+  }
+
+  #buildBindGroup (): GPUBindGroup {
+    const { workflow, tile, parent, layerGuide, featureCodeBuffer } = this
+    const { context } = workflow
+    const { mask } = parent ?? tile
+    const { layerBuffer, layerCodeBuffer } = layerGuide
+    return context.buildGroup(
+      'Heatmap Feature BindGroup',
+      context.featureBindGroupLayout,
+      [mask.uniformBuffer, mask.positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
+    )
+  }
+
+  #buildHeatmapBindGroup (): GPUBindGroup {
+    const { workflow, heatmapBoundsBuffer } = this
+    const { context, heatmapTextureBindGroupLayout } = workflow
+    return context.buildGroup(
+      'Heatmap BindGroup',
+      heatmapTextureBindGroupLayout,
+      [heatmapBoundsBuffer]
+    )
+  }
+}
+
 // TODO: The texture target should just have a single float channel?
 
 export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
@@ -43,8 +120,8 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
   pipeline!: GPURenderPipeline
   module!: GPUShaderModule
   texturePipeline!: GPURenderPipeline
-  #heatmapBindGroupLayout!: GPUBindGroupLayout
-  #heatmapTextureBindGroupLayout!: GPUBindGroupLayout
+  heatmapBindGroupLayout!: GPUBindGroupLayout
+  heatmapTextureBindGroupLayout!: GPUBindGroupLayout
   constructor (context: WebGPUContext) {
     this.context = context
   }
@@ -52,8 +129,8 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
   async setup (): Promise<void> {
     const { context } = this
     const { device } = context
-    this.#heatmapTextureBindGroupLayout = context.buildLayout('Heatmap Texture BindGroupLayout', ['uniform'], GPUShaderStage.VERTEX)
-    this.#heatmapBindGroupLayout = device.createBindGroupLayout({
+    this.heatmapTextureBindGroupLayout = context.buildLayout('Heatmap Texture BindGroupLayout', ['uniform'], GPUShaderStage.VERTEX)
+    this.heatmapBindGroupLayout = device.createBindGroupLayout({
       label: 'Heatmap BindGroupLayout',
       entries: [
         // sampler
@@ -167,7 +244,7 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
 
   #buildLayerBindGroup (renderTarget: GPUTexture, colorRamp: GPUTexture): GPUBindGroup {
     return this.context.device.createBindGroup({
-      layout: this.#heatmapBindGroupLayout,
+      layout: this.heatmapBindGroupLayout,
       entries: [
         { binding: 1, resource: this.context.defaultSampler },
         { binding: 2, resource: renderTarget.createView() },
@@ -196,8 +273,7 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
 
   #buildFeatures (source: HeatmapSource, tile: Tile, featureGuideArray: Float32Array): void {
     const { context } = this
-    const { mask } = tile
-    const features: HeatmapFeature[] = []
+    const features: HeatmapFeatureSpec[] = []
 
     const lgl = featureGuideArray.length
     let i = 0
@@ -214,43 +290,12 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
 
       const layerGuide = this.layerGuides.get(layerIndex)
       if (layerGuide === undefined) continue
-      const { sourceName, lch, colorRamp, layerBuffer, layerCodeBuffer } = layerGuide
-
-      const heatmapUniformBuffer = context.buildGPUBuffer('Heatmap Uniform Buffer', new Float32Array([0, 0, 1, 1]), GPUBufferUsage.UNIFORM)
-      const heatmapBindGroup = context.buildGroup(
-        'Heatmap BindGroup',
-        this.#heatmapTextureBindGroupLayout,
-        [heatmapUniformBuffer]
-      )
+      const heatmapBoundsBuffer = context.buildGPUBuffer('Heatmap Uniform Buffer', new Float32Array([0, 0, 1, 1]), GPUBufferUsage.UNIFORM)
       const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array(featureCode), GPUBufferUsage.STORAGE)
-      const bindGroup = context.buildGroup(
-        'Feature BindGroup',
-        context.featureBindGroupLayout,
-        [mask.uniformBuffer, mask.positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
+      const feature = new HeatmapFeature(
+        this, source, layerGuide, tile, count, offset, layerIndex, featureCode,
+        heatmapBoundsBuffer, featureCodeBuffer
       )
-
-      const feature: HeatmapFeature = {
-        type: 'heatmap' as const,
-        source,
-        tile,
-        count,
-        offset,
-        sourceName,
-        layerIndex,
-        featureCode,
-        lch,
-        colorRamp,
-        bindGroup,
-        heatmapBindGroup,
-        draw: () => {
-          context.setStencilReference(tile.tmpMaskID)
-          this.draw(feature)
-        },
-        destroy: () => {
-          heatmapUniformBuffer.destroy()
-          featureCodeBuffer.destroy()
-        }
-      }
 
       features.push(feature)
     }
@@ -268,10 +313,10 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
 
     const layout = isScreen
       ? device.createPipelineLayout({
-        bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.#heatmapBindGroupLayout]
+        bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.heatmapBindGroupLayout]
       })
       : device.createPipelineLayout({
-        bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.#heatmapTextureBindGroupLayout]
+        bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.heatmapTextureBindGroupLayout]
       })
 
     const stencilState: GPUStencilFaceState = {
@@ -318,14 +363,14 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
     })
   }
 
-  textureDraw (features: HeatmapFeature[]): HeatmapFeature[] | undefined {
+  textureDraw (features: HeatmapFeatureSpec[]): HeatmapFeatureSpec[] | undefined {
     if (features.length === 0) return undefined
     const { context } = this
     const { device, frameBufferBindGroup } = context
 
-    const output: HeatmapFeature[] = []
+    const output: HeatmapFeatureSpec[] = []
     // group by layerIndex
-    const layerFeatures = new Map<number, HeatmapFeature[]>()
+    const layerFeatures = new Map<number, HeatmapFeatureSpec[]>()
     for (const feature of features) {
       const { layerIndex } = feature
       const layer = layerFeatures.get(layerIndex)
@@ -363,7 +408,7 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
     return output
   }
 
-  draw ({ bindGroup, layerIndex }: HeatmapFeature): void {
+  draw ({ bindGroup, layerIndex }: HeatmapFeatureSpec): void {
     // get current source data
     const { passEncoder } = this.context
     const layerGuide = this.layerGuides.get(layerIndex)

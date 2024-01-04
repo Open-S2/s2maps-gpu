@@ -8,17 +8,15 @@ import vert2 from '../shaders/glyph2.vertex.glsl'
 import frag2 from '../shaders/glyph2.fragment.glsl'
 
 import type { Context, GlyphFeatureGuide, GlyphSource } from '../contexts/context.spec'
-import type { GlyphImages } from 'workers/source/glyphSource'
 import type {
   GlyphLayerDefinition,
   GlyphLayerStyle,
   GlyphWorkflowLayerGuide,
   LayerDefinitionBase
 } from 'style/style.spec'
-import type { GlyphData, SpriteImageMessage } from 'workers/worker.spec'
+import type { GlyphData } from 'workers/worker.spec'
 import type { TileGL as Tile } from 'source/tile.spec'
 import type {
-  FBO,
   GlyphFilterProgram,
   GlyphProgram as GlyphProgramSpec,
   GlyphProgramUniforms
@@ -28,7 +26,6 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
   const Program = await import('./program').then(m => m.default)
 
   class GlyphProgram extends Program implements GlyphProgramSpec {
-    fbo: FBO
     stepBuffer?: WebGLBuffer
     uvBuffer?: WebGLBuffer
     glyphFilterProgram!: GlyphFilterProgram
@@ -51,10 +48,8 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
       gl.uniform1i(uGlyphTex, 1) // uGlyphTex texture unit 1
       // setup the devicePixelRatio
       this.setDevicePixelRatio(devicePixelRatio)
-      // build an initial fbo
-      this.fbo = this.#buildFramebuffer(200)
       // set the current fbo size
-      gl.uniform2fv(uTexSize, this.fbo.texSize)
+      gl.uniform2fv(uTexSize, context.sharedFBO.texSize)
     }
 
     #bindStepBuffer (): void {
@@ -105,7 +100,7 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
       ], true)
       // id buffer
       const glyphFilterIDs = new Uint8Array(glyphData.glyphFilterIDBuffer)
-      const glyphFilterIDBuffer = context.bindEnableVertexAttr(glyphFilterIDs, 6, 3, gl.UNSIGNED_BYTE, true, 3, 0, true)
+      const glyphFilterIDBuffer = context.bindEnableVertexAttr(glyphFilterIDs, 6, 4, gl.UNSIGNED_BYTE, true, 4, 0, true)
 
       // STEP 2 - QUADS
       const vao = context.buildVAO()
@@ -280,134 +275,22 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
       return layerDefinition
     }
 
-    #buildFramebuffer (height: number): FBO {
-      const { gl } = this
-      const texture = gl.createTexture()
-      if (texture === null) throw new Error('Failed to create glyph texture')
-      const stencil = gl.createRenderbuffer()
-      if (stencil === null) throw new Error('Failed to create glyph stencil')
-      const glyphFramebuffer = gl.createFramebuffer()
-      if (glyphFramebuffer === null) throw new Error('Failed to create glyph framebuffer')
-      // TEXTURE BUFFER
-      // pre-build the glyph texture
-      // bind
-      gl.bindTexture(gl.TEXTURE_2D, texture)
-      // allocate size
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 2048, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
-      // set filter system
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-      // DEPTH & STENCIL BUFFER
-      // bind
-      gl.bindRenderbuffer(gl.RENDERBUFFER, stencil)
-      // allocate size
-      gl.renderbufferStorage(gl.RENDERBUFFER, gl.STENCIL_INDEX8, 2048, height)
-      // FRAMEBUFFER
-      // bind
-      gl.bindFramebuffer(gl.FRAMEBUFFER, glyphFramebuffer)
-      // attach texture to glyphFramebuffer
-      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0)
-      // attach stencil renderbuffer to framebuffer
-      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.STENCIL_ATTACHMENT, gl.RENDERBUFFER, stencil)
-      // rebind our default framebuffer
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null)
-
-      return {
-        width: 2048,
-        height,
-        texSize: [2048, height],
-        texture,
-        stencil,
-        glyphFramebuffer
-      }
-    }
-
-    #increaseFBOSize (height: number): void {
-      const { gl, context, fbo, uniforms } = this
-      if (height <= fbo.height) return
-
-      // use to update texture size
-      this.use()
-      // build the new fbo
-      const newFBO = this.#buildFramebuffer(height)
-      // copy over data
-      if (context.type === 1) {
-        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo.glyphFramebuffer)
-        gl.bindTexture(gl.TEXTURE_2D, newFBO.texture)
-        gl.copyTexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 0, 0, 2048, fbo.height)
-      } else {
-        const gl2 = gl as WebGL2RenderingContext
-        gl2.bindFramebuffer(gl2.READ_FRAMEBUFFER, fbo.glyphFramebuffer)
-        gl2.bindFramebuffer(gl2.DRAW_FRAMEBUFFER, newFBO.glyphFramebuffer)
-        gl2.blitFramebuffer(0, 0, 2048, fbo.height, 0, 0, 2048, fbo.height, gl.COLOR_BUFFER_BIT, gl.LINEAR)
-      }
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null)
-      // set the texture size uniform
-      gl.uniform2fv(uniforms.uTexSize, newFBO.texSize)
-      // delete old FBO and set new
-      this.#deleteFBO(fbo)
-      // update to new FBO
-      this.fbo = newFBO
-    }
-
-    #deleteFBO (fbo: FBO): void {
-      const { gl } = this
-      if (fbo !== undefined) {
-        gl.deleteTexture(fbo.texture)
-        gl.deleteRenderbuffer(fbo.stencil)
-        gl.deleteFramebuffer(fbo.glyphFramebuffer)
-      }
-    }
-
-    injectImages (maxHeight: number, images: GlyphImages): void {
-      const { gl } = this
-      // increase texture size if necessary
-      this.#increaseFBOSize(maxHeight)
-      // iterate through images and store
-      gl.bindTexture(gl.TEXTURE_2D, this.fbo.texture)
-      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0)
-      for (const { posX, posY, width, height, data } of images) {
-        const srcData = new Uint8ClampedArray(data)
-        gl.texSubImage2D(gl.TEXTURE_2D, 0, posX, posY, width, height, gl.RGBA, gl.UNSIGNED_BYTE, srcData, 0)
-      }
-    }
-
-    injectSpriteImage (data: SpriteImageMessage): void {
-      const { gl } = this
-      const { image, built, offsetX, offsetY, width, height, maxHeight } = data
-      // increase texture size if necessary
-      this.#increaseFBOSize(maxHeight)
-      // do not premultiply
-      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0)
-      // setup texture
-      const texture = context.buildTexture(
-        built ? image as ImageBitmap : new Uint8ClampedArray(image as ArrayBuffer),
-        width,
-        height
-      )
-      // bind the framebuffer and copy the texture
-      gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo.glyphFramebuffer)
-      gl.bindTexture(gl.TEXTURE_2D, texture)
-      gl.copyTexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, offsetX, offsetY, width, height)
-      // cleanup (delete texture)
-      gl.deleteTexture(texture)
-    }
-
     use (): void {
-      const { context } = this
+      const { context, uniforms } = this
+      const { gl, sharedFBO } = context
       // prepare context
       context.defaultBlend()
       context.enableDepthTest()
       context.disableCullFace()
       context.disableStencilTest()
       super.use()
+      // set the texture size uniform
+      gl.uniform2fv(uniforms.uTexSize, sharedFBO.texSize)
     }
 
     draw (featureGuide: GlyphFeatureGuide, interactive = false): void {
-      const { gl, context, fbo, glyphFilterProgram, uniforms } = this
-      const { type, defaultBounds } = context
+      const { gl, context, glyphFilterProgram, uniforms } = this
+      const { type, defaultBounds, sharedFBO } = context
       const { uSize, uFill, uStroke, uSWidth, uBounds, uIsStroke } = uniforms
       // pull out the appropriate data from the source
       const {
@@ -416,7 +299,7 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
       } = featureGuide
       const { glyphQuadBuffer, glyphQuadIDBuffer, glyphColorBuffer, vao } = source
       // grab glyph texture
-      const { texture } = fbo
+      const { texture } = sharedFBO
       // WebGL1 - set paint properties; WebGL2 - set feature code
       if (type === 1) {
         gl.uniform1f(uSize, size ?? 0)
@@ -466,8 +349,6 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
     }
 
     delete (): void {
-      // cleanup fbos
-      this.#deleteFBO(this.fbo)
       // continue forward
       super.delete()
     }

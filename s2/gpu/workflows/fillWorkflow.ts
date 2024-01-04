@@ -3,7 +3,13 @@ import shaderCode from '../shaders/fill.wgsl'
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
 
 import type { WebGPUContext } from '../context'
-import type { FillFeature, FillSource, FillWorkflow as FillWorkflowSpec, TileMaskSource } from './workflow.spec'
+import type {
+  FillFeature as FillFeatureSpec,
+  FillSource,
+  FillWorkflow as FillWorkflowSpec,
+  MaskSource,
+  TileMaskSource
+} from './workflow.spec'
 import type {
   FillLayerDefinition,
   FillLayerStyle,
@@ -32,8 +38,99 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
   }
 ]
 
+export class FillFeature implements FillFeatureSpec {
+  type = 'fill' as const
+  sourceName: string
+  invert: boolean
+  opaque: boolean
+  interactive: boolean
+  bindGroup: GPUBindGroup
+  fillPatternBindGroup: GPUBindGroup
+  fillInteractiveBindGroup?: GPUBindGroup | undefined
+  constructor (
+    public workflow: FillWorkflowSpec,
+    public layerGuide: FillWorkflowLayerGuideGPU,
+    public maskLayer: boolean,
+    public source: FillSource | MaskSource,
+    public count: number,
+    public offset: number,
+    public tile: Tile,
+    public layerIndex: number,
+    public featureCodeBuffer: GPUBuffer,
+    public fillTexturePositions: GPUBuffer,
+    public fillInteractiveBuffer?: GPUBuffer,
+    public featureCode: number[] = [0],
+    public parent?: Tile
+  ) {
+    const { sourceName, invert, opaque, interactive } = layerGuide
+    this.sourceName = sourceName
+    this.invert = invert
+    this.opaque = opaque
+    this.interactive = interactive
+    this.fillPatternBindGroup = tile.context.createPatternBindGroup(fillTexturePositions)
+    this.bindGroup = this.#buildBindGroup()
+    if (fillInteractiveBuffer !== undefined) this.fillInteractiveBindGroup = this.#buildInteractiveBindGroup()
+  }
+
+  draw (): void {
+    const { maskLayer, tile, parent, workflow } = this
+    const { mask } = parent ?? tile
+    workflow.context.setStencilReference(tile.tmpMaskID)
+    if (maskLayer) workflow.drawMask(mask, this)
+    else workflow.draw(this)
+  }
+
+  updateSharedTexture (): void {
+    const { context } = this.workflow
+    this.fillPatternBindGroup = context.createPatternBindGroup(this.fillTexturePositions)
+  }
+
+  destroy (): void {
+    this.featureCodeBuffer.destroy()
+    this.fillTexturePositions.destroy()
+    this.fillInteractiveBuffer?.destroy()
+  }
+
+  duplicate (tile: Tile, parent: Tile): FillFeature {
+    const { workflow, layerGuide, maskLayer, source, count, offset, layerIndex, featureCodeBuffer, fillInteractiveBuffer, featureCode, fillTexturePositions } = this
+    const { context } = this.workflow
+    const cE = context.device.createCommandEncoder()
+    const newFeatureCodeBuffer = context.duplicateGPUBuffer(featureCodeBuffer, cE)
+    const newFillTexturePositions = context.duplicateGPUBuffer(fillTexturePositions, cE)
+    const newFillInteractiveBuffer = (fillInteractiveBuffer !== undefined) ? context.duplicateGPUBuffer(fillInteractiveBuffer, cE) : undefined
+    context.device.queue.submit([cE.finish()])
+    return new FillFeature(
+      workflow, layerGuide, maskLayer, source, count, offset, tile, layerIndex,
+      newFeatureCodeBuffer, newFillTexturePositions, newFillInteractiveBuffer, featureCode,
+      parent
+    )
+  }
+
+  #buildBindGroup (): GPUBindGroup {
+    const { workflow, tile, parent, layerGuide, featureCodeBuffer } = this
+    const { context } = workflow
+    const { mask } = parent ?? tile
+    const { layerBuffer, layerCodeBuffer } = layerGuide
+    return context.buildGroup(
+      'Fill Feature BindGroup',
+      context.featureBindGroupLayout,
+      [mask.uniformBuffer, mask.positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
+    )
+  }
+
+  #buildInteractiveBindGroup (): GPUBindGroup {
+    const { workflow, tile, source, fillInteractiveBuffer } = this
+    if (fillInteractiveBuffer === undefined) throw new Error('Fill Interactive Buffer is undefined')
+    if (!('idBuffer' in source)) throw new Error('Source does not have an idBuffer')
+    return tile.context.buildGroup(
+      'Fill Interactive BindGroup',
+      workflow.fillInteractiveBindGroupLayout,
+      [fillInteractiveBuffer, source.vertexBuffer, source.indexBuffer, source.idBuffer]
+    )
+  }
+}
+
 export default class FillWorkflow implements FillWorkflowSpec {
-  context: WebGPUContext
   layerGuides = new Map<number, FillWorkflowLayerGuideGPU>()
   interactivePipeline!: GPUComputePipeline
   maskPipeline!: GPURenderPipeline
@@ -42,10 +139,8 @@ export default class FillWorkflow implements FillWorkflowSpec {
   invertPipeline!: GPURenderPipeline
   #shaderModule!: GPUShaderModule
   #pipelineLayout!: GPUPipelineLayout
-  #fillInteractiveBindGroupLayout!: GPUBindGroupLayout
-  constructor (context: WebGPUContext) {
-    this.context = context
-  }
+  fillInteractiveBindGroupLayout!: GPUBindGroupLayout
+  constructor (public context: WebGPUContext) {}
 
   async setup (): Promise<void> {
     const { device, frameBindGroupLayout, featureBindGroupLayout, maskPatternBindGroupLayout } = this.context
@@ -131,45 +226,14 @@ export default class FillWorkflow implements FillWorkflowSpec {
     // not in the zoom range, ignore
     if (zoom < minzoom || zoom > maxzoom) return
 
-    const layer = this.layerGuides.get(layerIndex)
-    if (layer === undefined) return
-    const { sourceName, layerBuffer, layerCodeBuffer, lch, invert, opaque, interactive } = layer
+    const layerGuide = this.layerGuides.get(layerIndex)
+    if (layerGuide === undefined) return
     const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array([0]), GPUBufferUsage.STORAGE)
-    const bindGroup = context.buildGroup(
-      'Feature BindGroup',
-      context.featureBindGroupLayout,
-      [mask.uniformBuffer, mask.positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
-    )
     const fillTexturePositions = context.buildGPUBuffer('Fill Texture Positions', new Float32Array([0, 0, 0, 0, 0]), GPUBufferUsage.UNIFORM)
-
-    const feature: FillFeature = {
-      type: 'fill' as const,
-      sourceName,
-      maskLayer: true,
-      source: mask,
-      count: mask.count,
-      offset: mask.offset,
-      tile,
-      layerIndex,
-      lch,
-      invert,
-      opaque,
-      interactive,
-      featureCode: [0],
-      bindGroup,
-      fillPatternBindGroup: context.createPatternBindGroup(fillTexturePositions),
-      draw: () => {
-        context.setStencilReference(tile.tmpMaskID)
-        this.drawMask(mask, feature)
-      },
-      updateSharedTexture: () => {
-        feature.fillPatternBindGroup = context.createPatternBindGroup(fillTexturePositions)
-      },
-      destroy: () => {
-        featureCodeBuffer.destroy()
-        fillTexturePositions.destroy()
-      }
-    }
+    const feature = new FillFeature(
+      this, layerGuide, true, mask, mask.count, mask.offset,
+      tile, layerIndex, featureCodeBuffer, fillTexturePositions
+    )
     tile.addFeatures([feature])
   }
 
@@ -197,8 +261,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
 
   #buildFeatures (source: FillSource, tile: Tile, featureGuideArray: Float32Array): void {
     const { context } = this
-    const { mask } = tile
-    const features: FillFeature[] = []
+    const features: FillFeatureSpec[] = []
 
     const lgl = featureGuideArray.length
     let i = 0
@@ -217,53 +280,13 @@ export default class FillWorkflow implements FillWorkflowSpec {
 
       const layerGuide = this.layerGuides.get(layerIndex)
       if (layerGuide === undefined) continue
-      const { sourceName, layerBuffer, layerCodeBuffer, lch, invert, opaque, interactive } = layerGuide
-
       const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array(featureCode), GPUBufferUsage.STORAGE)
-      const bindGroup = context.buildGroup(
-        'Feature BindGroup',
-        context.featureBindGroupLayout,
-        [mask.uniformBuffer, mask.positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
-      )
       const fillTexturePositions = context.buildGPUBuffer('Fill Texture Positions', new Float32Array([texX, texY, texW, texH, patternMovement]), GPUBufferUsage.UNIFORM)
       const fillInteractiveBuffer = context.buildGPUBuffer('Fill Interactive Buffer', new Uint32Array([offset / 3, count / 3]), GPUBufferUsage.UNIFORM)
-      const fillInteractiveBindGroup = context.buildGroup(
-        'Fill Interactive BindGroup',
-        this.#fillInteractiveBindGroupLayout,
-        [fillInteractiveBuffer, source.vertexBuffer, source.indexBuffer, source.idBuffer]
+      const feature = new FillFeature(
+        this, layerGuide, false, source, count, offset, tile, layerIndex,
+        featureCodeBuffer, fillTexturePositions, fillInteractiveBuffer, featureCode
       )
-
-      const feature: FillFeature = {
-        type: 'fill' as const,
-        maskLayer: false,
-        source,
-        tile,
-        count,
-        offset,
-        sourceName,
-        invert,
-        layerIndex,
-        opaque,
-        featureCode,
-        lch,
-        interactive,
-        bindGroup,
-        fillPatternBindGroup: context.createPatternBindGroup(fillTexturePositions),
-        fillInteractiveBindGroup,
-        draw: () => {
-          context.setStencilReference(tile.tmpMaskID)
-          this.draw(feature)
-        },
-        compute: () => { this.computeInteractive(feature) },
-        updateSharedTexture: () => {
-          feature.fillPatternBindGroup = context.createPatternBindGroup(fillTexturePositions)
-        },
-        destroy: () => {
-          featureCodeBuffer.destroy()
-          fillInteractiveBuffer.destroy()
-          fillTexturePositions.destroy()
-        }
-      }
       features.push(feature)
     }
 
@@ -326,7 +349,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
     const { context } = this
     const { device, frameBindGroupLayout, featureBindGroupLayout, interactiveBindGroupLayout } = context
 
-    this.#fillInteractiveBindGroupLayout = device.createBindGroupLayout({
+    this.fillInteractiveBindGroupLayout = device.createBindGroupLayout({
       label: 'Fill Interactive BindGroupLayout',
       entries: [
         { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } }, // interactive offset & count
@@ -338,25 +361,23 @@ export default class FillWorkflow implements FillWorkflowSpec {
 
     const layout = device.createPipelineLayout({
       label: 'Fill Interactive Pipeline Layout',
-      bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.#fillInteractiveBindGroupLayout, interactiveBindGroupLayout]
+      bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.fillInteractiveBindGroupLayout, interactiveBindGroupLayout]
     })
 
     return await device.createComputePipelineAsync({
       label: 'Fill Interactive Pipeline',
       layout,
-      compute: {
-        module: this.#shaderModule,
-        entryPoint: 'interactive'
-      }
+      compute: { module: this.#shaderModule, entryPoint: 'interactive' }
     })
   }
 
-  draw (featureGuide: FillFeature): void {
+  draw (featureGuide: FillFeatureSpec): void {
     // get current source data
     const { passEncoder } = this.context
-    const { tile, invert, bindGroup, fillPatternBindGroup, source, count, offset } = featureGuide
+    const { tile, parent, invert, bindGroup, fillPatternBindGroup, source, count, offset } = featureGuide
     const { vertexBuffer, indexBuffer, codeTypeBuffer } = source
     const pipeline = invert ? this.invertPipeline : this.fillPipeline
+    const { mask } = parent ?? tile
 
     // setup pipeline, bind groups, & buffers
     this.context.setRenderPipeline(pipeline)
@@ -368,12 +389,12 @@ export default class FillWorkflow implements FillWorkflowSpec {
     // draw
     passEncoder.drawIndexed(count, 1, offset)
 
-    if (invert) this.drawMask(tile.mask, featureGuide)
+    if (invert) this.drawMask(mask, featureGuide)
   }
 
   drawMask (
     { vertexBuffer, indexBuffer, codeTypeBuffer, bindGroup, fillPatternBindGroup, count, offset }: TileMaskSource,
-    featureGuide?: FillFeature
+    featureGuide?: FillFeatureSpec
   ): void {
     const { context, maskPipeline, maskFillPipeline } = this
     // get current source data
@@ -389,7 +410,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
     passEncoder.drawIndexed(count, 1, offset)
   }
 
-  computeInteractive ({ bindGroup, fillInteractiveBindGroup, count }: FillFeature): void {
+  computeInteractive ({ bindGroup, fillInteractiveBindGroup, count }: FillFeatureSpec): void {
     const { computePass, interactiveBindGroup } = this.context
     this.context.setComputePipeline(this.interactivePipeline)
     // set bind group & draw

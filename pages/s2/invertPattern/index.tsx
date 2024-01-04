@@ -16,7 +16,7 @@ export default function InvertPattern (): React.JSX.Element {
     <div className='pages'>
       <Map
         style={style}
-        opts={{ zoomController: false }}
+        opts={{ zoomController: false, contextType: 3 }}
         ready={ready}
         noAPIKey
       />

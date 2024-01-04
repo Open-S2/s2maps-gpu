@@ -115,9 +115,9 @@ export default async function fillProgram (context: Context): Promise<FillProgra
         layerCode,
         lch,
         invert,
-        texXY: [0, 0],
-        texWH: [1, 1],
-        patternMovement: false,
+        patternXY: [0, 0],
+        patternWH: [0, 0],
+        patternMovement: 0,
         opaque,
         interactive,
         featureCode: [0],
@@ -192,7 +192,7 @@ export default async function fillProgram (context: Context): Promise<FillProgra
         }
         // update index
         i += encodingSize
-        const [texX, texY, texW, texH, patternMovement] = featureGuideArray.slice(i, i + 5)
+        const [patternX, patternY, patternW, patternH, patternMovement] = featureGuideArray.slice(i, i + 5)
         i += 5
 
         const layerGuide = this.layerGuides.get(layerIndex)
@@ -208,9 +208,9 @@ export default async function fillProgram (context: Context): Promise<FillProgra
           offset,
           sourceName,
           invert,
-          texXY: [texX, texY],
-          texWH: [texW, texH],
-          patternMovement: patternMovement > 0,
+          patternXY: [patternX, patternY],
+          patternWH: [patternW, patternH],
+          patternMovement,
           layerIndex,
           opaque,
           layerCode,
@@ -229,8 +229,13 @@ export default async function fillProgram (context: Context): Promise<FillProgra
     draw (featureGuide: FillFeatureGuide, interactive = false): void {
       // grab context
       const { gl, context, type, uniforms } = this
+      const { uTexSize, uPatternXY, uPatternWH, uPatternMovement, uColors, uOpacity } = uniforms
+      const { texture, texSize } = context.sharedFBO
       // get current source data
-      const { source, tile, parent, count, offset, layerIndex, color, opacity, invert, featureCode, mode } = featureGuide
+      const {
+        source, tile, parent, count, offset, layerIndex, color, opacity, invert, featureCode, mode,
+        patternXY, patternWH, patternMovement
+      } = featureGuide
       const { vao } = source
       const { mask } = parent ?? tile
       // ensure proper context state
@@ -240,12 +245,19 @@ export default async function fillProgram (context: Context): Promise<FillProgra
       context.enableStencilTest()
       context.lessDepth()
       context.setDepthRange(layerIndex)
+      // set texture data
+      gl.activeTexture(gl.TEXTURE0)
+      gl.bindTexture(gl.TEXTURE_2D, texture)
+      gl.uniform2fv(uTexSize, texSize)
+      gl.uniform2fv(uPatternXY, patternXY)
+      gl.uniform2fv(uPatternWH, patternWH)
+      gl.uniform1i(uPatternMovement, patternMovement)
       if (interactive) context.stencilFuncAlways(0)
       if (invert) gl.colorMask(false, false, false, false)
       // set feature code (webgl 1 we store the colors, webgl 2 we store layerCode lookups)
       if (type === 1) {
-        gl.uniform4fv(uniforms.uColors, color ?? [0, 0, 0, 1])
-        gl.uniform1fv(uniforms.uOpacity, opacity ?? [1])
+        gl.uniform4fv(uColors, color ?? [0, 0, 0, 1])
+        gl.uniform1fv(uOpacity, opacity ?? [1])
       } else { this.setFeatureCode(featureCode ?? [0]) }
       // draw elements
       if (count > 0) {

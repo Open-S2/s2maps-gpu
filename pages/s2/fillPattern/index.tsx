@@ -16,7 +16,7 @@ export default function FillPattern (): React.JSX.Element {
     <div className='pages'>
       <Map
         style={style}
-        opts={{ zoomController: false, contextType: 2 }}
+        opts={{ zoomController: false, contextType: 3 }}
         ready={ready}
         noAPIKey
       />

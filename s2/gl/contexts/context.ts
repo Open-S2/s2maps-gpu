@@ -2,9 +2,11 @@
 import buildMask from './buildMask'
 
 import type { MapOptions } from 'ui/s2mapUI'
-import type { Context as ContextSpec, MaskSource } from './context.spec'
+import type { Context as ContextSpec, FBO, MaskSource } from './context.spec'
 import type { GPUType, Projection } from 'style/style.spec'
 import type { BBox } from 'geometry'
+import type { GlyphImages } from 'workers/source/glyphSource'
+import type { SpriteImageMessage } from 'workers/worker.spec'
 
 const DEPTH_ESPILON = 1 / Math.pow(2, 16)
 
@@ -12,6 +14,7 @@ const DEPTH_ESPILON = 1 / Math.pow(2, 16)
 
 export default class Context implements ContextSpec {
   gl: WebGLRenderingContext | WebGL2RenderingContext
+  presentation: { width: number, height: number } = { width: 0, height: 0 }
   renderer: string // ex: AMD Radeon Pro 560 OpenGL Engine (https://github.com/pmndrs/detect-gpu)
   devicePixelRatio: number
   interactive = false
@@ -35,12 +38,14 @@ export default class Context implements ContextSpec {
   interactFramebuffer!: WebGLFramebuffer
   defaultBounds: BBox = [0, 0, 1, 1]
   nullTexture!: WebGLTexture
+  sharedFBO: FBO
   constructor (context: WebGLRenderingContext | WebGL2RenderingContext, options: MapOptions) {
     const { canvasMultiplier } = options
     const gl = this.gl = context
     this.devicePixelRatio = canvasMultiplier ?? 1
-    this.#buildInteractFramebuffer()
     this.#buildNullTexture()
+    this.sharedFBO = this.#buildFramebuffer(200)
+    this.#buildInteractFBO()
     // lastly grab the renderers id
     const debugRendererInfo = context.getExtension('WEBGL_debug_renderer_info')
     if (debugRendererInfo !== undefined) this.renderer = cleanRenderer(context.getParameter(debugRendererInfo.UNMASKED_RENDERER_WEBGL))
@@ -63,9 +68,120 @@ export default class Context implements ContextSpec {
     this.nullTexture = this.buildTexture(null, 1)
   }
 
+  // MANAGE FRAMEBUFFER OBJECTS
+
+  #buildFramebuffer (height: number): FBO {
+    const { gl } = this
+    const texture = gl.createTexture()
+    if (texture === null) throw new Error('Failed to create glyph texture')
+    const stencil = gl.createRenderbuffer()
+    if (stencil === null) throw new Error('Failed to create glyph stencil')
+    const glyphFramebuffer = gl.createFramebuffer()
+    if (glyphFramebuffer === null) throw new Error('Failed to create glyph framebuffer')
+    // TEXTURE BUFFER
+    // pre-build the glyph texture
+    // bind
+    gl.bindTexture(gl.TEXTURE_2D, texture)
+    // allocate size
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 2048, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
+    // set filter system
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+    // DEPTH & STENCIL BUFFER
+    // bind
+    gl.bindRenderbuffer(gl.RENDERBUFFER, stencil)
+    // allocate size
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.STENCIL_INDEX8, 2048, height)
+    // FRAMEBUFFER
+    // bind
+    gl.bindFramebuffer(gl.FRAMEBUFFER, glyphFramebuffer)
+    // attach texture to glyphFramebuffer
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0)
+    // attach stencil renderbuffer to framebuffer
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.STENCIL_ATTACHMENT, gl.RENDERBUFFER, stencil)
+    // rebind our default framebuffer
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+
+    return {
+      width: 2048,
+      height,
+      texSize: [2048, height],
+      texture,
+      stencil,
+      glyphFramebuffer
+    }
+  }
+
+  #increaseFBOSize (height: number): void {
+    const { gl, type, sharedFBO } = this
+    if (height <= sharedFBO.height) return
+
+    // build the new fbo
+    const newFBO = this.#buildFramebuffer(height)
+    // copy over data
+    if (type === 1) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, sharedFBO.glyphFramebuffer)
+      gl.bindTexture(gl.TEXTURE_2D, newFBO.texture)
+      gl.copyTexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 0, 0, 2048, sharedFBO.height)
+    } else {
+      const gl2 = gl as WebGL2RenderingContext
+      gl2.bindFramebuffer(gl2.READ_FRAMEBUFFER, sharedFBO.glyphFramebuffer)
+      gl2.bindFramebuffer(gl2.DRAW_FRAMEBUFFER, newFBO.glyphFramebuffer)
+      gl2.blitFramebuffer(0, 0, 2048, sharedFBO.height, 0, 0, 2048, sharedFBO.height, gl.COLOR_BUFFER_BIT, gl.LINEAR)
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+    // delete old FBO and set new
+    this.#deleteFBO(sharedFBO)
+    // update to new FBO
+    this.sharedFBO = newFBO
+  }
+
+  #deleteFBO (fbo: FBO): void {
+    const { gl } = this
+    if (fbo !== undefined) {
+      gl.deleteTexture(fbo.texture)
+      gl.deleteRenderbuffer(fbo.stencil)
+      gl.deleteFramebuffer(fbo.glyphFramebuffer)
+    }
+  }
+
+  // MANAGE IMAGE IMPORTS
+
+  injectImages (maxHeight: number, images: GlyphImages): void {
+    const { gl } = this
+    // increase texture size if necessary
+    this.#increaseFBOSize(maxHeight)
+    // iterate through images and store
+    gl.bindTexture(gl.TEXTURE_2D, this.sharedFBO.texture)
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0)
+    for (const { posX, posY, width, height, data } of images) {
+      const srcData = new Uint8ClampedArray(data)
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, posX, posY, width, height, gl.RGBA, gl.UNSIGNED_BYTE, srcData, 0)
+    }
+  }
+
+  injectSpriteImage (data: SpriteImageMessage): void {
+    const { gl } = this
+    const { image, built, offsetX, offsetY, width, height, maxHeight } = data
+    // increase texture size if necessary
+    this.#increaseFBOSize(maxHeight)
+    // do not premultiply
+    gl.bindTexture(gl.TEXTURE_2D, this.sharedFBO.texture)
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0)
+    if (built) {
+      // @ts-expect-error - not sure why this is throwing an error, it works and the types account for it.
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, offsetX, offsetY, gl.RGBA, gl.UNSIGNED_BYTE, image as ImageBitmap)
+    } else {
+      const srcData = new Uint8ClampedArray(image as ArrayBuffer)
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, offsetX, offsetY, width, height, gl.RGBA, gl.UNSIGNED_BYTE, srcData, 0)
+    }
+  }
+
   // SETUP INTERACTIVE BUFFER
 
-  #buildInteractFramebuffer (): void {
+  #buildInteractFBO (): void {
     const { gl } = this
     // TEXTURE & STENCIL
     const texture = gl.createTexture()
@@ -89,6 +205,8 @@ export default class Context implements ContextSpec {
   }
 
   resize (): void {
+    const { width, height } = this.gl.canvas
+    this.presentation = { width, height }
     this.resizeInteract()
   }
 
@@ -149,6 +267,7 @@ export default class Context implements ContextSpec {
     // gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null)
     // gl.bindRenderbuffer(gl.RENDERBUFFER, null)
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+    this.#deleteFBO(this.sharedFBO)
     // set canvas to smallest size possible
     gl.canvas.width = 1
     gl.canvas.height = 1

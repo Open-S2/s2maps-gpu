@@ -44,7 +44,7 @@ export default class JsonVT {
     // update projection
     if (data.type === 'Feature' || data.type === 'FeatureCollection') this.projection = 'WM'
     // sanity check
-    if (this.maxzoom < 0 || this.maxzoom > 20) throw new Error('maxzoom should be in the 0-24 range')
+    if (this.maxzoom < 0 || this.maxzoom > 20) throw new Error('maxzoom should be in the 0-20 range')
     // convert features
     const features: FeatureVector[] = convert(data, this)
     // organize features to faces
@@ -100,13 +100,9 @@ export default class JsonVT {
   getTile (id: bigint): undefined | JSONVectorTile {
     const { projection } = this
     const zoom = level(projection, id)
-    if (zoom < 0 || zoom > 24 || !this.faces.has(getFace(projection, id))) {
-      return
-    }
+    if (zoom < 0 || zoom > 30 || !this.faces.has(getFace(projection, id))) return
     let tile = this.tiles.get(id)
-    if (tile !== undefined) {
-      return transformTile(tile, this.extent)
-    }
+    if (tile !== undefined) return transformTile(tile, this.extent)
 
     let pID = id
     let parent: undefined | JSONTile
