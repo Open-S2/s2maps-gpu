@@ -18,14 +18,16 @@ import { type StyleDefinition, type TimeSeriesStyle } from 'style/style.spec'
 
 import type S2Map from 's2Map'
 import type { FlushData, InteractiveObject, ReadyMessageGL, TileRequest, TileWorkerMessage } from 'workers/worker.spec'
-import type { TileGPU, Tile as TileSpec } from 'source/tile.spec'
+import type { Combine, TileShared as Tile } from 'source/tile.spec'
 
 export interface ResizeDimensions {
   width: number
   height: number
 }
 
-export default class Camera {
+export type SharedPainter = Combine<GLPainter | GPUPainter>
+
+export default class Camera<P extends SharedPainter = SharedPainter> {
   readonly parent?: S2Map
   id: string
   readonly #canvas: HTMLCanvasElement
@@ -34,12 +36,12 @@ export default class Camera {
   readonly #scrollZoom // allow the user to scroll over the canvas and cause a zoom change
   style: Style
   projector: Projector
-  painter!: GLPainter & GPUPainter
-  tileCache = new Cache<bigint, TileSpec>()
+  painter!: P
+  tileCache = new Cache<bigint, Tile>()
   timeCache?: TimeCache
-  tilesInView: TileSpec[] = [] // S2CellIDs of the tiles
+  tilesInView: Tile[] = [] // S2CellIDs of the tiles
   lastTileViewState: number[] = []
-  requestQueue: TileSpec[] = []
+  requestQueue: Tile[] = []
   wasDirtyLastFrame = false
   webworker: boolean
   canMove = true
@@ -146,7 +148,7 @@ export default class Camera {
       context = this.#canvas.getContext('webgpu') as unknown as GPUCanvasContext // GPUCanvasContext
       if (context === null) return false
       const Painter = await import('gpu').then(m => m.Painter)
-      this.painter = new Painter(context, options) as any
+      this.painter = new Painter(context, options) as unknown as P
       await this.painter.prepare()
     } else {
       let type: 1 | 2 = 1
@@ -163,7 +165,7 @@ export default class Camera {
       }
       if (context === null) return false
       const Painter = await import('gl').then(m => m.Painter)
-      this.painter = new Painter(context, type, options) as unknown as any
+      this.painter = new Painter(context, type, options) as unknown as P
     }
 
     return true
@@ -201,8 +203,8 @@ export default class Camera {
       if (!keepCache && !tileIDs.includes(key)) { // just remove the tile for simplicity
         this.tileCache.delete(key)
       } else { // add to tileRequests
-        const { id, face, zoom, i, j, bbox, type, division, size } = tile
-        tileRequests.push({ id, face, zoom, i, j, bbox, type, division, size })
+        const { id, face, zoom, i, j, bbox, type, division } = tile
+        tileRequests.push({ id, face, zoom, i, j, bbox, type, division })
         if (!awaitReplace) tile.deleteSources(sourceNames)
       }
     })
@@ -362,15 +364,15 @@ export default class Camera {
 
     if (type === 'interactive') this.#injectInteractiveData(data.tileID, data.interactiveGuideBuffer, data.interactiveDataBuffer)
     else if (type === 'flush') this.#injectFlush(data)
-    else if (type === 'glyphimages') this.painter.injectGlyphImages(data.maxHeight, data.images, this.tileCache.getAll() as TileGPU[])
-    else if (type === 'spriteimage') this.painter.injectSpriteImage(data, this.tileCache.getAll() as TileGPU[])
+    else if (type === 'glyphimages') this.painter.injectGlyphImages(data.maxHeight, data.images, this.tileCache.getAll())
+    else if (type === 'spriteimage') this.painter.injectSpriteImage(data, this.tileCache.getAll())
     else if (type === 'timesource') this._addTimeSource(data.sourceName, data.interval)
     else {
       // 1) grab the tile
       const tile = this.tileCache.get(data.tileID)
       if (tile === undefined) return
       // 2) Build features via the painter. Said workflow will add to the tile's feature list
-      this.painter.buildFeatureData(tile as any, data)
+      this.painter.buildFeatureData(tile, data)
     }
 
     // new 'paint', so painter is dirty
@@ -403,17 +405,17 @@ export default class Camera {
     }
   }
 
-  getTile (tileID: bigint): undefined | TileSpec {
+  getTile (tileID: bigint): undefined | Tile {
     return this.tileCache.get(tileID)
   }
 
-  getTiles (): TileSpec[] {
+  getTiles (): Tile[] {
     const { tileCache, projector, painter, style } = this
     if (projector.dirty) {
       painter.dirty = true // to avoid re-requesting getTiles (which is expensive), we set painter.dirty to true
       let tilesInView: bigint[] = []
       // no matter what we need to update what's in view
-      const newTiles: TileSpec[] = []
+      const newTiles: Tile[] = []
       // update tiles in view
       tilesInView = projector.getTilesInView()
       // check if any of the tiles don't exist in the cache. If they don't create a new tile
@@ -448,7 +450,7 @@ export default class Camera {
     style.requestTiles(newTiles)
   }
 
-  #createTile (id: bigint): TileSpec {
+  #createTile (id: bigint): Tile {
     const { style, painter, tileCache, projector } = this
     const { projection } = projector
     // create tile
@@ -462,7 +464,7 @@ export default class Camera {
       const pID = parentID(projection, id)
       // check if parent tile exists, if so inject
       const parent = tileCache.get(pID)
-      if (parent !== undefined) tile.injectParentTile(parent as any, style.layers)
+      if (parent !== undefined) tile.injectParentTile(parent, style.layers)
     }
     // store the tile
     tileCache.set(id, tile)
@@ -479,12 +481,12 @@ export default class Camera {
       // store for future draw that it was a "dirty" frame
       this.wasDirtyLastFrame = true
       // paint scene
-      painter.paint(projector, tiles as any)
+      painter.paint(projector, tiles)
     }
     // draw the interactive elements if there was no movement/zoom change
     if (style.interactive && !projector.dirty && this.wasDirtyLastFrame) {
       this.wasDirtyLastFrame = false
-      painter.computeInteractive(tiles as any)
+      painter.computeInteractive(tiles)
     }
     // cleanup
     painter.dirty = false

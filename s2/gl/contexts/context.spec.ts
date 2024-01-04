@@ -1,7 +1,18 @@
 import type { BBox } from 'geometry'
-import type { TileGL } from 'source/tile.spec'
-import type { GPUType, Resampling } from 'style/style.spec'
+import type { TileGL as Tile } from 'source/tile.spec'
+import type { GPUType, Resampling, UnpackData } from 'style/style.spec'
 import type { SensorTextureDefinition } from 'ui/camera/timeCache'
+import type { GlyphImages } from 'workers/source/glyphSource'
+import type { SpriteImageMessage } from 'workers/worker.spec'
+
+export interface FBO {
+  width: number
+  height: number
+  texSize: number[]
+  texture: WebGLTexture
+  stencil: WebGLRenderbuffer
+  glyphFramebuffer: WebGLFramebuffer
+}
 
 export interface MaskSource {
   type: 'mask'
@@ -71,8 +82,9 @@ export type FeatureSource = MaskSource | FillSource | LineSource | PointSource |
 /* FEATURE GUIDES */
 
 export interface FeatureGuideBase {
-  tile: TileGL
-  parent?: TileGL
+  tile: Tile
+  parent?: Tile
+  maskLayer?: boolean
   layerIndex: number
   sourceName: string
   layerCode: number[]
@@ -91,9 +103,9 @@ export interface FillFeatureGuide extends FeatureGuideBase {
   count: number
   offset: number
   invert: boolean
-  texXY: [x: number, y: number]
-  texWH: [w: number, h: number]
-  patternMovement: boolean
+  patternXY: [x: number, y: number]
+  patternWH: [w: number, h: number]
+  patternMovement: number
   interactive: boolean
   opaque: boolean
   color?: number[] // webgl1
@@ -187,6 +199,7 @@ export interface HillshadeFeatureGuide extends FeatureGuideBase {
   source: RasterSource
   fadeDuration: number
   fadeStartTime: number
+  unpack: UnpackData
   opacity?: number // webgl1
   shadowColor?: [number, number, number, number] // webgl1
   accentColor?: [number, number, number, number] // webgl1
@@ -206,7 +219,6 @@ export interface SensorFeatureGuide extends FeatureGuideBase {
 }
 
 export interface ShadeFeatureGuide extends FeatureGuideBase {
-  tile: TileGL
   layerIndex: number
   sourceName: string
   type: 'shade'
@@ -226,6 +238,7 @@ export type FeatureGuide =
 export interface Context {
   gl: WebGLRenderingContext | WebGL2RenderingContext
   type: GPUType
+  presentation: { width: number, height: number }
   renderer: string
   devicePixelRatio: number
   interactive: boolean
@@ -246,6 +259,11 @@ export interface Context {
   interactFramebuffer?: WebGLFramebuffer
   defaultBounds: BBox
   nullTexture: WebGLTexture
+  sharedFBO: FBO
+
+  // MANAGE IMAGE IMPORTS
+  injectImages: (maxHeight: number, images: GlyphImages) => void
+  injectSpriteImage: (data: SpriteImageMessage) => void
 
   // SETUP INTERACTIVE BUFFER
   resize: () => void

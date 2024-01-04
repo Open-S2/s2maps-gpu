@@ -23,10 +23,10 @@ import type {
   ShadeProgram,
   SkyboxProgram,
   WallpaperProgram,
-  Workflow,
   WorkflowImports,
   WorkflowKey,
-  WorkflowType
+  WorkflowType,
+  Workflows
 } from './programs/program.spec'
 import type { GlyphImages } from 'workers/source/glyphSource'
 import type { ColorMode } from 's2Map'
@@ -34,7 +34,7 @@ import type { PainterData, SpriteImageMessage } from 'workers/worker.spec'
 
 export default class Painter implements PainterSpec {
   context: WebGL2Context | WebGLContext
-  workflows: Workflow = {}
+  workflows: Workflows = {}
   curProgram?: WorkflowKey
   dirty = true
   constructor (
@@ -46,6 +46,8 @@ export default class Painter implements PainterSpec {
     if (type === 2) this.context = new WebGL2Context(context as WebGL2RenderingContext, options)
     else this.context = new WebGLContext(context as WebGLRenderingContext, options)
   }
+
+  async prepare (): Promise<void> {}
 
   delete (): void {
     const { context, workflows } = this
@@ -75,7 +77,7 @@ export default class Painter implements PainterSpec {
       wallpaper: async () => { return await import('./programs/wallpaperProgram') },
       skybox: async () => { return await import('./programs/skyboxProgram') }
     }
-    const programKeys: Array<keyof Omit<Workflow, 'background'>> = []
+    const programKeys: Array<keyof Omit<Workflows, 'background'>> = []
     for (const program of buildSet) {
       if (program in workflows) continue
       if (program === 'glyph') programKeys.push('glyphFilter')
@@ -104,7 +106,7 @@ export default class Painter implements PainterSpec {
   injectFrameUniforms (matrix: Float32Array, view: Float32Array, aspect: [number, number]): void {
     const { workflows } = this
     for (const programName in workflows) {
-      workflows[programName as keyof Workflow]?.injectFrameUniforms(matrix, view, aspect)
+      workflows[programName as keyof Workflows]?.injectFrameUniforms(matrix, view, aspect)
     }
   }
 
@@ -123,6 +125,7 @@ export default class Painter implements PainterSpec {
   useWorkflow (programName: 'shade'): ShadeProgram | undefined
   useWorkflow (programName: 'glyphFilter'): GlyphFilterProgram | undefined
   useWorkflow (programName: 'background'): WallpaperProgram | SkyboxProgram | undefined
+  useWorkflow (programName: WorkflowKey): Program | undefined
   useWorkflow (programName: WorkflowKey): Program | undefined {
     const program = this.workflows[programName]
     if (program === undefined && programName !== 'background') throw new Error(`Program ${programName} not found`)
@@ -251,7 +254,7 @@ export default class Painter implements PainterSpec {
       const { tile, parent, layerIndex, type, layerCode, lch } = feature
       const { tmpMaskID } = tile
       // set program
-      program = this.useWorkflow(type as any | undefined) // TODO: Maybe there is a way for this to properly check
+      program = this.useWorkflow(type)
       if (program === undefined) throw new Error(`Program ${type} not found`)
       // set stencil
       context.stencilFuncEqual(tmpMaskID)
@@ -266,7 +269,7 @@ export default class Painter implements PainterSpec {
       // adjust tile uniforms
       program.setTileUniforms(parent ?? tile)
       // draw (just ignore types... they are handled in the program)
-      program.draw(feature as any, interactive) // TODO: We could wisen this up too
+      program.draw(feature as any, interactive) // TODO: We could wisen this up
     }
   }
 
@@ -299,7 +302,7 @@ export default class Painter implements PainterSpec {
     this.#paintGlyphFilter(glyphFilterProgram, glyphFeatures, 2)
   }
 
-  getScreen (): Uint8ClampedArray {
+  async getScreen (): Promise<Uint8ClampedArray> {
     const { gl } = this.context
     const { canvas, RGBA, UNSIGNED_BYTE } = gl
     const { width, height } = canvas
@@ -335,13 +338,12 @@ export default class Painter implements PainterSpec {
   }
 
   injectGlyphImages (maxHeight: number, images: GlyphImages): void {
-    const { glyph } = this.workflows
-    glyph?.injectImages(maxHeight, images)
+    this.context.injectImages(maxHeight, images)
   }
 
-  injectSpriteImage (data: SpriteImageMessage): void {
-    const { glyph } = this.workflows
-    glyph?.injectSpriteImage(data)
+  injectSpriteImage (data: SpriteImageMessage): boolean {
+    this.context.injectSpriteImage(data)
+    return true
   }
 
   setColorMode (mode: ColorMode): void {

@@ -3,7 +3,7 @@ import Cache from './cache'
 import type Camera from '.'
 import type { SensorSource } from 'gl/contexts/context.spec'
 import type { TileRequest } from 'workers/worker.spec'
-import type { TileGL, TileGPU } from 'source/tile.spec'
+import type { TileShared as Tile } from 'source/tile.spec'
 import type { TimeSeriesStyle } from 'style/style.spec'
 
 export interface TimeSource {
@@ -127,13 +127,13 @@ export default class TimeCache extends Cache<string, SensorSource> {
 
   #requestTiles (time: number, shortName: string, sourceName: string, id?: bigint): void {
     const { webworker, camera } = this
-    let tiles: Array<TileGL & TileGPU> = []
+    let tiles: Tile[] = []
     if (id !== undefined) {
       const tile = camera.getTile(id)
-      if (tile !== undefined) tiles = [tile as any]
+      if (tile !== undefined) tiles = [tile]
       else tiles = []
     } else {
-      tiles = camera.getTiles() as any
+      tiles = camera.getTiles()
     }
     const tileRequests: TileRequest[] = []
     // build tile requests
@@ -145,8 +145,8 @@ export default class TimeCache extends Cache<string, SensorSource> {
       // place a temporary source in the cache
       // this will be replaced by the source data when it arrives
       this.set(timeID, {})
-      const { id, face, i, j, zoom, bbox, type, division, size } = tile
-      tileRequests.push({ id, face, i, j, zoom, bbox, type, division, size, time })
+      const { id, face, i, j, zoom, bbox, type, division } = tile
+      tileRequests.push({ id, face, i, j, zoom, bbox, type, division, time })
     }
     // get list of current tiles in view
     if (tileRequests.length > 0) {

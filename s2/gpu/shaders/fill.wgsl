@@ -493,19 +493,15 @@ fn vMain(
   // Convert from clip space to [0, 1] range
   output.uv = (tmpPos.xy + 1.) / 2.;
   let textureSize = vec2<f32>(textureDimensions(patternTexture, 0));
-  let regionX = pattern.texX / textureSize.x;
-  let regionY = pattern.texY / textureSize.y;
-  let regionWidth = pattern.texW / textureSize.x;
-  let regionHeight = pattern.texH / textureSize.y;
+  let aspect = vec2<f32>(view.aspectX, view.aspectY);
+  let patternWH = vec2<f32>(pattern.texW, pattern.texH);
+  output.regionPos = vec2<f32>(pattern.texX, pattern.texY) / textureSize;
+  output.regionSize = patternWH / textureSize;
   // Scale UV coordinates for tiling
-  let tileFactorX = view.aspectX / pattern.texW;
-  let tileFactorY = view.aspectY / pattern.texH;
+  output.tileFactor = aspect / patternWH;
   // prep deltaMouse
   if (pattern.movement == 0.) { output.deltaMouse = vec2<f32>(0., 0.); }
   else { output.deltaMouse = vec2<f32>(view.deltaMouseX, view.deltaMouseY); }
-  output.tileFactor = vec2<f32>(tileFactorX, tileFactorY);
-  output.regionPos = vec2<f32>(regionX, regionY);
-  output.regionSize = vec2<f32>(regionWidth, regionHeight);
 
   // set color
   // prep layer index and feature index positions
@@ -525,9 +521,6 @@ fn fMain(
   output: VertexOutput
 ) -> @location(0) vec4<f32> {
   if (pattern.texW == 0. || pattern.texH == 0.) { return output.color * output.alpha; }
-  // handle pattern case
-  let pos = output.uv;
-  let textureSize = vec2<f32>(textureDimensions(patternTexture, 0)); // Texture size
   // Calculate UV coordinates within the specified region
   let uv = (((output.uv + output.deltaMouse) * output.tileFactor) % 1.) * output.regionSize + output.regionPos;
   // grab the texture color from the pattern at uv coordinates

@@ -175,7 +175,8 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     for (const [layerIndex, fillWorkerLayer] of this.invertLayers) {
       if (fillWorkerLayer.source !== sourceName) continue
       if (!features.some(feature => feature.layerIndex === layerIndex)) {
-        this.#buildInvertFeature(tile, fillWorkerLayer)
+        const feature = this.#buildInvertFeature(tile, fillWorkerLayer)
+        if (feature !== undefined) features.push(feature)
       }
     }
 
@@ -191,7 +192,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
   }
 
   // NOTE: You can not build invert features that require properties data
-  #buildInvertFeature (tile: TileRequest, fillWorkerLayer: FillWorkerLayer): void {
+  #buildInvertFeature (tile: TileRequest, fillWorkerLayer: FillWorkerLayer): undefined | FillFeature {
     const { gpuType, imageStore } = this
     const { zoom } = tile
     const { getCode, minzoom, maxzoom, layerIndex } = fillWorkerLayer
@@ -208,7 +209,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     const id = this.idGen.getNum()
     const [gl1Code, gl2Code] = getCode(zoom, {})
     const feature: FillFeature = {
-      vertices: [0, 0, 1, 0, 1, 1, 0, 1],
+      vertices: [-0.1, -0.1, 1.1, -0.1, 1.1, 1.1, -0.1, 1.1],
       indices: [0, 2, 1, 2, 0, 3],
       layerIndex,
       code: gpuType === 1 ? gl1Code : gl2Code,
@@ -223,6 +224,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     if (!this.featureStore.has(tile.id)) this.featureStore.set(tile.id, [] as FillFeature[])
     const features = this.featureStore.get(tile.id) as FillFeature[]
     features.push(feature)
+    return feature
   }
 
   #flush (mapID: string, sourceName: string, tileID: bigint): void {

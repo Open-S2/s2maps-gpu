@@ -21,6 +21,7 @@ const style: StyleDefinition = {
       layer: 'water',
       type: 'fill',
       pattern: 'pattern',
+      patternMovement: true,
       color: '#b4c1c6'
     }
   ]

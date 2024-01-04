@@ -577,6 +577,15 @@ export interface RasterWorkerLayer extends LayerWorkerBaseRaster {
 
 /** HILLSHADE **/
 
+export interface UnpackDefinition {
+  offset: number
+  zFactor: number
+  rMultiplier: number
+  gMultiplier: number
+  bMultiplier: number
+  aMultiplier: number
+}
+export type UnpackData = [offset: number, zFactor: number, rMul: number, gMul: number, bMul: number, aMul: number]
 export interface HillshadeLayerStyle extends LayerStyleBase {
   type: 'hillshade'
   // paint
@@ -588,6 +597,7 @@ export interface HillshadeLayerStyle extends LayerStyleBase {
   accentColor?: string | Property<string>
   // layout
   fadeDuration?: number
+  unpack?: UnpackDefinition
 }
 export interface HillshadeLayerDefinition extends LayerDefinitionBase {
   type: 'hillshade'
@@ -599,13 +609,16 @@ export interface HillshadeLayerDefinition extends LayerDefinitionBase {
   highlightColor: string | Property<string>
   accentColor: string | Property<string>
   // layout
+  unpack: UnpackDefinition
 }
 export interface HillshadeWorkflowLayerGuide extends LayerWorkflowGuideBase {
   fadeDuration: number
+  unpack: UnpackData
 }
-export interface HillshadeWorkflowLayerGuideGPU extends HillshadeWorkflowLayerGuide {
+export interface HillshadeWorkflowLayerGuideGPU extends Omit<HillshadeWorkflowLayerGuide, 'unpack'> {
   layerBuffer: GPUBuffer
   layerCodeBuffer: GPUBuffer
+  unpackBuffer: GPUBuffer
 }
 export interface HillshadeWorkerLayer extends LayerWorkerBaseRaster {
   type: 'hillshade'

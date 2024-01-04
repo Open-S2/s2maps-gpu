@@ -14,10 +14,20 @@ uniform float uAzimuth;
 uniform float uAltitude;
 uniform float uFade;
 uniform float uTexLength;
+// [offset, zFactor, rMul, gMul, bMul, aMul]
+uniform float uUnpack[6];
 
 float getElevation (vec2 uv) {
   vec4 color = texture2D(uTexture, uv);
-  return -10000. + ((color.r * 256. * 256. + color.g * 256. + color.b) * 0.1);
+  return uUnpack[0] + (
+    (
+      color.r * uUnpack[2] +
+      color.g * uUnpack[3] +
+      color.b * uUnpack[4] +
+      color.a * uUnpack[5]
+    )
+    * uUnpack[1]
+  );
 }
 
 void main () {

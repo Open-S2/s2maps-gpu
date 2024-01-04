@@ -53,6 +53,22 @@ struct LayerUniforms {
   useLCH: f32, // use LCH coloring or RGB if false
 };
 
+// Terrarium unpack formula:
+// https://s3.amazonaws.com/elevation-tiles-prod/terrarium/6/6/24.png
+// return (color.r * 256. + color.g + color.b / 256.) - 32768.;
+// Mapbox unpack formula:
+// return ((color.r * 256. * 256. + color.g * 256. + color.b) * 0.1) - 10000.;
+// Variable names:
+// return ((color.r * rMultiplier + color.g * gMultiplier + color.b * gMultiplier + color.a * aMultiplier) * zFactor) + offset;
+struct UnpackUniforms {
+  offset: f32,
+  zFactor: f32,
+  rMultiplier: f32,
+  gMultiplier: f32,
+  bMultiplier: f32,
+  aMultiplier: f32,
+};
+
 // ** FRAME DATA **
 // frame data is updated at the beginning of each new frame
 @binding(0) @group(0) var<uniform> view: ViewUniforms;
@@ -74,6 +90,7 @@ struct LayerUniforms {
 @binding(0) @group(2) var<uniform> hillshadeFade: f32;
 @binding(1) @group(2) var imageSampler: sampler;
 @binding(2) @group(2) var demTexture: texture_2d<f32>;
+@binding(3) @group(2) var<uniform> unpack: UnpackUniforms;
 
 fn LCH2LAB (lch: vec4<f32>) -> vec4<f32> { // r -> l ; g -> c ; b -> h
   var h = lch.b * (PI / 180.);
@@ -451,7 +468,15 @@ fn getElevation(
   uv: vec2<f32>,
 ) -> f32 {
   var color = textureSample(demTexture, imageSampler, uv);
-  return -10000. + ((color.r * 256. * 256. + color.g * 256. + color.b) * 0.1);
+  return (
+    (
+      color.r * unpack.rMultiplier +
+      color.g * unpack.gMultiplier +
+      color.b * unpack.bMultiplier +
+      color.a * unpack.aMultiplier
+    )
+    * unpack.zFactor
+  ) + unpack.offset;
 }
 
 @vertex

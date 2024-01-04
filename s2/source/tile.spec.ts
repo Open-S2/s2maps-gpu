@@ -1,7 +1,7 @@
 import type {
-  Context as ContextGL,
   FeatureGuide as FeatureGuideGL,
-  MaskSource as MaskSourceGL
+  MaskSource as MaskSourceGL,
+  Context as WebGLContext
 } from 'gl/contexts/context.spec'
 import type WebGPUContext from 'gpu/context/context'
 import type {
@@ -20,6 +20,17 @@ export interface Corners {
   bottomRight: XYZ
 }
 
+// gets all viable keys from all interfaces in a union.
+export type AllKeysOf<T> = T extends any ? keyof T : never
+// basically does T[K] but when T is a union it only gives T[K] for the members of the union for which it is a valid key.
+export type Get<T, K extends keyof any, Fallback=undefined> = T extends Record<K, any> ? T[K] : Fallback
+// takes a union of interfaces and merges them so that any common key is a union of possibilities.
+export type Combine<T> = { [K in AllKeysOf<T>]: Get<T, K> }
+
+export type SharedContext = Combine<WebGLContext | WebGPUContext>
+export type SharedFeatureGuide = Combine<FeatureGuideGL | FeaturesGPU>
+export type SharedMaskSource = Combine<MaskSourceGL | MaskSourceGPU>
+
 export type FaceST = [face: number, zoom: number, sLow: number, deltaS: number, tLow: number, deltaT: number]
 // export type Bottom = [bottomLeftX: number, bottomLeftY: number, bottomRightX: number, bottomRightY: number]
 // export type Top = [topLeftX: number, topLeftY: number, topRightX: number, topRightY: number]
@@ -29,13 +40,12 @@ export type FaceST = [face: number, zoom: number, sLow: number, deltaS: number, 
 // before managing sources asyncronously, a tile needs to synchronously build spherical background
 // data to ensure we get no awkward visuals.
 
-export interface TileBase {
+export interface TileBase<C, F, M> {
   id: bigint
   face: Face
   i: number
   j: number
   zoom: number
-  size: number
   bbox: BBox
   division: number
   tmpMaskID: number
@@ -44,6 +54,16 @@ export interface TileBase {
   rendered: boolean
   bottomTop: Float32Array
   state: 'loading' | 'loaded' | 'deleted'
+  type: 'S2' | 'WM'
+  // S2 specific features
+  faceST: FaceST
+  corners?: Corners
+  // WM specific features
+  matrix: Float32Array
+
+  context: C
+  featureGuides: F[]
+  mask: M
 
   flush: (data: FlushData) => void
   removeLayer: (index: number) => void
@@ -57,48 +77,17 @@ export interface TileBase {
 
   getInteractiveFeature: (id: number) => undefined | InteractiveObject
 
+  injectParentTile: (parent: TileBase<C, F, M>, layers: LayerDefinition[]) => void
+  // given a matrix, compute the corners screen positions
+  setScreenPositions: (projector: Projector) => void
+  addFeatures: (features: F[]) => void
+
   // cleanup after itself. When a tile is deleted, it's adventageous to cleanup GPU cache.
   delete: () => void
   deleteSources: (sourceNames: string[]) => void
 }
 
-export interface TileGLBase extends TileBase {
-  mask: MaskSourceGL
-  featureGuides: FeatureGuideGL[]
-  context: ContextGL
-
-  injectParentTile: (parent: TileGLBase, layers: LayerDefinition[]) => void
-  // given a matrix, compute the corners screen positions
-  setScreenPositions: (projector: Projector) => void
-  addFeatures: (features: FeatureGuideGL[]) => void
-}
-
-export interface TileGPUBase extends TileBase {
-  mask: MaskSourceGPU
-  featureGuides: FeaturesGPU[]
-  context: WebGPUContext
-
-  injectParentTile: (parent: TileGPUBase, layers: LayerDefinition[]) => void
-  // given a matrix, compute the corners screen positions
-  setScreenPositions: (projector: Projector) => void
-  addFeatures: (features: FeaturesGPU[]) => void
-}
-
-export interface S2Tile extends TileBase {
-  type: 'S2'
-  faceST: FaceST
-  corners?: Corners
-}
-export interface S2TileGL extends S2Tile, TileGLBase {}
-export interface S2TileGPU extends S2Tile, TileGPUBase {}
-
-export interface WMTile extends TileBase {
-  type: 'WM'
-  matrix: Float32Array
-}
-export interface WMTileGL extends WMTile, TileGLBase {}
-export interface WMTileGPU extends WMTile, TileGPUBase {}
-
-export type Tile = S2Tile | WMTile
-export type TileGL = S2TileGL | WMTileGL
-export type TileGPU = S2TileGPU | WMTileGPU
+export type Tile = TileBase<SharedContext, SharedFeatureGuide, SharedMaskSource>
+export type TileGL = TileBase<WebGLContext, FeatureGuideGL, MaskSourceGL>
+export type TileGPU = TileBase<WebGPUContext, FeaturesGPU, MaskSourceGPU>
+export type TileShared = TileGL & TileGPU

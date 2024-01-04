@@ -35,7 +35,7 @@ vec4 getBbox (in int bboxIndex) {
     float(int(btmLeft.r * 255.) << 8) + btmLeft.g * 255., // left
     float(int(btmLeft.b * 255.) << 8) + btmLeft.a * 255., // bottom
     float(int(topRght.r * 255.) << 8) + topRght.g * 255., // right
-    float(int(topRght.b * 255.) << 8) + topRght.a * 255.  // top
+    float(int(topRght.b * 255.) << 8) + topRght.a * 255. // top
   );
 }
 

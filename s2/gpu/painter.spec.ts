@@ -23,6 +23,7 @@ import type {
 } from 'workers/worker.spec'
 import type { GlyphImages } from 'workers/source/glyphSource'
 import type Projector from 'ui/camera/projector'
+import type TimeCache from 'ui/camera/timeCache'
 
 export interface Painter {
   context: WebGPUContext
@@ -35,9 +36,10 @@ export interface Painter {
   buildFeatureData: (tile: Tile, data: PainterData) => void
   buildWorkflows: (buildSet: Set<WorkflowType>) => Promise<void>
   resize: (width: number, height: number) => void
-  getScreen: () => Uint8ClampedArray
+  getScreen: () => Promise<Uint8ClampedArray>
   injectGlyphImages: (maxHeight: number, images: GlyphImages, tiles: Tile[]) => void
   injectSpriteImage: (data: SpriteImageMessage, tiles: Tile[]) => void
+  injectTimeCache: (timeCache: TimeCache) => void
   setColorMode: (mode: 0 | 1 | 2 | 3 | 4) => void
   delete: () => void
   paint: (projector: Projector, tiles: Tile[]) => void

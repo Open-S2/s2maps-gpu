@@ -33,7 +33,6 @@ import type {
 import type Projector from 'ui/camera/projector'
 import type S2MapUI from 'ui/s2mapUI'
 import type TimeCache from 'ui/camera/timeCache'
-import type { GlyphImages } from 'workers/source/glyphSource'
 import type { Scheme } from './wallpaperProgram'
 import type {
   FillData,
@@ -43,8 +42,7 @@ import type {
   LineData,
   PointData,
   RasterData,
-  SensorData,
-  SpriteImageMessage
+  SensorData
 } from 'workers/worker.spec'
 import type {
   Context,
@@ -72,16 +70,7 @@ export interface ShaderSource {
   attributes: Attributes
 }
 
-export interface FBO {
-  width: number
-  height: number
-  texSize: number[]
-  texture: WebGLTexture
-  stencil: WebGLRenderbuffer
-  glyphFramebuffer: WebGLFramebuffer
-}
-
-export interface Workflow {
+export interface Workflows {
   fill?: FillProgram
   glyphFilter?: GlyphFilterProgram
   glyph?: GlyphProgram
@@ -112,8 +101,7 @@ export interface WorkflowImports {
   skybox: () => Promise<{ default: (context: Context) => Promise<SkyboxProgram> }>
 }
 
-export type WorkflowKey = keyof Workflow
-
+export type WorkflowKey = keyof Workflows
 export type WorkflowType = 'fill' | 'glyph' | 'heatmap' | 'line' | 'point' | 'raster' | 'hillshade' | 'sensor' | 'shade' | 'skybox' | 'wallpaper'
 
 export interface ProgramSpec {
@@ -182,7 +170,6 @@ export interface GlyphFilterProgram extends ProgramSpec {
 }
 
 export interface GlyphProgram extends ProgramSpec {
-  fbo: FBO
   stepBuffer?: WebGLBuffer
   uvBuffer?: WebGLBuffer
   glyphFilterProgram: GlyphFilterProgram
@@ -192,8 +179,6 @@ export interface GlyphProgram extends ProgramSpec {
   injectFilter: (glyphFilterProgram: GlyphFilterProgram) => void
   buildSource: (glyphData: GlyphData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: GlyphLayerStyle) => GlyphLayerDefinition
-  injectImages: (maxHeight: number, images: GlyphImages) => void
-  injectSpriteImage: (data: SpriteImageMessage) => void
   draw: (featureGuide: GlyphFeatureGuide, interactive: boolean) => void
 }
 
@@ -329,6 +314,10 @@ export enum FillProgramUniforms {
   uLayerCode = 'uLayerCode',
   uFeatureCode = 'uFeatureCode',
   uCBlind = 'uCBlind',
+  uTexSize = 'uTexSize',
+  uPatternXY = 'uPatternXY',
+  uPatternWH = 'uPatternWH',
+  uPatternMovement = 'uPatternMovement',
   uColors = 'uColors', // WEBGL1
   uOpacity = 'uOpacity' // WEBGL1
 }
@@ -474,6 +463,7 @@ export enum HillshadeProgramUniforms {
   uCBlind = 'uCBlind',
   uFade = 'uFade',
   uTexture = 'uTexture',
+  uUnpack = 'uUnpack',
   uOpacity = 'uOpacity', // WEBGL1
   uShadowColor = 'uShadowColor', // WEBGL1
   uHighlightColor = 'uHighlightColor', // WEBGL1

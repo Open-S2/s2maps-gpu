@@ -3,7 +3,11 @@ import shaderCode from '../shaders/hillshade.wgsl'
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
 
 import type { WebGPUContext } from '../context'
-import type { HillshadeFeature, HillshadeWorkflow as HillshadeWorkflowSpec, RasterSource } from './workflow.spec'
+import type {
+  HillshadeFeature as HillshadeFeatureSpec,
+  HillshadeWorkflow as HillshadeWorkflowSpec,
+  RasterSource
+} from './workflow.spec'
 import type {
   HillshadeLayerDefinition,
   HillshadeLayerStyle,
@@ -24,40 +28,107 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
   }
 ]
 
+export class HilllshadeFeature implements HillshadeFeatureSpec {
+  type = 'hillshade' as const
+  sourceName: string
+  fadeDuration: number
+  bindGroup: GPUBindGroup
+  hillshadeBindGroup: GPUBindGroup
+  constructor (
+    public layerGuide: HillshadeWorkflowLayerGuideGPU,
+    public workflow: HillshadeWorkflowSpec,
+    public tile: Tile,
+    public source: RasterSource,
+    public layerIndex: number,
+    public featureCode: number[],
+    public hillshadeFadeBuffer: GPUBuffer,
+    public featureCodeBuffer: GPUBuffer,
+    public fadeStartTime = Date.now(),
+    public parent?: Tile
+  ) {
+    const { sourceName, fadeDuration } = layerGuide
+    this.sourceName = sourceName
+    this.fadeDuration = fadeDuration
+    this.bindGroup = this.#buildBindGroup()
+    this.hillshadeBindGroup = this.#buildHillshadeBindGroup()
+  }
+
+  draw (): void {
+    const { tile, workflow } = this
+    workflow.context.setStencilReference(tile.tmpMaskID)
+    workflow.draw(this)
+  }
+
+  destroy (): void {
+    const { hillshadeFadeBuffer, featureCodeBuffer } = this
+    hillshadeFadeBuffer.destroy()
+    featureCodeBuffer.destroy()
+  }
+
+  duplicate (tile: Tile, parent: Tile): HilllshadeFeature {
+    const {
+      layerGuide, workflow, source, layerIndex,
+      featureCode, hillshadeFadeBuffer, featureCodeBuffer, fadeStartTime
+    } = this
+    const { context } = workflow
+    const cE = context.device.createCommandEncoder()
+    const newHillshadeFadeBuffer = context.duplicateGPUBuffer(hillshadeFadeBuffer, cE)
+    const newFeatureCodeBuffer = context.duplicateGPUBuffer(featureCodeBuffer, cE)
+    context.device.queue.submit([cE.finish()])
+    return new HilllshadeFeature(
+      layerGuide, workflow, tile, source, layerIndex, featureCode,
+      newHillshadeFadeBuffer, newFeatureCodeBuffer, fadeStartTime, parent
+    )
+  }
+
+  #buildBindGroup (): GPUBindGroup {
+    const { workflow, tile, parent, layerGuide, featureCodeBuffer } = this
+    const { context } = workflow
+    const { mask } = parent ?? tile
+    const { layerBuffer, layerCodeBuffer } = layerGuide
+    return context.buildGroup(
+      'Hillshade Feature BindGroup',
+      context.featureBindGroupLayout,
+      [mask.uniformBuffer, mask.positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
+    )
+  }
+
+  #buildHillshadeBindGroup (): GPUBindGroup {
+    const { source, workflow, hillshadeFadeBuffer, layerGuide } = this
+    const { context, hillshadeBindGroupLayout } = workflow
+    const { unpackBuffer } = layerGuide
+    return context.device.createBindGroup({
+      label: 'Hillshade BindGroup',
+      layout: hillshadeBindGroupLayout,
+      entries: [
+        { binding: 0, resource: { buffer: hillshadeFadeBuffer } },
+        { binding: 1, resource: context.defaultSampler },
+        { binding: 2, resource: source.texture.createView() },
+        { binding: 3, resource: { buffer: unpackBuffer } }
+      ]
+    })
+  }
+}
+
 export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
   context: WebGPUContext
   layerGuides = new Map<number, HillshadeWorkflowLayerGuideGPU>()
-  module!: GPUShaderModule
   pipeline!: GPURenderPipeline
-  #hillshadeBindGroupLayout!: GPUBindGroupLayout
+  hillshadeBindGroupLayout!: GPUBindGroupLayout
   constructor (context: WebGPUContext) {
     this.context = context
   }
 
   async setup (): Promise<void> {
-    const { context } = this
-    const { device } = context
-    // prep hillshade uniforms
-    this.#hillshadeBindGroupLayout = context.device.createBindGroupLayout({
-      label: 'Hillshade Texture BindGroupLayout',
-      entries: [
-        // uniform
-        { binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
-        // sampler
-        { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
-        // texture
-        { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } }
-      ]
-    })
-    this.module = device.createShaderModule({ code: shaderCode })
     // create pipelines
     this.pipeline = await this.#getPipeline()
   }
 
   destroy (): void {
-    for (const { layerBuffer, layerCodeBuffer } of this.layerGuides.values()) {
+    for (const { layerBuffer, layerCodeBuffer, unpackBuffer } of this.layerGuides.values()) {
       layerBuffer.destroy()
       layerCodeBuffer.destroy()
+      unpackBuffer.destroy()
     }
   }
 
@@ -66,7 +137,7 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
     const { context } = this
     const { source, layerIndex, lch } = layerBase
     // PRE) get layer properties
-    let { shadowColor, accentColor, highlightColor, opacity, azimuth, altitude, fadeDuration } = layer
+    let { unpack, shadowColor, accentColor, highlightColor, opacity, azimuth, altitude, fadeDuration } = layer
     shadowColor = shadowColor ?? '#000'
     accentColor = accentColor ?? '#000'
     highlightColor = highlightColor ?? '#fff'
@@ -74,16 +145,21 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
     azimuth = azimuth ?? 315
     altitude = altitude ?? 45
     fadeDuration = fadeDuration ?? 300
+    // defaults to mapbox unpack
+    unpack = unpack ?? { offset: -10000, zFactor: 0.1, aMultiplier: 0, bMultiplier: 1, gMultiplier: 256, rMultiplier: 256 * 256 }
     // 1) build definition
     const layerDefinition: HillshadeLayerDefinition = {
       ...layerBase,
       type: 'hillshade',
+      // paint
       shadowColor,
       accentColor,
       highlightColor,
       azimuth,
       altitude,
-      opacity
+      opacity,
+      // layout
+      unpack
     }
     // 2) Store layer workflow
     const layerCode: number[] = []
@@ -93,6 +169,8 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
     // 3) Setup layer buffers in GPU
     const layerBuffer = context.buildGPUBuffer('Layer Uniform Buffer', new Float32Array([context.getDepthPosition(layerIndex), ~~lch]), GPUBufferUsage.UNIFORM)
     const layerCodeBuffer = context.buildGPUBuffer('Layer Code Buffer', new Float32Array(layerCode), GPUBufferUsage.STORAGE)
+    const unpackData = [unpack.offset, unpack.zFactor, unpack.rMultiplier, unpack.gMultiplier, unpack.bMultiplier, unpack.aMultiplier]
+    const unpackBuffer = context.buildGPUBuffer('Unpack Buffer', new Float32Array(unpackData), GPUBufferUsage.UNIFORM)
     // 4) Store layer guide
     this.layerGuides.set(layerIndex, {
       sourceName: source,
@@ -101,7 +179,8 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
       lch,
       fadeDuration: fadeDuration ?? 300,
       layerBuffer,
-      layerCodeBuffer
+      layerCodeBuffer,
+      unpackBuffer
     })
 
     return layerDefinition
@@ -116,7 +195,6 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
       built ? image as ImageBitmap : new Uint8ClampedArray(image as ArrayBuffer),
       size
     )
-
     // prep buffers
     const source: RasterSource = {
       type: 'raster' as const,
@@ -133,55 +211,20 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
 
   #buildFeatures (source: RasterSource, hillshadeData: HillshadeData, tile: Tile): void {
     const { context } = this
-    const { sourceName, featureGuides } = hillshadeData
-    const { mask } = tile
+    const { featureGuides } = hillshadeData
     // for each layer that maches the source, build the feature
-
-    const features: HillshadeFeature[] = []
+    const features: HillshadeFeatureSpec[] = []
 
     for (const { code, layerIndex } of featureGuides) {
       const layerGuide = this.layerGuides.get(layerIndex)
       if (layerGuide === undefined) continue
-      const { layerBuffer, layerCodeBuffer, fadeDuration, lch } = layerGuide
 
       const hillshadeFadeBuffer = context.buildGPUBuffer('Hillshade Uniform Buffer', new Float32Array([1]), GPUBufferUsage.UNIFORM)
-      const hillshadeBindGroup = context.device.createBindGroup({
-        label: 'Hillshade BindGroup',
-        layout: this.#hillshadeBindGroupLayout,
-        entries: [
-          { binding: 0, resource: { buffer: hillshadeFadeBuffer } },
-          { binding: 1, resource: context.defaultSampler },
-          { binding: 2, resource: source.texture.createView() }
-        ]
-      })
       const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array(code.length > 0 ? code : [0]), GPUBufferUsage.STORAGE)
-      const bindGroup = context.buildGroup(
-        'Feature BindGroup',
-        context.featureBindGroupLayout,
-        [mask.uniformBuffer, mask.positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
+      const feature = new HilllshadeFeature(
+        layerGuide, this, tile, source, layerIndex,
+        code, hillshadeFadeBuffer, featureCodeBuffer
       )
-
-      const feature: HillshadeFeature = {
-        type: 'hillshade' as const,
-        tile,
-        source,
-        sourceName,
-        layerIndex,
-        lch,
-        featureCode: code,
-        fadeDuration,
-        bindGroup,
-        hillshadeBindGroup,
-        fadeStartTime: Date.now(),
-        draw: () => {
-          context.setStencilReference(tile.tmpMaskID)
-          this.draw(feature)
-        },
-        destroy: () => {
-          hillshadeFadeBuffer.destroy()
-          featureCodeBuffer.destroy()
-        }
-      }
       features.push(feature)
     }
 
@@ -192,11 +235,27 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
   // BEST PRACTICE 6: it is recommended to create pipeline asynchronously
   // BEST PRACTICE 7: explicitly define pipeline layouts
   async #getPipeline (): Promise<GPURenderPipeline> {
-    const { context, module } = this
+    const { context } = this
     const { device, format, defaultBlend, projection, sampleCount, frameBindGroupLayout, featureBindGroupLayout } = context
 
+    // prep hillshade uniforms
+    this.hillshadeBindGroupLayout = context.device.createBindGroupLayout({
+      label: 'Hillshade BindGroupLayout',
+      entries: [
+        // uniform
+        { binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+        // sampler
+        { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+        // texture
+        { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+        // unpack
+        { binding: 3, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } }
+      ]
+    })
+
+    const module = device.createShaderModule({ code: shaderCode })
     const layout = device.createPipelineLayout({
-      bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.#hillshadeBindGroupLayout]
+      bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.hillshadeBindGroupLayout]
     })
     const stencilState: GPUStencilFaceState = {
       compare: 'equal',
@@ -239,7 +298,7 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
     })
   }
 
-  draw ({ bindGroup, hillshadeBindGroup, source }: HillshadeFeature): void {
+  draw ({ bindGroup, hillshadeBindGroup, source }: HillshadeFeatureSpec): void {
     // get current source data
     const { passEncoder } = this.context
     const { vertexBuffer, indexBuffer, count, offset } = source

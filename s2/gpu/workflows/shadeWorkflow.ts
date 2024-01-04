@@ -2,9 +2,18 @@
 import shaderCode from '../shaders/shade.wgsl'
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
 
-import type { ShadeFeature, ShadeWorkflow as ShadeWorkflowSpec } from './workflow.spec'
+import type {
+  MaskSource,
+  ShadeFeature as ShadeFeatureSpec,
+  ShadeWorkflow as ShadeWorkflowSpec
+} from './workflow.spec'
 import type { WebGPUContext } from '../context'
-import type { LayerDefinitionBase, ShadeLayerDefinitionGPU, ShadeLayerStyle } from 'style/style.spec'
+import type {
+  LayerDefinitionBase,
+  ShadeLayerDefinition,
+  ShadeLayerDefinitionGPU,
+  ShadeLayerStyle
+} from 'style/style.spec'
 import type { TileGPU as Tile } from 'source/tile.spec'
 
 const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
@@ -18,9 +27,55 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
   }
 ]
 
+export class ShadeFeature implements ShadeFeatureSpec {
+  type = 'shade' as const
+  maskLayer = true
+  sourceName = 'mask'
+  source: MaskSource
+  count: number
+  offset: number
+  featureCode = [0]
+  bindGroup: GPUBindGroup
+  constructor (
+    public workflow: ShadeWorkflowSpec,
+    public tile: Tile,
+    public layerIndex: number,
+    public layerDefinition: ShadeLayerDefinitionGPU,
+    public featureCodeBuffer: GPUBuffer
+  ) {
+    const { mask } = tile
+    this.source = mask
+    this.count = mask.count
+    this.offset = mask.offset
+    this.bindGroup = this.#buildBindGroup()
+  }
+
+  draw (): void {
+    const { workflow } = this
+    workflow.context.setStencilReference(this.tile.tmpMaskID)
+    workflow.draw(this)
+  }
+
+  destroy (): void {
+    this.featureCodeBuffer.destroy()
+  }
+
+  #buildBindGroup (): GPUBindGroup {
+    const { workflow, tile, layerDefinition, featureCodeBuffer } = this
+    const { context } = workflow
+    const { mask } = tile
+    const { layerBuffer, layerCodeBuffer } = layerDefinition
+    return context.buildGroup(
+      'Shade Feature BindGroup',
+      context.featureBindGroupLayout,
+      [mask.uniformBuffer, mask.positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
+    )
+  }
+}
+
 export default class ShadeWorkflow implements ShadeWorkflowSpec {
   context: WebGPUContext
-  #layerDefinition!: ShadeLayerDefinitionGPU
+  layerDefinition!: ShadeLayerDefinitionGPU
   pipeline!: GPURenderPipeline
   constructor (context: WebGPUContext) {
     this.context = context
@@ -31,7 +86,7 @@ export default class ShadeWorkflow implements ShadeWorkflowSpec {
   }
 
   destroy (): void {
-    const { layerBuffer, layerCodeBuffer } = this.#layerDefinition
+    const { layerBuffer, layerCodeBuffer } = this.layerDefinition
     layerBuffer.destroy()
     layerCodeBuffer.destroy()
   }
@@ -48,7 +103,7 @@ export default class ShadeWorkflow implements ShadeWorkflowSpec {
     const layerBuffer = context.buildGPUBuffer('Layer Uniform Buffer', new Float32Array([context.getDepthPosition(layerIndex), ~~lch]), GPUBufferUsage.UNIFORM)
     const layerCodeBuffer = context.buildGPUBuffer('Layer Code Buffer', new Float32Array(layerCode), GPUBufferUsage.STORAGE)
     // 4) store the layerDefinition and return
-    this.#layerDefinition = {
+    this.layerDefinition = {
       ...layerBase,
       type: 'shade' as const,
       // layout
@@ -58,43 +113,18 @@ export default class ShadeWorkflow implements ShadeWorkflowSpec {
       layerCodeBuffer
     }
 
-    return this.#layerDefinition
+    return this.layerDefinition
   }
 
   // given a set of layerIndexes that use Masks and the tile of interest
-  buildMaskFeature ({ layerIndex, lch, minzoom, maxzoom }: ShadeLayerDefinitionGPU, tile: Tile): void {
-    const { context } = this
-    const { mask, zoom } = tile
-    const { layerBuffer, layerCodeBuffer } = this.#layerDefinition
+  buildMaskFeature ({ layerIndex, minzoom, maxzoom }: ShadeLayerDefinition, tile: Tile): void {
+    const { context, layerDefinition } = this
+    const { zoom } = tile
     // not in the zoom range, ignore
     if (zoom < minzoom || zoom > maxzoom) return
 
     const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array([0]), GPUBufferUsage.STORAGE)
-    const bindGroup = context.buildGroup(
-      'Feature BindGroup',
-      context.featureBindGroupLayout,
-      [mask.uniformBuffer, mask.positionBuffer, layerBuffer, layerCodeBuffer, featureCodeBuffer]
-    )
-    const feature: ShadeFeature = {
-      type: 'shade' as const,
-      maskLayer: true,
-      sourceName: 'mask',
-      source: mask,
-      count: mask.count,
-      offset: mask.offset,
-      tile,
-      layerIndex,
-      featureCode: [0],
-      lch,
-      bindGroup,
-      draw: () => {
-        context.setStencilReference(tile.tmpMaskID)
-        this.draw(feature)
-      },
-      destroy: () => {
-        featureCodeBuffer.destroy()
-      }
-    }
+    const feature = new ShadeFeature(this, tile, layerIndex, layerDefinition, featureCodeBuffer)
     tile.addFeatures([feature])
   }
 
@@ -161,15 +191,15 @@ export default class ShadeWorkflow implements ShadeWorkflowSpec {
     })
   }
 
-  draw ({ source, bindGroup }: ShadeFeature): void {
+  draw ({ source, bindGroup }: ShadeFeatureSpec): void {
     const { context, pipeline } = this
     const { passEncoder } = context
     const { vertexBuffer, indexBuffer, count, offset } = source
     // setup pipeline, bind groups, & buffers
     this.context.setRenderPipeline(pipeline)
-    passEncoder.setBindGroup(1, bindGroup)
     passEncoder.setVertexBuffer(0, vertexBuffer)
     passEncoder.setIndexBuffer(indexBuffer, 'uint32')
+    passEncoder.setBindGroup(1, bindGroup)
     // draw
     passEncoder.drawIndexed(count, 1, offset)
   }

@@ -8,6 +8,9 @@
     "type": "raster",
     "extension": "webp",
     "encoding": "none",
+    "attributions": {
+        "© Mapbox": "https://www.mapbox.com/about/maps/"
+    },
     "bounds": [
         -180,
         -85,

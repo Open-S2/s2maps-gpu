@@ -4,20 +4,27 @@ import type {
   FillWorkflowLayerGuideGPU,
   GlyphLayerDefinition,
   GlyphLayerStyle,
+  GlyphWorkflowLayerGuideGPU,
   HeatmapLayerDefinition,
   HeatmapLayerStyle,
+  HeatmapWorkflowLayerGuideGPU,
   HillshadeLayerDefinition,
   HillshadeLayerStyle,
+  HillshadeWorkflowLayerGuideGPU,
   LayerDefinitionBase,
   LineLayerDefinition,
   LineLayerStyle,
+  LineWorkflowLayerGuideGPU,
   PointLayerDefinition,
   PointLayerStyle,
+  PointWorkflowLayerGuideGPU,
   RasterLayerDefinition,
   RasterLayerStyle,
+  RasterWorkflowLayerGuideGPU,
   SensorLayerDefinition,
   SensorLayerStyle,
   ShadeLayerDefinition,
+  ShadeLayerDefinitionGPU,
   ShadeLayerStyle
 } from 'style/style.spec'
 import type { WebGPUContext } from '../context'
@@ -35,6 +42,7 @@ import type {
 } from 'workers/worker.spec'
 import type { TileGPU as Tile } from 'source/tile.spec'
 import type Projector from 'ui/camera/projector'
+import type { BBox } from 'geometry'
 
 // SOURCES
 
@@ -127,23 +135,23 @@ export type FeatureSource = MaskSource | FillSource | LineSource | PointSource |
 export interface FeatureBase {
   tile: Tile
   parent?: Tile
+  maskLayer?: boolean
   layerIndex: number
   sourceName: string
-  lch: boolean
   opaque?: boolean
   interactive?: boolean
   featureCode: number[]
   bindGroup: GPUBindGroup
   draw: () => void
   destroy: () => void
+  duplicate?: (tile: Tile, parent: Tile, bounds: BBox) => FeatureBase
   compute?: () => void
   updateSharedTexture?: () => void
 }
 
-// tile, parent, layerIndex, layerUniforms, layerCode, featureCode
-
 // ** FILL **
 export interface FillFeature extends FeatureBase {
+  workflow: FillWorkflow
   type: 'fill'
   maskLayer: boolean
   source: FillSource | MaskSource
@@ -152,8 +160,11 @@ export interface FillFeature extends FeatureBase {
   invert: boolean
   interactive: boolean
   opaque: boolean
+  featureCodeBuffer: GPUBuffer
+  fillTexturePositions: GPUBuffer
   fillPatternBindGroup: GPUBindGroup
   fillInteractiveBindGroup?: GPUBindGroup
+  duplicate: (tile: Tile, parent: Tile) => FillFeature
 }
 
 // ** GLYPH + GLYPH FILTER **
@@ -169,7 +180,7 @@ export interface GlyphFeature extends FeatureBase {
   isIcon: boolean
   interactive: boolean
   viewCollisions: boolean
-  bounds?: [number, number, number, number]
+  bounds?: BBox
   size?: number
   strokeWidth?: number
   glyphBindGroup: GPUBindGroup
@@ -177,6 +188,7 @@ export interface GlyphFeature extends FeatureBase {
   glyphFilterBindGroup: GPUBindGroup
   glyphInteractiveBindGroup: GPUBindGroup
   glyphUniformBuffer: GPUBuffer
+  duplicate: (tile: Tile, parent: Tile, bounds: BBox) => GlyphFeature
 }
 
 // ** HEATMAP **
@@ -185,9 +197,9 @@ export interface HeatmapFeature extends FeatureBase {
   source: HeatmapSource
   count: number
   offset: number
-  colorRamp: WebGLTexture
-  bounds?: [number, number, number, number]
+  bounds?: BBox
   heatmapBindGroup: GPUBindGroup
+  duplicate: (tile: Tile, parent: Tile, bounds: BBox) => HeatmapFeature
 }
 
 // ** LINE **
@@ -201,6 +213,7 @@ export interface LineFeature extends FeatureBase {
   dashTexture?: WebGLTexture
   cap: number
   lineBindGroup: GPUBindGroup
+  duplicate: (tile: Tile, parent: Tile) => LineFeature
 }
 
 // ** POINT **
@@ -209,9 +222,10 @@ export interface PointFeature extends FeatureBase {
   source: PointSource
   count: number
   offset: number
-  bounds?: [number, number, number, number]
+  bounds?: BBox
   pointBindGroup: GPUBindGroup
   pointInteractiveBindGroup: GPUBindGroup
+  duplicate: (tile: Tile, parent: Tile, bounds: BBox) => PointFeature
 }
 
 // ** RASTER **
@@ -221,6 +235,7 @@ export interface RasterFeature extends FeatureBase {
   fadeDuration: number
   fadeStartTime: number
   rasterBindGroup: GPUBindGroup
+  duplicate: (tile: Tile, parent: Tile) => RasterFeature
 }
 
 // ** SENSOR **
@@ -230,6 +245,7 @@ export interface SensorFeature extends FeatureBase {
   fadeStartTime: number
   colorRamp: WebGLTexture
   getTextures: () => SensorTextureDefinition
+  duplicate: (tile: Tile, parent: Tile) => SensorFeature
 }
 
 // ** HILLSHADE **
@@ -239,6 +255,7 @@ export interface HillshadeFeature extends FeatureBase {
   fadeDuration: number
   fadeStartTime: number
   hillshadeBindGroup: GPUBindGroup
+  duplicate: (tile: Tile, parent: Tile) => HillshadeFeature
 }
 
 export interface ShadeFeature extends FeatureBase {
@@ -301,53 +318,108 @@ export interface Workflow {
 
 export interface FillWorkflow extends Workflow {
   layerGuides: Map<number, FillWorkflowLayerGuideGPU>
+  interactivePipeline: GPUComputePipeline
+  maskPipeline: GPURenderPipeline
+  fillPipeline: GPURenderPipeline
+  maskFillPipeline: GPURenderPipeline
+  invertPipeline: GPURenderPipeline
+  fillInteractiveBindGroupLayout: GPUBindGroupLayout
   draw: (feature: FillFeature) => void
-  drawMask: (maskSource: TileMaskSource) => void
+  drawMask: (maskSource: TileMaskSource, feature?: FillFeature) => void
   buildSource: (fillData: FillData, tile: Tile) => void
   buildMaskFeature: (maskLayer: FillLayerDefinition, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: FillLayerStyle) => FillLayerDefinition
 }
 
 export interface GlyphWorkflow extends Workflow {
+  module: GPUShaderModule
+  layerGuides: Map<number, GlyphWorkflowLayerGuideGPU>
+  pipeline: GPURenderPipeline
+  testRenderPipeline: GPURenderPipeline
+  bboxPipeline: GPUComputePipeline
+  testPipeline: GPUComputePipeline
+  interactivePipeline: GPUComputePipeline
+  glyphBindGroupLayout: GPUBindGroupLayout
+  glyphPipelineLayout: GPUPipelineLayout
+  glyphFilterBindGroupLayout: GPUBindGroupLayout
+  glyphFilterPipelineLayout: GPUPipelineLayout
+  glyphInteractiveBindGroupLayout: GPUBindGroupLayout
+  glyphInteractivePiplineLayout: GPUPipelineLayout
+  glyphBBoxesBuffer: GPUBuffer
+  glyphFilterResultBuffer: GPUBuffer
   buildSource: (glyphData: GlyphData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: GlyphLayerStyle) => GlyphLayerDefinition
+  computeInteractive: (feature: GlyphFeature) => void
   computeFilters: (features: GlyphFeature[]) => void
+  draw: (feature: GlyphFeature) => void
 }
 
 export interface HeatmapWorkflow extends Workflow {
+  layerGuides: Map<number, HeatmapWorkflowLayerGuideGPU>
+  pipeline: GPURenderPipeline
+  module: GPUShaderModule
+  texturePipeline: GPURenderPipeline
+  heatmapBindGroupLayout: GPUBindGroupLayout
+  heatmapTextureBindGroupLayout: GPUBindGroupLayout
   buildSource: (heatmapData: HeatmapData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: HeatmapLayerStyle) => HeatmapLayerDefinition
   textureDraw: (features: HeatmapFeature[]) => HeatmapFeature[] | undefined
+  draw: (feature: HeatmapFeature) => void
 }
 
 export interface LineWorkflow extends Workflow {
+  layerGuides: Map<number, LineWorkflowLayerGuideGPU>
+  pipeline: GPURenderPipeline
+  lineBindGroupLayout: GPUBindGroupLayout
   buildSource: (lineData: LineData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LineLayerStyle) => LineLayerDefinition
+  draw: (feature: LineFeature) => void
 }
 
 export interface PointWorkflow extends Workflow {
+  layerGuides: Map<number, PointWorkflowLayerGuideGPU>
+  pipeline: GPURenderPipeline
+  interactivePipeline: GPUComputePipeline
+  pointInteractiveBindGroupLayout: GPUBindGroupLayout
+  pointBindGroupLayout: GPUBindGroupLayout
+  module: GPUShaderModule
   buildSource: (pointData: PointData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: PointLayerStyle) => PointLayerDefinition
+  computeInteractive: (feature: PointFeature) => void
+  draw: (feature: PointFeature) => void
 }
 
 export interface RasterWorkflow extends Workflow {
+  layerGuides: Map<number, RasterWorkflowLayerGuideGPU>
+  pipeline: GPURenderPipeline
+  rasterBindGroupLayout: GPUBindGroupLayout
   buildSource: (rasterData: RasterData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: RasterLayerStyle) => RasterLayerDefinition
+  draw: (feature: RasterFeature) => void
 }
 
 export interface HillshadeWorkflow extends Workflow {
+  layerGuides: Map<number, HillshadeWorkflowLayerGuideGPU>
+  pipeline: GPURenderPipeline
+  hillshadeBindGroupLayout: GPUBindGroupLayout
   buildSource: (rasterData: HillshadeData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: HillshadeLayerStyle) => HillshadeLayerDefinition
+  draw: (feature: HillshadeFeature) => void
 }
 
 export interface SensorWorkflow extends Workflow {
   buildSource: (sensorData: SensorData, tile: Tile) => void
   injectTimeCache: (timeCache: TimeCache) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: SensorLayerStyle) => SensorLayerDefinition
+  draw: (feature: SensorFeature) => void
 }
 
 export interface ShadeWorkflow extends Workflow {
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: ShadeLayerStyle) => ShadeLayerDefinition
+  layerDefinition: ShadeLayerDefinitionGPU
+  pipeline: GPURenderPipeline
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: ShadeLayerStyle) => ShadeLayerDefinitionGPU
+  buildMaskFeature: (maskLayer: ShadeLayerDefinition, tile: Tile) => void
+  draw: (feature: ShadeFeature) => void
 }
 
 export interface WallpaperWorkflow extends Workflow {
