@@ -24,8 +24,8 @@ npm run dev
 ## Add S2 Maps dependencies to public/index.html
 
 ```html
-<script src="https://data.s2maps.io/s2maps-gpu/v0.1.0/s2maps-gpu.min.js"></script>
-<link href="https://data.s2maps.io/s2maps-gpu/v0.1.0/s2maps-gpu.min.css" rel="stylesheet" />
+<script src="https://opens2.com/s2maps-gpu/v0.11.0/s2maps-gpu.min.js"></script>
+<link href="https://opens2.com/s2maps-gpu/v0.11.0/s2maps-gpu.min.css" rel="stylesheet" />
 ```
 
 ## Copy Paste App.svelte code

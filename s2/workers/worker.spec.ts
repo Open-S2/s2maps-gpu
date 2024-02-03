@@ -11,7 +11,9 @@ import type { UserTouchEvent } from 'ui/camera/dragPan'
 import type { InfoData } from 'ui/info'
 import type { MapOptions } from 'ui/s2mapUI'
 import type { Face, Properties } from 'geometry'
-import type { ColorMap, GlyphImages, IconMap } from './source/glyphSource'
+import type { Glyph } from 'workers/process/glyph/familySource'
+import type { GlyphImages, GlyphMetadata } from './source/glyphSource'
+import type { ImageMetadata } from './source/imageSource'
 import type { MarkerDefinition } from './source/markerSource'
 
 /** GENERIC WORKER TYPES **/
@@ -47,17 +49,6 @@ export interface TileRequest {
   parent?: ParentLayer
   layerIndexes?: number[]
 }
-
-// export interface Feature {
-//   vertices: number[]
-//   indices: number[]
-//   geometry?: number[][]
-//   featureCode: number[]
-//   code: number[]
-//   size: number
-//   divisor: number
-//   layerIndex: number
-// }
 
 export interface Feature {
   geometry: any[]
@@ -529,8 +520,7 @@ export interface GlyphRequestMessage extends MapID {
   type: 'glyphrequest'
   workerID: number
   reqID: string
-  glyphList: Record<string, ArrayBuffer>
-  iconList: Record<string, Set<string>>
+  glyphList: Record<string, string[]>
 }
 export type TileWorkerToSourceWorkerMessage = GlyphRequestMessage
 
@@ -563,13 +553,17 @@ export interface JSONDataMessage extends MapID {
   data: ArrayBuffer
 }
 
+export interface GlyphMetadataMessage extends MapID {
+  type: 'glyphmetadata'
+  glyphMetadata: GlyphMetadata[]
+  imageMetadata: ImageMetadata[]
+}
+
 export interface GlyphResponseMessage extends MapID {
   type: 'glyphresponse'
   reqID: string
-  glyphMetadata: ArrayBuffer
+  glyphMetadata: Glyph[]
   familyName: string
-  icons?: IconMap
-  colors?: ColorMap
 }
 
 /* WORKER POOL MESSAGE */
@@ -588,5 +582,5 @@ export type SourceWorkerMessages =
 
 export type TileWorkerMessages =
   WorkerPoolMessage | StyleMessage | VectorMessage |
-  RasterMessage | JSONDataMessage | GlyphResponseMessage |
+  RasterMessage | JSONDataMessage | GlyphResponseMessage | GlyphMetadataMessage |
   AddLayerMessageTileWorker | RemoveLayerMessageGL | ReorderLayersMessageGL

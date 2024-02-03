@@ -9,11 +9,11 @@ dependencies:
     specifier: ^0.9.8
     version: 0.9.8
   s2-vector-tile:
-    specifier: ^2.0.10
-    version: 2.0.10
+    specifier: ^2.0.12
+    version: 2.0.12
   unicode-shaper-zig:
-    specifier: 0.1.4
-    version: 0.1.4
+    specifier: 0.1.5
+    version: 0.1.5
 
 devDependencies:
   '@maplibre/maplibre-gl-style-spec':
@@ -88,6 +88,9 @@ devDependencies:
   filesize:
     specifier: ^8.0.6
     version: 8.0.7
+  loader-utils:
+    specifier: ^1.1.0
+    version: 1.4.2
   mini-css-extract-plugin:
     specifier: ^2.4.5
     version: 2.7.6(webpack@5.88.2)
@@ -6447,8 +6450,8 @@ packages:
     resolution: {integrity: sha512-PdhdWy89SiZogBLaw42zdeqtRJ//zFd2PgQavcICDUgJT5oW10QCRKbJ6bg4r0/UY2M6BWd5tkxuGFRvCkgfHQ==}
     dev: true
 
-  /s2-vector-tile@2.0.10:
-    resolution: {integrity: sha512-y4qEpR0XCJqZFW4OXwC0LE4js5VEN/0TsGSLbuY+vdGkr/o2fCcOMjrD1fjqNYoBk1lAdmIumdY0jezu2oDHjw==}
+  /s2-vector-tile@2.0.12:
+    resolution: {integrity: sha512-3Mpr43q6lfTbDuCAqfLk0ICxw/sFdtCLrY+UlZfFJfdfPHDbFo+KlHt2WQKaGmb1ZCTFruDRzKF6P8yLK9TbkQ==}
     dev: false
 
   /safe-array-concat@1.0.1:
@@ -7144,8 +7147,8 @@ packages:
     engines: {node: '>=4'}
     dev: true
 
-  /unicode-shaper-zig@0.1.4:
-    resolution: {integrity: sha512-oDkVH3HBVjishMLx/kHhnzlyRmuPEP0AvLymu/+AP6ggTbGj51pR6LJdl/Z3C0z/36uiIxL7GOFRqktZqn79qQ==}
+  /unicode-shaper-zig@0.1.5:
+    resolution: {integrity: sha512-ymtqr3JVz50elRQEaPFropnzAoH9LbROHvGELF1HDv0/kHmyF4rSjsrAEMxqLAsRF9NuO3UomKT512/JfZfcaA==}
     dev: false
 
   /union-value@1.0.1:

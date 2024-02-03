@@ -190,6 +190,7 @@ export default class TimeCache extends Cache<string, SensorSource> {
   }
 }
 
+/** convert a date to a unix timestamp */
 function parseDate (d: string | number): number {
   const date = new Date(d)
   return date.getTime() / 1000

@@ -135,7 +135,7 @@ function parse (id, contents, res = { source: '', uniforms: {}, attributes: {}, 
 
   let shaderName = id.split('/').pop()
   shaderName = shaderName.split('.')[0]
-  // console.log(shaderName)
+  // console.info(shaderName)
 
   if (!SOURCE_MAPS[shaderName]) {
     SOURCE_MAPS[shaderName] = {
@@ -217,7 +217,7 @@ function _parseWords (words, res, shaderName) {
     } else if (word === 'uniform') {
       let unifm = words[i + 2].replace(/;|,|\)/g, '')
       if (unifm.includes('[')) unifm = unifm.split('[')[0]
-      // console.log(unifm, uniformMap.has(unifm), res.uniforms[unifm])
+      // console.info(unifm, uniformMap.has(unifm), res.uniforms[unifm])
       if (!res.uniforms[unifm]) {
         let value
         if (uniformMap.has(unifm)) {

@@ -8,6 +8,7 @@ import vert2 from '../shaders/glyph2.vertex.glsl'
 import frag2 from '../shaders/glyph2.fragment.glsl'
 
 import type { Context, GlyphFeatureGuide, GlyphSource } from '../contexts/context.spec'
+import type { ColorArray } from 'style/color'
 import type {
   GlyphLayerDefinition,
   GlyphLayerStyle,
@@ -151,16 +152,16 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
         // If webgl1, we pull out the color and opacity otherwise build featureCode
         let featureCode: number[] = [0]
         let size: number | undefined
-        let fill: [r: number, g: number, b: number, a: number] | undefined
-        let stroke: [r: number, g: number, b: number, a: number] | undefined
+        let fill: ColorArray | undefined
+        let stroke: ColorArray | undefined
         let strokeWidth: number | undefined
         if (this.type === 1) {
           if (type === 0) { // text
             // get fill, stroke, and stroke width. Increment
             size = featureGuideArray[i]
-            fill = [...featureGuideArray.slice(i + 1, i + 5)] as [r: number, g: number, b: number, a: number]
+            fill = [...featureGuideArray.slice(i + 1, i + 5)] as ColorArray
             strokeWidth = featureGuideArray[i + 5]
-            stroke = [...featureGuideArray.slice(i + 6, i + 10)] as [r: number, g: number, b: number, a: number]
+            stroke = [...featureGuideArray.slice(i + 6, i + 10)] as ColorArray
           } else { // icon
             size = featureGuideArray[i]
           }
@@ -212,7 +213,7 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
         textAlign, textKerning, textLineHeight, iconFamily, iconField, iconAnchor,
         iconOffset, iconPadding,
         // properties
-        interactive, cursor, overdraw, viewCollisions
+        interactive, cursor, overdraw, viewCollisions, onlyPoints, onlyLines
       } = layer
       textSize = textSize ?? 16
       iconSize = iconSize ?? 16
@@ -223,6 +224,8 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
       cursor = cursor ?? 'default'
       overdraw = overdraw ?? false
       viewCollisions = viewCollisions ?? false
+      onlyPoints = onlyPoints ?? false
+      onlyLines = onlyLines ?? false
       // 1) build definition
       const layerDefinition: GlyphLayerDefinition = {
         ...layerBase,
@@ -252,7 +255,9 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
         viewCollisions,
         interactive,
         cursor,
-        overdraw
+        overdraw,
+        onlyPoints,
+        onlyLines
       }
       // 2) Store layer workflow, building code if webgl2
       const layerCode: number[] = []

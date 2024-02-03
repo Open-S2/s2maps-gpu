@@ -16,7 +16,7 @@ export const isChrome = /chrome/i.test(global.window.navigator.userAgent)
  */
 // TODO: Get this working again. Something changed and runs this file before window is accessable
 // if (!('createImageBitmap' in window) || isSafari) {
-//   window.createImageBitmap = async function (blob: Blob | MediaSource) {
+//   window.createImageBitmap = async function (blob: Blob | MediaSource): Promise<ImageBitmap> {
 //     return await new Promise((resolve) => {
 //       const img = document.createElement('img')
 //       img.addEventListener('load', function () { resolve(this) })
@@ -24,11 +24,4 @@ export const isChrome = /chrome/i.test(global.window.navigator.userAgent)
 //       img.deleteURL = function () { URL.revokeObjectURL(this.src) }
 //     })
 //   }
-// }
-
-/** Opera Mini polyfill
-  * https://caniuse.com/?search=requestAnimationFrame
-  */
-// if (!('requestAnimationFrame' in window)) {
-//   window.requestAnimationFrame = cb => setTimeout(() => cb(Date.now()), 1000 / 60)
 // }

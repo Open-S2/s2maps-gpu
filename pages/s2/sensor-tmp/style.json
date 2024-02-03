@@ -17,7 +17,7 @@
       "faces": [0, 1, 2, 3, 4, 5],
       "interval": 43200,
       "attributions": {
-        "S2 Maps": "https://s2maps.io/data",
+        "S2 Maps": "https://opens2.com/data",
         "GFS": "https://www.nco.ncep.noaa.gov/pmb/products/gfs"
       }
     }

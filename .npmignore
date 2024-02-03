@@ -1,0 +1,8 @@
+# Ignore all files and directories
+/*
+
+# Include README.md
+!README.md
+
+# Include dist-types directory
+!dist-types/

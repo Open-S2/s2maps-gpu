@@ -16,9 +16,11 @@ export interface AnimationDirections {
 }
 
 export type AnimationType = 'easeTo' | 'flyTo'
+export type IncrementResponse = [boolean, [lon: number, lat: number, zoom: number, bearing: number, pitch: number]]
 
-export type IncrementResponse = [boolean, [number, number, number, number, number]]
-
+/**
+ * Animator class handles user defined animations of the camera.
+ */
 export default class Animator {
   startTime?: number
   startLon: number
@@ -40,7 +42,7 @@ export default class Animator {
   duration = 2.5
   velocity = 0
   futureOffset = 0
-  futureTiles = new Map<number, bigint[]>() // timeKey: [tileID]
+  futureTiles = new Map<number, bigint[]>() // { timeKey: [tileID] }
   futureKeys: number[] = []
   ease: (time: number, start: number, delta: number, duration: number) => number
   #increment?: (time: number) => IncrementResponse
@@ -78,7 +80,7 @@ export default class Animator {
     this.deltaPitch = pitch - projector.pitch
   }
 
-  // Updates the position based upon time. returns whether complete or not.
+  /** Updates the position based upon time. returns whether complete or not. */
   increment (time: number): boolean {
     const { projector, futureOffset, futureKeys, duration } = this
     // corner case: increment was never setup
@@ -86,7 +88,7 @@ export default class Animator {
     // setup time should it not exist yet
     if (this.startTime === undefined) this.startTime = time
     // if current time is greater than or equal to the latest futureKeys, send off a request to preload tiles
-    if (futureKeys[0] - futureOffset <= time) this._requestFutureTiles()
+    if (futureKeys[0] - futureOffset <= time) this.#requestFutureTiles()
     // build the new lon, lat, zoom, bearing, pitch
     const [finished, pos] = this.#increment(time - this.startTime)
     // grab the positions
@@ -98,6 +100,7 @@ export default class Animator {
     return false
   }
 
+  /** Handles zoom animations. */
   zoomTo (): void {
     const { startLon, startLat, startZoom, deltaLon, deltaLat, deltaZoom, endLon, endLat, endZoom, endBearing, endPitch, duration } = this
     this.#increment = (time: number): IncrementResponse => {
@@ -117,6 +120,7 @@ export default class Animator {
     this.#buildFutureTileList()
   }
 
+  /** Handles rotation animations. */
   compassTo (): void {
     const { startBearing, startPitch, deltaBearing, deltaPitch, endLon, endLat, endZoom, endBearing, endPitch, duration } = this
     this.#increment = (time: number): IncrementResponse => {
@@ -136,6 +140,7 @@ export default class Animator {
     this.#buildFutureTileList()
   }
 
+  /** Handles swiping animations. */
   swipeTo (movementX: number, movementY: number): void {
     const { projector, duration } = this
     const { abs } = Math
@@ -148,6 +153,7 @@ export default class Animator {
     }
   }
 
+  /** Handles easing mechanic */
   easeTo (): boolean {
     const {
       startLon, startLat, startZoom, startBearing, startPitch,
@@ -182,6 +188,7 @@ export default class Animator {
     return true
   }
 
+  /** Handles flying animation with both panning and zooming combined. */
   flyTo (): boolean {
     // Van Wijk, Jarke J.; Nuij, Wim A. A. “Smooth and efficient zooming and panning.” INFOVIS
     // ’03. pp. 15–22. <https://www.win.tue.nl/~vanwijk/zoompan.pdf#page=5>.
@@ -314,12 +321,12 @@ export default class Animator {
     this.futureKeys = this.futureKeys.sort((a, b) => a - b)
     this.futureOffset = this.futureKeys[0]
     // pre-request the first three tile sets
-    this._requestFutureTiles()
-    this._requestFutureTiles()
-    this._requestFutureTiles()
+    this.#requestFutureTiles()
+    this.#requestFutureTiles()
+    this.#requestFutureTiles()
   }
 
-  _requestFutureTiles (): void {
+  #requestFutureTiles (): void {
     if (this.futureKeys.length === 0) return
     const { futureKeys, futureTiles, projector } = this
     const { camera } = projector

@@ -33,5 +33,5 @@
   "parserOptions": {
     "project": ["./tsconfig.next.json"]
   },
-  "ignorePatterns": ["temp.js", "**/*.js", "dist"]
+  "ignorePatterns": ["temp.js", "**/*.js", "dist-types/**/*.d.ts", "dist"]
 }

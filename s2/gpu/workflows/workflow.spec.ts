@@ -337,7 +337,7 @@ export interface GlyphWorkflow extends Workflow {
   pipeline: GPURenderPipeline
   testRenderPipeline: GPURenderPipeline
   bboxPipeline: GPUComputePipeline
-  testPipeline: GPUComputePipeline
+  testBBoxPipeline: GPUComputePipeline
   interactivePipeline: GPUComputePipeline
   glyphBindGroupLayout: GPUBindGroupLayout
   glyphPipelineLayout: GPUPipelineLayout

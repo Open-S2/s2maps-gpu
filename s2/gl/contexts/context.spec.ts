@@ -1,5 +1,6 @@
 import type { BBox } from 'geometry'
 import type { TileGL as Tile } from 'source/tile.spec'
+import type { ColorArray } from 'style/color'
 import type { GPUType, Resampling, UnpackData } from 'style/style.spec'
 import type { SensorTextureDefinition } from 'ui/camera/timeCache'
 import type { GlyphImages } from 'workers/source/glyphSource'
@@ -249,7 +250,7 @@ export interface Context {
   zTestMode: number
   zLow: number
   zHigh: number
-  clearColorRGBA: [r: number, g: number, b: number, a: number]
+  clearColorRGBA: ColorArray
   featurePoint: Uint8Array
   masks: Map<number, MaskSource>
   vao: WebGLVertexArrayObject

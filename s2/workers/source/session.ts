@@ -1,5 +1,5 @@
 /* eslint-env worker */
-import s2mapsURL from 'util/s2mapsURL'
+import adjustURL from 'util/adjustURL'
 
 import type { Analytics, StyleDefinition } from 'style/style.spec'
 import type { InfoDetails } from 'ui/info'
@@ -59,7 +59,7 @@ export default class Session {
     const Authorization = await this.requestSessionToken(mapID)
     if (Authorization === undefined) return
     // fetch the style
-    const json = await fetch(s2mapsURL(style), { headers: { Authorization } })
+    const json = await fetch(adjustURL(style), { headers: { Authorization } })
       .then<StyleDefinition | null>(async res => {
       if (res.status !== 200) return null
       return await res.json()

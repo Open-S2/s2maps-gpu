@@ -12,7 +12,7 @@ import {
   SpriteSource,
   TexturePack
 } from './source'
-import s2mapsURL from '../util/s2mapsURL'
+import adjustURL from '../util/adjustURL'
 
 import type {
   Analytics,
@@ -28,7 +28,9 @@ import type {
   Source as StyleSource
 } from 'style/style.spec'
 import type { MarkerDefinition } from './source/markerSource'
-import type { SourceWorkerMessages, TileRequest } from './worker.spec'
+import type { GlyphMetadataMessage, SourceWorkerMessages, TileRequest } from './worker.spec'
+import type { GlyphMetadata, GlyphMetadataUnparsed } from './source/glyphSource'
+import type { ImageMetadata } from './source/imageSource'
 
 /**
   SOURCE WORKER
@@ -55,7 +57,7 @@ import type { SourceWorkerMessages, TileRequest } from './worker.spec'
   * default -> assumed the location has a metadata. json at root with a "s2cellid.ext" file structure
 
   SESSION TOKEN
-  This is a pre-approved JWT token for any calls made to api.s2maps.io
+  This is a pre-approved JWT token for any calls made to api.opens2.com or api.s2maps.io
   when building requests, we take the current time, run a black box digest to hash, and return:
   { h: 'first-five-chars', t: '1620276149967' } // h -> hash ; t -> timestamp ('' + Date.now())
   (now - timestamp) / 1000 = seconds passed
@@ -82,7 +84,7 @@ export default class SourceWorker {
       else if (type === 'style') this.#loadStyle(mapID, data.style)
       else if (type === 'tilerequest') void this.#requestTile(mapID, data.tiles, data.sources)
       else if (type === 'timerequest') void this.#requestTime(mapID, data.tiles, data.sourceNames)
-      else if (type === 'glyphrequest') this.#glyphRequest(mapID, data.workerID, data.reqID, data.glyphList, data.iconList)
+      else if (type === 'glyphrequest') this.#glyphRequest(mapID, data.workerID, data.reqID, data.glyphList)
       else if (type === 'getInfo') this.#getInfo(mapID, data.featureID)
       else if (type === 'addMarkers') this.#addMarkers(mapID, data.markers, data.sourceName)
       else if (type === 'removeMarkers') this.#removeMarkers(mapID, data.ids, data.sourceName)
@@ -177,28 +179,35 @@ export default class SourceWorker {
       this.#createSource(mapID, name, source, layers.filter(layer => layer.source === name))
     }
     // fonts & icons
+    const glyphAwaits: Array<Promise<undefined | GlyphMetadataUnparsed>> = []
     for (const [name, source] of Object.entries({ ...fonts, ...icons, ...glyphs })) {
-      if (typeof source === 'object') {
-        this.#createGlyphSource(mapID, name, source.path, source.fallback)
-      } else { this.#createGlyphSource(mapID, name, source) }
+      glyphAwaits.push(this.#createGlyphSource(mapID, name, source))
     }
     // sprites
+    const imageAwaits: Array<Promise<undefined | ImageMetadata>> = []
     for (const [name, source] of Object.entries(sprites)) {
       if (typeof source === 'object') {
-        this.#createSpriteSheet(mapID, name, source.path, source.fallback, source.fileType)
-      } else { this.#createSpriteSheet(mapID, name, source) }
+        imageAwaits.push(this.#createSpriteSheet(mapID, name, source.path, source.fileType))
+      } else { imageAwaits.push(this.#createSpriteSheet(mapID, name, source)) }
     }
     // images
     for (const [name, href] of Object.entries(images)) {
-      void this.images.addImage(mapID, name, href)
+      imageAwaits.push(this.images.addImage(mapID, name, href))
     }
 
-    // add in glyph and sprite fallbacks
-    for (const input of [this.glyphs, this.sprites]) {
-      for (const [, inputSource] of Object.entries(input)) {
-        const { fallbackName } = inputSource
-        if (fallbackName !== undefined) inputSource.fallback = input[fallbackName]
+    // ship the glyph metadata
+    const glyphMetadata = await Promise.all(glyphAwaits)
+    const filteredMetadata = glyphMetadata.filter(m => m?.metadata !== undefined) as GlyphMetadata[]
+    const imageMetadata = await Promise.all(imageAwaits)
+    const filteredImageMetadata = imageMetadata.filter(m => m !== undefined) as ImageMetadata[]
+    for (const worker of this.workers) {
+      const message: GlyphMetadataMessage = {
+        mapID,
+        type: 'glyphmetadata',
+        glyphMetadata: filteredMetadata,
+        imageMetadata: filteredImageMetadata
       }
+      worker.postMessage(message)
     }
   }
 
@@ -206,13 +215,15 @@ export default class SourceWorker {
     const { session } = this
     // prepare variables to build appropriate source type
     let metadata: SourceMetadata | undefined
+    let fileType: string | undefined
     if (typeof input === 'object') {
       metadata = input
-      input = input.path
+      fileType = input.fileType ?? input.type
+      input = input.path ?? ''
     }
-    const fileType = (input.split('.').pop() ?? '').toLowerCase()
+    if (fileType === undefined) fileType = (input.split('.').pop() ?? '').toLowerCase()
     const needsToken = session.hasAPIKey(mapID)
-    const path = s2mapsURL(input)
+    const path = adjustURL(input)
     // create the proper source type
     let source
     if (fileType === 's2tiles') {
@@ -228,29 +239,28 @@ export default class SourceWorker {
     void source.build(mapID, metadata)
   }
 
-  #createGlyphSource (mapID: string, name: string, input: string, fallback?: string): void {
+  async #createGlyphSource (mapID: string, name: string, input: string): Promise<undefined | GlyphMetadataUnparsed> {
     const { texturePack, session } = this
     // check if already exists
     if (this.glyphs[name] !== undefined) return
-    const source = new GlyphSource(name, s2mapsURL(input), texturePack, session, fallback)
+    const source = new GlyphSource(name, adjustURL(input), texturePack, session)
     this.glyphs[name] = source
-    void source.build(mapID)
+    return await source.build(mapID)
   }
 
-  #createSpriteSheet (
+  async #createSpriteSheet (
     mapID: string,
     name: string,
     input: string,
-    fallback?: string,
     fileType?: SpriteFileType
-  ): void {
+  ): Promise<undefined | ImageMetadata> {
     const { texturePack, session } = this
     // check if already exists
     if (this.sprites[name] !== undefined) return
-    const source = new SpriteSource(name, s2mapsURL(input), texturePack, session, fallback, fileType)
+    const source = new SpriteSource(name, adjustURL(input), texturePack, session, fileType)
     // store & build
     this.sprites[name] = source
-    void source.build(mapID)
+    return await source.build(mapID)
   }
 
   async #requestTile (
@@ -273,7 +283,7 @@ export default class SourceWorker {
       for (const source of Object.values(this.sources[mapID])) {
         if (sourceNames.length > 0 && !sourceNames.includes(source.name)) continue
         if (source.isTimeFormat) continue
-        source.tileRequest(mapID, { ...tile })
+        void source.tileRequest(mapID, { ...tile })
       }
     }
   }
@@ -283,7 +293,7 @@ export default class SourceWorker {
     for (const tile of tiles) {
       for (const source of Object.values(this.sources[mapID])) {
         if (!source.isTimeFormat || !sourceNames.includes(source.name)) continue
-        source.tileRequest(mapID, { ...tile })
+        void source.tileRequest(mapID, { ...tile })
       }
     }
   }
@@ -292,19 +302,13 @@ export default class SourceWorker {
     mapID: string,
     workerID: number,
     reqID: string,
-    sourceGlyphs: Record<string, ArrayBuffer>,
-    iconList: Record<string, Set<string>>
+    sourceGlyphs: Record<string, string[]>
   ): void {
     // prep
     const { workers } = this
     // iterate the glyph sources for the unicodes
-    for (const [name, unicodes] of Object.entries(sourceGlyphs)) {
-      void this.glyphs[name].glyphRequest([...new Uint16Array(unicodes)], mapID, reqID, workers[workerID])
-    }
-    // iterate all icon requests
-    for (const [name, icons] of Object.entries(iconList)) {
-      if (name === '__images') void this.images.iconRequest(icons, mapID, reqID, workers[workerID])
-      else void (this.sprites[name] ?? this.glyphs[name])?.iconRequest(icons, mapID, reqID, workers[workerID])
+    for (const [name, codes] of Object.entries(sourceGlyphs)) {
+      void this.glyphs[name].glyphRequest(codes, mapID, reqID, workers[workerID])
     }
   }
 
@@ -316,20 +320,20 @@ export default class SourceWorker {
   }
 
   #addMarkers (mapID: string, markers: MarkerDefinition[], sourceName: string): void {
-    if (this.sources[mapID] === undefined) return
-    if (this.sources[mapID][sourceName] === undefined) {
-      this.sources[mapID][sourceName] = new MarkerSource(sourceName, this.session)
-    }
-    (this.sources[mapID][sourceName] as MarkerSource).addMarkers(markers)
+    const markerSource = this.#getMarkerSource(mapID, sourceName)
+    markerSource.addMarkers(markers)
   }
 
   #removeMarkers (mapID: string, ids: number[], sourceName: string): void {
-    if (this.sources[mapID] === undefined) return
-    let markerSource = this.sources[mapID][sourceName] as MarkerSource
-    if (markerSource === undefined) {
-      markerSource = this.sources[mapID][sourceName] = new MarkerSource(sourceName, this.session)
-    }
+    const markerSource = this.#getMarkerSource(mapID, sourceName)
     markerSource.removeMarkers(ids)
+  }
+
+  #getMarkerSource (mapID: string, sourceName: string): MarkerSource {
+    const sources = this.sources[mapID]
+    if (sources === undefined) throw new Error(`Map ${mapID} does not exist`)
+    if (sources[sourceName] === undefined) sources[sourceName] = new MarkerSource(sourceName, this.session)
+    return sources[sourceName] as MarkerSource
   }
 
   #deleteSource (mapID: string, sourceNames: string[]): void {

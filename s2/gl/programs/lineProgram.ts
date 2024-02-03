@@ -145,7 +145,7 @@ export default async function lineProgram (context: Context): Promise<LineProgra
         [2, 2, gl.FLOAT, false, 24, 8],
         [3, 2, gl.FLOAT, false, 24, 16]
       ], true)
-      const lengthSoFarBuffer = context.bindEnableVertexAttr(lengthSoFarA, 4, 1, gl.FLOAT, false, 0, 0)
+      const lengthSoFarBuffer = context.bindEnableVertexAttr(lengthSoFarA, 4, 1, gl.FLOAT, false, 4, 0, true)
       // const fillIDBuffer = context.bindEnableVertexAttr(fillIDA, 6, 3, gl.UNSIGNED_BYTE, true, 0, 0)
 
       // bind the typeBuffer
@@ -251,7 +251,7 @@ export default async function lineProgram (context: Context): Promise<LineProgra
       gl.uniform1f(uCap, cap)
       gl.uniform1i(uDashed, ~~dashed)
       // ensure a dash texture is mapped, if feature isn't dashed, use nullTexture
-      if (dashed && this.curTexture !== layerIndex) {
+      if (dashed) {
         this.curTexture = layerIndex
         gl.uniform1f(uTexLength, dashLength)
         gl.uniform1f(uDashCount, dashCount)
@@ -271,7 +271,7 @@ export default async function lineProgram (context: Context): Promise<LineProgra
       gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 24, 8 + (offset * 24))
       gl.vertexAttribPointer(3, 2, gl.FLOAT, false, 24, 16 + (offset * 24))
       gl.bindBuffer(gl.ARRAY_BUFFER, lengthSoFarBuffer)
-      gl.vertexAttribPointer(4, 1, gl.FLOAT, false, 4, offset * 4)
+      gl.vertexAttribPointer(4, 1, gl.FLOAT, false, 0, offset * 4)
       // draw elements
       gl.drawArraysInstanced(gl.TRIANGLES, 0, 9, count) // gl.drawArraysInstancedANGLE(mode, first, count, primcount)
     }

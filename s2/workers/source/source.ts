@@ -16,8 +16,9 @@ export type LayerMetaData = Record<string, { // layer
 export interface Metadata extends Omit<SourceMetadata, 'path'> {}
 
 export default class Source {
-  ready = false
   active = true
+  resolve: (value: void | PromiseLike<void>) => void = () => {}
+  ready = new Promise<void>(resolve => { this.resolve = resolve })
   name: string
   path: string
   type: SourceType = 'vector' // how to process the result
@@ -35,7 +36,6 @@ export default class Source {
   needsToken: boolean
   time?: number
   session: Session
-  requestCache: Array<[string, TileRequest]> = [] // each element in array -> [mapID, TileRequest]
   textEncoder: TextEncoder = new TextEncoder()
   constructor (
     name: string,
@@ -91,29 +91,18 @@ export default class Source {
       })
     }
     // once the metadata is complete, we should check if any tiles were queued
-    this.ready = true
-    this.#checkCache()
+    this.resolve()
     // if attributions, we send them off
     const attributions = { ...this.attributions }
     if (Object.keys(attributions).length > 0) postMessage({ mapID, type: 'attributions', attributions })
   }
 
-  #checkCache (): void {
-    while (this.requestCache.length > 0) {
-      const request = this.requestCache.pop()
-      if (request !== undefined) this.tileRequest(...request)
-    }
-  }
-
   // all tile requests undergo a basic check on whether that data exists
   // within the metadata boundaries. layerIndexes exists to set a boundary
   // of what layers the map is interested in (caused by style change add/edit layer)
-  tileRequest (mapID: string, tile: TileRequest): void {
-    // if the source isn't ready yet, we store in cache
-    if (!this.ready) {
-      this.requestCache.push([mapID, tile])
-      return
-    }
+  async tileRequest (mapID: string, tile: TileRequest): Promise<void> {
+    // if the source isn't ready yet, we wait for the metadata to be built
+    await this.ready
     // inject layerIndexes
     this.#getLayerIndexes(tile)
     // now make requests for parent data as necessary

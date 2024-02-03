@@ -1,6 +1,7 @@
 /* eslint-env browser */
 import buildMask from './buildMask'
 
+import type { ColorArray } from 'style/color'
 import type { GPUType, Projection } from 'style/style.spec'
 import type { MapOptions } from 'ui/s2mapUI'
 import type { MaskSource, TileMaskSource } from 'gpu/workflows/workflow.spec'
@@ -28,7 +29,7 @@ export default class WebGPUContext {
   format: GPUTextureFormat = 'rgba8unorm'
   masks = new Map<number, MaskSource>()
   sampleCount = 1
-  clearColorRGBA: [r: number, g: number, b: number, a: number] = [0, 0, 0, 0]
+  clearColorRGBA: ColorArray = [0, 0, 0, 0]
   // manage buffers, layouts, and bind groups
   nullTexture!: GPUTexture
   sharedTexture!: GPUTexture
@@ -131,7 +132,7 @@ export default class WebGPUContext {
     this.computePass.setPipeline(pipeline)
   }
 
-  setClearColor (clearColor: [r: number, g: number, b: number, a: number]): void {
+  setClearColor (clearColor: ColorArray): void {
     this.clearColorRGBA = clearColor
   }
 

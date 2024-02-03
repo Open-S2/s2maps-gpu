@@ -6,8 +6,6 @@ import type { MapOptions } from '../s2/ui/s2mapUI'
 
 export type Ready = (s2map: S2Map) => void
 
-const { NEXT_PUBLIC_API_KEY } = process.env
-
 export interface MapProps {
   style?: StyleDefinition
   opts?: Omit<MapOptions, 'style'>
@@ -57,7 +55,7 @@ function prepCanvas (
   props: MapProps
 ): void {
   // pull in properties
-  const { style, opts, ready, noAPIKey, mouseenter, mouseleave } = props
+  const { style, opts, ready, mouseenter, mouseleave } = props
   // don't bother reloading without a style or container
   if (style === undefined || (container == null)) return
 
@@ -66,7 +64,7 @@ function prepCanvas (
     s2map.current = new S2Map({
       ...(opts ?? {}),
       style,
-      apiKey: noAPIKey === true ? undefined : NEXT_PUBLIC_API_KEY,
+      apiKey: undefined,
       container,
       // projection: 'blend',
       // colorBlindController: (typeof opts.zoomController === 'boolean') ? opts.zoomController : true,

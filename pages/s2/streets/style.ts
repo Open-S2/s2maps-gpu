@@ -4,16 +4,19 @@ const style: StyleDefinition = {
   version: 1,
   name: 's2maps-streets-v1',
   center: [-111.88683599228256, 40.76645913667518],
-  zoom: 12,
+  // center: [0, 0],
+  zoom: 7.9,
   minzoom: -0.5,
   maxzoom: 18.99,
   sources: {
-    streets: 'http://localhost:3000/api/tiles/s2/streets',
-    terrain: 'http://localhost:3000/api/tiles/s2/terrain'
+    streets: 'http://localhost:8008/s2tiles/s2maps/streets-v1.s2tiles',
+    terrain: 'http://localhost:8008/s2tiles/s2maps/terrain-v1.s2tiles'
   },
   fonts: {
-    robotoMedium: 'http://localhost:3000/api/glyphs/RobotoMedium.font',
-    robotoRegular: 'http://localhost:3000/api/glyphs/RobotoRegular.font'
+    robotoRegular: 'http://localhost:8008/glyphs-v2/RobotoRegular',
+    robotoMedium: 'http://localhost:8008/glyphs-v2/RobotoMedium',
+    notoRegular: 'http://localhost:8008/glyphs-v2/NotoRegular',
+    notoMedium: 'http://localhost:8008/glyphs-v2/NotoMedium'
   },
   wallpaper: {
     background: '#030a2d',
@@ -188,15 +191,14 @@ const style: StyleDefinition = {
                 inputRange: {
                   type: 'zoom',
                   ease: 'lin',
-                  base: 13,
                   ranges: [
-                    {
-                      stop: 14,
-                      input: '#f8f9fa'
-                    },
                     {
                       stop: 13,
                       input: '#e9eaed'
+                    },
+                    {
+                      stop: 14,
+                      input: '#f8f9fa'
                     }
                   ]
                 }
@@ -1972,6 +1974,10 @@ const style: StyleDefinition = {
       cap: 'butt',
       join: 'bevel',
       color: 'rgba(125, 102, 97, 0.8)',
+      dasharray: [
+        [20, 'rgba(125, 102, 97, 0.8)'],
+        [20, 'rgba(255, 255, 255, 0)']
+      ],
       width: 1.5
     },
     {
@@ -2073,7 +2079,7 @@ const style: StyleDefinition = {
       layer: 'addr',
       type: 'glyph',
       minzoom: 16,
-      textFamily: 'robotoRegular',
+      textFamily: ['robotoRegular', 'notoRegular'],
       textField: '?housenumber',
       textAnchor: 'center',
       textLineHeight: 0.02,
@@ -2101,16 +2107,46 @@ const style: StyleDefinition = {
       layer: 'place',
       type: 'glyph',
       maxzoom: 12,
-      textFamily: 'robotoMedium',
+      textFamily: ['robotoMedium', 'notoMedium'],
       textField: {
         dataCondition: {
           conditions: [
             {
               filter: { key: 'class', comparator: '==', value: 'continent' },
-              input: '?!P!Uname_en'
+              input: '?!P!Uname_XX'
             }
           ],
-          fallback: '?!Pname_en'
+          fallback: {
+            inputRange: {
+              type: 'zoom',
+              ease: 'step',
+              ranges: [
+                {
+                  stop: 0,
+                  input: '?abbr,?name'
+                },
+                {
+                  stop: 3,
+                  input: {
+                    dataCondition: {
+                      conditions: [
+                        {
+                          filter: {
+                            and: [
+                              { key: '?!Pname_XX', comparator: '!=', value: '' },
+                              { key: '?!Pname_XX', comparator: 'has', value: '?name' }
+                            ]
+                          },
+                          input: '?name'
+                        }
+                      ],
+                      fallback: ['?name', '\n', '?!Pname_XX']
+                    }
+                  }
+                }
+              ]
+            }
+          }
         }
       },
       textAnchor: 'center',
@@ -2206,10 +2242,10 @@ const style: StyleDefinition = {
           conditions: [
             {
               filter: { key: 'class', comparator: 'has', value: ['town', 'hamlet'] },
-              input: 'robotoRegular'
+              input: ['robotoRegular']
             }
           ],
-          fallback: 'robotoMedium'
+          fallback: ['robotoMedium']
         }
       },
       textField: {
@@ -2376,7 +2412,7 @@ const style: StyleDefinition = {
       filter: { key: 'class', comparator: '==', value: 'water' },
       layer: 'poi',
       type: 'glyph',
-      textFamily: 'robotoMedium',
+      textFamily: ['robotoMedium', 'notoMedium'],
       textField: {
         dataCondition: {
           conditions: [{

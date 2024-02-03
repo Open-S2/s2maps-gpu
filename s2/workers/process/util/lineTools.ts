@@ -28,11 +28,36 @@ export function flattenGeometry (geometry: S2VectorGeometry, type: S2VectorTileF
   } else return []
 }
 
-export function findPointsAlongLine (lines: S2VectorLines, minWidth: number): Array<[s: number, t: number]> {
+export function findPointsAlongLine (
+  lines: S2VectorLines,
+  minWidth: number,
+  extent: number
+): Array<[s: number, t: number]> {
+  const res: Array<[s: number, t: number]> = []
+  // step 1: cleanup the lines to not include data outside the 0->1 boundary
   for (const line of lines) {
-    // check if the line is long enough to fit the glyph
+    // iterate through the line. Find:
+    // 1: If the line passes through the 0->1 boundary of the tile
+    // 2: If the line is long enough to fit the glyph
+    // 3: Find the anchor points to place the glyph
+    const { length } = lineLength(line)
+    if (length < minWidth) continue
+    // find the anchor points to place the glyph
+    const numPoints = Math.floor(length / minWidth)
+    console.log(numPoints)
   }
-  return []
+  return res
+}
+
+function lineLength (line: S2VectorLine): { length: number } {
+  let length = 0
+  let prev = line[0]
+  for (let i = 1, ll = line.length; i < ll; i++) {
+    const curr = line[i]
+    length += distance(prev, curr)
+    prev = curr
+  }
+  return { length }
 }
 
 export function drawLine (

@@ -24,7 +24,7 @@ import type {
 } from './process.spec'
 
 export default class LineWorker extends VectorWorker implements LineWorkerSpec {
-  features: LineFeature[] = []
+  featureStore = new Map<bigint, LineFeature[]>() // tileID -> features
 
   setupLayer (lineLayer: LineLayerDefinition): LineWorkerLayer {
     const {
@@ -120,19 +120,25 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
       idRGB: idToRGB(id)
     }
 
-    this.features.push(lineFeature)
+    if (!this.featureStore.has(tile.id)) this.featureStore.set(tile.id, [] as LineFeature[])
+    const store = this.featureStore.get(tile.id) as LineFeature[]
+    store.push(lineFeature)
     return true
   }
 
   async flush (mapID: string, tile: TileRequest, sourceName: string): Promise<void> {
-    if (this.features.length === 0) return
-    this.#flush(mapID, sourceName, tile.id)
-    this.features = []
+    const features = this.featureStore.get(tile.id) ?? []
+    if (features.length === 0) return
+    this.#flush(mapID, sourceName, tile.id, features)
+    this.featureStore.delete(tile.id)
   }
 
-  #flush (mapID: string, sourceName: string, tileID: bigint): void {
-    const { features } = this
-
+  #flush (
+    mapID: string,
+    sourceName: string,
+    tileID: bigint,
+    features: LineFeature[]
+  ): void {
     // Step 1: Sort by layerIndex, than sort by feature code.
     features.sort(featureSort)
 

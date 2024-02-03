@@ -17,7 +17,7 @@
 			"satellite": "s2maps://data/s2maps/modis-v1/7.s2tiles"
 		},
 		"wallpaper": {
-			"skybox": "https://data.s2maps.io/public/backgrounds/milkyway",
+			"skybox": "https://opens2.com/public/backgrounds/milkyway",
 			"loadingBackground": "rgb(9, 8, 17)",
 			"size": 2048,
 			"type": "webp"

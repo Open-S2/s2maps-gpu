@@ -10,12 +10,12 @@ export interface MarkerDefinition {
   lon: number
   lat: number
   html?: string // HTMLElement
-  properties?: Record<string, any>
+  properties?: Record<string, unknown>
   geometry?: Point
 }
 
 interface MarkerProperties {
-  [key: string]: any
+  [key: string]: unknown
   __markerID: number
 }
 
@@ -87,6 +87,9 @@ export default class MarkerSource {
       }
     }
     // if markers fit within bounds, create a tile
+    const length = features.length
+    // TODO: Flush instead of return
+    if (length === 0) return
     // build data object
     const data = { extent: 8_192, face, zoom, i, j, layers: { default: { extent: 8_192, features, length: features.length } } }
     // encode for transfer

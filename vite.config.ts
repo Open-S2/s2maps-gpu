@@ -6,7 +6,6 @@ export default defineConfig({
     globals: true,
     setupFiles: ['@vitest/web-worker'],
     env: {
-      NEXT_PUBLIC_API_KEY: 'eyJ1IjoiYWRtaW4iLCJpYXQiOjE2NDgxMjIyMzN9.FEk8jgxK_HDV1PC0pYUKysO9hs-UfIb0gT-yKmJDcw0',
       NEXT_PUBLIC_API_URL: 'http://localhost:8008',
       NODE_ENV: 'test'
     },

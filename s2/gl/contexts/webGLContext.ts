@@ -7,6 +7,7 @@ export default class WebGLContext extends Context {
   elementIndexUint: OES_element_index_uint | null
   angledInstancedArrays: ANGLE_instanced_arrays | null
   vertexArrayObject: OES_vertex_array_object | null
+  textureFloat: OES_texture_float | null
   constructor (context: WebGLRenderingContext, options: MapOptions) {
     super(context, options)
     // let the painter know it's a WebGLContext
@@ -19,13 +20,15 @@ export default class WebGLContext extends Context {
     if (this.angledInstancedArrays === null) console.error('*** Error - "ANGLE_instanced_arrays" is not a supported extension')
     this.vertexArrayObject = gl.getExtension('OES_vertex_array_object')
     if (this.vertexArrayObject === null) console.error('*** Error - "OES_vertex_array_object" is not a supported extension')
+    this.textureFloat = gl.getExtension('OES_texture_float')
+    if (this.textureFloat === null) console.error('*** Error - "OES_texture_float" is not a supported extension')
     // polyfill
-    this._polyfill()
+    this.#polyfill()
     // create default quad
     this._createDefaultQuad()
   }
 
-  _polyfill (): void {
+  #polyfill (): void {
     const gl = this.gl as WebGLRenderingContext
     // OES_vertex_array_object
     if (this.vertexArrayObject !== null) {

@@ -57,8 +57,6 @@ struct LayerUniforms {
 
 struct GlyphUniforms {
   sourceIndexOffset: u32, // where to start searching the collisionResults array
-  // TODO: drawType should be local to the glyph
-  // drawType: f32, // 0 -> MTSDF, 1 -> SDF, 2 -> RAW_IMAGE
   isIcon: f32,
   overdraw: f32,
   deltaTime: f32, // time since last frame
@@ -91,12 +89,21 @@ struct GlyphContainer {
   id: u32, // identifier - the last 8 bits explain how many containers it shares with
 };
 
+struct GlyphContainerPath {
+  st: vec2<f32>, // s & t position relative to the tile's 0-1 bounds
+  path: array<vec2<f32>, 3>, // path of st points from the starting position st
+  distance: f32, // distance in glyphs from the starting position st. 0.0 is the center glyph assuming odd number of glyphs
+  pad: f32, // padding around the container
+  index: u32, // index in the collision result array without offset (needed because some Containers share indexes)
+  id: u32, // identifier - the last 8 bits explain how many containers it shares with
+};
+
 struct BBox {
   index: u32, 
   left: f32,
   bottom: f32,
   right: f32,
-  top: f32,
+  top: f32, // -99999 if actually a circle
 };
 
 struct Circle {
@@ -104,7 +111,6 @@ struct Circle {
   x: f32,
   y: f32,
   radius: f32,
-  _padding: f32,
 };
 
 // ** FRAME DATA **
@@ -132,10 +138,11 @@ struct Circle {
 // the bbox index is the container position + the glyph indexOffset
 // the collision result index is the container's index value + the glyph indexOffset
 @binding(4) @group(2) var<storage, read> containers: array<GlyphContainer>;
-@binding(5) @group(2) var<storage, read_write> bboxes: array<BBox>;
-@binding(6) @group(2) var<storage, read_write> collisionResults: array<atomic<u32>>;
-@binding(7) @group(2) var<storage, read> collisionResultsReadOnly: array<u32>;
-@binding(8) @group(2) var<uniform> attributes: Attributes;
+@binding(5) @group(2) var<storage, read> containerPaths: array<GlyphContainerPath>;
+@binding(6) @group(2) var<storage, read_write> bboxes: array<BBox>;
+@binding(7) @group(2) var<storage, read_write> collisionResults: array<atomic<u32>>;
+@binding(8) @group(2) var<storage, read> collisionResultsReadOnly: array<u32>;
+@binding(9) @group(2) var<uniform> attributes: Attributes;
 // ** Interactive Data **
 @binding(0) @group(3) var<storage, read_write> resultIndex: atomic<u32>;
 @binding(1) @group(3) var<storage, read_write> results: array<u32>;
@@ -559,7 +566,7 @@ fn vMain(
   // setup position
   var tmpPos = getPos(st);
   tmpPos /= tmpPos.w;
-  var tmpPosXY = tmpPos.xy;
+  var posXY = tmpPos.xy;
 
   var index = 0;
   var featureIndex = 0;
@@ -599,13 +606,89 @@ fn vMain(
   let uAspect = vec2<f32>(view.aspectX, view.aspectY);
   var XY = (xy + (offset * size)) / uAspect; // setup the xy positional change in pixels
   var quad = (wh * size) / uAspect * uv;
-  tmpPosXY += XY + quad;
+  posXY += XY + quad;
   // set texture position (don't bother wasting time looking up if drawing "interactive quad")
   var uTexSize = vec2<f32>(textureDimensions(glyphTexture));
   output.texcoord = (texXY / uTexSize) + (texWH / uTexSize * uv);
   // output.texcoord = uv;
 
-  output.Position = vec4(tmpPosXY, layer.depthPos, 1.0);
+  output.Position = vec4(posXY, layer.depthPos, 1.0);
+
+  return output;
+}
+
+@vertex
+fn vCircleMain(
+  @builtin(vertex_index) VertexIndex: u32,
+  @location(0) st: vec2<f32>,
+  @location(1) stPath1: vec2<f32>,
+  @location(2) stPath2: vec2<f32>,
+  @location(3) stPath3: vec2<f32>,
+  @location(4) distance: f32,
+  @location(5) texXY: vec2<f32>,
+  @location(6) texWH: vec2<f32>,
+  @location(7) collisionIndex: u32, // index to check in collisionResults
+  @location(8) iconColor: vec4<f32>,
+) -> VertexOutput {
+  var output: VertexOutput;
+  let uv = UVs[VertexIndex];
+  let uIsIcon = glyph.isIcon == 1.;
+  output.isIcon = glyph.isIcon;
+
+  // check if collision then we just return
+  if (collisionResultsReadOnly[collisionIndex + glyph.sourceIndexOffset] != 0u) { return output; }
+
+  // setup position
+  var tmpPos = getPos(st);
+  tmpPos /= tmpPos.w;
+  var tmpPosXY = tmpPos.xy;
+
+  var index = 0;
+  var featureIndex = 0;
+
+  // decode properties
+  var tmpSize = decodeFeature(false, &index, &featureIndex)[0];
+  if (uIsIcon) { tmpSize = decodeFeature(false, &index, &featureIndex)[0]; }
+  else { _ = decodeFeature(false, &index, &featureIndex)[0]; }
+  var size = tmpSize * view.devicePixelRatio * 2.;
+  // color
+  var color = decodeFeature(true, &index, &featureIndex);
+  if (uIsIcon) { color = cBlindAdjust(iconColor); }
+  // stroke properties
+  output.buf = 0.5;
+  if (attributes.isStroke == 1u) {
+    var strokeWidth = decodeFeature(false, &index, &featureIndex)[0];
+    if (strokeWidth > 0.) {
+      color = decodeFeature(true, &index, &featureIndex);
+      output.buf = 1. - clamp(0.5 + (strokeWidth / 2.), 0.5, 0.999); // strokeWidth is 0->1
+    } else { return output; }
+  }
+  output.color = vec4<f32>(color.rgb * color.a, color.a);
+
+  // set gamma based upon size
+  output.gamma = ICON_GAMMA;
+  if (!uIsIcon) {
+    output.gamma = max(
+      MIN_GAMMA,
+      min(
+        MAX_GAMMA,
+        ((MAX_GAMMA - MIN_GAMMA) / (15. - 30.)) * (tmpSize - 15.) + MAX_GAMMA
+      )
+    );
+  }
+
+  // build circle
+  let uAspect = vec2<f32>(view.aspectX, view.aspectY);
+  let radius = size * view.devicePixelRatio * 2. / uAspect; // * 2 pixel ratio and then radius is size / 2
+  var posXY = pathPosition(distance, array<vec2<f32>, 3>(stPath1, stPath2, stPath3), st, size);
+  // migrate glyph by half the radius
+  posXY += radius;
+  // set texture position (don't bother wasting time looking up if drawing "interactive quad")
+  var uTexSize = vec2<f32>(textureDimensions(glyphTexture));
+  output.texcoord = (texXY / uTexSize) + (texWH / uTexSize * uv);
+  // output.texcoord = uv;
+
+  output.Position = vec4(posXY, layer.depthPos, 1.0);
 
   return output;
 }
@@ -630,18 +713,10 @@ fn fMain(
 /* TEST PASS */
 
 const TestPos = array<vec2<f32>, 8>(
-  // 1
-  vec2(0., 0.),
-  vec2(1., 0.),
-  // 2
-  vec2(1., 0.),
-  vec2(1., 1.),
-  // 3
-  vec2(1., 1.),
-  vec2(0., 1.),
-  // 4
-  vec2(0., 1.),
-  vec2(0., 0.)
+  vec2(0., 0.), vec2(1., 0.), // 1
+  vec2(1., 0.), vec2(1., 1.), // 2
+  vec2(1., 1.), vec2(0., 1.), // 3
+  vec2(0., 1.), vec2(0., 0.) // 4
 );
 
 @vertex
@@ -692,53 +767,130 @@ fn vTest(
 }
 
 @fragment
-fn fTest(
-  output: TestOutput
-) -> @location(0) vec4<f32> {
+fn fTest(output: TestOutput) -> @location(0) vec4<f32> {
   if (output.color.a < 0.01) { discard; }
   return output.color;
 }
 
 /* COMPUTE FILTER PASSES */
 
+const CIRCLE_CONDITION = -99999.;
+
+fn overlap(a: BBox, b: BBox) -> bool {
+  // check if a or b is bbox:
+  let aIsCircle = a.top == CIRCLE_CONDITION;
+  let bIsCircle = b.top == CIRCLE_CONDITION;
+  if (aIsCircle && bIsCircle) {
+    return circlesOverlap(
+      Circle(a.index, a.left, a.bottom, a.right),
+      Circle(b.index, b.left, b.bottom, b.right)
+    );
+  } else if (aIsCircle) {
+    return boxCircleOverlap(b, Circle(a.index, a.left, a.bottom, a.right));
+  } else if (bIsCircle) {
+    return boxCircleOverlap(a, Circle(b.index, b.left, b.bottom, b.right));
+  } else {
+    return boxesOverlap(a, b);
+  }
+}
+
 fn boxesOverlap(a: BBox, b: BBox) -> bool {
-  if (a.left >= b.right || b.left >= a.right) { return false; }
-  else if (a.top <= b.bottom || b.top <= a.bottom) { return false; }
+  if (
+    a.left >= b.right ||
+    b.left >= a.right ||
+    a.top <= b.bottom ||
+    b.top <= a.bottom
+  ) { return false; }
   return true;
 }
 
-// PASS 1: Get positional data for each glyph and store in bboxes.
-// Find early collisions (behind S2 sphere or outside tile bounds)
-@compute @workgroup_size(64)
-fn boxes(@builtin(global_invocation_id) global_id: vec3<u32>) {
-  if (global_id.x >= attributes.count) { return; }
-  let containerIndex = global_id.x + attributes.offset;
-  let container = containers[containerIndex];
-  let bboxIndex = containerIndex + glyph.sourceIndexOffset;
-  let collideIndex = container.index + glyph.sourceIndexOffset;
+fn circlesOverlap(a: Circle, b: Circle) -> bool {
+  let dx = a.x - b.x;
+  let dy = a.y - b.y;
+  let distance = sqrt(dx * dx + dy * dy);
+  return distance < a.radius + b.radius;
+}
+
+fn boxCircleOverlap(a: BBox, b: Circle) -> bool {
+  let dx = b.x - max(a.left, min(b.x, a.right));
+  let dy = b.y - max(a.bottom, min(b.y, a.top));
+  return (dx * dx + dy * dy) < b.radius * b.radius;
+}
+
+fn pathPosition(
+  distance: f32,
+  paths: array<vec2<f32>, 3>,
+  startPosition: vec2<f32>,
+  size: f32,
+) -> vec2<f32> {
+// setup circle variables
+  let uAspect = vec2<f32>(view.aspectX, view.aspectY);
+  // container distance is in glyph units, so we need to multiply by current glyph size
+  // and convert to pixels.
+  // combined glyph units are defined by the number of glyphs traveled:
+  // let sum = (glyph1.advanceWidth + glyph1.kerning) + (glyph2.advanceWidth + glyph2.kerning) + ...
+  var distanceToTravel = distance * size;
+
+  // we need to find xy by following the containers path
+  var posXY = startPosition;
+  var i = 0u;
+  var distanceTraveled = 0.;
+  while (distanceTraveled < distanceToTravel) {
+    let path = paths[i];
+    var pathPos = getPos(path.xy);
+    pathPos /= pathPos.w;
+    let distance = length(uAspect * pathPos.xy);
+    // first case: we haven't reached the distance yet
+    if (distance + distanceTraveled < distanceToTravel) {
+      posXY = pathPos.xy;
+    } else {
+      // second case: we are at the last point and we need to travel past it
+      // third case: otherwise we need to interpolate between the two points
+      let t = (distanceToTravel - distanceTraveled) / distance;
+      posXY = mix(posXY, pathPos.xy, t);
+      break;
+    }
+    // upgrade distance traveled and increment our index
+    distanceTraveled += distance;
+    // increment i
+    i++;
+  }
+  return posXY;
+}
+
+struct BoxCircleRes {
+  size: f32,
+  position: vec2<f32>,
+};
+
+fn prepBoxOrCircle(
+  bboxIndex: u32,
+  collideOffsetIndex: u32,
+  st: vec2<f32>,
+) -> BoxCircleRes { // return size and position data
+  let collideIndex = collideOffsetIndex + glyph.sourceIndexOffset;
   let bbox = &bboxes[bboxIndex];
-  var position = getPos(container.st);
+  var position = getPos(st);
   let zero = getZero();
   // adjust by w to match zero
   position /= position.w;
-
   // reset bbox
   (*bbox).index = collideIndex;
   (*bbox).left = 0.;
   (*bbox).bottom = 0.;
   (*bbox).right = 0.;
   (*bbox).top = 0.;
-
   // First check that we don't already have collisions
   var hasCollision: bool = false;
+  var containerST = st;
   // Case 1: The point lies behind the sphere (if s2)
   if (tile.isS2 == 1. && position.z > zero.z) {
     hasCollision = true;
   } else if ( // Case 2: The point lies outside the bounds of the tile (if a child tile)
-    container.st.x < bounds.left ||
-    container.st.x > bounds.right ||
-    container.st.y < bounds.bottom ||
-    container.st.y > bounds.top
+    containerST.x < bounds.left ||
+    containerST.x > bounds.right ||
+    containerST.y < bounds.bottom ||
+    containerST.y > bounds.top
   ) {
     hasCollision = true;
   }
@@ -746,11 +898,10 @@ fn boxes(@builtin(global_invocation_id) global_id: vec3<u32>) {
   if (hasCollision) {
     // update collision state
     atomicStore(&collisionResults[collideIndex], 2u);
-    return;
+    return BoxCircleRes(0., vec2<f32>(0., 0.));
   }
   // otherwise no collision
   atomicStore(&collisionResults[collideIndex], 0u);
-
   // figure out the size of the glyph
   var index = 0;
   var featureIndex = 0;
@@ -758,19 +909,65 @@ fn boxes(@builtin(global_invocation_id) global_id: vec3<u32>) {
   var size = decodeFeature(false, &index, &featureIndex)[0] * view.devicePixelRatio * 2.;
   if (glyph.isIcon == 1.) { size = decodeFeature(false, &index, &featureIndex)[0] * view.devicePixelRatio * 2.; }
 
+  return BoxCircleRes(size, position.xy);
+}
+
+// PASS 1: Get positional data for each glyph and store in bboxes.
+// Find early collisions (behind S2 sphere or outside tile bounds)
+@compute @workgroup_size(64)
+fn boxes(@builtin(global_invocation_id) global_id: vec3<u32>) {
+  // prep
+  if (global_id.x >= attributes.count) { return; }
+  let offsetIndex = global_id.x + attributes.offset;
+  let bboxIndex = offsetIndex + glyph.sourceIndexOffset;
+  let container = containers[offsetIndex];
+  // setup and get bbox/circle attributes
+  let setup = prepBoxOrCircle(bboxIndex, container.index, container.st);
+  let size = setup.size;
+  let position = setup.position;
+  // early return if no size (collision)
+  if (size == 0.) { return; } // early return if no size (collision)
   // build bbox
-  // tmpPosXY += XY + (WH * uv);
   let uAspect = vec2<f32>(view.aspectX, view.aspectY);
-  var padding = container.pad  * view.devicePixelRatio * 2.;
+  var padding = container.pad * view.devicePixelRatio * 2.;
   var XY = ((container.xy * size) - padding) / uAspect; // setup the xy positional change in pixels
   var WH = ((container.wh * size) + (padding * 2)) / uAspect;
   var bottomLeft = position.xy + XY;
   var topRight = bottomLeft + WH;
+  // adjust back to pixel space 
+  bottomLeft *= uAspect;
+  topRight *= uAspect;
   // store
+  let bbox = &bboxes[bboxIndex];
   (*bbox).left = bottomLeft.x;
   (*bbox).bottom = bottomLeft.y;
   (*bbox).right = topRight.x;
   (*bbox).top = topRight.y;
+}
+@compute @workgroup_size(64)
+fn circles(@builtin(global_invocation_id) global_id: vec3<u32>) {
+  // prep
+  if (global_id.x >= attributes.count) { return; }
+  let offsetIndex = global_id.x + attributes.offset;
+  let bboxIndex = offsetIndex + glyph.sourceIndexOffset;
+  let containerPath = containerPaths[offsetIndex];
+  // setup and get bbox/circle attributes
+  let setup = prepBoxOrCircle(bboxIndex, containerPath.index, containerPath.st);
+  let size = setup.size;
+  let position = setup.position;
+  // early return if no size (collision)
+  if (size == 0.) { return; } // early return if no size (collision)
+  // build circle
+  let uAspect = vec2<f32>(view.aspectX, view.aspectY);
+  let padding = containerPath.pad * view.devicePixelRatio * 2.;
+  let radius = (size / 2.) + padding;
+  let posXY = pathPosition(containerPath.distance, containerPath.path, position.xy, size) * uAspect;
+  // store
+  let bbox = &bboxes[bboxIndex];
+  (*bbox).left = posXY.x; // x
+  (*bbox).bottom = posXY.y; // y
+  (*bbox).right = radius; // radius
+  (*bbox).top = CIRCLE_CONDITION;
 }
 
 // PASS 2: Check for collisions between computed bboxes
@@ -800,7 +997,7 @@ fn test(@builtin(global_invocation_id) global_id: vec3<u32>) {
       // 3) then check the lower indexed filter result isn't already collided with something else
       if (
         otherResultIndex != collideIndex &&
-        boxesOverlap(testBox, box) &&
+        overlap(testBox, box) &&
         atomicLoad(&collisionResults[otherResultIndex]) == 0u
       ) {
         // update collision state
@@ -824,11 +1021,18 @@ fn interactive(@builtin(global_invocation_id) global_id: vec3<u32>) {
   if (collisionResultsReadOnly[box.index] != 0u) { return; }
 
   // check if mouse is inside box
-  if (
-    view.mouseX >= box.left &&
-    view.mouseX <= box.right &&
-    view.mouseY >= box.bottom &&
-    view.mouseY <= box.top
+  let mousePos = vec2<f32>(view.mouseX, view.mouseY);
+  if (box.top == CIRCLE_CONDITION) {
+    // check if mouse is inside circle
+    // (box.left -> circle.x; box.bottom -> circle.y; box.right -> circle.radius)
+    if (length(mousePos - vec2<f32>(box.left, box.bottom)) <= box.right) {
+      results[atomicAdd(&resultIndex, 1u)] = container.id;
+    }
+  } else if (
+    mousePos.x >= box.left &&
+    mousePos.x <= box.right &&
+    mousePos.y >= box.bottom &&
+    mousePos.y <= box.top
   ) {
     results[atomicAdd(&resultIndex, 1u)] = container.id;
   }

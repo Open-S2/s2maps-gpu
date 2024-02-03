@@ -1,6 +1,9 @@
 import { degToRad, radToDeg } from '../util'
 
 // http://www.movable-type.co.uk/scripts/latlong.html
+/**
+ * Represents an orthodrome, which is the shortest path between two points on a sphere.
+ */
 export default class Orthodrome {
   λ1: number // startLon
   φ1: number // startLat
@@ -20,7 +23,11 @@ export default class Orthodrome {
     this.δ = 2 * atan2(sqrt(a), sqrt(1 - a))
   }
 
-  intermediatePoint (t: number): [number, number] {
+  /**
+   * input t 0->1. Find a point along the orthodrome.
+   * returns [lon, lat]
+   */
+  intermediatePoint (t: number): [lon: number, lat: number] {
     const { λ1, λ2, φ1, φ2, δ } = this
     const { sin, cos, atan2, sqrt } = Math
 
@@ -37,7 +44,7 @@ export default class Orthodrome {
     return [radToDeg(λ3), radToDeg(φ3)]
   }
 
-  // projected without a radius (0->1)
+  /** projected normalized (0->1) */
   distanceTo (): number {
     const { a } = this
     const { atan2, sqrt } = Math

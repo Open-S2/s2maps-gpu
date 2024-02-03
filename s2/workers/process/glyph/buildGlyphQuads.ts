@@ -1,8 +1,11 @@
 import { findPointsAlongLine, flattenGeometry } from '../util'
+import { clipLines } from '../util/scaleShiftClip'
 
 import type { Alignment, Anchor } from 'style/style.spec'
 import type { GlyphPath, GlyphPoint } from './glyph.spec'
-import type { GlyphMap } from '../imageStore'
+// import type { MapGlyphSource } from '../imageStore'
+import type { MapGlyphSource } from '../imageStore'
+import type { Glyph } from './familySource'
 
 // [s, t, xOffset, yOffset, xPos, yPos, width, height, texX, texY, texWidth, texHeight, id]
 export type Quad = number[]
@@ -14,7 +17,23 @@ export type Filter = number[]
 
 export const QUAD_SIZE = 12
 
-export const MYANMAR_MEDIALS = [4155, 4156, 4157, 4158, 4190, 4191, 4192, 4226]
+export const MEDIALS_AND_VOWELS = [
+  // MYANMAR MEDIALS
+  '4155', '4156', '4157', '4158', '4190', '4191', '4192', '4226',
+  // TIBETAN VOWELS
+  '3953', '3954', '3955', '3956', '3957', '3958', '3959', '3960', '3961', '3962', '3963', '3964', '3965',
+  // TAMIL VOWELS
+  '3006', '3007', '3008', '3009', '3010', '3011', '3012', '3013', '3014', '3015', '3016'
+  // ORIYA VOWELS
+  // '2878' to '2888'
+  // TODO: Maybe consider Decompose these? Not sure if something along the way is bugged or I'm missing something else
+  // 0 decompose 2888(0B48): 2887(0B47) ->  -> previous char
+  // 1 decompose 2891(0B4B): 2887(0B47) -> previous char -> 2878(0B3E)
+  // 2 decompose 2892(0B4C): 2887(0B47) -> previous char -> 2903(0B57)
+  // '2888', '2891', '2892'
+]
+
+export const NULL_GLYPH = { code: '0', texX: 0, texY: 0, texW: 0, texH: 0, xOffset: 0, yOffset: 0, width: 0, height: 0, advanceWidth: 0 }
 
 // This step exclusively creates quad data, E.G. How to draw each glyph on the screen,
 // given the anchor point as a basis for drawing. This step is seperate to preprocessing
@@ -26,7 +45,7 @@ export const MYANMAR_MEDIALS = [4155, 4156, 4157, 4158, 4190, 4191, 4192, 4226]
 // TODO: https://blog.mapbox.com/beautifying-map-labels-with-better-line-breaking-2a6ce3ed432
 export function buildGlyphPointQuads (
   feature: GlyphPoint,
-  glyphMap: GlyphMap
+  glyphSource: MapGlyphSource
 ): void {
   const { max } = Math
   const {
@@ -34,7 +53,6 @@ export function buildGlyphPointQuads (
     wordWrap, align, kerning, lineHeight, type, quads
   } = feature
   let { fieldCodes } = feature
-  const familyMap = glyphMap[family]
   const [adjustX, adjustY] = offset
   // update field codes if it contains joining characters
   if (type === 'text') fieldCodes = adjustMedials(fieldCodes)
@@ -49,7 +67,7 @@ export function buildGlyphPointQuads (
     // word-wrap if line break or length exceeds max allowed.
     if (
       type === 'text' && // is text
-      (unicode === 10 || unicode === 13 || (unicode === 32 && wordWrap !== 0 && cursorX >= wordWrap))
+      (unicode === '10' || unicode === '13' || (unicode === '32' && wordWrap !== 0 && cursorX >= wordWrap))
     ) {
       cursorX = 0
       const heightAdjust = rowCount > 0 ? rowHeight + lineHeight : 0
@@ -61,7 +79,7 @@ export function buildGlyphPointQuads (
       continue
     }
     // grab the unicode information
-    const unicodeData = familyMap[unicode]
+    const unicodeData = getGlyph(glyphSource, family, unicode)
     if (unicodeData === undefined) continue
     const { texX, texY, texW, texH, xOffset, yOffset, width, height, advanceWidth } = unicodeData
     // prep x-y positions
@@ -102,21 +120,21 @@ export function buildGlyphPointQuads (
 // IDEATION: https://blog.mapbox.com/map-label-placement-in-mapbox-gl-c6f843a7caaa
 export function buildGlyphPathQuads (
   feature: GlyphPath,
-  glyphMap: GlyphMap
+  glyphSource: MapGlyphSource
 ): void {
   const { max } = Math
+  // NOTE: missing "size" and "padding"
   const {
-    size, offset, padding, family, anchor, geometry,
-    geometryType, align, kerning, type, quads
+    offset, family, anchor, geometry,
+    geometryType, extent, align, kerning, type, quads
   } = feature
   let { fieldCodes } = feature
-  const familyMap = glyphMap[family]
   const [adjustX, adjustY] = offset
   // update field codes if it contains joining characters
   if (type === 'text') fieldCodes = adjustMedials(fieldCodes)
   // first replace all newlines with spaces
   fieldCodes = fieldCodes.map(unicode => {
-    if (unicode === 10 || unicode === 13) return 32
+    if (unicode === '10' || unicode === '13') return '32'
     else return unicode
   })
   // setup variable
@@ -125,7 +143,7 @@ export function buildGlyphPathQuads (
   let cursorX = 0
   // first run builds maxWidth and maxHeight
   for (const unicode of fieldCodes) {
-    const unicodeData = familyMap[unicode]
+    const unicodeData = getGlyph(glyphSource, family, unicode)
     if (unicodeData === undefined) continue
     const { texW, texH, xOffset, width, height, advanceWidth } = unicodeData
     maxHeight = max(maxHeight, height)
@@ -138,11 +156,13 @@ export function buildGlyphPathQuads (
   }
   // reset cursor
   cursorX = 0
-  // grab geometry lines
-  const lines = flattenGeometry(geometry, geometryType)
+  // grab geometry lines and clip
+  let lines = flattenGeometry(geometry, geometryType)
+  // clip any data outside the 0->extent boundary
+  lines = clipLines(lines, extent, geometryType > 2, 0)
   if (lines.length === 0) return
   // build points for each line
-  const points = findPointsAlongLine(lines, maxWidth)
+  const points = findPointsAlongLine(lines, maxWidth, extent)
   // TODO: given the geometry, check if the line is long enough to fit the glyph
   // TODO: given the geometry, find the anchor points to place the glyph
   // TODO: build the filters + x,y,r for each set of glyphs
@@ -150,7 +170,7 @@ export function buildGlyphPathQuads (
   for (const [s, t] of points) {
     for (const unicode of fieldCodes) {
       // grab the unicode information
-      const unicodeData = familyMap[unicode]
+      const unicodeData = getGlyph(glyphSource, family, unicode)
       if (unicodeData === undefined) continue
       const { texX, texY, texW, texH, xOffset, yOffset, width, height, advanceWidth } = unicodeData
       // prep x-y positions
@@ -172,11 +192,21 @@ export function buildGlyphPathQuads (
   }
 }
 
+function getGlyph (glyphSource: MapGlyphSource, family: string[], code: string): Glyph {
+  for (const familyName of family) {
+    const glyphFamily = glyphSource.get(familyName)
+    if (glyphFamily === undefined) continue
+    const glyph = glyphFamily.glyphCache.get(code)
+    if (glyph !== undefined) return glyph
+  }
+  return NULL_GLYPH
+}
+
 // NOTE: Tempporary solution; remove whne zig module implements more languages
 // MYANMAR MEDIALS go after the characters they are attached to
-function adjustMedials (fieldCodes: number[]): number[] {
+function adjustMedials (fieldCodes: string[]): string[] {
   for (let i = 1, fl = fieldCodes.length; i < fl; i++) {
-    if (MYANMAR_MEDIALS.includes(fieldCodes[i])) {
+    if (MEDIALS_AND_VOWELS.includes(fieldCodes[i])) {
       // swap with previous char
       const prev = fieldCodes[i - 1]
       fieldCodes[i - 1] = fieldCodes[i]

@@ -28,7 +28,7 @@ import type ImageStore from './imageStore'
 const MAX_FEATURE_BATCH_SIZE = 1 << 6 // 64
 
 export default class FillWorker extends VectorWorker implements FillWorkerSpec {
-  featureStore = new Map<bigint, FillFeature[]>()
+  featureStore = new Map<bigint, FillFeature[]>() // tileID -> features
   invertLayers = new Map<number, FillWorkerLayer>()
   imageStore: ImageStore
   constructor (idGen: IDGen, gpuType: GPUType, imageStore: ImageStore) {
@@ -73,25 +73,29 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     return fillWorkerLayer
   }
 
-  buildFeature (
+  async buildFeature (
     tile: TileRequest,
     feature: VTFeature,
-    fillLayer: FillWorkerLayer
-  ): boolean {
+    fillLayer: FillWorkerLayer,
+    mapID: string
+  ): Promise<boolean> {
     const { gpuType, imageStore } = this
     // pull data
     const { zoom, division } = tile
     const { extent, properties } = feature
     let { type } = feature
     const { getCode, interactive, layerIndex } = fillLayer
+    // only accept polygons and multipolygons
+    if (type !== 3 && type !== 4) return false
     // get pattern
     const pattern = fillLayer.pattern?.([], properties, zoom)
     const patternFamily = fillLayer.patternFamily([], properties, zoom)
     const patternMovement = fillLayer.patternMovement([], properties, zoom)
     let missing = false
-    if (pattern !== undefined) missing = imageStore.addMissingIcons(pattern, patternFamily)
-    // only accept polygons and multipolygons
-    if (type !== 3 && type !== 4) return false
+    if (pattern !== undefined) {
+      await imageStore.getReady(mapID)
+      missing = imageStore.addMissingGlyph(mapID, tile.id, [pattern], [patternFamily])
+    }
     const hasParent = tile.parent !== undefined
     const [geometry, indices] = !hasParent && feature.loadGeometryFlat !== undefined
       ? feature.loadGeometryFlat()
@@ -175,7 +179,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     for (const [layerIndex, fillWorkerLayer] of this.invertLayers) {
       if (fillWorkerLayer.source !== sourceName) continue
       if (!features.some(feature => feature.layerIndex === layerIndex)) {
-        const feature = this.#buildInvertFeature(tile, fillWorkerLayer)
+        const feature = await this.#buildInvertFeature(tile, fillWorkerLayer, mapID)
         if (feature !== undefined) features.push(feature)
       }
     }
@@ -192,7 +196,11 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
   }
 
   // NOTE: You can not build invert features that require properties data
-  #buildInvertFeature (tile: TileRequest, fillWorkerLayer: FillWorkerLayer): undefined | FillFeature {
+  async #buildInvertFeature (
+    tile: TileRequest,
+    fillWorkerLayer: FillWorkerLayer,
+    mapID: string
+  ): Promise<undefined | FillFeature> {
     const { gpuType, imageStore } = this
     const { zoom } = tile
     const { getCode, minzoom, maxzoom, layerIndex } = fillWorkerLayer
@@ -204,7 +212,10 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     const patternMovement = fillWorkerLayer.patternMovement([], {}, zoom)
     // get if missing
     let missing = false
-    if (pattern !== undefined) missing = imageStore.addMissingIcons(pattern, patternFamily)
+    if (pattern !== undefined) {
+      await imageStore.getReady(mapID)
+      missing = imageStore.addMissingGlyph(mapID, tile.id, [pattern], [patternFamily])
+    }
     // build feature
     const id = this.idGen.getNum()
     const [gl1Code, gl2Code] = getCode(zoom, {})
@@ -260,16 +271,18 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
         curlayerIndex !== layerIndex ||
         (encodings.length + code.length > MAX_FEATURE_BATCH_SIZE)
       ) {
+        const indexSize = indices.length - indicesOffset
+        if (indexSize === 0) continue // skip if no indices
         // only store if count is actually greater than 0
         featureGuide.push(
           curlayerIndex,
-          indices.length - indicesOffset,
+          indexSize,
           indicesOffset,
           encodings.length,
           ...encodings
         ) // layerIndex, count, offset, encoding size, encodings
         // describe pattern
-        const { texX, texY, texW, texH } = this.imageStore.getPattern(patternFamily, pattern)
+        const { texX, texY, texW, texH } = this.imageStore.getPattern(mapID, patternFamily, pattern)
         featureGuide.push(texX, texY, texW, texH, patternMovement ? 1 : 0)
         // update variables for reset
         indicesOffset = indices.length
@@ -317,7 +330,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
         ...encodings
       ) // layerIndex, count, offset, encoding size, encodings
       // describe pattern
-      const { texX, texY, texW, texH } = this.imageStore.getPattern(curPatternFamily, curPattern)
+      const { texX, texY, texW, texH } = this.imageStore.getPattern(mapID, curPatternFamily, curPattern)
       featureGuide.push(texX, texY, texW, texH, curPatternMovement ? 1 : 0)
     }
 

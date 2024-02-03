@@ -58,8 +58,8 @@ export default function transformTile (tile: JSONTile, extent: number): JSONVect
     tile.transformed = true
   }
 
-  const { zoom, i, j, layers } = tile
-  return { zoom, i, j, layers, extent }
+  const { face, zoom, i, j, layers } = tile
+  return { face, zoom, i, j, layers, extent }
 }
 
 export function transformPoint (

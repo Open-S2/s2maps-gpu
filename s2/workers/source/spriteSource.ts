@@ -1,6 +1,8 @@
 /* eslint-env worker */
 import ImageSource from './imageSource'
+
 import type { SpriteImageMessage } from 'workers/worker.spec'
+import type { ImageMetadata, Metadata } from './imageSource'
 
 export interface SpriteMetadata {
   id: number
@@ -10,41 +12,51 @@ export interface SpriteMetadata {
   y: number
   pixelRatio: number
 }
-
-export type Metadata = Record<string, SpriteMetadata>
+export type SpritesMetadata = Record<string, SpriteMetadata>
 
 export default class SpriteSource extends ImageSource {
-  async build (mapID: string): Promise<void> {
+  async build (mapID: string): Promise<undefined | ImageMetadata> {
     const { name, fileType, path, texturePack } = this
     // grab the metadata and sprites
-    const [metadata, sprites] = await Promise.all([
+    const [spriteMeta, sprites] = await Promise.all([
       this._fetch(`${path}.json`, mapID),
       this._fetch(`${path}.${fileType}`, mapID)
     ]).catch(err => {
       console.error(err)
       return [undefined, undefined]
-    }) as [Metadata | undefined, ArrayBuffer | undefined]
+    }) as [SpritesMetadata | undefined, ArrayBuffer | undefined]
     // if either failed, stop their
-    if (metadata === undefined || sprites === undefined) {
+    if (spriteMeta === undefined || sprites === undefined) {
       this.active = false
       console.error(`Failed to fetch sprite source ${name}`)
     } else {
+      const metadata: Metadata = {}
       // store the metadata
-      let id = 0
       let texW = 0
       let texH = 0
-      for (const [name, meta] of Object.entries(metadata)) {
+      for (const meta of Object.values(spriteMeta)) {
         texW = Math.max(texW, meta.width + meta.x)
         texH = Math.max(texH, meta.height + meta.y)
-        this.metadata.set(name, { ...meta, id })
-        id++
       }
       // update the texture pack
       const [offsetX, offsetY] = texturePack.addGlyph(texW, texH)
       // invert the y axis for each glyph & add offsets
-      for (const meta of this.metadata.values()) {
+      for (const [name, meta] of Object.entries(spriteMeta)) {
+        // fix the y axis to be inverted
         meta.y = texH - meta.y - meta.height + offsetY
-        meta.x += offsetX
+        const { x, y, width, height, pixelRatio } = meta
+        metadata[name] = {
+          code: name,
+          texX: x + offsetX,
+          texY: y + offsetY,
+          texW: width,
+          texH: height,
+          xOffset: 0,
+          yOffset: 0,
+          width: width / pixelRatio,
+          height: height / pixelRatio,
+          advanceWidth: 0
+        }
       }
       // prebuild the sprite sheet if possible
       let built = false
@@ -57,7 +69,7 @@ export default class SpriteSource extends ImageSource {
       // ship the sprites to the map
       const spriteImageMessage: SpriteImageMessage = { type: 'spriteimage', mapID, name, built, offsetX, offsetY, width: texW, height: texH, maxHeight: texturePack.height, image }
       postMessage(spriteImageMessage, [image])
-      this.resolveFirstFunction()
+      return { name, metadata }
     }
   }
 }

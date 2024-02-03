@@ -65,7 +65,7 @@ function decodeFeature (color: boolean, indexPtr: { ptr: number }, featureIndexP
   let bigLoopTotal = 0
   while (true) {
     bigLoopTotal++
-    if (bigLoopTotal > 100) { console.log('FOUND'); break }
+    if (bigLoopTotal > 100) { console.info('FOUND'); break }
     stackIndex--
     // pull out current stackIndex condition an decode
     indexPtr.ptr = conditionStack[stackIndex]
@@ -73,26 +73,26 @@ function decodeFeature (color: boolean, indexPtr: { ptr: number }, featureIndexP
     conditionSet = layerCode[indexPtr.ptr]
     len = conditionSet >> 10
     condition = (conditionSet & 1008) >> 4
-    console.log('condition', condition)
+    console.info('condition', condition)
     indexPtr.ptr++
     // for each following condition, pull out the eventual color and set to val
     if (condition === 0) {
       // do nothing
     } else if (condition === 1) { // value
-      console.log('CONDITION 1 BEGIN')
+      console.info('CONDITION 1 BEGIN')
       if (res[0] === -1.0) {
-        console.log('LEN', len)
+        console.info('LEN', len)
         for (let i = 0; i < len - 1; i++) {
           res[i] = layerCode[indexPtr.ptr + i]
         }
-        console.log('NEW RES', res)
+        console.info('NEW RES', res)
       } else {
         if (color) {
           const val: Color = [layerCode[indexPtr.ptr], layerCode[indexPtr.ptr + 1], layerCode[indexPtr.ptr + 2], layerCode[indexPtr.ptr + 3]]
-          console.log('INTERPOLATE', res, val, tStack[stackIndex])
+          console.info('INTERPOLATE', res, val, tStack[stackIndex])
           res = interpolateColor(res, val, tStack[stackIndex])
         } else {
-          console.log('INTERPOLATE', len, res, layerCode[indexPtr.ptr], tStack[stackIndex])
+          console.info('INTERPOLATE', len, res, layerCode[indexPtr.ptr], tStack[stackIndex])
           for (let i = 0; i < len - 1; i++) {
             res[i] = res[i] + tStack[stackIndex] * (layerCode[indexPtr.ptr + i] - res[i])
           }
@@ -140,7 +140,7 @@ function decodeFeature (color: boolean, indexPtr: { ptr: number }, featureIndexP
       if (condition === 4) {
         inputVal = featureCode[featureIndexPtr.ptr]
         featureIndexPtr.ptr++
-      } else { console.log('INPUT', uInputs[inputType]); inputVal = uInputs[inputType] }
+      } else { console.info('INPUT', uInputs[inputType]); inputVal = uInputs[inputType] }
       // create a start point
       end = layerCode[indexPtr.ptr]
       start = end
@@ -148,8 +148,8 @@ function decodeFeature (color: boolean, indexPtr: { ptr: number }, featureIndexP
       startIndex = endIndex
       let loopTotal = 0
       while (end < inputVal && endIndex < len + startingOffset) {
-        console.log('end < inputVal', end, inputVal, end < inputVal)
-        console.log('endIndex < len + startingOffset', endIndex, len + startingOffset, endIndex < len + startingOffset)
+        console.info('end < inputVal', end, inputVal, end < inputVal)
+        console.info('endIndex < len + startingOffset', endIndex, len + startingOffset, endIndex < len + startingOffset)
         // if current sub condition is an input-range, we must check if if the "start"
         // subCondition was a data-condition or data-range, and if so,
         // we must move past the featureCode that was stored there
@@ -165,14 +165,14 @@ function decodeFeature (color: boolean, indexPtr: { ptr: number }, featureIndexP
         endIndex = indexPtr.ptr + 1
         if (endIndex < len + startingOffset) { end = layerCode[indexPtr.ptr] }
         loopTotal++
-        if (loopTotal > 100) { console.log('FOUND'); break }
+        if (loopTotal > 100) { console.info('FOUND'); break }
       }
-      console.log('subCondition', subCondition)
-      console.log('startIndex', startIndex)
-      console.log('endIndex', endIndex)
-      console.log('start', start)
-      console.log('end', end)
-      console.log('inputVal', inputVal)
+      console.info('subCondition', subCondition)
+      console.info('startIndex', startIndex)
+      console.info('endIndex', endIndex)
+      console.info('start', start)
+      console.info('end', end)
+      console.info('inputVal', inputVal)
       // if start and end are the same, we only need to process the first piece
       if (startIndex === endIndex) {
         conditionStack[stackIndex] = startIndex
@@ -185,36 +185,36 @@ function decodeFeature (color: boolean, indexPtr: { ptr: number }, featureIndexP
         if (stackIndex > 0) { tStack[stackIndex] = tStack[stackIndex - 1] } else { tStack[stackIndex] = 1.0 } // UNKOWN WHY - THIS CAUSES AN ERROR FOR NVIDIA GPUS
         stackIndex++
       } else { // otherwise we process startIndex and endIndex
-        console.log('HERHEHREHRHEH')
+        console.info('HERHEHREHRHEH')
         const t = exponentialInterpolation(inputVal, start, end, base)
-        console.log('t', t)
+        console.info('t', t)
         conditionStack[stackIndex] = startIndex
         tStack[stackIndex] = 1.0 - t
         stackIndex++
         conditionStack[stackIndex] = endIndex
         tStack[stackIndex] = t
         stackIndex++
-        console.log('conditionStack', conditionStack)
-        console.log('tStack', tStack)
-        console.log('stackIndex', stackIndex)
+        console.info('conditionStack', conditionStack)
+        console.info('tStack', tStack)
+        console.info('stackIndex', stackIndex)
       }
       // now that we got the information we need - we need to ensure we flush all feature subCondition data
       // hidden in zooms that we had to parse in the setup stage
       loopTotal = 0
-      console.log('loop?', endIndex < len + startingOffset)
+      console.info('loop?', endIndex < len + startingOffset)
       while (endIndex < len + startingOffset) {
-        console.log('endIndex < len + startingOffset', endIndex, len + startingOffset, endIndex < len + startingOffset)
+        console.info('endIndex < len + startingOffset', endIndex, len + startingOffset, endIndex < len + startingOffset)
         // if current sub condition is an input-range, we must check if if the "start"
         // subCondition was a data-condition or data-range, and if so,
         // we must move past the featureCode that was stored there
         subCondition = (layerCode[startIndex] & 1008) >> 4
-        console.log('subCondition', subCondition)
+        console.info('subCondition', subCondition)
         if (subCondition === 2 || subCondition === 4) { featureIndexPtr.ptr++ }
         indexPtr.ptr++
         indexPtr.ptr += layerCode[indexPtr.ptr] >> 10
         endIndex = indexPtr.ptr + 1
         loopTotal++
-        if (loopTotal > 100) { console.log('FOUND'); break }
+        if (loopTotal > 100) { console.info('FOUND'); break }
       }
     } else if (condition === 6) { // feature-state
       // iterate through subConditions until it matches "uFeatureState"
@@ -234,7 +234,7 @@ function decodeFeature (color: boolean, indexPtr: { ptr: number }, featureIndexP
 
   // update index to the next Layer property
   indexPtr.ptr = featureSize + decodeOffset
-  console.log(indexPtr.ptr)
+  console.info(indexPtr.ptr)
 
   // // if lch: convert back to rgb
   // if (color && layer.useLCH != 0.0) { res = LCH2RGB(res) }
@@ -254,8 +254,8 @@ const size = decodeFeature(false, indexPtr, featureIndexPtr)[0]
 // const strokeWidth = decodeFeature(false, indexPtr, featureIndexPtr)[0]
 // const strokeColor = decodeFeature(true, indexPtr, featureIndexPtr)
 
-console.log('size', size)
-// console.log('iconSize', iconSize)
-// console.log('color', color)
-// console.log('strokeWidth', strokeWidth)
-// console.log('strokeColor', strokeColor)
+console.info('size', size)
+// console.info('iconSize', iconSize)
+// console.info('color', color)
+// console.info('strokeWidth', strokeWidth)
+// console.info('strokeColor', strokeColor)
