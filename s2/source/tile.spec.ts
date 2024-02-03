@@ -21,8 +21,9 @@ export interface Corners {
 }
 
 // gets all viable keys from all interfaces in a union.
-export type AllKeysOf<T> = T extends any ? keyof T : never
+export type AllKeysOf<T> = T extends unknown ? keyof T : never
 // basically does T[K] but when T is a union it only gives T[K] for the members of the union for which it is a valid key.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Get<T, K extends keyof any, Fallback=undefined> = T extends Record<K, any> ? T[K] : Fallback
 // takes a union of interfaces and merges them so that any common key is a union of possibilities.
 export type Combine<T> = { [K in AllKeysOf<T>]: Get<T, K> }
@@ -32,11 +33,9 @@ export type SharedFeatureGuide = Combine<FeatureGuideGL | FeaturesGPU>
 export type SharedMaskSource = Combine<MaskSourceGL | MaskSourceGPU>
 
 export type FaceST = [face: number, zoom: number, sLow: number, deltaS: number, tLow: number, deltaT: number]
-// export type Bottom = [bottomLeftX: number, bottomLeftY: number, bottomRightX: number, bottomRightY: number]
-// export type Top = [topLeftX: number, topLeftY: number, topRightX: number, topRightY: number]
 
 // tiles are designed to create mask geometry and store prebuilt layer data handed off by the worker pool
-// whenever rerenders are called, they will access these tile objects for the layer data / vaos
+// whenever rerenders are called, they will access these tile objects for the layer data / (vaos/bindgroups)
 // before managing sources asyncronously, a tile needs to synchronously build spherical background
 // data to ensure we get no awkward visuals.
 

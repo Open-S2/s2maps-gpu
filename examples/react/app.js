@@ -1,7 +1,5 @@
 /* MODULES */
 import { useEffect, useRef } from 'react'
-/* GRAB THE API KEY */
-const { NEXT_PUBLIC_API_KEY } = process.env
 
 export default function Map ({ style, opts }) {
   const s2map = useRef()
@@ -14,7 +12,6 @@ export default function Map ({ style, opts }) {
     s2map.current = new window.S2Map({
       ...opts,
       style,
-      apiKey: NEXT_PUBLIC_API_KEY,
       container: s2mapContainer.current
     })
     // componentWillUnmount equivalent:

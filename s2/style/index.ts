@@ -171,7 +171,7 @@ export default class Style {
     const { apiKey, layers } = this
     const { id, webworker, painter } = this.camera
     const { type } = painter.context
-    const { projection, sources, glyphs, fonts, icons, sprites, images, minzoom, maxzoom } = style
+    const { projection, sources, glyphs, fonts, icons, sprites, images, minzoom, maxzoom, experimental } = style
     const analytics = this.#buildAnalytics()
     // now that we have various source data, package up the style objects we need and send it off:
     const stylePackage: StylePackage = {
@@ -187,7 +187,8 @@ export default class Style {
       minzoom: minzoom ?? 0,
       maxzoom: maxzoom ?? 20,
       analytics,
-      apiKey
+      apiKey,
+      experimental: experimental ?? false
     }
     // If the map engine is running on the main thread, directly send the stylePackage to the worker pool.
     // Otherwise perhaps this map instance is a web worker and has a global instance of postMessage

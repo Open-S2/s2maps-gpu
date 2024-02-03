@@ -1,18 +1,9 @@
-Copyright 2022 - S2MAPS INC
+Copyright 2024 - Open S2
 
 All rights reserved.
 
-s2maps-gpu must be used according to the S2 Maps Terms of Service. This license
-allows developers with a current active S2 Maps account to use and modify the
-S2 Maps Web SDK. Developers may modify the S2 Maps Web SDK code so long as the
-modifications do not change or interfere with marked portions of the code related
-to billing, accounting, and anonymized data collection. The S2 Maps Web SDK
-only sends anonymized usage data, which S2 Maps uses for fixing bugs and errors,
-accounting, and generating aggregated anonymized statistics. This license terminates
-automatically if a user no longer has an active S2 Maps account.
-
-For the full license terms, please see the S2 Maps Terms of Service at
-https://www.s2maps.io/tos/.
+For the full license terms, please see the Open S2 Terms of Service at
+https://www.opens2.com/tos/. Please review these terms before use.
 
 ---
 

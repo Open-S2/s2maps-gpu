@@ -42,7 +42,7 @@ module.exports = {
       {
         test: /\.wasm$/,
         type: 'javascript/auto',
-        use: ['arraybuffer-loader']
+        use: require.resolve('../config/arraybuffer-loader')
       }
     ]
   },
@@ -60,7 +60,7 @@ module.exports = {
   },
   plugins: [
     new webpack.EnvironmentPlugin(['CORS', 'NEXT_PUBLIC_API_URL']),
-    new webpack.BannerPlugin(`S2Maps GPU is Copyright © ${(new Date()).getFullYear()} S2Maps and subject to the S2 Maps Terms of Service (https://www.s2maps.io/tos/).`),
+    new webpack.BannerPlugin(`s2maps-gpu is Copyright © ${(new Date()).getFullYear()} OpenS2 and subject to the S2 Maps Terms of Service (https://www.opens2.com/tos/).`),
     new webpack.ProgressPlugin(),
     new CorsWorkerPlugin()
   ]

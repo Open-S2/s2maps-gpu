@@ -13,6 +13,6 @@ await Bun.build({
   sourcemap: 'external',
   splitting: true,
   target: 'browser',
-  publicPath: `https://s2maps.io/s2maps-gpu/v${version}/`,
+  publicPath: `https://opens2.com/s2maps-gpu/v${version}/`,
   naming: '[name]-[hash].[ext]'
 })

@@ -35,6 +35,7 @@ void main () {
     color = vec4(aID, 1.);
   } else {
     color = uColors[index];
+    color.rgb *= color.a;
     alpha = uOpacity[index];
     if (uCBlind != 0.) color = cBlindAdjust(color);
     // build texture data

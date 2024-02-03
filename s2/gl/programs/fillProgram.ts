@@ -138,7 +138,7 @@ export default async function fillProgram (context: Context): Promise<FillProgra
       const vertexA = new Float32Array(fillData.vertexBuffer)
       const indexA = new Uint32Array(fillData.indexBuffer)
       const fillIDA = new Uint8Array(fillData.idBuffer)
-      const codeTypeA = new Uint8Array(fillData.codeTypeBuffer)
+      const codeTypeA = new Uint32Array(fillData.codeTypeBuffer)
       // Create a starting vertex array object (attribute state)
       const vao = context.buildVAO()
 
@@ -147,7 +147,7 @@ export default async function fillProgram (context: Context): Promise<FillProgra
       const vertexBuffer = context.bindEnableVertexAttr(vertexA, 0, 2, gl.FLOAT, false, 0, 0)
       const indexBuffer = context.bindElementArray(indexA)
       const idBuffer = context.bindEnableVertexAttr(fillIDA, 1, 4, gl.UNSIGNED_BYTE, true, 0, 0)
-      const codeTypeBuffer = context.bindEnableVertexAttr(codeTypeA, 2, 1, gl.UNSIGNED_BYTE, false, 0, 0)
+      const codeTypeBuffer = context.bindEnableVertexAttr(codeTypeA, 2, 1, gl.UNSIGNED_INT, false, 0, 0)
 
       const source: FillSource = {
         type: 'fill',
@@ -199,28 +199,30 @@ export default async function fillProgram (context: Context): Promise<FillProgra
         if (layerGuide === undefined) continue
         const { sourceName, layerCode, lch, invert, opaque, interactive } = layerGuide
 
-        features.push({
-          type: 'fill',
-          maskLayer: false,
-          source,
-          tile,
-          count,
-          offset,
-          sourceName,
-          invert,
-          patternXY: [patternX, patternY],
-          patternWH: [patternW, patternH],
-          patternMovement,
-          layerIndex,
-          opaque,
-          layerCode,
-          featureCode,
-          color,
-          opacity,
-          lch,
-          interactive,
-          mode: gl.TRIANGLES
-        })
+        if (count > 0) {
+          features.push({
+            type: 'fill',
+            maskLayer: false,
+            source,
+            tile,
+            count,
+            offset,
+            sourceName,
+            invert,
+            patternXY: [patternX, patternY],
+            patternWH: [patternW, patternH],
+            patternMovement,
+            layerIndex,
+            opaque,
+            layerCode,
+            featureCode,
+            color,
+            opacity,
+            lch,
+            interactive,
+            mode: gl.TRIANGLES
+          })
+        }
       }
 
       tile.addFeatures(features)
@@ -260,10 +262,8 @@ export default async function fillProgram (context: Context): Promise<FillProgra
         gl.uniform1fv(uOpacity, opacity ?? [1])
       } else { this.setFeatureCode(featureCode ?? [0]) }
       // draw elements
-      if (count > 0) {
-        gl.bindVertexArray(vao)
-        gl.drawElements(mode, count, gl.UNSIGNED_INT, offset * 4)
-      }
+      gl.bindVertexArray(vao)
+      gl.drawElements(mode, count, gl.UNSIGNED_INT, offset * 4)
       // If invert reset color mask & draw a full tile mask
       if (invert) {
         gl.colorMask(true, true, true, true)

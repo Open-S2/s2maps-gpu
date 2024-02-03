@@ -2,7 +2,7 @@
 process.env.BABEL_ENV = 'production'
 process.env.NODE_ENV = 'production'
 process.env.CORS = 1
-process.env.NEXT_PUBLIC_API_URL = 'https://api.s2maps.io/v1'
+process.env.NEXT_PUBLIC_API_URL = 'https://api.opens2.com/v1'
 // grab components
 const fs = require('fs')
 const path = require('path')
@@ -54,18 +54,20 @@ Promise.all([
   build(jsDevCompiler),
   build(jsLocalCompiler)
 ])
-  .catch((err) => { console.log('Failed to build', err) })
+  .catch((err) => { console.info('Failed to build', err) })
   .finally(res => {
     getFileSizes()
     // copy css
     fs.copyFileSync('./buildS2/s2maps-gpu.min.css', './buildS2-local/s2maps-gpu.min.css')
     fs.copyFileSync('./buildS2/s2maps-gpu.min.css', './buildS2-dev/s2maps-gpu.min.css')
-    // setup local and live version for .io
-    store('../s2maps.io/public/s2maps-gpu', './buildS2-local', `${VERSION}-local`)
-    store('../s2maps.io/public/s2maps-gpu', './buildS2', VERSION)
+    // setup local and live version for .com
+    store('../opens2.com/public/s2maps-gpu', './buildS2-local', 'latest-local', true)
+    store('../opens2.com/public/s2maps-gpu', './buildS2-local', `${VERSION}-local`)
+    store('../opens2.com/public/s2maps-gpu', './buildS2', 'latest', true)
+    store('../opens2.com/public/s2maps-gpu', './buildS2', VERSION)
     // setup local and live version for .dev
-    // store('../s2maps.dev/public/s2maps-gpu', './buildS2-local', `${VERSION}-local`)
-    // store('../s2maps.dev/public/s2maps-gpu', './buildS2-dev', VERSION)
+    store('../s2maps.dev/public/s2maps-gpu', './buildS2-local', `${VERSION}-local`)
+    store('../s2maps.dev/public/s2maps-gpu', './buildS2-dev', VERSION)
   })
 
 function removeDir (path) {
@@ -117,35 +119,36 @@ function getFileSizes () {
   res.jsTotalbr = filesize(res.jsTotalbr)
 
   // CONSOLE CSS
-  console.log(blue('CSS PACKAGES\n'))
-  console.log(`${green('PACKAGE NAME')}                  ${red('MIN')}           ${blue('GZ')}           ${yellow('BR')}`)
+  console.info(blue('CSS PACKAGES\n'))
+  console.info(`${green('PACKAGE NAME')}                  ${red('MIN')}           ${blue('GZ')}           ${yellow('BR')}`)
   for (const name in res.css) {
     const { min, br, gz } = res.css[name]
-    console.log(`${green(name)}${' '.repeat(30 - name.length)}${red(min)}${' '.repeat(14 - min.length)}${blue(gz)}${' '.repeat(13 - gz.length)}${yellow(br)}`)
+    console.info(`${green(name)}${' '.repeat(30 - name.length)}${red(min)}${' '.repeat(14 - min.length)}${blue(gz)}${' '.repeat(13 - gz.length)}${yellow(br)}`)
   }
-  console.log(`\n${green('TOTAL:')}${' '.repeat(30 - 6)}${red(res.cssTotalmin)}${' '.repeat(14 - res.cssTotalmin.length)}${blue(res.cssTotalgz)}${' '.repeat(13 - res.cssTotalgz.length)}${yellow(res.cssTotalbr)}`)
+  console.info(`\n${green('TOTAL:')}${' '.repeat(30 - 6)}${red(res.cssTotalmin)}${' '.repeat(14 - res.cssTotalmin.length)}${blue(res.cssTotalgz)}${' '.repeat(13 - res.cssTotalgz.length)}${yellow(res.cssTotalbr)}`)
 
-  console.log('\n')
+  console.info('\n')
 
   // CONSOLE JS
-  console.log(blue('JS MODULES\n'))
-  console.log(`${green('PACKAGE NAME')}                  ${red('MIN')}           ${blue('GZ')}           ${yellow('BR')}`)
+  console.info(blue('JS MODULES\n'))
+  console.info(`${green('PACKAGE NAME')}                  ${red('MIN')}           ${blue('GZ')}           ${yellow('BR')}`)
   for (const name in res.js) {
     const { min, br, gz } = res.js[name]
-    console.log(`${green(name)}${' '.repeat(30 - name.length)}${red(min)}${' '.repeat(14 - min.length)}${blue(gz)}${' '.repeat(13 - gz.length)}${yellow(br)}`)
+    console.info(`${green(name)}${' '.repeat(30 - name.length)}${red(min)}${' '.repeat(14 - min.length)}${blue(gz)}${' '.repeat(13 - gz.length)}${yellow(br)}`)
   }
-  console.log(`\n${green('TOTAL:')}${' '.repeat(30 - 6)}${red(res.jsTotalmin)}${' '.repeat(14 - res.jsTotalmin.length)}${blue(res.jsTotalgz)}${' '.repeat(13 - res.jsTotalgz.length)}${yellow(res.jsTotalbr)}`)
+  console.info(`\n${green('TOTAL:')}${' '.repeat(30 - 6)}${red(res.jsTotalmin)}${' '.repeat(14 - res.jsTotalmin.length)}${blue(res.jsTotalgz)}${' '.repeat(13 - res.jsTotalgz.length)}${yellow(res.jsTotalbr)}`)
 
-  console.log()
+  console.info()
 }
 
-function store (input, outputFolder, version) {
-  // store latest version in s2maps.io website if possible
+function store (input, outputFolder, version, canReplace = false) {
+  // store latest version in opens2.com website if possible
   if (fs.existsSync(input)) {
     // read from files and copy over
     const dest = `${input}/${version}`
-    if (!fs.existsSync(dest)) {
-      fs.mkdirSync(dest)
+    const existsFolder = fs.existsSync(dest)
+    if (canReplace || !existsFolder) {
+      if (!existsFolder) fs.mkdirSync(dest)
       const files = fs.readdirSync(outputFolder)
       for (const file of files) {
         if (file.endsWith('.min.css') || file.endsWith('.min.js')) {
@@ -155,7 +158,7 @@ function store (input, outputFolder, version) {
       // store the latest version
       fs.writeFileSync(`${input}/latest.ts`, `const version = '${version}'\nexport default version\n`)
     } else {
-      console.log(`${input} [${version}] already exists!`)
+      console.info(`${input} [${version}] already exists!`)
     }
   }
 }

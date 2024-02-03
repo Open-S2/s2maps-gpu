@@ -18,6 +18,7 @@
 /buildS2-dev
 /buildS2-local
 /dist
+/dist-types
 
 #s2
 /s2/**/*.js
@@ -43,3 +44,12 @@ yarn-error.log*
 
 # zig
 zig-cache/
+
+# Large Files
+public/glyphs/GLYPHS_V2.sqlite
+
+# sql metadata
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite3-shm
+*.sqlite3-wal

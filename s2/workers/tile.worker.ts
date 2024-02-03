@@ -20,10 +20,11 @@ export default class TileWorker extends ProcessManager {
     else {
       const { mapID } = data
       if (type === 'style') this.#loadStyle(mapID, data.style)
-      else if (type === 'vector') this.processVector(mapID, data.tile, data.sourceName, new VectorTile(new Uint8Array(data.data)))
+      else if (type === 'vector') void this.processVector(mapID, data.tile, data.sourceName, new VectorTile(new Uint8Array(data.data)))
       else if (type === 'raster') this.processRaster(mapID, data.tile, data.sourceName, data.data, data.size)
       else if (type === 'jsondata') this.#processJSONData(mapID, data.tile, data.sourceName, data.data)
-      else if (type === 'glyphresponse') this.processGlyphResponse(data.reqID, data.glyphMetadata, data.familyName, data.icons, data.colors)
+      else if (type === 'glyphmetadata') this.processMetadata(mapID, data.glyphMetadata, data.imageMetadata)
+      else if (type === 'glyphresponse') this.processGlyphResponse(mapID, data.reqID, data.glyphMetadata, data.familyName)
       else if (type === 'addLayer') this.#addLayer(mapID, data.layer, data.index)
       else if (type === 'removeLayer') this.#removeLayer(mapID, data.index)
       else if (type === 'reorderLayers') this.#reorderLayers(mapID, data.layerChanges)
@@ -46,7 +47,7 @@ export default class TileWorker extends ProcessManager {
 
   // pull in the layers and preprocess them
   #loadStyle (mapID: string, style: StylePackage): void {
-    this.setupLayers(mapID, style)
+    this.setupStyle(mapID, style)
   }
 
   #addLayer (mapID: string, layer: LayerDefinition, index: number): void {
@@ -94,7 +95,7 @@ export default class TileWorker extends ProcessManager {
       for (const feature of layer.features) feature.loadGeometry = function () { return this.geometry }
     }
     // step 3: process the vector data
-    this.processVector(mapID, tile, sourceName, vectorTile)
+    void this.processVector(mapID, tile, sourceName, vectorTile)
   }
 }
 

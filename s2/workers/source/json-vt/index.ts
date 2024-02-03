@@ -15,7 +15,7 @@ import createTile from './tile' // final simplified tile generation
 /** TYPES **/
 import type { JSONTile, JSONVectorTile } from './tile'
 import type { FeatureVector } from './feature'
-import type { Face, Feature, FeatureCollection, S2Feature, S2FeatureCollection } from 'geometry'
+import type { Face, JSONFeatures } from 'geometry'
 import type { Projection } from 'style/style.spec'
 
 export type Tiles = Map<bigint, JSONTile>
@@ -29,6 +29,25 @@ type FaceSet = [
   FeatureVector[] // 5
 ]
 
+export interface JSONVTOptions {
+  /** min zoom to generate data on */
+  minzoom?: number
+  /** max zoom level to cluster the points on */
+  maxzoom?: number
+  /** cluster radius in pixels */
+  radius?: number
+  /** tile extent (radius is calculated relative to it) */
+  extent?: number
+  /** tile buffer on each side in pixels */
+  indexMaxzoom?: number
+  /** max number of points per tile in the tile index */
+  indexMaxPoints?: number
+  /** simplification tolerance (higher means simpler) */
+  tolerance?: number
+  /** tile buffer on each side so lines and polygons don't get clipped */
+  buffer?: number
+}
+
 export default class JsonVT {
   minzoom = 0 // min zoom to preserve detail on
   maxzoom = 20 // max zoom to preserve detail on
@@ -40,7 +59,15 @@ export default class JsonVT {
   buffer = 64 // tile extent is usually 4096x4096. However, we usually overdraw to ensure the data draws correctly
   tiles: Tiles = new Map() // stores both WM and S2 tiles
   projection: Projection = 'S2'
-  constructor (data: Feature | FeatureCollection | S2Feature | S2FeatureCollection) {
+  constructor (data: JSONFeatures, options?: JSONVTOptions) {
+    // set options should they exist
+    this.minzoom = options?.minzoom ?? 0
+    this.maxzoom = options?.maxzoom ?? 20
+    this.indexMaxzoom = options?.indexMaxzoom ?? 4
+    this.indexMaxPoints = options?.indexMaxPoints ?? 100000
+    this.tolerance = options?.tolerance ?? 3
+    this.extent = options?.extent ?? 8_192
+    this.buffer = options?.buffer ?? 64
     // update projection
     if (data.type === 'Feature' || data.type === 'FeatureCollection') this.projection = 'WM'
     // sanity check

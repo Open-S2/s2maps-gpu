@@ -1,4 +1,6 @@
-export type ColorDefinition = [encoding: string, colors: [r: number, g: number, b: number, a: number]]
+import type { ColorArray } from 'style/color'
+
+export type ColorDefinition = [encoding: string, colors: ColorArray]
 
 // there are three types of strings to parse
 // color names: 'red', 'black', etc

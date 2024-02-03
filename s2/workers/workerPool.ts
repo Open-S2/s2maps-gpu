@@ -13,9 +13,9 @@ declare global {
 }
 
 // workerPool is designed to manage the workers and when a worker is free, send... work
-const AVAILABLE_LOGICAL_PROCESSES: number = Math.floor((global.window.navigator.hardwareConcurrency ?? 4) / 2)
+const AVAILABLE_WORKERS: number = Math.floor((global.window.navigator.hardwareConcurrency ?? 4) / 2)
 export class WorkerPool {
-  workerCount: number = Math.max(Math.min(AVAILABLE_LOGICAL_PROCESSES, 6), 2)
+  workerCount: number = Math.max(Math.min(AVAILABLE_WORKERS, 6), 2)
   workers: Worker[] = []
   sourceWorker: Worker
   maps: Record<string, S2Map> = {} // MapID: S2Map
@@ -98,18 +98,18 @@ export class WorkerPool {
   }
 
   addLayer (mapID: string, layer: LayerDefinition, index: number, tileRequest: TileRequest[]): void {
-    this.sourceWorker.postMessage({ mapID, type: 'addLayer', layer, index, tileRequest })
     for (const worker of this.workers) worker.postMessage({ mapID, type: 'addLayer', layer, index })
+    this.sourceWorker.postMessage({ mapID, type: 'addLayer', layer, index, tileRequest })
   }
 
   removeLayer (mapID: string, index: number): void {
-    this.sourceWorker.postMessage({ mapID, type: 'removeLayer', index })
     for (const worker of this.workers) worker.postMessage({ mapID, type: 'removeLayer', index })
+    this.sourceWorker.postMessage({ mapID, type: 'removeLayer', index })
   }
 
   reorderLayers (mapID: string, layerChanges: Record<string | number, number>): void {
-    this.sourceWorker.postMessage({ mapID, type: 'reorderLayers', layerChanges })
     for (const worker of this.workers) worker.postMessage({ mapID, type: 'reorderLayers', layerChanges })
+    this.sourceWorker.postMessage({ mapID, type: 'reorderLayers', layerChanges })
   }
 }
 

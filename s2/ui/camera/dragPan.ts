@@ -19,6 +19,14 @@ export interface ClickEvent {
   }
 }
 
+/**
+ * DragPan is a class that handles mouse and touch events for panning and zooming
+ * @example
+ * const dragPan = new DragPan()
+ * dragPan.addEventListener('move', () => {
+ *  console.info(dragPan.movementX, dragPan.movementY)
+ * })
+ */
 export default class DragPan extends EventTarget {
   zoomActive = false // allow two finger zooming
   mouseActive = false // when a user presses left click and moves during the press
@@ -33,6 +41,7 @@ export default class DragPan extends EventTarget {
   touchDeltaZ = 0
   clickEvent: null | ReturnType<typeof setTimeout> = null
   zoom = 0
+  /** Clears all previous movement and zoom changes */
   clear (): void {
     this.movementX = 0
     this.movementY = 0
@@ -41,13 +50,15 @@ export default class DragPan extends EventTarget {
     this.zoom = 0
   }
 
+  /** Beginning of a touch event, user has just touched the screen */
   onTouchStart (touches: UserTouchEvent): void {
-    this._setTouchDelta(touches)
+    this.#setTouchDelta(touches)
     this.mouseActive = true
   }
 
+  /** User has let go, we don't know if it was a swipe, a click, or a double click */
   onTouchEnd (touches: UserTouchEvent): void {
-    this._setTouchDelta(touches)
+    this.#setTouchDelta(touches)
     if (Math.abs(this.totalMovementX) < this.minMovementX && Math.abs(this.totalMovementY) < this.minMovementY) {
       if (this.clickEvent !== null) {
         clearTimeout(this.clickEvent)
@@ -62,7 +73,8 @@ export default class DragPan extends EventTarget {
     }
   }
 
-  _setTouchDelta (touches: UserTouchEvent): void {
+  /** User is actively moving their fingers */
+  #setTouchDelta (touches: UserTouchEvent): void {
     const { length } = touches
     if (length !== 0) {
       let { clientX, clientY } = touches[0]
@@ -80,12 +92,14 @@ export default class DragPan extends EventTarget {
     }
   }
 
+  /** User is using a mouse and just clicked */
   onMouseDown (): void {
     // set to active and set starting movement
     this.mouseActive = true
     this.clear()
   }
 
+  /** User has let go of the left mouse button */
   onMouseUp (posX = 0, posY = 0): void {
     this.mouseActive = false
     // if movement is greater than mins, animate swipe,
@@ -107,8 +121,10 @@ export default class DragPan extends EventTarget {
     }
   }
 
-  // tracks movement if the left click actively pressed
-  // or it tracks what features are currently active
+  /**
+   * tracks movement if the left click actively pressed
+   * or it tracks what features are currently active
+   */
   onMouseMove (movementX: number, movementY: number): void {
     if (this.mouseActive) {
       this.movementX = movementX
@@ -119,6 +135,7 @@ export default class DragPan extends EventTarget {
     }
   }
 
+  /** User is using a touch screen and is actively moving their finger(s) */
   onTouchMove (touches: UserTouchEvent): void {
     const { length } = touches
     let { clientX, clientY } = touches[0]

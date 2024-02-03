@@ -73,8 +73,6 @@ const lineDataCondition = colorDataCondition.map(color => {
 })
 // ['data-condition', ['iso2', 'has', ['AF', 'AL', ...]], '#f5f9fb', ...]
 
-// console.log(filter)
-
 const mapStyle = {
   version: 1,
   name: 'countries-example',

@@ -93,9 +93,11 @@ implements TileSpec<C, F, M> {
     }
   }
 
-  // currently this is for glyphs, points, and heatmaps. By sharing glyph data with children,
-  // the glyphs will be rendered 4 or even more times. To alleviate this, we can set boundaries
-  // of what points will be considered
+  /**
+   * currently this is for glyphs, points, and heatmaps. By sharing glyph data with children,
+   * the glyphs will be rendered 4 or even more times. To alleviate this, we can set boundaries
+   * of what points will be considered
+   */
   #buildBounds (parent: TileSpec<C, F, M>): BBox {
     let { i, j, zoom } = this
     const parentZoom = parent.zoom
@@ -184,7 +186,7 @@ implements TileSpec<C, F, M> {
     return this.interactiveGuide.get(id)
   }
 
-  // cleanup after itself. When a tile is deleted, it's adventageous to cleanup GPU cache.
+  /** cleanup after itself. When a tile is deleted, it's adventageous to cleanup GPU cache. */
   delete (): void {
     this.state = 'deleted'
     // remove all features
@@ -194,11 +196,14 @@ implements TileSpec<C, F, M> {
     this.mask.destroy?.()
   }
 
+  /** remove all sources that match the input sourceNames */
   deleteSources (sourceNames: string[]): void {
-    // TODO: run 'destroy' on each feature and their sources if filtered
     this.featureGuides = this.featureGuides.filter(fg => {
       const fgSourceName = fg.sourceName.split(':')[0]
-      return !sourceNames.includes(fgSourceName)
+      const keep = !sourceNames.includes(fgSourceName)
+      // GPU case: destroy any/all buffers that are no longer needed
+      if (!keep) fg.destroy?.()
+      return keep
     })
   }
 }

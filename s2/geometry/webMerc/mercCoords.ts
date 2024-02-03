@@ -13,9 +13,7 @@ function getZoomSize (zoom: number, tileSize: number): BBox {
   ]
 }
 
-/**
- * Convert Longitude and Latitude to a mercator pixel coordinate
- * */
+/** Convert Longitude and Latitude to a mercator pixel coordinate */
 export function llToPX (
   ll: Point,
   zoom: number,
@@ -35,9 +33,7 @@ export function llToPX (
   return [x, y]
 }
 
-/**
- * Convert mercator pixel coordinates to Longitude and Latitude
- * */
+/** Convert mercator pixel coordinates to Longitude and Latitude */
 export function pxToLL (
   px: Point,
   zoom: number,
@@ -51,9 +47,7 @@ export function pxToLL (
   return [lon, lat]
 }
 
-/**
- * Convert Longitude and Latitude to a mercator x-y coordinates
- */
+/** Convert Longitude and Latitude to a mercator x-y coordinates */
 export function llToMerc (ll: Point): Point {
   const { tan, log, PI } = Math
   let x = degToRad(A * ll[0])
@@ -67,9 +61,7 @@ export function llToMerc (ll: Point): Point {
   return [x, y]
 }
 
-/**
- * Convert mercator x-y coordinates to Longitude and Latitude
- */
+/** Convert mercator x-y coordinates to Longitude and Latitude */
 export function mercToLL (merc: Point): Point {
   const { atan, exp, PI } = Math
   const x = radToDeg(merc[0] / A)
@@ -77,9 +69,7 @@ export function mercToLL (merc: Point): Point {
   return [x, y]
 }
 
-/**
- * Convert a pixel coordinate to a tile x-y coordinate
- */
+/** Convert a pixel coordinate to a tile x-y coordinate */
 export function pxToTile (px: Point, tileSize = 512): Point {
   const { floor } = Math
   const x = floor(px[0] / tileSize)
@@ -87,9 +77,7 @@ export function pxToTile (px: Point, tileSize = 512): Point {
   return [x, y]
 }
 
-/**
- * Convert a tile x-y-z to a bbox of the form `[w, s, e, n]`
- */
+/** Convert a tile x-y-z to a bbox of the form `[w, s, e, n]` */
 export function tilePxBounds (tile: [zoom: number, x: number, y: number], tileSize = 512): BBox {
   const [, x, y] = tile
   const minX = x * tileSize
@@ -99,9 +87,7 @@ export function tilePxBounds (tile: [zoom: number, x: number, y: number], tileSi
   return [minX, minY, maxX, maxY]
 }
 
-/**
- * Convert a lat-lon and zoom to the tile's x-y coordinates
- */
+/** Convert a lat-lon and zoom to the tile's x-y coordinates */
 export function llToTile (ll: Point, zoom: number, tileSize = 512): Point {
   const px = llToPX(ll, zoom, false, tileSize)
   return pxToTile(px, tileSize)
@@ -206,14 +192,10 @@ export function bboxToXYZBounds (
   return bounds
 }
 
-/**
- * The average circumference of the world in meters.
- */
+/** The average circumference of the world in meters. */
 const EARTH_CIRCUMFERENCE = 2 * Math.PI * EARTH_RADIUS // meters
 
-/**
- * The circumference at a line of latitude in meters.
- */
+/** The circumference at a line of latitude in meters. */
 function circumferenceAtLatitude (latitude: number): number {
   return EARTH_CIRCUMFERENCE * Math.cos(latitude * Math.PI / 180)
 }
@@ -239,18 +221,14 @@ export function lngFromMercatorX (x: number): number {
   return x * 360 - 180
 }
 
-/**
- * Convert mercator projection's Y-Value to latitude
- */
+/** Convert mercator projection's Y-Value to latitude */
 export function latFromMercatorY (y: number): number {
   const { PI, atan, exp } = Math
   const y2 = 180 - y * 360
   return 360 / PI * atan(exp(y2 * PI / 180)) - 90
 }
 
-/**
- * Convert mercator projection's Z-Value to altitude
- */
+/** Convert mercator projection's Z-Value to altitude */
 export function altitudeFromMercatorZ (z: number, y: number): number {
   return z * circumferenceAtLatitude(latFromMercatorY(y))
 }

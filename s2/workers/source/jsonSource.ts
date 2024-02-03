@@ -3,25 +3,19 @@ import JsonVT from './json-vt'
 import Source from './source'
 
 import type { TileRequest } from '../worker.spec'
-import type {
-  Feature,
-  FeatureCollection,
-  S2Feature,
-  S2FeatureCollection
-} from 'geometry'
-
-type JSON = Feature | FeatureCollection | S2Feature | S2FeatureCollection
+import type { JSONFeatures } from 'geometry'
+import type { SourceMetadata } from 'style/style.spec'
 
 export default class JSONSource extends Source {
   json!: JsonVT
   textEncoder: TextEncoder = new TextEncoder()
-  async build (mapID: string): Promise<void> {
-    const json = await this._fetch(`${this.path}`, mapID, true) as unknown as JSON
+  async build (mapID: string, metadata?: SourceMetadata): Promise<void> {
+    const json = metadata?.data ?? await this._fetch(`${this.path}`, mapID, true) as unknown as JSONFeatures
     if (json === undefined) {
       this.active = false
       console.error(`FAILED TO extrapolate ${this.path} json data`)
     } else {
-      this.json = new JsonVT(json)
+      this.json = new JsonVT(json, metadata)
       const { minzoom, maxzoom, faces } = this.json
       this._buildMetadata({
         type: 'vector',

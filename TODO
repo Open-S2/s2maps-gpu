@@ -4,7 +4,6 @@
 // TODO PART 1:
 
 // GPU:
-// * destoy assets correctly
 // * Some Workflows can be added async from the painter
 
 // TODO PART 2:
@@ -13,14 +12,12 @@
 // * store session token locally incase of app refresh.
 // * improve zooming in webgl1 for fill just like heatmap
 
-// * dashed lines
 // * glyphs: add alpha fade support
 // * glyphs along path
 
 // TODO PART 3:
 // * snapshot post flush
 // * zoom out keeps children tiles
-// * pull out colorBlind changing from Color
 // * raster fade-in from parent
 // * zooming fast interactive data search doesn't check parent tiles, so clicking does nothing.
 
@@ -89,4 +86,3 @@
 // 6) API 100%
 // 7) Website ready
 // 11) Support glyphs along path
-// 12) Support dashed lines

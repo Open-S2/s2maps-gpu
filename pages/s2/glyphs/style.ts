@@ -11,7 +11,7 @@ const style: StyleDefinition = {
     countries: '/s2json/countriesHD.s2json'
   },
   fonts: {
-    robotoMedium: 'http://localhost:3000/api/glyphs/RobotoMedium.font'
+    robotoMedium: 'http://localhost:3000/api/glyphs-v2/RobotoMedium'
   },
   layers: [
     {
@@ -34,7 +34,7 @@ const style: StyleDefinition = {
       source: 'countries',
       type: 'glyph',
       interactive: false,
-      textFamily: 'robotoMedium',
+      textFamily: ['robotoMedium'],
       textField: '?!Uname',
       textAnchor: 'center',
       textOffset: [0, 0],

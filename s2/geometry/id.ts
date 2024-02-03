@@ -21,37 +21,43 @@ import {
 import type { Face } from './s2'
 import type { Projection } from 'style/style.spec'
 
+/** Given the projection, get the parent tile of the input ID */
 export function parent (proj: Projection, id: bigint): bigint {
   if (proj === 'S2') return parentS2(id)
   else return parentWM(id)
 }
 
+/** Given the projection, get the children tiles given the face-zoom-i-j. */
 export function childrenIJ (
   proj: Projection,
   face: Face,
   zoom: number,
   i: number,
   j: number
-): [bigint, bigint, bigint, bigint] {
+): [blID: bigint, brID: bigint, tlID: bigint, trID: bigint] {
   if (proj === 'S2') return childrenIJS2(face, zoom, i, j)
   else return childrenWM(toIDWM(zoom, i, j))
 }
 
+/** Given the projection, check if the tile ID is of the highest zoom or not. */
 export function isFace (proj: Projection, id: bigint): boolean {
   if (proj === 'S2') return isFaceS2(id)
   else return isFaceWM(id)
 }
 
+/** Given the projection, get the face of the input ID. If not S2, gaurenteed to be 0. */
 export function face (proj: Projection, id: bigint): Face {
   if (proj === 'S2') return faceS2(id)
   else return 0 as Face
 }
 
+/** Given the projection, get the ID of a requested face. If not S2, gaurenteed to be 0. */
 export function fromFace (proj: Projection, face: Face): bigint {
   if (proj === 'S2') return fromFaceS2(face)
   else return 0n
 }
 
+/** Given the projection, get the ID of a requested zoom-i-j. */
 export function toIJ (
   proj: Projection,
   id: bigint,
@@ -61,7 +67,7 @@ export function toIJ (
   else return toIJWM(id, level)
 }
 
-// find the "level" or "zoom" of the id
+/** Given the projection and tile ID, get the zoom of said tile. */
 export function level (
   proj: Projection,
   id: bigint
@@ -70,6 +76,7 @@ export function level (
   else return levelWM(id)
 }
 
+/** Given the projection, check if the "child" exists inside the "parent"'s bounds or not. */
 export function contains (proj: Projection, parentID: bigint, childID: bigint): boolean {
   if (proj === 'S2') return containsS2(parentID, childID)
   else return containsWM(parentID, childID)

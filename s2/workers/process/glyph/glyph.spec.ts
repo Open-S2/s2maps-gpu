@@ -1,7 +1,6 @@
 import type { Alignment, Anchor } from 'style/style.spec'
 import type { S2VectorGeometry, S2VectorTileFeatureType } from 's2-vector-tile'
-
-export type Unicode = number
+import type { ColorArray } from 'style/color'
 
 export interface SquareNode {
   minX: number
@@ -27,15 +26,15 @@ export type GlyphData = [string, string] // [family, char]
 export interface GlyphBase {
   // organization parameters
   id: number
-  idRGB: [r: number, g: number, b: number, a: number]
+  idRGB: ColorArray
   layerIndex: number
   gl2Code: number[]
   code: number[]
   // layout
   overdraw: boolean
-  family: string
+  family: string[]
   field: string
-  fieldCodes: Unicode[]
+  fieldCodes: string[]
   offset: [x: number, y: number]
   padding: [x: number, y: number]
   kerning: number
@@ -67,6 +66,7 @@ export interface GlyphPoint extends GlyphBase, SquareNode {
 export interface GlyphPath extends GlyphBase, RoundNodes {
   glyphType: 'path'
   // store geometry data and type to properly build later
+  extent: number
   geometry: S2VectorGeometry
   geometryType: S2VectorTileFeatureType
   // [s, t, anchorOffsetX, anchorOffsetY, paddingX, paddingY, maxWidth, maxHeight, index, id]
@@ -74,15 +74,3 @@ export interface GlyphPath extends GlyphBase, RoundNodes {
 }
 
 export type GlyphObject = GlyphPoint | GlyphPath
-
-export interface Glyph {
-  texX: number // x position on glyph texture sheet
-  texY: number // y position on glyph texture sheet
-  texW: number // width of the glyph in the texture
-  texH: number // height of the glyph in the texture
-  xOffset: number // x offset for glyph
-  yOffset: number // y offset for glyph
-  width: number // width of glyph relative to 0->1
-  height: number // height of glyph relative to 0->1
-  advanceWidth: number // how far to move the cursor
-}

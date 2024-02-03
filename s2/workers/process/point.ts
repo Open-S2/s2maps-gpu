@@ -26,7 +26,7 @@ interface Features {
 }
 
 export default class PointWorker extends VectorWorker implements PointWorkerSpec {
-  features: Features = { point: [], heatmap: [] }
+  featureStore = new Map<bigint, Features>() // tileID -> features
 
   setupLayer (
     layerDefinition: PointLayerDefinition | HeatmapLayerDefinition
@@ -116,9 +116,11 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
         : [...codeLo, ...codeHi],
       gl2Code
     }
+    if (!this.featureStore.has(tile.id)) this.featureStore.set(tile.id, { point: [], heatmap: [] })
+    const store = this.featureStore.get(tile.id) as Features
     if (type === 'point') {
       const id = this.idGen.getNum()
-      this.features.point.push({
+      store.point.push({
         type: 'point',
         idRGB: idToRGB(id),
         ...typeFeature
@@ -126,7 +128,7 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
       // if interactive, store interactive properties
       if (layer.interactive) this._addInteractiveFeature(id, properties, layer)
     } else {
-      this.features.heatmap.push({
+      store.heatmap.push({
         type: 'heatmap',
         weights,
         ...typeFeature
@@ -138,13 +140,12 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
   async flush (mapID: string, tile: TileRequest, sourceName: string, wait: Promise<void>): Promise<void> {
     this.#flush(mapID, sourceName, tile.id, 'point')
     this.#flush(mapID, sourceName, tile.id, 'heatmap')
-    this.features.point = []
-    this.features.heatmap = []
+    this.featureStore.delete(tile.id)
     await super.flush(mapID, tile, sourceName, wait)
   }
 
   #flush (mapID: string, sourceName: string, tileID: bigint, type: 'point' | 'heatmap'): void {
-    const features = this.features[type]
+    const features = (this.featureStore.get(tileID) ?? { point: [], heatmap: [] })[type]
     if (features.length === 0) return
 
     // Step 1: Sort by layerIndex, than sort by feature code.

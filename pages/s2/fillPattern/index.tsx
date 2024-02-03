@@ -8,7 +8,7 @@ import style from './style'
 import type { S2Map } from '../../../s2'
 
 function ready (s2map: S2Map): void {
-  console.log('ready', s2map)
+  console.info('ready', s2map)
 }
 
 export default function FillPattern (): React.JSX.Element {
@@ -16,7 +16,7 @@ export default function FillPattern (): React.JSX.Element {
     <div className='pages'>
       <Map
         style={style}
-        opts={{ zoomController: false, contextType: 3 }}
+        opts={{ zoomController: false }}
         ready={ready}
         noAPIKey
       />

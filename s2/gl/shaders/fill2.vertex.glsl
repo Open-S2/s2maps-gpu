@@ -35,6 +35,7 @@ void main () {
     color = aID;
   } else {
     color = decodeFeature(true, index, featureIndex);
+    color.rgb *= color.a;
     alpha = decodeFeature(false, index, featureIndex)[0];
     // build texture data
     if (uPatternWH.x != 0. && uPatternWH.y != 0.) {

@@ -16,6 +16,12 @@ import type {
   TileWorkerMessage
 } from './workers/worker.spec'
 
+// export types from './ui/s2mapUI'
+export type { Attributions, LayerStyle, StyleDefinition } from './style/style.spec'
+export type { MarkerDefinition } from './workers/source/markerSource'
+export type { AnimationDirections } from './ui/camera/animator'
+export type { UserTouchEvent } from './ui/camera/dragPan'
+
 export type ColorMode = 0 | 1 | 2 | 3 | 4
 
 declare global {
@@ -30,6 +36,7 @@ export default class S2Map extends EventTarget {
   readonly #canvasMultiplier: number
   _canvas: HTMLCanvasElement
   #attributionPopup?: HTMLDivElement
+  #watermark?: HTMLAnchorElement
   #compass?: HTMLElement
   #colorBlind?: HTMLElement
   #attributions: Attributions = {}
@@ -160,7 +167,8 @@ export default class S2Map extends EventTarget {
       compassController,
       colorblindController,
       darkMode,
-      attributionOff
+      attributionOff,
+      watermarkOff
     } = options
     // add info bar with our jollyRoger
     const isDarkMode = darkMode === true
@@ -174,7 +182,7 @@ export default class S2Map extends EventTarget {
       const popup = this.#attributionPopup = window.document.createElement('div')
       popup.className = 's2-popup-container'
       if (isDarkMode) popup.classList.add('s2-popup-container-dark')
-      popup.innerHTML = '<div>Rendered with ❤ by</div><a href="https://s2maps.io" target="popup"><div class="s2-jolly-roger"></div></a>'
+      popup.innerHTML = '<div>Rendered with ❤ by</div><a href="https://opens2.com" target="popup"><div class="s2-jolly-roger"></div></a>'
       // add attributions
       if (attributions !== undefined) {
         for (const name in attributions) {
@@ -186,6 +194,15 @@ export default class S2Map extends EventTarget {
       }
       attribution.appendChild(info)
       attribution.appendChild(popup)
+      // add watermark
+      if (watermarkOff !== true) {
+        const watermark = this.#watermark = window.document.createElement('a')
+        watermark.className = 's2-watermark'
+        watermark.href = 'https://opens2.com'
+        watermark.target = 'popup'
+        if (isDarkMode) watermark.classList.add('s2-watermark-dark')
+        attribution.appendChild(watermark)
+      }
       this.#container?.appendChild(attribution)
     }
     // if zoom or compass controllers, add

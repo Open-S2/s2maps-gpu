@@ -91,7 +91,7 @@ export interface FillWorker extends VectorWorker {
   featureStore: Map<bigint, FillFeature[]>
   invertLayers: Map<number, FillWorkerLayer>
   setupLayer: (layer: FillLayerDefinition) => FillWorkerLayer
-  buildFeature: (tile: TileRequest, feature: VTFeature, sourceLayer: FillWorkerLayer) => boolean
+  buildFeature: (tile: TileRequest, feature: VTFeature, sourceLayer: FillWorkerLayer, mapID: string) => Promise<boolean>
 }
 
 export interface LineWorker extends VectorWorker {
@@ -109,7 +109,7 @@ export interface HeatmapWorker extends PointWorker {
 
 export interface GlyphWorker extends VectorWorker {
   setupLayer: (layer: GlyphLayerDefinition) => GlyphWorkerLayer
-  buildFeature: (tile: TileRequest, feature: VTFeature, sourceLayer: GlyphWorkerLayer) => boolean
+  buildFeature: (tile: TileRequest, feature: VTFeature, sourceLayer: GlyphWorkerLayer, mapID: string) => Promise<boolean>
 }
 
 export interface RasterWorker {

@@ -2,26 +2,28 @@
 import { WMPointCluster } from './pointCluster'
 import Source from './source'
 
-import type { ClusterOptions } from './pointCluster'
+import type { SourceMetadata } from 'style/style.spec'
 import type { TileRequest } from '../worker.spec'
 import type {
   Feature,
-  FeatureCollection,
-  S2FeatureCollection
+  JSONFeatureCollection
 } from 'geometry'
-
-type JSON = FeatureCollection | S2FeatureCollection
 
 export default class ClusterSource extends Source {
   wmCluster!: WMPointCluster
   textEncoder: TextEncoder = new TextEncoder()
-  async build (mapID: string, options?: ClusterOptions): Promise<void> {
-    const json = await this._fetch(`${this.path}`, mapID, true) as unknown as JSON
+  async build (mapID: string, metadata?: SourceMetadata): Promise<void> {
+    let json = metadata?.data ?? await this._fetch(`${this.path}`, mapID, true) as unknown as JSONFeatureCollection
     if (json === undefined) {
       this.active = false
       console.error(`FAILED TO extrapolate ${this.path} json data`)
     } else {
-      this.wmCluster = new WMPointCluster(options)
+      if (json.type === 'Feature') {
+        json = { type: 'FeatureCollection', features: [json] }
+      } else if (json.type === 'S2Feature') {
+        json = { type: 'S2FeatureCollection', features: [json], faces: [json.face] }
+      }
+      this.wmCluster = new WMPointCluster(metadata)
       this.wmCluster.addManyPoints(json.features as Feature[])
       this.wmCluster.cluster()
       const { minzoom, maxzoom, faces } = this.wmCluster

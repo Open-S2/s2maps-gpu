@@ -1,12 +1,13 @@
 /* eslint-env browser */
 
-import type { Properties } from 'geometry/proj.spec'
+import type { JSONFeatures, Properties } from 'geometry'
 import type { Filter, FilterFunction } from 'style/parseFilter'
 import type { EaseType } from './easingFunctions'
 import type { MapOptions } from 'ui/s2mapUI'
+import type { JSONVTOptions } from 'workers/source/json-vt'
 import type { ClusterOptions } from 'workers/source/pointCluster'
 
-export type { Properties } from 'geometry/proj.spec'
+export type { Properties, JSONFeatures } from 'geometry'
 export type { Filter } from './parseFilter'
 export type { EaseType } from './easingFunctions'
 export type { MapOptions } from 'ui/s2mapUI'
@@ -27,10 +28,10 @@ export type LayerMetaData = Record<string, { // layer
 export type Attributions = Record<string, string>
 export type FaceBounds = Record<number, Record<number, [number, number, number, number]>>
 export type SourceType = 'vector' | 'json' | 'raster' | 'raster-dem' | 'sensor' | 'overlay'
-export interface SourceMetadata extends ClusterOptions {
-  path: string
+export interface SourceMetadata extends JSONVTOptions, ClusterOptions {
+  path?: string
   type: SourceType
-  extension: string
+  extension?: string
   fileType?: 'json' | 's2json' | 'pbf' | 'png' | 'jpg' | 'webp'
   encoding?: 'gz' | 'br' | 'none'
   bounds?: [minX: number, minY: number, maxX: number, maxY: number]
@@ -46,7 +47,7 @@ export interface SourceMetadata extends ClusterOptions {
   layers?: LayerMetaData
   sourceName?: string // if you want to make requests without getting metadata, you need this
   // used by geojson sources
-  data?: unknown
+  data?: JSONFeatures
   cluster?: boolean
 }
 export type Source = string | SourceMetadata
@@ -54,16 +55,13 @@ export type Sources = Record<string, Source> // address to source or source itse
 
 /** GLYPHS, FONTS, SPRITES, AND ICONS */
 
-export type Glyphs = Record<string, string | {
-  path: string
-  fallback?: string
-}>
+/**  { fontName: url } */
+export type Glyphs = Record<string, string>
 export interface Fonts extends Glyphs {}
 export interface Icons extends Glyphs {}
 export type SpriteFileType = 'png' | 'webp' | 'avif'
 export type Sprites = Record<string, string | {
   path: string
-  fallback?: string
   fileType?: SpriteFileType
 }>
 
@@ -313,7 +311,7 @@ export interface GlyphLayerStyle extends LayerStyleBase {
   textStrokeWidth?: number | Property<number>
   iconSize?: number | Property<number>
   // layout
-  textFamily?: string | Property<string>
+  textFamily?: string | string[] | Property<string | string[]>
   textField?: string | string[] | Property<string | string[]>
   textAnchor?: Anchor | Property<Anchor>
   textOffset?: [number, number] | Property<[number, number]>
@@ -322,12 +320,14 @@ export interface GlyphLayerStyle extends LayerStyleBase {
   textAlign?: Alignment | Property<Alignment>
   textKerning?: number | Property<number>
   textLineHeight?: number | Property<number>
-  iconFamily?: string | Property<string>
+  iconFamily?: string | string[] | Property<string | string[]>
   iconField?: string | string[] | Property<string | string[]>
   iconAnchor?: Anchor | Property<Anchor>
   iconOffset?: [number, number] | Property<[number, number]>
   iconPadding?: [number, number] | Property<[number, number]>
   // properties
+  onlyPoints?: boolean
+  onlyLines?: boolean
   overdraw?: boolean
   interactive?: boolean
   viewCollisions?: boolean
@@ -342,7 +342,7 @@ export interface GlyphLayerDefinition extends LayerDefinitionBase {
   textStrokeWidth: number | Property<number>
   iconSize: number | Property<number>
   // layout
-  textFamily: string | Property<string>
+  textFamily: string | string[] | Property<string | string[]>
   textField: string | string[] | Property<string | string[]>
   textAnchor: Anchor | Property<Anchor>
   textOffset: [number, number] | Property<[number, number]>
@@ -351,12 +351,14 @@ export interface GlyphLayerDefinition extends LayerDefinitionBase {
   textAlign: Alignment | Property<Alignment>
   textKerning: number | Property<number>
   textLineHeight: number | Property<number>
-  iconFamily: string | Property<string>
+  iconFamily: string | string[] | Property<string | string[]>
   iconField: string | string[] | Property<string | string[]>
   iconAnchor: Anchor | Property<Anchor>
   iconOffset: [number, number] | Property<[number, number]>
   iconPadding: [number, number] | Property<[number, number]>
   // properties
+  onlyPoints: boolean
+  onlyLines: boolean
   overdraw: boolean
   interactive: boolean
   viewCollisions: boolean
@@ -381,7 +383,7 @@ export interface GlyphWorkerLayer extends LayerWorkerBase {
   textSize: LayerWorkerFunction<number>
   iconSize: LayerWorkerFunction<number>
   // layout
-  textFamily: LayerWorkerFunction<string>
+  textFamily: LayerWorkerFunction<string | string[]>
   textField: LayerWorkerFunction<string | string[]>
   textAnchor: LayerWorkerFunction<string>
   textOffset: LayerWorkerFunction<[number, number]>
@@ -390,12 +392,14 @@ export interface GlyphWorkerLayer extends LayerWorkerBase {
   textAlign: LayerWorkerFunction<Alignment>
   textKerning: LayerWorkerFunction<number>
   textLineHeight: LayerWorkerFunction<number>
-  iconFamily: LayerWorkerFunction<string>
+  iconFamily: LayerWorkerFunction<string | string[]>
   iconField: LayerWorkerFunction<string | string[]>
   iconAnchor: LayerWorkerFunction<Anchor>
   iconOffset: LayerWorkerFunction<[number, number]>
   iconPadding: LayerWorkerFunction<[number, number]>
   // properties
+  onlyPoints: boolean
+  onlyLines: boolean
   overdraw: boolean
   interactive: boolean
   cursor: Cursor
@@ -725,6 +729,7 @@ export interface StylePackage {
   minzoom: number
   maxzoom: number
   analytics: Analytics
+  experimental: boolean
   apiKey?: string
 }
 
@@ -786,4 +791,5 @@ export interface StyleDefinition {
   skybox?: SkyboxStyle
   wallpaper?: WallpaperStyle
   layers?: LayerStyle[]
+  experimental?: boolean
 }

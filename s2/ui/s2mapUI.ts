@@ -11,20 +11,32 @@ import type { TileWorkerMessage } from 'workers/worker.spec'
 import type { ColorMode } from 's2Map'
 
 export interface MapOptions {
-  contextType?: GPUType // can force a specific context type (1 -> webgl1, 2 -> webgl2, 3 -> webgpu)
-  /** support OffscreenCanvas */
+  /** Forces the use of 1: WebGL, 2: WebGL2, or 3: WebGPU */
+  contextType?: GPUType
+  /** Support OffscreenCanvas */
   offscreen?: false
+  /** Reference a canvas instead of a container */
   canvas?: HTMLCanvasElement
-  /** can be a reference to an ID or an HTMLElement */
+  /** Can be a reference to an ID or an HTMLElement */
   container?: string | HTMLElement
+  /** If true, the map will be interactive; [default: true] */
   interactive?: boolean
+  /** An API key will ensure control and ownership over data */
   apiKey?: string
-  style: StyleDefinition | string // URL to a StyleDefinition or a StyleDefinition object
+  /** Either the style definition or a string URL pointing to the location of the style definition */
+  style: StyleDefinition | string
+  /** if true, allow user to use scroll wheel to zoom. [default: true] */
   scrollZoom?: boolean
-  positionalZoom?: boolean // If true, cursor position impacts zoom's x & y directions [default: true]
+  /** if true, cursor position impacts zoom's x & y directions . [default: true] */
+  positionalZoom?: boolean // If true, cursor position impacts zoom's x & y directions
+  /** Control the number of fragments per pixel. [default: window.devicePixelRatio] */
   canvasMultiplier?: number
+  /** Set attributions for data. { [name: string]: URL string } */
   attributions?: Record<string, string>
+  /** Hide the attribution tag */
   attributionOff?: boolean
+  /** Hide the logo */
+  watermarkOff?: boolean
   infoLayers?: string[]
   controls?: boolean // zoom, compass, and colorblind turned on or off
   zoomController?: boolean
@@ -35,6 +47,7 @@ export interface MapOptions {
   darkMode?: boolean
   // TODO: pushing this into options is not the play
   webworker?: boolean
+  /** Alow latitude and longitude to pass their limits (-90, 90) and (-180, 180) respectively */
   noClamp?: boolean // lat and lon can be any number
 }
 
@@ -224,7 +237,7 @@ export default class S2MapUI extends Camera {
     requestAnimationFrame(() => {
       if (this.#fullyRenderedScreen()) {
         // assuming the screen is ready for a screen shot we ask for a draw
-        this.painter.getScreen()
+        void this.painter.getScreen()
           .then(screen => {
             if (this.webworker) {
               postMessage({ type: 'screenshot', screen })

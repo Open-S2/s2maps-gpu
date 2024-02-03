@@ -4,6 +4,7 @@ import buildMask from './buildMask'
 import type { MapOptions } from 'ui/s2mapUI'
 import type { Context as ContextSpec, FBO, MaskSource } from './context.spec'
 import type { GPUType, Projection } from 'style/style.spec'
+import type { ColorArray } from 'style/color'
 import type { BBox } from 'geometry'
 import type { GlyphImages } from 'workers/source/glyphSource'
 import type { SpriteImageMessage } from 'workers/worker.spec'
@@ -28,7 +29,7 @@ export default class Context implements ContextSpec {
   zHigh = 1
   type: GPUType = 1
   projection: Projection = 'S2'
-  clearColorRGBA: [r: number, g: number, b: number, a: number] = [0, 0, 0, 0]
+  clearColorRGBA: ColorArray = [0, 0, 0, 0]
   featurePoint: Uint8Array = new Uint8Array(4)
   masks = new Map<number, MaskSource>() // <zoom, mask>
   vao!: WebGLVertexArrayObject
@@ -324,7 +325,7 @@ export default class Context implements ContextSpec {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
   }
 
-  setClearColor (clearColor: [r: number, g: number, b: number, a: number]): void {
+  setClearColor (clearColor: ColorArray): void {
     this.clearColorRGBA = clearColor
   }
 

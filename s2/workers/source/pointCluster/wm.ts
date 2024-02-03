@@ -127,6 +127,7 @@ export default class PointCluser {
     }
 
     return {
+      face: 0,
       zoom,
       i,
       j,

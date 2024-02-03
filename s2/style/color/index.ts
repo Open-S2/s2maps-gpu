@@ -5,6 +5,8 @@ import type { ColorBlindAdjust } from './colorBlindAdjust'
 
 export * from './colorGenerators'
 
+export type ColorArray = [r: number, g: number, b: number, a: number]
+
 // COLOR INTERPOLATION: we should use the LCH color space
 // https://www.alanzucconi.com/2016/01/06/colour-interpolation/4/
 // use https://github.com/gka/chroma.js as a guide to create best interpolation

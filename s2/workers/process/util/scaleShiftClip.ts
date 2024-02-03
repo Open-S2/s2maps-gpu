@@ -109,19 +109,31 @@ function shiftScale (
   }
 }
 
-// uses a buffer of 20 as default
+export function clipLines (
+  lines: S2VectorLines,
+  extent: number,
+  isPolygon: boolean,
+  buffer: number = 80
+): S2VectorLines {
+  const res: S2VectorLines = []
+  for (const line of lines) res.push(...clipLine(line, extent, isPolygon, buffer))
+  return res
+}
+
+// uses a buffer of 80 as default
 function clipLine (
   line: S2VectorLine,
   extent: number,
-  isPolygon: boolean
+  isPolygon: boolean,
+  buffer: number = 80
 ): S2VectorLines {
   const res: S2VectorLines = []
   const vertical: S2VectorLines = []
 
   // slice vertically
-  _clipLine(line, vertical, -80, extent + 80, 1, isPolygon)
+  _clipLine(line, vertical, -buffer, extent + buffer, 1, isPolygon)
   // slice horizontally
-  for (const vertLine of vertical) _clipLine(vertLine, res, -80, extent + 80, 0, isPolygon)
+  for (const vertLine of vertical) _clipLine(vertLine, res, -buffer, extent + buffer, 0, isPolygon)
 
   return res
 }

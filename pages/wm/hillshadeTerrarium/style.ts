@@ -46,7 +46,7 @@ const style: StyleDefinition = {
         rMultiplier: 256,
         gMultiplier: 1,
         bMultiplier: 1 / 256,
-        aMultiplier: 0,
+        aMultiplier: 0
       }
     }
   ]

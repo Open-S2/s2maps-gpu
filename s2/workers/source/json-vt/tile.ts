@@ -89,6 +89,7 @@ export interface JSONTile {
   numFeatures: number
   source?: FeatureVector[]
   id: bigint
+  face: number
   zoom: number
   i: number
   j: number
@@ -101,6 +102,7 @@ export interface JSONTile {
 
 // data used by the engine
 export interface JSONVectorTile {
+  face: number
   zoom: number
   i: number
   j: number
@@ -111,7 +113,7 @@ export interface JSONVectorTile {
 export default function createTile (features: FeatureVector[], id: bigint, jsonVT: JsonVT): JSONTile {
   const { projection, maxzoom, extent } = jsonVT
   const zoom = level(projection, id)
-  const [, i, j] = toIJ(projection, id, zoom)
+  const [face, i, j] = toIJ(projection, id, zoom)
   const tolerance = (zoom === maxzoom)
     ? 0
     : jsonVT.tolerance / ((1 << zoom) * extent)
@@ -123,6 +125,7 @@ export default function createTile (features: FeatureVector[], id: bigint, jsonV
     numFeatures: 0,
     source: features,
     id,
+    face,
     zoom,
     i,
     j,

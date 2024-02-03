@@ -50,9 +50,7 @@ export function parent (id: bigint): bigint {
   return toID(z - 1, Math.floor(x / 2), Math.floor(y / 2))
 }
 
-/**
- * convert an id to a zoom-x-y after setting it to a new parent zoom
- */
+/** convert an id to a zoom-x-y after setting it to a new parent zoom */
 export function toIJ (id: bigint, level?: number | bigint): [zoom: number, i: number, j: number] {
   if (level !== undefined) {
     let [currentZoom] = fromID(id)

@@ -42,7 +42,7 @@ module.exports = {
     config.module.rules.push({
       test: /\.wasm$/,
       type: 'javascript/auto',
-      use: ['arraybuffer-loader']
+      use: require.resolve('./config/arraybuffer-loader')
     })
 
     return config
