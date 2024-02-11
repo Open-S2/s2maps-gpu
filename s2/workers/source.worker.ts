@@ -16,14 +16,9 @@ import adjustURL from '../util/adjustURL'
 
 import type {
   Analytics,
-  Fonts,
-  Glyphs,
-  Icons,
   LayerDefinition,
   SourceMetadata,
-  Sources,
   SpriteFileType,
-  Sprites,
   StylePackage,
   Source as StyleSource
 } from 'style/style.spec'
@@ -113,15 +108,16 @@ export default class SourceWorker {
   }
 
   #loadStyle (mapID: string, style: StylePackage): void {
+    // pull style data
+    const { layers, analytics, apiKey } = style
     // create the source map, if sources already exists, we are dumping the old sources
     this.sources[mapID] = {}
-    // pull style data
-    const { sources, layers, fonts, icons, glyphs, sprites, images, analytics, apiKey } = style
+    // create the layer map
     this.layers[mapID] = layers
     // create a session with the style
     this.session.loadStyle(mapID, analytics, apiKey)
     // now build sources
-    void this.#buildSources(mapID, sources, layers, fonts, icons, glyphs, sprites, images)
+    void this.#buildSources(mapID, style)
   }
 
   #addLayer (
@@ -166,14 +162,9 @@ export default class SourceWorker {
 
   async #buildSources (
     mapID: string,
-    sources: Sources = {},
-    layers: LayerDefinition[],
-    fonts: Fonts = {},
-    icons: Icons = {},
-    glyphs: Glyphs = {},
-    sprites: Sprites = {},
-    images: Record<string, string> = {}
+    style: StylePackage
   ): Promise<void> {
+    const { sources, layers, fonts, icons, glyphs, sprites, images } = style
     // sources
     for (const [name, source] of Object.entries(sources)) {
       this.#createSource(mapID, name, source, layers.filter(layer => layer.source === name))
@@ -211,7 +202,12 @@ export default class SourceWorker {
     }
   }
 
-  #createSource (mapID: string, name: string, input: StyleSource, layers: LayerDefinition[]): void {
+  #createSource (
+    mapID: string,
+    name: string,
+    input: StyleSource,
+    layers: LayerDefinition[]
+  ): void {
     const { session } = this
     // prepare variables to build appropriate source type
     let metadata: SourceMetadata | undefined

@@ -1,5 +1,8 @@
 {
   "type": "S2FeatureCollection",
+  "attributions": {
+    "Open S2": "https://opens2.com/data"
+  },
   "features": [
     {
       "type": "S2Feature",

@@ -1,10 +1,54 @@
-import type { XYZ } from './proj.spec'
+import { toS2, toWM } from 'geometry'
+
+import type { JSONFeatures, XYZ } from './proj.spec'
+import type { Projection } from 'style/style.spec'
+import type { S2FeatureCollection } from './s2'
+import type { FeatureCollection } from './webMerc'
 
 export * from './lonlat'
 export * from './s2'
 export * from './webMerc'
 export * from './proj.spec'
 export * from './util'
+
+export function toProjection (data: JSONFeatures, projection: Projection): FeatureCollection | S2FeatureCollection {
+  if (projection === 'S2') {
+    const res: S2FeatureCollection = {
+      type: 'S2FeatureCollection',
+      faces: [],
+      features: []
+    }
+    if (data.type === 'S2FeatureCollection') return data
+    else if (data.type === 'S2Feature') res.features.push(data)
+    else if (data.type === 'FeatureCollection') {
+      for (const feature of data.features) {
+        res.features.push(toS2(feature))
+      }
+    } else if (data.type === 'Feature') {
+      res.features.push(toS2(data))
+    } else {
+      throw Error('Incompatible data type', data)
+    }
+    return res
+  } else {
+    const res: FeatureCollection = {
+      type: 'FeatureCollection',
+      features: []
+    }
+    if (data.type === 'FeatureCollection') return data
+    else if (data.type === 'Feature') res.features.push(data)
+    else if (data.type === 'S2FeatureCollection') {
+      for (const feature of data.features) {
+        res.features.push(toWM(feature))
+      }
+    } else if (data.type === 'S2Feature') {
+      res.features.push(toWM(data))
+    } else {
+      throw Error('Incompatible data type', data)
+    }
+    return res
+  }
+}
 
 /** BASIC GEOMETRIC FUNCTIONS */
 

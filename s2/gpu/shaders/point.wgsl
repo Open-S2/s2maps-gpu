@@ -446,6 +446,15 @@ fn decodeFeature (color: bool, indexPtr: ptr<function, i32>, featureIndexPtr: pt
       return res;
     } else if (condition == 7) { // animation-state
 
+    } else if (condition == 8) { // input-value
+      // get length
+      len = i32(featureCode[featureIndex]);
+      featureIndex++;
+      // get value(s)
+      for (var i = 0; i < len; i++) {
+        res[i] = featureCode[featureIndex];
+        featureIndex++;
+      }
     }
 
     continuing {

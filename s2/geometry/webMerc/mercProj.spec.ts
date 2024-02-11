@@ -1,4 +1,5 @@
 import type { Properties } from '../proj.spec'
+import type { Attributions } from 'style/style.spec'
 
 export type Sources = '900913' | 'WGS84'
 
@@ -7,6 +8,7 @@ export type Sources = '900913' | 'WGS84'
 export interface FeatureCollection {
   type: 'FeatureCollection'
   features: Feature[]
+  attributions?: Attributions
 }
 
 export interface Feature {
@@ -14,6 +16,7 @@ export interface Feature {
   id?: number
   properties: Properties
   geometry: Geometry
+  attributions?: Attributions
 }
 
 export interface PointFeature {

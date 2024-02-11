@@ -1,4 +1,5 @@
 import type { Properties } from 'geometry'
+import type { NestedKey } from './style.spec'
 
 // Coalesce text layout property "field"
 //
@@ -15,10 +16,16 @@ import type { Properties } from 'geometry'
 const language = navigator.language.split('-')[0] ?? 'en'
 
 export default function coalesceField (
-  field: string | string[],
+  field: string | string[] | NestedKey,
   properties: Properties,
   fieldIsKey = false
 ): string {
+  // first dive into nested properties
+  while (typeof field === 'object' && 'key' in field) {
+    properties = (properties[field.nestedKey ?? ''] ?? {}) as Properties
+    field = field.key
+  }
+  // now coalesce the field
   if (Array.isArray(field)) {
     return field.reduce((acc, cur) => { return acc + coalesceText(cur, properties, fieldIsKey) }, '')
   } else { return coalesceText(field, properties, fieldIsKey) }

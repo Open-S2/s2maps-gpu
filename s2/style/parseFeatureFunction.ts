@@ -7,7 +7,9 @@ import type {
   DataRangeStep,
   InputRangeEase,
   InputRangeStep,
+  InputValue,
   LayerWorkerFunction,
+  NestedKey,
   NotNullOrObject,
   NumberColor,
   Property,
@@ -29,7 +31,9 @@ export default function parseFeatureFunction<T extends NotNullOrObject, U = T> (
   cb: Callback<T, U> = (i: T): U => i as unknown as U
 ): LayerWorkerFunction<U> {
   if (typeof input === 'object' && !Array.isArray(input)) {
-    if ('dataCondition' in input && input.dataCondition !== undefined) {
+    if ('inputValue' in input && input.inputValue !== undefined) {
+      return inputValueFunction(input.inputValue, cb)
+    } else if ('dataCondition' in input && input.dataCondition !== undefined) {
       return dataConditionFunction<T, U>(input.dataCondition, cb)
     } else if ('dataRange' in input && input.dataRange !== undefined) {
       return dataRangeFunction<T, U>(input.dataRange, cb)
@@ -39,6 +43,26 @@ export default function parseFeatureFunction<T extends NotNullOrObject, U = T> (
       return parseFeatureFunction(input.fallback, cb)
     } else { throw Error('invalid input') }
   } else { return () => cb(input) }
+}
+
+function inputValueFunction<T extends NotNullOrObject, U> (
+  inputValue: InputValue<ValueType<T>>,
+  cb: Callback<ValueType<T>, U>
+): LayerWorkerFunction<U> {
+  return (code: number[], properties: Properties): U => {
+    let endKey: string | NestedKey = inputValue.key
+    // dive into nested properties if needed
+    while (typeof endKey === 'object' && 'key' in endKey) {
+      properties = (properties[endKey.nestedKey ?? ''] ?? {}) as Properties
+      endKey = endKey.key
+    }
+    // return the input if it exists, otherwise fallback
+    const res = ((properties[endKey] ?? inputValue.fallback) as ValueType<T>)
+    const cbValue = cb(res)
+    if (typeof cbValue === 'number') code.push(1, cbValue)
+    else if (Array.isArray(cbValue)) code.push(cbValue.length, ...cbValue)
+    return cbValue
+  }
 }
 
 function dataConditionFunction<T extends NotNullOrObject, U> (
@@ -89,8 +113,14 @@ function dataRangeFunction<T extends NotNullOrObject, U> (
   })
 
   return (code: number[], properties: Properties, _zoom: number): U => {
-    const dataInput = (properties[key] !== undefined && !isNaN(properties[key] as number))
-      ? +(properties[key] as number)
+    let endKey: string | NestedKey = key
+    // dive into nested properties if needed
+    while (typeof endKey === 'object' && 'key' in endKey) {
+      properties = (properties[key.nestedKey ?? ''] ?? {}) as Properties
+      endKey = endKey.key
+    }
+    const dataInput = (properties[endKey] !== undefined && !isNaN(properties[endKey] as number))
+      ? +(properties[endKey] as number)
       : 0
     if (dataInput <= parsedRanges[0].stop) { // less then or equal to first stop
       return parsedRanges[0].input(code, properties, dataInput)
