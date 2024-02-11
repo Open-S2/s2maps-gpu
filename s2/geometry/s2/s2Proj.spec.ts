@@ -1,4 +1,5 @@
 import type { Properties } from '../proj.spec'
+import type { Attributions } from 'style/style.spec'
 
 export type Face = 0 | 1 | 2 | 3 | 4 | 5
 
@@ -8,6 +9,7 @@ export interface S2FeatureCollection {
   type: 'S2FeatureCollection'
   features: S2Feature[]
   faces: Face[]
+  attributions?: Attributions
 }
 
 export interface S2Feature {
@@ -16,6 +18,7 @@ export interface S2Feature {
   face: Face
   properties: Properties
   geometry: S2Geometry
+  attributions?: Attributions
 }
 
 export type S2GeometryType =

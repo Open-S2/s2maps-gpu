@@ -47,6 +47,7 @@ export interface SourceMetadata extends JSONVTOptions, ClusterOptions {
   layers?: LayerMetaData
   sourceName?: string // if you want to make requests without getting metadata, you need this
   // used by geojson sources
+  projection?: Projection
   data?: JSONFeatures
   cluster?: boolean
 }
@@ -93,6 +94,18 @@ export type BuildCodeFunctionZoom = (zoom: number) => number[]
 
 export type Comparator = '==' | '!=' | '>' | '>=' | '<' | '<=' | 'in' | '!in' | 'has' | '!has'
 
+export interface NestedKey {
+  // nested conditions are used to dive into nested properties
+  // ex. { nestedKey: 'class', filter: { key: 'type', comparator: '==', value: 'ocean' } }
+  // this would be used to filter features where feature.properties.class.type === 'ocean'
+  nestedKey?: string
+  key: string | NestedKey
+}
+
+export interface InputValue<T extends NotNullOrObject> extends NestedKey {
+  fallback: T
+}
+
 export interface DataCondition<T extends NotNullOrObject> {
   conditions: Array<{
     filter: Filter
@@ -104,7 +117,7 @@ export interface DataCondition<T extends NotNullOrObject> {
 // export type DataRange<T extends NotNullOrObject> = DataRangeStep<T> | DataRangeEase<T>
 
 export interface DataRangeEase<T extends number | string> {
-  key: string // the objects[key] -> value used as position on range
+  key: NestedKey // the objects[key] -> value used as position on range
   ease?: EaseType
   base?: number // 0 -> 2
   ranges: Array<{
@@ -114,7 +127,7 @@ export interface DataRangeEase<T extends number | string> {
 }
 
 export interface DataRangeStep<T extends NotNullOrObject> {
-  key: string // the objects[key] -> value used as position on range
+  key: NestedKey // the objects[key] -> value used as position on range
   ease: 'step'
   base?: number // 0 -> 2
   ranges: Array<{
@@ -124,7 +137,7 @@ export interface DataRangeStep<T extends NotNullOrObject> {
 }
 
 export interface DataRangeStepOnlyStep<T extends NotNullOrObject> {
-  key: string // the objects[key] -> value used as position on range
+  key: NestedKey // the objects[key] -> value used as position on range
   ease: 'step'
   base?: number // 0 -> 2
   ranges: Array<{
@@ -155,7 +168,7 @@ export interface InputRangeStep<T extends NotNullOrObject> {
 
 export interface FeatureState<T extends NotNullOrObject> {
   condition: 'default' /* (inactive) */ | 'active' | 'hover' | 'selected' | 'disabled'
-  key: string
+  key: NestedKey
   value: T
   input: T | Property<T>
 }
@@ -165,6 +178,7 @@ export type ValueType<T> = T extends NotNullOrObject ? T : never
 export type NumberColor<T> = T extends (number | string) ? T : never
 
 export interface Property<T extends NotNullOrObject> {
+  inputValue?: InputValue<ValueType<T>>
   dataCondition?: DataCondition<ValueType<T>>
   dataRange?: DataRangeEase<NumberColor<T>> | DataRangeStep<ValueType<T>>
   inputRange?: InputRangeEase<NumberColor<T>> | InputRangeStep<ValueType<T>>
@@ -173,6 +187,7 @@ export interface Property<T extends NotNullOrObject> {
 }
 
 export interface PropertyOnlyStep<T extends NotNullOrObject> {
+  inputValue?: InputValue<ValueType<T>>
   dataCondition?: DataCondition<ValueType<T>>
   dataRange?: DataRangeStepOnlyStep<ValueType<T>>
   inputRange?: InputRangeStep<ValueType<T>>

@@ -30,6 +30,8 @@ type FaceSet = [
 ]
 
 export interface JSONVTOptions {
+  /** manually set the projection, otherwise it defaults to whatever the data type is */
+  projection?: Projection
   /** min zoom to generate data on */
   minzoom?: number
   /** max zoom level to cluster the points on */
@@ -69,7 +71,8 @@ export default class JsonVT {
     this.extent = options?.extent ?? 8_192
     this.buffer = options?.buffer ?? 64
     // update projection
-    if (data.type === 'Feature' || data.type === 'FeatureCollection') this.projection = 'WM'
+    if (options?.projection !== undefined) this.projection = options.projection
+    else if (data.type === 'Feature' || data.type === 'FeatureCollection') this.projection = 'WM'
     // sanity check
     if (this.maxzoom < 0 || this.maxzoom > 20) throw new Error('maxzoom should be in the 0-20 range')
     // convert features

@@ -2,31 +2,29 @@
 import type JsonVT from '.'
 import simplify from './simplify'
 import createFeature from './feature'
+import { toProjection } from 'geometry'
 /** TYPES **/
 import type { FeatureVector } from './feature'
-import type { Feature, FeatureCollection, Point, S2Feature, S2FeatureCollection } from 'geometry'
+import type { Feature, JSONFeatures, Point, S2Feature } from 'geometry'
 import type { Projection } from 'style/style.spec'
 
 // convert S2JSON to a geometry with simplification data
 export default function convert (
-  data: Feature | FeatureCollection | S2Feature | S2FeatureCollection,
+  data: JSONFeatures,
   jsonVT: JsonVT
 ): FeatureVector[] {
+  // convert as necessary
+  data = toProjection(data, jsonVT.projection)
+  // build the vector features
   const features: FeatureVector[] = []
   if (data.type === 'S2FeatureCollection') {
     for (const feature of data.features) {
       convertFeature(features, feature, jsonVT, 'S2')
     }
-  } else if (data.type === 'S2Feature') {
-    convertFeature(features, data, jsonVT, 'S2')
   } else if (data.type === 'FeatureCollection') {
     for (const feature of data.features) {
       convertFeature(features, feature, jsonVT, 'WM')
     }
-  } else if (data.type === 'Feature') {
-    convertFeature(features, data, jsonVT, 'WM')
-  } else {
-    throw Error('Incompatible data type')
   }
 
   return features

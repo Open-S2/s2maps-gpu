@@ -22,6 +22,7 @@ import type {
 // 5 -> input-range
 // 6 -> feature-state (this updates for each draw assuming the feature has a "feature-state")
 // 7 -> animation-state (this updates for each draw assuming the feature has a "animation-state")
+// 8 -> input-value (this is a constant value pulled from properties)
 
 // FEATURE-STATE ENCODINGS:
 // 0 -> default (inactive)
@@ -61,6 +62,10 @@ export default function encodeLayerAttribute<T extends NotNullOrObject> (
       encodings[0] += (2 << 4)
       // encode the condition type
       encodings.push(...encodeDataCondition<T>(input.dataCondition, lch))
+    } else if ('inputCondition' in input && input.inputCondition !== undefined) {
+      // set the condition bits as input-condition
+      encodings[0] += (3 << 4)
+      // TODO: encode the condition type
     } else if ('dataRange' in input && input.dataRange !== undefined) {
       const { dataRange } = input
       const { base, ease } = dataRange
@@ -96,6 +101,9 @@ export default function encodeLayerAttribute<T extends NotNullOrObject> (
       encodings[0] += (6 << 4)
       // encode the feature-states and store
       encodings.push(...encodeFeatureStates<T>(input.featureState, lch))
+    } else if ('inputValue' in input && input.inputValue !== undefined) {
+      // set the condition bits as input-condition
+      encodings[0] += (8 << 4)
     } else throw Error('unknown condition type')
   } else if (input !== undefined && input !== null) { // assuming data exists, than it's just a value type
     // value

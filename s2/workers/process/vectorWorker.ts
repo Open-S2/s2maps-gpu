@@ -14,8 +14,6 @@ export type CodeDesignInput<T extends NotNullOrObject> = [
   Callback<T, ColorArray>
 ] | [T | Property<T>]
 
-// export interface CodeDesignInputRange<T> {
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type CodeDesign<T = any> = Array<CodeDesignInput<ValueType<T>>>
 
@@ -66,7 +64,7 @@ export default class VectorWorker {
     return (zoom: number, properties: Properties): [number[], number[]] => {
       // prep codes
       const webgl2Code: number[] = []
-      const webgl1Code: number[] = featureFunctions.map(func => func(webgl2Code, properties, zoom)).flat()
+      const webgl1Code: number[] = featureFunctions.flatMap(func => func(webgl2Code, properties, zoom))
 
       return [webgl1Code, webgl2Code]
     }

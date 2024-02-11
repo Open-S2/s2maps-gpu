@@ -188,7 +188,7 @@ export default class S2Map extends EventTarget {
         for (const name in attributions) {
           if (this.#attributions[name] === undefined) {
             this.#attributions[name] = attributions[name]
-            popup.innerHTML += `<div><a href="${attributions[name]}" target="popup">${name}</a></div>`
+            popup.innerHTML += `<div><a href="${attributions[name]}" target="_popup">${name}</a></div>`
           }
         }
       }
@@ -199,7 +199,7 @@ export default class S2Map extends EventTarget {
         const watermark = this.#watermark = window.document.createElement('a')
         watermark.className = 's2-watermark'
         watermark.href = 'https://opens2.com'
-        watermark.target = 'popup'
+        watermark.target = '_popup'
         if (isDarkMode) watermark.classList.add('s2-watermark-dark')
         attribution.appendChild(watermark)
       }
@@ -513,6 +513,7 @@ export default class S2Map extends EventTarget {
 
   delete (): void {
     const { offscreen, map, _canvas } = this
+    this.dispatchEvent(new Event('delete'))
     offscreen?.postMessage({ type: 'delete' })
     offscreen?.terminate()
     map?.delete()
