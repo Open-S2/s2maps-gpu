@@ -61,9 +61,7 @@ Promise.all([
     fs.copyFileSync('./buildS2/s2maps-gpu.min.css', './buildS2-local/s2maps-gpu.min.css')
     fs.copyFileSync('./buildS2/s2maps-gpu.min.css', './buildS2-dev/s2maps-gpu.min.css')
     // setup local and live version for .com
-    store('../opens2.com/public/s2maps-gpu', './buildS2-local', 'latest-local', true)
     store('../opens2.com/public/s2maps-gpu', './buildS2-local', `${VERSION}-local`)
-    store('../opens2.com/public/s2maps-gpu', './buildS2', 'latest', true)
     store('../opens2.com/public/s2maps-gpu', './buildS2', VERSION)
     // setup local and live version for .dev
     store('../s2maps.dev/public/s2maps-gpu', './buildS2-local', `${VERSION}-local`)

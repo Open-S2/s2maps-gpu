@@ -29,9 +29,8 @@
   border-radius: 7px;
   overflow: hidden;
 }
-
-.s2-nav-dark {
-  background-color: #adadad;
+.dark-mode .s2-nav-container {
+  background-color: #c4c8d5;
 }
 
 .s2-control-button {
@@ -97,11 +96,8 @@
   border-left: 1px solid #ccc;
   z-index: 300;
 }
-
-.s2-nav-sep-dark {
-  height: 18px;
+.dark-mode .s2-nav-sep {
   border-left: 1px solid #666;
-  z-index: 300;
 }
 
 #s2-attribution {
@@ -137,11 +133,20 @@
   background: #ededed;
   z-index: 20;
 }
+.dark-mode .s2-info {
+  background: #c4c8d5;
+}
 .s2-info:hover {
   background: #fff;
 }
+.dark-mode .s2-info:hover {
+  background: #d0d3db;
+}
 .s2-info:active {
   background: #fff;
+}
+.dark-mode .s2-info:active {
+  background: #ededed;
 }
 
 #s2-attribution.show .s2-info {
@@ -152,16 +157,6 @@
   border-top-left-radius: 0;
   cursor: pointer;
   background-image: url('/s2/svg/info.svg');
-}
-
-.s2-info-dark {
-  background: #adadad;
-}
-.s2-info-dark:hover {
-  background: #ededed;
-}
-.s2-info-dark:active {
-  background: #ededed;
 }
 
 .s2-popup-container {
@@ -183,6 +178,9 @@
   padding-bottom: 25px;
   box-shadow: 0px 1px 4px rgb(0 0 0 / 35%);
   z-index: 10;
+}
+.dark-mode .s2-popup-container {
+  background-color: #c4c8d5;
 }
 
 .s2-popup-container a {
@@ -216,7 +214,7 @@
   width: 92.2px;
   height: 33px;
 }
-.s2-watermark-dark {
+.dark-mode .s2-watermark {
   background-image: url('/s2/svg/s2-jolly-roger-light.svg');
 }
 

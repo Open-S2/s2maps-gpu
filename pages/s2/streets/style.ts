@@ -5,7 +5,7 @@ const style: StyleDefinition = {
   name: 's2maps-streets-v1',
   center: [-111.88683599228256, 40.76645913667518],
   // center: [0, 0],
-  zoom: 7.9,
+  zoom: 0,
   minzoom: -0.5,
   maxzoom: 18.99,
   sources: {
@@ -2088,7 +2088,8 @@ const style: StyleDefinition = {
       textSize: 14,
       textFill: 'rgb(100, 100, 100)',
       textStroke: 'rgba(255, 255, 255, 0.65)',
-      textStrokeWidth: 0.7
+      textStrokeWidth: 0.7,
+      viewCollisions: false
     },
     {
       name: 'country_state',
@@ -2404,7 +2405,8 @@ const style: StyleDefinition = {
         }
       },
       textStroke: 'rgba(255, 255, 255, 0.75)',
-      textStrokeWidth: 0.65
+      textStrokeWidth: 0.65,
+      viewCollisions: false
     },
     {
       name: 'water_label',
@@ -2463,7 +2465,8 @@ const style: StyleDefinition = {
       },
       textFill: '#00669E',
       textStroke: '#00669E',
-      textStrokeWidth: 0
+      textStrokeWidth: 0,
+      viewCollisions: false
     }
   ]
 }

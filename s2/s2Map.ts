@@ -88,6 +88,7 @@ export default class S2Map extends EventTarget {
     // prep container
     const container = this.#container
     container.classList.add('s2-map')
+    this.setDarkMode(options.darkMode)
     // build canvas-container
     const canvasContainer = this.#canvasContainer = window.document.createElement('div')
     canvasContainer.className = 's2-canvas-container'
@@ -166,22 +167,18 @@ export default class S2Map extends EventTarget {
       zoomController,
       compassController,
       colorblindController,
-      darkMode,
       attributionOff,
       watermarkOff
     } = options
     // add info bar with our jollyRoger
-    const isDarkMode = darkMode === true
     if (attributionOff !== true) {
       const attribution = window.document.createElement('div')
       attribution.id = 's2-attribution'
       const info = window.document.createElement('div')
       info.className = info.id = 's2-info'
-      if (isDarkMode) info.classList.add('s2-info-dark')
       info.onclick = function () { attribution.classList.toggle('show') }
       const popup = this.#attributionPopup = window.document.createElement('div')
       popup.className = 's2-popup-container'
-      if (isDarkMode) popup.classList.add('s2-popup-container-dark')
       popup.innerHTML = '<div>Rendered with ❤ by</div><a href="https://opens2.com" target="popup"><div class="s2-jolly-roger"></div></a>'
       // add attributions
       if (attributions !== undefined) {
@@ -200,7 +197,6 @@ export default class S2Map extends EventTarget {
         watermark.className = 's2-watermark'
         watermark.href = 'https://opens2.com'
         watermark.target = '_popup'
-        if (isDarkMode) watermark.classList.add('s2-watermark-dark')
         attribution.appendChild(watermark)
       }
       this.#container?.appendChild(attribution)
@@ -208,11 +204,10 @@ export default class S2Map extends EventTarget {
     // if zoom or compass controllers, add
     if (controls !== false) {
       let navSep
-      const darkModeEnd = (isDarkMode ? '-dark' : '')
+      let firstNavComponent = false
       // first create the container
       const navigationContainer = this.#navigationContainer = window.document.createElement('div')
       navigationContainer.className = 's2-nav-container'
-      if (isDarkMode) navigationContainer.classList.add('s2-nav-dark')
       this.#container?.appendChild(navigationContainer)
       if (zoomController !== false) {
         // plus
@@ -224,7 +219,7 @@ export default class S2Map extends EventTarget {
         zoomPlus.addEventListener('click', () => { this.#navEvent('zoomIn') })
         // seperator
         navSep = window.document.createElement('div')
-        navSep.className = 's2-nav-sep' + darkModeEnd
+        navSep.className = 's2-nav-sep'
         navigationContainer.appendChild(navSep)
         // minus
         const zoomMinus = window.document.createElement('button')
@@ -235,10 +230,14 @@ export default class S2Map extends EventTarget {
         zoomMinus.addEventListener('click', () => { this.#navEvent('zoomOut') })
       }
       if (compassController !== false) {
-        // seperator
-        navSep = window.document.createElement('div')
-        navSep.className = 's2-nav-sep' + darkModeEnd
-        navigationContainer.appendChild(navSep)
+        if (!firstNavComponent) {
+          firstNavComponent = true
+        } else {
+          // seperator
+          navSep = window.document.createElement('div')
+          navSep.className = 's2-nav-sep'
+          navigationContainer.appendChild(navSep)
+        }
         // compass button
         const compassContainer = window.document.createElement('button')
         compassContainer.className = 's2-control-button'
@@ -253,10 +252,14 @@ export default class S2Map extends EventTarget {
         compassContainer.addEventListener('mousedown', this.#onCompassMouseDown.bind(this))
       }
       if (colorblindController !== false) {
-        // seperator
-        navSep = window.document.createElement('div')
-        navSep.className = 's2-nav-sep' + darkModeEnd
-        navigationContainer.appendChild(navSep)
+        if (!firstNavComponent) {
+          firstNavComponent = true
+        } else {
+          // seperator
+          navSep = window.document.createElement('div')
+          navSep.className = 's2-nav-sep'
+          navigationContainer.appendChild(navSep)
+        }
         // colorblind button
         const colorBlind = this.#colorBlind = window.document.createElement('button')
         colorBlind.className = 's2-control-button s2-colorblind-button'
@@ -525,6 +528,12 @@ export default class S2Map extends EventTarget {
     if (this.#container !== undefined) {
       while (this.#container.lastChild !== null) this.#container.removeChild(this.#container.lastChild)
     }
+  }
+
+  setDarkMode (state: boolean = false): void {
+    const classList = this.#container?.classList
+    if (state) classList?.add('dark-mode')
+    else classList?.remove('dark-mode')
   }
 
   getContainer (): HTMLElement {

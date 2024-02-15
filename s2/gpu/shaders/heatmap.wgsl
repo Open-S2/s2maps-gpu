@@ -236,7 +236,7 @@ fn getPosLocal (pos: vec2<f32>) -> vec4<f32> {
 }
 
 fn getPos (pos: vec2<f32>) -> vec4<f32> {
-  if (tile.isS2 == 0. || view.zoom >= 12.) {
+  if (tile.isS2 == 0. || tile.zoom >= 12.) {
     return getPosLocal(pos);
   } else {
     return matrix * stToXYZ(pos);
@@ -244,7 +244,7 @@ fn getPos (pos: vec2<f32>) -> vec4<f32> {
 }
 
 fn getZero () -> vec4<f32> {
-  if (tile.isS2 == 0. || view.zoom >= 12.) {
+  if (tile.isS2 == 0. || tile.zoom >= 12.) {
     return vec4<f32>(0., 0., 1., 1.);
   } else {
     return matrix * vec4<f32>(0., 0., 0., 1.);

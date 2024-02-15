@@ -99,6 +99,10 @@ export default class FamilySource {
     return fs
   }
 
+  has (code: string): boolean {
+    return this.glyphSet.has(code)
+  }
+
   addMetadata (metadata: Metadata): void {
     for (const [code, glyph] of Object.entries(metadata)) {
       this.glyphSet.add(code)
