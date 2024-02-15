@@ -9,6 +9,7 @@ import type { S2Map } from '../../../s2'
 
 function ready (s2map: S2Map): void {
   console.info('ready', s2map)
+  s2map.setDarkMode(true)
 }
 
 export default function Fill (): React.JSX.Element {
@@ -16,7 +17,7 @@ export default function Fill (): React.JSX.Element {
     <div className='pages'>
       <Map
         style={style}
-        opts={{ zoomController: false, darkMode: false }}
+        opts={{ zoomController: false }}
         ready={ready}
         noAPIKey
       />

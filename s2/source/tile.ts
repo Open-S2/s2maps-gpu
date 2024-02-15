@@ -40,7 +40,7 @@ implements TileSpec<C, F, M> {
   zoom = 0
   division = 1
   tmpMaskID = 0
-  mask: M
+  mask!: M
   bbox: BBox = [0, 0, 0, 0]
   featureGuides: F[] = []
   context: C
@@ -55,7 +55,6 @@ implements TileSpec<C, F, M> {
   constructor (context: C, id: bigint) {
     this.context = context
     this.id = id
-    this.mask = context.getMask(1, this as any) as M
   }
 
   // inject references to featureGuide from each parentTile. Sometimes if we zoom really fast, we inject
@@ -237,7 +236,7 @@ export class S2Tile<C extends SharedContext, F extends SharedFeatureGuide, M ext
     // build division
     this.division = 16 / (1 << max(min(floor(zoom / 2), 4), 0))
     // grab mask
-    if (this.division !== 1) this.mask = context.getMask(this.division, this as any) as M
+    this.mask = context.getMask(this.division, this as any) as M
   }
 
   #buildCorners (): void {
@@ -295,6 +294,8 @@ export class WMTile<C extends SharedContext, F extends SharedFeatureGuide, M ext
       0, // face
       zoom // zoom
     ])
+    // grab mask
+    this.mask = context.getMask(1, this as any) as M
   }
 
   // given a basic ortho matrix, adjust by the tile's offset and scale

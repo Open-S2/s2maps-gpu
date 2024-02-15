@@ -70,12 +70,31 @@ export default class ImageStore {
     families: string[],
     glyphs: string[]
   ): void {
-    // TODO: Rethink how we parse ligatures. if the first family contains the glyphs, then the
-    // next familes should not reparse the ligatures because visually will look different
-    for (const family of [families[0]]) {
-      const familySource = this.getFamilyMap(mapID, family)
-      familySource.parseLigatures(glyphs, true)
-      familySource.parseLigatures(glyphs)
+    // split the glyphs string[] into pieces everytime we see a space or line break characters
+    const splitGlyphs: Array<{ glyphs: string[], splitValue?: '32' | '10' | '13' }> = []
+    let current: string[] = []
+    for (const glyph of glyphs) {
+      if (glyph === '32' || glyph === '10' || glyph === '13') {
+        splitGlyphs.push({ glyphs: current, splitValue: glyph })
+        current = []
+      } else { current.push(glyph) }
+    }
+    splitGlyphs.push({ glyphs: current })
+    // next we check each "word" for ligatures; if a family source contains the codes
+    // we move on, otherwise we might accidentally use two fonts for a single word
+    for (const splitGlyph of splitGlyphs) {
+      for (const family of families) {
+        const familySource = this.getFamilyMap(mapID, family)
+        familySource.parseLigatures(splitGlyph.glyphs, true)
+        familySource.parseLigatures(splitGlyph.glyphs)
+        if (familySource.has(splitGlyph.glyphs[0])) break
+      }
+    }
+    // rejoin the splitGlyphs back into the glyphs array
+    glyphs.splice(0, glyphs.length)
+    for (const splitGlyph of splitGlyphs) {
+      glyphs.push(...splitGlyph.glyphs)
+      if (splitGlyph.splitValue !== undefined) glyphs.push(splitGlyph.splitValue)
     }
   }
 
