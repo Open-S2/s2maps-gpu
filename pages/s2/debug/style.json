@@ -6,12 +6,12 @@
   "minzoom": -0.5,
   "maxzoom": 18.99,
   "sources": {
-    "streets": "s2maps://s2tiles/s2maps/streets-v1.s2tiles",
-    "terrain": "s2maps://s2tiles/s2maps/terrain-v1.s2tiles"
+    "streets": "opens2://s2tiles/s2maps/streets-v1.s2tiles",
+    "terrain": "opens2://s2tiles/s2maps/terrain-v1.s2tiles"
   },
   "fonts": {
-    "roboto-medium": "s2maps://glyphs/RobotoMedium",
-    "roboto-regular": "s2maps://glyphs/RobotoRegular"
+    "roboto-medium": "opens2://glyphs/RobotoMedium",
+    "roboto-regular": "opens2://glyphs/RobotoRegular"
   },
   "wallpaper": {
     "background": "#030a2d",

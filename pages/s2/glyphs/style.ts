@@ -11,7 +11,7 @@ const style: StyleDefinition = {
     countries: '/s2json/countriesHD.s2json'
   },
   fonts: {
-    robotoMedium: 'http://localhost:3000/api/glyphs-v2/RobotoMedium'
+    robotoMedium: '/api/glyphs-v2/RobotoMedium'
   },
   layers: [
     {

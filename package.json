@@ -3,7 +3,7 @@
   "description": "S2 Maps GPU",
   "version": "0.11.8",
   "scripts": {
-    "dev": "next dev",
+    "dev": "NODE_ENV=development next dev",
     "build": "next build",
     "build:S2": "node configS2/build.js",
     "build:ESM": "tsc --project tsconfig.json",

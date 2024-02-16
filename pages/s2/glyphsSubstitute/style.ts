@@ -209,8 +209,8 @@ const style: StyleDefinition = {
     }
   },
   fonts: {
-    robotoMedium: 'http://localhost:3000/api/glyphs-v2/RobotoMedium',
-    NotoMedium: 'http://localhost:3000/api/glyphs-v2/NotoMedium'
+    robotoMedium: '/api/glyphs-v2/RobotoMedium',
+    NotoMedium: '/api/glyphs-v2/NotoMedium'
   },
   layers: [
     {

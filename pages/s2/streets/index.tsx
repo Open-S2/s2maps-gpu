@@ -16,7 +16,7 @@ export default function Streets (): React.JSX.Element {
     <div className='pages'>
       <Map
         style={style}
-        opts={{ zoomController: false, contextType: 3 }}
+        opts={{ zoomController: false, contextType: 3, apiURL: 'http://localhost:8008' }}
         ready={ready}
         noAPIKey
       />

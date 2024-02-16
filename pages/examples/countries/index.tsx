@@ -81,13 +81,13 @@ const mapStyle = {
   minzoom: -1,
   maxzoom: 9,
   sources: {
-    countries: 's2maps://s2tiles/s2maps/countries4K_CHN.s2tiles',
-    bathymetry: 's2maps://s2tiles/s2maps/bathymetry.s2tiles',
-    place: 's2maps://s2tiles/s2maps/place.s2tiles'
+    countries: 'opens2://s2tiles/s2maps/countries4K_CHN.s2tiles',
+    bathymetry: 'opens2://s2tiles/s2maps/bathymetry.s2tiles',
+    place: 'opens2://s2tiles/s2maps/place.s2tiles'
   },
   fonts: {
-    'roboto-medium': 's2maps://glyphs/RobotoMedium',
-    'roboto-regular': 's2maps://glyphs/RobotoRegular'
+    'roboto-medium': 'opens2://glyphs/RobotoMedium',
+    'roboto-regular': 'opens2://glyphs/RobotoRegular'
   },
   layers: [
     {

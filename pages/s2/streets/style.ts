@@ -9,14 +9,14 @@ const style: StyleDefinition = {
   minzoom: -0.5,
   maxzoom: 18.99,
   sources: {
-    streets: 'http://localhost:8008/s2tiles/s2maps/streets-v1.s2tiles',
-    terrain: 'http://localhost:8008/s2tiles/s2maps/terrain-v1.s2tiles'
+    streets: 'apiURL://s2tiles/s2maps/streets-v1.s2tiles',
+    terrain: 'opens2://s2tiles/s2maps/terrain-v1.s2tiles'
   },
   fonts: {
-    robotoRegular: 'http://localhost:8008/glyphs-v2/RobotoRegular',
-    robotoMedium: 'http://localhost:8008/glyphs-v2/RobotoMedium',
-    notoRegular: 'http://localhost:8008/glyphs-v2/NotoRegular',
-    notoMedium: 'http://localhost:8008/glyphs-v2/NotoMedium'
+    robotoRegular: 'opens2://glyphs-v2/RobotoRegular',
+    robotoMedium: 'opens2://glyphs-v2/RobotoMedium',
+    notoRegular: 'opens2://glyphs-v2/NotoRegular',
+    notoMedium: 'opens2://glyphs-v2/NotoMedium'
   },
   wallpaper: {
     background: '#030a2d',

@@ -6,11 +6,11 @@
   "minzoom": -0.5,
   "maxzoom": 0.999999,
   "sources": {
-    "countries": "s2maps://s2json/s2maps/countriesHD.s2json",
+    "countries": "opens2://s2json/s2maps/countriesHD.s2json",
     "temperature": {
       "type": "raster",
       "extension": "webp",
-      "path": "s2maps://tiles/sensors/sfcTmp",
+      "path": "opens2://tiles/sensors/sfcTmp",
       "format": "tfzxy",
       "minzoom": 0,
       "maxzoom": 0,

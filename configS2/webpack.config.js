@@ -71,7 +71,7 @@ module.exports = {
     })]
   },
   plugins: [
-    new webpack.EnvironmentPlugin(['CORS', 'NEXT_PUBLIC_API_URL']),
+    new webpack.EnvironmentPlugin(['CORS', 'API_URL']),
     new webpack.BannerPlugin(`s2maps-gpu is Copyright © ${(new Date()).getFullYear()} Open S2 and subject to the Open S2 Terms of Service (https://www.opens2.com/tos/).`),
     new webpack.ProgressPlugin(),
     new CorsWorkerPlugin(),

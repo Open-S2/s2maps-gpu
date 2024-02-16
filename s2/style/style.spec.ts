@@ -766,6 +766,7 @@ export interface StylePackage {
   analytics: Analytics
   experimental: boolean
   apiKey?: string
+  apiURL?: string
 }
 
 /** WALLPAPER **/
