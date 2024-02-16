@@ -8,6 +8,7 @@ const style: StyleDefinition = {
   minzoom: -1,
   maxzoom: 2.5,
   sources: {
+    countries: '/s2json/countriesHD.s2json',
     hilbert: {
       type: 'json',
       data: {
@@ -19,7 +20,13 @@ const style: StyleDefinition = {
             properties: {
               class: 'hilbert',
               level: 4,
-              levels: [0, 1, 2, 3]
+              levels: [0, 1, 2, 3],
+              subClass: {
+                subSubClass: {
+                  type: 'hil',
+                  radius: 40
+                }
+              }
             },
             face: 0,
             geometry: {
@@ -34,6 +41,14 @@ const style: StyleDefinition = {
   },
   fonts: {},
   layers: [
+    {
+      name: 'country-fill',
+      source: 'countries',
+      type: 'fill',
+      opaque: false,
+      color: '#b4c1c6',
+      interactive: false
+    },
     {
       name: 'hilbert_point',
       source: 'hilbert',

@@ -292,7 +292,12 @@ export class WMTile<C extends SharedContext, F extends SharedFeatureGuide, M ext
     this.uniforms = new Float32Array([
       0, // isS2
       0, // face
-      zoom // zoom
+      zoom, // zoom
+      // padding (unused by WM tiles)
+      0, // sLow
+      0, // tLow
+      1, // deltaS
+      1 // deltaT
     ])
     // grab mask
     this.mask = context.getMask(1, this as any) as M
