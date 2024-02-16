@@ -9,7 +9,7 @@ const style: StyleDefinition = {
   minzoom: -0.5,
   maxzoom: 5,
   sources: {
-    planet: '/tiles/wm/osm',
+    countries: '/geojson/countries.geojson',
     earthquakes: {
       type: 'json',
       path: '/geojson/earthquakes.geojson',
@@ -20,10 +20,10 @@ const style: StyleDefinition = {
   },
   layers: [
     {
-      name: 'water-fill',
-      source: 'planet',
-      layer: 'water',
+      name: 'countries-fill',
+      source: 'countries',
       type: 'fill',
+      invert: true,
       color: '#b4c1c6'
     },
     {

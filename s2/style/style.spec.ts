@@ -7,8 +7,10 @@ import type { MapOptions } from 'ui/s2mapUI'
 import type { JSONVTOptions } from 'workers/source/json-vt'
 import type { ClusterOptions } from 'workers/source/pointCluster'
 
+export type { JSONVTOptions } from 'workers/source/json-vt'
+export type { ClusterOptions } from 'workers/source/pointCluster'
 export type { Properties, JSONFeatures } from 'geometry'
-export type { Filter } from './parseFilter'
+export type { Filter, FilterFunction } from './parseFilter'
 export type { EaseType } from './easingFunctions'
 export type { MapOptions } from 'ui/s2mapUI'
 
@@ -46,10 +48,28 @@ export interface SourceMetadata extends JSONVTOptions, ClusterOptions {
   faces?: number[]
   layers?: LayerMetaData
   sourceName?: string // if you want to make requests without getting metadata, you need this
-  // used by geojson sources
-  projection?: Projection
+  // used by json sources
   data?: JSONFeatures
   cluster?: boolean
+  // TODO: No idea why I have to add this manually when extending JSONVTOptions and ClusterOptions
+  // missing cluster properties
+  /** cluster radius in pixels */
+  radius?: number
+  /** tile extent (radius is calculated relative to it) */
+  extent?: number
+  /** size of the KD-tree leaf node, effects performance */
+  nodeSize?: number
+  // missing json-vt properties
+  /** manually set the projection, otherwise it defaults to whatever the data type is */
+  projection?: Projection
+  /** tile buffer on each side in pixels */
+  indexMaxzoom?: number
+  /** max number of points per tile in the tile index */
+  indexMaxPoints?: number
+  /** simplification tolerance (higher means simpler) */
+  tolerance?: number
+  /** tile buffer on each side so lines and polygons don't get clipped */
+  buffer?: number
 }
 export type Source = string | SourceMetadata
 export type Sources = Record<string, Source> // address to source or source itself
