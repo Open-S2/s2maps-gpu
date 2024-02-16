@@ -204,7 +204,7 @@ export default class S2Map extends EventTarget {
     // if zoom or compass controllers, add
     if (controls !== false) {
       let navSep
-      let firstNavComponent = false
+      let firstNavCompSet = false
       // first create the container
       const navigationContainer = this.#navigationContainer = window.document.createElement('div')
       navigationContainer.className = 's2-nav-container'
@@ -218,6 +218,7 @@ export default class S2Map extends EventTarget {
         navigationContainer.appendChild(zoomPlus)
         zoomPlus.addEventListener('click', () => { this.#navEvent('zoomIn') })
         // seperator
+        firstNavCompSet = true
         navSep = window.document.createElement('div')
         navSep.className = 's2-nav-sep'
         navigationContainer.appendChild(navSep)
@@ -230,8 +231,8 @@ export default class S2Map extends EventTarget {
         zoomMinus.addEventListener('click', () => { this.#navEvent('zoomOut') })
       }
       if (compassController !== false) {
-        if (!firstNavComponent) {
-          firstNavComponent = true
+        if (!firstNavCompSet) {
+          firstNavCompSet = true
         } else {
           // seperator
           navSep = window.document.createElement('div')
@@ -252,8 +253,8 @@ export default class S2Map extends EventTarget {
         compassContainer.addEventListener('mousedown', this.#onCompassMouseDown.bind(this))
       }
       if (colorblindController !== false) {
-        if (!firstNavComponent) {
-          firstNavComponent = true
+        if (!firstNavCompSet) {
+          firstNavCompSet = true
         } else {
           // seperator
           navSep = window.document.createElement('div')

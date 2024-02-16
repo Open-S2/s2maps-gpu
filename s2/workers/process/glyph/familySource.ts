@@ -107,6 +107,7 @@ export default class FamilySource {
     for (const [code, glyph] of Object.entries(metadata)) {
       this.glyphSet.add(code)
       this.glyphCache.set(code, glyph)
+      if (!this.iconCache.has(code)) this.iconCache.set(code, [{ glyphID: code, color: [0, 0, 0, 0] }])
     }
   }
 
