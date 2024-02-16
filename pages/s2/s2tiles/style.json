@@ -6,7 +6,7 @@
   "minzoom": -0.5,
   "maxzoom": 5,
   "sources": {
-    "openAddressData": "s2maps://s2tiles/s2maps/open-address-data-v1.s2tiles"
+    "openAddressData": "opens2://s2tiles/s2maps/open-address-data-v1.s2tiles"
   },
   "fonts": {},
   "layers": [

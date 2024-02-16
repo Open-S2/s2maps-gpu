@@ -7,7 +7,7 @@
   "minzoom": -1,
   "maxzoom": 2.5,
   "sources": {
-    "language": "http://localhost:3000/s2json/language.s2json"
+    "language": "/s2json/language.s2json"
   },
   "layers": [
     {

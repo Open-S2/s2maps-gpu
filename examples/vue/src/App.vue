@@ -17,7 +17,7 @@ const style = {
   'maxzoom': 5.25,
   'zoom-offset': 0.5,
   'sources': {
-    'satellite': 's2maps://data/s2maps/modis-v1/7.s2tiles'
+    'satellite': 'opens2://data/s2maps/modis-v1/7.s2tiles'
   },
   'wallpaper': {
     'skybox': 'https://opens2.com/public/backgrounds/milkyway',

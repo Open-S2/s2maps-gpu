@@ -6,8 +6,8 @@
   "minzoom": -0.5,
   "maxzoom": 5,
   "sources": {
-    "countries": "s2maps://s2json/s2maps/countriesHD.s2json",
-    "cloudflare": "s2maps://s2json/s2maps/cloudflare-nodes.s2json"
+    "countries": "opens2://s2json/s2maps/countriesHD.s2json",
+    "cloudflare": "opens2://s2json/s2maps/cloudflare-nodes.s2json"
   },
   "fonts": {},
   "layers": [

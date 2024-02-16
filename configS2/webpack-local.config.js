@@ -59,10 +59,10 @@ module.exports = {
     })]
   },
   plugins: [
-    // new webpack.EnvironmentPlugin(['CORS', 'NEXT_PUBLIC_API_URL']),
+    // new webpack.EnvironmentPlugin(['CORS', 'API_URL']),
     new webpack.DefinePlugin({
       'process.env.CORS': '0',
-      'process.env.NEXT_PUBLIC_API_URL': '\'http://192.168.0.113:8789/v1\''
+      'process.env.API_URL': '\'http://192.168.0.113:8789/v1\''
     }),
     new webpack.BannerPlugin(`s2maps-gpu is Copyright © ${(new Date()).getFullYear()} Open S2 and subject to the S2 Maps Terms of Service (https://www.opens2.com/tos/).`),
     new webpack.ProgressPlugin(),

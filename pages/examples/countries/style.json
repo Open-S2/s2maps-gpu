@@ -6,8 +6,8 @@
   "minzoom": -0.5,
   "maxzoom": 1,
   "sources": {
-    "countries": "s2maps://s2json/s2maps/countriesHD.s2json",
-    "bathymetry": "s2maps://s2tiles/s2maps/bathymetry.s2tiles"
+    "countries": "opens2://s2json/s2maps/countriesHD.s2json",
+    "bathymetry": "opens2://s2tiles/s2maps/bathymetry.s2tiles"
   },
   "fonts": {},
   "colorBlind": false,

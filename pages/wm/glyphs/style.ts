@@ -12,7 +12,7 @@ const style: StyleDefinition = {
     planet: '/tiles/wm/osm'
   },
   fonts: {
-    robotoMedium: 'http://localhost:3000/api/glyphs/RobotoMedium.font'
+    robotoMedium: '/api/glyphs/RobotoMedium.font'
   },
   layers: [
     {

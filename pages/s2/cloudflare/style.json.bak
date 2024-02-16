@@ -6,12 +6,12 @@
   "minzoom": -0.5,
   "maxzoom": 5,
   "sources": {
-    "countries": "s2maps://s2json/s2maps/countriesHD.s2json"
+    "countries": "opens2://s2json/s2maps/countriesHD.s2json"
   },
   "fonts": {
-    "noto-sans-medium": "s2maps://glyphs/s2maps/Noto/NotoSansMedium.font",
+    "noto-sans-medium": "opens2://glyphs/s2maps/Noto/NotoSansMedium.font",
     "roboto-medium": {
-      "path": "s2maps://glyphs/s2maps/Roboto/RobotoMedium.font",
+      "path": "opens2://glyphs/s2maps/Roboto/RobotoMedium.font",
       "fallback": "noto-sans-medium"
     }
   },

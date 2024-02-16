@@ -36,7 +36,7 @@ import type { ImageMetadata } from './source/imageSource'
   the request string is passed to a tile worker to run the fetch and then consequently
   process.
 
-  S2JSON is a unique case where the source worker just builds the json
+  GEOJSON / S2JSON is a unique case where the source worker just builds the json
   locally to avoid processing the same json multiple times per tile worker.
 
   The glyph map is processed by the source worker. All data is localized to
@@ -46,6 +46,7 @@ import type { ImageMetadata } from './source/imageSource'
 
   SOURCE TYPES
   * S2Tile - a compact s2tiles file where we request tiles of many file types and compression types
+  * GeoJSON - a json file containing geo-spatial data
   * S2JSON - a json file modeled much like geojson
   * Glyph - either a font or icon file stored in a pbf structure
   * Tile -> local build tile
@@ -64,6 +65,7 @@ export default class SourceWorker {
   workers: Array<MessageChannel['port2']> = []
   session: Session = new Session()
   layers: Record<string, LayerDefinition[]> = {}
+  apiURLS: Record<string, string> = {} // { mapID: apiURL }
   sources: SourceMap = {}
   glyphs: Record<string, GlyphSource> = {} // path is key again
   sprites: Record<string, SpriteSource> = {}
@@ -75,7 +77,7 @@ export default class SourceWorker {
     if (type === 'port') this.#loadWorkerPort(ports[0], ports[1], data.id)
     else {
       const { mapID } = data
-      if (type === 'requestStyle') this.#requestStyle(mapID, data.style, data.analytics, data.apiKey)
+      if (type === 'requestStyle') this.#requestStyle(mapID, data.style, data.analytics, data.apiKey, data.apiURL)
       else if (type === 'style') this.#loadStyle(mapID, data.style)
       else if (type === 'tilerequest') void this.#requestTile(mapID, data.tiles, data.sources)
       else if (type === 'timerequest') void this.#requestTime(mapID, data.tiles, data.sourceNames)
@@ -100,16 +102,18 @@ export default class SourceWorker {
     this.session.loadWorker(messagePort, postPort, id)
   }
 
-  #requestStyle (mapID: string, style: string, analytics: Analytics, apiKey?: string): void {
+  #requestStyle (mapID: string, style: string, analytics: Analytics, apiKey?: string, apiURL?: string): void {
     // build maps session
     this.session.loadStyle(mapID, analytics, apiKey)
     // request style
-    void this.session.requestStyle(mapID, style)
+    void this.session.requestStyle(mapID, style, apiURL)
   }
 
   #loadStyle (mapID: string, style: StylePackage): void {
     // pull style data
-    const { layers, analytics, apiKey } = style
+    const { layers, analytics, apiKey, apiURL } = style
+    // store the apiURL
+    this.apiURLS[mapID] = apiURL ?? ''
     // create the source map, if sources already exists, we are dumping the old sources
     this.sources[mapID] = {}
     // create the layer map
@@ -219,7 +223,7 @@ export default class SourceWorker {
     }
     if (fileType === undefined) fileType = (input.split('.').pop() ?? '').toLowerCase()
     const needsToken = session.hasAPIKey(mapID)
-    const path = adjustURL(input)
+    const path = adjustURL(input, this.apiURLS[mapID])
     // create the proper source type
     let source
     if (fileType === 's2tiles') {
@@ -239,7 +243,7 @@ export default class SourceWorker {
     const { texturePack, session } = this
     // check if already exists
     if (this.glyphs[name] !== undefined) return
-    const source = new GlyphSource(name, adjustURL(input), texturePack, session)
+    const source = new GlyphSource(name, adjustURL(input, this.apiURLS[mapID]), texturePack, session)
     this.glyphs[name] = source
     return await source.build(mapID)
   }
@@ -253,7 +257,7 @@ export default class SourceWorker {
     const { texturePack, session } = this
     // check if already exists
     if (this.sprites[name] !== undefined) return
-    const source = new SpriteSource(name, adjustURL(input), texturePack, session, fileType)
+    const source = new SpriteSource(name, adjustURL(input, this.apiURLS[mapID]), texturePack, session, fileType)
     // store & build
     this.sprites[name] = source
     return await source.build(mapID)
@@ -310,7 +314,7 @@ export default class SourceWorker {
 
   #getInfo (mapID: string, featureID: number): void {
     // 1) build the S2JSON should it exist
-    this.#createSource(mapID, '_info', `s2maps://info/${featureID}.s2json`, [])
+    this.#createSource(mapID, '_info', `opens2://info/${featureID}.s2json`, [])
     // 2) request the JSON
     void this.session.getInfo(mapID, featureID)
   }

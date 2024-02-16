@@ -9,7 +9,7 @@ import type {
   StyleDefinition,
   StylePackage
 } from './style.spec'
-import type { TileRequest } from 'workers/worker.spec'
+import type { RequestStyleMessage, TileRequest } from 'workers/worker.spec'
 import type { WorkflowType as GLWorkflowType } from 'gl/programs/program.spec'
 import type { WorkflowType as GPUWorkflowType } from 'gpu/workflows/workflow.spec'
 import type Camera from 'ui/camera'
@@ -25,14 +25,16 @@ import type { TileShared as Tile } from 'source/tile.spec'
 export default class Style {
   camera: Camera
   apiKey?: string
+  apiURL?: string
   maskLayers: Array<FillLayerDefinition | ShadeLayerDefinition> = []
   layers: LayerDefinition[] = []
   interactive = false
   dirty = true
   constructor (camera: Camera, options: MapOptions) {
-    const { apiKey } = options
+    const { apiKey, apiURL } = options
     this.camera = camera
     this.apiKey = apiKey
+    this.apiURL = apiURL
   }
 
   async buildStyle (style: string | StyleDefinition): Promise<boolean> {
@@ -67,14 +69,15 @@ export default class Style {
   }
 
   #requestStyle (style: string): void {
-    const { apiKey, camera } = this
+    const { apiKey, apiURL, camera } = this
     const { id, webworker } = camera
     const analytics = this.#buildAnalytics()
 
     if (webworker) {
-      postMessage({ mapID: id, type: 'requestStyle', style })
+      const message: RequestStyleMessage = { mapID: id, analytics, type: 'requestStyle', style, apiKey, apiURL }
+      postMessage(message)
     } else {
-      window.S2WorkerPool.requestStyle(id, style, analytics, apiKey)
+      window.S2WorkerPool.requestStyle(id, style, analytics, apiKey, apiURL)
     }
   }
 
@@ -168,7 +171,7 @@ export default class Style {
   }
 
   #sendStyleDataToWorkers (style: StyleDefinition): void {
-    const { apiKey, layers } = this
+    const { apiKey, apiURL, layers } = this
     const { id, webworker, painter } = this.camera
     const { type } = painter.context
     const { projection, sources, glyphs, fonts, icons, sprites, images, minzoom, maxzoom, experimental } = style
@@ -188,6 +191,7 @@ export default class Style {
       maxzoom: maxzoom ?? 20,
       analytics,
       apiKey,
+      apiURL,
       experimental: experimental ?? false
     }
     // If the map engine is running on the main thread, directly send the stylePackage to the worker pool.

@@ -23,6 +23,8 @@ export interface MapOptions {
   interactive?: boolean
   /** An API key will ensure control and ownership over data */
   apiKey?: string
+  /** An API URL that remaps any source strings that start with "apiURL://" to whatever apiURL is */
+  apiURL?: string
   /** Either the style definition or a string URL pointing to the location of the style definition */
   style: StyleDefinition | string
   /** if true, allow user to use scroll wheel to zoom. [default: true] */
