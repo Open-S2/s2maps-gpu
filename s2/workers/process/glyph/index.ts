@@ -27,7 +27,7 @@ import type ImageStore from '../imageStore'
 export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec {
   collisionTest: CollisionTester = new CollisionTester()
   imageStore: ImageStore
-  featureStore = new Map<bigint, GlyphObject[]>() // tileID -> features
+  featureStore = new Map<string, GlyphObject[]>() // tileID -> features
   sourceWorker: MessagePort
   uShaper = new UnicodeShaper(uShaperWASM)
   experimental: boolean
@@ -112,10 +112,12 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     tile: TileRequest,
     feature: VTFeature,
     glyphLayer: GlyphWorkerLayer,
-    mapID: string
+    mapID: string,
+    sourceName: string
   ): Promise<boolean> {
     const { gpuType, imageStore, featureStore } = this
-    if (!featureStore.has(tile.id)) featureStore.set(tile.id, [])
+    const storeID: string = `${mapID}:${tile.id}:${sourceName}`
+    if (!featureStore.has(storeID)) featureStore.set(storeID, [])
     // ensure that our imageStore is ready
     await imageStore.getReady(mapID)
     // creating both a text and icon version as applicable
@@ -144,6 +146,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       // pre-process and shape the unicodes
       if (field.length === 0) continue
       let fieldCodes: string[] = []
+      const color: number[] = []
       const familyProcess = glyphLayer[`${type}Family`](deadCode, properties, zoom)
       const family = Array.isArray(familyProcess) ? familyProcess : [familyProcess]
       // if icon, convert field to list of codes, otherwise create a unicode array
@@ -161,7 +164,8 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
         imageStore.parseLigatures(mapID, family, fieldCodes)
         missing ||= imageStore.addMissingGlyph(mapID, tile.id, fieldCodes, family)
       } else {
-        missing ||= imageStore.addMissingGlyph(mapID, tile.id, [field], family)
+        fieldCodes = this.#mapIcon(mapID, family, field, color)
+        missing ||= imageStore.addMissingGlyph(mapID, tile.id, fieldCodes, family)
       }
       // for rtree tests
       const size = glyphLayer[`${type}Size`](deadCode, properties, zoom)
@@ -193,14 +197,14 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
         // paint
         size,
         // prep color, quads
-        color: [],
+        color,
         quads: [],
         // track if this feature is missing char or icon data
         missing
       }
 
       // prep store
-      const store = featureStore.get(tile.id) as GlyphFeature[]
+      const store = featureStore.get(storeID) as GlyphFeature[]
       if (featureType === 1) {
         for (const point of clip as S2VectorPoints) {
           const glyph: GlyphPoint = {
@@ -244,7 +248,8 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
   }
 
   async flush (mapID: string, tile: TileRequest, sourceName: string, wait: Promise<void>): Promise<void> {
-    const features = this.featureStore.get(tile.id) ?? []
+    const storeID: string = `${mapID}:${tile.id}:${sourceName}`
+    const features = this.featureStore.get(storeID) ?? []
     // check if we need to wait for a response of missing data
     const missing = features.some(f => f.missing)
     if (missing) await wait
@@ -253,7 +258,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     // finish the flush
     await super.flush(mapID, tile, sourceName, wait)
     // cleanup
-    this.featureStore.delete(tile.id)
+    this.featureStore.delete(storeID)
   }
 
   // actually flushing because the glyph response came back (if needed)
@@ -265,6 +270,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     features: GlyphFeature[]
   ): void {
     const { imageStore, collisionTest } = this
+    const storeID: string = `${mapID}:${tile.id}:${sourceName}`
     // prepare
     collisionTest.clear()
     const res: GlyphObject[] = []
@@ -280,8 +286,6 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     })
     features = features.sort(featureSort)
     for (const feature of features) {
-      // PRE: If icon, remap the features fieldCodes and inject color
-      if (feature.type === 'icon') this.#mapIcon(mapID, feature)
       // Step 1: prebuild the glyph positions and bbox
       if (feature.glyphType === 'point') buildGlyphPointQuads(feature, imageStore.getGlyphSource(mapID))
       // else buildGlyphLineQuads(feature, imageStore.glyphMap)
@@ -292,26 +296,28 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       ) res.push(feature)
     }
     // replace the features with the filtered set
-    this.featureStore.set(tile.id, res)
+    this.featureStore.set(storeID, res)
     // Step 3: flush the features
     this.#flush(mapID, sourceName, tile.id)
   }
 
-  #mapIcon (mapID: string, feature: GlyphObject): void {
-    const { family, field } = feature
+  #mapIcon (mapID: string, family: string[], field: string, outColor: number[]): string[] {
+    const fieldCodes: string[] = []
     const fam = Array.isArray(family) ? family[0] : family
     const { iconCache } = this.imageStore.getFamilyMap(mapID, fam)
     const icon = iconCache.get(field)
     if (icon !== undefined) {
       for (const { glyphID, color } of icon) {
-        feature.fieldCodes.push(glyphID)
-        feature.color.push(...color)
+        fieldCodes.push(glyphID)
+        outColor.push(...color)
       }
     }
+    return fieldCodes
   }
 
   #flush (mapID: string, sourceName: string, tileID: bigint): void {
-    const features = this.featureStore.get(tileID) ?? []
+    const storeID: string = `${mapID}:${tileID}:${sourceName}`
+    const features = this.featureStore.get(storeID) ?? []
     if (features.length === 0) return
     const glyphPointFeatures = features.filter(f => f.glyphType === 'point') as GlyphPoint[]
     if (glyphPointFeatures.length === 0) return
@@ -319,7 +325,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       this.#flushPoints3(mapID, sourceName, tileID, glyphPointFeatures)
     } else this.#flushPoints2(mapID, sourceName, tileID, glyphPointFeatures)
     // cleanup
-    this.featureStore.delete(tileID)
+    this.featureStore.delete(storeID)
   }
 
   #flushPoints2 (mapID: string, sourceName: string, tileID: bigint, features: GlyphPoint[]): void {

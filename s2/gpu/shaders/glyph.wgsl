@@ -213,6 +213,7 @@ fn LCH2RGB (lch: vec4<f32>) -> vec4<f32> {
 // http://www.daltonize.org/
 // https://galactic.ink/labs/Color-Vision/Javascript/Color.Vision.Daltonize.js
 fn cBlindAdjust (rgba: vec4<f32>) -> vec4<f32> {
+  if (view.cBlind == 0.) { return rgba; }
   // setup rgb
   var r = rgba.r * 255.;
   var g = rgba.g * 255.;

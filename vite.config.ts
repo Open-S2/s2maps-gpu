@@ -6,7 +6,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['@vitest/web-worker'],
     env: {
-      API_URL: 'http://localhost:8008',
+      NEXT_PUBLIC_API_URL: 'http://localhost:8008',
       NODE_ENV: 'test'
     },
     environment: 'node',

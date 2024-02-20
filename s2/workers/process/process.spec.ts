@@ -24,6 +24,7 @@ import type {
 import type { Properties } from 'geometry'
 import type { JSONVectorFeature } from '../source/json-vt/tile'
 import type { GlyphObject } from './glyph/glyph.spec'
+import type { Features as PointHeatFeatures } from './point'
 
 export interface IDGen {
   workerID: number
@@ -88,28 +89,30 @@ export interface VectorWorker {
 }
 
 export interface FillWorker extends VectorWorker {
-  featureStore: Map<bigint, FillFeature[]>
+  featureStore: Map<string, FillFeature[]>
   invertLayers: Map<number, FillWorkerLayer>
   setupLayer: (layer: FillLayerDefinition) => FillWorkerLayer
-  buildFeature: (tile: TileRequest, feature: VTFeature, sourceLayer: FillWorkerLayer, mapID: string) => Promise<boolean>
+  buildFeature: (tile: TileRequest, feature: VTFeature, sourceLayer: FillWorkerLayer, mapID: string, sourceName: string) => Promise<boolean>
 }
 
 export interface LineWorker extends VectorWorker {
+  featureStore: Map<string, LineFeature[]>
   setupLayer: (layer: LineLayerDefinition) => LineWorkerLayer
-  buildFeature: (tile: TileRequest, feature: VTFeature, sourceLayer: LineWorkerLayer) => boolean
+  buildFeature: (tile: TileRequest, feature: VTFeature, sourceLayer: LineWorkerLayer, mapID: string, sourceName: string) => boolean
 }
 
 export interface PointWorker extends VectorWorker {
+  featureStore: Map<string, PointHeatFeatures>
   setupLayer: (layer: PointLayerDefinition | HeatmapLayerDefinition) => PointWorkerLayer | HeatmapWorkerLayer
-  buildFeature: (tile: TileRequest, feature: VTFeature, sourceLayer: PointWorkerLayer | HeatmapWorkerLayer) => boolean
+  buildFeature: (tile: TileRequest, feature: VTFeature, sourceLayer: PointWorkerLayer | HeatmapWorkerLayer, mapID: string, sourceName: string) => boolean
 }
 
-export interface HeatmapWorker extends PointWorker {
-}
+export interface HeatmapWorker extends PointWorker {}
 
 export interface GlyphWorker extends VectorWorker {
+  featureStore: Map<string, GlyphObject[]>
   setupLayer: (layer: GlyphLayerDefinition) => GlyphWorkerLayer
-  buildFeature: (tile: TileRequest, feature: VTFeature, sourceLayer: GlyphWorkerLayer, mapID: string) => Promise<boolean>
+  buildFeature: (tile: TileRequest, feature: VTFeature, sourceLayer: GlyphWorkerLayer, mapID: string, sourceName: string) => Promise<boolean>
 }
 
 export interface RasterWorker {

@@ -1,4 +1,5 @@
 import FamilySource from './glyph/familySource'
+import { NULL_GLYPH } from './glyph/buildGlyphQuads'
 
 import type { Glyph } from './glyph/familySource'
 import type { GlyphRequestMessage } from 'workers/worker.spec'
@@ -9,6 +10,7 @@ import type { ImageMetadata } from 'workers/source/imageSource'
 export interface GlyphRequestTracker {
   glyphFamilyCount: number
   processed: number
+  self: { promise?: Promise<void> }
   resolve: () => void
 }
 
@@ -108,8 +110,7 @@ export default class ImageStore {
     for (const code of glyphCodes) {
       for (const family of families) {
         const familySource = this.getFamilyMap(mapID, family)
-        const { glyphSet, glyphCache } = familySource
-        if (glyphSet.has(code) && !glyphCache.has(code)) {
+        if (familySource.missingGlyph(code)) {
           familySource.addGlyphRequest(tileID, code)
           missing = true
         }
@@ -118,7 +119,7 @@ export default class ImageStore {
     return missing
   }
 
-  // NOTE: This function is called from the source thread ONLY ONCE per mapID
+  // NOTE: This function is called from the source thread ONLY ONCE per mapID before anything is processed
   processMetadata (
     mapID: string,
     glyphMetadata: GlyphMetadata[],
@@ -158,7 +159,7 @@ export default class ImageStore {
       }
     }
     if (glyphFamilyCount > 0) {
-      // randome string of numbers and letters 7 characters long
+      // random string of numbers and letters 7 characters long
       const reqID = `${mapID}:${sourceName}:${Math.random().toString(36).substring(2, 9)}`
       // send off and prep for response
       const requestMessage: GlyphRequestMessage = {
@@ -169,9 +170,14 @@ export default class ImageStore {
         glyphList
       }
       sourceWorker.postMessage(requestMessage)
-      await new Promise<void>(resolve => {
-        glyphRequestTracker.set(reqID, { glyphFamilyCount, processed: 0, resolve })
+      const self: { promise?: Promise<void> } = { promise: undefined }
+      self.promise = new Promise<void>(resolve => {
+        glyphRequestTracker.set(reqID, { glyphFamilyCount, processed: 0, resolve, self })
       })
+      await self.promise
+    } else if (glyphRequestTracker.size > 0) {
+      // a seperate tile request for the same source may be in the process of building glyphs shared with this request. We need to wait for those to finish
+      await Promise.all([...glyphRequestTracker.values()].map(async ({ self }) => { await self.promise }))
     } else {
       await new Promise<void>(resolve => { resolve() })
     }
@@ -208,10 +214,9 @@ export default class ImageStore {
   }
 
   getPattern (mapID: string, familyName: string, name?: string): Glyph {
-    const nullGlyph: Glyph = { code: '0', texX: 0, texY: 0, texW: 0, texH: 0, xOffset: 0, yOffset: 0, width: 0, height: 0, advanceWidth: 0 }
-    if (name === undefined) return nullGlyph
+    if (name === undefined) return NULL_GLYPH
     const familyMap = this.getFamilyMap(mapID, familyName)
     const glyph = familyMap.glyphCache.get(name)
-    return glyph ?? nullGlyph
+    return glyph ?? NULL_GLYPH
   }
 }
