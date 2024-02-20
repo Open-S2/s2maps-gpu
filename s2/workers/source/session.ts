@@ -6,7 +6,7 @@ import type { InfoDetails } from 'ui/info'
 
 declare const process: {
   env: {
-    API_URL: string
+    NEXT_PUBLIC_API_URL: string
   }
 }
 
@@ -73,7 +73,7 @@ export default class Session {
     const Authorization = await this.requestSessionToken(mapID)
     if (Authorization === undefined) return
     // fetch the json
-    const json = await fetch(`${process.env.API_URL}/info/${featureID}.json`, { headers: { Authorization } })
+    const json = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/info/${featureID}.json`, { headers: { Authorization } })
       .then<InfoDetails | null>(async (res) => {
       if (res.status !== 200) return null
       return await res.json()
@@ -94,7 +94,7 @@ export default class Session {
     const { gpu, context, language, width, height } = this.analytics ?? {}
     // grab a new token
     if (this.sessionPromise === undefined) {
-      this.sessionPromise = fetch(`${process.env.API_URL}/session`, {
+      this.sessionPromise = fetch(`${process.env.NEXT_PUBLIC_API_URL}/session`, {
         method: 'POST',
         body: JSON.stringify({ apiKey, gpu, context, language, width, height }),
         headers: { 'Content-Type': 'application/json' }

@@ -20,13 +20,13 @@ import type {
 } from './process.spec'
 import type { CodeDesign } from './vectorWorker'
 
-interface Features {
+export interface Features {
   point: PointFeature[]
   heatmap: HeatmapFeature[]
 }
 
 export default class PointWorker extends VectorWorker implements PointWorkerSpec {
-  featureStore = new Map<bigint, Features>() // tileID -> features
+  featureStore = new Map<string, Features>() // tileID -> features
 
   setupLayer (
     layerDefinition: PointLayerDefinition | HeatmapLayerDefinition
@@ -78,7 +78,9 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
   buildFeature (
     tile: TileRequest,
     feature: VTFeature,
-    layer: PointWorkerLayer | HeatmapWorkerLayer
+    layer: PointWorkerLayer | HeatmapWorkerLayer,
+    mapID: string,
+    sourceName: string
   ): boolean {
     const { gpuType } = this
     const { zoom } = tile
@@ -116,8 +118,10 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
         : [...codeLo, ...codeHi],
       gl2Code
     }
-    if (!this.featureStore.has(tile.id)) this.featureStore.set(tile.id, { point: [], heatmap: [] })
-    const store = this.featureStore.get(tile.id) as Features
+
+    const storeID: string = `${mapID}:${tile.id}:${sourceName}`
+    if (!this.featureStore.has(storeID)) this.featureStore.set(storeID, { point: [], heatmap: [] })
+    const store = this.featureStore.get(storeID) as Features
     if (type === 'point') {
       const id = this.idGen.getNum()
       store.point.push({
@@ -140,12 +144,12 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
   async flush (mapID: string, tile: TileRequest, sourceName: string, wait: Promise<void>): Promise<void> {
     this.#flush(mapID, sourceName, tile.id, 'point')
     this.#flush(mapID, sourceName, tile.id, 'heatmap')
-    this.featureStore.delete(tile.id)
+    this.featureStore.delete(`${mapID}:${tile.id}:${sourceName}`)
     await super.flush(mapID, tile, sourceName, wait)
   }
 
   #flush (mapID: string, sourceName: string, tileID: bigint, type: 'point' | 'heatmap'): void {
-    const features = (this.featureStore.get(tileID) ?? { point: [], heatmap: [] })[type]
+    const features = (this.featureStore.get(`${mapID}:${tileID}:${sourceName}`) ?? { point: [], heatmap: [] })[type]
     if (features.length === 0) return
 
     // Step 1: Sort by layerIndex, than sort by feature code.

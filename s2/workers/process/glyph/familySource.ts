@@ -58,6 +58,7 @@ export default class FamilySource {
   iconCache = new Map<string, Icon>()
   // track missing glyphs for future requests to the source worker
   glyphRequestList = new Map<bigint, Set<string>>()
+  isIcon = false
   constructor (
     name: string,
     metadata?: ArrayBuffer
@@ -71,9 +72,7 @@ export default class FamilySource {
     const iconMapSize = meta.getUint32(12, true)
     const colorBufSize = meta.getUint16(16, true) * 4
     const substituteSize = meta.getUint32(18, true)
-
-    // store space (32)
-    this.glyphCache.set('32', { code: '32', texX: 0, texY: 0, texW: 0, texH: 0, xOffset: 0, yOffset: 0, width: 0, height: 0, advanceWidth: this.defaultAdvance })
+    this.isIcon = iconMapSize > 0
 
     // store glyphSet
     const glyphEnd = 30 + (glyphCount * 2)
@@ -91,6 +90,9 @@ export default class FamilySource {
       }))
     }
     this.#buildSubstituteMap(substituteSize, new DataView(metadata, glyphEnd + iconMapSize + colorBufSize, substituteSize))
+
+    // store space (32)
+    if (!this.isIcon) this.glyphCache.set('32', { code: '32', texX: 0, texY: 0, texW: 0, texH: 0, xOffset: 0, yOffset: 0, width: 0, height: 0, advanceWidth: this.defaultAdvance })
   }
 
   static FromImageMetadata ({ name, metadata }: ImageMetadata): FamilySource {
@@ -101,6 +103,12 @@ export default class FamilySource {
 
   has (code: string): boolean {
     return this.glyphSet.has(code)
+  }
+
+  missingGlyph (code: string): boolean {
+    const { isIcon, glyphSet, glyphCache } = this
+    if (isIcon) return !glyphCache.has(code)
+    return glyphSet.has(code) && !glyphCache.has(code)
   }
 
   addMetadata (metadata: Metadata): void {

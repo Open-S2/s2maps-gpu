@@ -123,7 +123,7 @@ export default class ProcessManager {
         const { properties } = feature
         // filter out features that are not applicable, otherwise tell the vectorWorker to build
         if (filter(properties)) {
-          const wasBuilt = await workers[type]?.buildFeature(tile, feature, sourceLayer as any, mapID)
+          const wasBuilt = await workers[type]?.buildFeature(tile, feature, sourceLayer as any, mapID, sourceName)
           if (wasBuilt === true && layers[layerIndex] !== undefined) layers[layerIndex]++
         }
       }

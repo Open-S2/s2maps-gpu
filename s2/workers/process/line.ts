@@ -24,7 +24,7 @@ import type {
 } from './process.spec'
 
 export default class LineWorker extends VectorWorker implements LineWorkerSpec {
-  featureStore = new Map<bigint, LineFeature[]>() // tileID -> features
+  featureStore = new Map<string, LineFeature[]>() // tileID -> features
 
   setupLayer (lineLayer: LineLayerDefinition): LineWorkerLayer {
     const {
@@ -64,7 +64,9 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
   buildFeature (
     tile: TileRequest,
     feature: VTFeature,
-    lineLayer: LineWorkerLayer
+    lineLayer: LineWorkerLayer,
+    mapID: string,
+    sourceName: string
   ): boolean {
     const { gpuType } = this
     const { zoom, division } = tile
@@ -120,17 +122,19 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
       idRGB: idToRGB(id)
     }
 
-    if (!this.featureStore.has(tile.id)) this.featureStore.set(tile.id, [] as LineFeature[])
-    const store = this.featureStore.get(tile.id) as LineFeature[]
+    const storeID: string = `${mapID}:${tile.id}:${sourceName}`
+    if (!this.featureStore.has(storeID)) this.featureStore.set(storeID, [] as LineFeature[])
+    const store = this.featureStore.get(storeID) as LineFeature[]
     store.push(lineFeature)
     return true
   }
 
   async flush (mapID: string, tile: TileRequest, sourceName: string): Promise<void> {
-    const features = this.featureStore.get(tile.id) ?? []
+    const storeID: string = `${mapID}:${tile.id}:${sourceName}`
+    const features = this.featureStore.get(storeID) ?? []
     if (features.length === 0) return
     this.#flush(mapID, sourceName, tile.id, features)
-    this.featureStore.delete(tile.id)
+    this.featureStore.delete(storeID)
   }
 
   #flush (

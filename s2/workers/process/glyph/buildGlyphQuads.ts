@@ -47,6 +47,8 @@ export function buildGlyphPointQuads (
   feature: GlyphPoint,
   glyphSource: MapGlyphSource
 ): void {
+  // safety check
+  feature.quads = []
   const { max } = Math
   const {
     s, t, size, offset, padding, family, anchor,

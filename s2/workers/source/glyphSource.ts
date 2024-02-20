@@ -46,6 +46,7 @@ export default class GlyphSource {
   session: Session
   glyphWaitlist = new Map<string, Promise<void>>()
   glyphCache = new Map<string, Glyph>() // glyphs we have built already
+  isIcon = false
   constructor (
     name: string,
     path: string,
@@ -76,6 +77,7 @@ export default class GlyphSource {
     this.maxHeight = meta.getUint16(4, true)
     this.range = meta.getUint16(6, true)
     this.defaultAdvance = meta.getUint16(8, true) / this.extent
+    this.isIcon = meta.getUint32(12, true) > 0
     // return the metadata so it can be shipped to the worker threads
     return { name: this.name, metadata }
   }
@@ -124,7 +126,7 @@ export default class GlyphSource {
   }
 
   async #requestGlyphs (list: string[], mapID: string): Promise<void> {
-    const { extent, glyphCache, glyphWaitlist, maxHeight, texturePack } = this
+    const { isIcon, extent, glyphCache, glyphWaitlist, maxHeight, texturePack } = this
     // 1) build the ranges, max 35 glyphs per request
     const requests = this.#buildRequests(list)
     // 2) return the request promise, THEN: store the glyphs in cache, build the images, and ship the images to the mapID
@@ -139,7 +141,7 @@ export default class GlyphSource {
         while (pos < size) {
           // build glyph metadata
           let code = String(dv.getUint16(pos, true))
-          if (code === '0') code = substitutes.shift() ?? ''
+          if (!isIcon && code === '0') code = substitutes.shift() ?? ''
           const glyph: Glyph = {
             code,
             width: dv.getUint16(pos + 2, true) / extent,

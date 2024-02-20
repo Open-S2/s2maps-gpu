@@ -6,8 +6,8 @@ declare const process: {
 }
 
 const URL_MAP: Record<string, string> = {
-  s2maps: process.env.NEXT_PUBLIC_API_URL ?? process.env.API_URL ?? 'https://api.s2maps.com',
-  opens2: process.env.NEXT_PUBLIC_API_URL ?? process.env.API_URL ?? 'https://api.opens2.com',
+  s2maps: process.env.NEXT_PUBLIC_API_URL ?? 'https://api.s2maps.com',
+  opens2: process.env.NEXT_PUBLIC_API_URL ?? 'https://api.opens2.com',
   mapbox: 'https://api.mapbox.com'
 }
 

@@ -411,7 +411,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
       glyphFilterBuffer: context.buildGPUBuffer('Glyph Filter Buffer', glyphFilterBuffer, GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX),
       glyphQuadBuffer: context.buildGPUBuffer('Glyph Quad Buffer', glyphQuadBuffer, GPUBufferUsage.VERTEX),
       glyphQuadIndexBuffer: context.buildGPUBuffer('Glyph Quad ID Buffer', glyphQuadIndexBuffer, GPUBufferUsage.VERTEX),
-      glyphColorBuffer: context.buildGPUBuffer('Glyph Color Buffer', glyphColorBuffer, GPUBufferUsage.VERTEX),
+      glyphColorBuffer: context.buildGPUBuffer('Glyph Color Buffer', new Float32Array(glyphColorBuffer), GPUBufferUsage.VERTEX),
       indexOffset: -1,
       filterLength,
       destroy: () => {

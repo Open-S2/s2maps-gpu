@@ -28,7 +28,7 @@ import type ImageStore from './imageStore'
 const MAX_FEATURE_BATCH_SIZE = 1 << 6 // 64
 
 export default class FillWorker extends VectorWorker implements FillWorkerSpec {
-  featureStore = new Map<bigint, FillFeature[]>() // tileID -> features
+  featureStore = new Map<string, FillFeature[]>() // tileID -> features
   invertLayers = new Map<number, FillWorkerLayer>()
   imageStore: ImageStore
   constructor (idGen: IDGen, gpuType: GPUType, imageStore: ImageStore) {
@@ -77,7 +77,8 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     tile: TileRequest,
     feature: VTFeature,
     fillLayer: FillWorkerLayer,
-    mapID: string
+    mapID: string,
+    sourceName: string
   ): Promise<boolean> {
     const { gpuType, imageStore } = this
     // pull data
@@ -165,21 +166,23 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     // if interactive, store interactive properties
     if (interactive) this._addInteractiveFeature(id, properties, fillLayer)
 
-    if (!this.featureStore.has(tile.id)) this.featureStore.set(tile.id, [] as FillFeature[])
-    const features = this.featureStore.get(tile.id) as FillFeature[]
+    const storeID: string = `${mapID}:${tile.id}:${sourceName}`
+    if (!this.featureStore.has(storeID)) this.featureStore.set(storeID, [] as FillFeature[])
+    const features = this.featureStore.get(storeID) as FillFeature[]
     features.push(fillFeature)
     return true
   }
 
   async flush (mapID: string, tile: TileRequest, sourceName: string, wait: Promise<void>): Promise<void> {
-    const features = this.featureStore.get(tile.id) ?? []
+    const storeID: string = `${mapID}:${tile.id}:${sourceName}`
+    const features = this.featureStore.get(storeID) ?? []
     // If `invertLayers` is non-empty, we should check if `features`
     // does not have said invert layers. If it doesn't, we need to add
     // a dummy feature that is empty for said layers.
     for (const [layerIndex, fillWorkerLayer] of this.invertLayers) {
       if (fillWorkerLayer.source !== sourceName) continue
       if (!features.some(feature => feature.layerIndex === layerIndex)) {
-        const feature = await this.#buildInvertFeature(tile, fillWorkerLayer, mapID)
+        const feature = await this.#buildInvertFeature(tile, fillWorkerLayer, mapID, sourceName)
         if (feature !== undefined) features.push(feature)
       }
     }
@@ -192,14 +195,15 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     }
     // finish the flush
     await super.flush(mapID, tile, sourceName, wait)
-    this.featureStore.delete(tile.id)
+    this.featureStore.delete(storeID)
   }
 
   // NOTE: You can not build invert features that require properties data
   async #buildInvertFeature (
     tile: TileRequest,
     fillWorkerLayer: FillWorkerLayer,
-    mapID: string
+    mapID: string,
+    sourceName: string
   ): Promise<undefined | FillFeature> {
     const { gpuType, imageStore } = this
     const { zoom } = tile
@@ -232,14 +236,16 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
       missing
     }
 
-    if (!this.featureStore.has(tile.id)) this.featureStore.set(tile.id, [] as FillFeature[])
-    const features = this.featureStore.get(tile.id) as FillFeature[]
+    const storeID: string = `${mapID}:${tile.id}:${sourceName}`
+    if (!this.featureStore.has(storeID)) this.featureStore.set(storeID, [] as FillFeature[])
+    const features = this.featureStore.get(storeID) as FillFeature[]
     features.push(feature)
     return feature
   }
 
   #flush (mapID: string, sourceName: string, tileID: bigint): void {
-    const features = this.featureStore.get(tileID) ?? []
+    const storeID: string = `${mapID}:${tileID}:${sourceName}`
+    const features = this.featureStore.get(storeID) ?? []
     if (features.length === 0) return
     // now that we have created all triangles, let's merge into bundled buffer sets
     // for the main thread to build VAOs.
