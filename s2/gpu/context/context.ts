@@ -81,7 +81,6 @@ export default class WebGPUContext {
     const device = this.device = await this.#adapter.requestDevice()
     // configure context
     const format = this.format = navigator.gpu.getPreferredCanvasFormat()
-    console.log('format', format)
     this.gpu.configure({ device, format, alphaMode: 'premultiplied' })
     // prep uniform/storage buffers
     this.#buildContextStorageGroupsAndLayouts()
