@@ -136,7 +136,7 @@ export default async function heatmapProgram (context: Context): Promise<Heatmap
           count,
           offset,
           sourceName,
-          layerIndex,
+          layerGuide,
           layerCode,
           featureCode,
           lch,
@@ -155,7 +155,7 @@ export default async function heatmapProgram (context: Context): Promise<Heatmap
 
     buildLayerDefinition (layerBase: LayerDefinitionBase, layer: HeatmapLayerStyle): HeatmapLayerDefinition {
       const { type, context } = this
-      const { source, layerIndex, lch } = layerBase
+      const { source, layerIndex, lch, visible } = layerBase
       // PRE) get layer base
       let {
         // paint
@@ -191,7 +191,8 @@ export default async function heatmapProgram (context: Context): Promise<Heatmap
         layerIndex,
         layerCode,
         lch,
-        colorRamp: context.buildTexture(buildColorRamp(colorRamp, lch), 256, 4)
+        colorRamp: context.buildTexture(buildColorRamp(colorRamp, lch), 256, 4),
+        visible
       })
 
       return layerDefinition
@@ -291,7 +292,8 @@ export default async function heatmapProgram (context: Context): Promise<Heatmap
       const { gl, context } = this
       const { vao } = context
       // get current featureGuide data
-      const { colorRamp, layerIndex } = featureGuide
+      const { colorRamp, layerGuide: { layerIndex, visible } } = featureGuide
+      if (!visible) return
       // set context's full screen fbo
       gl.bindVertexArray(vao)
       // set colorRamp

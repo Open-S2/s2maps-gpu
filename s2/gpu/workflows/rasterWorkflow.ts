@@ -39,7 +39,6 @@ export class RasterFeature implements RasterFeatureSpec {
     public workflow: RasterWorkflowSpec,
     public tile: Tile,
     public source: RasterSource,
-    public layerIndex: number,
     public featureCode: number[],
     public rasterFadeBuffer: GPUBuffer,
     public featureCodeBuffer: GPUBuffer,
@@ -67,7 +66,7 @@ export class RasterFeature implements RasterFeatureSpec {
 
   duplicate (tile: Tile, parent: Tile): RasterFeature {
     const {
-      layerGuide, workflow, source, layerIndex,
+      layerGuide, workflow, source,
       featureCode, rasterFadeBuffer, featureCodeBuffer, fadeStartTime
     } = this
     const { context } = workflow
@@ -76,7 +75,7 @@ export class RasterFeature implements RasterFeatureSpec {
     const newFeatureCodeBuffer = context.duplicateGPUBuffer(featureCodeBuffer, cE)
     context.device.queue.submit([cE.finish()])
     return new RasterFeature(
-      layerGuide, workflow, tile, source, layerIndex, featureCode,
+      layerGuide, workflow, tile, source, featureCode,
       newRasterFadeBuffer, newFeatureCodeBuffer, fadeStartTime, parent
     )
   }
@@ -133,7 +132,7 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
   // programs helps design the appropriate layer parameters
   buildLayerDefinition (layerBase: LayerDefinitionBase, layer: RasterLayerStyle): RasterLayerDefinition {
     const { context } = this
-    const { source, layerIndex, lch } = layerBase
+    const { source, layerIndex, lch, visible } = layerBase
     // PRE) get layer base
     let { opacity, saturation, contrast, resampling, fadeDuration } = layer
     opacity = opacity ?? 1
@@ -164,7 +163,8 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
       fadeDuration: fadeDuration ?? 300,
       resampling: resampling ?? 'linear',
       layerBuffer,
-      layerCodeBuffer
+      layerCodeBuffer,
+      visible
     })
 
     return layerDefinition
@@ -206,7 +206,7 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
       const rasterFadeBuffer = context.buildGPUBuffer('Raster Uniform Buffer', new Float32Array([1]), GPUBufferUsage.UNIFORM)
       const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array(code.length > 0 ? code : [0]), GPUBufferUsage.STORAGE)
       const feature = new RasterFeature(
-        layerGuide, this, tile, source, layerIndex,
+        layerGuide, this, tile, source,
         code, rasterFadeBuffer, featureCodeBuffer
       )
       features.push(feature)
@@ -280,7 +280,8 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
     })
   }
 
-  draw ({ bindGroup, rasterBindGroup, source }: RasterFeatureSpec): void {
+  draw ({ layerGuide, bindGroup, rasterBindGroup, source }: RasterFeatureSpec): void {
+    if (!layerGuide.visible) return
     // get current source data
     const { passEncoder } = this.context
     const { vertexBuffer, indexBuffer, count, offset } = source

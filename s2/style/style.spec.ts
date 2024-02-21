@@ -229,6 +229,7 @@ export interface LayerStyleBase {
   maxzoom?: number
   filter?: Filter
   lch?: boolean
+  visible?: boolean
   metadata?: unknown
 }
 // refines the style.json to ensure all variables exist that need to
@@ -242,6 +243,7 @@ export interface LayerDefinitionBase {
   maxzoom: number
   filter?: Filter
   lch: boolean
+  visible: boolean
 }
 // uses definition to create a guide for the workflow (program/pipeline)
 export interface LayerWorkflowGuideBase {
@@ -249,6 +251,7 @@ export interface LayerWorkflowGuideBase {
   layerIndex: number
   layerCode: number[]
   lch: boolean
+  visible: boolean
 }
 // worker takes the definition and creates a layer to prep input data for workflow (program/pipeline)
 export interface LayerWorkerBase {

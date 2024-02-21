@@ -40,7 +40,7 @@ export default function styleConverter (input: StyleSpecification): StyleDefinit
 
   const glyphs: Glyphs = {}
 
-  return {
+  const res: StyleDefinition = {
     version: 1,
     center,
     zoom,
@@ -52,6 +52,9 @@ export default function styleConverter (input: StyleSpecification): StyleDefinit
     sprites: sprite !== undefined ? convertSprite(sprite) : undefined,
     layers: input.layers.map(l => convertLayer(l, glyphs)).filter((l): l is LayerStyle => l !== undefined)
   }
+  console.log(res)
+
+  return res
 }
 
 function convertSources (input: Record<string, SourceSpecification>): Sources {
@@ -77,20 +80,26 @@ function convertSources (input: Record<string, SourceSpecification>): Sources {
         maxzoom,
         cluster,
         radius: clusterRadius,
-        maxzoom: clusterMaxZoom
+        indexMaxzoom: clusterMaxZoom
       } satisfies SourceMetadata
     } else {
       const { url, tiles, minzoom, maxzoom, bounds } = value
       if (url === undefined && !Array.isArray(tiles)) throw new Error(`Source ${name} has no url`)
       const path = url ?? (Array.isArray(tiles) ? tiles[0] : '')
-      sources[name] = {
-        path,
-        extension: path.split('.').pop() as string,
-        type,
-        minzoom,
-        maxzoom,
-        bounds,
-        format: 'zxy'
+      const extension = path.split('.').pop()
+      if (extension === 'json' && type === 'vector') {
+        // remove the 'tiles.json' from the path
+        sources[name] = path.replace('tiles.json', '')
+      } else {
+        sources[name] = {
+          path,
+          extension,
+          type,
+          minzoom,
+          maxzoom,
+          bounds,
+          format: 'zxy'
+        }
       }
     }
   }
@@ -138,7 +147,8 @@ function convertLayerBackground (backgroundLayer: BackgroundLayerSpecification):
     minzoom,
     maxzoom,
     color: convertPropertyValueSpecification(paint['background-color']),
-    opacity: (layout.visibility === 'none') ? 0 : convertPropertyValueSpecification(paint['background-opacity'])
+    opacity: convertPropertyValueSpecification(paint['background-opacity']),
+    visible: layout.visibility !== 'none'
   }
 }
 
@@ -157,7 +167,8 @@ function convertLayerFill (fillLayer: FillLayerSpecification): FillLayerStyle {
     minzoom,
     maxzoom,
     color: convertDataDrivenPropertyValueSpecification(paint['fill-color']),
-    opacity: (layout.visibility === 'none') ? 0 : convertDataDrivenPropertyValueSpecification(paint['fill-opacity'])
+    opacity: convertDataDrivenPropertyValueSpecification(paint['fill-opacity']),
+    visible: layout.visibility !== 'none'
   }
 }
 
@@ -186,11 +197,12 @@ function convertLayerLine (lineLayer: LineLayerSpecification): LineLayerStyle {
     minzoom,
     maxzoom,
     color: convertDataDrivenPropertyValueSpecification(paint['line-color']),
-    opacity: (layout.visibility === 'none') ? 0 : convertDataDrivenPropertyValueSpecification(paint['line-opacity']),
+    opacity: convertDataDrivenPropertyValueSpecification(paint['line-opacity']),
     width: convertDataDrivenPropertyValueSpecification(paint['line-width']),
     cap: convertPropertyValueSpecification(layout['line-cap']),
-    join: convertDataDrivenPropertyValueSpecification(layout['line-join'])
+    join: convertDataDrivenPropertyValueSpecification(layout['line-join']),
     // dasharray: convertDataDrivenPropertyValueSpecification(paint['line-dasharray'])
+    visible: layout.visibility !== 'none'
   }
 }
 
@@ -217,9 +229,10 @@ function convertLayerRaster (input: RasterLayerSpecification): undefined | Raste
     metadata,
     minzoom,
     maxzoom,
-    opacity: (layout.visibility === 'none') ? 0 : convertPropertyValueSpecification(paint['raster-opacity']),
+    opacity: convertPropertyValueSpecification(paint['raster-opacity']),
     saturation: convertPropertyValueSpecification(paint['raster-saturation']),
-    contrast: convertPropertyValueSpecification(paint['raster-contrast'])
+    contrast: convertPropertyValueSpecification(paint['raster-contrast']),
+    visible: layout.visibility !== 'none'
   }
 }
 
@@ -247,12 +260,12 @@ function convertLayerHillshade (input?: HillshadeLayerSpecification): HillshadeL
     metadata,
     minzoom,
     maxzoom,
-    opacity: (layout.visibility === 'none') ? 0 : 1,
     azimuth: convertPropertyValueSpecification(paint['hillshade-illumination-direction']),
-    intensity: convertPropertyValueSpecification(paint['hillshade-exaggeration']),
+    // intensity: convertPropertyValueSpecification(paint['hillshade-exaggeration']),
     shadowColor: convertPropertyValueSpecification(paint['hillshade-shadow-color']),
     highlightColor: convertPropertyValueSpecification(paint['hillshade-highlight-color']),
-    accentColor: convertPropertyValueSpecification(paint['hillshade-accent-color'])
+    accentColor: convertPropertyValueSpecification(paint['hillshade-accent-color']),
+    visible: layout.visibility !== 'none'
   }
 }
 
@@ -279,11 +292,12 @@ function convertLayerHeatmap (input?: HeatmapLayerSpecification): HeatmapLayerSt
     metadata,
     minzoom,
     maxzoom,
-    opacity: (layout.visibility === 'none') ? 0 : convertPropertyValueSpecification(paint['heatmap-opacity']),
+    opacity: convertPropertyValueSpecification(paint['heatmap-opacity']),
     intensity: convertPropertyValueSpecification(paint['heatmap-intensity']),
     radius: convertDataDrivenPropertyValueSpecification(paint['heatmap-radius']),
     weight: convertDataDrivenPropertyValueSpecification(paint['heatmap-weight']),
-    colorRamp: convertColorRamp(paint['heatmap-color'])
+    colorRamp: convertColorRamp(paint['heatmap-color']),
+    visible: layout.visibility !== 'none'
   }
 }
 
@@ -311,11 +325,12 @@ function convertLayerCircle (input: CircleLayerSpecification): undefined | Point
     metadata,
     minzoom,
     maxzoom,
-    opacity: (layout.visibility === 'none') ? 0 : convertDataDrivenPropertyValueSpecification(paint['circle-opacity']),
+    opacity: convertDataDrivenPropertyValueSpecification(paint['circle-opacity']),
     radius: convertDataDrivenPropertyValueSpecification(paint['circle-radius']),
     color: convertDataDrivenPropertyValueSpecification(paint['circle-color']),
     stroke: convertDataDrivenPropertyValueSpecification(paint['circle-stroke-color']),
-    strokeWidth: convertDataDrivenPropertyValueSpecification(paint['circle-stroke-width'])
+    strokeWidth: convertDataDrivenPropertyValueSpecification(paint['circle-stroke-width']),
+    visible: layout.visibility !== 'none'
   }
 }
 
@@ -334,15 +349,22 @@ function convertLayerSymbol (input: SymbolLayerSpecification, glyphs: Glyphs): u
   } = input
 
   // TODO: May be an ExpressionSpecification
-  const font = layout['text-font']
-  let textFamily: string = ''
-  if (Array.isArray(font) && typeof font[0] === 'string') {
-    textFamily = font[0]
-    const glyph: { path: string, fallback?: string } = {
-      path: ''
+  const fonts = layout['text-font']
+  let textFamily: string | string[] = ''
+  if (Array.isArray(fonts) && typeof fonts[0] === 'string') {
+    // if we find regular, replace with robotoRegular & notoSansRegular
+    if (fonts[0].toLocaleLowerCase().includes('regular')) {
+      glyphs.robotoRegular = 'apiURL://glyphs-v2/RobotoRegular'
+      glyphs.NotoRegular = 'apiURL://glyphs-v2/NotoRegular'
+      textFamily = ['robotoRegular', 'NotoRegular']
+    } else {
+      glyphs.robotoMedium = 'apiURL://glyphs-v2/RobotoMedium'
+      glyphs.NotoMedium = 'apiURL://glyphs-v2/NotoMedium'
+      textFamily = ['robotoMedium', 'NotoMedium']
     }
-    if (font.length > 1 && typeof font[1] === 'string') glyph.fallback = font[1]
-    glyphs[textFamily] = glyph
+  } else {
+    glyphs.robotoMedium = 'apiURL://glyphs-v2/RobotoMedium'
+    textFamily = 'robotoMedium'
   }
 
   return {
@@ -354,7 +376,7 @@ function convertLayerSymbol (input: SymbolLayerSpecification, glyphs: Glyphs): u
     metadata,
     minzoom,
     maxzoom,
-    // opacity: (layout.visibility === 'none') ? 0 : convertDataDrivenPropertyValueSpecification(paint['text-opacity']),
+    // opacity: convertDataDrivenPropertyValueSpecification(paint['text-opacity']),
     textFill: convertDataDrivenPropertyValueSpecification(paint['text-color']),
     textStroke: convertDataDrivenPropertyValueSpecification(paint['text-halo-color']),
     textStrokeWidth: convertDataDrivenPropertyValueSpecification(paint['text-halo-width']),
@@ -378,28 +400,55 @@ function convertLayerSymbol (input: SymbolLayerSpecification, glyphs: Glyphs): u
     iconAnchor: convertDataDrivenPropertyValueSpecification(layout['icon-anchor']),
     iconOffset: convertDataDrivenPropertyValueSpecification(layout['icon-offset']),
     // TODO: support PaddingSpecification
-    iconPadding: convertDataDrivenPropertyValueSpecification(layout['icon-padding']) as [number, number]
+    iconPadding: convertDataDrivenPropertyValueSpecification(layout['icon-padding']) as [number, number],
+    visible: layout.visibility !== 'none'
   }
 }
 
 // TODO:
 function convertColorRamp (input?: ExpressionSpecification): undefined | Array<{ stop: number, color: string }> {
-  if (input === undefined) return undefined
+  if (Array.isArray(input)) {
+    return undefined
+  } else if (typeof input === 'object') {
+    return undefined
+  } else {
+    return undefined
+  }
 }
 
 // TODO:
 function convertFilter (input?: FilterSpecification): undefined | Filter {
-  if (input === undefined) return undefined
+  if (Array.isArray(input)) {
+    // const input2 = input
+    return undefined
+  } else {
+    return undefined
+  }
 }
 
 // TODO:
-function convertPropertyValueSpecification<T extends NotNullOrObject> (input?: PropertyValueSpecification<T>): undefined | Property<T> {
+function convertPropertyValueSpecification<T extends NotNullOrObject> (input?: PropertyValueSpecification<T>): undefined | T | Property<T> {
   if (input === undefined) return undefined
+  // if the input is not an object or array, it's a constant
+  if (Array.isArray(input)) {
+    return undefined
+  } else if (typeof input === 'object') {
+    return undefined
+  } else {
+    return input
+  }
 }
 
 // TODO:
 function convertDataDrivenPropertyValueSpecification<T extends NotNullOrObject> (
   input?: DataDrivenPropertyValueSpecification<T>
-): undefined | Property<T> {
-  if (input === undefined) return undefined
+): undefined | T | Property<T> {
+  if (Array.isArray(input)) {
+    console.log(input)
+    return undefined
+  } else if (typeof input === 'object') {
+    return undefined
+  } else {
+    return input
+  }
 }

@@ -66,7 +66,7 @@ export default async function lineProgram (context: Context): Promise<LineProgra
     // programs helps design the appropriate layer parameters
     buildLayerDefinition (layerBase: LayerDefinitionBase, layer: LineLayerStyle): LineLayerDefinition {
       const { type } = this
-      const { source, layerIndex, lch } = layerBase
+      const { source, layerIndex, lch, visible } = layerBase
       // PRE) get layer base
       let {
         interactive, cursor, onlyLines,
@@ -119,7 +119,8 @@ export default async function lineProgram (context: Context): Promise<LineProgra
         dashLength: length,
         dashTexture,
         interactive,
-        cursor
+        cursor,
+        visible
       })
 
       return layerDefinition
@@ -209,7 +210,7 @@ export default async function lineProgram (context: Context): Promise<LineProgra
           dashLength,
           dashTexture,
           cap,
-          layerIndex,
+          layerGuide,
           layerCode,
           featureCode,
           lch,
@@ -243,8 +244,9 @@ export default async function lineProgram (context: Context): Promise<LineProgra
       const { uCap, uDashed, uDashCount, uTexLength, uColor, uOpacity, uWidth } = uniforms
       // get current source data
       const {
-        count, offset, layerIndex, featureCode, source, cap, dashed, dashCount, dashLength, dashTexture, color, opacity, width
+        count, offset, layerGuide: { layerIndex, visible }, featureCode, source, cap, dashed, dashCount, dashLength, dashTexture, color, opacity, width
       } = featureGuide
+      if (!visible) return
       const { vao, vertexBuffer, lengthSoFarBuffer } = source
       context.setDepthRange(layerIndex)
       // set cap and dashed

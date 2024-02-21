@@ -251,7 +251,7 @@ export default class Painter implements PainterSpec {
     let program: Program | undefined
     // run through the features, and upon tile, layer, or program change, adjust accordingly
     for (const feature of features) {
-      const { tile, parent, layerIndex, type, layerCode, lch } = feature
+      const { tile, parent, layerGuide: { layerIndex }, type, layerCode, lch } = feature
       const { tmpMaskID } = tile
       // set program
       program = this.useWorkflow(type)
@@ -324,7 +324,7 @@ export default class Painter implements PainterSpec {
     glyphFilterProgram.setMode(mode)
     // draw each feature
     for (const glyphFeature of glyphFeatures) {
-      const { lch, tile, parent, layerIndex, source, layerCode } = glyphFeature
+      const { lch, tile, parent, layerGuide: { layerIndex }, source, layerCode } = glyphFeature
       // update layerIndex
       if (curLayer !== layerIndex) {
         curLayer = layerIndex
@@ -359,7 +359,7 @@ export default class Painter implements PainterSpec {
 
 function featureSort (a: FeatureGuide, b: FeatureGuide): number {
   // first check if the layer is the same
-  let diff = a.layerIndex - b.layerIndex
+  let diff = a.layerGuide.layerIndex - b.layerGuide.layerIndex
   if (diff !== 0) return diff
   // check for zoom difference
   const zoomDiff = ((a.parent !== undefined) ? 1 : 0) - ((b.parent !== undefined) ? 1 : 0)

@@ -40,7 +40,7 @@ export default async function fillProgram (context: Context): Promise<FillProgra
     // programs helps design the appropriate layer parameters
     buildLayerDefinition (layerBase: LayerDefinitionBase, layer: FillLayerStyle): FillLayerDefinition {
       const { type } = this
-      const { source, layerIndex, lch } = layerBase
+      const { source, layerIndex, lch, visible } = layerBase
       // PRE) get layer base
       let { color, opacity, invert, opaque, pattern, patternFamily, patternMovement, interactive, cursor } = layer
       invert = invert ?? false
@@ -87,7 +87,8 @@ export default async function fillProgram (context: Context): Promise<FillProgra
         interactive,
         pattern: pattern !== undefined,
         color: isGL1Mask ? parseFeatureFunction<string, [number, number, number, number]>(color, colorFunc(lch)) : undefined,
-        opacity: isGL1Mask ? parseFeatureFunction<number, number[]>(opacity, (i: number) => [i]) : undefined
+        opacity: isGL1Mask ? parseFeatureFunction<number, number[]>(opacity, (i: number) => [i]) : undefined,
+        visible
       })
 
       return layerDefinition
@@ -100,9 +101,9 @@ export default async function fillProgram (context: Context): Promise<FillProgra
       // not in the zoom range, ignore
       if (zoom < minzoom || zoom > maxzoom) return
 
-      const layer = this.layerGuides.get(layerIndex)
-      if (layer === undefined) return
-      const { sourceName, layerCode, lch, invert, opaque, interactive, color, opacity } = layer
+      const layerGuide = this.layerGuides.get(layerIndex)
+      if (layerGuide === undefined) return
+      const { sourceName, layerCode, lch, invert, opaque, interactive, color, opacity } = layerGuide
       const feature: FillFeatureGuide = {
         type: 'fill',
         sourceName,
@@ -111,7 +112,7 @@ export default async function fillProgram (context: Context): Promise<FillProgra
         count: mask.count,
         offset: mask.offset,
         tile,
-        layerIndex,
+        layerGuide,
         layerCode,
         lch,
         invert,
@@ -212,7 +213,7 @@ export default async function fillProgram (context: Context): Promise<FillProgra
             patternXY: [patternX, patternY],
             patternWH: [patternW, patternH],
             patternMovement,
-            layerIndex,
+            layerGuide,
             opaque,
             layerCode,
             featureCode,
@@ -235,9 +236,10 @@ export default async function fillProgram (context: Context): Promise<FillProgra
       const { texture, texSize } = context.sharedFBO
       // get current source data
       const {
-        source, tile, parent, count, offset, layerIndex, color, opacity, invert, featureCode, mode,
+        source, tile, parent, count, offset, layerGuide: { layerIndex, visible }, color, opacity, invert, featureCode, mode,
         patternXY, patternWH, patternMovement
       } = featureGuide
+      if (!visible) return
       const { vao } = source
       const { mask } = parent ?? tile
       // ensure proper context state

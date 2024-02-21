@@ -63,7 +63,7 @@ implements TileSpec<C, F, M> {
     // feature guides
     for (const feature of parent.featureGuides) {
       if (feature.maskLayer ?? false) continue // ignore mask features
-      const { maxzoom } = layers[feature.layerIndex]
+      const { maxzoom } = layers[feature.layerGuide.layerIndex]
       const actualParent = feature.parent ?? parent
       if (this.zoom <= maxzoom) {
         const bounds = this.#buildBounds(actualParent)
@@ -139,7 +139,7 @@ implements TileSpec<C, F, M> {
     for (const [id, count] of Object.entries(layers)) if (count === 0) deadLayers.push(+id)
     this.featureGuides = this.featureGuides.filter(fg => {
       return !(
-        deadLayers.includes(fg.layerIndex) &&
+        deadLayers.includes(fg.layerGuide.layerIndex) &&
         fg.parent !== undefined &&
         // corner-case: empty data/missing tile -> flushes ALL layers,
         // but that layer MAY BE inverted so we don't kill it.
@@ -152,14 +152,15 @@ implements TileSpec<C, F, M> {
     // remove any references to layerIndex
     this.featureGuides = this.featureGuides.filter(f => f.layerIndex !== index)
     // all layerIndexes greater than index should be decremented once
-    for (const feature of this.featureGuides) {
-      feature.layerIndex--
+    for (const { layerGuide } of this.featureGuides) {
+      if (layerGuide.layerIndex > index) layerGuide.layerIndex--
     }
   }
 
   reorderLayers (layerChanges: Record<number, number>): void {
-    for (const feature of this.featureGuides) {
-      feature.layerIndex = layerChanges[feature.layerIndex]
+    for (const { layerGuide } of this.featureGuides) {
+      const change = layerChanges[layerGuide.layerIndex]
+      if (change !== undefined) layerGuide.layerIndex = change
     }
   }
 

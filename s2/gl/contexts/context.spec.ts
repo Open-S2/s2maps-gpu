@@ -1,7 +1,20 @@
 import type { BBox } from 'geometry'
 import type { TileGL as Tile } from 'source/tile.spec'
 import type { ColorArray } from 'style/color'
-import type { GPUType, Resampling, UnpackData } from 'style/style.spec'
+import type {
+  FillWorkflowLayerGuide,
+  GPUType,
+  GlyphWorkflowLayerGuide,
+  HeatmapWorkflowLayerGuide,
+  HillshadeWorkflowLayerGuide,
+  LineWorkflowLayerGuide,
+  PointWorkflowLayerGuide,
+  RasterWorkflowLayerGuide,
+  Resampling,
+  SensorWorkflowLayerGuide,
+  ShadeLayerDefinition,
+  UnpackData
+} from 'style/style.spec'
 import type { SensorTextureDefinition } from 'ui/camera/timeCache'
 import type { GlyphImages } from 'workers/source/glyphSource'
 import type { SpriteImageMessage } from 'workers/worker.spec'
@@ -79,6 +92,7 @@ export interface SensorSource {
 }
 
 export type FeatureSource = MaskSource | FillSource | LineSource | PointSource | HeatmapSource | RasterSource | GlyphSource
+export type LayerGuides = FillWorkflowLayerGuide | GlyphWorkflowLayerGuide | HeatmapWorkflowLayerGuide | LineWorkflowLayerGuide | PointWorkflowLayerGuide | RasterWorkflowLayerGuide | HillshadeWorkflowLayerGuide | SensorWorkflowLayerGuide | ShadeLayerDefinition
 
 /* FEATURE GUIDES */
 
@@ -86,7 +100,7 @@ export interface FeatureGuideBase {
   tile: Tile
   parent?: Tile
   maskLayer?: boolean
-  layerIndex: number
+  layerGuide: LayerGuides
   sourceName: string
   layerCode: number[]
   lch: boolean
@@ -101,6 +115,7 @@ export interface FillFeatureGuide extends FeatureGuideBase {
   type: 'fill'
   maskLayer: boolean
   source: FillSource | MaskSource
+  layerGuide: FillWorkflowLayerGuide
   count: number
   offset: number
   invert: boolean
@@ -119,6 +134,7 @@ export type GlyphType = 'text' | 'icon'
 export interface GlyphFeatureGuide extends FeatureGuideBase {
   type: 'glyph'
   source: GlyphSource
+  layerGuide: GlyphWorkflowLayerGuide
   count: number
   offset: number
   filterCount: number
@@ -138,6 +154,7 @@ export interface GlyphFeatureGuide extends FeatureGuideBase {
 export interface HeatmapFeatureGuide extends FeatureGuideBase {
   type: 'heatmap'
   source: HeatmapSource
+  layerGuide: HeatmapWorkflowLayerGuide
   count: number
   offset: number
   colorRamp: WebGLTexture
@@ -154,6 +171,7 @@ export interface HeatmapFeatureGuide extends FeatureGuideBase {
 export interface LineFeatureGuide extends FeatureGuideBase {
   type: 'line'
   source: LineSource
+  layerGuide: LineWorkflowLayerGuide
   interactive: boolean
   count: number
   offset: number
@@ -172,6 +190,7 @@ export interface LineFeatureGuide extends FeatureGuideBase {
 export interface PointFeatureGuide extends FeatureGuideBase {
   type: 'point'
   source: PointSource
+  layerGuide: PointWorkflowLayerGuide
   count: number
   offset: number
   color?: [number, number, number, number] // webgl1
@@ -186,6 +205,7 @@ export interface PointFeatureGuide extends FeatureGuideBase {
 export interface RasterFeatureGuide extends FeatureGuideBase {
   type: 'raster'
   source: RasterSource
+  layerGuide: RasterWorkflowLayerGuide
   resampling: Resampling
   fadeDuration: number
   fadeStartTime: number
@@ -198,6 +218,7 @@ export interface RasterFeatureGuide extends FeatureGuideBase {
 export interface HillshadeFeatureGuide extends FeatureGuideBase {
   type: 'hillshade'
   source: RasterSource
+  layerGuide: HillshadeWorkflowLayerGuide
   fadeDuration: number
   fadeStartTime: number
   unpack: UnpackData
@@ -215,16 +236,17 @@ export interface SensorFeatureGuide extends FeatureGuideBase {
   fadeDuration: number
   fadeStartTime: number
   colorRamp: WebGLTexture
+  layerGuide: SensorWorkflowLayerGuide
   getTextures: () => SensorTextureDefinition
   opacity?: number // webgl1
 }
 
 export interface ShadeFeatureGuide extends FeatureGuideBase {
-  layerIndex: number
   sourceName: string
   type: 'shade'
   maskLayer: boolean
   source: MaskSource
+  layerGuide: ShadeLayerDefinition
   count: number
   offset: number
 }

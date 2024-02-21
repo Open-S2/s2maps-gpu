@@ -191,7 +191,7 @@ export default class Painter {
 
 function featureSort (a: FeatureBase, b: FeatureBase): number {
   // first check if the layer is the same
-  let diff = a.layerIndex - b.layerIndex
+  let diff = a.layerGuide.layerIndex - b.layerGuide.layerIndex
   if (diff !== 0) return diff
   // check for zoom difference
   const zoomDiff = ((a.parent !== undefined) ? 1 : 0) - ((b.parent !== undefined) ? 1 : 0)

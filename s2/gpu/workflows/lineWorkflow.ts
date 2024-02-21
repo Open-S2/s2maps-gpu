@@ -72,7 +72,6 @@ export class LineFeature implements LineFeatureSpec {
     public count: number,
     public offset: number,
     public featureCode: number[],
-    public layerIndex: number,
     public dashTexture: GPUTexture,
     public featureCodeBuffer: GPUBuffer,
     public lineUniformBuffer: GPUBuffer,
@@ -102,7 +101,7 @@ export class LineFeature implements LineFeatureSpec {
   duplicate (tile: Tile, parent: Tile): LineFeature {
     const {
       workflow, layerGuide, source, count, offset, featureCode,
-      layerIndex, dashTexture, featureCodeBuffer, lineUniformBuffer, cap
+      dashTexture, featureCodeBuffer, lineUniformBuffer, cap
     } = this
     const { context } = workflow
     const cE = context.device.createCommandEncoder()
@@ -111,7 +110,7 @@ export class LineFeature implements LineFeatureSpec {
     context.device.queue.submit([cE.finish()])
     return new LineFeature(
       workflow, layerGuide, source, tile, count, offset, featureCode,
-      layerIndex, dashTexture, newFeatureCodeBuffer, newLineUniformBuffer, cap, parent
+      dashTexture, newFeatureCodeBuffer, newLineUniformBuffer, cap, parent
     )
   }
 
@@ -167,7 +166,7 @@ export default class LineWorkflow implements LineWorkflowSpec {
   buildLayerDefinition (layerBase: LayerDefinitionBase, layer: LineLayerStyle): LineLayerDefinition {
     const { context } = this
     const { devicePixelRatio, nullTexture } = context
-    const { source, layerIndex, lch } = layerBase
+    const { source, layerIndex, lch, visible } = layerBase
     // PRE) get layer base
     let {
       interactive, cursor, onlyLines,
@@ -223,7 +222,8 @@ export default class LineWorkflow implements LineWorkflowSpec {
       dashCount,
       dashTexture,
       interactive,
-      cursor
+      cursor,
+      visible
     })
 
     return layerDefinition
@@ -273,7 +273,7 @@ export default class LineWorkflow implements LineWorkflowSpec {
       const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array(featureCode), GPUBufferUsage.STORAGE)
       const feature = new LineFeature(
         this, layerGuide, source, tile, count, offset, featureCode,
-        layerIndex, dashTexture, featureCodeBuffer, lineUniformBuffer, cap
+        dashTexture, featureCodeBuffer, lineUniformBuffer, cap
       )
       features.push(feature)
     }
@@ -342,7 +342,8 @@ export default class LineWorkflow implements LineWorkflowSpec {
     })
   }
 
-  draw ({ bindGroup, lineBindGroup, source, count, offset }: LineFeatureSpec): void {
+  draw ({ layerGuide, bindGroup, lineBindGroup, source, count, offset }: LineFeatureSpec): void {
+    if (!layerGuide.visible) return
     // get current source data
     const { passEncoder } = this.context
     const { vertexBuffer, lengthSoFarBuffer } = source

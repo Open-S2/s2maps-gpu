@@ -91,7 +91,6 @@ export class GlyphFeature implements GlyphFeatureSpec {
     public offset: number,
     public filterCount: number,
     public filterOffset: number,
-    public layerIndex: number,
     public isIcon: boolean,
     public featureCode: number[],
     public glyphUniformBuffer: GPUBuffer,
@@ -137,7 +136,7 @@ export class GlyphFeature implements GlyphFeatureSpec {
   duplicate (tile: Tile, parent: Tile, bounds: BBox): GlyphFeature {
     const {
       workflow, source, layerGuide, featureCodeBuffer, count, offset, filterCount, filterOffset,
-      layerIndex, isIcon, featureCode, glyphUniformBuffer, glyphAttributeBuffer, glyphAttributeNoStrokeBuffer
+      isIcon, featureCode, glyphUniformBuffer, glyphAttributeBuffer, glyphAttributeNoStrokeBuffer
     } = this
     const { context } = workflow
     const cE = context.device.createCommandEncoder()
@@ -149,7 +148,7 @@ export class GlyphFeature implements GlyphFeatureSpec {
     context.device.queue.submit([cE.finish()])
     return new GlyphFeature(
       workflow, source, tile, layerGuide, count, offset, filterCount, filterOffset,
-      layerIndex, isIcon, featureCode, newGlyphUniformBuffer, newGlyphBoundsBuffer,
+      isIcon, featureCode, newGlyphUniformBuffer, newGlyphBoundsBuffer,
       newGlyphAttributeBuffer, newGlyphAttributeNoStrokeBuffer, newFeatureCodeBuffer, parent
     )
   }
@@ -318,7 +317,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
   // programs helps design the appropriate layer parameters
   buildLayerDefinition (layerBase: LayerDefinitionBase, layer: GlyphLayerStyle): GlyphLayerDefinition {
     const { context } = this
-    const { source, layerIndex, lch } = layerBase
+    const { source, layerIndex, lch, visible } = layerBase
     // PRE) get layer base
     let {
       // paint
@@ -395,7 +394,8 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
       interactive,
       cursor,
       overdraw,
-      viewCollisions
+      viewCollisions,
+      visible
     })
 
     return layerDefinition
@@ -453,7 +453,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
       const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array(featureCode), GPUBufferUsage.STORAGE)
       const feature = new GlyphFeature(
         this, source, tile, layerGuide, count, offset, filterCount, filterOffset,
-        layerIndex, isIcon === 1, featureCode, glyphUniformBuffer, glyphBoundsBuffer,
+        isIcon === 1, featureCode, glyphUniformBuffer, glyphBoundsBuffer,
         glyphAttributeBuffer, glyphAttributeNoStrokeBuffer, featureCodeBuffer
       )
 
@@ -570,6 +570,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
   }
 
   draw ({
+    layerGuide,
     viewCollisions,
     isIcon,
     bindGroup,
@@ -581,6 +582,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     filterCount,
     filterOffset
   }: GlyphFeatureSpec): void {
+    if (!layerGuide.visible) return
     // get current source data
     const { context, pipeline } = this
     const { passEncoder } = context

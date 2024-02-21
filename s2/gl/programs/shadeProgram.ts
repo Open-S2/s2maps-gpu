@@ -39,8 +39,9 @@ export default async function shadeProgram (context: Context): Promise<ShadeProg
     }
 
     // given a set of layerIndexes that use Masks and the tile of interest
-    buildMaskFeature ({ layerIndex, lch, minzoom, maxzoom }: ShadeLayerDefinition, tile: Tile): void {
+    buildMaskFeature (layerGuide: ShadeLayerDefinition, tile: Tile): void {
       const { mask, zoom } = tile
+      const { lch, minzoom, maxzoom } = layerGuide
       // not in the zoom range, ignore
       if (zoom < minzoom || zoom > maxzoom) return
 
@@ -52,7 +53,7 @@ export default async function shadeProgram (context: Context): Promise<ShadeProg
         count: mask.count,
         offset: mask.offset,
         tile,
-        layerIndex,
+        layerGuide,
         featureCode: [0],
         layerCode: [],
         lch
@@ -77,8 +78,9 @@ export default async function shadeProgram (context: Context): Promise<ShadeProg
 
     draw (feature: ShadeFeatureGuide): void {
       const { gl, context } = this
-      const { source, layerIndex } = feature
+      const { source, layerGuide: { layerIndex, visible } } = feature
       const { count, offset, vao } = source
+      if (!visible) return
       // bind vao & draw
       context.setDepthRange(layerIndex)
       gl.bindVertexArray(vao)
