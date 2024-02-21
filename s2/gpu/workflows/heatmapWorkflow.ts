@@ -52,7 +52,6 @@ export class HeatmapFeature implements HeatmapFeatureSpec {
     public tile: Tile,
     public count: number,
     public offset: number,
-    public layerIndex: number,
     public featureCode: number[],
     public heatmapBoundsBuffer: GPUBuffer,
     public featureCodeBuffer: GPUBuffer,
@@ -77,14 +76,14 @@ export class HeatmapFeature implements HeatmapFeatureSpec {
   }
 
   duplicate (tile: Tile, parent: Tile, bounds: BBox): HeatmapFeature {
-    const { workflow, source, layerGuide, count, offset, layerIndex, featureCode, featureCodeBuffer } = this
+    const { workflow, source, layerGuide, count, offset, featureCode, featureCodeBuffer } = this
     const { context } = workflow
     const cE = context.device.createCommandEncoder()
     const newFeatureCodeBuffer = context.duplicateGPUBuffer(featureCodeBuffer, cE)
     const newHeatmapBoundsBuffer = context.buildGPUBuffer('Heatmap Uniform Buffer', new Float32Array(bounds), GPUBufferUsage.UNIFORM)
     context.device.queue.submit([cE.finish()])
     return new HeatmapFeature(
-      workflow, source, layerGuide, tile, count, offset, layerIndex, featureCode,
+      workflow, source, layerGuide, tile, count, offset, featureCode,
       newHeatmapBoundsBuffer, newFeatureCodeBuffer, parent
     )
   }
@@ -170,7 +169,7 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
   // programs helps design the appropriate layer parameters
   buildLayerDefinition (layerBase: LayerDefinitionBase, layer: HeatmapLayerStyle): HeatmapLayerDefinition {
     const { context } = this
-    const { source, layerIndex, lch } = layerBase
+    const { source, layerIndex, lch, visible } = layerBase
     // PRE) get layer base
     let {
       // paint
@@ -215,7 +214,8 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
       colorRamp: colorRampTexture,
       renderTarget,
       renderPassDescriptor: this.#buildLayerPassDescriptor(renderTarget),
-      textureBindGroup: this.#buildLayerBindGroup(renderTarget, colorRampTexture)
+      textureBindGroup: this.#buildLayerBindGroup(renderTarget, colorRampTexture),
+      visible
     })
 
     return layerDefinition
@@ -293,7 +293,7 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
       const heatmapBoundsBuffer = context.buildGPUBuffer('Heatmap Uniform Buffer', new Float32Array([0, 0, 1, 1]), GPUBufferUsage.UNIFORM)
       const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array(featureCode), GPUBufferUsage.STORAGE)
       const feature = new HeatmapFeature(
-        this, source, layerGuide, tile, count, offset, layerIndex, featureCode,
+        this, source, layerGuide, tile, count, offset, featureCode,
         heatmapBoundsBuffer, featureCodeBuffer
       )
 
@@ -372,7 +372,7 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
     // group by layerIndex
     const layerFeatures = new Map<number, HeatmapFeatureSpec[]>()
     for (const feature of features) {
-      const { layerIndex } = feature
+      const { layerIndex } = feature.layerGuide
       const layer = layerFeatures.get(layerIndex)
       if (layer === undefined) {
         layerFeatures.set(layerIndex, [feature])
@@ -408,11 +408,10 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
     return output
   }
 
-  draw ({ bindGroup, layerIndex }: HeatmapFeatureSpec): void {
+  draw ({ layerGuide, bindGroup }: HeatmapFeatureSpec): void {
     // get current source data
     const { passEncoder } = this.context
-    const layerGuide = this.layerGuides.get(layerIndex)
-    if (layerGuide === undefined) return
+    if (layerGuide === undefined || !layerGuide.visible) return
     // setup pipeline, bind groups, & buffers
     this.context.setRenderPipeline(this.pipeline)
     passEncoder.setBindGroup(1, bindGroup)

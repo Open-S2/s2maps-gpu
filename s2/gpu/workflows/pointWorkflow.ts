@@ -44,7 +44,6 @@ export class PointFeature implements PointFeatureSpec {
     public tile: Tile,
     public count: number,
     public offset: number,
-    public layerIndex: number,
     public featureCode: number[],
     public pointBoundsBuffer: GPUBuffer,
     public pointInteractiveBuffer: GPUBuffer,
@@ -78,7 +77,7 @@ export class PointFeature implements PointFeatureSpec {
 
   duplicate (tile: Tile, parent: Tile, bounds: BBox): PointFeature {
     const {
-      workflow, source, layerGuide, count, offset, layerIndex, featureCode,
+      workflow, source, layerGuide, count, offset, featureCode,
       pointInteractiveBuffer, featureCodeBuffer
     } = this
     const { context } = workflow
@@ -88,7 +87,7 @@ export class PointFeature implements PointFeatureSpec {
     const newPointInteractiveBuffer = context.duplicateGPUBuffer(pointInteractiveBuffer, cE)
     context.device.queue.submit([cE.finish()])
     return new PointFeature(
-      workflow, source, layerGuide, tile, count, offset, layerIndex, featureCode,
+      workflow, source, layerGuide, tile, count, offset, featureCode,
       newPointBoundsBuffer, newPointInteractiveBuffer, newFeatureCodeBuffer, parent
     )
   }
@@ -154,7 +153,7 @@ export default class PointWorkflow implements PointWorkflowSpec {
   // programs helps design the appropriate layer parameters
   buildLayerDefinition (layerBase: LayerDefinitionBase, layer: PointLayerStyle): PointLayerDefinition {
     const { context } = this
-    const { source, layerIndex, lch } = layerBase
+    const { source, layerIndex, lch, visible } = layerBase
     // PRE) get layer base
     let { radius, opacity, color, stroke, strokeWidth, interactive, cursor } = layer
     radius = radius ?? 1
@@ -195,7 +194,8 @@ export default class PointWorkflow implements PointWorkflowSpec {
       layerCodeBuffer,
       lch,
       interactive,
-      cursor
+      cursor,
+      visible
     })
 
     return layerDefinition
@@ -245,7 +245,7 @@ export default class PointWorkflow implements PointWorkflowSpec {
       const pointInteractiveBuffer = context.buildGPUBuffer('Point Interactive Buffer', new Uint32Array([offset, count]), GPUBufferUsage.UNIFORM)
 
       const feature = new PointFeature(
-        this, source, layerGuide, tile, count, offset, layerIndex, featureCode,
+        this, source, layerGuide, tile, count, offset, featureCode,
         pointBoundsBuffer, pointInteractiveBuffer, featureCodeBuffer
       )
       features.push(feature)
@@ -331,7 +331,8 @@ export default class PointWorkflow implements PointWorkflowSpec {
     })
   }
 
-  draw ({ bindGroup, pointBindGroup, source, count, offset }: PointFeatureSpec): void {
+  draw ({ layerGuide, bindGroup, pointBindGroup, source, count, offset }: PointFeatureSpec): void {
+    if (!layerGuide.visible) return
     // get current source data
     const { passEncoder } = this.context
     const { vertexBuffer } = source
@@ -345,7 +346,8 @@ export default class PointWorkflow implements PointWorkflowSpec {
     passEncoder.draw(6, count, 0, offset)
   }
 
-  computeInteractive ({ bindGroup, pointInteractiveBindGroup, count }: PointFeatureSpec): void {
+  computeInteractive ({ layerGuide, bindGroup, pointInteractiveBindGroup, count }: PointFeatureSpec): void {
+    if (!layerGuide.visible) return
     const { interactiveBindGroup, computePass } = this.context
     this.context.setComputePipeline(this.interactivePipeline)
     // set bind group & draw

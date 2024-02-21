@@ -40,7 +40,7 @@ export class ShadeFeature implements ShadeFeatureSpec {
     public workflow: ShadeWorkflowSpec,
     public tile: Tile,
     public layerIndex: number,
-    public layerDefinition: ShadeLayerDefinitionGPU,
+    public layerGuide: ShadeLayerDefinitionGPU,
     public featureCodeBuffer: GPUBuffer
   ) {
     const { mask } = tile
@@ -61,10 +61,10 @@ export class ShadeFeature implements ShadeFeatureSpec {
   }
 
   #buildBindGroup (): GPUBindGroup {
-    const { workflow, tile, layerDefinition, featureCodeBuffer } = this
+    const { workflow, tile, layerGuide, featureCodeBuffer } = this
     const { context } = workflow
     const { mask } = tile
-    const { layerBuffer, layerCodeBuffer } = layerDefinition
+    const { layerBuffer, layerCodeBuffer } = layerGuide
     return context.buildGroup(
       'Shade Feature BindGroup',
       context.featureBindGroupLayout,
@@ -191,7 +191,8 @@ export default class ShadeWorkflow implements ShadeWorkflowSpec {
     })
   }
 
-  draw ({ source, bindGroup }: ShadeFeatureSpec): void {
+  draw ({ layerGuide, source, bindGroup }: ShadeFeatureSpec): void {
+    if (!layerGuide.visible) return
     const { context, pipeline } = this
     const { passEncoder } = context
     const { vertexBuffer, indexBuffer, count, offset } = source

@@ -125,7 +125,7 @@ export default async function pointProgram (context: Context): Promise<PointProg
           count,
           offset,
           sourceName,
-          layerIndex,
+          layerGuide,
           layerCode,
           featureCode,
           lch,
@@ -143,7 +143,7 @@ export default async function pointProgram (context: Context): Promise<PointProg
 
     buildLayerDefinition (layerBase: LayerDefinitionBase, layer: PointLayerStyle): PointLayerDefinition {
       const { type } = this
-      const { source, layerIndex, lch } = layerBase
+      const { source, layerIndex, lch, visible } = layerBase
       // PRE) get layer base
       let { radius, opacity, color, stroke, strokeWidth, interactive, cursor } = layer
       radius = radius ?? 1
@@ -180,7 +180,8 @@ export default async function pointProgram (context: Context): Promise<PointProg
         layerCode,
         lch,
         interactive,
-        cursor
+        cursor,
+        visible
       })
 
       return layerDefinition
@@ -204,9 +205,10 @@ export default async function pointProgram (context: Context): Promise<PointProg
       const { defaultBounds } = context
       // get current source data
       const {
-        source, count, offset, featureCode, layerIndex, color,
+        source, count, offset, featureCode, layerGuide: { layerIndex, visible }, color,
         radius, stroke, strokeWidth, opacity, bounds
       } = featureGuide
+      if (!visible) return
       const { vao, vertexBuffer } = source
       context.stencilFuncAlways(0)
       context.setDepthRange(layerIndex)

@@ -39,7 +39,6 @@ export class HilllshadeFeature implements HillshadeFeatureSpec {
     public workflow: HillshadeWorkflowSpec,
     public tile: Tile,
     public source: RasterSource,
-    public layerIndex: number,
     public featureCode: number[],
     public hillshadeFadeBuffer: GPUBuffer,
     public featureCodeBuffer: GPUBuffer,
@@ -67,7 +66,7 @@ export class HilllshadeFeature implements HillshadeFeatureSpec {
 
   duplicate (tile: Tile, parent: Tile): HilllshadeFeature {
     const {
-      layerGuide, workflow, source, layerIndex,
+      layerGuide, workflow, source,
       featureCode, hillshadeFadeBuffer, featureCodeBuffer, fadeStartTime
     } = this
     const { context } = workflow
@@ -76,7 +75,7 @@ export class HilllshadeFeature implements HillshadeFeatureSpec {
     const newFeatureCodeBuffer = context.duplicateGPUBuffer(featureCodeBuffer, cE)
     context.device.queue.submit([cE.finish()])
     return new HilllshadeFeature(
-      layerGuide, workflow, tile, source, layerIndex, featureCode,
+      layerGuide, workflow, tile, source, featureCode,
       newHillshadeFadeBuffer, newFeatureCodeBuffer, fadeStartTime, parent
     )
   }
@@ -135,7 +134,7 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
   // programs helps design the appropriate layer parameters
   buildLayerDefinition (layerBase: LayerDefinitionBase, layer: HillshadeLayerStyle): HillshadeLayerDefinition {
     const { context } = this
-    const { source, layerIndex, lch } = layerBase
+    const { source, layerIndex, lch, visible } = layerBase
     // PRE) get layer properties
     let { unpack, shadowColor, accentColor, highlightColor, opacity, azimuth, altitude, fadeDuration } = layer
     shadowColor = shadowColor ?? '#000'
@@ -180,7 +179,8 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
       fadeDuration: fadeDuration ?? 300,
       layerBuffer,
       layerCodeBuffer,
-      unpackBuffer
+      unpackBuffer,
+      visible
     })
 
     return layerDefinition
@@ -222,7 +222,7 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
       const hillshadeFadeBuffer = context.buildGPUBuffer('Hillshade Uniform Buffer', new Float32Array([1]), GPUBufferUsage.UNIFORM)
       const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array(code.length > 0 ? code : [0]), GPUBufferUsage.STORAGE)
       const feature = new HilllshadeFeature(
-        layerGuide, this, tile, source, layerIndex,
+        layerGuide, this, tile, source,
         code, hillshadeFadeBuffer, featureCodeBuffer
       )
       features.push(feature)
@@ -298,7 +298,8 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
     })
   }
 
-  draw ({ bindGroup, hillshadeBindGroup, source }: HillshadeFeatureSpec): void {
+  draw ({ layerGuide, bindGroup, hillshadeBindGroup, source }: HillshadeFeatureSpec): void {
+    if (!layerGuide.visible) return
     // get current source data
     const { passEncoder } = this.context
     const { vertexBuffer, indexBuffer, count, offset } = source

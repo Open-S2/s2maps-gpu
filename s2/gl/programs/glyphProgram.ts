@@ -184,7 +184,7 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
           filterCount,
           filterOffset,
           sourceName,
-          layerIndex,
+          layerGuide,
           layerCode,
           featureCode,
           lch,
@@ -203,7 +203,7 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
 
     buildLayerDefinition (layerBase: LayerDefinitionBase, layer: GlyphLayerStyle): GlyphLayerDefinition {
       const { type } = this
-      const { source, layerIndex, lch } = layerBase
+      const { source, layerIndex, lch, visible } = layerBase
       // PRE) get layer base
       let {
         // paint
@@ -274,7 +274,8 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
         interactive,
         cursor,
         overdraw,
-        viewCollisions
+        viewCollisions,
+        visible
       })
 
       return layerDefinition
@@ -299,9 +300,10 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
       const { uSize, uFill, uStroke, uSWidth, uBounds, uIsStroke } = uniforms
       // pull out the appropriate data from the source
       const {
-        source, overdraw, isIcon, layerIndex, featureCode, offset,
+        source, overdraw, isIcon, layerGuide: { layerIndex, visible }, featureCode, offset,
         count, size, fill, stroke, strokeWidth, bounds
       } = featureGuide
+      if (!visible) return
       const { glyphQuadBuffer, glyphQuadIDBuffer, glyphColorBuffer, vao } = source
       // grab glyph texture
       const { texture } = sharedFBO

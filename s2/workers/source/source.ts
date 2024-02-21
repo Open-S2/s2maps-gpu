@@ -67,8 +67,7 @@ export default class Source {
     if (Array.isArray(metadata.faces)) this.faces = new Set(metadata.faces ?? [0, 1, 2, 3, 4, 5])
     if (typeof metadata.extension === 'string') this.extension = metadata.extension
     this.attributions = metadata.attributions ?? {}
-    this.type = metadata.type ?? 'vector'
-    if (this.type === 'overlay') this.type = 'vector'
+    this.type = parseMetaType(metadata.type)
     if (typeof metadata.size === 'number') this.size = metadata.size
     this.encoding = metadata.encoding ?? 'none'
     if (typeof metadata.layers === 'object') { // cleanup the fields property
@@ -226,4 +225,9 @@ export default class Source {
     ) return await res.json()
     return await res.arrayBuffer()
   }
+}
+
+function parseMetaType (type: string): SourceType {
+  if (['vector', 'json', 'raster', 'raster-dem', 'sensor', 'overlay'].includes(type)) return type as SourceType
+  return 'vector'
 }

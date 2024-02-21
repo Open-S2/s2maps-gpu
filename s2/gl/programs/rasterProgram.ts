@@ -52,7 +52,7 @@ export default async function rasterProgram (context: Context): Promise<RasterPr
     // programs helps design the appropriate layer parameters
     buildLayerDefinition (layerBase: LayerDefinitionBase, layer: RasterLayerStyle): RasterLayerDefinition {
       const { type } = this
-      const { source, layerIndex, lch } = layerBase
+      const { source, layerIndex, lch, visible } = layerBase
       // PRE) get layer base
       let { opacity, saturation, contrast, resampling, fadeDuration } = layer
       opacity = opacity ?? 1
@@ -79,7 +79,8 @@ export default async function rasterProgram (context: Context): Promise<RasterPr
         layerCode,
         lch,
         fadeDuration: fadeDuration ?? 300,
-        resampling: resampling ?? 'linear'
+        resampling: resampling ?? 'linear',
+        visible
       })
 
       return layerDefinition
@@ -125,7 +126,7 @@ export default async function rasterProgram (context: Context): Promise<RasterPr
           tile,
           source,
           sourceName,
-          layerIndex,
+          layerGuide,
           layerCode,
           lch,
           featureCode: code,
@@ -157,9 +158,10 @@ export default async function rasterProgram (context: Context): Promise<RasterPr
 
       // get current source data
       const {
-        tile, parent, source, layerIndex, featureCode,
+        tile, parent, source, layerGuide: { layerIndex, visible }, featureCode,
         opacity, contrast, saturation, resampling
       } = featureGuide
+      if (!visible) return
       const { texture } = source
       const { vao, count, offset } = (parent ?? tile).mask
       context.setDepthRange(layerIndex)

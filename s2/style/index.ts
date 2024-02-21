@@ -126,7 +126,7 @@ export default class Style {
   #buildLayer (layerStyle: LayerStyle, layerIndex: number): undefined | LayerDefinition {
     const { workflows } = this.camera.painter
     // grab variables
-    const { type, name, source, layer, minzoom, maxzoom, filter, lch } = layerStyle
+    const { type, name, source, layer, minzoom, maxzoom, filter, lch, visible } = layerStyle
     if (type === undefined || name === undefined || source === undefined) {
       console.warn(
         'Skipping layer: "',
@@ -145,7 +145,8 @@ export default class Style {
       minzoom: minzoom ?? 0,
       maxzoom: maxzoom ?? 20,
       filter,
-      lch: lch ?? false
+      lch: lch ?? false,
+      visible: visible ?? true
     }
     // store the layer definition
     const layerDefinition = workflows[type]?.buildLayerDefinition?.(base, layerStyle as any)

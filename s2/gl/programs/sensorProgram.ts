@@ -101,7 +101,7 @@ export default async function sensorProgram (context: Context): Promise<SensorPr
           type: 'sensor',
           tile,
           sourceName,
-          layerIndex,
+          layerGuide,
           layerCode,
           lch,
           featureCode: code,
@@ -117,7 +117,7 @@ export default async function sensorProgram (context: Context): Promise<SensorPr
     }
 
     buildLayerDefinition (layerBase: LayerDefinitionBase, layer: SensorLayerStyle): SensorLayerDefinition {
-      const { source, layerIndex, lch } = layerBase
+      const { source, layerIndex, lch, visible } = layerBase
       // PRE) get layer properties
       let { colorRamp, opacity, fadeDuration, interactive, cursor } = layer
       opacity = opacity ?? 1
@@ -142,7 +142,8 @@ export default async function sensorProgram (context: Context): Promise<SensorPr
         layerCode,
         lch,
         fadeDuration,
-        colorRamp: context.buildTexture(buildColorRamp(colorRamp, lch), 256, 4)
+        colorRamp: context.buildTexture(buildColorRamp(colorRamp, lch), 256, 4),
+        visible
       })
 
       return layerDefinition
@@ -163,7 +164,8 @@ export default async function sensorProgram (context: Context): Promise<SensorPr
       const { uTime, uOpacity } = uniforms
 
       // get current source data. Time is a uniform
-      const { tile, parent, featureCode, colorRamp, opacity, layerIndex } = featureGuide
+      const { tile, parent, featureCode, colorRamp, opacity, layerGuide: { layerIndex, visible } } = featureGuide
+      if (!visible) return
       const { time, texture, textureNext } = featureGuide.getTextures()
       const { mask } = parent ?? tile
       const { vao, count, offset } = mask

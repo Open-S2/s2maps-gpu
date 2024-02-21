@@ -55,7 +55,6 @@ export class FillFeature implements FillFeatureSpec {
     public count: number,
     public offset: number,
     public tile: Tile,
-    public layerIndex: number,
     public featureCodeBuffer: GPUBuffer,
     public fillTexturePositions: GPUBuffer,
     public fillInteractiveBuffer?: GPUBuffer,
@@ -92,7 +91,7 @@ export class FillFeature implements FillFeatureSpec {
   }
 
   duplicate (tile: Tile, parent: Tile): FillFeature {
-    const { workflow, layerGuide, maskLayer, source, count, offset, layerIndex, featureCodeBuffer, fillInteractiveBuffer, featureCode, fillTexturePositions } = this
+    const { workflow, layerGuide, maskLayer, source, count, offset, featureCodeBuffer, fillInteractiveBuffer, featureCode, fillTexturePositions } = this
     const { context } = this.workflow
     const cE = context.device.createCommandEncoder()
     const newFeatureCodeBuffer = context.duplicateGPUBuffer(featureCodeBuffer, cE)
@@ -100,7 +99,7 @@ export class FillFeature implements FillFeatureSpec {
     const newFillInteractiveBuffer = (fillInteractiveBuffer !== undefined) ? context.duplicateGPUBuffer(fillInteractiveBuffer, cE) : undefined
     context.device.queue.submit([cE.finish()])
     return new FillFeature(
-      workflow, layerGuide, maskLayer, source, count, offset, tile, layerIndex,
+      workflow, layerGuide, maskLayer, source, count, offset, tile,
       newFeatureCodeBuffer, newFillTexturePositions, newFillInteractiveBuffer, featureCode,
       parent
     )
@@ -166,7 +165,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
   // programs helps design the appropriate layer parameters
   buildLayerDefinition (layerBase: LayerDefinitionBase, layer: FillLayerStyle): FillLayerDefinition {
     const { context } = this
-    const { source, layerIndex, lch } = layerBase
+    const { source, layerIndex, lch, visible } = layerBase
     // PRE) get layer base
     let { color, opacity, pattern, patternFamily, patternMovement, invert, opaque, interactive, cursor } = layer
     invert = invert ?? false
@@ -213,7 +212,8 @@ export default class FillWorkflow implements FillWorkflowSpec {
       invert,
       opaque,
       pattern: pattern !== undefined,
-      interactive
+      interactive,
+      visible
     })
 
     return layerDefinition
@@ -232,7 +232,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
     const fillTexturePositions = context.buildGPUBuffer('Fill Texture Positions', new Float32Array([0, 0, 0, 0, 0]), GPUBufferUsage.UNIFORM)
     const feature = new FillFeature(
       this, layerGuide, true, mask, mask.count, mask.offset,
-      tile, layerIndex, featureCodeBuffer, fillTexturePositions
+      tile, featureCodeBuffer, fillTexturePositions
     )
     tile.addFeatures([feature])
   }
@@ -284,7 +284,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
       const fillTexturePositions = context.buildGPUBuffer('Fill Texture Positions', new Float32Array([texX, texY, texW, texH, patternMovement]), GPUBufferUsage.UNIFORM)
       const fillInteractiveBuffer = context.buildGPUBuffer('Fill Interactive Buffer', new Uint32Array([offset / 3, count / 3]), GPUBufferUsage.UNIFORM)
       const feature = new FillFeature(
-        this, layerGuide, false, source, count, offset, tile, layerIndex,
+        this, layerGuide, false, source, count, offset, tile,
         featureCodeBuffer, fillTexturePositions, fillInteractiveBuffer, featureCode
       )
       features.push(feature)
@@ -372,15 +372,18 @@ export default class FillWorkflow implements FillWorkflowSpec {
   }
 
   draw (featureGuide: FillFeatureSpec): void {
+    const { context, invertPipeline, fillPipeline } = this
     // get current source data
-    const { passEncoder } = this.context
-    const { tile, parent, invert, bindGroup, fillPatternBindGroup, source, count, offset } = featureGuide
+    const { passEncoder } = context
+    const { layerGuide, tile, parent, invert, bindGroup, fillPatternBindGroup, source, count, offset } = featureGuide
     const { vertexBuffer, indexBuffer, codeTypeBuffer } = source
-    const pipeline = invert ? this.invertPipeline : this.fillPipeline
+    const pipeline = invert ? invertPipeline : fillPipeline
     const { mask } = parent ?? tile
+    // if the layer is not visible, move on
+    if (!layerGuide.visible) return
 
     // setup pipeline, bind groups, & buffers
-    this.context.setRenderPipeline(pipeline)
+    context.setRenderPipeline(pipeline)
     passEncoder.setBindGroup(1, bindGroup)
     passEncoder.setBindGroup(2, fillPatternBindGroup)
     passEncoder.setVertexBuffer(0, vertexBuffer)
@@ -397,6 +400,8 @@ export default class FillWorkflow implements FillWorkflowSpec {
     featureGuide?: FillFeatureSpec
   ): void {
     const { context, maskPipeline, maskFillPipeline } = this
+    // if the layer is not visible, move on
+    if (featureGuide?.layerGuide?.visible === false) return
     // get current source data
     const { passEncoder } = context
     // setup pipeline, bind groups, & buffers
@@ -410,7 +415,8 @@ export default class FillWorkflow implements FillWorkflowSpec {
     passEncoder.drawIndexed(count, 1, offset)
   }
 
-  computeInteractive ({ bindGroup, fillInteractiveBindGroup, count }: FillFeatureSpec): void {
+  computeInteractive ({ layerGuide, bindGroup, fillInteractiveBindGroup, count }: FillFeatureSpec): void {
+    if (!layerGuide.visible) return
     const { computePass, interactiveBindGroup } = this.context
     this.context.setComputePipeline(this.interactivePipeline)
     // set bind group & draw

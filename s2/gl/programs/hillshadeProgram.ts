@@ -85,7 +85,7 @@ export default async function hillshadeProgram (context: Context): Promise<Hills
           tile,
           source,
           sourceName,
-          layerIndex,
+          layerGuide,
           layerCode,
           lch,
           featureCode: code,
@@ -106,7 +106,7 @@ export default async function hillshadeProgram (context: Context): Promise<Hills
 
     buildLayerDefinition (layerBase: LayerDefinitionBase, layer: HillshadeLayerStyle): HillshadeLayerDefinition {
       const { type } = this
-      const { source, layerIndex, lch } = layerBase
+      const { source, layerIndex, lch, visible } = layerBase
       // PRE) get layer properties
       let { unpack, shadowColor, accentColor, highlightColor, opacity, azimuth, altitude, fadeDuration } = layer
       shadowColor = shadowColor ?? '#000'
@@ -145,7 +145,8 @@ export default async function hillshadeProgram (context: Context): Promise<Hills
         layerCode,
         lch,
         fadeDuration,
-        unpack: unpackData
+        unpack: unpackData,
+        visible
       })
 
       return layerDefinition
@@ -170,9 +171,10 @@ export default async function hillshadeProgram (context: Context): Promise<Hills
 
       // get current source data
       const {
-        tile, parent, source, layerIndex, featureCode, unpack,
+        tile, parent, source, layerGuide: { layerIndex, visible }, featureCode, unpack,
         opacity, shadowColor, accentColor, highlightColor, azimuth, altitude
       } = featureGuide
+      if (!visible) return
       const { texture, size } = source
       const { vao, count, offset } = (parent ?? tile).mask
       context.setDepthRange(layerIndex)

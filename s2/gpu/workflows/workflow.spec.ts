@@ -129,14 +129,15 @@ export interface SensorSource {
 }
 
 export type FeatureSource = MaskSource | FillSource | LineSource | PointSource | HeatmapSource | RasterSource | GlyphSource
+export type LayerGuides = FillWorkflowLayerGuideGPU | GlyphWorkflowLayerGuideGPU | HeatmapWorkflowLayerGuideGPU | HillshadeWorkflowLayerGuideGPU | LineWorkflowLayerGuideGPU | PointWorkflowLayerGuideGPU | RasterWorkflowLayerGuideGPU | SensorLayerDefinition | ShadeLayerDefinitionGPU
 
 // Features
 
 export interface FeatureBase {
   tile: Tile
   parent?: Tile
+  layerGuide: LayerGuides
   maskLayer?: boolean
-  layerIndex: number
   sourceName: string
   opaque?: boolean
   interactive?: boolean
@@ -155,6 +156,7 @@ export interface FillFeature extends FeatureBase {
   type: 'fill'
   maskLayer: boolean
   source: FillSource | MaskSource
+  layerGuide: FillWorkflowLayerGuideGPU
   count: number
   offset: number
   invert: boolean
@@ -172,6 +174,7 @@ export type GlyphType = 'text' | 'icon'
 export interface GlyphFeature extends FeatureBase {
   type: 'glyph'
   source: GlyphSource
+  layerGuide: GlyphWorkflowLayerGuideGPU
   count: number
   offset: number
   filterCount: number
@@ -195,6 +198,7 @@ export interface GlyphFeature extends FeatureBase {
 export interface HeatmapFeature extends FeatureBase {
   type: 'heatmap'
   source: HeatmapSource
+  layerGuide: HeatmapWorkflowLayerGuideGPU
   count: number
   offset: number
   bounds?: BBox
@@ -206,6 +210,7 @@ export interface HeatmapFeature extends FeatureBase {
 export interface LineFeature extends FeatureBase {
   type: 'line'
   source: LineSource
+  layerGuide: LineWorkflowLayerGuideGPU
   interactive: boolean
   count: number
   offset: number
@@ -220,6 +225,7 @@ export interface LineFeature extends FeatureBase {
 export interface PointFeature extends FeatureBase {
   type: 'point'
   source: PointSource
+  layerGuide: PointWorkflowLayerGuideGPU
   count: number
   offset: number
   bounds?: BBox
@@ -232,6 +238,7 @@ export interface PointFeature extends FeatureBase {
 export interface RasterFeature extends FeatureBase {
   type: 'raster'
   source: RasterSource
+  layerGuide: RasterWorkflowLayerGuideGPU
   fadeDuration: number
   fadeStartTime: number
   rasterBindGroup: GPUBindGroup
@@ -241,6 +248,7 @@ export interface RasterFeature extends FeatureBase {
 // ** SENSOR **
 export interface SensorFeature extends FeatureBase {
   type: 'sensor'
+  layerGuide: SensorLayerDefinition
   fadeDuration: number
   fadeStartTime: number
   colorRamp: WebGLTexture
@@ -252,6 +260,7 @@ export interface SensorFeature extends FeatureBase {
 export interface HillshadeFeature extends FeatureBase {
   type: 'hillshade'
   source: RasterSource
+  layerGuide: HillshadeWorkflowLayerGuideGPU
   fadeDuration: number
   fadeStartTime: number
   hillshadeBindGroup: GPUBindGroup
@@ -265,6 +274,7 @@ export interface ShadeFeature extends FeatureBase {
   type: 'shade'
   maskLayer: boolean
   source: MaskSource
+  layerGuide: ShadeLayerDefinitionGPU
   count: number
   offset: number
 }
