@@ -3,13 +3,14 @@ import { parent as parentID, toIJ } from 'geometry/id'
 
 import type { Session } from '.'
 import type { ParentLayers, TileRequest } from '../worker.spec'
-import type { Attributions, Format, LayerDefinition, Projection, SourceMetadata, SourceType } from 'style/style.spec'
+import type { Attributions, Format, LayerDefinition, Projection, SourceMetadata, SourceType, VectorLayer } from 'style/style.spec'
 
-export type LayerMetaData = Record<string, { // layer
+export interface LayerMeta { // layer
   minzoom: number
   maxzoom: number
   fields?: Record<string, Array<string | number | boolean>> // max fields size of 50
-}>
+}
+export type LayerMetaData = Record<string, LayerMeta>
 
 // export type FaceBounds = Record<number, Record<number, [number, number, number, number]>>
 
@@ -62,8 +63,8 @@ export default class Source {
 
   _buildMetadata (metadata: Metadata, mapID: string): void {
     this.active = true // incase we use a "broken" aproach for metadata and insert later
-    this.minzoom = metadata.minzoom ?? 0
-    this.maxzoom = Math.min(metadata.maxzoom ?? 20, this.maxzoom)
+    this.minzoom = Number(metadata.minzoom) ?? 0
+    this.maxzoom = Math.min(Number(metadata.maxzoom) ?? 20, this.maxzoom)
     if (Array.isArray(metadata.faces)) this.faces = new Set(metadata.faces ?? [0, 1, 2, 3, 4, 5])
     if (typeof metadata.extension === 'string') this.extension = metadata.extension
     this.attributions = metadata.attributions ?? {}
@@ -73,6 +74,20 @@ export default class Source {
     if (typeof metadata.layers === 'object') { // cleanup the fields property
       for (const value of Object.values(metadata.layers)) delete value.fields
       this.layers = metadata.layers
+    }
+    // other engines that have built data store layer data differently  :
+    const vectorLayers = Array.isArray(metadata.vector_layers)
+      ? metadata.vector_layers
+      : typeof metadata.json === 'string'
+        ? JSON.parse(metadata.json).vector_layers as VectorLayer[]
+        : undefined
+    if (vectorLayers !== undefined) {
+      this.layers = {}
+      for (const layer of vectorLayers) {
+        if (layer.id === undefined) continue
+        const { minzoom, maxzoom } = layer
+        this.layers[layer.id] = { minzoom: minzoom ?? 0, maxzoom: maxzoom ?? this.maxzoom }
+      }
     }
     // time series data check
     if (metadata.scheme !== undefined) this.format = 'zxy'

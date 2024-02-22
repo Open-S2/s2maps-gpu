@@ -376,6 +376,7 @@ export const style: StyleSpecification = {
       id: 'geolines',
       type: 'line',
       paint: {
+        'line-width': 1.25,
         'line-color': '#1077B0',
         'line-opacity': 1,
         'line-dasharray': [

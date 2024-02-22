@@ -1,4 +1,5 @@
 import type {
+  Comparator,
   FillLayerStyle,
   Filter,
   GlyphLayerStyle,
@@ -14,12 +15,14 @@ import type {
   SourceMetadata,
   Sources,
   Sprites,
-  StyleDefinition
+  StyleDefinition,
+  ValueType
 } from '../s2/style/style.spec'
 import type {
   BackgroundLayerSpecification,
   CircleLayerSpecification,
   DataDrivenPropertyValueSpecification,
+  ExpressionInputType,
   ExpressionSpecification,
   FillLayerSpecification,
   FilterSpecification,
@@ -187,6 +190,9 @@ function convertLayerLine (lineLayer: LineLayerSpecification): LineLayerStyle {
     paint = {}
   } = lineLayer
 
+  const color = convertDataDrivenPropertyValueSpecification(paint['line-color'])
+  const dashColor = typeof color === 'string' ? color : 'rgba(0, 0, 0, 0)'
+
   return {
     name: id,
     type: 'line',
@@ -196,12 +202,12 @@ function convertLayerLine (lineLayer: LineLayerSpecification): LineLayerStyle {
     metadata,
     minzoom,
     maxzoom,
-    color: convertDataDrivenPropertyValueSpecification(paint['line-color']),
+    color,
     opacity: convertDataDrivenPropertyValueSpecification(paint['line-opacity']),
     width: convertDataDrivenPropertyValueSpecification(paint['line-width']),
     cap: convertPropertyValueSpecification(layout['line-cap']),
     join: convertDataDrivenPropertyValueSpecification(layout['line-join']),
-    // dasharray: convertDataDrivenPropertyValueSpecification(paint['line-dasharray'])
+    dasharray: convertDashArray(paint['line-dasharray'] ?? [], dashColor),
     visible: layout.visibility !== 'none'
   }
 }
@@ -416,11 +422,23 @@ function convertColorRamp (input?: ExpressionSpecification): undefined | Array<{
   }
 }
 
-// TODO:
 function convertFilter (input?: FilterSpecification): undefined | Filter {
   if (Array.isArray(input)) {
-    // const input2 = input
-    return undefined
+    if (input.length <= 1) return undefined
+    else {
+      const [operator, expression] = input
+      if (operator === 'all' || operator === 'any' || operator === 'none') {
+        if (typeof expression === 'boolean') return undefined
+        const [cmp, key, value] = expression as [Comparator, string, NotNullOrObject]
+        if (cmp === '!=' || cmp === 'has' || cmp === '!has' || cmp === 'in' || cmp === '!in' || cmp === '<' || cmp === '<=' || cmp === '==' || cmp === '>' || cmp === '>=') {
+          return { comparator: cmp, key, value }
+        } else {
+          return undefined
+        }
+      } else {
+        return undefined
+      }
+    }
   } else {
     return undefined
   }
@@ -431,12 +449,47 @@ function convertPropertyValueSpecification<T extends NotNullOrObject> (input?: P
   if (input === undefined) return undefined
   // if the input is not an object or array, it's a constant
   if (Array.isArray(input)) {
+    if (input[0] === 'match') return convertPropertyValueSpecificationMatch(input)
     return undefined
   } else if (typeof input === 'object') {
     return undefined
   } else {
-    return input
+    return typeof input === 'string' ? replaceBrackets(input) : input
   }
+}
+
+function convertPropertyValueSpecificationMatch<T extends NotNullOrObject> (input: [
+  'match',
+  ExpressionInputType | ExpressionSpecification,
+  ExpressionInputType | ExpressionInputType[],
+  ExpressionInputType | ExpressionSpecification,
+  ...Array<ExpressionInputType | ExpressionInputType[] | ExpressionSpecification>,
+  // repeated as above
+  ExpressionInputType | ExpressionSpecification
+]): undefined | T | Property<T> {
+  const [, expression, ...rest] = input
+  const fallback = rest.pop()
+  if (expression[0] !== 'get') return undefined
+  const key = expression[1]
+  // we return a dataCondition
+  const res: Property<T> = {
+    dataCondition: {
+      conditions: [],
+      fallback: convertPropertyValueSpecification(fallback) as ValueType<T>
+    }
+  }
+  for (let i = 0; i < rest.length; i += 2) {
+    const value = rest[i]
+    const output = rest[i + 1]
+    if (value === undefined || output === undefined) return undefined
+    const isArray = Array.isArray(value)
+    res.dataCondition?.conditions.push({
+      filter: { key, comparator: isArray ? 'has' : '==', value },
+      input: convertPropertyValueSpecification(output) as ValueType<T>
+    })
+  }
+
+  return res
 }
 
 // TODO:
@@ -444,11 +497,77 @@ function convertDataDrivenPropertyValueSpecification<T extends NotNullOrObject> 
   input?: DataDrivenPropertyValueSpecification<T>
 ): undefined | T | Property<T> {
   if (Array.isArray(input)) {
-    console.log(input)
+    if (input[0] === 'match') return convertPropertyValueSpecificationMatch(input)
     return undefined
   } else if (typeof input === 'object') {
+    if ('stops' in input) {
+      if (input.type === undefined || input.type === 'interval') {
+        return convertDataDrivenPropertyValueSpecificationStops(input)
+      }
+    }
     return undefined
   } else {
-    return input
+    return replaceBrackets(input)
   }
+}
+
+// for now assume interval
+function convertDataDrivenPropertyValueSpecificationStops<T extends NotNullOrObject> (
+  input: {
+    type: 'interval'
+    stops: Array<[number, T]>
+  } | {
+    type: 'interval'
+    stops: Array<[number, T]>
+    property: string
+    default?: T | undefined
+  } | {
+    type: 'interval'
+    stops: Array<[{
+      zoom: number
+      value: number
+    }, T]>
+    property: string
+    default?: T | undefined
+  }
+): undefined | T | Property<T> {
+  if ('property' in input) return undefined
+  if (typeof input.stops[0][0] === 'object') return undefined
+
+  const res: Property<T> = {
+    inputRange: {
+      type: 'zoom',
+      ranges: []
+    }
+  }
+
+  for (const [zoom, value] of input.stops) {
+    res.inputRange?.ranges.push({
+      stop: zoom,
+      input: replaceBrackets(value)
+    })
+  }
+
+  return res
+}
+
+// create a function that takes a string as an input
+// if the input string has {word} (brackets around the word), replace it with "?word"
+function replaceBrackets<T> (input: string): T {
+  if (typeof input !== 'string') return input
+  return input.replace(/{(\w+)}/g, '?$1') as T
+}
+
+function convertDashArray (inputDashes: PropertyValueSpecification<number[]>, color: string): Array<[number, string]> {
+  const dashArray: Array<[number, string]> = []
+
+  if (Array.isArray(inputDashes) && inputDashes.length > 0 && typeof inputDashes[0] === 'number') {
+    for (let i = 0; i < inputDashes.length; i++) {
+      const dashSize = inputDashes[i] * 10
+      if (i % 2 === 1) dashArray.unshift([dashSize, color])
+      else dashArray.unshift([dashSize, 'rgba(255, 255, 255, 0)'])
+    }
+  }
+
+  return dashArray
 }
