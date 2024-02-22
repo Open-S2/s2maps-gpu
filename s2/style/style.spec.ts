@@ -30,6 +30,12 @@ export type LayerMetaData = Record<string, { // layer
 export type Attributions = Record<string, string>
 export type FaceBounds = Record<number, Record<number, [number, number, number, number]>>
 export type SourceType = 'vector' | 'json' | 'raster' | 'raster-dem' | 'sensor' | 'overlay'
+export interface VectorLayer {
+  id: string
+  description: string
+  minzoom?: number
+  maxzoom?: number
+}
 export interface SourceMetadata extends JSONVTOptions, ClusterOptions {
   path?: string
   type: SourceType
@@ -70,6 +76,9 @@ export interface SourceMetadata extends JSONVTOptions, ClusterOptions {
   tolerance?: number
   /** tile buffer on each side so lines and polygons don't get clipped */
   buffer?: number
+  /** Other build engines place layer data inside a json string */
+  json?: string
+  vector_layers?: VectorLayer[]
 }
 export type Source = string | SourceMetadata
 export type Sources = Record<string, Source> // address to source or source itself
