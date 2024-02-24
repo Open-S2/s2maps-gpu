@@ -6,6 +6,7 @@ import type {
   Glyphs,
   HeatmapLayerStyle,
   HillshadeLayerStyle,
+  JSONFeatures,
   LayerStyle,
   LineLayerStyle,
   NotNullOrObject,
@@ -17,7 +18,7 @@ import type {
   Sprites,
   StyleDefinition,
   ValueType
-} from '../s2/style/style.spec'
+} from 'style/style.spec'
 import type {
   BackgroundLayerSpecification,
   CircleLayerSpecification,
@@ -38,7 +39,7 @@ import type {
   SymbolLayerSpecification
 } from '@maplibre/maplibre-gl-style-spec'
 
-export default function styleConverter (input: StyleSpecification): StyleDefinition {
+export default function maplibreStyleConverter (input: StyleSpecification): StyleDefinition {
   const { center, zoom, bearing, pitch, sprite, sources } = input
 
   const glyphs: Glyphs = {}
@@ -55,7 +56,6 @@ export default function styleConverter (input: StyleSpecification): StyleDefinit
     sprites: sprite !== undefined ? convertSprite(sprite) : undefined,
     layers: input.layers.map(l => convertLayer(l, glyphs)).filter((l): l is LayerStyle => l !== undefined)
   }
-  console.log(res)
 
   return res
 }
@@ -78,7 +78,7 @@ function convertSources (input: Record<string, SourceSpecification>): Sources {
       sources[name] = {
         path: '',
         extension: 'geojson',
-        data,
+        data: data as JSONFeatures | undefined,
         type: 'json',
         maxzoom,
         cluster,
@@ -402,7 +402,7 @@ function convertLayerSymbol (input: SymbolLayerSpecification, glyphs: Glyphs): u
     // icon
     iconSize: convertDataDrivenPropertyValueSpecification(layout['icon-size']),
     iconFamily: convertDataDrivenPropertyValueSpecification(layout['icon-image']),
-    iconField: convertDataDrivenPropertyValueSpecification(layout['icon-field']),
+    iconField: convertDataDrivenPropertyValueSpecification(layout['icon-image']),
     iconAnchor: convertDataDrivenPropertyValueSpecification(layout['icon-anchor']),
     iconOffset: convertDataDrivenPropertyValueSpecification(layout['icon-offset']),
     // TODO: support PaddingSpecification
@@ -469,6 +469,7 @@ function convertPropertyValueSpecificationMatch<T extends NotNullOrObject> (inpu
 ]): undefined | T | Property<T> {
   const [, expression, ...rest] = input
   const fallback = rest.pop()
+  // @ts-expect-error - fix later
   if (expression[0] !== 'get') return undefined
   const key = expression[1]
   // we return a dataCondition
@@ -484,6 +485,7 @@ function convertPropertyValueSpecificationMatch<T extends NotNullOrObject> (inpu
     if (value === undefined || output === undefined) return undefined
     const isArray = Array.isArray(value)
     res.dataCondition?.conditions.push({
+      // @ts-expect-error - fix later
       filter: { key, comparator: isArray ? 'has' : '==', value },
       input: convertPropertyValueSpecification(output) as ValueType<T>
     })
@@ -507,6 +509,7 @@ function convertDataDrivenPropertyValueSpecification<T extends NotNullOrObject> 
     }
     return undefined
   } else {
+    // @ts-expect-error - fix later
     return replaceBrackets(input)
   }
 }
@@ -544,6 +547,7 @@ function convertDataDrivenPropertyValueSpecificationStops<T extends NotNullOrObj
   for (const [zoom, value] of input.stops) {
     res.inputRange?.ranges.push({
       stop: zoom,
+      // @ts-expect-error - fix later
       input: replaceBrackets(value)
     })
   }
