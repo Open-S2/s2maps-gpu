@@ -5,7 +5,7 @@ import Map from '../../../components/map'
 /* STYLES */
 import { style } from './maplibreStyle'
 /* TOOLS */
-import styleConverter from '../../../tools/styleConverter'
+import styleConverter from '../../../s2/plugins/mapLibreStyleConverter'
 
 import type { S2Map } from '../../../s2'
 

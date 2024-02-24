@@ -4,5 +4,6 @@
 # Include README.md
 !README.md
 
-# Include dist-types directory
+# Include dist-types directory and plugins
 !dist-types/
+!dist/plugins/*

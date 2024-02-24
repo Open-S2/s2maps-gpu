@@ -4,3 +4,4 @@ export { default as S2Map } from './s2Map'
 
 export * from './s2Map'
 export * from './style/style.spec'
+export * from './plugins'
