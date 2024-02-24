@@ -4,6 +4,11 @@
 # Include README.md
 !README.md
 
-# Include dist-types directory and plugins
+# Include dist-types directory
 !dist-types/
-!dist/plugins/*
+
+# Exclude all contents of dist folder except plugins
+/dist/*
+!/dist/plugins/
+!/dist/index.js
+!/dist/index.d.ts
