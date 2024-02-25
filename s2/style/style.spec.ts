@@ -146,7 +146,7 @@ export interface DataCondition<T extends NotNullOrObject> {
 // export type DataRange<T extends NotNullOrObject> = DataRangeStep<T> | DataRangeEase<T>
 
 export interface DataRangeEase<T extends number | string> {
-  key: NestedKey // the objects[key] -> value used as position on range
+  key: string | NestedKey // the objects[key] -> value used as position on range
   ease?: EaseType
   base?: number // 0 -> 2
   ranges: Array<{
@@ -156,7 +156,7 @@ export interface DataRangeEase<T extends number | string> {
 }
 
 export interface DataRangeStep<T extends NotNullOrObject> {
-  key: NestedKey // the objects[key] -> value used as position on range
+  key: string | NestedKey // the objects[key] -> value used as position on range
   ease: 'step'
   base?: number // 0 -> 2
   ranges: Array<{
@@ -166,7 +166,7 @@ export interface DataRangeStep<T extends NotNullOrObject> {
 }
 
 export interface DataRangeStepOnlyStep<T extends NotNullOrObject> {
-  key: NestedKey // the objects[key] -> value used as position on range
+  key: string | NestedKey // the objects[key] -> value used as position on range
   ease: 'step'
   base?: number // 0 -> 2
   ranges: Array<{
@@ -197,7 +197,7 @@ export interface InputRangeStep<T extends NotNullOrObject> {
 
 export interface FeatureState<T extends NotNullOrObject> {
   condition: 'default' /* (inactive) */ | 'active' | 'hover' | 'selected' | 'disabled'
-  key: NestedKey
+  key: string | NestedKey
   value: T
   input: T | Property<T>
 }

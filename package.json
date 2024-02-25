@@ -1,7 +1,7 @@
 {
   "name": "s2maps-gpu",
   "description": "S2 Maps GPU",
-  "version": "0.12.6",
+  "version": "0.12.7",
   "scripts": {
     "dev": "NODE_ENV=development next dev",
     "build": "next build",
