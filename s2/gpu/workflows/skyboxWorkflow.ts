@@ -9,6 +9,7 @@ import type { WebGPUContext } from '../context'
 import type Projector from 'ui/camera/projector'
 import type { StyleDefinition } from 'style/style.spec'
 import type Camera from 'ui/camera'
+import adjustURL from 'util/adjustURL'
 
 export default class SkyboxWorkflow implements SkyboxWorkflowSpec {
   context: WebGPUContext
@@ -47,13 +48,16 @@ export default class SkyboxWorkflow implements SkyboxWorkflowSpec {
     this.#cubeMap.destroy()
   }
 
-  updateStyle (style: StyleDefinition, camera: Camera): void {
+  updateStyle (style: StyleDefinition, camera: Camera, apiURL = '', baseURL = ''): void {
     const { context } = this
     const { device } = context
-    const { path, type, size, loadingBackground } = style.skybox ?? {}
+    const { skybox } = style
+    const { type, size, loadingBackground } = style.skybox ?? {}
+    let path = skybox?.path
     if (typeof path !== 'string') throw new Error('Skybox path must be a string')
     if (typeof type !== 'string') throw new Error('Skybox type must be a string')
     if (typeof size !== 'number') throw new Error('Skybox size must be a number')
+    path = adjustURL(path, apiURL, baseURL)
     // grab clear color and set inside painter
     if (loadingBackground !== undefined) {
       context.setClearColor(

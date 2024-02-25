@@ -84,7 +84,7 @@ export default class Style {
   }
 
   async #buildWorkflows (style: StyleDefinition): Promise<void> {
-    const { camera } = this
+    const { camera, apiURL, baseURL } = this
     const { painter } = camera
     const { skybox, wallpaper, layers } = style
     const workflows = new Set<GLWorkflowType & GPUWorkflowType>(['fill'])
@@ -101,7 +101,7 @@ export default class Style {
     await painter.buildWorkflows(workflows)
     // inject styles into programs
     for (const workflow of Object.values(painter.workflows)) {
-      if ('updateStyle' in workflow) workflow.updateStyle(style, camera)
+      if ('updateStyle' in workflow) workflow.updateStyle(style, camera, apiURL, baseURL)
     }
   }
 

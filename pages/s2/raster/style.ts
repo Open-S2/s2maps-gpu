@@ -12,7 +12,7 @@ const style: StyleDefinition = {
   },
   fonts: {},
   skybox: {
-    path: '/backgrounds/milkyway',
+    path: 'baseURL://backgrounds/milkyway',
     loadingBackground: 'rgb(9, 8, 17)',
     size: 2048,
     type: 'webp'

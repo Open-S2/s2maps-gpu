@@ -16,7 +16,7 @@ export default function Raster (): React.JSX.Element {
     <div className='pages'>
       <Map
         style={style}
-        opts={{ zoomController: false }}
+        opts={{ zoomController: false, baseURL: 'http://localhost:3000' }}
         ready={ready}
         noAPIKey
       />
