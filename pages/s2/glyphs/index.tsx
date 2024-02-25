@@ -17,7 +17,7 @@ export default function Glyphs (): React.JSX.Element {
     <div className='pages'>
       <Map
         style={style}
-        opts={{ zoomController: false }}
+        opts={{ zoomController: false, baseURL: 'http://localhost:3000' }}
         ready={ready}
         noAPIKey
       />

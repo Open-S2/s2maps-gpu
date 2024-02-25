@@ -54,12 +54,12 @@ export default class Session {
     return this.sessionKeys[mapID]?.apiKey !== undefined
   }
 
-  async requestStyle (mapID: string, style: string, apiURL = ''): Promise<void> {
+  async requestStyle (mapID: string, style: string, apiURL = '', baseURL = ''): Promise<void> {
     // grab the auth token
     const Authorization = await this.requestSessionToken(mapID)
     if (Authorization === undefined) return
     // fetch the style
-    const json = await fetch(adjustURL(style, apiURL), { headers: { Authorization } })
+    const json = await fetch(adjustURL(style, apiURL, baseURL), { headers: { Authorization } })
       .then<StyleDefinition | null>(async res => {
       if (res.status !== 200) return null
       return await res.json()

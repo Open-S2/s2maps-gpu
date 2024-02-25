@@ -321,6 +321,7 @@ export interface RequestStyleMessage extends MapID {
   analytics: Analytics
   apiKey?: string
   apiURL?: string
+  baseURL?: string
 }
 
 export interface StyleMessage extends MapID {

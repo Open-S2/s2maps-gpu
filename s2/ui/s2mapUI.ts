@@ -25,6 +25,8 @@ export interface MapOptions {
   apiKey?: string
   /** An API URL that remaps any source strings that start with "apiURL://" to whatever apiURL is */
   apiURL?: string
+  /** Like "apiURL", a base URL to use for all relative URLs. Necessary because of [WorkerGlobalScope](https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope) */
+  baseURL?: string
   /** Either the style definition or a string URL pointing to the location of the style definition */
   style: StyleDefinition | string
   /** if true, allow user to use scroll wheel to zoom. [default: true] */

@@ -1,7 +1,7 @@
 {
   "name": "s2maps-gpu",
   "description": "S2 Maps GPU",
-  "version": "0.12.2",
+  "version": "0.12.6",
   "scripts": {
     "dev": "NODE_ENV=development next dev",
     "build": "next build",
@@ -15,7 +15,11 @@
     "test:dev": "vitest dev",
     "test": "vitest run"
   },
-  "types": "dist-types/index.d.ts",
+  "exports": {
+    ".": "./dist/plugins/index.js"
+  },
+  "main": "./dist/plugins/index.js",
+  "types": "./dist-types/index.d.ts",
   "dependencies": {
     "earclip": "^0.9.8",
     "s2-vector-tile": "^2.0.12",

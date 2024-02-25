@@ -53,8 +53,8 @@ export class WorkerPool {
     this.maps[map.id] = map
   }
 
-  requestStyle (mapID: string, style: string, analytics: Analytics, apiKey?: string, apiURL?: string): void {
-    this.sourceWorker.postMessage({ mapID, type: 'requestStyle', style, apiKey, apiURL, analytics })
+  requestStyle (mapID: string, style: string, analytics: Analytics, apiKey?: string, apiURL?: string, baseURL?: string): void {
+    this.sourceWorker.postMessage({ mapID, type: 'requestStyle', style, apiKey, apiURL, baseURL, analytics })
   }
 
   injectStyle (mapID: string, style: StylePackage): void {

@@ -26,15 +26,17 @@ export default class Style {
   camera: Camera
   apiKey?: string
   apiURL?: string
+  baseURL?: string
   maskLayers: Array<FillLayerDefinition | ShadeLayerDefinition> = []
   layers: LayerDefinition[] = []
   interactive = false
   dirty = true
   constructor (camera: Camera, options: MapOptions) {
-    const { apiKey, apiURL } = options
+    const { apiKey, apiURL, baseURL } = options
     this.camera = camera
     this.apiKey = apiKey
     this.apiURL = apiURL
+    this.baseURL = baseURL
   }
 
   async buildStyle (style: string | StyleDefinition): Promise<boolean> {
@@ -69,15 +71,15 @@ export default class Style {
   }
 
   #requestStyle (style: string): void {
-    const { apiKey, apiURL, camera } = this
+    const { apiKey, apiURL, baseURL, camera } = this
     const { id, webworker } = camera
     const analytics = this.#buildAnalytics()
 
     if (webworker) {
-      const message: RequestStyleMessage = { mapID: id, analytics, type: 'requestStyle', style, apiKey, apiURL }
+      const message: RequestStyleMessage = { mapID: id, analytics, type: 'requestStyle', style, apiKey, apiURL, baseURL }
       postMessage(message)
     } else {
-      window.S2WorkerPool.requestStyle(id, style, analytics, apiKey, apiURL)
+      window.S2WorkerPool.requestStyle(id, style, analytics, apiKey, apiURL, baseURL)
     }
   }
 
@@ -172,7 +174,7 @@ export default class Style {
   }
 
   #sendStyleDataToWorkers (style: StyleDefinition): void {
-    const { apiKey, apiURL, layers } = this
+    const { apiKey, apiURL, baseURL, layers } = this
     const { id, webworker, painter } = this.camera
     const { type } = painter.context
     const { projection, sources, glyphs, fonts, icons, sprites, images, minzoom, maxzoom, experimental } = style
@@ -193,6 +195,7 @@ export default class Style {
       analytics,
       apiKey,
       apiURL,
+      baseURL,
       experimental: experimental ?? false
     }
     // If the map engine is running on the main thread, directly send the stylePackage to the worker pool.

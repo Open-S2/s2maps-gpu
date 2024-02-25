@@ -10,5 +10,3 @@
 # Exclude all contents of dist folder except plugins
 /dist/*
 !/dist/plugins/
-!/dist/index.js
-!/dist/index.d.ts

@@ -779,6 +779,7 @@ export interface StylePackage {
   experimental: boolean
   apiKey?: string
   apiURL?: string
+  baseURL?: string
 }
 
 /** WALLPAPER **/
