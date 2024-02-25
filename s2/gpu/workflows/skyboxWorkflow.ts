@@ -3,13 +3,13 @@ import shaderCode from '../shaders/skybox.wgsl'
 import Color from 'style/color'
 import { degToRad } from 'geometry/util'
 import { invert, multiply, perspective, rotate } from 'ui/camera/projector/mat4'
+import adjustURL from 'util/adjustURL'
 
 import type { SkyboxWorkflow as SkyboxWorkflowSpec } from './workflow.spec'
 import type { WebGPUContext } from '../context'
 import type Projector from 'ui/camera/projector'
 import type { StyleDefinition } from 'style/style.spec'
 import type Camera from 'ui/camera'
-import adjustURL from 'util/adjustURL'
 
 export default class SkyboxWorkflow implements SkyboxWorkflowSpec {
   context: WebGPUContext
