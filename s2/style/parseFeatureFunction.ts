@@ -116,7 +116,7 @@ function dataRangeFunction<T extends NotNullOrObject, U> (
     let endKey: string | NestedKey = key
     // dive into nested properties if needed
     while (typeof endKey === 'object' && 'key' in endKey) {
-      properties = (properties[key.nestedKey ?? ''] ?? {}) as Properties
+      properties = (properties[endKey.nestedKey ?? ''] ?? {}) as Properties
       endKey = endKey.key
     }
     const dataInput = (properties[endKey] !== undefined && !isNaN(properties[endKey] as number))
