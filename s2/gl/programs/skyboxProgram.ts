@@ -1,6 +1,7 @@
 import Color from 'style/color'
 import { degToRad } from 'geometry/util'
 import { invert, multiply, perspective, rotate } from 'ui/camera/projector/mat4'
+import adjustURL from 'util/adjustURL'
 
 // WEBGL1
 import vert1 from '../shaders/skybox1.vertex.glsl'
@@ -40,12 +41,15 @@ export default async function skyboxProgram (context: Context): Promise<SkyboxPr
       this.cubeMap = cubeMap
     }
 
-    updateStyle (style: StyleDefinition, camera: Camera): void {
+    updateStyle (style: StyleDefinition, camera: Camera, apiURL = '', baseURL = ''): void {
       const { context } = this
-      const { path, type, size, loadingBackground } = style.skybox ?? {}
+      const { skybox } = style
+      const { type, size, loadingBackground } = skybox ?? {}
+      let path = skybox?.path
       if (typeof path !== 'string') throw new Error('Skybox path must be a string')
       if (typeof type !== 'string') throw new Error('Skybox type must be a string')
       if (typeof size !== 'number') throw new Error('Skybox size must be a number')
+      path = adjustURL(path, apiURL, baseURL)
       // grab clear color and set inside painter
       if (loadingBackground !== undefined) {
         context.setClearColor(
