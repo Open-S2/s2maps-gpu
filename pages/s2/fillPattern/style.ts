@@ -11,7 +11,7 @@ const style: StyleDefinition = {
     countries: '/s2json/countriesHD.s2json'
   },
   images: {
-    pattern: '/images/pattern.jpg'
+    pattern: 'baseURL://images/pattern.jpg'
   },
   layers: [
     {

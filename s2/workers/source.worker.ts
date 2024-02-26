@@ -179,6 +179,7 @@ export default class SourceWorker {
     mapID: string,
     style: StylePackage
   ): Promise<void> {
+    const { apiURL, baseURL } = this.mapURLS[mapID]
     const { sources, layers, fonts, icons, glyphs, sprites, images } = style
     // sources
     for (const [name, source] of Object.entries(sources)) {
@@ -193,12 +194,14 @@ export default class SourceWorker {
     const imageAwaits: Array<Promise<undefined | ImageMetadata>> = []
     for (const [name, source] of Object.entries(sprites)) {
       if (typeof source === 'object') {
-        imageAwaits.push(this.#createSpriteSheet(mapID, name, source.path, source.fileType))
+        const path = adjustURL(source.path, apiURL, baseURL)
+        imageAwaits.push(this.#createSpriteSheet(mapID, name, path, source.fileType))
       } else { imageAwaits.push(this.#createSpriteSheet(mapID, name, source)) }
     }
     // images
     for (const [name, href] of Object.entries(images)) {
-      imageAwaits.push(this.images.addImage(mapID, name, href))
+      const path = adjustURL(href, apiURL, baseURL)
+      imageAwaits.push(this.images.addImage(mapID, name, path))
     }
 
     // ship the glyph metadata
