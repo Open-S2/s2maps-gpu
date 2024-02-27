@@ -119,7 +119,7 @@ export default class S2Map extends EventTarget {
       }
       options.contextType = (tryContext('webgpu'))
         ? 3
-        : (!isSafari && tryContext('webgl2'))
+        : (tryContext('webgl2'))
             ? 2
             : 1
     }
