@@ -165,7 +165,7 @@ export default class GlyphSource {
           glyphWaitlist.delete(code)
           // grab the image
           const imageSize = glyph.texW * glyph.texH * 4
-          const data = (new Uint8ClampedArray(glyphsBuf.slice(pos, pos + imageSize))).buffer
+          const data = (new Uint8ClampedArray(glyphsBuf.slice(pos, pos + imageSize))).buffer as ArrayBuffer
           images.push({ posX, posY, width: glyph.texW, height: glyph.texH, data })
           pos += imageSize
         }

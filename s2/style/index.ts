@@ -66,7 +66,7 @@ export default class Style {
     const { maskLayers, camera } = this
     for (const maskLayer of maskLayers) {
       const workflow = camera.painter.workflows[maskLayer.type]
-      workflow?.buildMaskFeature(maskLayer as any, tile)
+      workflow?.buildMaskFeature(maskLayer as never, tile)
     }
   }
 
@@ -151,7 +151,7 @@ export default class Style {
       visible: visible ?? true
     }
     // store the layer definition
-    const layerDefinition = workflows[type]?.buildLayerDefinition?.(base, layerStyle as any)
+    const layerDefinition = workflows[type]?.buildLayerDefinition?.(base, layerStyle as never)
     if (layerDefinition !== undefined) return layerDefinition
   }
 

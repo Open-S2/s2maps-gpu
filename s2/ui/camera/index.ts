@@ -113,8 +113,8 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   #setupCanvas (): void {
     const { _interactive, dragPan } = this
     // setup listeners
-    this.#canvas.addEventListener('webglcontextlost', this.#contextLost)
-    this.#canvas.addEventListener('webglcontextrestored', this.#contextRestored)
+    this.#canvas.addEventListener('webglcontextlost', this.#contextLost.bind(this))
+    this.#canvas.addEventListener('webglcontextrestored', this.#contextRestored.bind(this))
     // if we allow the user to interact with map, we add events
     if (_interactive) {
       // let dragPan know if we can zoom
@@ -276,15 +276,16 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   }
 
   async _onCanvasMouseMove (): Promise<void> {
-    if (!this.style.interactive) return
-    const featureID = await this.painter.context.getFeatureAtMousePosition(...this.mousePosition)
+    const { style, mousePosition, currFeature } = this
+    if (!style.interactive) return
+    const featureID = await this.painter.context.getFeatureAtMousePosition(...mousePosition)
     // if we found an ID and said feature is not the same as the current, we dive down
     // @ts-expect-error isNaN can check for properties that are not numbers
-    if (isNaN(featureID) && this.currFeature !== null) {
+    if (isNaN(featureID) && currFeature !== null) {
       this.#handleFeatureChange(null)
     } else if (
       typeof featureID === 'number' &&
-      (this.currFeature === null || this.currFeature.__id !== featureID)
+      (currFeature === null || currFeature.__id !== featureID)
     ) {
       let found = false
       for (const tile of this.tilesInView) {
@@ -295,7 +296,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
           break
         }
       }
-      if (!found && this.currFeature !== undefined) this.#handleFeatureChange(null)
+      if (!found && currFeature !== undefined) this.#handleFeatureChange(null)
     }
   }
 

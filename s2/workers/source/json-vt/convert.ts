@@ -40,7 +40,7 @@ function convertFeature (
 
   const { type, coordinates } = json.geometry
   const tolerance = Math.pow(jsonVT.tolerance / ((1 << jsonVT.maxzoom) * jsonVT.extent), 2)
-  const geometry: any = []
+  const geometry: number[] & number[][] & number[][][] = []
   if (type === 'Point') {
     convertPoint(coordinates, geometry as number[], projection)
   } else if (type === 'MultiPoint') {

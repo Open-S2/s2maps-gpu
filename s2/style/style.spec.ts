@@ -1,6 +1,6 @@
 /* eslint-env browser */
 
-import type { JSONFeatures, Properties } from 'geometry'
+import type { JSONFeatures, Properties } from 'geometry/proj.spec'
 import type { Filter, FilterFunction } from 'style/parseFilter'
 import type { EaseType } from './easingFunctions'
 import type { MapOptions } from 'ui/s2mapUI'
@@ -9,7 +9,7 @@ import type { ClusterOptions } from 'workers/source/pointCluster'
 
 export type { JSONVTOptions } from 'workers/source/json-vt'
 export type { ClusterOptions } from 'workers/source/pointCluster'
-export type { Properties, JSONFeatures } from 'geometry'
+export type { Properties, JSONFeatures } from 'geometry/proj.spec'
 export type { Filter, FilterFunction } from './parseFilter'
 export type { EaseType } from './easingFunctions'
 export type { MapOptions } from 'ui/s2mapUI'
@@ -535,7 +535,7 @@ export interface LineWorkflowLayerGuide extends LayerWorkflowGuideBase {
   interactive: boolean
   cursor: Cursor
 }
-export interface LineWorkflowLayerGuideGPU extends LineWorkflowLayerGuide {
+export interface LineWorkflowLayerGuideGPU extends Omit<LineWorkflowLayerGuide, 'dashTexture'> {
   layerBuffer: GPUBuffer
   layerCodeBuffer: GPUBuffer
   dashTexture: GPUTexture

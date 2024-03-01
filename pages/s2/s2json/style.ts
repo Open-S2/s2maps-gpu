@@ -1,8 +1,8 @@
-import type { StyleDefinition } from '../../../s2/style/style.spec'
+import type { StyleDefinition } from 's2/style/style.spec'
 
 const style: StyleDefinition = {
   version: 1,
-  name: 'S2 Hilbert',
+  name: 'S2 JSON',
   center: [-90, 0],
   zoom: -0.4,
   minzoom: -1,

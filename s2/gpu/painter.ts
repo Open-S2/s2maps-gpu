@@ -67,7 +67,7 @@ export default class Painter {
     const promises: Array<Promise<void>> = []
     for (const set of buildSet) {
       // @ts-expect-error - typescript can't handle matching the workflow to the module
-      const workflow = workflows[set] = programCases[set]()
+      const workflow: Workflow = workflows[set] = programCases[set]()
       if (set === 'wallpaper' || set === 'skybox') workflows.background = workflows[set]
       promises.push(workflow.setup())
     }

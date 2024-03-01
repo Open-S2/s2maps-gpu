@@ -1,4 +1,4 @@
-import type { StyleDefinition } from '../../../s2/style/style.spec'
+import type { StyleDefinition } from 's2/style/style.spec'
 
 const style: StyleDefinition = {
   version: 1,
@@ -11,12 +11,6 @@ const style: StyleDefinition = {
     satellite: '/tiles/s2/modis'
   },
   fonts: {},
-  skybox: {
-    path: 'baseURL://backgrounds/milkyway',
-    loadingBackground: 'rgb(9, 8, 17)',
-    size: 2048,
-    type: 'webp'
-  },
   layers: [
     {
       name: 'background',
@@ -30,12 +24,6 @@ const style: StyleDefinition = {
       source: 'satellite',
       type: 'raster'
     }
-    //   {
-    //     name: 'shade',
-    //     source: 'mask',
-    //     type: 'shade',
-    //     maxzoom: 2
-    //   }
   ]
 }
 

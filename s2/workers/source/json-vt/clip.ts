@@ -90,7 +90,7 @@ function _clip (
       continue
     }
 
-    let newGeometry: any = []
+    let newGeometry: number[] & number[][] & number[][][] = []
 
     if (type === 'Point' || type === 'MultiPoint') {
       clipPoints(feature.geometry, newGeometry, k1, k2, axis)
@@ -113,6 +113,7 @@ function _clip (
       if (type === 'LineString' || type === 'MultiLineString') {
         if (newGeometry.length === 1) {
           newType = 'LineString'
+          // @ts-expect-error - TS doesn't understand that newGeometry is a number[][]
           newGeometry = newGeometry[0]
         } else {
           newType = 'MultiLineString'

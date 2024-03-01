@@ -269,7 +269,7 @@ export default class Painter implements PainterSpec {
       // adjust tile uniforms
       program.setTileUniforms(parent ?? tile)
       // draw (just ignore types... they are handled in the program)
-      program.draw(feature as any, interactive) // TODO: We could wisen this up
+      program.draw(feature as never, interactive) // TODO: We could wisen this up
     }
   }
 
@@ -351,7 +351,7 @@ export default class Painter implements PainterSpec {
     // tell all the workflows
     const { workflows } = this
     for (const programName in workflows) {
-      const program = workflows[programName as WorkflowKey] as Program
+      const program = workflows[programName as WorkflowKey] as unknown as Program
       program.updateColorBlindMode = mode
     }
   }

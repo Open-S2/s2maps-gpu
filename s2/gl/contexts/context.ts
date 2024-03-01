@@ -48,8 +48,8 @@ export default class Context implements ContextSpec {
     this.sharedFBO = this.#buildFramebuffer(200)
     this.#buildInteractFBO()
     // lastly grab the renderers id
-    const debugRendererInfo = context.getExtension('WEBGL_debug_renderer_info')
-    if (debugRendererInfo !== undefined) this.renderer = cleanRenderer(context.getParameter(debugRendererInfo.UNMASKED_RENDERER_WEBGL))
+    const debugRendererInfo: WEBGL_debug_renderer_info | null = context.getExtension('WEBGL_debug_renderer_info')
+    if (debugRendererInfo !== null) this.renderer = cleanRenderer(context.getParameter(debugRendererInfo.UNMASKED_RENDERER_WEBGL) as string)
     else this.renderer = context.getParameter(context.RENDERER)
     // set initial states
     gl.enable(gl.STENCIL_TEST)
@@ -273,7 +273,7 @@ export default class Context implements ContextSpec {
     gl.canvas.width = 1
     gl.canvas.height = 1
     // attempt to force a context loss
-    gl.getExtension('WEBGL_lose_context').loseContext()
+    gl.getExtension('WEBGL_lose_context')?.loseContext()
   }
 
   /** CONSTRUCTION **/

@@ -1,46 +1,35 @@
 {
+  // https://nuxt.com/docs/guide/concepts/typescript
+  "extends": "./.nuxt/tsconfig.json",
+  "esModuleInterop": true,
+  "moduleResolution": "node",
   "compilerOptions": {
-    "target": "esnext",
-    "lib": [
-      "DOM",
-      "DOM.Iterable",
-      "ESNext",
-      "WebWorker"
-    ],
-    "outDir": "dist",
-    "declarationDir": "dist",
-    "declaration": true,
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "noEmit": false,
-    "module": "esnext",
-    "moduleResolution": "Bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "react-jsx",
-    "incremental": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "typeRoots": [ /* Specify multiple folders that act like `./node_modules/@types`. */
-      "./node_modules/@webgpu/types",
-      "./node_modules/@types"
-    ],
-    "baseUrl": "s2",
+    "types": ["@webgpu/types"],
+    "baseUrl": ".", // This must be specified if "paths" is.
     "paths": {    
-      "*" : ["./*"],
-      "@s2/*": ["./s2/*"],
-      "@assets/*": ["./assets/*"],
-      "@components/*": ["./components/*"],
-      "@contexts/*": ["./contexts/*"],
-      "@pages/*": ["./pages/*"],
-      "@public/*": ["./public/*"],
-      "@styles/*": ["./styles/*"]
+      "*" : ["./*", "./s2/*"],
+      "geometry/*": ["./s2/geometry/*"],
+      "gl/*": ["./s2/gl/*"],
+      "gpu/*": ["./s2/gpu/*"],
+      "plugins/*": ["./s2/plugins/*"],
+      "source/*": ["./s2/source/*"],
+      "style/*": ["./s2/style/*"],
+      "svg/*": ["./s2/svg/*"],
+      "ui/*": ["./s2/ui/*"],
+      "util/*": ["./s2/util/*"],
+      "workers/*": ["./s2/workers/*"],
     }
   },
-  "include": [
-    "types/*.d.ts",
-    "s2/**/*.ts"
+  "exclude": [
+    "node_modules",
+    "buildS2",
+    "buildS2-dev",
+    "buildS2-local",
+    "buildS2-flat",
+    "dist",
+    "dist-types",
+    "test",
+    "examples",
+    ".output"
   ]
 }

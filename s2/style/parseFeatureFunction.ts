@@ -16,7 +16,7 @@ import type {
   ValueType
 } from './style.spec'
 import type { FilterFunction } from './parseFilter'
-import type { Properties } from 'geometry'
+import type { Properties } from 'geometry/proj.spec'
 
 interface DataConditionList<U> {
   condition: FilterFunction

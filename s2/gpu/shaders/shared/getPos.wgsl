@@ -1,18 +1,3 @@
-struct PositionUniforms {
-  face: i32,
-  zoom: i32,
-  sLow: f32,
-  tLow: f32,
-  deltaS: f32,
-  deltaT: f32,
-  uBottom: vec4<f32>, // [bottomLeft-X, bottomLeft-Y, bottomRight-X, bottomRight-Y]
-  uTop: vec4<f32>, // [topLeft-X, topLeft-Y, topRight-X, topRight-Y]
-  uMatrix: mat4x4<f32>,
-  uIsS2: bool,
-}
-
-@binding(1) @group(2) var<uniform> posUniforms : PositionUniforms;
-
 fn stToUV (s: f32) -> f32 {
   // compressed VTs are extended, so we must squeeze them back to [0,1]
   if (s >= 0.5) { return (1. / 3.) * (4. * s * s - 1.); }
@@ -53,7 +38,7 @@ fn getPosLocal (pos: vec2<f32>) -> vec4<f32> {
 }
 
 fn getPos (pos: vec2<f32>) -> vec4<f32> {
-  if (tile.isS2 == 0. || view.zoom >= 12.) {
+  if (tile.isS2 == 0. || tile.zoom >= 12.) {
     return getPosLocal(pos);
   } else {
     return matrix * stToXYZ(pos);
@@ -61,7 +46,7 @@ fn getPos (pos: vec2<f32>) -> vec4<f32> {
 }
 
 fn getZero () -> vec4<f32> {
-  if (tile.isS2 == 0. || view.zoom >= 12.) {
+  if (tile.isS2 == 0. || tile.zoom >= 12.) {
     return vec4<f32>(0., 0., 1., 1.);
   } else {
     return matrix * vec4<f32>(0., 0., 0., 1.);

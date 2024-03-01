@@ -68,7 +68,7 @@ export default class RasterWorker implements RasterWorkerSpec {
     }
   }
 
-  buildCode (design: CodeDesign): BuildCodeFunctionZoom {
+  buildCode (design: CodeDesign<number>): BuildCodeFunctionZoom {
     const { gpuType } = this
 
     const featureFunctions: Array<LayerWorkerFunction<number | [number, number, number, number]>> = []

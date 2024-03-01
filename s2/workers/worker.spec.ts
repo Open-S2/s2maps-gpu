@@ -51,7 +51,7 @@ export interface TileRequest {
 }
 
 export interface Feature {
-  geometry: any[]
+  geometry: never[]
   properties: Properties
   indices?: number[]
 }

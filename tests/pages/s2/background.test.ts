@@ -3,7 +3,7 @@ import { createCanvas } from 'node-canvas-webgl'
 import { S2Map } from '../../../s2'
 
 test('Background renders', async () => {
-  global.window = globalThis.window = {
+  window = globalThis.window = {
     // @ts-expect-error - support NodeJS
     navigator: {
       hardwareConcurrency: 4

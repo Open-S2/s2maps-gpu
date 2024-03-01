@@ -1,15 +1,5 @@
-if (global.window === undefined) {
-  global.window = {
-    // @ts-expect-error - support NodeJS
-    navigator: {
-      hardwareConcurrency: 4,
-      userAgent: ''
-    }
-  }
-}
-
-export const isSafari = /^((?!chrome|android).)*safari/i.test(global.window.navigator.userAgent)
-export const isChrome = /chrome/i.test(global.window.navigator.userAgent)
+export const isSafari = /^((?!chrome|android).)*safari/i.test(window.navigator.userAgent)
+export const isChrome = /chrome/i.test(window.navigator.userAgent)
 /* eslint-env browser */
 /* Safari and Edge polyfill for createImageBitmap
  * https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/createImageBitmap

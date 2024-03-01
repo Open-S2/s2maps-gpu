@@ -206,7 +206,7 @@ function addFeature (tile: JSONTile, feature: FeatureVector, tolerance: number):
       }
     }
     const layer = tile.layers[layerName]
-    layer.features.push(tileFeature as any)
+    layer.features.push(tileFeature as VTFeature)
     layer.length++
   }
 }

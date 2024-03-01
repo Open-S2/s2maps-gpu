@@ -1,4 +1,28 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Nuxt dev/build outputs
+.output
+.data
+.nuxt
+.nitro
+.cache
+dist
+
+# Node dependencies
+node_modules
+
+# Logs
+logs
+*.log
+
+# Misc
+.DS_Store
+.fleet
+.idea
+
+# Local env files
+.env
+.env.*
+!.env.example
+
 
 # dependencies
 /node_modules
@@ -17,11 +41,13 @@
 /buildS2
 /buildS2-dev
 /buildS2-local
+/buildS2-flat
 /dist
 /dist-types
 
 #s2
 /s2/**/*.js
+/pages/**/*.js
 
 # misc
 .DS_Store
@@ -38,6 +64,9 @@ yarn-error.log*
 
 # vercel
 .vercel
+
+# vscode
+.vscode
 
 # typescript
 *.tsbuildinfo

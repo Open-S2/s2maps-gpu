@@ -121,8 +121,8 @@ export default class FamilySource {
 
   addGlyphRequest (tileID: bigint, code: string): void {
     if (!this.glyphRequestList.has(tileID)) this.glyphRequestList.set(tileID, new Set())
-    const requests = this.glyphRequestList.get(tileID) as Set<string>
-    requests.add(code)
+    const requests = this.glyphRequestList.get(tileID)
+    requests?.add(code)
   }
 
   getRequests (tileID: bigint): string[] {

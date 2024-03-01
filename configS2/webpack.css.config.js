@@ -11,7 +11,7 @@ module.exports = {
   mode: 'production',
   // These are the 'entry points' to our application.
   // This means they will be the 'root' imports that are included in JS bundle.
-  entry: path.join(__dirname, '/../styles/s2maps.css'),
+  entry: path.join(__dirname, '/../assets/styles/s2maps.css'),
   output: {
     path: path.join(__dirname, '/../buildS2'),
     filename: 'css.tmp'

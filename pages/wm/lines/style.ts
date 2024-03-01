@@ -1,9 +1,9 @@
-import type { StyleDefinition } from '../../../s2/style/style.spec'
+import type { StyleDefinition } from 's2/style/style.spec'
 
 const style: StyleDefinition = {
   version: 1,
   projection: 'WM',
-  name: 'webmercator background',
+  name: 'WM Lines',
   center: [0, 0],
   zoom: 0.95,
   minzoom: 0,
