@@ -1,0 +1,57 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ESNext",
+      "WebWorker"
+    ],
+    "outDir": "dist",
+    "declarationDir": "dist",
+    "declaration": true,
+    "skipLibCheck": true,
+    "noEmit": false,
+    "module": "esnext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "incremental": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "types": ["@webgpu/types"],
+    "baseUrl": "s2", // This must be specified if "paths" is.
+    "paths": {    
+      "*" : ["./*"],
+      "geometry/*": ["./geometry/*"],
+      "gl/*": ["./gl/*"],
+      "gpu/*": ["./gpu/*"],
+      "plugins/*": ["./plugins/*"],
+      "source/*": ["./source/*"],
+      "style/*": ["./style/*"],
+      "svg/*": ["./svg/*"],
+      "ui/*": ["./ui/*"],
+      "util/*": ["./util/*"],
+      "workers/*": ["./workers/*"],
+    }
+  },
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
+  },
+  "include": [
+    "types/*.d.ts",
+    "s2/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "buildS2",
+    "buildS2-dev",
+    "buildS2-local",
+    "buildS2-flat",
+    "server",
+    "dist",
+    "dist-types",
+    ".output"
+  ]
+}

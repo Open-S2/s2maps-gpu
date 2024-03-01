@@ -1,4 +1,4 @@
-const PI = 3.1415926538;
+const PI = 3.141592653589793238;
 
 // LCH
 
@@ -68,14 +68,25 @@ fn LCH2RGB (lch: vec4<f32>) -> vec4<f32> {
 // http://www.daltonize.org/
 // https://galactic.ink/labs/Color-Vision/Javascript/Color.Vision.Daltonize.js
 fn cBlindAdjust (rgba: vec4<f32>) -> vec4<f32> {
+  if (view.cBlind == 0.) { return rgba; }
   // setup rgb
   var r = rgba.r * 255.;
   var g = rgba.g * 255.;
   var b = rgba.b * 255.;
+  // if uCBlind is 4 return grayscale
+  if (view.cBlind == 4.) {
+    var l = (0.3 * r) + (0.59 * g) + (0.11 * b);
+    return vec4<f32>(
+      l / 255.,
+      l / 255.,
+      l / 255.,
+      rgba.a
+    );
+  }
   // grab color conversion mode
   var CVD = array<f32, 9>();
-  if (layerUniforms.uCBlind == 1u) { CVD = array<f32, 9>(0.0, 2.02344, -2.52581, 0., 1., 0., 0., 0., 1.); } // protanopia
-  else if (layerUniforms.uCBlind == 2u) { CVD = array<f32, 9>(1.0, 0., 0., 0.494207, 0., 1.24827, 0., 0., 1.); } // deutranopia
+  if (view.cBlind == 1.) { CVD = array<f32, 9>(0.0, 2.02344, -2.52581, 0., 1., 0., 0., 0., 1.); } // protanopia
+  else if (view.cBlind == 2.) { CVD = array<f32, 9>(1.0, 0., 0., 0.494207, 0., 1.24827, 0., 0., 1.); } // deutranopia
   else { CVD = array<f32, 9>(1.0, 0., 0., 0., 1.0, 0., -0.395913, 0.801109, 0.); } // tritanopia
   // RGB to LMS matrix conversion
 	var L = (17.8824 * r) + (43.5161 * g) + (4.11935 * b);

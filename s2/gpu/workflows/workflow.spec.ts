@@ -215,7 +215,7 @@ export interface LineFeature extends FeatureBase {
   count: number
   offset: number
   dashed: boolean
-  dashTexture?: WebGLTexture
+  dashTexture: GPUTexture
   cap: number
   lineBindGroup: GPUBindGroup
   duplicate: (tile: Tile, parent: Tile) => LineFeature

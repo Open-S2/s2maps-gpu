@@ -36,7 +36,7 @@ module.exports = {
       },
       {
         test: /\.wgsl$/i,
-        use: ['raw-loader']
+        loader: require.resolve('../config/wgsl-loader')
       },
       {
         test: /\.ts?$/,
@@ -44,16 +44,12 @@ module.exports = {
           {
             loader: 'ts-loader',
             options: {
-              transpileOnly: true
+              transpileOnly: true,
+              configFile: path.join(__dirname, '/../tsconfig.build.json')
             }
           }
         ],
         exclude: /node_modules/
-      },
-      {
-        test: /\.wasm$/,
-        type: 'javascript/auto',
-        use: require.resolve('../config/arraybuffer-loader')
       }
     ]
   },

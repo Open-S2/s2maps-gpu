@@ -1,4 +1,4 @@
-import type { StyleDefinition } from '../../../s2/style/style.spec'
+import type { StyleDefinition } from 's2/style/style.spec'
 
 const style: StyleDefinition = {
   version: 1,
@@ -12,7 +12,7 @@ const style: StyleDefinition = {
     planet: '/tiles/wm/osm'
   },
   fonts: {
-    robotoMedium: '/api/glyphs/RobotoMedium.font'
+    robotoMedium: '/api/glyphs-v2/RobotoMedium'
   },
   layers: [
     {

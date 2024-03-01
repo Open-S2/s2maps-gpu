@@ -1,4 +1,4 @@
-import type { StyleDefinition } from '../../../s2/style/style.spec'
+import type { StyleDefinition } from 's2/style/style.spec'
 
 const style: StyleDefinition = {
   version: 1,
@@ -7,9 +7,7 @@ const style: StyleDefinition = {
   zoom: -0.5,
   minzoom: -0.5,
   maxzoom: 5,
-  sources: {
-    countries: '/s2json/countriesHD.s2json'
-  },
+  sources: {},
   fonts: {},
   layers: [
     {

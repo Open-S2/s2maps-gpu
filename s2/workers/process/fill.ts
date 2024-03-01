@@ -168,8 +168,8 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
 
     const storeID: string = `${mapID}:${tile.id}:${sourceName}`
     if (!this.featureStore.has(storeID)) this.featureStore.set(storeID, [] as FillFeature[])
-    const features = this.featureStore.get(storeID) as FillFeature[]
-    features.push(fillFeature)
+    const features = this.featureStore.get(storeID)
+    features?.push(fillFeature)
     return true
   }
 
@@ -238,8 +238,8 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
 
     const storeID: string = `${mapID}:${tile.id}:${sourceName}`
     if (!this.featureStore.has(storeID)) this.featureStore.set(storeID, [] as FillFeature[])
-    const features = this.featureStore.get(storeID) as FillFeature[]
-    features.push(feature)
+    const features = this.featureStore.get(storeID)
+    features?.push(feature)
     return feature
   }
 
@@ -341,11 +341,11 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     }
 
     // Upon building the batches, convert to buffers and ship.
-    const vertexBuffer = new Float32Array(vertices).buffer
-    const indexBuffer = new Uint32Array(indices).buffer
-    const idBuffer = new Uint8ClampedArray(ids).buffer // pre-store each id as an rgb value
-    const codeTypeBuffer = new Uint32Array(codeType).buffer
-    const featureGuideBuffer = new Float32Array(featureGuide).buffer
+    const vertexBuffer = new Float32Array(vertices).buffer as ArrayBuffer
+    const indexBuffer = new Uint32Array(indices).buffer as ArrayBuffer
+    const idBuffer = new Uint8ClampedArray(ids).buffer as ArrayBuffer // pre-store each id as an rgb value
+    const codeTypeBuffer = new Uint32Array(codeType).buffer as ArrayBuffer
+    const featureGuideBuffer = new Float32Array(featureGuide).buffer as ArrayBuffer
     // ship the vector data.
     const message: FillData = {
       mapID,

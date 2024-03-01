@@ -1,7 +1,5 @@
 /* eslint-env worker */
 import UnicodeShaper from 'unicode-shaper-zig'
-// @ts-expect-error - file exists
-import uShaperWASM from 'unicode-shaper-zig/u-shaper.wasm'
 import VectorWorker, { colorFunc, idToRGB } from '../vectorWorker'
 import featureSort from '../util/featureSort'
 import { QUAD_SIZE, buildGlyphPointQuads } from './buildGlyphQuads'
@@ -29,7 +27,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
   imageStore: ImageStore
   featureStore = new Map<string, GlyphObject[]>() // tileID -> features
   sourceWorker: MessagePort
-  uShaper = new UnicodeShaper(uShaperWASM)
+  uShaper = new UnicodeShaper()
   experimental: boolean
   constructor (
     idGen: IDGen,
@@ -116,7 +114,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     sourceName: string
   ): Promise<boolean> {
     const { gpuType, imageStore, featureStore } = this
-    const storeID: string = `${mapID}:${tile.id}:${sourceName}`
+    const storeID: string = `${mapID}:${String(tile.id)}:${sourceName}`
     if (!featureStore.has(storeID)) featureStore.set(storeID, [])
     // ensure that our imageStore is ready
     await imageStore.getReady(mapID)
@@ -204,7 +202,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       }
 
       // prep store
-      const store = featureStore.get(storeID) as GlyphFeature[]
+      const store = featureStore.get(storeID)
       if (featureType === 1) {
         for (const point of clip as S2VectorPoints) {
           const glyph: GlyphPoint = {
@@ -220,7 +218,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
             maxX: -Infinity,
             maxY: -Infinity
           }
-          store.push(glyph)
+          store?.push(glyph)
         }
       } else {
         // path type
@@ -238,7 +236,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
           // node Properties
           nodes: []
         }
-        store.push(glyph)
+        store?.push(glyph)
       }
     }
 
@@ -248,7 +246,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
   }
 
   async flush (mapID: string, tile: TileRequest, sourceName: string, wait: Promise<void>): Promise<void> {
-    const storeID: string = `${mapID}:${tile.id}:${sourceName}`
+    const storeID: string = `${mapID}:${String(tile.id)}:${sourceName}`
     const features = this.featureStore.get(storeID) ?? []
     // check if we need to wait for a response of missing data
     const missing = features.some(f => f.missing)
@@ -270,7 +268,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     features: GlyphFeature[]
   ): void {
     const { imageStore, collisionTest } = this
-    const storeID: string = `${mapID}:${tile.id}:${sourceName}`
+    const storeID: string = `${mapID}:${String(tile.id)}:${sourceName}`
     // prepare
     collisionTest.clear()
     const res: GlyphObject[] = []
@@ -395,13 +393,13 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     }
 
     // filter data
-    const glyphFilterBuffer = new Float32Array(glyphFilterVertices).buffer
-    const glyphFilterIDBuffer = new Uint8ClampedArray(glyphFilterIDs).buffer
+    const glyphFilterBuffer = new Float32Array(glyphFilterVertices).buffer as ArrayBuffer
+    const glyphFilterIDBuffer = new Uint8ClampedArray(glyphFilterIDs).buffer as ArrayBuffer
     // quad draw data
-    const glyphQuadBuffer = new Float32Array(glyphQuads).buffer
-    const glyphQuadIDBuffer = new Uint8ClampedArray(glyphQuadIDs).buffer
-    const glyphColorBuffer = new Uint8ClampedArray(glyphColors).buffer
-    const featureGuideBuffer = new Float32Array(featureGuide).buffer
+    const glyphQuadBuffer = new Float32Array(glyphQuads).buffer as ArrayBuffer
+    const glyphQuadIDBuffer = new Uint8ClampedArray(glyphQuadIDs).buffer as ArrayBuffer
+    const glyphColorBuffer = new Uint8ClampedArray(glyphColors).buffer as ArrayBuffer
+    const featureGuideBuffer = new Float32Array(featureGuide).buffer as ArrayBuffer
 
     const message: GlyphData = {
       mapID,
@@ -493,15 +491,15 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     }
 
     // filter data
-    const glyphFilterBuffer = new Float32Array(glyphFilterVertices).buffer
+    const glyphFilterBuffer = new Float32Array(glyphFilterVertices).buffer as ArrayBuffer
     // unused by WebGPU
-    const glyphFilterIDBuffer = new Uint8ClampedArray([0]).buffer
+    const glyphFilterIDBuffer = new Uint8ClampedArray([0]).buffer as ArrayBuffer
     // quad draw data
-    const glyphQuadBuffer = new Float32Array(glyphQuads).buffer
+    const glyphQuadBuffer = new Float32Array(glyphQuads).buffer as ArrayBuffer
     // actually an index buffer not ID buffer
-    const glyphQuadIDBuffer = new Uint32Array(glyphQuadIDs).buffer
-    const glyphColorBuffer = new Float32Array(glyphColors).buffer
-    const featureGuideBuffer = new Float32Array(featureGuide).buffer
+    const glyphQuadIDBuffer = new Uint32Array(glyphQuadIDs).buffer as ArrayBuffer
+    const glyphColorBuffer = new Float32Array(glyphColors).buffer as ArrayBuffer
+    const featureGuideBuffer = new Float32Array(featureGuide).buffer as ArrayBuffer
 
     const message: GlyphData = {
       mapID,
@@ -533,7 +531,7 @@ function storeAsFloat32 (u32value: number): number {
 }
 
 function decodeHtmlEntities (input: string): string {
-  return input.replace(/&#x([0-9A-Fa-f]+);/g, function (_, hex) {
+  return input.replace(/&#x([0-9A-Fa-f]+);/g, function (_, hex: string) {
     return String.fromCharCode(parseInt(hex, 16))
   })
 }

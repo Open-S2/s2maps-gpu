@@ -93,14 +93,15 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
     if (clip === undefined) return false
     const vertices: number[] = []
     const weights: number[] = []
+    const isHeatmap = type === 'heatmap'
 
-    const weight = (type === 'heatmap') && layer.weight([], properties, zoom)
+    const weight = isHeatmap ? layer.weight([], properties, zoom) : 0
     // create multiplier
     const multiplier = 1 / extent
     // if weight, then it is a heatmap and we add weight data
     for (const point of clip) {
       vertices.push(point[0] * multiplier, point[1] * multiplier)
-      if (weight !== false) weights.push(weight)
+      if (isHeatmap) weights.push(weight)
     }
 
     // skip empty geometry
@@ -121,10 +122,10 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
 
     const storeID: string = `${mapID}:${tile.id}:${sourceName}`
     if (!this.featureStore.has(storeID)) this.featureStore.set(storeID, { point: [], heatmap: [] })
-    const store = this.featureStore.get(storeID) as Features
+    const store = this.featureStore.get(storeID)
     if (type === 'point') {
       const id = this.idGen.getNum()
-      store.point.push({
+      store?.point.push({
         type: 'point',
         idRGB: idToRGB(id),
         ...typeFeature
@@ -132,7 +133,7 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
       // if interactive, store interactive properties
       if (layer.interactive) this._addInteractiveFeature(id, properties, layer)
     } else {
-      store.heatmap.push({
+      store?.heatmap.push({
         type: 'heatmap',
         weights,
         ...typeFeature
@@ -226,10 +227,10 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
     }
 
     // Upon building the batches, convert to buffers and ship.
-    const vertexBuffer = new Float32Array(vertices).buffer
-    const weightBuffer = new Float32Array(weights).buffer
-    const idBuffer = new Uint8ClampedArray(ids).buffer // pre-store each id as an rgb value
-    const featureGuideBuffer = new Float32Array(featureGuide).buffer
+    const vertexBuffer = new Float32Array(vertices).buffer as ArrayBuffer
+    const weightBuffer = new Float32Array(weights).buffer as ArrayBuffer
+    const idBuffer = new Uint8ClampedArray(ids).buffer as ArrayBuffer // pre-store each id as an rgb value
+    const featureGuideBuffer = new Float32Array(featureGuide).buffer as ArrayBuffer
     // ship the vector data.
     if (type === 'point') {
       const data: PointData = {

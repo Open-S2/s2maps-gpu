@@ -65,7 +65,7 @@ export default class ProcessManager {
 
   setupLayer (layer: LayerDefinition): undefined | WorkerLayer {
     if (layer.type === 'shade') return
-    return this.workers[layer.type]?.setupLayer(layer as any)
+    return this.workers[layer.type]?.setupLayer(layer as never)
   }
 
   #buildWorkers (names: Set<LayerType>): void {
@@ -123,7 +123,7 @@ export default class ProcessManager {
         const { properties } = feature
         // filter out features that are not applicable, otherwise tell the vectorWorker to build
         if (filter(properties)) {
-          const wasBuilt = await workers[type]?.buildFeature(tile, feature, sourceLayer as any, mapID, sourceName)
+          const wasBuilt = await workers[type]?.buildFeature(tile, feature, sourceLayer as never, mapID, sourceName)
           if (wasBuilt === true && layers[layerIndex] !== undefined) layers[layerIndex]++
         }
       }

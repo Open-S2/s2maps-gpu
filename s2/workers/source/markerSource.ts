@@ -93,7 +93,7 @@ export default class MarkerSource {
     // build data object
     const data = { extent: 8_192, face, zoom, i, j, layers: { default: { extent: 8_192, features, length: features.length } } }
     // encode for transfer
-    const uint8data = (this.textEncoder.encode(JSON.stringify(data))).buffer
+    const uint8data = (this.textEncoder.encode(JSON.stringify(data))).buffer as ArrayBuffer
     // request a worker and post
     const worker = this.session.requestWorker()
     worker.postMessage({ mapID, type: 'jsondata', tile, sourceName: '_markers', data: uint8data }, [uint8data])

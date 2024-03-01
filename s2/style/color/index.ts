@@ -51,7 +51,7 @@ export default class Color {
     return this.val
   }
 
-  toRGB (): Color {
+  toRGB (): this {
     if (this.type === 'rgb') return this
     // potentially swing back
     if (this.type === 'hsv') this.HSV2RGB()
@@ -65,7 +65,7 @@ export default class Color {
     return this
   }
 
-  toHSV (): Color {
+  toHSV (): this {
     if (this.type === 'hsv') return this
     // potentially swing back
     if (this.type === 'lch') this.LCH2LAB()
@@ -76,7 +76,7 @@ export default class Color {
     return this
   }
 
-  toLCH (): Color {
+  toLCH (): this {
     if (this.type === 'lch') return this
     // if outside variables, bring them back to a starting point
     if (this.type === 'hsv') this.HSV2RGB()

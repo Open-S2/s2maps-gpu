@@ -178,7 +178,8 @@ implements TileSpec<C, F, M> {
       start = interactiveGuide[i + 1]
       end = interactiveGuide[i + 2]
       // parse feature and add properties
-      this.interactiveGuide.set(id, JSON.parse(textDecoder.decode(interactiveData.slice(start, end))))
+      const interactiveObject: InteractiveObject = JSON.parse(textDecoder.decode(interactiveData.slice(start, end)))
+      this.interactiveGuide.set(id, interactiveObject)
     }
   }
 
@@ -211,7 +212,6 @@ implements TileSpec<C, F, M> {
 export class S2Tile<C extends SharedContext, F extends SharedFeatureGuide, M extends SharedMaskSource>
   extends Tile<C, F, M> {
   type = 'S2' as const
-  faceST: FaceST
   corners?: Corners
   constructor (context: C, id: bigint) {
     super(context, id)
@@ -237,7 +237,7 @@ export class S2Tile<C extends SharedContext, F extends SharedFeatureGuide, M ext
     // build division
     this.division = 16 / (1 << max(min(floor(zoom / 2), 4), 0))
     // grab mask
-    this.mask = context.getMask(this.division, this as any) as M
+    this.mask = context.getMask(this.division, this as never) as M
   }
 
   #buildCorners (): void {
@@ -301,7 +301,7 @@ export class WMTile<C extends SharedContext, F extends SharedFeatureGuide, M ext
       1 // deltaT
     ])
     // grab mask
-    this.mask = context.getMask(1, this as any) as M
+    this.mask = context.getMask(1, this as never) as M
   }
 
   // given a basic ortho matrix, adjust by the tile's offset and scale

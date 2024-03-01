@@ -1,14 +1,15 @@
-import type { StyleDefinition } from '../../../s2/style/style.spec'
+import type { StyleDefinition } from 's2/style/style.spec'
 
 const style: StyleDefinition = {
   version: 1,
+  experimental: true,
   name: 'S2 Glyphs',
   center: [-122.4585607773497, 37.778443127730476],
   zoom: -0.5,
   minzoom: -0.5,
   maxzoom: 5,
   sources: {
-    countries: 'baseURL://s2json/countriesHD.s2json'
+    countries: '/s2json/countriesHD.s2json'
   },
   fonts: {
     robotoMedium: '/api/glyphs-v2/RobotoMedium'

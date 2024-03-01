@@ -8,7 +8,7 @@ interface HTMLCanvasElement {
   getContext: (contextId: 'webgl' | 'experimental-webgl', contextAttributes?: WebGLContextAttributes) => WebGLRenderingContext | null
 }
 
-interface WebGLObject extends Object {
+interface WebGLObject extends Record<string, unknown> {
 }
 
 interface WebGLBuffer extends WebGLObject {
@@ -29,7 +29,7 @@ interface WebGLShader extends WebGLObject {
 interface WebGLTexture extends WebGLObject {
 }
 
-interface WebGLUniformLocation extends Object {
+interface WebGLUniformLocation extends Record<string, unknown> {
 }
 
 interface WebGLVertexArrayObject extends WebGLObject {
@@ -551,28 +551,28 @@ interface WebGLRenderingContext {
 
   getAttribLocation: (program: WebGLProgram, name: string) => number
 
-  getBufferParameter: (target: number, pname: number) => any
-  getParameter: (pname: number) => any
+  getBufferParameter: (target: number, pname: number) => GLint | GLenum
+  getParameter: (pname: number) => unknown
 
   getError: () => number
 
-  getFramebufferAttachmentParameter: (target: number, attachment: number, pname: number) => any
-  getProgramParameter: (program: WebGLProgram, pname: number) => any
+  getFramebufferAttachmentParameter: (target: number, attachment: number, pname: number) => GLint | GLenum | WebGLRenderbuffer | WebGLTexture
+  getProgramParameter: (program: WebGLProgram, pname: number) => unknown
   getProgramInfoLog: (program: WebGLProgram) => string
-  getRenderbufferParameter: (target: number, pname: number) => any
-  getShaderParameter: (shader: WebGLShader, pname: number) => any
+  getRenderbufferParameter: (target: number, pname: number) => GLint | GLenum
+  getShaderParameter: (shader: WebGLShader, pname: number) => unknown
   getShaderPrecisionFormat: (shadertype: number, precisiontype: number) => WebGLShaderPrecisionFormat
   getShaderInfoLog: (shader: WebGLShader) => string
 
   getShaderSource: (shader: WebGLShader) => string
 
-  getTexParameter: (target: number, pname: number) => any
+  getTexParameter: (target: number, pname: number) => unknown | null
 
-  getUniform: (program: WebGLProgram, location: WebGLUniformLocation) => any
+  getUniform: (program: WebGLProgram, location: WebGLUniformLocation) => unknown | null
 
   getUniformLocation: (program: WebGLProgram, name: string) => WebGLUniformLocation
 
-  getVertexAttrib: (index: number, pname: number) => any
+  getVertexAttrib: (index: number, pname: number) => unknown | null
 
   getVertexAttribOffset: (index: number, pname: number) => number
 
@@ -656,7 +656,14 @@ interface WebGLRenderingContext {
   viewport: (x: number, y: number, width: number, height: number) => void
 
   /* PLUGINS */
-  getExtension: ((name: string) => any) & ((name: 'OES_element_index_uint') => OES_element_index_uint) & ((name: 'ANGLE_instanced_arrays') => ANGLE_instanced_arrays) & ((name: 'OES_vertex_array_object') => OES_vertex_array_object) & ((name: 'EXT_blend_minmax') => EXT_blend_minmax) & ((name: 'OES_texture_float') => OES_texture_float)
+  getExtension:
+  ((name: 'OES_element_index_uint') => OES_element_index_uint) &
+  ((name: 'ANGLE_instanced_arrays') => ANGLE_instanced_arrays) &
+  ((name: 'OES_vertex_array_object') => OES_vertex_array_object) &
+  ((name: 'EXT_blend_minmax') => EXT_blend_minmax) &
+  ((name: 'OES_texture_float') => OES_texture_float) &
+  ((name: 'WEBGL_debug_renderer_info') => WEBGL_debug_renderer_info | null) &
+  ((name: 'WEBGL_lose_context') => WEBGL_lose_context | null)
 
   MIN: number
   MAX: number

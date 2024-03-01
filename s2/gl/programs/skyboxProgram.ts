@@ -67,7 +67,7 @@ export default async function skyboxProgram (context: Context): Promise<SkyboxPr
           if (res.status !== 200 && res.status !== 206) return
           return await res.blob()
         })
-        .catch(() => { /* no-op */ })
+        .catch(() => { return undefined })
       if (data === undefined) return
       const image = await createImageBitmap(data)
       gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.cubeMap)

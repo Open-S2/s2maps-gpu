@@ -1,13 +1,13 @@
 // setup env variables
 process.env.BABEL_ENV = 'production'
 process.env.NODE_ENV = 'production'
-process.env.CORS = 1
+process.env.CORS = '1'
 process.env.NEXT_PUBLIC_API_URL = 'https://api.opens2.com/v1'
 // grab components
 const fs = require('fs')
 const path = require('path')
 const webpack = require('webpack')
-const filesize = require('filesize')
+const { filesize } = require('filesize')
 const { green, red, blue, yellow } = require('picocolors')
 const configuration = require('./webpack.config.js')
 const configurationDev = require('./webpack-dev.config.js')
@@ -18,10 +18,13 @@ const VERSION = `v${version}`
 
 // CLEAN UP FROM OLD BUILD
 const dirPath = path.join(__dirname, '../buildS2')
+if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath)
 removeDir(dirPath)
 const dirPathDev = path.join(__dirname, '../buildS2-dev')
+if (!fs.existsSync(dirPathDev)) fs.mkdirSync(dirPathDev)
 removeDir(dirPathDev)
 const dirPathLocal = path.join(__dirname, '../buildS2-local')
+if (!fs.existsSync(dirPathLocal)) fs.mkdirSync(dirPathLocal)
 removeDir(dirPathLocal)
 
 // SETUP COMPILER
