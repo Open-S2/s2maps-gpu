@@ -50,7 +50,7 @@ export default class ClusterSource extends Source {
       const worker = session.requestWorker()
       if (Object.values(vectorTile.layers).length === 0) { this._flush(mapID, tile, name); return }
       // compress
-      const data = (textEncoder.encode(JSON.stringify(vectorTile))).buffer
+      const data = (textEncoder.encode(JSON.stringify(vectorTile))).buffer as ArrayBuffer
       // send off
       worker.postMessage({ mapID, type: 'jsondata', tile, sourceName: name, data }, [data])
     } else {

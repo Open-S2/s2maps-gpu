@@ -219,7 +219,7 @@ export default class Source {
   _flush (mapID: string, tile: TileRequest, sourceName: string): void {
     const { textEncoder, session } = this
     // compress
-    const data = textEncoder.encode('{"layers":{}}').buffer
+    const data = textEncoder.encode('{"layers":{}}').buffer as ArrayBuffer
     // send off
     const worker = session.requestWorker()
     worker.postMessage({ mapID, type: 'jsondata', tile, sourceName, data }, [data])

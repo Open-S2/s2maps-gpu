@@ -1,27 +1,18 @@
-@import "./color.wgsl"
-
-struct DecodeUniforms {
-  uInputs: array<f32, 16>, // [zoom, lon, lat, angle, pitch, time, featureState, curFeature, ...extensions]
-  uLayerCode: array<i32, 128>,
-  uFeatureCode: array<f32, 64>,
-}
-
-@binding(1) @group(1) var<uniform> decodeUniforms : DecodeUniforms;
-
 // y = e^x OR y = Math.pow(2, 10 * x)
 fn exponentialInterpolation (inputVal: f32, start: f32, end: f32, base: f32) -> f32 {
   // grab change
   var diff = end - start;
   if (diff == 0.) { return 0.; }
   // refine base value
-  if (base <= 0.) { base = 0.1; }
-  else if (base > 2.) { base = 2.; }
+  var mutBase = base;
+  if (mutBase <= 0.) { mutBase = 0.1; }
+  else if (mutBase > 2.) { mutBase = 2.; }
   // grab diff
   var progress = inputVal - start;
   // linear case
-  if (base == 1.) { return progress / diff; }
+  if (mutBase == 1.) { return progress / diff; }
   // solve
-  return (pow(base, progress) - 1.) / (pow(base, diff) - 1.);
+  return (pow(mutBase, progress) - 1.) / (pow(mutBase, diff) - 1.);
 }
 
 fn interpolateColor (color1: vec4<f32>, color2: vec4<f32>, t: f32) -> vec4<f32> {
@@ -30,7 +21,7 @@ fn interpolateColor (color1: vec4<f32>, color2: vec4<f32>, t: f32) -> vec4<f32> 
   else if (t == 1.) { return color2; }
   var hue = 0.;
   // LCH interpolation
-  if (uLCH) { // create proper hue translation
+  if (layer.useLCH != 0.) { // create proper hue translation
     var dh = 0.;
     if (color2[0] > color1[0] && color2[0] - color1[0] > 180.) { dh = color2[0] - color1[0] + 360.; }
     else if (color2[0] < color1[0] && color1[0] - color2[0] > 180.) { dh = color2[0] + 360. - color1[0]; }
@@ -49,26 +40,29 @@ fn interpolateColor (color1: vec4<f32>, color2: vec4<f32>, t: f32) -> vec4<f32> 
   return vec4<f32>(hue, sat, lbv, alpha);
 }
 
-fn decodeFeature (color: bool, index: ptr<private, i32>, featureIndex: ptr<private, i32>) -> vec4<f32> {
+fn decodeFeature (color: bool, indexPtr: ptr<function, i32>, featureIndexPtr: ptr<function, i32>) -> vec4<f32> {
+  let uInputs = array<f32, 10>(view.zoom, view.lon, view.lat, view.bearing, view.pitch, view.time, view.aspectX, view.aspectY, view.featureState, view.curFeature);
   // prep result and variables
+  var index = i32(*indexPtr);
+  var featureIndex = i32(*featureIndexPtr);
   var decodeOffset = index;
   var startingOffset = index;
-  var featureSize = uLayerCode[index] >> 10;
+  var featureSize = i32(layerCode[index]) >> 10;
   var res = vec4<f32>(-1., -1., -1., -1.);
   var conditionStack = array<i32, 6>();
   var tStack = array<f32, 6>();
-  var stackIndex = 1u; // start at 1 because our first condition will be the initial starting point
+  var stackIndex = i32(1); // start at 1 because our loop decrements this at start
   conditionStack[0] = index;
-  var len = 0u;
-  var conditionSet = 0u;
-  var condition = 0u;
+  var len = 0;
+  var conditionSet = 0;
+  var condition = 0;
 
   loop {
     stackIndex--;
     // pull out current stackIndex condition an decode
     index = conditionStack[stackIndex];
     startingOffset = index;
-    conditionSet = uLayerCode[index];
+    conditionSet = i32(layerCode[index]);
     len = conditionSet >> 10;
     condition = (conditionSet & 1008) >> 4;
     index++;
@@ -76,35 +70,34 @@ fn decodeFeature (color: bool, index: ptr<private, i32>, featureIndex: ptr<priva
     if (condition == 0) {
     } else if (condition == 1) { // value
       if (res[0] == -1.) {
-        for (var i = 0u; i < len - 1; i++) {
-          res[i] = uLayerCode[index + i];
+        for (var i = 0; i < len - 1; i++) {
+          res[i] = f32(layerCode[index + i]);
         }
       } else {
         if (color) {
-          var val = vec4<f32>(uLayerCode[index], uLayerCode[index + 1], uLayerCode[index + 2], uLayerCode[index + 3]);
+          var val = vec4<f32>(layerCode[index], layerCode[index + 1], layerCode[index + 2], layerCode[index + 3]);
           res = interpolateColor(res, val, tStack[stackIndex]);
         } else {
-          for (var i = 0u; i < len - 1; i++) {
-            res[i] = res[i] + tStack[stackIndex] * (uLayerCode[index + i] - res[i]);
+          for (var i = 0; i < len - 1; i++) {
+            res[i] = res[i] + tStack[stackIndex] * (layerCode[index + i] - res[i]);
           }
         }
       }
     } else if (condition == 2 || condition == 3) { // data-condition & input-condition
-      // get the input from either uFeatureCode or uInputs
-      var inputVal = 0.0f;
-      var conditionInput = 0.0f;
+      // get the input from either featureCode or uInputs
+      var inputVal = 0.;
+      var conditionInput = 0.;
       if (condition == 2) {
-        inputVal = uFeatureCode[featureIndex];
+        inputVal = featureCode[featureIndex];
         featureIndex++;
-      } else { inputVal = decodeUniforms.uInputs[(conditionSet & 14) >> 1]; }
+      } else { inputVal = uInputs[(conditionSet & 14) >> 1]; }
       // now that we have the inputVal, we iterate through and find a match
-      conditionInput = uLayerCode[index];
+      conditionInput = layerCode[index];
       while (inputVal != conditionInput) {
         // increment index & find length
-        index += (int(uLayerCode[index + 1]) >> 10) + 1;
-        conditionInput = uLayerCode[index];
-        // if we hit the default, than the value does not exist
-        if (conditionInput == 0.) break;
+        index += (i32(layerCode[index + 1]) >> 10) + 1;
+        conditionInput = layerCode[index];
+        if (conditionInput == 0.) { break; }
       }
       index++; // increment to conditionEncoding
       // now add subCondition to be parsed
@@ -115,56 +108,56 @@ fn decodeFeature (color: bool, index: ptr<private, i32>, featureIndex: ptr<priva
       // get interpolation & base
       var interpolationType = conditionSet & 1;
       var inputType = (conditionSet & 14) >> 1;
-      var base = 1.0f;
+      var base = 1.;
       if (interpolationType == 1) {
-        base = uLayerCode[index];
+        base = layerCode[index];
         index++;
       }
       // find the two values and run them
-      var inputVal = 0.0f;
-      var start = 0.0f;
-      var end = 0.0f;
-      var startIndex = 0u;
-      var endIndex = 0u;
-      var subCondition = 0u;
+      var inputVal = 0.;
+      var start = 0.;
+      var end = 0.;
+      var startIndex = 0;
+      var endIndex = 0;
+      var subCondition = 0;
       // grab the inputVal value
       if (condition == 4) {
-        inputVal = uFeatureCode[featureIndex];
+        inputVal = featureCode[featureIndex];
         featureIndex++;
-      } else { inputVal = decodeUniforms.uInputs[inputType]; }
+      } else { inputVal = uInputs[inputType]; }
       // create a start point
-      end = uLayerCode[index];
+      end = layerCode[index];
       start = end;
       endIndex = index + 1;
       startIndex = endIndex;
       while (end < inputVal && endIndex < len + startingOffset) {
         // if current sub condition is an input-range, we must check if if the "start"
         // subCondition was a data-condition or data-range, and if so,
-        // we must move past the uFeatureCode that was stored there
-        subCondition = (int(uLayerCode[startIndex]) & 1008) >> 4;
-        if (subCondition == 2 || subCondition == 4) featureIndex++;
+        // we must move past the featureCode that was stored there
+        subCondition = (i32(layerCode[startIndex]) & 1008) >> 4;
+        if (subCondition == 2 || subCondition == 4) { featureIndex++; }
         // increment to subCondition
         index++;
         // increment by subConditions length
-        index += int(uLayerCode[index]) >> 10;
+        index += i32(layerCode[index]) >> 10;
         // set new start and end
         start = end;
         startIndex = endIndex;
         endIndex = index + 1;
-        if (endIndex < len + startingOffset) end = uLayerCode[index];
+        if (endIndex < len + startingOffset) { end = layerCode[index]; }
       }
       // if start and end are the same, we only need to process the first piece
       if (startIndex == endIndex) {
         conditionStack[stackIndex] = startIndex;
         tStack[stackIndex] = 1.;
         if (stackIndex > 0) { tStack[stackIndex] = tStack[stackIndex - 1]; }
-        // else tStack[stackIndex] = 1.; UNKOWN WHY - THIS CAUSES AN ERROR FOR NVIDIA GPUS
+        else { tStack[stackIndex] = 1.; } // UNKOWN WHY - THIS CAUSES AN ERROR FOR NVIDIA GPUS
         stackIndex++;
       } else if (end == inputVal) {
         conditionStack[stackIndex] = endIndex;
         tStack[stackIndex] = 1.;
         if (stackIndex > 0) { tStack[stackIndex] = tStack[stackIndex - 1]; }
-        // else tStack[stackIndex] = 1.; UNKOWN WHY - THIS CAUSES AN ERROR FOR NVIDIA GPUS
+        else { tStack[stackIndex] = 1.; } // UNKOWN WHY - THIS CAUSES AN ERROR FOR NVIDIA GPUS
         stackIndex++;
       } else { // otherwise we process startIndex and endIndex
         var t = exponentialInterpolation(inputVal, start, end, base);
@@ -180,17 +173,17 @@ fn decodeFeature (color: bool, index: ptr<private, i32>, featureIndex: ptr<priva
       while (endIndex < len + startingOffset) {
         // if current sub condition is an input-range, we must check if if the "start"
         // subCondition was a data-condition or data-range, and if so,
-        // we must move past the uFeatureCode that was stored there
-        subCondition = (uLayerCode[startIndex] & 1008) >> 4;
-        if (subCondition == 2 || subCondition == 4) featureIndex++;
+        // we must move past the featureCode that was stored there
+        subCondition = (i32(layerCode[startIndex]) & 1008) >> 4;
+        if (subCondition == 2 || subCondition == 4) { featureIndex++; }
         index++;
-        index += uLayerCode[index] >> 10;
+        index += i32(layerCode[index]) >> 10;
         endIndex = index + 1;
       }
     } else if (condition == 6) { // feature-state
       // iterate through subConditions until it matches "uFeatureState"
       // once found, inject
-      res = vec4(0., 0., 0., 1.);
+      res = vec4<f32>(0., 0., 0., 1.);
       return res;
     } else if (condition == 7) { // animation-state
 
@@ -205,23 +198,20 @@ fn decodeFeature (color: bool, index: ptr<private, i32>, featureIndex: ptr<priva
       }
     }
 
-    // safety precaution
-    if (stackIndex > 5) {
-      break;
-    }
-
     continuing {
-      break if stackIndex <= 0;
+      // if our stackIndex is done or we went to far (bug) then we break
+      break if (stackIndex <= 0 || stackIndex > 5);
     }
   }
 
   // update index to the next Layer property
-  index = featureSize + decodeOffset;
+  *indexPtr = featureSize + decodeOffset;
+  *featureIndexPtr = featureIndex;
 
   // if lch: convert back to rgb
-  if (color && uLCH) { res = LCH2RGB(res); }
+  if (color && layer.useLCH != 0.) { res = LCH2RGB(res); }
   // assuming user has selected a colorblind state, adjust accordingly
-  if (color && uCBlind != 0.) { res = cBlindAdjust(res); }
+  if (color && view.cBlind != 0.) { res = cBlindAdjust(res); }
 
   return res;
 }

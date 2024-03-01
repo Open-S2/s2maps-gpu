@@ -17,7 +17,7 @@ class DirCache extends Map<number, DataView> {
   set (key: number, dir: DataView): this {
     // place in front the new
     this.order.unshift(key)
-    while (this.order.length > 7) this.delete(this.order.pop() as number)
+    while (this.order.length > 7) this.delete(this.order.pop() ?? 0)
     return super.set(key, dir)
   }
 
@@ -101,7 +101,7 @@ export default class S2TilesSource extends Source {
     // walk the tree if past zoom 0
     while (path.length > 0) {
       // grab position
-      const nodePos = path.shift() as number * NODE_SIZE
+      const nodePos = (path.shift() ?? 0) * NODE_SIZE
       // set
       offset = getUint48(dir, nodePos)
       length = dir.getUint32(nodePos + 6, true)

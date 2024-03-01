@@ -131,8 +131,8 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
 
     const storeID: string = `${mapID}:${tile.id}:${sourceName}`
     if (!this.featureStore.has(storeID)) this.featureStore.set(storeID, [] as LineFeature[])
-    const store = this.featureStore.get(storeID) as LineFeature[]
-    store.push(lineFeature)
+    const store = this.featureStore.get(storeID)
+    store?.push(lineFeature)
     return true
   }
 
@@ -218,9 +218,9 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
     }
 
     // Upon building the batches, convert to buffers and ship.
-    const vertexBuffer = new Float32Array(vertices).buffer
-    const lengthSoFarBuffer = new Float32Array(lengthSoFar).buffer
-    const featureGuideBuffer = new Float32Array(featureGuide).buffer
+    const vertexBuffer = new Float32Array(vertices).buffer as ArrayBuffer
+    const lengthSoFarBuffer = new Float32Array(lengthSoFar).buffer as ArrayBuffer
+    const featureGuideBuffer = new Float32Array(featureGuide).buffer as ArrayBuffer
     // ship the vector data.
     const data: LineData = {
       mapID,

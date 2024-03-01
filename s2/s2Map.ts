@@ -537,8 +537,8 @@ export default class S2Map extends EventTarget {
     else classList?.remove('dark-mode')
   }
 
-  getContainer (): HTMLElement {
-    return this.#container as HTMLElement
+  getContainer (): HTMLElement | undefined {
+    return this.#container
   }
 
   getCanvasContainer (): HTMLElement {
@@ -691,11 +691,11 @@ export default class S2Map extends EventTarget {
   async screenshot (): Promise<null | Uint8Array> {
     const { offscreen, map } = this
     return await new Promise<null | Uint8Array>(resolve => {
-      this.addEventListener(
-        'screenshot',
-        (data: any) => { resolve(data.detail) },
-        { once: true }
-      )
+      const listener = (event: Event): void => {
+        const ce = event as CustomEvent<Uint8Array | null>
+        resolve(ce?.detail)
+      }
+      this.addEventListener('screenshot', listener, { once: true })
       offscreen?.postMessage({ type: 'screenshot' })
       map?.screenshot()
     })

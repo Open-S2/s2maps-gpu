@@ -1,23 +1,27 @@
 {
-  "extends": [
-    "standard-with-typescript",
-    "standard-jsx",
-    "plugin:@typescript-eslint/recommended"
-  ],
   "env": {
-    "browser": true
+    "browser": true,
+    "es2021": true
   },
-  "parser": "@typescript-eslint/parser",
+  "extends": [
+    "plugin:@typescript-eslint/recommended",
+    "standard-with-typescript",
+    "plugin:vue/vue3-essential"
+  ],
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "parser": "@typescript-eslint/parser",
+    "sourceType": "module",
+    "extraFileExtensions": ["vue"]
+  },
   "plugins": [
     "@typescript-eslint",
-    "react"
+    "vue"
   ],
   "rules": {
-    "@next/next/no-img-element": "off",
-    "react/require-default-props": "off",
-    "react/react-in-jsx-scope": "off",
-    "react/prop-types": "off",
-    "@typescript-eslint/no-dynamic-delete": "off",
+    "@typescript-eslint/no-unsafe-argument": "off",
+    "vue/multi-word-component-names": "off",
+    // "@typescript-eslint/no-dynamic-delete": "off",
     "@typescript-eslint/no-explicit-any": "warn",
     "@typescript-eslint/ban-ts-comment": "warn",
     "sort-imports": ["error", {
@@ -26,12 +30,29 @@
       "ignoreMemberSort": false,
       "memberSyntaxSortOrder": ["none", "all", "multiple", "single"],
       "allowSeparatedGroups": false
-    }],
-    "@typescript-eslint/ban-types": "warn",
-    "@typescript-eslint/restrict-plus-operands": "off"
+    }]
+    // "@typescript-eslint/ban-types": "warn",
+    // "@typescript-eslint/restrict-plus-operands": "off"
   },
-  "parserOptions": {
-    "project": ["./tsconfig.next.json"]
-  },
-  "ignorePatterns": ["temp.js", "**/*.js", "dist-types/**/*.d.ts", "dist"]
+  "ignorePatterns": [
+    "node_modules",
+    "dist",
+    "dist-types",
+    "buildS2",
+    "buildS2-dev",
+    "buildS2-local",
+    "buildS2-flat",
+    "public",
+    "TODO",
+    "examples",
+    "**/*.js"
+  ],
+  "overrides": [
+    {
+      "files": ["*.ts", "*.mts"],
+      "extends": [
+        "standard-with-typescript"
+      ]
+    }
+  ]
 }

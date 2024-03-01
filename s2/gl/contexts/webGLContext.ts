@@ -34,7 +34,7 @@ export default class WebGLContext extends Context {
     if (this.vertexArrayObject !== null) {
       const vertexArrayObject = this.vertexArrayObject
       // createVertexArray
-      gl.createVertexArray = () => vertexArrayObject.createVertexArrayOES()
+      gl.createVertexArray = (): WebGLVertexArrayObject | null => vertexArrayObject.createVertexArrayOES() as WebGLVertexArrayObject | null
       // bindVertexArray
       gl.bindVertexArray = (vao: WebGLVertexArrayObject | null) => { vertexArrayObject.bindVertexArrayOES(vao) }
       // deleteVertexArray

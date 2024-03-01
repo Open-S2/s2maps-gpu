@@ -13,7 +13,7 @@ declare global {
 }
 
 // workerPool is designed to manage the workers and when a worker is free, send... work
-const AVAILABLE_WORKERS: number = Math.floor((global.window.navigator.hardwareConcurrency ?? 4) / 2)
+const AVAILABLE_WORKERS: number = Math.floor((window.navigator.hardwareConcurrency ?? 4) / 2)
 export class WorkerPool {
   workerCount: number = Math.max(Math.min(AVAILABLE_WORKERS, 6), 2)
   workers: Worker[] = []

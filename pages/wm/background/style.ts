@@ -1,16 +1,14 @@
-import type { StyleDefinition } from '../../../s2/style/style.spec'
+import type { StyleDefinition } from 's2/style/style.spec'
 
 const style: StyleDefinition = {
   version: 1,
   projection: 'WM',
-  name: 'webmercator background',
+  name: 'WM Background',
   center: [0, 0],
   zoom: -0.5,
   minzoom: 0,
   maxzoom: 6.9,
-  sources: {
-    planet: '/tiles/wm/osm'
-  },
+  sources: {},
   fonts: {},
   layers: [
     {

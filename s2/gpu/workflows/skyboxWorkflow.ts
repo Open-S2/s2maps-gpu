@@ -138,7 +138,7 @@ export default class SkyboxWorkflow implements SkyboxWorkflowSpec {
         if (res.status !== 200 && res.status !== 206) return
         return await res.blob()
       })
-      .catch(() => { /* no-op */ })
+      .catch(() => { return undefined })
     if (data === undefined) return
     const image = await createImageBitmap(data)
     // upload to texture

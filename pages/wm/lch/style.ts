@@ -1,9 +1,9 @@
-import type { StyleDefinition } from '../../../s2/style/style.spec'
+import type { StyleDefinition } from 's2/style/style.spec'
 
 const style: StyleDefinition = {
   version: 1,
   projection: 'WM',
-  name: 'webmercator background',
+  name: 'WM LCH',
   center: [0, 0],
   zoom: 0.95,
   minzoom: 0,
@@ -33,8 +33,5 @@ const style: StyleDefinition = {
     }
   ]
 }
-
-// rgb(33, 49, 62)
-// rgb(239, 238, 105)
 
 export default style

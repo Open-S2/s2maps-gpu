@@ -70,7 +70,7 @@ function convertSources (input: Record<string, SourceSpecification>): Sources {
     }
     const { type } = value
     if (type === 'video' || type === 'image') {
-      console.error(`Source type ${type} not supported`)
+      console.error(`Source type ${type as string} not supported`)
       continue
     }
     if (type === 'geojson') {
@@ -135,7 +135,7 @@ function convertLayer (layer: LayerSpecification, glyphs: Glyphs): undefined | L
   else if (type === 'heatmap') return convertLayerHeatmap(layer)
   else if (type === 'hillshade') return convertLayerHillshade(layer)
   // else if (type === 'sky') return undefined
-  else console.error(`Layer type ${type} not supported`)
+  else console.error(`Layer type ${type as string} not supported`)
 }
 
 // TODO: background-pattern
@@ -494,6 +494,24 @@ function convertPropertyValueSpecificationMatch<T extends NotNullOrObject> (inpu
   return res
 }
 
+type IntervalType<T> = {
+  type: 'interval'
+  stops: Array<[number, T]>
+} | {
+  type: 'interval'
+  stops: Array<[number, T]>
+  property: string
+  default?: T | undefined
+} | {
+  type: 'interval'
+  stops: Array<[{
+    zoom: number
+    value: number
+  }, T]>
+  property: string
+  default?: T | undefined
+}
+
 // TODO:
 function convertDataDrivenPropertyValueSpecification<T extends NotNullOrObject> (
   input?: DataDrivenPropertyValueSpecification<T>
@@ -504,7 +522,8 @@ function convertDataDrivenPropertyValueSpecification<T extends NotNullOrObject> 
   } else if (typeof input === 'object') {
     if ('stops' in input) {
       if (input.type === undefined || input.type === 'interval') {
-        return convertDataDrivenPropertyValueSpecificationStops(input)
+        const input2 = input as IntervalType<T>
+        return convertDataDrivenPropertyValueSpecificationStops(input2)
       }
     }
     return undefined
@@ -516,23 +535,7 @@ function convertDataDrivenPropertyValueSpecification<T extends NotNullOrObject> 
 
 // for now assume interval
 function convertDataDrivenPropertyValueSpecificationStops<T extends NotNullOrObject> (
-  input: {
-    type: 'interval'
-    stops: Array<[number, T]>
-  } | {
-    type: 'interval'
-    stops: Array<[number, T]>
-    property: string
-    default?: T | undefined
-  } | {
-    type: 'interval'
-    stops: Array<[{
-      zoom: number
-      value: number
-    }, T]>
-    property: string
-    default?: T | undefined
-  }
+  input: IntervalType<T>
 ): undefined | T | Property<T> {
   if ('property' in input) return undefined
   if (typeof input.stops[0][0] === 'object') return undefined

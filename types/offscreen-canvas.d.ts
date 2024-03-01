@@ -88,27 +88,27 @@ declare function createImageBitmap (
 
 // OffscreenCanvas should be a part of Transferable => extend all postMessage methods
 interface Worker {
-  postMessage: (message: any, transfer?: Array<Transferable | OffscreenCanvas>) => void
+  postMessage: (message: unknown, transfer?: Array<Transferable | OffscreenCanvas>) => void
 }
 
 interface DedicatedWorkerGlobalScope {
-  postMessage: (message: any, transfer?: Array<Transferable | OffscreenCanvas>) => void
+  postMessage: (message: unknown, transfer?: Array<Transferable | OffscreenCanvas>) => void
 }
 
 interface ServiceWorker {
-  postMessage: (message: any, transfer?: Array<Transferable | OffscreenCanvas>) => void
+  postMessage: (message: unknown, transfer?: Array<Transferable | OffscreenCanvas>) => void
 }
 
 interface MessagePort {
-  postMessage: (message: any, transfer?: Array<Transferable | OffscreenCanvas>) => void
+  postMessage: (message: unknown, transfer?: Array<Transferable | OffscreenCanvas>) => void
 }
 
 interface Window {
-  postMessage: (message: any, targetOrigin: string, transfer?: Array<Transferable | OffscreenCanvas>) => void
+  postMessage: (message: unknown, targetOrigin: string, transfer?: Array<Transferable | OffscreenCanvas>) => void
 }
 
 declare function postMessage (
-  message: any,
+  message: unknown,
   targetOrigin: string,
   transfer?: Array<Transferable | OffscreenCanvas>,
 ): void
