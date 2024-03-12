@@ -59,16 +59,12 @@ import type { ImageMetadata } from './source/imageSource'
 **/
 
 type SourceMap = Record<string, Record<string, Source | S2TilesSource | JSONSource | ClusterSource | LocalSource | MarkerSource>>
-export interface MapURLS {
-  apiURL: string
-  baseURL: string
-}
 
 export default class SourceWorker {
   workers: Array<MessageChannel['port2']> = []
   session: Session = new Session()
   layers: Record<string, LayerDefinition[]> = {}
-  mapURLS: Record<string, MapURLS> = {} // { mapID: { apiURL: string, } }
+  mapURLS: Record<string, Record<string, string>> = {} // { mapID: { apiURL: string, ... } }
   sources: SourceMap = {}
   glyphs: Record<string, GlyphSource> = {} // path is key again
   sprites: Record<string, SpriteSource> = {}
@@ -80,7 +76,7 @@ export default class SourceWorker {
     if (type === 'port') this.#loadWorkerPort(ports[0], ports[1], data.id)
     else {
       const { mapID } = data
-      if (type === 'requestStyle') this.#requestStyle(mapID, data.style, data.analytics, data.apiKey, data.apiURL)
+      if (type === 'requestStyle') this.#requestStyle(mapID, data.style, data.analytics, data.apiKey, data.urlMap)
       else if (type === 'style') this.#loadStyle(mapID, data.style)
       else if (type === 'tilerequest') void this.#requestTile(mapID, data.tiles, data.sources)
       else if (type === 'timerequest') void this.#requestTime(mapID, data.tiles, data.sourceNames)
@@ -109,20 +105,19 @@ export default class SourceWorker {
     style: string,
     analytics: Analytics,
     apiKey?: string,
-    apiURL?: string,
-    baseURL?: string
+    urlMap?: Record<string, string>
   ): void {
     // build maps session
     this.session.loadStyle(mapID, analytics, apiKey)
     // request style
-    void this.session.requestStyle(mapID, style, apiURL, baseURL)
+    void this.session.requestStyle(mapID, style, urlMap)
   }
 
   #loadStyle (mapID: string, style: StylePackage): void {
     // pull style data
-    const { layers, analytics, apiKey, apiURL, baseURL } = style
+    const { layers, analytics, apiKey, urlMap } = style
     // store the apiURL
-    this.mapURLS[mapID] = { apiURL: apiURL ?? '', baseURL: baseURL ?? '' }
+    this.mapURLS[mapID] = urlMap ?? {}
     // create the source map, if sources already exists, we are dumping the old sources
     this.sources[mapID] = {}
     // create the layer map
@@ -177,7 +172,7 @@ export default class SourceWorker {
     mapID: string,
     style: StylePackage
   ): Promise<void> {
-    const { apiURL, baseURL } = this.mapURLS[mapID]
+    const urlMap = this.mapURLS[mapID]
     const { sources, layers, fonts, icons, glyphs, sprites, images } = style
     // sources
     for (const [name, source] of Object.entries(sources)) {
@@ -192,13 +187,13 @@ export default class SourceWorker {
     const imageAwaits: Array<Promise<undefined | ImageMetadata>> = []
     for (const [name, source] of Object.entries(sprites)) {
       if (typeof source === 'object') {
-        const path = adjustURL(source.path, apiURL, baseURL)
+        const path = adjustURL(source.path, urlMap)
         imageAwaits.push(this.#createSpriteSheet(mapID, name, path, source.fileType))
       } else { imageAwaits.push(this.#createSpriteSheet(mapID, name, source)) }
     }
     // images
     for (const [name, href] of Object.entries(images)) {
-      const path = adjustURL(href, apiURL, baseURL)
+      const path = adjustURL(href, urlMap)
       imageAwaits.push(this.images.addImage(mapID, name, path))
     }
 
@@ -235,8 +230,8 @@ export default class SourceWorker {
     }
     if (fileType === undefined) fileType = (input.split('.').pop() ?? '').toLowerCase()
     const needsToken = session.hasAPIKey(mapID)
-    const { apiURL, baseURL } = this.mapURLS[mapID] ?? { apiURL: '', baseURL: '' }
-    const path = adjustURL(input, apiURL, baseURL)
+    const urlMap = this.mapURLS[mapID]
+    const path = adjustURL(input, urlMap)
     // create the proper source type
     let source
     if (fileType === 's2tiles') {
@@ -254,10 +249,10 @@ export default class SourceWorker {
 
   async #createGlyphSource (mapID: string, name: string, input: string): Promise<undefined | GlyphMetadataUnparsed> {
     const { texturePack, session } = this
-    const { apiURL, baseURL } = this.mapURLS[mapID] ?? { apiURL: '', baseURL: '' }
+    const urlMap = this.mapURLS[mapID]
     // check if already exists
     if (this.glyphs[name] !== undefined) return
-    const source = new GlyphSource(name, adjustURL(input, apiURL, baseURL), texturePack, session)
+    const source = new GlyphSource(name, adjustURL(input, urlMap), texturePack, session)
     this.glyphs[name] = source
     return await source.build(mapID)
   }
@@ -269,10 +264,10 @@ export default class SourceWorker {
     fileType?: SpriteFileType
   ): Promise<undefined | ImageMetadata> {
     const { texturePack, session } = this
-    const { apiURL, baseURL } = this.mapURLS[mapID] ?? { apiURL: '', baseURL: '' }
+    const urlMap = this.mapURLS[mapID]
     // check if already exists
     if (this.sprites[name] !== undefined) return
-    const source = new SpriteSource(name, adjustURL(input, apiURL, baseURL), texturePack, session, fileType)
+    const source = new SpriteSource(name, adjustURL(input, urlMap), texturePack, session, fileType)
     // store & build
     this.sprites[name] = source
     return await source.build(mapID)

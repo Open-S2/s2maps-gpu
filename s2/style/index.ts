@@ -24,18 +24,16 @@ import type { TileShared as Tile } from 'source/tile.spec'
 export default class Style {
   camera: Camera
   apiKey?: string
-  apiURL?: string
-  baseURL?: string
+  urlMap?: Record<string, string>
   maskLayers: Array<FillDefinition | ShadeDefinition> = []
   layers: LayerDefinition[] = []
   interactive = false
   dirty = true
   constructor (camera: Camera, options: MapOptions) {
-    const { apiKey, apiURL, baseURL } = options
+    const { apiKey, urlMap } = options
     this.camera = camera
     this.apiKey = apiKey
-    this.apiURL = apiURL
-    this.baseURL = baseURL
+    this.urlMap = urlMap
   }
 
   async buildStyle (style: string | StyleDefinition): Promise<boolean> {
@@ -70,20 +68,20 @@ export default class Style {
   }
 
   #requestStyle (style: string): void {
-    const { apiKey, apiURL, baseURL, camera } = this
+    const { apiKey, urlMap, camera } = this
     const { id, webworker } = camera
     const analytics = this.#buildAnalytics()
 
     if (webworker) {
-      const message: RequestStyleMessage = { mapID: id, analytics, type: 'requestStyle', style, apiKey, apiURL, baseURL }
+      const message: RequestStyleMessage = { mapID: id, analytics, type: 'requestStyle', style, apiKey, urlMap }
       postMessage(message)
     } else {
-      window.S2WorkerPool.requestStyle(id, style, analytics, apiKey, apiURL, baseURL)
+      window.S2WorkerPool.requestStyle(id, style, analytics, apiKey, urlMap)
     }
   }
 
   async #buildWorkflows (style: StyleDefinition): Promise<void> {
-    const { camera, apiURL, baseURL } = this
+    const { camera, urlMap } = this
     const { painter } = camera
     const { skybox, wallpaper, layers } = style
     const workflows = new Set<GLWorkflowType & GPUWorkflowType>(['fill'])
@@ -100,7 +98,7 @@ export default class Style {
     await painter.buildWorkflows(workflows)
     // inject styles into programs
     for (const workflow of Object.values(painter.workflows)) {
-      if ('updateStyle' in workflow) workflow.updateStyle(style, camera, apiURL, baseURL)
+      if ('updateStyle' in workflow) workflow.updateStyle(style, camera, urlMap)
     }
   }
 
@@ -173,7 +171,7 @@ export default class Style {
   }
 
   #sendStyleDataToWorkers (style: StyleDefinition): void {
-    const { apiKey, apiURL, baseURL, layers } = this
+    const { apiKey, urlMap, layers } = this
     const { id, webworker, painter } = this.camera
     const { type } = painter.context
     const { projection, sources, glyphs, fonts, icons, sprites, images, minzoom, maxzoom, experimental } = style
@@ -193,8 +191,7 @@ export default class Style {
       maxzoom: maxzoom ?? 20,
       analytics,
       apiKey,
-      apiURL,
-      baseURL,
+      urlMap,
       experimental: experimental ?? false
     }
     // If the map engine is running on the main thread, directly send the stylePackage to the worker pool.

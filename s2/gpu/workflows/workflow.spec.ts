@@ -25,7 +25,8 @@ import type {
   SensorStyle,
   ShadeDefinition,
   ShadeDefinitionGPU,
-  ShadeStyle
+  ShadeStyle,
+  StyleDefinition
 } from 'style/style.spec'
 import type { WebGPUContext } from '../context'
 import type { SensorTextureDefinition } from 'ui/camera/timeCache'
@@ -43,6 +44,7 @@ import type {
 import type { TileGPU as Tile } from 'source/tile.spec'
 import type Projector from 'ui/camera/projector'
 import type { BBox } from 'geometry'
+import type S2MapUI from 's2/ui/s2mapUI'
 
 // SOURCES
 
@@ -437,5 +439,6 @@ export interface WallpaperWorkflow extends Workflow {
 }
 
 export interface SkyboxWorkflow extends Workflow {
+  updateStyle: (style: StyleDefinition, s2mapGL: S2MapUI, urlMap?: Record<string, string>) => void
   draw: (feature: Projector) => void
 }

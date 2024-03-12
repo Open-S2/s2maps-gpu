@@ -268,7 +268,7 @@ export interface SkyboxProgram extends ProgramSpec {
   matrix: Float32Array
   uniforms: { [key in SkyboxProgramUniforms]: WebGLUniformLocation }
 
-  updateStyle: (style: StyleDefinition, s2mapGL: S2MapUI, apiURL?: string, baseURL?: string) => void
+  updateStyle: (style: StyleDefinition, s2mapGL: S2MapUI, urlMap?: Record<string, string>) => void
   draw: (projector: Projector) => void
 }
 

@@ -1073,8 +1073,7 @@ export interface StylePackage {
   analytics: Analytics
   experimental: boolean
   apiKey?: string
-  apiURL?: string
-  baseURL?: string
+  urlMap?: Record<string, string>
 }
 
 /** WALLPAPER **/

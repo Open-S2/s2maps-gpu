@@ -41,7 +41,7 @@ export default async function skyboxProgram (context: Context): Promise<SkyboxPr
       this.cubeMap = cubeMap
     }
 
-    updateStyle (style: StyleDefinition, camera: Camera, apiURL = '', baseURL = ''): void {
+    updateStyle (style: StyleDefinition, camera: Camera, urlMap?: Record<string, string>): void {
       const { context } = this
       const { skybox } = style
       const { type, size, loadingBackground } = skybox ?? {}
@@ -49,7 +49,7 @@ export default async function skyboxProgram (context: Context): Promise<SkyboxPr
       if (typeof path !== 'string') throw new Error('Skybox path must be a string')
       if (typeof type !== 'string') throw new Error('Skybox type must be a string')
       if (typeof size !== 'number') throw new Error('Skybox size must be a number')
-      path = adjustURL(path, apiURL, baseURL)
+      path = adjustURL(path, urlMap)
       // grab clear color and set inside painter
       if (loadingBackground !== undefined) {
         context.setClearColor(

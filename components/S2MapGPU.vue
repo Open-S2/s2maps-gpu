@@ -25,8 +25,10 @@ export default {
       const { S2Map } = await import('s2')
       const config = useRuntimeConfig()
       const options: MapOptions = {
-        apiURL: config.public.dataURL,
-        baseURL: config.public.baseURL,
+        urlMap: {
+          apiURL: config.public.dataURL,
+          baseURL: config.public.baseURL
+        },
         ...mapOptions,
         container: container.value
         // contextType: 2
