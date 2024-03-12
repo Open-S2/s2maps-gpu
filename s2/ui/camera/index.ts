@@ -32,7 +32,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   readonly #canvas: HTMLCanvasElement
   _canDraw = false // let the render sequence know if the painter is ready to paint
   _interactive = false // allow the user to make visual changes to the map, whether that be zooming, panning, or dragging
-  readonly #scrollZoom // allow the user to scroll over the canvas and cause a zoom change
+  readonly #scrollZoom: boolean // allow the user to scroll over the canvas and cause a zoom change
   style: Style
   projector: Projector
   painter!: P
@@ -112,15 +112,15 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   #setupCanvas (): void {
     const { _interactive, dragPan } = this
     // setup listeners
-    this.#canvas.addEventListener('webglcontextlost', this.#contextLost.bind(this))
-    this.#canvas.addEventListener('webglcontextrestored', this.#contextRestored.bind(this))
+    this.#canvas.addEventListener('webglcontextlost', this.#contextLost.bind(this) as EventListener)
+    this.#canvas.addEventListener('webglcontextrestored', this.#contextRestored.bind(this) as EventListener)
     // if we allow the user to interact with map, we add events
     if (_interactive) {
       // let dragPan know if we can zoom
       if (this.#scrollZoom) dragPan.zoomActive = true
       // listen to dragPans updates
-      dragPan.addEventListener('move', this.#onMovement.bind(this))
-      dragPan.addEventListener('swipe', this.#onSwipe.bind(this))
+      dragPan.addEventListener('move', this.#onMovement.bind(this) as EventListener)
+      dragPan.addEventListener('swipe', this.#onSwipe.bind(this) as EventListener)
       dragPan.addEventListener('zoom', () => { this.onZoom(dragPan.zoom) })
       dragPan.addEventListener('click', ((e: CustomEvent) => { this.#onClick(e) }) as EventListener)
       dragPan.addEventListener('doubleClick', ((e: CustomEvent) => { this.#onDoubleClick(e) }) as EventListener)
@@ -129,7 +129,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     this.#resizeCamera(this.#canvas.width, this.#canvas.height)
   }
 
-  #contextLost (): void {
+  #contextLost (evt: Event): void {
     console.warn('context lost')
   }
 
@@ -141,7 +141,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   // After we have the appropriate context, we build the painter and then the
   async #createPainter (options: MapOptions): Promise<boolean> {
     const { contextType } = options
-    let context = null
+    let context: null | GPUCanvasContext | WebGL2RenderingContext | WebGLRenderingContext = null
     // first try webGPU
     if (contextType === 3) {
       context = this.#canvas.getContext('webgpu') as unknown as GPUCanvasContext // GPUCanvasContext
@@ -436,7 +436,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
 
   createFutureTiles (tileIDs: bigint[]): void {
     const { tileCache, painter, style } = this
-    const newTiles = []
+    const newTiles: Tile[] = []
     // create the tiles
     for (const id of tileIDs) {
       if (!tileCache.has(id)) {

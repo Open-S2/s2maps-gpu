@@ -75,8 +75,8 @@ export default class VectorWorker {
     tileID: bigint
   ): void {
     if (this.interactiveMap.size === 0) return
-    const interactiveGuide = []
-    const interactiveData = []
+    const interactiveGuide: number[] = []
+    const interactiveData: number[] = []
 
     const textEncoder = new TextEncoder()
 

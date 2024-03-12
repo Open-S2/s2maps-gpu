@@ -82,12 +82,11 @@ function dataConditionFunction<T extends NotNullOrObject, U> (
   // build function
   return (code: number[], properties: Properties, zoom = 0): U => {
     if (properties !== undefined) {
-      let condition
       for (let i = 0, cl = conditionList.length; i < cl; i++) { // run through the conditionList
-        condition = conditionList[i]
-        if (condition.condition(properties)) {
+        const { condition, result } = conditionList[i]
+        if (condition(properties)) {
           code.push(i + 1)
-          return condition.result(code, properties, zoom)
+          return result(code, properties, zoom)
         }
       }
     }
@@ -131,9 +130,9 @@ function dataRangeFunction<T extends NotNullOrObject, U> (
       while (parsedRanges[i] !== undefined && parsedRanges[i].stop <= dataInput) i++
       if (parsedRanges.length === i) i--
       const startValue = parsedRanges[i - 1].input(code, properties, dataInput)
-      const startStop = parsedRanges[i - 1].stop
+      const startStop: number = parsedRanges[i - 1].stop
       const endValue = parsedRanges[i].input(code, properties, dataInput)
-      const endStop = parsedRanges[i].stop
+      const endStop: number = parsedRanges[i].stop
       return easeFunction(dataInput, startStop, endStop, startValue, endValue)
     }
   }
@@ -165,9 +164,9 @@ function inputRangeFunction<T extends NotNullOrObject, U> (
       while (parsedRanges[i] !== undefined && parsedRanges[i].stop <= zoom) i++
       if (parsedRanges.length === i) i--
       const startValue = parsedRanges[i - 1].input(code, properties, zoom)
-      const startStop = parsedRanges[i - 1].stop
+      const startStop: number = parsedRanges[i - 1].stop
       const endValue = parsedRanges[i].input(code, properties, zoom)
-      const endStop = parsedRanges[i].stop
+      const endStop: number = parsedRanges[i].stop
       return easeFunction(zoom, startStop, endStop, startValue, endValue)
     }
   }

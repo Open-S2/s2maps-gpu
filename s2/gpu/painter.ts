@@ -65,7 +65,7 @@ export default class Painter {
     }
     const promises: Array<Promise<void>> = []
     for (const set of buildSet) {
-      // @ts-expect-error - typescript can't handle matching the workflow to the module
+      // TODO: Figure out why eslint and tsc don't see an error but vscode does:
       const workflow: Workflow = workflows[set] = programCases[set]()
       if (set === 'wallpaper' || set === 'skybox') workflows.background = workflows[set]
       promises.push(workflow.setup())

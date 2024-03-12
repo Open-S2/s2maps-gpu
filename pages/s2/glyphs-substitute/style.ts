@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 's2/style/style.spec'
+import type { StyleDefinition } from 'style/style.spec'
 import type { S2FeatureCollection } from 's2/geometry'
 
 const data: S2FeatureCollection = {

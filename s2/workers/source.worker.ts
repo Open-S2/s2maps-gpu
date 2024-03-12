@@ -157,7 +157,7 @@ export default class SourceWorker {
 
   #reorderLayers (mapID: string, layerChanges: Record<string | number, number>): void {
     const layers = this.layers[mapID]
-    const newLayers = []
+    const newLayers: LayerDefinition[] = []
     // move the layer to its new position
     for (const [from, to] of Object.entries(layerChanges)) {
       const layer = layers[+from]

@@ -440,7 +440,7 @@ export function fromIJWrap (face: Face, i: number, j: number): bigint {
 /** Given an S2CellID, find it's nearest neighbors associated with it */
 export function vertexNeighbors (id: bigint, lev?: number): bigint[] {
   if (lev === undefined) lev = level(id)
-  const res = []
+  const res: bigint[] = []
 
   const [face, i, j] = toIJ(id)
 
@@ -449,7 +449,7 @@ export function vertexNeighbors (id: bigint, lev?: number): bigint[] {
   // determine which quadrant of this->parent(level) this cell lies in.
   const halfsize = sizeIJ(lev + 1)
   const size = halfsize << 1
-  let isame, jsame, ioffset, joffset
+  let isame: boolean, jsame: boolean, ioffset: number, joffset: number
 
   if ((i & halfsize) !== 0) {
     ioffset = size

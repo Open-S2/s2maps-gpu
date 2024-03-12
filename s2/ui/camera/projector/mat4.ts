@@ -321,7 +321,7 @@ export function multiplyVector (
   m: Float32Array,
   v: XYZ
 ): number[] {
-  const out = []
+  const out: number[] = []
 
   out.push(m[0] * v[0] + m[4] * v[1] + m[8] * v[2] + m[12])
   out.push(m[1] * v[0] + m[5] * v[1] + m[9] * v[2] + m[13])

@@ -10,7 +10,7 @@ import {
   MAXLAT,
   degToRad,
   radToDeg
-} from 's2/geometry/util'
+} from 'geometry/util'
 import { describe, expect, it } from 'bun:test'
 
 describe('radToDeg', () => {

@@ -140,7 +140,7 @@ export default class Source {
     const { layers, styleLayers } = this
     const { zoom } = tile
     if (layers === undefined) return
-    const layerIndexes = []
+    const layerIndexes: number[] = []
 
     for (let l = 0, ll = styleLayers.length; l < ll; l++) {
       const layer = styleLayers[l]

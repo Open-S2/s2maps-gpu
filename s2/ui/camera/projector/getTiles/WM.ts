@@ -1,5 +1,5 @@
 import { project } from '../mat4'
-import { llToTile, llToTilePx, neighborsXY, toID } from 's2/geometry/wm'
+import { llToTile, llToTilePx, neighborsXY, toID } from 'geometry/wm'
 import { boxIntersects, pointBoundaries } from 'geometry'
 
 import type Projector from '../'

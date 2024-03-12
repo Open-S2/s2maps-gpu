@@ -325,10 +325,10 @@ export default class S2MapUI extends Camera {
     if (!this._canDraw) return
     if (this.renderNextFrame) return
     this.renderNextFrame = true
-    requestAnimationFrame(now => {
+    requestAnimationFrame((now: number) => {
       this.renderNextFrame = false
       // if timeCache exists, run animation function
-      this.timeCache?.animate(now, this._updatePainter.bind(this))
+      this.timeCache?.animate(now, this._updatePainter.bind(this) as () => void)
       // if animation currently exists, run it
       this.currAnimFunction?.(now)
       // if resize has been queued, we do so now

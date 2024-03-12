@@ -17,10 +17,10 @@ import {
   pxToTile,
   tilePxBounds,
   xyzToBBOX
-} from 's2/geometry/wm/mercCoords'
+} from 'geometry/wm/mercCoords'
 import { describe, expect, it, test } from 'bun:test'
 
-import type { BBox } from 's2/geometry'
+import type { BBox } from 'geometry'
 
 describe('llToPX', () => {
   it('PX with int zoom value converts when antiMeridian=true', () => {

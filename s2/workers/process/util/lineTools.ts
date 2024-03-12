@@ -90,7 +90,7 @@ export function drawLine (
 
   const prev = [...points[0]]
   const curr = [...points[0]]
-  const next = []
+  const next: number[] = []
   const lengthSoFar = [0]
   let curLength = 0
   let prevPoint = points[0]

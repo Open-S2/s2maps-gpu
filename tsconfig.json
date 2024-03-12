@@ -1,9 +1,15 @@
 {
   // https://nuxt.com/docs/guide/concepts/typescript
   "extends": "./.nuxt/tsconfig.json",
-  "esModuleInterop": true,
-  "moduleResolution": "node",
+  "lib": [
+    "DOM",
+    "DOM.Iterable",
+    "ESNext",
+    "WebWorker"
+  ],
   "compilerOptions": {
+    "esModuleInterop": true,
+    "moduleResolution": "node",
     "types": ["@webgpu/types"],
     "baseUrl": ".", // This must be specified if "paths" is.
     "paths": {    

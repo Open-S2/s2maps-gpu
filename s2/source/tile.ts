@@ -1,6 +1,6 @@
 import { project } from 'ui/camera/projector/mat4'
 import { bboxST } from 'geometry/s2/s2Coords'
-import { fromID, llToTilePx } from 's2/geometry/wm'
+import { fromID, llToTilePx } from 'geometry/wm'
 import { fromSTGL, mul, normalize } from 'geometry/s2/s2Point'
 import { level, toIJ } from 'geometry/s2/s2CellID'
 
@@ -169,7 +169,7 @@ implements TileSpec<C, F, M> {
     interactiveData: Uint8Array
   ): void {
     // setup variables
-    let id, start, end
+    let id: number, start: number, end: number
     const textDecoder = new TextDecoder('utf-8')
     // build interactive guide
     for (let i = 0, gl = interactiveGuide.length; i < gl; i += 3) {

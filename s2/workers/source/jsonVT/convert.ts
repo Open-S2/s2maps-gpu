@@ -80,7 +80,7 @@ function convertLine (
   tolerance: number,
   projection: Projection
 ): void {
-  let s, t
+  let s: number, t: number
   // setup the first point
   s = ring[0][0]
   t = ring[0][1]

@@ -155,7 +155,7 @@ const getUint48 = (dataview: DataView, pos: number): number => {
 
 const getPath = (zoom: number, x: number, y: number): number[] => {
   const { max, pow } = Math
-  const path = []
+  const path: Array<[number, number, number]> = []
 
   // grab 6 bits at a time
   while (zoom >= 5) {

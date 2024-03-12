@@ -1,7 +1,6 @@
 {
   "name": "s2maps-gpu",
-  "version": "0.13.3",
-  "private": true,
+  "version": "0.13.4",
   "description": "S2 Maps GPU",
   "keywords": [
     "s2",
@@ -59,8 +58,8 @@
     "@types/better-sqlite3": "^7.6.9",
     "@types/bun": "^1.0.8",
     "@types/webpack-bundle-analyzer": "^4.7.0",
-    "@typescript-eslint/eslint-plugin": "^7.1.0",
-    "@typescript-eslint/parser": "^7.1.0",
+    "@typescript-eslint/eslint-plugin": "^7.2.0",
+    "@typescript-eslint/parser": "^7.2.0",
     "@webgpu/types": "^0.1.40",
     "ajv": "^8.12.0",
     "better-sqlite3": "^9.4.3",
@@ -81,7 +80,7 @@
     "ts-node": "^10.9.2",
     "ts-standard": "*",
     "tsconfig-paths-webpack-plugin": "^4.1.0",
-    "typescript": "latest",
+    "typescript": "^5.4.2",
     "vue": "^3.4.19",
     "vue-router": "^4.3.0",
     "webpack": "^5.90.3",

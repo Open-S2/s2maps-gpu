@@ -8,7 +8,7 @@ import {
   parent,
   toID,
   toIJ
-} from 's2/geometry/wm/mercID'
+} from 'geometry/wm/mercID'
 import { describe, expect, it, test } from 'bun:test'
 
 describe('managing tile x-y-z to/from ID', () => {

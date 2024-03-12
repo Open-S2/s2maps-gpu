@@ -3,6 +3,7 @@ import { fromLonLat, toST } from 'geometry/s2/s2Point'
 import type { Session } from '.'
 import type { TileRequest } from '../worker.spec'
 import type { Point } from 'geometry'
+import type { JSONVectorPointsFeature } from './jsonVT/tile'
 
 export interface MarkerDefinition {
   id?: number
@@ -74,7 +75,7 @@ export default class MarkerSource {
   tileRequest (mapID: string, tile: TileRequest): void {
     const { face, zoom, bbox, i, j } = tile
     const tileZoom = 1 << zoom
-    const features = []
+    const features: JSONVectorPointsFeature[] = []
     // get bounds of tile
     const [minS, minT, maxS, maxT] = bbox
     // find all markers in st bounds

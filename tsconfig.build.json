@@ -7,6 +7,8 @@
       "ESNext",
       "WebWorker"
     ],
+    "checkJs": false,
+    "strictNullChecks": true,
     "outDir": "dist",
     "declarationDir": "dist",
     "declaration": true,
@@ -42,16 +44,5 @@
   "include": [
     "types/*.d.ts",
     "s2/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "buildS2",
-    "buildS2-dev",
-    "buildS2-local",
-    "buildS2-flat",
-    "server",
-    "dist",
-    "dist-types",
-    ".output"
   ]
 }

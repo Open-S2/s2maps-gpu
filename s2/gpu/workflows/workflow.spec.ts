@@ -44,7 +44,7 @@ import type {
 import type { TileGPU as Tile } from 'source/tile.spec'
 import type Projector from 'ui/camera/projector'
 import type { BBox } from 'geometry'
-import type S2MapUI from 's2/ui/s2mapUI'
+import type S2MapUI from 'ui/s2mapUI'
 
 // SOURCES
 

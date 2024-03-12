@@ -4,8 +4,8 @@ import type { MaskSource } from './context.spec'
 /** Given a Tile division size, build a Mask Source */
 export default function buildMask (division: number, context: WebGL2Context | WebGLContext): MaskSource {
   const { gl } = context
-  const vertices = []
-  const indices = []
+  const vertices: number[] = []
+  const indices: number[] = []
   // prep variables
   const indexLength = division + 1
   let t: number, s: number, indexAbove: number

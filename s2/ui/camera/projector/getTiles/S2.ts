@@ -4,7 +4,7 @@ import { fromLonLat, fromSTGL, mul, normalize, toIJ } from 'geometry/s2/s2Point'
 import { fromFace, fromIJ, parent } from 'geometry/s2/s2CellID'
 import { boxIntersects, lessThanZero, pointBoundaries } from 'geometry'
 
-import type { Face } from 'geometry'
+import type { BBox, Face, XYZ } from 'geometry'
 
 const ZERO_TILES = [fromFace(0), fromFace(1), fromFace(2), fromFace(3), fromFace(4), fromFace(5)]
 
@@ -20,7 +20,7 @@ export default function getTilesInView (
   const checkList: Array<[number, number, number]> = []
   const checkedTiles = new Set<string>()
   zoom = zoom << 0 // move to whole number
-  let stBbox, tLProj, tRProj, bLProj, bRProj
+  let stBbox: BBox, tLProj: XYZ, tRProj: XYZ, bLProj: XYZ, bRProj: XYZ
 
   // grab the first tile and prep neighbors for checks
   const [face, i, j] = toIJ(fromLonLat(lon, lat), zoom)

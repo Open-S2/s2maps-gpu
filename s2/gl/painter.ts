@@ -86,7 +86,7 @@ export default class Painter implements PainterSpec {
     for (const key of programKeys) {
       promises.push(workflowImports[key]?.()
         .then(async ({ default: pModule }) => {
-          // @ts-expect-error - typescript can't handle matching the workflow to the module
+          // TODO: Figure out why eslint and tsc don't see an error but vscode does:
           workflows[key] = await pModule(context)
           if (key === 'wallpaper' || key === 'skybox') workflows.background = workflows[key]
         })

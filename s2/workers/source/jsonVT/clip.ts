@@ -21,10 +21,10 @@ export default function clip (features: FeatureVector[], tile: JSONTile, s2json:
   const k3 = 0.5 + k1
   const k4 = 1 + k1
 
-  let tl = null
-  let bl = null
-  let tr = null
-  let br = null
+  let tl: null | FeatureVector[] = null
+  let bl: null | FeatureVector[] = null
+  let tr: null | FeatureVector[] = null
+  let br: null | FeatureVector[] = null
 
   const left = _clip(features, scale, i - k1, i + k3, 0, minS, maxS, s2json)
   const right = _clip(features, scale, i + k2, i + k4, 0, minS, maxS, s2json)

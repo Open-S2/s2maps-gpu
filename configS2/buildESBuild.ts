@@ -1,5 +1,5 @@
 import { build } from 'esbuild'
-import inlineWorkerPlugin from 'esbuild-plugin-inline-worker'
+// import inlineWorkerPlugin from 'esbuild-plugin-inline-worker'
 
 const result = await build({
   entryPoints: [
@@ -13,8 +13,8 @@ const result = await build({
   minify: true,
   outdir: './buildS2',
   target: 'es2017',
-  format: 'esm',
-  plugins: [inlineWorkerPlugin()]
+  format: 'esm'
+  // plugins: [inlineWorkerPlugin()]
 })
 
-console.log('build complete', result)
+console.info('build complete', result)

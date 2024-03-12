@@ -58,17 +58,21 @@ function scaleShiftClipLines (
     for (const line of geometry) shiftScale(line as S2VectorLine, xShift, yShift, scale)
   }
   // clip
-  const newGeometry: any = []
+  let newGeometry: S2VectorGeometry = []
   if (type === 4) {
+    const newGeo: S2VectorMultiPoly = []
     for (const poly of geometry) {
-      const newPoly = []
+      const newPoly: S2VectorLines = []
       for (const line of poly) newPoly.push(...clipLine(line as S2VectorLine, extent, true))
-      if (newPoly.length > 0) newGeometry.push(newPoly)
+      if (newPoly.length > 0) newGeo.push(newPoly)
     }
+    newGeometry = newGeo
   } else {
+    const newGeo: S2VectorLines = []
     for (const line of geometry) {
-      newGeometry.push(...clipLine(line as S2VectorLine, extent, type === 3))
+      newGeo.push(...clipLine(line as S2VectorLine, extent, type === 3))
     }
+    newGeometry = newGeo
   }
 
   if (newGeometry.length > 0) return newGeometry

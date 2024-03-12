@@ -57,7 +57,7 @@ function coalesceText (field: string, properties: Properties, fieldIsKey: boolea
       // prep variables
       let charIndex = 1
       let nextChar
-      const transforms = []
+      const transforms: Array<(input: string) => string> = []
       while (piece[charIndex] === '!') {
         charIndex++
         nextChar = piece[charIndex]

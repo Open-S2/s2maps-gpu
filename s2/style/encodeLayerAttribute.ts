@@ -127,7 +127,7 @@ function encodeDataCondition<T extends NotNullOrObject> (
   { conditions, fallback }: DataCondition<ValueType<T>>,
   lch: boolean
 ): number[] {
-  const encoding = []
+  const encoding: number[] = []
   let i = 1
 
   for (const { input } of conditions) {
@@ -143,7 +143,7 @@ function encodeRange<T> (
   { ranges }: DataRangeEase<NumberColor<T>> | DataRangeStep<ValueType<T>> | InputRangeEase<NumberColor<T>> | InputRangeStep<ValueType<T>>,
   lch: boolean
 ): number[] {
-  const encoding = []
+  const encoding: number[] = []
 
   for (const { stop, input } of ranges) {
     encoding.push(stop, ...encodeLayerAttribute(input, lch))
@@ -156,7 +156,7 @@ function encodeFeatureStates<T extends NotNullOrObject> (
   { condition, input }: FeatureState<ValueType<T>>,
   lch: boolean
 ): number[] {
-  const encoding = []
+  const encoding: number[] = []
 
   const conditionCode = (condition === 'default')
     ? 0 // (inactive)

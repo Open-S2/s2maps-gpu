@@ -16,7 +16,7 @@ export interface JSONVectorFeatureBase {
   extent: number
   properties: Properties
   loadGeometry?: () => S2VectorGeometry
-  loadGeometryFlat: undefined
+  loadGeometryFlat?: undefined
 }
 
 export interface JSONVectorPointsFeature extends JSONVectorFeatureBase {
@@ -67,6 +67,8 @@ export interface VTMultiPolyFeature extends VTFeatureBase {
   type: 4
   geometry: number[][][]
 }
+
+export type VTFeatureGeometry = (S2VectorPoints & number[]) | (S2VectorLines & number[][]) | (S2VectorPoly & number[][]) | (S2VectorMultiPoly & number[][][])
 
 export type VTFeature =
   VTPointsFeature | VTLinesFeature |
@@ -226,7 +228,7 @@ function addLine (
     return
   }
 
-  const ring = []
+  const ring: number[] = []
 
   for (let i = 0; i < geom.length; i += 3) {
     if (tolerance === 0 || geom[i + 2] > sqTolerance) {

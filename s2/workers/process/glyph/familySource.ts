@@ -43,7 +43,8 @@ export interface LigatureTree extends Record<number, LigatureTree> {
   substitute?: string
 }
 
-export type IconMap = Record<string, Array<{ glyphID: string, colorID: number }>> // ex: ['airport']: [0, 1, 2, 5, 7] (name maps reference a list of unicodes)
+export interface IconDefinition { glyphID: string, colorID: number }
+export type IconMap = Record<string, IconDefinition[]> // ex: ['airport']: [0, 1, 2, 5, 7] (name maps reference a list of unicodes)
 export type GlyphSet = Set<string>
 export type ColorMap = Record<number, ColorArray>
 
@@ -144,7 +145,7 @@ export default class FamilySource {
       for (let i = 0; i < nameLength; i++) id.push(dv.getUint8(pos + i))
       const name = id.map(n => String.fromCharCode(n)).join('')
       pos += nameLength
-      const map = []
+      const map: IconDefinition[] = []
       for (let i = 0; i < mapLength; i++) {
         map.push({
           glyphID: String(dv.getUint16(pos, true)),

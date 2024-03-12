@@ -140,11 +140,11 @@ export default class S2Map extends EventTarget {
     const canvasContainer = this.#canvasContainer
     if (options.interactive ?? true) {
       canvasContainer.classList.add('s2-interactive')
-      canvasContainer.addEventListener('mousemove', this.#onCanvasMouseMove.bind(this))
-      canvasContainer.addEventListener('contextmenu', this.#onCompassMouseDown.bind(this))
-      canvasContainer.addEventListener('mouseleave', this.#onCanvasMouseLeave.bind(this))
-      if (options.scrollZoom ?? true) canvasContainer.addEventListener('wheel', this.#onScroll.bind(this))
-      canvasContainer.addEventListener('mousedown', this.#onMouseDown.bind(this))
+      canvasContainer.addEventListener('mousemove', this.#onCanvasMouseMove.bind(this) as (e: MouseEvent) => void)
+      canvasContainer.addEventListener('contextmenu', this.#onCompassMouseDown.bind(this) as (e: MouseEvent) => void)
+      canvasContainer.addEventListener('mouseleave', this.#onCanvasMouseLeave.bind(this) as () => void)
+      if (options.scrollZoom ?? true) canvasContainer.addEventListener('wheel', this.#onScroll.bind(this) as (e: WheelEvent) => void)
+      canvasContainer.addEventListener('mousedown', this.#onMouseDown.bind(this) as (e: MouseEvent) => void)
       canvasContainer.addEventListener('touchstart', (e: TouchEvent) => { this.#onTouch(e, 'touchstart') })
       canvasContainer.addEventListener('touchend', (e: TouchEvent) => { this.#onTouch(e, 'touchend') })
       canvasContainer.addEventListener('touchmove', (e: TouchEvent) => { this.#onTouch(e, 'touchmove') })
@@ -248,7 +248,7 @@ export default class S2Map extends EventTarget {
         compass.setAttribute('aria-hidden', '')
         compass.tabIndex = -1
         compassContainer.appendChild(compass)
-        compassContainer.addEventListener('mousedown', this.#onCompassMouseDown.bind(this))
+        compassContainer.addEventListener('mousedown', this.#onCompassMouseDown.bind(this) as (e: MouseEvent) => void)
       }
       if (colorblindController !== false) {
         if (!firstNavCompSet) {
@@ -343,8 +343,8 @@ export default class S2Map extends EventTarget {
     this.#setColorMode(mode)
     // now that canvas is setup, support resizing
     if (this.#container !== undefined && 'ResizeObserver' in window) {
-      new ResizeObserver(this.#resize.bind(this)).observe(this.#container)
-    } else window.addEventListener('resize', this.#resize.bind(this))
+      new ResizeObserver(this.#resize.bind(this) as () => void).observe(this.#container)
+    } else window.addEventListener('resize', this.#resize.bind(this) as () => void)
     // let the S2WorkerPool know of this maps existance
     window.S2WorkerPool.addMap(this)
   }
@@ -398,7 +398,7 @@ export default class S2Map extends EventTarget {
     offscreen?.postMessage({ type: 'mousedown' })
     map?.dragPan.onMouseDown()
     // build a listener to mousemovement
-    const mouseMoveFunc = this.#onMouseMove.bind(this)
+    const mouseMoveFunc: (e: MouseEvent) => void = this.#onMouseMove.bind(this)
     window.addEventListener('mousemove', mouseMoveFunc)
     // upon eventual mouseup, let the map know
     window.addEventListener('mouseup', (e) => {
@@ -424,8 +424,7 @@ export default class S2Map extends EventTarget {
 
   #onCanvasMouseMove (e: MouseEvent): void {
     const { map, offscreen } = this
-    // @ts-expect-error - layerX and layerY are not defined in typescript
-    const { layerX, layerY } = e
+    const { layerX, layerY } = getLayerCoordinates(e)
     const x = layerX * this.#canvasMultiplier
     const y = layerY * this.#canvasMultiplier
 
@@ -687,6 +686,30 @@ export default class S2Map extends EventTarget {
       map?.screenshot()
     })
   }
+}
+
+function getLayerCoordinates ({ target, offsetX, offsetY }: MouseEvent): { layerX: number, layerY: number } {
+  const targetElement = target as HTMLElement | null
+  let currentElement = targetElement
+
+  let layerX = offsetX
+  let layerY = offsetY
+
+  // Traverse up the DOM tree to find the nearest positioned ancestor
+  while (currentElement !== null && currentElement !== document.body) {
+    const { offsetLeft, offsetTop, offsetParent } = currentElement
+    const offsetParentElement = offsetParent
+
+    if (offsetParentElement !== null && getComputedStyle(offsetParentElement).position !== 'static') {
+      layerX += offsetLeft
+      layerY += offsetTop
+      break
+    }
+
+    currentElement = offsetParentElement as HTMLElement | null
+  }
+
+  return { layerX, layerY }
 }
 
 window.S2Map = S2Map

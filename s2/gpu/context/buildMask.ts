@@ -2,8 +2,8 @@ import type { WebGPUContext } from '.'
 import type { MaskSource } from '../workflows/workflow.spec'
 
 export default function buildMask (division: number, context: WebGPUContext): MaskSource {
-  const vertices = []
-  const indices = []
+  const vertices: number[] = []
+  const indices: number[] = []
   // prep variables
   const indexLength = division + 1
   let t: number, s: number, indexAbove: number

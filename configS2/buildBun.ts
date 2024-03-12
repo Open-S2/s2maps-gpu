@@ -21,6 +21,6 @@ const result = await Bun.build({
   // naming: '[name].[ext]'
 })
 
-console.log('Build complete', result, version)
+console.info('Build complete', result, version)
 
 export {}

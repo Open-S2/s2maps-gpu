@@ -116,7 +116,7 @@ export default class Color {
   LAB2RGB (): void {
     this.type = 'rgb'
     const [l, a, b, alpha] = this.val
-    let x, y, z, r, g, b_
+    let x: number, y: number, z: number, r: number, g: number, b_: number
     // prep move to xyz
     y = (l + 16) / 116
     x = isNaN(a) ? y : y + a / 500
@@ -301,7 +301,7 @@ export function interpolate (color1: Color, color2: Color, t: number): Color {
     return new Color(r, g, b, a, 'rgb')
   }
   // prep variables
-  let sat, hue, dh
+  let sat: number | undefined, hue: number, dh: number
   const [hue0, sat0, lbv0, alpha0] = color1.val
   const [hue1, sat1, lbv1, alpha1] = color2.val
   // first manage hue
