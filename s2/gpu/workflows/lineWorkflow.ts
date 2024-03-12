@@ -1,4 +1,3 @@
-/* eslint-env browser */
 import shaderCode from '../shaders/line.wgsl'
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
 import { buildDashImage } from 'style/color'
@@ -11,8 +10,8 @@ import type {
 } from './workflow.spec'
 import type {
   LayerDefinitionBase,
-  LineLayerDefinition,
-  LineLayerStyle,
+  LineDefinition,
+  LineStyle,
   LineWorkflowLayerGuideGPU
 } from 'style/style.spec'
 import type { LineData } from 'workers/worker.spec'
@@ -163,7 +162,7 @@ export default class LineWorkflow implements LineWorkflowSpec {
   }
 
   // programs helps design the appropriate layer parameters
-  buildLayerDefinition (layerBase: LayerDefinitionBase, layer: LineLayerStyle): LineLayerDefinition {
+  buildLayerDefinition (layerBase: LayerDefinitionBase, layer: LineStyle): LineDefinition {
     const { context } = this
     const { devicePixelRatio, nullTexture } = context
     const { source, layerIndex, lch, visible } = layerBase
@@ -184,7 +183,7 @@ export default class LineWorkflow implements LineWorkflowSpec {
     interactive = interactive ?? false
     cursor = cursor ?? 'default'
     dasharray = dasharray ?? []
-    const layerDefinition: LineLayerDefinition = {
+    const layerDefinition: LineDefinition = {
       ...layerBase,
       type: 'line' as const,
       color,

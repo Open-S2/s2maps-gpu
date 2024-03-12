@@ -3,49 +3,58 @@ import { degToRad, radToDeg } from '../util'
 import type { Face } from './s2Proj.spec'
 import type { BBox, XYZ } from '../proj.spec'
 
-export const kLimitIJ = 1 << 30
+export const K_LIMIT_IJ = 1 << 30
 
+/** Convert a [0, 1] to a [-1, 1] in a linear fashion */
 export function linearSTtoUV (s: number): number {
   return 2 * s - 1
 }
 
+/** Convert a [-1, 1] to a [0, 1] in a linear fashion */
 export function linearUVtoST (u: number): number {
   return 0.5 * (u + 1)
 }
 
+/** Convert a [0, 1] to a [-1, 1] in a tangential fashion */
 export function tanSTtoUV (s: number): number {
   return Math.tan(Math.PI / 2 * s - Math.PI / 4)
 }
 
+/** Convert a [-1, 1] to a [0, 1] in a tangential fashion */
 export function tanUVtoST (u: number): number {
   return (2 * (1 / Math.PI)) * (Math.atan(u) + Math.PI / 4)
 }
 
+/** Convert a [0, 1] to a [-1, 1] in a quadratic fashion */
 export function quadraticSTtoUV (s: number): number {
   if (s >= 0.5) return (1 / 3) * (4 * s * s - 1)
   return (1 / 3) * (1 - 4 * (1 - s) * (1 - s))
 }
 
+/** Convert a [-1, 1] to a [0, 1] in a quadratic fashion */
 export function quadraticUVtoST (u: number): number {
   if (u >= 0) return 0.5 * Math.sqrt(1 + 3 * u)
   return 1 - 0.5 * Math.sqrt(1 - 3 * u)
 }
 
+/** Convert from st space to ij space (ij are whole numbers ranging an entire u30) */
 export function STtoIJ (s: number): number {
   const { max, min, floor } = Math
-  return max(0, min(kLimitIJ - 1, floor(kLimitIJ * s)))
+  return max(0, min(K_LIMIT_IJ - 1, floor(K_LIMIT_IJ * s)))
 }
 
+/** Convert from ij space to st space (ij are whole numbers ranging an entire u30) */
 export function IJtoST (i: number): number {
-  return i / kLimitIJ
+  return i / K_LIMIT_IJ
 }
 
+/** Convert SiTi to ST. */
 export function SiTiToST (si: number): number {
-  return (1 / 2147483648) * si
+  return (1 / 2_147_483_648) * si
 }
 
-// left hand rule
-export function faceUVtoXYZ (face: Face, u: number, v: number): [number, number, number] {
+/** Convert a face-u-v coords to left-hand-rule XYZ Point coords */
+export function faceUVtoXYZ (face: Face, u: number, v: number): XYZ {
   switch (face) {
     case 0: return [1, u, v]
     case 1: return [-u, 1, v]
@@ -56,7 +65,7 @@ export function faceUVtoXYZ (face: Face, u: number, v: number): [number, number,
   }
 }
 
-// right hand rule
+/** Convert a face-u-v coords to right-hand-rule XYZ Point coords */
 export function faceUVtoXYZGL (face: Face, u: number, v: number): XYZ {
   switch (face) {
     case 0: return [u, v, 1]
@@ -68,8 +77,8 @@ export function faceUVtoXYZGL (face: Face, u: number, v: number): XYZ {
   }
 }
 
-// left hand rule
-export function faceXYZtoUV (face: Face, xyz: XYZ): [number, number] {
+/** Convert from a face and left-hand-rule XYZ Point to u-v coords */
+export function faceXYZtoUV (face: Face, xyz: XYZ): [u: number, v: number] {
   const [x, y, z] = xyz
 
   switch (face) {
@@ -82,24 +91,26 @@ export function faceXYZtoUV (face: Face, xyz: XYZ): [number, number] {
   }
 }
 
+/** Find the face the point is located at */
 export function XYZtoFace (xyz: XYZ): Face {
   const temp = xyz.map((n: number): number => Math.abs(n))
 
   let face: number = (temp[0] > temp[1])
     ? (temp[0] > temp[2]) ? 0 : 2
     : (temp[1] > temp[2]) ? 1 : 2
-  // $FlowIgnore
   if (xyz[face] < 0) face += 3
 
   return face as Face
 }
 
-export function XYZtoFaceUV (xyz: XYZ): [Face, number, number] {
+/** Convert from an left-hand-rule XYZ Point to a Face-U-V coordinate */
+export function XYZtoFaceUV (xyz: XYZ): [face: Face, u: number, v: number] {
   const face = XYZtoFace(xyz)
   return [face, ...faceXYZtoUV(face, xyz)]
 }
 
-export function faceXYZGLtoUV (face: number, xyz: XYZ): [number, number] {
+/** Convert from a face and right-hand-rule XYZ Point to u-v coords */
+export function faceXYZGLtoUV (face: number, xyz: XYZ): [u: number, v: number] {
   const [x, y, z] = xyz
 
   switch (face) {
@@ -112,7 +123,8 @@ export function faceXYZGLtoUV (face: number, xyz: XYZ): [number, number] {
   }
 }
 
-export function xyzToLonLat (xyz: XYZ): [number, number] {
+/** Convert from an left-hand-rule XYZ Point to a lon-lat coord */
+export function xyzToLonLat (xyz: XYZ): [lon: number, lat: number] {
   const [x, y, z] = xyz
 
   return [
@@ -121,7 +133,8 @@ export function xyzToLonLat (xyz: XYZ): [number, number] {
   ]
 }
 
-export function lonLatToXYZ (lon: number, lat: number): [number, number, number] {
+/** Convert from a lon-lat coord to an left-hand-rule XYZ Point */
+export function lonLatToXYZ (lon: number, lat: number): XYZ {
   lon = degToRad(lon)
   lat = degToRad(lat)
   return [
@@ -131,7 +144,8 @@ export function lonLatToXYZ (lon: number, lat: number): [number, number, number]
   ]
 }
 
-export function lonLatToXYZGL (lon: number, lat: number): [number, number, number] {
+/** Convert from a lon-lat coord to an right-hand-rule XYZ Point */
+export function lonLatToXYZGL (lon: number, lat: number): XYZ {
   lon = degToRad(lon)
   lat = degToRad(lat)
   return [
@@ -141,19 +155,22 @@ export function lonLatToXYZGL (lon: number, lat: number): [number, number, numbe
   ]
 }
 
-export function tileXYFromUVZoom (u: number, v: number, zoom: number): [number, number] {
+/** Convert an u-v-zoom coordinate to a tile coordinate */
+export function tileXYFromUVZoom (u: number, v: number, zoom: number): [x: number, y: number] {
   const s = quadraticUVtoST(u)
   const t = quadraticUVtoST(v)
 
   return tileXYFromSTZoom(s, t, zoom)
 }
 
-export function tileXYFromSTZoom (s: number, t: number, zoom: number): [number, number] {
+/** Convert an s-t-zoom coordinate to a tile coordinate */
+export function tileXYFromSTZoom (s: number, t: number, zoom: number): [x: number, y: number] {
   const divisionFactor = (2 / (1 << zoom)) * 0.5
 
   return [Math.floor(s / divisionFactor), Math.floor(t / divisionFactor)]
 }
 
+/** Given a quad-based tile schema of "zoom-x-y", get the local UV bounds of said tile. */
 export function bboxUV (u: number, v: number, zoom: number): BBox {
   const divisionFactor = 2 / (1 << zoom)
 
@@ -165,18 +182,23 @@ export function bboxUV (u: number, v: number, zoom: number): BBox {
   ]
 }
 
-export function bboxST (x: number, y: number, zoom: number): BBox {
+/** Given a quad-based tile schema of "zoom-x-y", get the local ST bounds of said tile. */
+export function bboxST (s: number, t: number, zoom: number): BBox {
   const divisionFactor = (2 / (1 << zoom)) * 0.5
 
   return [
-    divisionFactor * x,
-    divisionFactor * y,
-    divisionFactor * (x + 1),
-    divisionFactor * (y + 1)
+    divisionFactor * s,
+    divisionFactor * t,
+    divisionFactor * (s + 1),
+    divisionFactor * (t + 1)
   ]
 }
 
-export function neighborsIJ (face: Face, i: number, j: number, level = 30): Array<[number, number, number]> {
+/**
+ * Find the face-i-j coordinates of neighbors for a specific face-i-j coordinate.
+ * Define an adjusted level (zoom) for the i-j coordinates. The level is 30 by default.
+ */
+export function neighborsIJ (face: Face, i: number, j: number, level = 30): Array<[face: number, i: number, j: number]> {
   const size = 1 << (30 - level)
 
   if (level !== 30) {
@@ -192,7 +214,10 @@ export function neighborsIJ (face: Face, i: number, j: number, level = 30): Arra
   ]
 }
 
-function fromIJWrap (face: Face, i: number, j: number, level: number, sameFace = false): [number, number, number] {
+/**
+ * Adjust a manipulated face-i-j coordinate to a legal one if necessary.
+ */
+function fromIJWrap (face: Face, i: number, j: number, level: number, sameFace = false): [face: number, i: number, j: number] {
   if (sameFace) return [face, i >> (30 - level), j >> (30 - level)]
   const { max, min } = Math
   const kMaxSize = 1073741824

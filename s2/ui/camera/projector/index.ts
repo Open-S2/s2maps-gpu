@@ -1,11 +1,10 @@
-/* eslint-env browser */
 import type Camera from '..'
 import * as mat4 from './mat4'
 import { getTilesS2, getTilesWM } from './getTiles'
 import { cursorToLonLatS2, cursorToLonLatWM } from './cursorToLonLat'
 import { fromLonLatGL, mul, normalize } from 'geometry/s2/s2Point'
-import { degToRad } from 'geometry'
-import { mercatorLatScale } from 'geometry/webMerc'
+import { EARTH_RADIUS, EARTH_RADIUS_EQUATORIAL, EARTH_RADIUS_POLAR, degToRad } from 'geometry'
+import { mercatorLatScale } from 's2/geometry/wm'
 
 import type { MapOptions } from 'ui/s2mapUI'
 import type { Projection } from 'style/style.spec'
@@ -33,8 +32,10 @@ export default class Projector {
   projection: Projection = 'S2'
   webworker = false
   noClamp = false
-  radius = 6_371.0088
-  radii: XYZ = [6378137, 6356752.3, 6378137]
+  // radius is the radius of the earth in kilometers
+  radius = EARTH_RADIUS / 1_000
+  // radii is the radius of the earth in meters for each axis
+  radii: XYZ = [EARTH_RADIUS_EQUATORIAL, EARTH_RADIUS_POLAR, EARTH_RADIUS_EQUATORIAL]
   zTranslateStart = 5
   zTranslateEnd = 1.001
   zoomEnd = 5

@@ -1,4 +1,3 @@
-/* eslint-env worker */
 import type { TileRequest } from '../worker.spec'
 
 export interface LocalTileProperties {

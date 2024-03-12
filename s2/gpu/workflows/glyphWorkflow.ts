@@ -1,4 +1,3 @@
-/* eslint-env browser */
 import shaderCode from '../shaders/glyph.wgsl'
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
 
@@ -9,8 +8,8 @@ import type {
   GlyphWorkflow as GlyphWorkflowSpec
 } from './workflow.spec'
 import type {
-  GlyphLayerDefinition,
-  GlyphLayerStyle,
+  GlyphDefinition,
+  GlyphStyle,
   GlyphWorkflowLayerGuideGPU,
   LayerDefinitionBase
 } from 'style/style.spec'
@@ -315,7 +314,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
   }
 
   // programs helps design the appropriate layer parameters
-  buildLayerDefinition (layerBase: LayerDefinitionBase, layer: GlyphLayerStyle): GlyphLayerDefinition {
+  buildLayerDefinition (layerBase: LayerDefinitionBase, layer: GlyphStyle): GlyphDefinition {
     const { context } = this
     const { source, layerIndex, lch, visible } = layerBase
     // PRE) get layer base
@@ -343,7 +342,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     viewCollisions = viewCollisions ?? false
     // 1) build definition
     // 1) build definition
-    const layerDefinition: GlyphLayerDefinition = {
+    const layerDefinition: GlyphDefinition = {
       ...layerBase,
       type: 'glyph' as const,
       // paint

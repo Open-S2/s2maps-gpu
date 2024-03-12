@@ -1,4 +1,3 @@
-/* eslint-env worker */
 // import { isSafari } util/polyfill'
 import { colorFunc } from './vectorWorker'
 import parseFeatureFunction from 'style/parseFeatureFunction'
@@ -7,12 +6,12 @@ import type { HillshadeData, RasterData, RasterDataGuide, SensorData, TileReques
 import type {
   BuildCodeFunctionZoom,
   GPUType,
-  HillshadeLayerDefinition,
+  HillshadeDefinition,
   HillshadeWorkerLayer,
   LayerWorkerFunction,
-  RasterLayerDefinition,
+  RasterDefinition,
   RasterWorkerLayer,
-  SensorLayerDefinition,
+  SensorDefinition,
   SensorWorkerLayer
 } from 'style/style.spec'
 import type {
@@ -27,7 +26,7 @@ export default class RasterWorker implements RasterWorkerSpec {
   }
 
   setupLayer (
-    layerDefinition: SensorLayerDefinition | RasterLayerDefinition | HillshadeLayerDefinition
+    layerDefinition: SensorDefinition | RasterDefinition | HillshadeDefinition
   ): RasterWorkerLayer | SensorWorkerLayer | HillshadeWorkerLayer {
     const {
       type, name, layerIndex, source,

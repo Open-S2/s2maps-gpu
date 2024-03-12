@@ -7,18 +7,19 @@ export * from './colorGenerators'
 
 export type ColorArray = [r: number, g: number, b: number, a: number]
 
-// COLOR INTERPOLATION: we should use the LCH color space
-// https://www.alanzucconi.com/2016/01/06/colour-interpolation/4/
-// use https://github.com/gka/chroma.js as a guide to create best interpolation
-// hsv is a good secondary. Saved for posterity.
-// COLOR BLIND ADJUST:
-// https://www.nature.com/articles/nmeth.1618
-// http://www.daltonize.org/
-// https://galactic.ink/labs/Color-Vision/Javascript/Color.Vision.Daltonize.js
-
-// color is designed to parse varying inputs
+/**
+ * Color class to handle color conversions and adjustments. Supports RGB, HSV, HSL, and LCH.
+ * COLOR INTERPOLATION: we support the use of the LCH color space
+ * [interpolation guide here.](https://www.alanzucconi.com/2016/01/06/colour-interpolation/4/)
+ * use [chroma.js](https://github.com/gka/chroma.js) as a guide to create best interpolation
+ * hsv is a good secondary. Saved for posterity.
+ * MORE INFORMATION ON COLOR BLIND ADJUST:
+ * [link one](https://www.nature.com/articles/nmeth.1618),
+ *  [link two](http://www.daltonize.org/),
+ *  and [ink three](https://galactic.ink/labs/Color-Vision/Javascript/Color.Vision.Daltonize.js)
+ */
 export default class Color {
-  val: [number, number, number, number]
+  val: ColorArray
   type = 'rgb'
   constructor (x: number | string | Color = 0, y = 0, z = 0, a = 1, type = 'rgb') {
     if (x instanceof Color) {
@@ -38,13 +39,13 @@ export default class Color {
     return new Color(...this.val, this.type)
   }
 
-  getRGB (normalize = true, cbAdjust?: ColorBlindAdjust): [number, number, number, number] {
+  getRGB (normalize = true, cbAdjust?: ColorBlindAdjust): ColorArray {
     this.toRGB()
     const color = (cbAdjust !== undefined) ? colorBlindAdjust(this.val, cbAdjust) : this.val.map(n => n)
-    return (normalize ? color.map((n, i) => i < 3 ? n / 255 : n) : color) as [number, number, number, number]
+    return (normalize ? color.map((n, i) => i < 3 ? n / 255 : n) : color) as ColorArray
   }
 
-  getLCH (): [number, number, number, number] {
+  getLCH (): ColorArray {
     // now convert to lch
     this.toLCH()
 
@@ -256,25 +257,25 @@ export default class Color {
 }
 
 // everything below this was taken from chroma.js
-const rgbXyz = (r: number): number => {
+function rgbXyz (r: number): number {
   if ((r /= 255) <= 0.04045) return r / 12.92
   return Math.pow((r + 0.055) / 1.055, 2.4)
 }
 
-const xyzLab = (t: number): number => {
+function xyzLab (t: number): number {
   if (t > 0.008856452) return Math.pow(t, 1 / 3)
   return t / 0.12841855 + 0.137931034
 }
 
-const xyzRgb = (r: number): number => {
+function xyzRgb (r: number): number {
   return 255 * (r <= 0.00304 ? 12.92 * r : 1.055 * Math.pow(r, 1 / 2.4) - 0.055)
 }
 
-const labXyz = (t: number): number => {
+function labXyz (t: number): number {
   return t > 0.206896552 ? t * t * t : 0.12841855 * (t - 0.137931034)
 }
 
-const rgb2xyz = (r: number, g: number, b: number): [number, number, number] => {
+function rgb2xyz (r: number, g: number, b: number): [r: number, g: number, b: number] {
   r = rgbXyz(r)
   g = rgbXyz(g)
   b = rgbXyz(b)
@@ -284,7 +285,10 @@ const rgb2xyz = (r: number, g: number, b: number): [number, number, number] => {
   return [x, y, z]
 }
 
-// take two hsv OR values and return an rgb Color
+/**
+ * Given two colors, interpolate between them using a t value between 0 and 1.
+ * 0 returns color1, 1 returns color2, and anything in between returns a mixture.
+ */
 export function interpolate (color1: Color, color2: Color, t: number): Color {
   if (color1.type !== color2.type) return new Color(color1.val[0], color1.val[1], color1.val[2], color1.val[3], color1.type)
   if (color1.type === 'rgb') {

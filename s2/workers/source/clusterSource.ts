@@ -1,4 +1,3 @@
-/* eslint-env worker */
 import { WMPointCluster } from './pointCluster'
 import Source from './source'
 

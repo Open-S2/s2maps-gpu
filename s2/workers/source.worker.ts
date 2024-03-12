@@ -1,4 +1,3 @@
-/* eslint-env worker */
 import {
   ClusterSource,
   GlyphSource,
@@ -86,7 +85,6 @@ export default class SourceWorker {
       else if (type === 'tilerequest') void this.#requestTile(mapID, data.tiles, data.sources)
       else if (type === 'timerequest') void this.#requestTime(mapID, data.tiles, data.sourceNames)
       else if (type === 'glyphrequest') this.#glyphRequest(mapID, data.workerID, data.reqID, data.glyphList)
-      else if (type === 'getInfo') this.#getInfo(mapID, data.featureID)
       else if (type === 'addMarkers') this.#addMarkers(mapID, data.markers, data.sourceName)
       else if (type === 'removeMarkers') this.#removeMarkers(mapID, data.ids, data.sourceName)
       else if (type === 'deleteSource') this.#deleteSource(mapID, data.sourceNames)
@@ -327,13 +325,6 @@ export default class SourceWorker {
     for (const [name, codes] of Object.entries(sourceGlyphs)) {
       void this.glyphs[name].glyphRequest(codes, mapID, reqID, workers[workerID])
     }
-  }
-
-  #getInfo (mapID: string, featureID: number): void {
-    // 1) build the S2JSON should it exist
-    this.#createSource(mapID, '_info', `opens2://info/${featureID}.s2json`, [])
-    // 2) request the JSON
-    void this.session.getInfo(mapID, featureID)
   }
 
   #addMarkers (mapID: string, markers: MarkerDefinition[], sourceName: string): void {

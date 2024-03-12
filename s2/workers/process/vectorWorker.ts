@@ -1,4 +1,3 @@
-/* eslint-env worker */
 import Color from 'style/color'
 import { type Properties } from 'geometry'
 import parseFeatureFunction from 'style/parseFeatureFunction'

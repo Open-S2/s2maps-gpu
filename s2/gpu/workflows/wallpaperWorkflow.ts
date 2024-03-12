@@ -1,4 +1,3 @@
-/* eslint-env browser */
 import shaderCode from '../shaders/wallpaper.wgsl'
 import Color from 'style/color'
 

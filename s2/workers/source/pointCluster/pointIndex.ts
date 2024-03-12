@@ -1,4 +1,4 @@
-import { projectX, projectY } from '../json-vt/convert'
+import { projectX, projectY } from '../jsonVT/convert'
 
 export interface Point<T> {
   x: number

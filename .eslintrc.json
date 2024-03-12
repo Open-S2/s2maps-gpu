@@ -30,7 +30,8 @@
       "ignoreMemberSort": false,
       "memberSyntaxSortOrder": ["none", "all", "multiple", "single"],
       "allowSeparatedGroups": false
-    }]
+    }],
+    "no-console": ["error", { "allow": ["info", "warn", "error"] }]
     // "@typescript-eslint/ban-types": "warn",
     // "@typescript-eslint/restrict-plus-operands": "off"
   },

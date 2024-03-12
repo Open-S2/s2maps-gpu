@@ -1,4 +1,3 @@
-/* eslint-env browser */
 /** CONTEXTS **/
 import { WebGL2Context, WebGLContext } from './contexts'
 /** SOURCES **/

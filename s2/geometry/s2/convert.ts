@@ -1,8 +1,9 @@
 import { fromST, toLonLat } from 'geometry/s2/s2Point'
 
 import type { Face, S2Feature, S2Geometry } from './s2Proj.spec'
-import type { Feature, Geometry } from '../webMerc/mercProj.spec'
+import type { Feature, Geometry } from '../wm/mercProj.spec'
 
+/** Convet an S2Feature to a GeoJSON Feature */
 export function toWM (data: S2Feature): Feature {
   const { face, properties, geometry } = data
   return {
@@ -12,6 +13,7 @@ export function toWM (data: S2Feature): Feature {
   }
 }
 
+/** Underlying conversion mechanic to move S2Geometry to GeoJSON Geometry */
 function convertGeometry (face: Face, geometry: S2Geometry): Geometry {
   const { type, coordinates } = geometry
   if (type === 'Point') {

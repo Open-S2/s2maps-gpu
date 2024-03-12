@@ -1,4 +1,3 @@
-/* eslint-env worker */
 import VectorWorker, { colorFunc, idToRGB } from './vectorWorker'
 import { earclip } from 'earclip'
 import { featureSort, scaleShiftClip } from './util'
@@ -12,7 +11,7 @@ import type {
 } from 's2-vector-tile'
 import type { FillData, TileRequest } from '../worker.spec'
 import type {
-  FillLayerDefinition,
+  FillDefinition,
   FillWorkerLayer,
   GPUType
 } from 'style/style.spec'
@@ -36,7 +35,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     this.imageStore = imageStore
   }
 
-  setupLayer (fillLayer: FillLayerDefinition): FillWorkerLayer {
+  setupLayer (fillLayer: FillDefinition): FillWorkerLayer {
     const {
       name, layerIndex, source, layer, minzoom, maxzoom, pattern, patternFamily,
       patternMovement, filter, color, opacity, invert, interactive, cursor, opaque, lch

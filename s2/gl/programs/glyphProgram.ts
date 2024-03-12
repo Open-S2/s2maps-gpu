@@ -10,8 +10,8 @@ import frag2 from '../shaders/glyph2.fragment.glsl'
 import type { Context, GlyphFeatureGuide, GlyphSource } from '../contexts/context.spec'
 import type { ColorArray } from 'style/color'
 import type {
-  GlyphLayerDefinition,
-  GlyphLayerStyle,
+  GlyphDefinition,
+  GlyphStyle,
   GlyphWorkflowLayerGuide,
   LayerDefinitionBase
 } from 'style/style.spec'
@@ -201,7 +201,7 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
       tile.addFeatures(features)
     }
 
-    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: GlyphLayerStyle): GlyphLayerDefinition {
+    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: GlyphStyle): GlyphDefinition {
       const { type } = this
       const { source, layerIndex, lch, visible } = layerBase
       // PRE) get layer base
@@ -227,7 +227,7 @@ export default async function glyphProgram (context: Context): Promise<GlyphProg
       onlyPoints = onlyPoints ?? false
       onlyLines = onlyLines ?? false
       // 1) build definition
-      const layerDefinition: GlyphLayerDefinition = {
+      const layerDefinition: GlyphDefinition = {
         ...layerBase,
         type: 'glyph',
         // paint

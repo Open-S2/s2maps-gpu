@@ -8,7 +8,6 @@ import type {
 } from 'style/style.spec'
 import type { AnimationDirections } from 'ui/camera/animator'
 import type { UserTouchEvent } from 'ui/camera/dragPan'
-import type { InfoData } from 'ui/info'
 import type { MapOptions } from 'ui/s2mapUI'
 import type { Face, Properties } from 'geometry'
 import type { Glyph } from 'workers/process/glyph/familySource'
@@ -252,11 +251,6 @@ export type S2MapMessage =
 
 /** FRONT END TO SOURCE WORKER MESSAGES */
 
-export interface GetInfoMessage extends MapID {
-  type: 'getInfo'
-  featureID: number
-}
-
 export interface AddMarkersMessage extends MapID {
   type: 'addMarkers'
   markers: MarkerDefinition[]
@@ -275,7 +269,7 @@ export interface DeleteSourceMessage extends MapID {
 }
 
 export type S2MapToSourceMessage =
-  GetInfoMessage | AddMarkersMessage | RemoveMarkersMessage | DeleteSourceMessage
+  AddMarkersMessage | RemoveMarkersMessage | DeleteSourceMessage
 
 /** UI GL REQUESTS -> S2Map or Worker Pool **/
 
@@ -380,11 +374,6 @@ export interface AttributionsMessage extends MapID {
   attributions: Attributions
 }
 
-export interface InfoMessage extends MapID {
-  type: 'info'
-  json: InfoData
-}
-
 export interface SourceSetStyleMessage extends MapID {
   type: 'setStyle'
   style: StyleDefinition
@@ -404,7 +393,7 @@ export interface SpriteImageMessage extends MapID {
 }
 
 export type SourceWorkerMessage =
-  AttributionsMessage | InfoMessage | SourceSetStyleMessage
+  AttributionsMessage | SourceSetStyleMessage
 
 /** TILE WORKER MESSAGES **/
 

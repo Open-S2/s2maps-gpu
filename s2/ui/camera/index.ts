@@ -1,4 +1,3 @@
-/* eslint-env browser */
 /** STYLE **/
 import Style from 'style'
 /** PAINT **/
@@ -153,7 +152,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     } else {
       let type: 1 | 2 = 1
       // prep webgl style options
-      const webglOptions = { powerPreference: 'high-performance', antialias: false, premultipliedAlpha: true, preserveDrawingBuffer: true, alpha: true, stencil: true }
+      const webglOptions = { antialias: false, premultipliedAlpha: true, preserveDrawingBuffer: true, alpha: true, stencil: true }
       // than try webgl2
       if (contextType === 2) {
         context = this.#canvas.getContext('webgl2', webglOptions) as WebGL2RenderingContext
@@ -243,7 +242,6 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     if (this.webworker) {
       postMessage({ type: 'click', feature: currFeature, lon, lat })
     } else {
-      if (parent?.info !== undefined) parent?.info.click(currFeature, lon, lat)
       parent?.dispatchEvent(new CustomEvent('click', { detail: { feature: currFeature, lon, lat } }))
     }
   }

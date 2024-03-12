@@ -1,4 +1,3 @@
-/* eslint-env worker */
 import ImageSource from './imageSource'
 
 import type { SpriteImageMessage } from 'workers/worker.spec'

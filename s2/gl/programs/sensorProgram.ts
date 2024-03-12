@@ -13,8 +13,8 @@ import type { SensorData } from 'workers/worker.spec'
 import type { TileGL as Tile } from 'source/tile.spec'
 import type {
   LayerDefinitionBase,
-  SensorLayerDefinition,
-  SensorLayerStyle,
+  SensorDefinition,
+  SensorStyle,
   SensorWorkflowLayerGuide
 } from 'style/style.spec'
 import type { SensorProgram as SensorProgramSpec, SensorProgramUniforms } from './program.spec'
@@ -116,7 +116,7 @@ export default async function sensorProgram (context: Context): Promise<SensorPr
       tile.addFeatures(features)
     }
 
-    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: SensorLayerStyle): SensorLayerDefinition {
+    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: SensorStyle): SensorDefinition {
       const { source, layerIndex, lch, visible } = layerBase
       // PRE) get layer properties
       let { colorRamp, opacity, fadeDuration, interactive, cursor } = layer
@@ -124,7 +124,7 @@ export default async function sensorProgram (context: Context): Promise<SensorPr
       colorRamp = colorRamp ?? 'sinebow'
       fadeDuration = fadeDuration ?? 300
       // 1) build definition
-      const layerDefinition: SensorLayerDefinition = {
+      const layerDefinition: SensorDefinition = {
         ...layerBase,
         type: 'sensor',
         opacity,

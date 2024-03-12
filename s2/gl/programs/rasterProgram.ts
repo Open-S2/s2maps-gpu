@@ -13,8 +13,8 @@ import type { TileGL as Tile } from 'source/tile.spec'
 import type { RasterData } from 'workers/worker.spec'
 import type {
   LayerDefinitionBase,
-  RasterLayerDefinition,
-  RasterLayerStyle,
+  RasterDefinition,
+  RasterStyle,
   RasterWorkflowLayerGuide,
   Resampling
 } from 'style/style.spec'
@@ -50,7 +50,7 @@ export default async function rasterProgram (context: Context): Promise<RasterPr
     }
 
     // programs helps design the appropriate layer parameters
-    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: RasterLayerStyle): RasterLayerDefinition {
+    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: RasterStyle): RasterDefinition {
       const { type } = this
       const { source, layerIndex, lch, visible } = layerBase
       // PRE) get layer base
@@ -59,7 +59,7 @@ export default async function rasterProgram (context: Context): Promise<RasterPr
       saturation = saturation ?? 0
       contrast = contrast ?? 0
       // 1) build definition
-      const layerDefinition: RasterLayerDefinition = {
+      const layerDefinition: RasterDefinition = {
         ...layerBase,
         type: 'raster',
         opacity: opacity ?? 1,

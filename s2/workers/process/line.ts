@@ -1,4 +1,3 @@
-/* eslint-env worker */
 import VectorWorker, { type CodeDesign, colorFunc, idToRGB } from './vectorWorker'
 import { drawLine, featureSort } from './util'
 import scaleShiftClip from './util/scaleShiftClip'
@@ -14,7 +13,7 @@ import type { LineData, TileRequest } from '../worker.spec'
 import type {
   Cap,
   Join,
-  LineLayerDefinition,
+  LineDefinition,
   LineWorkerLayer
 } from 'style/style.spec'
 import type {
@@ -26,7 +25,7 @@ import type {
 export default class LineWorker extends VectorWorker implements LineWorkerSpec {
   featureStore = new Map<string, LineFeature[]>() // tileID -> features
 
-  setupLayer (lineLayer: LineLayerDefinition): LineWorkerLayer {
+  setupLayer (lineLayer: LineDefinition): LineWorkerLayer {
     const {
       name, layerIndex, source, layer, minzoom, maxzoom, filter,
       dashed, onlyLines, interactive, cursor, lch, cap, join,

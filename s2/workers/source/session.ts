@@ -1,8 +1,6 @@
-/* eslint-env worker */
 import adjustURL from 'util/adjustURL'
 
 import type { Analytics, StyleDefinition } from 'style/style.spec'
-import type { InfoDetails } from 'ui/info'
 
 declare const process: {
   env: {
@@ -66,20 +64,6 @@ export default class Session {
     }).catch<null>(err => { console.error(err); return null })
     // send style back to map
     if (json !== null) postMessage({ type: 'setStyle', mapID, style: json, ignorePosition: false })
-  }
-
-  async getInfo (mapID: string, featureID: number): Promise<void> {
-    // grab the auth token
-    const Authorization = await this.requestSessionToken(mapID)
-    if (Authorization === undefined) return
-    // fetch the json
-    const json = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/info/${featureID}.json`, { headers: { Authorization } })
-      .then<InfoDetails | null>(async (res) => {
-      if (res.status !== 200) return null
-      return await res.json()
-    }).catch((err) => { console.error(err); return null })
-    // send json back to map
-    if (json !== null) postMessage({ mapID, type: 'info', json })
   }
 
   async requestSessionToken (mapID: string): Promise<string | undefined | 'failed'> {

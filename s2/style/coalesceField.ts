@@ -1,20 +1,24 @@
 import type { Properties } from 'geometry'
 import type { NestedKey } from './style.spec'
 
-// Coalesce text layout property "field"
-//
-// examples:
-//
-// const properties = { abbr: 'U.S.', name: 'United States', ... }
-// const field = ["\"", "?abbr,?name", "\""] - here we coallese to abbr if the property exists, otherwise we fallback on name
-// cooalesceField(field) // returns "U.S." or "United States" depending on whether abbr exists
-//
-// const properties = { type: 'airplane', ... }
-// const field = ["?type", "-16"]
-// cooalesceField(field) // 'airplane-16'
-
 const language = navigator.language.split('-')[0] ?? 'en'
 
+/** Coalesce text layout property "field"
+ *
+ * examples:
+ *
+ * ```ts
+ * // example 1
+ * const properties = { abbr: 'U.S.', name: 'United States', ... }
+ * const field = ["\"", "?abbr,?name", "\""] // here we coallese to abbr if the property exists, otherwise we fallback on name
+ * cooalesceField(field) // returns "U.S." or "United States" depending on whether abbr exists
+ *
+ * // example 2
+ * const properties = { type: 'airplane', ... }
+ * const field = ["?type", "-16"]
+ * cooalesceField(field) // 'airplane-16'
+ * ```
+ */
 export default function coalesceField (
   field: string | string[] | NestedKey,
   properties: Properties,
@@ -31,6 +35,19 @@ export default function coalesceField (
   } else { return coalesceText(field, properties, fieldIsKey) }
 }
 
+/** Parse unique strings that start with:
+ * "?" - coalesce from properties
+ *
+ * "!" - transform the result
+ *
+ * "U" - uppercase
+ *
+ * "L" - lowercase
+ *
+ * "C" - capitalize
+ *
+ * "P" - language aquisition (e.g. "XX" -> "en"). Defined by navigator.language (browser)
+ */
 function coalesceText (field: string, properties: Properties, fieldIsKey: boolean): string {
   if (field[0] === '?') {
     // corner case - use defined that they needed to start with a ?

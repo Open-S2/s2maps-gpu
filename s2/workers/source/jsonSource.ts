@@ -1,5 +1,4 @@
-/* eslint-env worker */
-import JsonVT from './json-vt'
+import JsonVT from './jsonVT'
 import Source from './source'
 
 import type { TileRequest } from '../worker.spec'

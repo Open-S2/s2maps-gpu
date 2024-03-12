@@ -14,8 +14,8 @@ import type { TileGL as Tile } from 'source/tile.spec'
 import type { LineData } from 'workers/worker.spec'
 import type {
   LayerDefinitionBase,
-  LineLayerDefinition,
-  LineLayerStyle,
+  LineDefinition,
+  LineStyle,
   LineWorkflowLayerGuide
 } from 'style/style.spec'
 
@@ -64,7 +64,7 @@ export default async function lineProgram (context: Context): Promise<LineProgra
     }
 
     // programs helps design the appropriate layer parameters
-    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: LineLayerStyle): LineLayerDefinition {
+    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: LineStyle): LineDefinition {
       const { type } = this
       const { source, layerIndex, lch, visible } = layerBase
       // PRE) get layer base
@@ -84,7 +84,7 @@ export default async function lineProgram (context: Context): Promise<LineProgra
       interactive = interactive ?? false
       cursor = cursor ?? 'default'
       dasharray = dasharray ?? []
-      const layerDefinition: LineLayerDefinition = {
+      const layerDefinition: LineDefinition = {
         ...layerBase,
         type: 'line',
         color,

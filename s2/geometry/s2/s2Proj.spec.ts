@@ -3,8 +3,6 @@ import type { Attributions } from 'style/style.spec'
 
 export type Face = 0 | 1 | 2 | 3 | 4 | 5
 
-/** S2 GEOMETRY **/
-
 export interface S2FeatureCollection {
   type: 'S2FeatureCollection'
   features: S2Feature[]

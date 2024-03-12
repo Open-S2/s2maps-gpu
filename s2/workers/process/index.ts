@@ -1,4 +1,3 @@
-/* eslint-env worker */
 import GlyphWorker from './glyph'
 import FillWorker from './fill'
 import LineWorker from './line'
@@ -18,7 +17,7 @@ import type {
   StylePackage,
   WorkerLayer
 } from 'style/style.spec'
-import type { JSONVectorTile } from '../source/json-vt/tile'
+import type { JSONVectorTile } from '../source/jsonVT/tile'
 import type { IDGen, VectorWorker, Workers } from './process.spec'
 import type { Glyph } from './glyph/familySource'
 import type { GlyphMetadata } from 'workers/source/glyphSource'

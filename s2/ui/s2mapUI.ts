@@ -1,4 +1,3 @@
-/* eslint-env browser */
 /** CAMERA **/
 import Camera from './camera/index'
 /** SOURCES **/
@@ -31,7 +30,7 @@ export interface MapOptions {
   style: StyleDefinition | string
   /** if true, allow user to use scroll wheel to zoom. [default: true] */
   scrollZoom?: boolean
-  /** if true, cursor position impacts zoom's x & y directions . [default: true] */
+  /** if true, cursor position impacts zoom's x & y directions. [default: true] */
   positionalZoom?: boolean // If true, cursor position impacts zoom's x & y directions
   /** Control the number of fragments per pixel. [default: window.devicePixelRatio] */
   canvasMultiplier?: number
@@ -41,13 +40,19 @@ export interface MapOptions {
   attributionOff?: boolean
   /** Hide the logo */
   watermarkOff?: boolean
-  infoLayers?: string[]
-  controls?: boolean // zoom, compass, and colorblind turned on or off
+  /** zoom, compass, and colorblind turned on or off. [default: true] */
+  controls?: boolean
+  /** controlling zoom controller state. [default: true] */
   zoomController?: boolean
+  /** controlling compass controller state. [default: true] */
   compassController?: boolean
+  /** controlling colorblind controller state. [default: true] */
   colorblindController?: boolean
+  /** allow the user to zoom the map. [default: true] */
   canZoom?: boolean
+  /** allow the user to move the map. [default: true] */
   canMove?: boolean
+  /** display controls, info icon, etc. in a dark style. [default: false] */
   darkMode?: boolean
   // TODO: pushing this into options is not the play
   webworker?: boolean

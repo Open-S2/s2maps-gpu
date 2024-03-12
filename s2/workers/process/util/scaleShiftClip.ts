@@ -1,4 +1,3 @@
-/* eslint-env worker */
 import type {
   S2VectorGeometry,
   S2VectorLine,

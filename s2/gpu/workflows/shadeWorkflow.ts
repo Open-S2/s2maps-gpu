@@ -1,4 +1,3 @@
-/* eslint-env browser */
 import shaderCode from '../shaders/shade.wgsl'
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
 
@@ -10,9 +9,9 @@ import type {
 import type { WebGPUContext } from '../context'
 import type {
   LayerDefinitionBase,
-  ShadeLayerDefinition,
-  ShadeLayerDefinitionGPU,
-  ShadeLayerStyle
+  ShadeDefinition,
+  ShadeDefinitionGPU,
+  ShadeStyle
 } from 'style/style.spec'
 import type { TileGPU as Tile } from 'source/tile.spec'
 
@@ -40,7 +39,7 @@ export class ShadeFeature implements ShadeFeatureSpec {
     public workflow: ShadeWorkflowSpec,
     public tile: Tile,
     public layerIndex: number,
-    public layerGuide: ShadeLayerDefinitionGPU,
+    public layerGuide: ShadeDefinitionGPU,
     public featureCodeBuffer: GPUBuffer
   ) {
     const { mask } = tile
@@ -75,7 +74,7 @@ export class ShadeFeature implements ShadeFeatureSpec {
 
 export default class ShadeWorkflow implements ShadeWorkflowSpec {
   context: WebGPUContext
-  layerDefinition!: ShadeLayerDefinitionGPU
+  layerDefinition!: ShadeDefinitionGPU
   pipeline!: GPURenderPipeline
   constructor (context: WebGPUContext) {
     this.context = context
@@ -91,7 +90,7 @@ export default class ShadeWorkflow implements ShadeWorkflowSpec {
     layerCodeBuffer.destroy()
   }
 
-  buildLayerDefinition (layerBase: LayerDefinitionBase, layer: ShadeLayerStyle): ShadeLayerDefinitionGPU {
+  buildLayerDefinition (layerBase: LayerDefinitionBase, layer: ShadeStyle): ShadeDefinitionGPU {
     const { context } = this
     const { lch, layerIndex } = layerBase
     let { color } = layer
@@ -117,7 +116,7 @@ export default class ShadeWorkflow implements ShadeWorkflowSpec {
   }
 
   // given a set of layerIndexes that use Masks and the tile of interest
-  buildMaskFeature ({ layerIndex, minzoom, maxzoom }: ShadeLayerDefinition, tile: Tile): void {
+  buildMaskFeature ({ layerIndex, minzoom, maxzoom }: ShadeDefinition, tile: Tile): void {
     const { context, layerDefinition } = this
     const { zoom } = tile
     // not in the zoom range, ignore

@@ -1,4 +1,3 @@
-/* eslint-env browser */
 import shaderCode from '../shaders/point.wgsl'
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
 
@@ -10,8 +9,8 @@ import type {
 } from './workflow.spec'
 import type {
   LayerDefinitionBase,
-  PointLayerDefinition,
-  PointLayerStyle,
+  PointDefinition,
+  PointStyle,
   PointWorkflowLayerGuideGPU
 } from 'style/style.spec'
 import type { PointData } from 'workers/worker.spec'
@@ -151,7 +150,7 @@ export default class PointWorkflow implements PointWorkflowSpec {
   }
 
   // programs helps design the appropriate layer parameters
-  buildLayerDefinition (layerBase: LayerDefinitionBase, layer: PointLayerStyle): PointLayerDefinition {
+  buildLayerDefinition (layerBase: LayerDefinitionBase, layer: PointStyle): PointDefinition {
     const { context } = this
     const { source, layerIndex, lch, visible } = layerBase
     // PRE) get layer base
@@ -164,7 +163,7 @@ export default class PointWorkflow implements PointWorkflowSpec {
     interactive = interactive ?? false
     cursor = cursor ?? 'default'
     // 1) build definition
-    const layerDefinition: PointLayerDefinition = {
+    const layerDefinition: PointDefinition = {
       ...layerBase,
       type: 'point' as const,
       // paint

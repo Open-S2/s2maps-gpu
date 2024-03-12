@@ -1,7 +1,7 @@
-/* eslint-env browser */
 import type { WebGL2Context, WebGLContext } from '.'
 import type { MaskSource } from './context.spec'
 
+/** Given a Tile division size, build a Mask Source */
 export default function buildMask (division: number, context: WebGL2Context | WebGLContext): MaskSource {
   const { gl } = context
   const vertices = []

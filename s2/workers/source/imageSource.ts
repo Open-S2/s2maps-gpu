@@ -1,4 +1,3 @@
-/* eslint-env worker */
 import type { SpriteImageMessage } from 'workers/worker.spec'
 import type Session from './session'
 import type { SpriteFileType } from 'style/style.spec'

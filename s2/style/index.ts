@@ -1,11 +1,10 @@
-/* eslint-env browser */
 import type {
   Analytics,
-  FillLayerDefinition,
+  FillDefinition,
   LayerDefinition,
   LayerDefinitionBase,
   LayerStyle,
-  ShadeLayerDefinition,
+  ShadeDefinition,
   StyleDefinition,
   StylePackage
 } from './style.spec'
@@ -27,7 +26,7 @@ export default class Style {
   apiKey?: string
   apiURL?: string
   baseURL?: string
-  maskLayers: Array<FillLayerDefinition | ShadeLayerDefinition> = []
+  maskLayers: Array<FillDefinition | ShadeDefinition> = []
   layers: LayerDefinition[] = []
   interactive = false
   dirty = true

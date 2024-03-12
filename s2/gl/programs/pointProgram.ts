@@ -12,8 +12,8 @@ import type { PointData } from 'workers/worker.spec'
 import type { TileGL as Tile } from 'source/tile.spec'
 import type {
   LayerDefinitionBase,
-  PointLayerDefinition,
-  PointLayerStyle,
+  PointDefinition,
+  PointStyle,
   PointWorkflowLayerGuide
 } from 'style/style.spec'
 import type { PointProgram as PointProgramSpec, PointProgramUniforms } from './program.spec'
@@ -141,7 +141,7 @@ export default async function pointProgram (context: Context): Promise<PointProg
       tile.addFeatures(features)
     }
 
-    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: PointLayerStyle): PointLayerDefinition {
+    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: PointStyle): PointDefinition {
       const { type } = this
       const { source, layerIndex, lch, visible } = layerBase
       // PRE) get layer base
@@ -154,7 +154,7 @@ export default async function pointProgram (context: Context): Promise<PointProg
       interactive = interactive ?? false
       cursor = cursor ?? 'default'
       // 1) build definition
-      const layerDefinition: PointLayerDefinition = {
+      const layerDefinition: PointDefinition = {
         ...layerBase,
         type: 'point',
         // paint

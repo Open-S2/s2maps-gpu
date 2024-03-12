@@ -1,4 +1,3 @@
-/* eslint-env worker */
 import UnicodeShaper from 'unicode-shaper-zig'
 import VectorWorker, { colorFunc, idToRGB } from '../vectorWorker'
 import featureSort from '../util/featureSort'
@@ -17,7 +16,7 @@ import type {
 } from './glyph.spec'
 import type { GlyphData, TileRequest } from 'workers/worker.spec'
 import type { GlyphFeature, GlyphWorker as GlyphWorkerSpec, IDGen, VTFeature } from '../process.spec'
-import type { Alignment, Anchor, GPUType, GlyphLayerDefinition, GlyphWorkerLayer } from 'style/style.spec'
+import type { Alignment, Anchor, GPUType, GlyphDefinition, GlyphWorkerLayer } from 'style/style.spec'
 import type { CodeDesign } from '../vectorWorker'
 import type { S2VectorPoints } from 's2-vector-tile'
 import type ImageStore from '../imageStore'
@@ -42,7 +41,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     this.experimental = experimental
   }
 
-  setupLayer (glyphLayer: GlyphLayerDefinition): GlyphWorkerLayer {
+  setupLayer (glyphLayer: GlyphDefinition): GlyphWorkerLayer {
     const {
       name, layerIndex, source, layer, minzoom, maxzoom,
       filter, interactive, cursor, lch, overdraw,

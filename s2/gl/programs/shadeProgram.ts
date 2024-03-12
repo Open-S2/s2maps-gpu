@@ -6,7 +6,7 @@ import frag2 from '../shaders/shade2.fragment.glsl'
 
 import type { Context, ShadeFeatureGuide } from '../contexts/context.spec'
 import type { ShadeProgram as ShadeProgramSpec, ShadeProgramUniforms } from './program.spec'
-import type { LayerDefinitionBase, ShadeLayerDefinition, ShadeLayerStyle } from 'style/style.spec'
+import type { LayerDefinitionBase, ShadeDefinition, ShadeStyle } from 'style/style.spec'
 import type { TileGL as Tile } from 'source/tile.spec'
 
 export default async function shadeProgram (context: Context): Promise<ShadeProgramSpec> {
@@ -28,7 +28,7 @@ export default async function shadeProgram (context: Context): Promise<ShadeProg
       this.setDevicePixelRatio(devicePixelRatio)
     }
 
-    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: ShadeLayerStyle): ShadeLayerDefinition {
+    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: ShadeStyle): ShadeDefinition {
       let { color } = layer
       color = color ?? 'rgb(0.6, 0.6, 0.6)'
       return {
@@ -39,7 +39,7 @@ export default async function shadeProgram (context: Context): Promise<ShadeProg
     }
 
     // given a set of layerIndexes that use Masks and the tile of interest
-    buildMaskFeature (layerGuide: ShadeLayerDefinition, tile: Tile): void {
+    buildMaskFeature (layerGuide: ShadeDefinition, tile: Tile): void {
       const { mask, zoom } = tile
       const { lch, minzoom, maxzoom } = layerGuide
       // not in the zoom range, ignore

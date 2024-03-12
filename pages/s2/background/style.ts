@@ -11,8 +11,8 @@ const style: StyleDefinition = {
   fonts: {},
   layers: [
     {
-      name: 'background',
       type: 'fill',
+      name: 'background',
       source: 'mask',
       opaque: true,
       color: '#b4c1c6'

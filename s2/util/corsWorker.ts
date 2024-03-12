@@ -1,13 +1,13 @@
-/* eslint-env browser */
 declare const process: {
   env: {
     CORS: string
   }
 }
 
+/** Designed for webpack code splitting purposes. Allows the request of workers of the same origin */
 export class CorsWorker extends Worker {
   constructor (url: URL, options?: { name: string, type: 'module' }) {
-    if (+process.env.CORS !== 1) {
+    if (+process?.env?.CORS !== 1) {
       super(url, options)
     } else {
       const webpackWorkerOrigin = `__webpack_worker_origin__ = ${JSON.stringify(url.origin)}`

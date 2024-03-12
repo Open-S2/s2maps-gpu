@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 const DOUBLE_CLICK_TIMEOUT = 175
 
 export interface UserTouchEvent {

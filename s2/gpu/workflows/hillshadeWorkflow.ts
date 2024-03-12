@@ -1,4 +1,3 @@
-/* eslint-env browser */
 import shaderCode from '../shaders/hillshade.wgsl'
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
 
@@ -9,8 +8,8 @@ import type {
   RasterSource
 } from './workflow.spec'
 import type {
-  HillshadeLayerDefinition,
-  HillshadeLayerStyle,
+  HillshadeDefinition,
+  HillshadeStyle,
   HillshadeWorkflowLayerGuideGPU,
   LayerDefinitionBase
 } from 'style/style.spec'
@@ -132,7 +131,7 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
   }
 
   // programs helps design the appropriate layer parameters
-  buildLayerDefinition (layerBase: LayerDefinitionBase, layer: HillshadeLayerStyle): HillshadeLayerDefinition {
+  buildLayerDefinition (layerBase: LayerDefinitionBase, layer: HillshadeStyle): HillshadeDefinition {
     const { context } = this
     const { source, layerIndex, lch, visible } = layerBase
     // PRE) get layer properties
@@ -147,7 +146,7 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
     // defaults to mapbox unpack
     unpack = unpack ?? { offset: -10000, zFactor: 0.1, aMultiplier: 0, bMultiplier: 1, gMultiplier: 256, rMultiplier: 256 * 256 }
     // 1) build definition
-    const layerDefinition: HillshadeLayerDefinition = {
+    const layerDefinition: HillshadeDefinition = {
       ...layerBase,
       type: 'hillshade',
       // paint

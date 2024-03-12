@@ -1,4 +1,3 @@
-/* eslint-env browser */
 import shaderCode from '../shaders/heatmap.wgsl'
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
 import { buildColorRamp } from 'style/color'
@@ -10,8 +9,8 @@ import type {
   HeatmapWorkflow as HeatmapWorkflowSpec
 } from './workflow.spec'
 import type {
-  HeatmapLayerDefinition,
-  HeatmapLayerStyle,
+  HeatmapDefinition,
+  HeatmapStyle,
   HeatmapWorkflowLayerGuideGPU,
   LayerDefinitionBase
 } from 'style/style.spec'
@@ -167,7 +166,7 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
   }
 
   // programs helps design the appropriate layer parameters
-  buildLayerDefinition (layerBase: LayerDefinitionBase, layer: HeatmapLayerStyle): HeatmapLayerDefinition {
+  buildLayerDefinition (layerBase: LayerDefinitionBase, layer: HeatmapStyle): HeatmapDefinition {
     const { context } = this
     const { source, layerIndex, lch, visible } = layerBase
     // PRE) get layer base
@@ -182,7 +181,7 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
     intensity = intensity ?? 1
     colorRamp = colorRamp ?? 'sinebow'
     // 1) build definition
-    const layerDefinition: HeatmapLayerDefinition = {
+    const layerDefinition: HeatmapDefinition = {
       ...layerBase,
       type: 'heatmap' as const,
       // paint

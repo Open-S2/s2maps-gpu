@@ -1,6 +1,4 @@
-/* eslint-env browser */
 import { CorsWorker as Worker } from './util/corsWorker'
-import Info from './ui/info'
 import { isSafari } from './util/polyfill'
 
 import type S2MapUI from './ui/s2mapUI'
@@ -34,7 +32,7 @@ export default class S2Map extends EventTarget {
   #canvasContainer!: HTMLElement
   #navigationContainer!: HTMLElement
   readonly #canvasMultiplier: number
-  _canvas: HTMLCanvasElement
+  readonly #canvas: HTMLCanvasElement
   #attributionPopup?: HTMLDivElement
   #watermark?: HTMLAnchorElement
   #compass?: HTMLElement
@@ -45,8 +43,8 @@ export default class S2Map extends EventTarget {
   colorMode: ColorMode = 0 // 0: none - 1: protanopia - 2: deuteranopia - 3: tritanopia - 4: greyscale
   map?: S2MapUI
   offscreen?: Worker
-  info?: Info
   id: string = Math.random().toString(36).replace('0.', '')
+  isNative = false
   constructor (
     options: MapOptions = {
       canvasMultiplier: window.devicePixelRatio ?? 2,
@@ -71,9 +69,10 @@ export default class S2Map extends EventTarget {
     // we now remove container from options for potential webworker
     delete options.container
     // prep container, creating the canvas
-    this._canvas = options.canvas ?? this.#setupContainer(options)
+    this.#canvas = options.canvas ?? this.#setupContainer(options)
+    if ('node' in this.#canvas) this.isNative = true
     // create map via a webworker if possible, otherwise just load it in directly
-    void this.#setupCanvas(this._canvas, options)
+    void this.#setupCanvas(this.#canvas, options)
   }
 
   ready (): void {
@@ -101,8 +100,6 @@ export default class S2Map extends EventTarget {
     canvas.width = container.clientWidth * this.#canvasMultiplier
     canvas.height = container.clientHeight * this.#canvasMultiplier
     canvasContainer.appendChild(canvas)
-    // add infoLayers should they exist
-    if (Array.isArray(options.infoLayers)) this.info = new Info(this, container, options.infoLayers)
 
     return canvas
   }
@@ -156,7 +153,7 @@ export default class S2Map extends EventTarget {
 
   // If mouse leaves the canvas, clear out any features considered "active"
   #onCanvasMouseLeave (): void {
-    this._canvas.style.cursor = 'default'
+    this.#canvas.style.cursor = 'default'
     this.dispatchEvent(new CustomEvent('mouseleave', { detail: null }))
   }
 
@@ -170,6 +167,7 @@ export default class S2Map extends EventTarget {
       attributionOff,
       watermarkOff
     } = options
+    if (this.isNative) return
     // add info bar with our jollyRoger
     if (attributionOff !== true) {
       const attribution = window.document.createElement('div')
@@ -282,8 +280,6 @@ export default class S2Map extends EventTarget {
       this.#addAttributions(data.attributions)
     } else if (type === 'setStyle') {
       void this.setStyle(data.style, data.ignorePosition)
-    } else if (type === 'info') {
-      if (this.info !== undefined) this.info.injectInfo(data.json)
     } else if (offscreen !== undefined) {
       if (type === 'fill') offscreen.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.idBuffer, data.codeTypeBuffer, data.featureGuideBuffer])
       else if (type === 'line') offscreen.postMessage(data, [data.vertexBuffer, data.featureGuideBuffer])
@@ -308,15 +304,14 @@ export default class S2Map extends EventTarget {
       window.S2WorkerPool.timeRequest(mapID, data.tiles, data.sourceNames)
     } else if (type === 'mouseenter') {
       const { feature } = data
-      this._canvas.style.cursor = feature.__cursor
+      this.#canvas.style.cursor = feature.__cursor
       this.dispatchEvent(new CustomEvent('mouseenter', { detail: feature }))
     } else if (type === 'mouseleave') {
       const { feature } = data
-      this._canvas.style.cursor = 'default'
+      this.#canvas.style.cursor = 'default'
       this.dispatchEvent(new CustomEvent('mouseleave', { detail: feature }))
     } else if (type === 'click') {
       const { feature, lon, lat } = data
-      this.info?.click(feature, lon, lat)
       this.dispatchEvent(new CustomEvent('click', { detail: { feature, lon, lat } }))
     } else if (type === 'pos') {
       const { zoom, lon, lat } = data
@@ -391,7 +386,7 @@ export default class S2Map extends EventTarget {
     e.preventDefault()
     const { map, offscreen } = this
     const { clientX, clientY, deltaY } = e
-    const rect = this._canvas.getBoundingClientRect()
+    const rect = this.#canvas.getBoundingClientRect()
     offscreen?.postMessage({ type: 'scroll', rect, clientX, clientY, deltaY })
     map?.onZoom(deltaY, clientX - rect.left, clientY - rect.top)
   }
@@ -407,7 +402,7 @@ export default class S2Map extends EventTarget {
     window.addEventListener('mousemove', mouseMoveFunc)
     // upon eventual mouseup, let the map know
     window.addEventListener('mouseup', (e) => {
-      const rect = this._canvas.getBoundingClientRect()
+      const rect = this.#canvas.getBoundingClientRect()
       const { clientX, clientY } = e
       window.removeEventListener('mousemove', mouseMoveFunc)
       offscreen?.postMessage({ type: 'mouseup', clientX, clientY, rect })
@@ -516,7 +511,7 @@ export default class S2Map extends EventTarget {
   /* API */
 
   delete (): void {
-    const { offscreen, map, _canvas } = this
+    const { offscreen, map } = this
     this.dispatchEvent(new Event('delete'))
     offscreen?.postMessage({ type: 'delete' })
     offscreen?.terminate()
@@ -524,7 +519,7 @@ export default class S2Map extends EventTarget {
     // reset the worker pool
     window.S2WorkerPool.delete()
     // remove all canvas listeners via cloning
-    _canvas.replaceWith(_canvas.cloneNode(true))
+    if (this.#canvas instanceof HTMLCanvasElement) this.#canvas.replaceWith(this.#canvas.cloneNode(true))
     // cleanup the html
     if (this.#container !== undefined) {
       while (this.#container.lastChild !== null) this.#container.removeChild(this.#container.lastChild)
@@ -591,14 +586,6 @@ export default class S2Map extends EventTarget {
     const { offscreen, map } = this
     offscreen?.postMessage({ type: 'flyTo', directions })
     map?.animateTo('flyTo', directions)
-  }
-
-  getInfo (featureID: number): void {
-    // TODO:
-    // // 1) tell worker pool we need info data
-    // window.S2WorkerPool.getInfo(this.id, featureID)
-    // // 2) clear old info s2json data should it exist
-    // this.resetSource([['_info']], true)
   }
 
   addSource (sourceName: string, href: string): void {

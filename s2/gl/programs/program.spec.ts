@@ -1,33 +1,33 @@
 import type { ColorMode } from 's2Map'
 import type { TileGL as Tile } from 'source/tile.spec'
 import type {
-  FillLayerDefinition,
-  FillLayerStyle,
+  FillDefinition,
+  FillStyle,
   FillWorkflowLayerGuide,
-  GlyphLayerDefinition,
-  GlyphLayerStyle,
+  GlyphDefinition,
+  GlyphStyle,
   GlyphWorkflowLayerGuide,
-  HeatmapLayerDefinition,
-  HeatmapLayerStyle,
+  HeatmapDefinition,
+  HeatmapStyle,
   HeatmapWorkflowLayerGuide,
-  HillshadeLayerDefinition,
-  HillshadeLayerStyle,
+  HillshadeDefinition,
+  HillshadeStyle,
   HillshadeWorkflowLayerGuide,
   LayerDefinitionBase,
-  LineLayerDefinition,
-  LineLayerStyle,
+  LineDefinition,
+  LineStyle,
   LineWorkflowLayerGuide,
-  PointLayerDefinition,
-  PointLayerStyle,
+  PointDefinition,
+  PointStyle,
   PointWorkflowLayerGuide,
-  RasterLayerDefinition,
-  RasterLayerStyle,
+  RasterDefinition,
+  RasterStyle,
   RasterWorkflowLayerGuide,
-  SensorLayerDefinition,
-  SensorLayerStyle,
+  SensorDefinition,
+  SensorStyle,
   SensorWorkflowLayerGuide,
-  ShadeLayerDefinition,
-  ShadeLayerStyle,
+  ShadeDefinition,
+  ShadeStyle,
   StyleDefinition
 } from 'style/style.spec'
 import type Projector from 'ui/camera/projector'
@@ -145,9 +145,9 @@ export interface FillProgram extends ProgramSpec {
   uniforms: { [key in FillProgramUniforms]: WebGLUniformLocation }
   layerGuides: Map<number, FillWorkflowLayerGuide>
 
-  buildMaskFeature: (maskLayer: FillLayerDefinition, tile: Tile) => void
+  buildMaskFeature: (maskLayer: FillDefinition, tile: Tile) => void
   buildSource: (fillData: FillData, tile: Tile) => void
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: FillLayerStyle) => FillLayerDefinition
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: FillStyle) => FillDefinition
   draw: (featureGuide: FillFeatureGuide, interactive: boolean) => void
   drawMask: (mask: MaskSource) => void
 }
@@ -178,7 +178,7 @@ export interface GlyphProgram extends ProgramSpec {
 
   injectFilter: (glyphFilterProgram: GlyphFilterProgram) => void
   buildSource: (glyphData: GlyphData, tile: Tile) => void
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: GlyphLayerStyle) => GlyphLayerDefinition
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: GlyphStyle) => GlyphDefinition
   draw: (featureGuide: GlyphFeatureGuide, interactive: boolean) => void
 }
 
@@ -192,7 +192,7 @@ export interface HeatmapProgram extends ProgramSpec {
   uniforms: { [key in HeatmapProgramUniforms]: WebGLUniformLocation }
 
   buildSource: (heatmapData: HeatmapData, tile: Tile) => void
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: HeatmapLayerStyle) => HeatmapLayerDefinition
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: HeatmapStyle) => HeatmapDefinition
   setupTextureDraw: () => void
   resize: () => void
   drawTexture: (featureGuide: HeatmapFeatureGuide) => void
@@ -206,7 +206,7 @@ export interface LineProgram extends ProgramSpec {
   uniforms: { [key in LineProgramUniforms]: WebGLUniformLocation }
 
   buildSource: (lineData: LineData, tile: Tile) => void
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LineLayerStyle) => LineLayerDefinition
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LineStyle) => LineDefinition
   draw: (featureGuide: LineFeatureGuide, interactive: boolean) => void
 }
 
@@ -216,7 +216,7 @@ export interface PointProgram extends ProgramSpec {
   uniforms: { [key in PointProgramUniforms]: WebGLUniformLocation }
 
   buildSource: (pointData: PointData, tile: Tile) => void
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: PointLayerStyle) => PointLayerDefinition
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: PointStyle) => PointDefinition
   draw: (featureGuide: PointFeatureGuide, interactive: boolean) => void
 }
 
@@ -226,7 +226,7 @@ export interface RasterProgram extends ProgramSpec {
   uniforms: { [key in RasterProgramUniforms]: WebGLUniformLocation }
 
   buildSource: (rasterData: RasterData, tile: Tile) => void
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: RasterLayerStyle) => RasterLayerDefinition
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: RasterStyle) => RasterDefinition
   draw: (featureGuide: RasterFeatureGuide, interactive: boolean) => void
 }
 
@@ -235,7 +235,7 @@ export interface HillshadeProgram extends ProgramSpec {
   uniforms: { [key in HillshadeProgramUniforms]: WebGLUniformLocation }
 
   buildSource: (hillshadeData: HillshadeData, tile: Tile) => void
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: HillshadeLayerStyle) => HillshadeLayerDefinition
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: HillshadeStyle) => HillshadeDefinition
   draw: (featureGuide: HillshadeFeatureGuide, interactive: boolean) => void
 }
 
@@ -246,7 +246,7 @@ export interface SensorProgram extends ProgramSpec {
   uniforms: { [key in SensorProgramUniforms]: WebGLUniformLocation }
 
   buildSource: (sensorData: SensorData, tile: Tile) => void
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: SensorLayerStyle) => SensorLayerDefinition
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: SensorStyle) => SensorDefinition
   injectTimeCache: (timeCache: TimeCache) => void
   draw: (featureGuide: SensorFeatureGuide, interactive: boolean) => void
 }
@@ -254,8 +254,8 @@ export interface SensorProgram extends ProgramSpec {
 export interface ShadeProgram extends ProgramSpec {
   uniforms: { [key in ShadeProgramUniforms]: WebGLUniformLocation }
 
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: ShadeLayerStyle) => ShadeLayerDefinition
-  buildMaskFeature: (maskLayer: ShadeLayerDefinition, tile: Tile) => void
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: ShadeStyle) => ShadeDefinition
+  buildMaskFeature: (maskLayer: ShadeDefinition, tile: Tile) => void
   draw: (feature: ShadeFeatureGuide) => void
 }
 

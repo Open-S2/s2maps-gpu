@@ -14,8 +14,8 @@ import type { FillProgram as FillProgramSpec, FillProgramUniforms } from './prog
 import type { FillData } from 'workers/worker.spec'
 import type { TileGL as Tile } from 'source/tile.spec'
 import type {
-  FillLayerDefinition,
-  FillLayerStyle,
+  FillDefinition,
+  FillStyle,
   FillWorkflowLayerGuide,
   LayerDefinitionBase
 } from 'style/style.spec'
@@ -38,7 +38,7 @@ export default async function fillProgram (context: Context): Promise<FillProgra
     }
 
     // programs helps design the appropriate layer parameters
-    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: FillLayerStyle): FillLayerDefinition {
+    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: FillStyle): FillDefinition {
       const { type } = this
       const { source, layerIndex, lch, visible } = layerBase
       // PRE) get layer base
@@ -52,7 +52,7 @@ export default async function fillProgram (context: Context): Promise<FillProgra
       patternFamily = patternFamily ?? '__images'
       patternMovement = patternMovement ?? false
       // 1) Build layer definition
-      const layerDefinition: FillLayerDefinition = {
+      const layerDefinition: FillDefinition = {
         ...layerBase,
         type: 'fill',
         // paint
@@ -95,7 +95,7 @@ export default async function fillProgram (context: Context): Promise<FillProgra
     }
 
     // given a set of layerIndexes that use Masks and the tile of interest
-    buildMaskFeature ({ layerIndex, minzoom, maxzoom }: FillLayerDefinition, tile: Tile): void {
+    buildMaskFeature ({ layerIndex, minzoom, maxzoom }: FillDefinition, tile: Tile): void {
       const { type } = this
       const { zoom, mask } = tile
       // not in the zoom range, ignore

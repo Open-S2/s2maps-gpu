@@ -16,7 +16,7 @@ import {
   parent as parentWM,
   toID as toIDWM,
   toIJ as toIJWM
-} from './webMerc/mercID'
+} from './wm/mercID'
 
 import type { Face } from './s2'
 import type { Projection } from 'style/style.spec'

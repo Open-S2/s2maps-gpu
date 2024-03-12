@@ -1,4 +1,3 @@
-/* eslint-env worker */
 import { parent as parentID, toIJ } from 'geometry/id'
 
 import type { Session } from '.'

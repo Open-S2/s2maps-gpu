@@ -1,4 +1,3 @@
-/* eslint-env browser */
 import buildMask from './buildMask'
 
 import type { MapOptions } from 'ui/s2mapUI'

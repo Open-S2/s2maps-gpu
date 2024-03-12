@@ -1,0 +1,10 @@
+[test]
+
+# preload happydom for all tests
+preload = ["./tests/happydom.ts"]
+
+# root directory
+root = "./tests"
+
+# always enable coverage
+coverage = true

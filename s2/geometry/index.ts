@@ -3,14 +3,15 @@ import { toS2, toWM } from 'geometry'
 import type { JSONFeatures, XYZ } from './proj.spec'
 import type { Projection } from 'style/style.spec'
 import type { S2FeatureCollection } from './s2'
-import type { FeatureCollection } from './webMerc'
+import type { FeatureCollection } from './wm'
 
 export * from './lonlat'
 export * from './s2'
-export * from './webMerc'
+export * from './wm'
 export * from './proj.spec'
 export * from './util'
 
+/** Given either S2 or Geo JSON data, convert to the proper projection of "WM" or "S2" */
 export function toProjection (data: JSONFeatures, projection: Projection): FeatureCollection | S2FeatureCollection {
   if (projection === 'S2') {
     const res: S2FeatureCollection = {

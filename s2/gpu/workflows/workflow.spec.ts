@@ -1,31 +1,31 @@
 import type {
-  FillLayerDefinition,
-  FillLayerStyle,
+  FillDefinition,
+  FillStyle,
   FillWorkflowLayerGuideGPU,
-  GlyphLayerDefinition,
-  GlyphLayerStyle,
+  GlyphDefinition,
+  GlyphStyle,
   GlyphWorkflowLayerGuideGPU,
-  HeatmapLayerDefinition,
-  HeatmapLayerStyle,
+  HeatmapDefinition,
+  HeatmapStyle,
   HeatmapWorkflowLayerGuideGPU,
-  HillshadeLayerDefinition,
-  HillshadeLayerStyle,
+  HillshadeDefinition,
+  HillshadeStyle,
   HillshadeWorkflowLayerGuideGPU,
   LayerDefinitionBase,
-  LineLayerDefinition,
-  LineLayerStyle,
+  LineDefinition,
+  LineStyle,
   LineWorkflowLayerGuideGPU,
-  PointLayerDefinition,
-  PointLayerStyle,
+  PointDefinition,
+  PointStyle,
   PointWorkflowLayerGuideGPU,
-  RasterLayerDefinition,
-  RasterLayerStyle,
+  RasterDefinition,
+  RasterStyle,
   RasterWorkflowLayerGuideGPU,
-  SensorLayerDefinition,
-  SensorLayerStyle,
-  ShadeLayerDefinition,
-  ShadeLayerDefinitionGPU,
-  ShadeLayerStyle
+  SensorDefinition,
+  SensorStyle,
+  ShadeDefinition,
+  ShadeDefinitionGPU,
+  ShadeStyle
 } from 'style/style.spec'
 import type { WebGPUContext } from '../context'
 import type { SensorTextureDefinition } from 'ui/camera/timeCache'
@@ -129,7 +129,7 @@ export interface SensorSource {
 }
 
 export type FeatureSource = MaskSource | FillSource | LineSource | PointSource | HeatmapSource | RasterSource | GlyphSource
-export type LayerGuides = FillWorkflowLayerGuideGPU | GlyphWorkflowLayerGuideGPU | HeatmapWorkflowLayerGuideGPU | HillshadeWorkflowLayerGuideGPU | LineWorkflowLayerGuideGPU | PointWorkflowLayerGuideGPU | RasterWorkflowLayerGuideGPU | SensorLayerDefinition | ShadeLayerDefinitionGPU
+export type LayerGuides = FillWorkflowLayerGuideGPU | GlyphWorkflowLayerGuideGPU | HeatmapWorkflowLayerGuideGPU | HillshadeWorkflowLayerGuideGPU | LineWorkflowLayerGuideGPU | PointWorkflowLayerGuideGPU | RasterWorkflowLayerGuideGPU | SensorDefinition | ShadeDefinitionGPU
 
 // Features
 
@@ -248,7 +248,7 @@ export interface RasterFeature extends FeatureBase {
 // ** SENSOR **
 export interface SensorFeature extends FeatureBase {
   type: 'sensor'
-  layerGuide: SensorLayerDefinition
+  layerGuide: SensorDefinition
   fadeDuration: number
   fadeStartTime: number
   colorRamp: WebGLTexture
@@ -274,7 +274,7 @@ export interface ShadeFeature extends FeatureBase {
   type: 'shade'
   maskLayer: boolean
   source: MaskSource
-  layerGuide: ShadeLayerDefinitionGPU
+  layerGuide: ShadeDefinitionGPU
   count: number
   offset: number
 }
@@ -337,8 +337,8 @@ export interface FillWorkflow extends Workflow {
   draw: (feature: FillFeature) => void
   drawMask: (maskSource: TileMaskSource, feature?: FillFeature) => void
   buildSource: (fillData: FillData, tile: Tile) => void
-  buildMaskFeature: (maskLayer: FillLayerDefinition, tile: Tile) => void
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: FillLayerStyle) => FillLayerDefinition
+  buildMaskFeature: (maskLayer: FillDefinition, tile: Tile) => void
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: FillStyle) => FillDefinition
 }
 
 export interface GlyphWorkflow extends Workflow {
@@ -358,7 +358,7 @@ export interface GlyphWorkflow extends Workflow {
   glyphBBoxesBuffer: GPUBuffer
   glyphFilterResultBuffer: GPUBuffer
   buildSource: (glyphData: GlyphData, tile: Tile) => void
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: GlyphLayerStyle) => GlyphLayerDefinition
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: GlyphStyle) => GlyphDefinition
   computeInteractive: (feature: GlyphFeature) => void
   computeFilters: (features: GlyphFeature[]) => void
   draw: (feature: GlyphFeature) => void
@@ -372,7 +372,7 @@ export interface HeatmapWorkflow extends Workflow {
   heatmapBindGroupLayout: GPUBindGroupLayout
   heatmapTextureBindGroupLayout: GPUBindGroupLayout
   buildSource: (heatmapData: HeatmapData, tile: Tile) => void
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: HeatmapLayerStyle) => HeatmapLayerDefinition
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: HeatmapStyle) => HeatmapDefinition
   textureDraw: (features: HeatmapFeature[]) => HeatmapFeature[] | undefined
   draw: (feature: HeatmapFeature) => void
 }
@@ -382,7 +382,7 @@ export interface LineWorkflow extends Workflow {
   pipeline: GPURenderPipeline
   lineBindGroupLayout: GPUBindGroupLayout
   buildSource: (lineData: LineData, tile: Tile) => void
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LineLayerStyle) => LineLayerDefinition
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LineStyle) => LineDefinition
   draw: (feature: LineFeature) => void
 }
 
@@ -394,7 +394,7 @@ export interface PointWorkflow extends Workflow {
   pointBindGroupLayout: GPUBindGroupLayout
   module: GPUShaderModule
   buildSource: (pointData: PointData, tile: Tile) => void
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: PointLayerStyle) => PointLayerDefinition
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: PointStyle) => PointDefinition
   computeInteractive: (feature: PointFeature) => void
   draw: (feature: PointFeature) => void
 }
@@ -404,7 +404,7 @@ export interface RasterWorkflow extends Workflow {
   pipeline: GPURenderPipeline
   rasterBindGroupLayout: GPUBindGroupLayout
   buildSource: (rasterData: RasterData, tile: Tile) => void
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: RasterLayerStyle) => RasterLayerDefinition
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: RasterStyle) => RasterDefinition
   draw: (feature: RasterFeature) => void
 }
 
@@ -413,22 +413,22 @@ export interface HillshadeWorkflow extends Workflow {
   pipeline: GPURenderPipeline
   hillshadeBindGroupLayout: GPUBindGroupLayout
   buildSource: (rasterData: HillshadeData, tile: Tile) => void
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: HillshadeLayerStyle) => HillshadeLayerDefinition
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: HillshadeStyle) => HillshadeDefinition
   draw: (feature: HillshadeFeature) => void
 }
 
 export interface SensorWorkflow extends Workflow {
   buildSource: (sensorData: SensorData, tile: Tile) => void
   injectTimeCache: (timeCache: TimeCache) => void
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: SensorLayerStyle) => SensorLayerDefinition
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: SensorStyle) => SensorDefinition
   draw: (feature: SensorFeature) => void
 }
 
 export interface ShadeWorkflow extends Workflow {
-  layerDefinition: ShadeLayerDefinitionGPU
+  layerDefinition: ShadeDefinitionGPU
   pipeline: GPURenderPipeline
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: ShadeLayerStyle) => ShadeLayerDefinitionGPU
-  buildMaskFeature: (maskLayer: ShadeLayerDefinition, tile: Tile) => void
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: ShadeStyle) => ShadeDefinitionGPU
+  buildMaskFeature: (maskLayer: ShadeDefinition, tile: Tile) => void
   draw: (feature: ShadeFeature) => void
 }
 

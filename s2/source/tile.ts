@@ -1,7 +1,6 @@
-/* eslint-env browser */
 import { project } from 'ui/camera/projector/mat4'
 import { bboxST } from 'geometry/s2/s2Coords'
-import { fromID, llToTilePx } from 'geometry/webMerc'
+import { fromID, llToTilePx } from 's2/geometry/wm'
 import { fromSTGL, mul, normalize } from 'geometry/s2/s2Point'
 import { level, toIJ } from 'geometry/s2/s2CellID'
 

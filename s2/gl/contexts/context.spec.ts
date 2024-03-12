@@ -12,7 +12,7 @@ import type {
   RasterWorkflowLayerGuide,
   Resampling,
   SensorWorkflowLayerGuide,
-  ShadeLayerDefinition,
+  ShadeDefinition,
   UnpackData
 } from 'style/style.spec'
 import type { SensorTextureDefinition } from 'ui/camera/timeCache'
@@ -92,7 +92,7 @@ export interface SensorSource {
 }
 
 export type FeatureSource = MaskSource | FillSource | LineSource | PointSource | HeatmapSource | RasterSource | GlyphSource
-export type LayerGuides = FillWorkflowLayerGuide | GlyphWorkflowLayerGuide | HeatmapWorkflowLayerGuide | LineWorkflowLayerGuide | PointWorkflowLayerGuide | RasterWorkflowLayerGuide | HillshadeWorkflowLayerGuide | SensorWorkflowLayerGuide | ShadeLayerDefinition
+export type LayerGuides = FillWorkflowLayerGuide | GlyphWorkflowLayerGuide | HeatmapWorkflowLayerGuide | LineWorkflowLayerGuide | PointWorkflowLayerGuide | RasterWorkflowLayerGuide | HillshadeWorkflowLayerGuide | SensorWorkflowLayerGuide | ShadeDefinition
 
 /* FEATURE GUIDES */
 
@@ -246,7 +246,7 @@ export interface ShadeFeatureGuide extends FeatureGuideBase {
   type: 'shade'
   maskLayer: boolean
   source: MaskSource
-  layerGuide: ShadeLayerDefinition
+  layerGuide: ShadeDefinition
   count: number
   offset: number
 }

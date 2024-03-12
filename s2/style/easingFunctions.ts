@@ -1,12 +1,12 @@
 import Color, { interpolate } from './color'
-// these modules return a value between 0->1 via a start, end, and input
-// obviously, the input must be between start and end inclusive: [start, end]
 
 export type EaseType = 'lin' | 'expo' | 'quad' | 'cubic' | 'step'
-
-export type ValueType = string | number | boolean | bigint | Color
 export type EaseFunction<T> = (zoom: number, start: number, end: number, startValue: T, endValue: T) => T
 
+/**
+ * Convert a string to a function that will return an interpolation
+ * between two values or colors.
+ */
 export default function getEasingFunction<T> (easeType: EaseType = 'lin', base = 1): EaseFunction<T> {
   const func = (easeType === 'lin')
     ? linear
@@ -26,12 +26,12 @@ export default function getEasingFunction<T> (easeType: EaseType = 'lin', base =
   }
 }
 
-// y = mx
+/** y = mx */
 function linear (input: number, start: number, end: number): number {
   return (input - start) / (end - start)
 }
 
-// y = e^x OR y = Math.pow(2, 10 * x)
+/** y = e^x OR y = Math.pow(2, 10 * x) */
 function exponential (input: number, start: number, end: number, base: number): number {
   // grab change
   const diff = end - start
@@ -47,16 +47,17 @@ function exponential (input: number, start: number, end: number, base: number): 
   return (Math.pow(base, progress) - 1) / (Math.pow(base, diff) - 1)
 }
 
-// y = x^2
+/** y = x^2 */
 function quad (input: number, start: number, end: number): number {
   return Math.pow(input - start, 2) / Math.pow(end - start, 2)
 }
 
-// y = x^3
+/** y = x^3 */
 function cubic (input: number, start: number, end: number): number {
   return Math.pow(input - start, 3) / Math.pow(end - start, 3)
 }
 
+/** y = 1 or 0 */
 function step (input: number, _start: number, end: number): number {
   return (input > end) ? 1 : 0
 }

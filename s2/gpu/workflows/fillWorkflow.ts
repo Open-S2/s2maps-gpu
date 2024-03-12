@@ -1,4 +1,3 @@
-/* eslint-env browser */
 import shaderCode from '../shaders/fill.wgsl'
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
 
@@ -11,8 +10,8 @@ import type {
   TileMaskSource
 } from './workflow.spec'
 import type {
-  FillLayerDefinition,
-  FillLayerStyle,
+  FillDefinition,
+  FillStyle,
   FillWorkflowLayerGuideGPU,
   LayerDefinitionBase
 } from 'style/style.spec'
@@ -163,7 +162,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
   }
 
   // programs helps design the appropriate layer parameters
-  buildLayerDefinition (layerBase: LayerDefinitionBase, layer: FillLayerStyle): FillLayerDefinition {
+  buildLayerDefinition (layerBase: LayerDefinitionBase, layer: FillStyle): FillDefinition {
     const { context } = this
     const { source, layerIndex, lch, visible } = layerBase
     // PRE) get layer base
@@ -177,7 +176,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
     opacity = opacity ?? 1
     patternFamily = patternFamily ?? '__images'
     patternMovement = patternMovement ?? false
-    const layerDefinition: FillLayerDefinition = {
+    const layerDefinition: FillDefinition = {
       ...layerBase,
       type: 'fill' as const,
       // paint
@@ -220,7 +219,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
   }
 
   // given a set of layerIndexes that use Masks and the tile of interest
-  async buildMaskFeature ({ layerIndex, minzoom, maxzoom }: FillLayerDefinition, tile: Tile): Promise<void> {
+  async buildMaskFeature ({ layerIndex, minzoom, maxzoom }: FillDefinition, tile: Tile): Promise<void> {
     const { context } = this
     const { zoom, mask } = tile
     // not in the zoom range, ignore

@@ -2,27 +2,27 @@ import type { VectorTileFeature } from 's2-vector-tile'
 import type { TileRequest } from '../worker.spec'
 import type {
   Cap,
-  FillLayerDefinition,
+  FillDefinition,
   FillWorkerLayer,
   GPUType,
-  GlyphLayerDefinition,
+  GlyphDefinition,
   GlyphWorkerLayer,
-  HeatmapLayerDefinition,
+  HeatmapDefinition,
   HeatmapWorkerLayer,
-  HillshadeLayerDefinition,
+  HillshadeDefinition,
   HillshadeWorkerLayer,
   InteractiveWorkerLayer,
-  LineLayerDefinition,
+  LineDefinition,
   LineWorkerLayer,
-  PointLayerDefinition,
+  PointDefinition,
   PointWorkerLayer,
-  RasterLayerDefinition,
+  RasterDefinition,
   RasterWorkerLayer,
-  SensorLayerDefinition,
+  SensorDefinition,
   SensorWorkerLayer
 } from 'style/style.spec'
 import type { Properties } from 'geometry'
-import type { JSONVectorFeature } from '../source/json-vt/tile'
+import type { JSONVectorFeature } from '../source/jsonVT/tile'
 import type { GlyphObject } from './glyph/glyph.spec'
 import type { Features as PointHeatFeatures } from './point'
 
@@ -91,19 +91,19 @@ export interface VectorWorker {
 export interface FillWorker extends VectorWorker {
   featureStore: Map<string, FillFeature[]>
   invertLayers: Map<number, FillWorkerLayer>
-  setupLayer: (layer: FillLayerDefinition) => FillWorkerLayer
+  setupLayer: (layer: FillDefinition) => FillWorkerLayer
   buildFeature: (tile: TileRequest, feature: VTFeature, sourceLayer: FillWorkerLayer, mapID: string, sourceName: string) => Promise<boolean>
 }
 
 export interface LineWorker extends VectorWorker {
   featureStore: Map<string, LineFeature[]>
-  setupLayer: (layer: LineLayerDefinition) => LineWorkerLayer
+  setupLayer: (layer: LineDefinition) => LineWorkerLayer
   buildFeature: (tile: TileRequest, feature: VTFeature, sourceLayer: LineWorkerLayer, mapID: string, sourceName: string) => boolean
 }
 
 export interface PointWorker extends VectorWorker {
   featureStore: Map<string, PointHeatFeatures>
-  setupLayer: (layer: PointLayerDefinition | HeatmapLayerDefinition) => PointWorkerLayer | HeatmapWorkerLayer
+  setupLayer: (layer: PointDefinition | HeatmapDefinition) => PointWorkerLayer | HeatmapWorkerLayer
   buildFeature: (tile: TileRequest, feature: VTFeature, sourceLayer: PointWorkerLayer | HeatmapWorkerLayer, mapID: string, sourceName: string) => boolean
 }
 
@@ -111,14 +111,14 @@ export interface HeatmapWorker extends PointWorker {}
 
 export interface GlyphWorker extends VectorWorker {
   featureStore: Map<string, GlyphObject[]>
-  setupLayer: (layer: GlyphLayerDefinition) => GlyphWorkerLayer
+  setupLayer: (layer: GlyphDefinition) => GlyphWorkerLayer
   buildFeature: (tile: TileRequest, feature: VTFeature, sourceLayer: GlyphWorkerLayer, mapID: string, sourceName: string) => Promise<boolean>
 }
 
 export interface RasterWorker {
   gpuType: GPUType
   setupLayer: (
-    layerDefinition: SensorLayerDefinition | RasterLayerDefinition | HillshadeLayerDefinition
+    layerDefinition: SensorDefinition | RasterDefinition | HillshadeDefinition
   ) => RasterWorkerLayer | SensorWorkerLayer | HillshadeWorkerLayer
 
   buildTile: (

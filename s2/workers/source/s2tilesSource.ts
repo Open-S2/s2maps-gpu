@@ -1,4 +1,3 @@
-/* eslint-env browser */
 import Source from './source'
 
 import type { Metadata } from './source'

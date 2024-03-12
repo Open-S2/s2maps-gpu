@@ -22,10 +22,63 @@ export interface Conditional {
 }
 
 export interface Condition extends NestedKey {
+  /**
+   * One of `"==" | "!=" | ">" | ">=" | "<" | "<=" | "in" | "!in" | "has" | "!has"`
+   * Used by the filter function to determine if a feature should be included in the render.
+   *
+   * NOTE: "in" means "in the array" and "has" means "has the key"
+   *
+   * ex.
+   * ```json
+   * { "filter": { "key": "type", "comparator": "in", "value": ["ocean", "lake"] } }
+   * ```
+   * this would be used to filter features where `feature.properties.type` is either "ocean" or "lake"
+   *
+   * ex.
+   * ```json
+   * { "filter": { "key": "type", "comparator": "has", "value": "ocean" } }
+   * ```
+   * this would be used to filter features where `feature.properties.type` is an array that has the key "ocean"
+   */
   comparator: Comparator
+  /**
+   * A non null object.
+   *
+   * Must be an array for "in" or "!in"
+   */
   value?: NotNullOrObject
 }
 
+/**
+ * example:
+ *
+ * ```json
+ * "filter": { "key": "class", "comparator": "==", "value": "ocean" }
+ * ```
+ *
+ * another example:
+ *
+ * ```json
+ * "filter": {
+ *  "or": [
+ *    { "key": "class", "comparator": "==", "value": "ocean" },
+ *    { "key": "class", "comparator": "==", "value": "bay" }
+ *  ]
+ * }
+ * ```
+ *
+ * another example:
+ *
+ * ```json
+ * "filter": {
+ *  "and": [
+ *    { "key": "class", "comparator": "==", "value": "ocean" },
+ *    { "key": "size", "comparator": "==", "value": "large" },
+ *    { "key": "type", "comparator": "!=", "value": "pacific" }
+ *  ]
+ * }
+ * ```
+ */
 export type Filter = { and: Filter[] } | { or: Filter[] } | Condition
 
 export default function parseFilter (filter?: Filter): FilterFunction {

@@ -11,8 +11,8 @@ import type { Context, HillshadeFeatureGuide, RasterSource } from '../contexts/c
 import type { HillshadeData } from 'workers/worker.spec'
 import type { TileGL as Tile } from 'source/tile.spec'
 import type {
-  HillshadeLayerDefinition,
-  HillshadeLayerStyle,
+  HillshadeDefinition,
+  HillshadeStyle,
   HillshadeWorkflowLayerGuide,
   LayerDefinitionBase,
   UnpackData
@@ -104,7 +104,7 @@ export default async function hillshadeProgram (context: Context): Promise<Hills
       tile.addFeatures(features)
     }
 
-    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: HillshadeLayerStyle): HillshadeLayerDefinition {
+    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: HillshadeStyle): HillshadeDefinition {
       const { type } = this
       const { source, layerIndex, lch, visible } = layerBase
       // PRE) get layer properties
@@ -119,7 +119,7 @@ export default async function hillshadeProgram (context: Context): Promise<Hills
       // defaults to mapbox unpack
       unpack = unpack ?? { offset: -10000, zFactor: 0.1, aMultiplier: 0, bMultiplier: 1, gMultiplier: 256, rMultiplier: 256 * 256 }
       // 1) build definition
-      const layerDefinition: HillshadeLayerDefinition = {
+      const layerDefinition: HillshadeDefinition = {
         ...layerBase,
         type: 'hillshade',
         shadowColor,

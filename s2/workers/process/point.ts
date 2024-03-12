@@ -1,4 +1,3 @@
-/* eslint-env worker */
 import VectorWorker, { colorFunc, idToRGB } from './vectorWorker'
 import { featureSort, scaleShiftClip } from './util'
 import parseFilter from 'style/parseFilter'
@@ -7,9 +6,9 @@ import parseFeatureFunction from 'style/parseFeatureFunction'
 import type { HeatmapData, PointData, TileRequest } from '../worker.spec'
 import type { S2VectorPoints } from 's2-vector-tile'
 import type {
-  HeatmapLayerDefinition,
+  HeatmapDefinition,
   HeatmapWorkerLayer,
-  PointLayerDefinition,
+  PointDefinition,
   PointWorkerLayer
 } from 'style/style.spec'
 import type {
@@ -29,7 +28,7 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
   featureStore = new Map<string, Features>() // tileID -> features
 
   setupLayer (
-    layerDefinition: PointLayerDefinition | HeatmapLayerDefinition
+    layerDefinition: PointDefinition | HeatmapDefinition
   ): PointWorkerLayer | HeatmapWorkerLayer {
     const {
       type, name, layerIndex, source, layer, minzoom, maxzoom,

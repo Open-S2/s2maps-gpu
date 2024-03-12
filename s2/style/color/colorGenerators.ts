@@ -1,5 +1,6 @@
 import Color, { interpolate } from '.'
 
+import type { ColorArray } from './'
 import type { ColorBlindAdjust } from './colorBlindAdjust'
 
 export function buildColorRamp (
@@ -13,8 +14,8 @@ export function buildColorRamp (
   // prep colors
   let getColor
   if (typeof ramp === 'string') {
-    if (ramp === 'sinebow') getColor = (i: number, cbAdjust?: ColorBlindAdjust): [number, number, number, number] => Color.sinebow(i).getRGB(false, cbAdjust)
-    else getColor = (i: number, cbAdjust?: ColorBlindAdjust): [number, number, number, number] => Color.sinebowExtended(i).getRGB(false, cbAdjust)
+    if (ramp === 'sinebow') getColor = (i: number, cbAdjust?: ColorBlindAdjust): ColorArray => Color.sinebow(i).getRGB(false, cbAdjust)
+    else getColor = (i: number, cbAdjust?: ColorBlindAdjust): ColorArray => Color.sinebowExtended(i).getRGB(false, cbAdjust)
   } else {
     const colorRamp: Color[] = []
     const numberRamp: number[] = []
@@ -24,7 +25,7 @@ export function buildColorRamp (
       colorRamp.push(lch ? color.toLCH() : color.toRGB())
     }
     // setup color output function
-    getColor = (t: number, cbAdjust?: ColorBlindAdjust): [number, number, number, number] => {
+    getColor = (t: number, cbAdjust?: ColorBlindAdjust): ColorArray => {
       let i = 0
       while (t > numberRamp[i]) i++
       if (t === numberRamp[i]) return lch ? colorRamp[i].getLCH() : colorRamp[i].getRGB(false, cbAdjust)
@@ -50,7 +51,7 @@ export function buildColorRamp (
 }
 
 export function buildDashImage (
-  dasharray: Array<[number, string]>,
+  dasharray: Array<[length: number, color: string]>,
   devicePixelRatio: number
 ): { length: number, dashCount: number, image: Uint8ClampedArray } {
   const { round } = Math

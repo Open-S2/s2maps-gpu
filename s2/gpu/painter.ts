@@ -1,4 +1,3 @@
-/* eslint-env browser */
 import { WebGPUContext } from './context'
 import {
   FillWorkflow,

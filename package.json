@@ -1,17 +1,45 @@
 {
   "name": "s2maps-gpu",
-  "description": "S2 Maps GPU",
+  "version": "0.13.2",
   "private": true,
-  "version": "0.13.0",
+  "description": "S2 Maps GPU",
+  "keywords": [
+    "s2",
+    "s2-geometry",
+    "maps",
+    "cartography",
+    "gpu",
+    "webgpu",
+    "webgl",
+    "webgl2",
+    "digital mapping engine"
+  ],
+  "homepage": "https://opens2.com/s2maps-gpu",
+  "bugs": {
+    "url": "https://github.com/Open-S2/s2maps-gpu/issues"
+  },
+  "funding": [
+    {
+      "type": "github",
+      "url": "https://github.com/sponsors/Open-S2"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:Open-S2/s2maps-gpu.git"
+  },
   "scripts": {
-    "build": "nuxt build",
+    "build:dev": "nuxt build",
     "build:S2": "node ./configS2/build.js",
     "build:S2:ES": "bun run ./configS2/buildESBuild.ts",
     "build:ESM": "tsc --project tsconfig.build.json",
     "build:types": "tsc --project tsconfig.build.json --emitDeclarationOnly --declaration --declarationDir dist-types",
     "tsc:version": "tsc --version",
     "dev": "nuxt dev --host",
-    "lint:S2": "eslint s2 --ext .ts"
+    "lint:S2": "eslint s2 --ext .ts",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "prepare": "bun run lint:S2 && bun run build:ESM && bun run build:types"
   },
   "exports": {
     ".": "./dist/plugins/index.js"
@@ -24,6 +52,7 @@
     "unicode-shaper-zig": "0.2.0"
   },
   "devDependencies": {
+    "@happy-dom/global-registrator": "^13.6.2",
     "@maplibre/maplibre-gl-style-spec": "^20.1.1",
     "@nuxtjs/eslint-module": "^4.1.0",
     "@rollup/pluginutils": "^5.1.0",

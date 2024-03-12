@@ -1,4 +1,3 @@
-/* eslint-env worker */
 import type Session from './session'
 
 import type TexturePack from './texturePack'

@@ -1,11 +1,11 @@
 import PointIndex from './pointIndex'
-import { fromID } from 'geometry/webMerc/mercID'
-import { transformPoint } from '../json-vt/transform'
+import { fromID } from 's2/geometry/wm/mercID'
+import { transformPoint } from '../jsonVT/transform'
 
 import type { ClusterOptions } from './'
 import type { Face, Feature, PointFeature } from 'geometry'
 import type { Point } from './pointIndex'
-import type { JSONLayers, JSONVectorPointsFeature, JSONVectorTile } from 'workers/source/json-vt/tile'
+import type { JSONLayers, JSONVectorPointsFeature, JSONVectorTile } from 's2/workers/source/jsonVT/tile'
 
 export interface Tile {
   features: PointFeature[]

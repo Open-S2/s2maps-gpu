@@ -1,4 +1,3 @@
-/* eslint-env browser */
 import shaderCode from '../shaders/raster.wgsl'
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
 
@@ -10,8 +9,8 @@ import type {
 } from './workflow.spec'
 import type {
   LayerDefinitionBase,
-  RasterLayerDefinition,
-  RasterLayerStyle,
+  RasterDefinition,
+  RasterStyle,
   RasterWorkflowLayerGuideGPU
 } from 'style/style.spec'
 import type { RasterData } from 'workers/worker.spec'
@@ -130,7 +129,7 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
   }
 
   // programs helps design the appropriate layer parameters
-  buildLayerDefinition (layerBase: LayerDefinitionBase, layer: RasterLayerStyle): RasterLayerDefinition {
+  buildLayerDefinition (layerBase: LayerDefinitionBase, layer: RasterStyle): RasterDefinition {
     const { context } = this
     const { source, layerIndex, lch, visible } = layerBase
     // PRE) get layer base
@@ -139,7 +138,7 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
     saturation = saturation ?? 0
     contrast = contrast ?? 0
     // 1) build definition
-    const layerDefinition: RasterLayerDefinition = {
+    const layerDefinition: RasterDefinition = {
       ...layerBase,
       type: 'raster' as const,
       opacity: opacity ?? 1,

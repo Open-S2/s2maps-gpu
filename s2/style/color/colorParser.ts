@@ -11,7 +11,7 @@ export type ColorDefinition = [encoding: string, colors: ColorArray]
 // hsv(180, 0.9, 0.7843137254901961)
 // hsva(180, 0.9, 0.7843137254901961, 1)
 
-const colorMap = {
+const COLOR_MAP = {
   aqua: 0x00FFFF,
   black: 0x000000,
   blue: 0x0000FF,
@@ -31,9 +31,23 @@ const colorMap = {
   yellow: 0xFFFF00
 }
 
+/**
+ * There are four types of strings to parse:
+ *
+ * @first color names: 'red', 'black', etc
+ *
+ * @second Hex: #ededed
+ *
+ * @third lastly type encodings:
+ * * rgb(255, 255, 255)
+ * * rgba(255, 255, 255, 255)
+ * * hsv(180, 0.9, 0.7843137254901961)
+ * * hsva(180, 0.9, 0.7843137254901961, 1)
+ *
+ */
 export default function colorParser (input: string): ColorDefinition {
-  if (colorMap[input as keyof typeof colorMap] !== undefined) {
-    const u = colorMap[input as keyof typeof colorMap]
+  if (COLOR_MAP[input as keyof typeof COLOR_MAP] !== undefined) {
+    const u = COLOR_MAP[input as keyof typeof COLOR_MAP]
     const r = u >> 16
     const g = (u >> 8) & 0xFF
     const b = u & 0xFF

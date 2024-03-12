@@ -44,7 +44,7 @@ export function findPointsAlongLine (
     if (length < minWidth) continue
     // find the anchor points to place the glyph
     const numPoints = Math.floor(length / minWidth)
-    console.log(numPoints)
+    console.info(numPoints)
   }
   return res
 }

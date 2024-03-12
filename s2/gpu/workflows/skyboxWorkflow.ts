@@ -1,4 +1,3 @@
-/* eslint-env browser */
 import shaderCode from '../shaders/skybox.wgsl'
 import Color from 'style/color'
 import { degToRad } from 'geometry/util'

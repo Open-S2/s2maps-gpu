@@ -1,4 +1,3 @@
-/* eslint-env worker */
 import S2MapUI from 'ui/s2mapUI'
 
 import type { MapOptions } from 'ui/s2mapUI'

@@ -1,11 +1,10 @@
-/* eslint-env worker */
 import { VectorTile } from 's2-vector-tile'
 // import { parseLayers } style/conditionals'
 import ProcessManager from './process'
 
 import type { LayerDefinition, StylePackage } from 'style/style.spec'
 import type { TileRequest, TileWorkerMessages } from './worker.spec'
-import type { JSONVectorTile } from './source/json-vt/tile'
+import type { JSONVectorTile } from './source/jsonVT/tile'
 
 // A TileWorker has one job: prebuild tile data for the WebGL / WebGPU instance
 // During construction, the tileworker is given the map's id to send the data to the correct recepient

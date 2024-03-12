@@ -1,4 +1,3 @@
-/* eslint-env browser */
 export default function loadShader (
   gl: WebGLRenderingContext | WebGL2RenderingContext,
   shaderSource: string,

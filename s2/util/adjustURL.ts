@@ -4,6 +4,11 @@ const URL_MAP: Record<string, string> = {
   mapbox: 'https://api.mapbox.com'
 }
 
+/** Adjust a URL either using:
+ * the URL_MAP (replace "s2maps://", "opens2://", or "mapbox://")
+ * the apiURL (replace "apiURL://") or baseURL (replace "baseURL://")
+ * which is defined by the user in the MapOptions.
+ */
 export default function adjustURL (input: string, apiURL: string, baseURL: string): string {
   if (apiURL === '') apiURL = URL_MAP.opens2
   if (baseURL === '') baseURL = URL_MAP.opens2

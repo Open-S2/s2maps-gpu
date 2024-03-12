@@ -1,4 +1,3 @@
-/* eslint-env browser */
 // These worker scripts are pre-interpreted by the worker plugin and a string
 // with the location of said worker is passed
 import { CorsWorker as Worker } from '../util/corsWorker'
@@ -68,7 +67,6 @@ export class WorkerPool {
     for (const worker of this.workers) worker.terminate()
     window.S2WorkerPool = new WorkerPool()
   }
-
   // delete (mapID: string) {
   //   this.sourceWorker.postMessage({ mapID, type: 'delete' })
   // }
@@ -79,10 +77,6 @@ export class WorkerPool {
 
   timeRequest (mapID: string, tiles: TileRequest[], sourceNames?: string[]): void {
     this.sourceWorker.postMessage({ mapID, type: 'timerequest', tiles, sourceNames })
-  }
-
-  getInfo (mapID: string, featureID: number): void {
-    this.sourceWorker.postMessage({ mapID, type: 'getInfo', featureID })
   }
 
   addMarkers (mapID: string, markers: MarkerDefinition[], sourceName: string): void {

@@ -1,18 +1,18 @@
 import type {
   Comparator,
-  FillLayerStyle,
+  FillStyle,
   Filter,
-  GlyphLayerStyle,
+  GlyphStyle,
   Glyphs,
-  HeatmapLayerStyle,
-  HillshadeLayerStyle,
+  HeatmapStyle,
+  HillshadeStyle,
   JSONFeatures,
   LayerStyle,
-  LineLayerStyle,
+  LineStyle,
   NotNullOrObject,
-  PointLayerStyle,
+  PointStyle,
   Property,
-  RasterLayerStyle,
+  RasterStyle,
   SourceMetadata,
   Sources,
   Sprites,
@@ -139,7 +139,7 @@ function convertLayer (layer: LayerSpecification, glyphs: Glyphs): undefined | L
 }
 
 // TODO: background-pattern
-function convertLayerBackground (backgroundLayer: BackgroundLayerSpecification): FillLayerStyle {
+function convertLayerBackground (backgroundLayer: BackgroundLayerSpecification): FillStyle {
   const { id, metadata, minzoom, maxzoom, layout = {}, paint = {} } = backgroundLayer
 
   return {
@@ -157,7 +157,7 @@ function convertLayerBackground (backgroundLayer: BackgroundLayerSpecification):
 
 // TODO: PAINT: fill-antialias, fill-outline-color, fill-translate, fill-translate-anchor, fill-pattern
 // TODO: LAYOUT: fill-sort-key
-function convertLayerFill (fillLayer: FillLayerSpecification): FillLayerStyle {
+function convertLayerFill (fillLayer: FillLayerSpecification): FillStyle {
   const { id, source, filter, 'source-layer': layer, metadata, minzoom, maxzoom, layout = {}, paint = {} } = fillLayer
 
   return {
@@ -177,7 +177,7 @@ function convertLayerFill (fillLayer: FillLayerSpecification): FillLayerStyle {
 
 // TODO: line-miter-limit, line-round-limit, line-sort-key, line-translate, line-translate-anchor, line-pattern
 // TODO: line-blur, line-gradient, line-offset, line-gap-width, line-dasharray
-function convertLayerLine (lineLayer: LineLayerSpecification): LineLayerStyle {
+function convertLayerLine (lineLayer: LineLayerSpecification): LineStyle {
   const {
     id,
     source,
@@ -213,7 +213,7 @@ function convertLayerLine (lineLayer: LineLayerSpecification): LineLayerStyle {
 }
 
 // TODO: raster-hue-rotate, raster-brightness-min, raster-brightness-max
-function convertLayerRaster (input: RasterLayerSpecification): undefined | RasterLayerStyle {
+function convertLayerRaster (input: RasterLayerSpecification): undefined | RasterStyle {
   const {
     id,
     source,
@@ -243,7 +243,7 @@ function convertLayerRaster (input: RasterLayerSpecification): undefined | Raste
 }
 
 // TODO: hillshade-illumination-anchor
-function convertLayerHillshade (input?: HillshadeLayerSpecification): HillshadeLayerStyle {
+function convertLayerHillshade (input?: HillshadeLayerSpecification): HillshadeStyle {
   if (input === undefined) throw new Error('Hillshade layer not supported')
   const {
     id,
@@ -275,7 +275,7 @@ function convertLayerHillshade (input?: HillshadeLayerSpecification): HillshadeL
   }
 }
 
-function convertLayerHeatmap (input?: HeatmapLayerSpecification): HeatmapLayerStyle {
+function convertLayerHeatmap (input?: HeatmapLayerSpecification): HeatmapStyle {
   if (input === undefined) throw new Error('Heatmap layer not supported')
   const {
     id,
@@ -309,7 +309,7 @@ function convertLayerHeatmap (input?: HeatmapLayerSpecification): HeatmapLayerSt
 
 // TODO: circle-sort-key, circle-blur, translate, translate-anchor
 // NOTE: circle-stroke-opacity? should I implement?
-function convertLayerCircle (input: CircleLayerSpecification): undefined | PointLayerStyle {
+function convertLayerCircle (input: CircleLayerSpecification): undefined | PointStyle {
   const {
     id,
     source,
@@ -341,7 +341,7 @@ function convertLayerCircle (input: CircleLayerSpecification): undefined | Point
 }
 
 // TODO: opacity, MANYYYYY different properties to convert
-function convertLayerSymbol (input: SymbolLayerSpecification, glyphs: Glyphs): undefined | GlyphLayerStyle {
+function convertLayerSymbol (input: SymbolLayerSpecification, glyphs: Glyphs): undefined | GlyphStyle {
   const {
     id,
     source,

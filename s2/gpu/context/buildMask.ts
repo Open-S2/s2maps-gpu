@@ -1,4 +1,3 @@
-/* eslint-env browser */
 import type { WebGPUContext } from '.'
 import type { MaskSource } from '../workflows/workflow.spec'
 

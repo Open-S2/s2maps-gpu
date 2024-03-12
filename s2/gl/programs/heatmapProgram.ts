@@ -12,8 +12,8 @@ import type { Context, HeatmapFeatureGuide, HeatmapSource } from '../contexts/co
 import type { HeatmapData } from 'workers/worker.spec'
 import type { TileGL as Tile } from 'source/tile.spec'
 import type {
-  HeatmapLayerDefinition,
-  HeatmapLayerStyle,
+  HeatmapDefinition,
+  HeatmapStyle,
   HeatmapWorkflowLayerGuide,
   LayerDefinitionBase
 } from 'style/style.spec'
@@ -153,7 +153,7 @@ export default async function heatmapProgram (context: Context): Promise<Heatmap
       tile.addFeatures(features)
     }
 
-    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: HeatmapLayerStyle): HeatmapLayerDefinition {
+    buildLayerDefinition (layerBase: LayerDefinitionBase, layer: HeatmapStyle): HeatmapDefinition {
       const { type, context } = this
       const { source, layerIndex, lch, visible } = layerBase
       // PRE) get layer base
@@ -168,7 +168,7 @@ export default async function heatmapProgram (context: Context): Promise<Heatmap
       intensity = intensity ?? 1
       colorRamp = colorRamp ?? 'sinebow'
       // 1) build definition
-      const layerDefinition: HeatmapLayerDefinition = {
+      const layerDefinition: HeatmapDefinition = {
         ...layerBase,
         type: 'heatmap',
         // paint

@@ -1,4 +1,3 @@
-/* eslint-env browser */
 import buildMask from './buildMask'
 
 import type { ColorArray } from 'style/color'

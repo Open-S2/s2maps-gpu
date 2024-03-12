@@ -1,4 +1,3 @@
-/* eslint-env worker */
 import { fromLonLat, toST } from 'geometry/s2/s2Point'
 
 import type { Session } from '.'

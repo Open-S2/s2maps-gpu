@@ -11,19 +11,19 @@ import {
   xyzToLonLat
 } from './s2Coords'
 import { toIJ as S2PointToIJ, fromS2CellID } from './s2Point'
-import { EARTH_RADIUS } from '../util'
 
 import type { Face } from './s2Proj.spec'
-import type { XYZ } from '../proj.spec'
+import type { BBox, XYZ } from '../proj.spec'
 
 /** CONSTANTS **/
 const LOOKUP_POS: bigint[] = []
 const LOOKUP_IJ: bigint[] = []
-// const FACE_BITS: bigint = 3n
-// const NUM_FACES: bigint = 6n
-// const MAX_LEVEL: bigint = 30n
-// const POS_BITS: bigint = 61n
-// const MAX_SIZE: bigint = 1073741824n
+const FACE_BITS = 3n
+const NUM_FACES = 6n
+const MAX_LEVEL = 30n
+const POS_BITS = 61n
+const K_WRAP_OFFSET = 13835058055282163712n
+const K_MAX_SIZE = 1073741824
 
 /** INITIALIZATION **/
 for (let i = 0; i < 4; i++) initLookupCell(0, 0, 0, i, 0, i)
@@ -55,16 +55,18 @@ function initLookupCell (
   }
 }
 
-/** FUNCTIONS **/
+/** Create a default S2CellID given a face on the sphere [0-6) */
 export function fromFace (face: Face): bigint {
-  return (BigInt(face) << 61n) + (1n << 60n)
+  return (BigInt(face) << POS_BITS) + (1n << 60n)
 }
 
+/** Create an S2CellID from a lon-lat coordinate */
 export function fromLonLat (lon: number, lat: number): bigint {
   const xyz = lonLatToXYZ(lon, lat)
   return fromS2Point(xyz)
 }
 
+/** Create an S2CellID from an XYZ Point */
 export function fromS2Point (xyz: XYZ): bigint {
   // convert to face-i-j
   const [face, i, j] = S2PointToIJ(xyz)
@@ -72,6 +74,7 @@ export function fromS2Point (xyz: XYZ): bigint {
   return fromIJ(face, i, j)
 }
 
+/** Create an S2CellID from an Face-U-V coordinate */
 export function fromUV (face: Face, u: number, v: number): bigint {
   // convert to st
   const s = UVtoST(u)
@@ -80,6 +83,7 @@ export function fromUV (face: Face, u: number, v: number): bigint {
   return fromST(face, s, t)
 }
 
+/** Create an S2CellID from an Face-S-T coordinate */
 export function fromST (face: Face, s: number, t: number): bigint {
   // convert to ij
   const i = STtoIJ(s)
@@ -88,19 +92,21 @@ export function fromST (face: Face, s: number, t: number): bigint {
   return fromIJ(face, i, j)
 }
 
-export function fromDistance (distance: bigint, level = 30n): bigint {
-  level = 2n * (30n - level)
+/** Create an S2CellID given a distance and level (zoom). Default level is 30n */
+export function fromDistance (distance: bigint, level = MAX_LEVEL): bigint {
+  level = 2n * (MAX_LEVEL - level)
   return (distance << (level + 1n)) + (1n << level)
 }
 
+/** Create an S2CellID from an Face-I-J coordinate and map it to a zoom if desired. */
 export function fromIJ (face: Face, i: number, j: number, level?: number): bigint {
   const bigFace = BigInt(face)
   let bigI = BigInt(i)
   let bigJ = BigInt(j)
   if (level !== undefined) {
     const levelB = BigInt(level)
-    bigI = bigI << (30n - levelB)
-    bigJ = bigJ << (30n - levelB)
+    bigI = bigI << (MAX_LEVEL - levelB)
+    bigJ = bigJ << (MAX_LEVEL - levelB)
   }
   let n = bigFace << 60n
   // Alternating faces have opposite Hilbert curve orientations; this
@@ -114,11 +120,11 @@ export function fromIJ (face: Face, i: number, j: number, level?: number): bigin
   // Hilbert curve orientation respectively.
   for (let k = 7n; k >= 0n; k--) {
     const kk = k * 4n
-    bits += ((bigI >> kk) & 15n) << 6n
+    bits += ((bigI >> kk) & 15n) << NUM_FACES
     bits += ((bigJ >> kk) & 15n) << 2n
     bits = LOOKUP_POS[Number(bits)]
     n |= (bits >> 2n) << (k * 8n)
-    bits &= 3n
+    bits &= FACE_BITS
   }
 
   const id = n * 2n + 1n
@@ -127,10 +133,17 @@ export function fromIJ (face: Face, i: number, j: number, level?: number): bigin
   return id
 }
 
-export function toIJ (id: bigint, level?: number | bigint): [Face, number, number, number] { // [face, i, j, orientation]
+/**
+ * Convert an S2CellID to a Face-I-J coordinate and provide its orientation.
+ * If a level is provided, the I-J coordinates will be shifted to that level.
+ */
+export function toIJ (
+  id: bigint,
+  level?: number | bigint
+): [face: Face, i: number, j: number, orientation: number] {
   let i = 0n
   let j = 0n
-  const face = Number(id >> 61n)
+  const face = Number(id >> POS_BITS)
   let bits = BigInt(face) & 1n
 
   // Each iteration maps 8 bits of the Hilbert curve position into
@@ -145,9 +158,9 @@ export function toIJ (id: bigint, level?: number | bigint): [Face, number, numbe
     const nbits = (k === 7n) ? 2n : 4n
     bits += (id >> (k * 8n + 1n) & ((1n << (2n * nbits)) - 1n)) << 2n
     bits = LOOKUP_IJ[Number(bits)]
-    i += (bits >> 6n) << (k * 4n)
+    i += (bits >> NUM_FACES) << (k * 4n)
     j += ((bits >> 2n) & 15n) << (k * 4n)
-    bits &= 3n
+    bits &= FACE_BITS
   }
 
   // adjust bits to the orientation
@@ -156,13 +169,14 @@ export function toIJ (id: bigint, level?: number | bigint): [Face, number, numbe
 
   if (level !== undefined) {
     level = BigInt(level)
-    i = i >> (30n - level)
-    j = j >> (30n - level)
+    i = i >> (MAX_LEVEL - level)
+    j = j >> (MAX_LEVEL - level)
   }
   return [face as Face, Number(i), Number(j), Number(bits)]
 }
 
-export function toST (id: bigint): [Face, number, number] {
+/** Convert an S2CellID to an Face-S-T coordinate */
+export function toST (id: bigint): [face: Face, s: number, t: number] {
   const [face, i, j] = toIJ(id)
   const s = IJtoST(i)
   const t = IJtoST(j)
@@ -170,7 +184,8 @@ export function toST (id: bigint): [Face, number, number] {
   return [face, s, t]
 }
 
-export function toUV (id: bigint): [Face, number, number] {
+/** Convert an S2CellID to an Face-U-V coordinate */
+export function toUV (id: bigint): [face: Face, u: number, v: number] {
   const [face, s, t] = toST(id)
   const u = STtoUV(s)
   const v = STtoUV(t)
@@ -178,29 +193,35 @@ export function toUV (id: bigint): [Face, number, number] {
   return [face, u, v]
 }
 
-export function toLonLat (id: bigint): [number, number] {
+/** Convert an S2CellID to an lon-lat coordinate */
+export function toLonLat (id: bigint): [lon: number, lat: number] {
   const xyz = toS2Point(id)
 
   return xyzToLonLat(xyz)
 }
 
+/** Convert an S2CellID to an XYZ Point */
 export function toS2Point (id: bigint): XYZ {
   return fromS2CellID(id)
 }
 
+/** Given an S2CellID, get the face it's located in */
 export function face (id: bigint): Face {
-  const face = Number(id >> 61n)
+  const face = Number(id >> POS_BITS)
   return face as Face
 }
 
+/** Given an S2CellID, check if it is a Face Cell. */
 export function isFace (id: bigint): boolean {
   return (id & ((1n << 60n) - 1n)) === 0n
 }
 
+/** Given an S2CellID, find the quad tree position [0-4) it's located in */
 export function pos (id: bigint): bigint {
   return id & 2305843009213693951n
 }
 
+/** Given an S2CellID, find the level (zoom) its located in */
 export function level (id: bigint): number {
   let count = 0
 
@@ -213,16 +234,19 @@ export function level (id: bigint): number {
   return 30 - count
 }
 
+/** Given an S2CellID, get the distance it spans (or length it covers) */
 export function distance (id: bigint, lev?: number): bigint {
   if (lev === undefined) lev = level(id)
   return id >> BigInt(2 * (30 - lev) + 1)
 }
 
+/** Given an S2CellID, get the quad child tile of your choice [0, 4) */
 export function child (id: bigint, pos: 0n | 1n | 2n | 3n): bigint {
   const newLSB = (id & (~id + 1n)) >> 2n
-  return id + (2n * pos - 3n) * newLSB
+  return id + (2n * pos - FACE_BITS) * newLSB
 }
 
+/** Given an S2CellID, get all the quad children tiles */
 export function children (id: bigint, orientation = 0): [bigint, bigint, bigint, bigint] {
   const childs: [bigint, bigint, bigint, bigint] = [child(id, 0n), child(id, 3n), child(id, 2n), child(id, 1n)]
   if (orientation === 0) {
@@ -234,6 +258,7 @@ export function children (id: bigint, orientation = 0): [bigint, bigint, bigint,
   return childs
 }
 
+/** Given a Face-level-i-j coordinate, get all its quad children tiles */
 export function childrenIJ (
   face: Face,
   level: number,
@@ -251,15 +276,18 @@ export function childrenIJ (
   ]
 }
 
+/** Given an S2CellID, get the quad position relative to its parent */
 export function childPosition (id: bigint, level: number): number {
-  return Number((id >> (2n * (30n - BigInt(level)) + 1n)) & 3n)
+  return Number((id >> (2n * (MAX_LEVEL - BigInt(level)) + 1n)) & FACE_BITS)
 }
 
+/** Given an S2CellID, get the parent quad tile */
 export function parent (id: bigint, level?: number): bigint {
-  const newLSB = (level !== undefined) ? (1n << (2n * (30n - BigInt(level)))) : ((id & (~id + 1n)) << 2n)
+  const newLSB = (level !== undefined) ? (1n << (2n * (MAX_LEVEL - BigInt(level)))) : ((id & (~id + 1n)) << 2n)
   return (id & (~newLSB + 1n)) | newLSB
 }
 
+/** Given an S2CellID, get the hilbert range it spans */
 export function range (id: bigint): [bigint, bigint] {
   const lsb = id & (~id + 1n)
 
@@ -269,36 +297,42 @@ export function range (id: bigint): [bigint, bigint] {
   ]
 }
 
+/** Check if the first S2CellID contains the second. */
 export function contains (a: bigint, b: bigint): boolean {
   const [min, max] = range(a)
   return b >= min && b <= max
 }
 
+/** Check if an S2CellID intersects another. This includes edges touching. */
 export function intersects (a: bigint, b: bigint): boolean {
   const [aMin, aMax] = range(a)
   const [bMin, bMax] = range(b)
   return bMin <= aMax && bMax >= aMin
 }
 
+/** Get the next S2CellID in the hilbert space */
 export function next (id: bigint): bigint {
   const n = id + ((id & (~id + 1n)) << 1n)
-  const kWrapOffset = 13835058055282163712n
-  if (n < kWrapOffset) return n
-  return n - kWrapOffset
+  if (n < K_WRAP_OFFSET) return n
+  return n - K_WRAP_OFFSET
 }
 
+/** Get the previous S2CellID in the hilbert space */
 export function prev (id: bigint): bigint {
   const p = id - ((id & (~id + 1n)) << 1n)
-  const kWrapOffset = 13835058055282163712n
-  if (p < kWrapOffset) return p
-  return p + kWrapOffset
+  if (p < K_WRAP_OFFSET) return p
+  return p + K_WRAP_OFFSET
 }
 
+/** Check if the S2CellID is a leaf value.
+ * This means it's the smallest possible cell
+ */
 export function isLeaf (id: bigint): boolean {
   return (id & 1n) === 1n
 }
 
-export function centerST (id: bigint): [number, number, number] {
+/** Given an S2CellID and level (zoom), get the center point of that cell in S-T space */
+export function centerST (id: bigint): [face: number, s: number, t: number] {
   const [face, i, j] = toIJ(id)
   const delta = ((id & 1n) !== 0n)
     ? 1
@@ -312,7 +346,8 @@ export function centerST (id: bigint): [number, number, number] {
   return [face, SiTiToST(Number(si)), SiTiToST(Number(ti))]
 }
 
-export function boundsST (id: bigint, lev: number): [number, number, number, number] {
+/** Given an S2CellID and level (zoom), get the S-T bounding range of that cell */
+export function boundsST (id: bigint, lev: number): BBox {
   if (lev === undefined) lev = level(id)
 
   const [, s, t] = centerST(id)
@@ -326,29 +361,31 @@ export function boundsST (id: bigint, lev: number): [number, number, number, num
   ]
 }
 
+/** Return the range maximum of a level (zoom) in S-T space */
 export function sizeST (level: number): number {
   return IJtoST(sizeIJ(level))
 }
 
+/** Return the range maximum of a level (zoom) in I-J space */
 export function sizeIJ (level: number): number {
   return 1 << (30 - level)
 }
 
+/** Given an S2CellID, find the neighboring S2CellIDs */
 export function neighbors (id: bigint): [bigint, bigint, bigint, bigint] {
-  const kMaxSize = 1073741824
-
   const lev = level(id)
   const size = sizeIJ(lev)
   const [face, i, j] = toIJ(id)
 
   return [
     parent(fromIJSame(face, i, j - size, j - size >= 0), lev),
-    parent(fromIJSame(face, i + size, j, i + size < kMaxSize), lev),
-    parent(fromIJSame(face, i, j + size, j + size < kMaxSize), lev),
+    parent(fromIJSame(face, i + size, j, i + size < K_MAX_SIZE), lev),
+    parent(fromIJSame(face, i, j + size, j + size < K_MAX_SIZE), lev),
     parent(fromIJSame(face, i - size, j, i - size >= 0), lev)
   ]
 }
 
+/** Given a Face-I-J and a desired level (zoom), find the neighboring S2CellIDs */
 export function neighborsIJ (face: Face, i: number, j: number, level: number): [bigint, bigint, bigint, bigint] {
   const size = sizeIJ(level)
 
@@ -360,20 +397,21 @@ export function neighborsIJ (face: Face, i: number, j: number, level: number): [
   ]
 }
 
+/** Build an S2CellID given a Face-I-J, but ensure the face is the same if desired  */
 export function fromIJSame (face: Face, i: number, j: number, sameFace: boolean): bigint {
   if (sameFace) return fromIJ(face, i, j)
   else return fromIJWrap(face, i, j)
 }
 
+/** Build an S2CellID given a Face-I-J, but ensure it's a legal value, otherwise wrap before creation */
 export function fromIJWrap (face: Face, i: number, j: number): bigint {
   const { max, min } = Math
-  const kMaxSize = 1073741824
 
   // Convert i and j to the coordinates of a leaf cell just beyond the
   // boundary of this face.  This prevents 32-bit overflow in the case
   // of finding the neighbors of a face cell.
-  i = max(-1, min(kMaxSize, i))
-  j = max(-1, min(kMaxSize, j))
+  i = max(-1, min(K_MAX_SIZE, i))
+  j = max(-1, min(K_MAX_SIZE, j))
 
   // We want to wrap these coordinates onto the appropriate adjacent face.
   // The easiest way to do this is to convert the (i,j) coordinates to (x,y,z)
@@ -388,10 +426,10 @@ export function fromIJWrap (face: Face, i: number, j: number): bigint {
   // [-1,1]x[-1,1] face rectangle, since otherwise the reprojection step
   // (which divides by the new z coordinate) might change the other
   // coordinates enough so that we end up in the wrong leaf cell.
-  const kScale = 1 / kMaxSize
+  const kScale = 1 / K_MAX_SIZE
   const kLimit = 1 + 2.2204460492503131e-16
-  const u = max(-kLimit, min(kLimit, kScale * (2 * (i - kMaxSize / 2) + 1)))
-  const v = max(-kLimit, min(kLimit, kScale * (2 * (j - kMaxSize / 2) + 1)))
+  const u = max(-kLimit, min(kLimit, kScale * (2 * (i - K_MAX_SIZE / 2) + 1)))
+  const v = max(-kLimit, min(kLimit, kScale * (2 * (j - K_MAX_SIZE / 2) + 1)))
 
   // Find the leaf cell coordinates on the adjacent face, and convert
   // them to a cell id at the appropriate level.
@@ -399,30 +437,9 @@ export function fromIJWrap (face: Face, i: number, j: number): bigint {
   return fromIJ(nFace, STtoIJ(0.5 * (nU + 1)), STtoIJ(0.5 * (nV + 1)))
 }
 
-export function getLevelFromMeters (meters: number): number {
-  const angle = meters / EARTH_RADIUS
-
-  return getLevelFromAngle(angle)
-}
-
-// convert radians to level
-export function getLevelFromAngle (angle: number): number {
-  const { round, log2, abs, max, min } = Math
-  const lev = round(log2(abs(0.9428090415820635 / angle)))
-
-  return max(0, min(30, lev))
-}
-
-// convert s2CellID "point" and a radius into s2CellID lookup "tiles"
-export function getCover (s2CellID: bigint, radius: number): bigint[] {
-  const level = getLevelFromMeters(radius)
-
-  return vertexNeighbors(s2CellID, level)
-}
-
+/** Given an S2CellID, find it's nearest neighbors associated with it */
 export function vertexNeighbors (id: bigint, lev?: number): bigint[] {
   if (lev === undefined) lev = level(id)
-  const kMaxSize = 1073741824
   const res = []
 
   const [face, i, j] = toIJ(id)
@@ -436,14 +453,14 @@ export function vertexNeighbors (id: bigint, lev?: number): bigint[] {
 
   if ((i & halfsize) !== 0) {
     ioffset = size
-    isame = (i + size) < kMaxSize
+    isame = (i + size) < K_MAX_SIZE
   } else {
     ioffset = -size
     isame = (i - size) >= 0
   }
   if ((j & halfsize) !== 0) {
     joffset = size
-    jsame = (j + size) < kMaxSize
+    jsame = (j + size) < K_MAX_SIZE
   } else {
     joffset = -size
     jsame = (j - size) >= 0
