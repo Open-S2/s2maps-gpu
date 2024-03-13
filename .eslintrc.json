@@ -59,12 +59,16 @@
     },
     {
       "files": ["s2/**/*.ts"],
-      "plugins": ["@typescript-eslint"],
+      "plugins": [
+        "@typescript-eslint"
+      ],
       "extends": [
+        "plugin:@typescript-eslint/recommended",
         "standard-with-typescript"
       ],
       "parserOptions": {
         "ecmaVersion": "latest",
+        "parser": "@typescript-eslint/parser",
         "sourceType": "module",
         "project": "./tsconfig.build.json"
       }

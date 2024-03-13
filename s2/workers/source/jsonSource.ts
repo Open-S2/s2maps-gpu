@@ -15,14 +15,14 @@ export default class JSONSource extends Source {
       console.error(`FAILED TO extrapolate ${this.path} json data`)
     } else {
       this.json = new JsonVT(json, metadata)
-      const { minzoom, maxzoom, faces } = this.json
+      const { projection, minzoom, maxzoom, faces } = this.json
       this._buildMetadata({
         type: 'vector',
         minzoom,
         maxzoom,
         faces: [...faces],
         layers: { default: { minzoom: 0, maxzoom: 30 } },
-        extension: '',
+        extension: projection === 'S2' ? 's2json' : 'geojson',
         attributions: json.attributions
       }, mapID)
     }

@@ -1,4 +1,7 @@
 import type {
+  Alignment,
+  Anchor,
+  Cap,
   Comparator,
   FillStyle,
   Filter,
@@ -7,11 +10,13 @@ import type {
   HeatmapStyle,
   HillshadeStyle,
   JSONFeatures,
+  Join,
   LayerStyle,
   LineStyle,
   NotNullOrObject,
   PointStyle,
   Property,
+  PropertyOnlyStep,
   RasterStyle,
   SourceMetadata,
   Sources,
@@ -96,7 +101,7 @@ function convertSources (input: Record<string, SourceSpecification>): Sources {
       } else {
         sources[name] = {
           path,
-          extension,
+          extension: extension as keyof SourceMetadata['extension'],
           type,
           minzoom,
           maxzoom,
@@ -205,8 +210,8 @@ function convertLayerLine (lineLayer: LineLayerSpecification): LineStyle {
     color,
     opacity: convertDataDrivenPropertyValueSpecification(paint['line-opacity']),
     width: convertDataDrivenPropertyValueSpecification(paint['line-width']),
-    cap: convertPropertyValueSpecification(layout['line-cap']),
-    join: convertDataDrivenPropertyValueSpecification(layout['line-join']),
+    cap: convertPropertyValueSpecification(layout['line-cap']) as PropertyOnlyStep<Cap>,
+    join: convertDataDrivenPropertyValueSpecification(layout['line-join']) as PropertyOnlyStep<Join>,
     dasharray: convertDashArray(paint['line-dasharray'] ?? [], dashColor),
     visible: layout.visibility !== 'none'
   }
@@ -388,25 +393,25 @@ function convertLayerSymbol (input: SymbolLayerSpecification, glyphs: Glyphs): u
     textStrokeWidth: convertDataDrivenPropertyValueSpecification(paint['text-halo-width']),
     textSize: convertDataDrivenPropertyValueSpecification(layout['text-size']),
     textFamily,
-    textField: convertDataDrivenPropertyValueSpecification(layout['text-field']),
-    textAlign: convertDataDrivenPropertyValueSpecification(layout['text-justify']),
-    textAnchor: convertDataDrivenPropertyValueSpecification(layout['text-anchor']),
-    textOffset: convertDataDrivenPropertyValueSpecification(layout['text-offset']),
+    textField: convertDataDrivenPropertyValueSpecification(layout['text-field']) as PropertyOnlyStep<string | string[]>,
+    textAlign: convertDataDrivenPropertyValueSpecification(layout['text-justify']) as PropertyOnlyStep<Alignment>,
+    textAnchor: convertDataDrivenPropertyValueSpecification(layout['text-anchor']) as PropertyOnlyStep<Anchor>,
+    textOffset: convertDataDrivenPropertyValueSpecification(layout['text-offset']) as PropertyOnlyStep<[number, number]>,
     // TODO: support PaddingSpecification
-    textPadding: convertDataDrivenPropertyValueSpecification(layout['text-padding']) as [number, number],
-    textWordWrap: convertDataDrivenPropertyValueSpecification(layout['text-max-width']),
+    textPadding: convertDataDrivenPropertyValueSpecification(layout['text-padding']) as PropertyOnlyStep<[number, number]>,
+    textWordWrap: convertDataDrivenPropertyValueSpecification(layout['text-max-width']) as PropertyOnlyStep<number>,
     // TODO: properly convert
-    textKerning: convertDataDrivenPropertyValueSpecification(layout['text-letter-spacing']),
+    textKerning: convertDataDrivenPropertyValueSpecification(layout['text-letter-spacing']) as PropertyOnlyStep<number>,
     // TODO: properly convert
-    textLineHeight: convertDataDrivenPropertyValueSpecification(layout['text-line-height']),
+    textLineHeight: convertDataDrivenPropertyValueSpecification(layout['text-line-height']) as PropertyOnlyStep<number>,
     // icon
     iconSize: convertDataDrivenPropertyValueSpecification(layout['icon-size']),
-    iconFamily: convertDataDrivenPropertyValueSpecification(layout['icon-image']),
-    iconField: convertDataDrivenPropertyValueSpecification(layout['icon-image']),
-    iconAnchor: convertDataDrivenPropertyValueSpecification(layout['icon-anchor']),
-    iconOffset: convertDataDrivenPropertyValueSpecification(layout['icon-offset']),
+    iconFamily: convertDataDrivenPropertyValueSpecification(layout['icon-image']) as PropertyOnlyStep<string | string[]>,
+    iconField: convertDataDrivenPropertyValueSpecification(layout['icon-image']) as PropertyOnlyStep<string | string[]>,
+    iconAnchor: convertDataDrivenPropertyValueSpecification(layout['icon-anchor']) as PropertyOnlyStep<Anchor>,
+    iconOffset: convertDataDrivenPropertyValueSpecification(layout['icon-offset']) as PropertyOnlyStep<[number, number]>,
     // TODO: support PaddingSpecification
-    iconPadding: convertDataDrivenPropertyValueSpecification(layout['icon-padding']) as [number, number],
+    iconPadding: convertDataDrivenPropertyValueSpecification(layout['icon-padding']) as PropertyOnlyStep<[number, number]>,
     visible: layout.visibility !== 'none'
   }
 }

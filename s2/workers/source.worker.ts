@@ -15,9 +15,9 @@ import adjustURL from '../util/adjustURL'
 
 import type {
   Analytics,
+  ImageFormats,
   LayerDefinition,
   SourceMetadata,
-  SpriteFileType,
   StylePackage,
   Source as StyleSource
 } from 'style/style.spec'
@@ -261,7 +261,7 @@ export default class SourceWorker {
     mapID: string,
     name: string,
     input: string,
-    fileType?: SpriteFileType
+    fileType?: ImageFormats
   ): Promise<undefined | ImageMetadata> {
     const { texturePack, session } = this
     const urlMap = this.mapURLS[mapID]

@@ -1,6 +1,6 @@
 import type { SpriteImageMessage } from 'workers/worker.spec'
 import type Session from './session'
-import type { SpriteFileType } from 'style/style.spec'
+import type { ImageFormats } from 'style/style.spec'
 import type { Glyph } from 'workers/process/glyph/familySource'
 import type TexturePack from './texturePack'
 
@@ -14,7 +14,7 @@ export default class ImageSource {
   active = true
   name: string
   path: string
-  fileType: SpriteFileType = 'png'
+  fileType: ImageFormats = 'png'
   metadata: Metadata = {}
   session: Session
   texturePack: TexturePack
@@ -24,7 +24,7 @@ export default class ImageSource {
     path: string,
     texturePack: TexturePack,
     session: Session,
-    fileType?: SpriteFileType
+    fileType?: ImageFormats
   ) {
     this.name = name
     this.path = path

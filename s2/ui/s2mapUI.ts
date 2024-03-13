@@ -10,7 +10,11 @@ import type { TileWorkerMessage } from 'workers/worker.spec'
 import type { ColorMode } from 's2Map'
 
 export interface MapOptions {
-  /** Forces the use of 1: WebGL, 2: WebGL2, or 3: WebGPU */
+  /** Forces the use of:
+   * - `1`: WebGL
+   * - `2`: WebGL2
+   * - `3`: WebGPU
+   */
   contextType?: GPUType
   /** Support OffscreenCanvas */
   offscreen?: false
@@ -43,7 +47,16 @@ export interface MapOptions {
   positionalZoom?: boolean // If true, cursor position impacts zoom's x & y directions
   /** Control the number of fragments per pixel. [default: window.devicePixelRatio] */
   canvasMultiplier?: number
-  /** Set attributions for data. { [name: string]: URL string } */
+  /**
+   * Set attributions for data. { [name: string]: URL string }
+   *
+   * ex.
+   * ```json
+   * {
+   *   "OpenS2": "https://opens2.com/data"
+   * }
+   * ```
+   */
   attributions?: Record<string, string>
   /** Hide the attribution tag */
   attributionOff?: boolean

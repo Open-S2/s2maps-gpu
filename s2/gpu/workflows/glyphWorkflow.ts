@@ -332,7 +332,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     textSize = textSize ?? 16
     iconSize = iconSize ?? 16
     textFill = textFill ?? 'rgb(0, 0, 0)'
-    textStrokeWidth = textStrokeWidth ?? 16
+    textStrokeWidth = textStrokeWidth ?? 0
     textStroke = textStroke ?? 'rgb(0, 0, 0)'
     onlyPoints = onlyPoints ?? false
     onlyLines = onlyLines ?? false

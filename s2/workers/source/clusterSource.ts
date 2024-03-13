@@ -32,7 +32,7 @@ export default class ClusterSource extends Source {
         maxzoom,
         faces: [...faces],
         layers: { default: { minzoom: 0, maxzoom: 30 } },
-        extension: '',
+        extension: 'geojson',
         attributions: json.attributions
       }, mapID)
     }
