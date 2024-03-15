@@ -30,15 +30,16 @@
   "scripts": {
     "build:dev": "nuxt build",
     "build:S2": "node ./configS2/build.js",
-    "build:S2:ES": "bun run ./configS2/buildESBuild.ts",
+    "build:S2:flat": "node ./configS2/buildFlat.js",
     "build:ESM": "tsc --project tsconfig.build.json",
     "build:types": "tsc --project tsconfig.build.json --emitDeclarationOnly --declaration --declarationDir dist-types",
     "tsc:version": "tsc --version",
     "dev": "nuxt dev --host",
     "lint:S2": "eslint s2 --ext .ts",
-    "test": "bun test",
-    "test:watch": "bun test --watch",
-    "prepare": "bun run lint:S2 && bun run build:ESM && bun run build:types"
+    "test:S2": "bun test",
+    "test:S2:watch": "bun test --watch",
+    "test:playwright": "playwright test -c ./playwright/playwright.config.ts",
+    "prepare:toAdd": "bun run lint:S2 && bun run build:ESM && bun run build:types"
   },
   "exports": {
     ".": "./dist/plugins/index.js"
@@ -46,6 +47,7 @@
   "main": "./dist/plugins/index.js",
   "types": "./dist-types/index.d.ts",
   "dependencies": {
+    "@playwright/test": "^1.42.1",
     "earclip": "^0.10.0",
     "s2-vector-tile": "^2.0.12",
     "unicode-shaper-zig": "0.2.0"
@@ -66,6 +68,7 @@
     "compression-webpack-plugin": "^11.1.0",
     "css-loader": "^6.10.0",
     "css-minimizer-webpack-plugin": "^6.0.0",
+    "esbuild-plugin-inline-worker": "^0.1.1",
     "eslint": "^8.57.0",
     "eslint-config-standard-with-typescript": "^43.0.1",
     "eslint-plugin-vue": "^9.22.0",
@@ -74,7 +77,6 @@
     "mini-css-extract-plugin": "^2.8.1",
     "nuxt": "^3.10.3",
     "picocolors": "^1.0.0",
-    "pixelmatch": "^5.3.0",
     "raw-loader": "^4.0.2",
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",

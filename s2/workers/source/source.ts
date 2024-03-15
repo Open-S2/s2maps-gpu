@@ -1,8 +1,16 @@
 import { parent as parentID, toIJ } from 'geometry/id'
 
 import type { Session } from '.'
-import type { ParentLayers, TileRequest } from '../worker.spec'
-import type { Attributions, Format, LayerDefinition, Projection, SourceMetadata, SourceType, VectorLayer } from 'style/style.spec'
+import type { ParentLayers, SourceFlushMessage, TileRequest } from '../worker.spec'
+import type {
+  Attributions,
+  Format,
+  LayerDefinition,
+  Projection,
+  SourceMetadata,
+  SourceType,
+  VectorLayer
+} from 'style/style.spec'
 
 export interface LayerMeta { // layer
   minzoom: number
@@ -113,13 +121,14 @@ export default class Source {
   // all tile requests undergo a basic check on whether that data exists
   // within the metadata boundaries. layerIndexes exists to set a boundary
   // of what layers the map is interested in (caused by style change add/edit layer)
-  async tileRequest (mapID: string, tile: TileRequest): Promise<void> {
+  async tileRequest (mapID: string, tile: TileRequest, flushMessage: SourceFlushMessage): Promise<void> {
+    const { layersToBeLoaded } = flushMessage
     // if the source isn't ready yet, we wait for the metadata to be built
     await this.ready
     // inject layerIndexes
-    this.#getLayerIndexes(tile)
+    this.#getLayerIndexes(tile, layersToBeLoaded)
     // now make requests for parent data as necessary
-    this.#getParentData(mapID, tile)
+    this.#getParentData(mapID, tile, layersToBeLoaded)
     // pull out data, check if data exists in bounds, then request
     const { active, minzoom, maxzoom, faces, name } = this
     const { face, zoom } = tile
@@ -136,11 +145,11 @@ export default class Source {
     }
   }
 
-  #getLayerIndexes (tile: TileRequest): void {
+  #getLayerIndexes (tile: TileRequest, layersToLoad: Set<number>): void {
     const { layers, styleLayers } = this
     const { zoom } = tile
-    if (layers === undefined) return
     const layerIndexes: number[] = []
+    if (layers === undefined) return
 
     for (let l = 0, ll = styleLayers.length; l < ll; l++) {
       const layer = styleLayers[l]
@@ -150,9 +159,10 @@ export default class Source {
     }
 
     tile.layerIndexes = layerIndexes
+    for (const index of layerIndexes) layersToLoad.add(index)
   }
 
-  #getParentData (mapID: string, tile: TileRequest): void {
+  #getParentData (mapID: string, tile: TileRequest, layersToLoad: Set<number>): void {
     const { format, layers, styleLayers, name } = this
     const projection: Projection = format === 'zxy' ? 'WM' : 'S2'
     if (layers === undefined) return
@@ -191,6 +201,7 @@ export default class Source {
     }
     // if we stored any parent layers, make the necessary requests
     for (const parent of Object.values(parentLayers)) {
+      for (const index of parent.layerIndexes) layersToLoad.add(index)
       void this._tileRequest(mapID, { ...tile, parent }, name)
     }
   }

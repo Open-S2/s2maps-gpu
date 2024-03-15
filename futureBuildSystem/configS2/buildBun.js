@@ -17,4 +17,4 @@ var result = await Bun.build({
     publicPath: "https://opens2.com/s2maps-gpu/v".concat(String(package_json_1.version), "/")
     // naming: '[name].[ext]'
 });
-console.log('Build complete', result, package_json_1.version);
+console.info('Build complete', result, package_json_1.version);

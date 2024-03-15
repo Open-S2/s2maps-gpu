@@ -17,8 +17,9 @@
   <a href="https://github.com/Open-S2/s2maps-gpu/issues/new">Issues</a>
   <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
   <a href="https://github.com/Open-S2/s2maps-gpu/issues/2">Roadmap</a>
-  <div style="margin-bottom: 20px"></div>
 </div>
+
+<br />
 
 [S2 Maps GPU](https://opens2.com/s2maps-gpu) is an open source, high-performance, and GPU-accelerated map engine for rendering large-scale, interactive maps. Supports advanced features like `WebGPU`, rendering on a seperate thread using `OffscreenCanvas`, a modern more powerful approach to custom styling of data, rendering complex languages and unicode patterns correctly, and more.
 

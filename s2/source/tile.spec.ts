@@ -9,7 +9,7 @@ import type {
   TileMaskSource as MaskSourceGPU
 } from 'gpu/workflows/workflow.spec'
 import type { BBox, Face, XYZ } from 'geometry'
-import type { FlushData, InteractiveObject } from 'workers/worker.spec'
+import type { InteractiveObject, SourceFlushMessage, TileFlushMessage } from 'workers/worker.spec'
 import type { LayerDefinition } from 'style/style.spec'
 import type Projector from 'ui/camera/projector'
 
@@ -50,7 +50,6 @@ export interface TileBase<C, F, M> {
   tmpMaskID: number
   interactiveGuide: Map<number, InteractiveObject>
   uniforms: Float32Array
-  rendered: boolean
   bottomTop: Float32Array
   state: 'loading' | 'loaded' | 'deleted'
   type: 'S2' | 'WM'
@@ -64,7 +63,10 @@ export interface TileBase<C, F, M> {
   featureGuides: F[]
   mask: M
 
-  flush: (data: FlushData) => void
+  layersLoaded: Set<number>
+  layersToBeLoaded?: Set<number>
+
+  flush: (data: TileFlushMessage | SourceFlushMessage) => void
   removeLayer: (index: number) => void
   reorderLayers: (layerChanges: Record<number, number>) => void
 

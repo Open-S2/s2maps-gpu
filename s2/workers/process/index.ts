@@ -6,7 +6,7 @@ import RasterWorker from './raster'
 import ImageStore from './imageStore'
 
 import type { VectorTile } from 's2-vector-tile'
-import type { FlushData, TileRequest } from '../worker.spec'
+import type { TileFlushMessage, TileRequest } from '../worker.spec'
 import type {
   GPUType,
   HillshadeWorkerLayer,
@@ -146,7 +146,9 @@ export default class ProcessManager {
       void (worker as VectorWorker).flush(mapID, tile, sourceName, wait)
     }
 
-    const msg: FlushData = { type: 'flush', tileID, mapID, layers }
+    const deadLayers: number[] = []
+    for (const [id, count] of Object.entries(layers)) if (count === 0) deadLayers.push(+id)
+    const msg: TileFlushMessage = { type: 'flush', from: 'tile', tileID, mapID, sourceName, deadLayers }
     postMessage(msg)
   }
 

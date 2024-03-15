@@ -16,3 +16,19 @@
 //   // })
 //   // expect(map).toBeDefined()
 // })
+
+// describe('My Nuxt Application', () => {
+//   it('renders the homepage correctly', async () => {
+//     const browser = new Bun.Browser();
+//     const page = await browser.newPage();
+//     await page.goto('http://localhost:3000');
+
+//     // Capture a screenshot
+//     const screenshot = await page.screenshot();
+
+//     // Compare the screenshot with a reference image
+//     await expect(screenshot).toMatchFileSnapshot();
+
+//     await browser.close();
+//   });
+// });

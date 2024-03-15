@@ -1,11 +1,15 @@
 <template>
-  <div id="map" ref='container'>
+  <div id='map' ref='container'>
     <slot />
   </div>
 </template>
 
-<script lang="ts">
+<script lang='ts'>
 import type { MapOptions, S2Map } from 's2'
+
+declare global {
+  interface Window { testMap: S2Map }
+}
 
 export default {
   name: 'S2MapGPU',
@@ -29,11 +33,16 @@ export default {
           apiURL: config.public.dataURL,
           baseURL: config.public.baseURL
         },
+        attributionOff: true,
+        watermarkOff: true,
+        controls: false,
         ...mapOptions,
         container: container.value
-        // contextType: 2
       }
       const map = new S2Map(options)
+
+      /** Used by playwright to ensure the map is ready to render */
+      window.testMap = toRaw(map)
 
       if (typeof mapReady === 'function') map.addEventListener('ready', () => { mapReady(map) }, { once: true })
 
@@ -50,11 +59,12 @@ export default {
 </script>
 
 <style>
-@import url("../assets/styles/s2maps.css");
+@import url('../assets/styles/s2maps.css');
 #map {
   position: absolute;
   top: 0;
   bottom: 0;
   width: 100%;
+  height: 100%;
 }
 </style>

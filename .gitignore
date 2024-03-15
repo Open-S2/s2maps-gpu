@@ -82,3 +82,9 @@ public/glyphs/GLYPHS_V2.sqlite
 *.sqlite-wal
 *.sqlite3-shm
 *.sqlite3-wal
+
+# playwright
+playwright-report/
+playwright-backup/
+.eslintrc-auto-import.json
+test-results/

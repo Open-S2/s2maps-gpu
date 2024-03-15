@@ -139,7 +139,7 @@ export default async function fillProgram (context: Context): Promise<FillProgra
       const vertexA = new Float32Array(fillData.vertexBuffer)
       const indexA = new Uint32Array(fillData.indexBuffer)
       const fillIDA = new Uint8Array(fillData.idBuffer)
-      const codeTypeA = new Uint32Array(fillData.codeTypeBuffer)
+      const codeTypeA = new Uint8Array(fillData.codeTypeBuffer)
       // Create a starting vertex array object (attribute state)
       const vao = context.buildVAO()
 
@@ -148,7 +148,7 @@ export default async function fillProgram (context: Context): Promise<FillProgra
       const vertexBuffer = context.bindEnableVertexAttr(vertexA, 0, 2, gl.FLOAT, false, 0, 0)
       const indexBuffer = context.bindElementArray(indexA)
       const idBuffer = context.bindEnableVertexAttr(fillIDA, 1, 4, gl.UNSIGNED_BYTE, true, 0, 0)
-      const codeTypeBuffer = context.bindEnableVertexAttr(codeTypeA, 2, 1, gl.UNSIGNED_INT, false, 0, 0)
+      const codeTypeBuffer = context.bindEnableVertexAttr(codeTypeA, 2, 1, gl.UNSIGNED_BYTE, false, 0, 0)
 
       const source: FillSource = {
         type: 'fill',

@@ -1,8 +1,8 @@
 precision highp float;
 
 attribute vec2 aPos;
-attribute float aIndex;
 attribute vec3 aID;
+attribute float aIndex;
 
 uniform vec4 uColors[16];
 uniform float uOpacity[16];

@@ -4,17 +4,16 @@
 
 <script setup lang="ts">
 import style from './style'
-import type { S2Map } from 's2'
+import type { MapOptions, S2Map } from 's2'
 
 function ready (s2map: S2Map): void {
   console.info('ready', s2map)
-  s2map.setDarkMode(true)
-  // s2map.screenshot().then((dataUrl) => {
-  //   console.info('screenshot', dataUrl)
+  // s2map.awaitFullyRendered().then(() => {
+  //   console.info('awaitFullyRendered worked!')
   // }).catch((error) => {
-  //   console.error('screenshot', error)
+  //   console.error('awaitFullyRendered failed: ', error)
   // })
 }
 
-const mapOptions = { style }
+const mapOptions: MapOptions = { style }
 </script>

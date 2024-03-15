@@ -176,6 +176,15 @@ vec4 decodeFeature (bool color, inout int index, inout int featureIndex) {
       return res;
     } else if (condition == 7) { // animation-state
 
+    } else if (condition == 8) { // input-value
+      // get length
+      int valLength = int(uFeatureCode[featureIndex]);
+      featureIndex++;
+      // get value(s)
+      for (int i = 0; i < valLength; i++) {
+        res[i] = uFeatureCode[featureIndex];
+        featureIndex++;
+      }
     }
     // safety precaution
     if (stackIndex > 5) {

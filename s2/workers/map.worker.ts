@@ -30,6 +30,7 @@ export default class MapWorker {
     else if (type === 'moveState') this.s2mapUI.canMove = data.state
     else if (type === 'zoomState') this.s2mapUI.canZoom = data.state
     else if (type === 'screenshot') this.s2mapUI.screenshot()
+    else if (type === 'awaitRendered') this.s2mapUI.awaitFullyRendered()
     else if (type === 'resetSource') this.s2mapUI.resetSource(data.sourceNames, data.keepCache, data.awaitReplace)
     else if (type === 'clearSource') this.s2mapUI.clearSource(data.sourceNames)
     else if (type === 'addLayer') this.s2mapUI.addLayer(data.layer, data.nameIndex)

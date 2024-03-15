@@ -343,7 +343,9 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     const vertexBuffer = new Float32Array(vertices).buffer as ArrayBuffer
     const indexBuffer = new Uint32Array(indices).buffer as ArrayBuffer
     const idBuffer = new Uint8ClampedArray(ids).buffer as ArrayBuffer // pre-store each id as an rgb value
-    const codeTypeBuffer = new Uint32Array(codeType).buffer as ArrayBuffer
+    const codeTypeBuffer = (this.gpuType === 3)
+      ? new Uint32Array(codeType).buffer as ArrayBuffer
+      : new Uint8Array(codeType).buffer as ArrayBuffer
     const featureGuideBuffer = new Float32Array(featureGuide).buffer as ArrayBuffer
     // ship the vector data.
     const message: FillData = {

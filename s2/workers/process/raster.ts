@@ -167,5 +167,6 @@ export default class RasterWorker implements RasterWorkerSpec {
     }
   }
 
-  async flush (mapID: string, tile: TileRequest, sourceName: string): Promise<void> {}
+  // TODO: flush images
+  async flush (_mapID: string, _tile: TileRequest, _sourceName: string): Promise<void> {}
 }

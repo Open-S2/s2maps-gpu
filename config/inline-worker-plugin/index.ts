@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import type { BuildConfig, BunPlugin, PluginBuilder } from 'bun'
 
 const InlineWorkerPlugin: BunPlugin = {
-  name: 'WGSL loader',
+  name: 'Inline Worker Loader',
   async setup (build: PluginBuilder): Promise<void> {
     build.onLoad(
       { filter: /\.worker\.(js|jsx|ts|tsx)$/ },

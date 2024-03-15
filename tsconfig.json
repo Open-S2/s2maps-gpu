@@ -20,7 +20,6 @@
       "plugins/*": ["./s2/plugins/*"],
       "source/*": ["./s2/source/*"],
       "style/*": ["./s2/style/*"],
-      "svg/*": ["./s2/svg/*"],
       "ui/*": ["./s2/ui/*"],
       "util/*": ["./s2/util/*"],
       "workers/*": ["./s2/workers/*"],

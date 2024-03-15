@@ -8,7 +8,24 @@ const style: StyleDefinition = {
   minzoom: -1,
   maxzoom: 2.5,
   sources: {
-    countries: '/s2json/countriesHD.s2json'
+    countries: '/s2json/countriesHD.s2json',
+    markers: {
+      type: 'markers',
+      path: '_markers',
+      data: {
+        type: 'FeatureCollection',
+        features: [
+          {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'Point',
+              coordinates: [0, 0]
+            }
+          }
+        ]
+      }
+    }
   },
   fonts: {},
   layers: [
@@ -22,7 +39,7 @@ const style: StyleDefinition = {
     },
     {
       name: 'markers',
-      source: '_markers',
+      source: 'markers',
       type: 'point',
       color: 'rgb(220, 83, 83)',
       radius: 20,

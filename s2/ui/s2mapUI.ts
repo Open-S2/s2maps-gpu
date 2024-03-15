@@ -6,7 +6,7 @@ import Animator from './camera/animator'
 import type { GPUType, LayerStyle, StyleDefinition } from 'style/style.spec'
 import type { AnimationDirections, AnimationType } from './camera/animator'
 import type { UserTouchEvent } from './camera/dragPan'
-import type { TileWorkerMessage } from 'workers/worker.spec'
+import type { SourceFlushMessage, TileWorkerMessage } from 'workers/worker.spec'
 import type { ColorMode } from 's2Map'
 
 export interface MapOptions {
@@ -280,11 +280,23 @@ export default class S2MapUI extends Camera {
     })
   }
 
+  awaitFullyRendered (): void {
+    requestAnimationFrame(() => {
+      if (this.#fullyRenderedScreen()) {
+        if (this.webworker) {
+          postMessage({ type: 'rendered' })
+        } else {
+          this.parent?.dispatchEvent(new Event('rendered'))
+        }
+      } else { this.awaitFullyRendered() }
+    })
+  }
+
   #fullyRenderedScreen (): boolean {
     const tiles = this.getTiles()
     let fullyRendered = true
     for (const tile of tiles) {
-      if (!tile.rendered) {
+      if (tile.state === 'loading') {
         fullyRendered = false
         break
       }
@@ -294,7 +306,7 @@ export default class S2MapUI extends Camera {
 
   // some cases we can just do the work immediately, otherwise we do one job per frame
   // to improve performance. Data is stored in the injection queue while it waits for it's frame.
-  injectData (data: TileWorkerMessage): void {
+  injectData (data: TileWorkerMessage | SourceFlushMessage): void {
     if (data.type === 'flush') this._injectData(data)
     else this.injectionQueue.push(data)
     this.render()

@@ -200,6 +200,10 @@ export interface ScreenshotMessage {
   type: 'screenshot'
 }
 
+export interface AwaitRenderedMessage {
+  type: 'awaitRendered'
+}
+
 export interface ResetSourceMessage {
   type: 'resetSource'
   sourceNames: Array<[string, string | undefined]>
@@ -245,9 +249,9 @@ export type S2MapMessage =
   TouchendMessage | TouchmoveMessage | NavMessage | UpdateComassMessage |
   MouseupCompassMessage | ResetCompassMessage | ColorModeMessage |
   SetStyleMessage | UpdateStyleMessage | JumpToMessage | EaseToMessage | FlyToMessage |
-  MoveStateMessage | ZoomStateMessage | ScreenshotMessage | ResetSourceMessage |
-  ClearSourceMessage | AddLayerMessage | UpdateLayerMessage | RemoveLayerMessage |
-  ReorderLayersMessage | DeleteMessage
+  MoveStateMessage | ZoomStateMessage | ScreenshotMessage | AwaitRenderedMessage |
+  ResetSourceMessage | ClearSourceMessage | AddLayerMessage | UpdateLayerMessage |
+  RemoveLayerMessage | ReorderLayersMessage | DeleteMessage
 
 /** FRONT END TO SOURCE WORKER MESSAGES */
 
@@ -350,6 +354,10 @@ export interface ScreenshotMessageGL extends MapID {
   screen: ArrayBuffer
 }
 
+export interface RenderedMessageGL extends MapID {
+  type: 'rendered'
+}
+
 export interface ReadyMessageGL extends MapID {
   type: 'ready'
 }
@@ -359,7 +367,7 @@ export type MapGLMessage =
   MouseLeaveMessage | MouseClickMessage | PositionMessage |
   RequestStyleMessage | StyleMessage | UpdateCompassMessage |
   AddLayerMessageGL | RemoveLayerMessageGL | ReorderLayersMessageGL |
-  ScreenshotMessageGL | ReadyMessageGL
+  ScreenshotMessageGL | RenderedMessageGL | ReadyMessageGL
 
 export type MapGLToSourceMessage =
   RequestStyleMessage | StyleMessage | TileRequestMessage |
@@ -391,8 +399,15 @@ export interface SpriteImageMessage extends MapID {
   image: ArrayBuffer | ImageBitmap
 }
 
+export interface SourceFlushMessage extends MapID {
+  type: 'flush'
+  from: 'source'
+  tileID: bigint
+  layersToBeLoaded: Set<number>
+}
+
 export type SourceWorkerMessage =
-  AttributionsMessage | SourceSetStyleMessage
+  AttributionsMessage | SourceSetStyleMessage | SpriteImageMessage | SourceFlushMessage
 
 /** TILE WORKER MESSAGES **/
 
@@ -484,10 +499,12 @@ export interface InteractiveData extends WorkerMessageBase {
   interactiveDataBuffer: ArrayBuffer
 }
 
-export interface FlushData extends MapID {
+export interface TileFlushMessage extends MapID {
   type: 'flush'
+  from: 'tile'
   tileID: bigint
-  layers: Record<number, number>
+  sourceName: string
+  deadLayers: number[]
 }
 
 export interface TimeSourceData extends WorkerMessageBase {
@@ -502,7 +519,7 @@ export type PainterData =
 export type TileWorkerMessage =
   FillData | LineData | GlyphData | GlyphImageData | SpriteImageMessage |
   RasterData | HillshadeData | SensorData | PointData |
-  HeatmapData | InteractiveData | FlushData | TimeSourceData
+  HeatmapData | InteractiveData | TileFlushMessage | TimeSourceData
 
 /** TILE WORKER TO SOURCE WORKER MESSAGES */
 

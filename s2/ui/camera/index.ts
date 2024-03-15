@@ -16,7 +16,7 @@ import Animator from './animator'
 import { type StyleDefinition, type TimeSeriesStyle } from 'style/style.spec'
 
 import type S2Map from 's2Map'
-import type { FlushData, InteractiveObject, ReadyMessageGL, TileRequest, TileWorkerMessage } from 'workers/worker.spec'
+import type { InteractiveObject, ReadyMessageGL, SourceFlushMessage, TileFlushMessage, TileRequest, TileWorkerMessage } from 'workers/worker.spec'
 import type { Combine, TileShared as Tile } from 'source/tile.spec'
 
 export interface ResizeDimensions {
@@ -228,7 +228,8 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   _setMousePosition (posX: number, posY: number): void {
     this.mousePosition = [posX, posY]
     this.projector.setMousePosition(posX, posY)
-    this.painter.dirty = true
+    // NOTE: This is a bit of a hack. Sometimes mouse positions update before the painter is ready
+    if (this.painter !== undefined) this.painter.dirty = true
   }
 
   #onClick ({ detail }: ClickEvent): void {
@@ -358,7 +359,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     this.render()
   }
 
-  _injectData (data: TileWorkerMessage): void {
+  _injectData (data: TileWorkerMessage | SourceFlushMessage): void {
     const { type } = data
 
     if (type === 'interactive') this.#injectInteractiveData(data.tileID, data.interactiveGuideBuffer, data.interactiveDataBuffer)
@@ -379,7 +380,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     this.render()
   }
 
-  #injectFlush (data: FlushData): void {
+  #injectFlush (data: TileFlushMessage | SourceFlushMessage): void {
     const { tileID } = data
     const tile = this.tileCache.get(tileID)
     tile?.flush(data)

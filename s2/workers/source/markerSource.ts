@@ -1,9 +1,11 @@
 import { fromLonLat, toST } from 'geometry/s2/s2Point'
+import { toProjection } from 'geometry' // GeoJSON conversion and preprocessing
 
 import type { Session } from '.'
-import type { TileRequest } from '../worker.spec'
-import type { Point } from 'geometry'
+import type { SourceFlushMessage, TileRequest } from '../worker.spec'
+import type { JSONFeatures, Point } from 'geometry'
 import type { JSONVectorPointsFeature } from './jsonVT/tile'
+import type { LayerDefinition, SourceMetadata } from 'style/style.spec'
 
 export interface MarkerDefinition {
   id?: number
@@ -29,7 +31,7 @@ export interface Marker {
 export default class MarkerSource {
   name: string
   isTimeFormat = false
-  styleLayers: undefined
+  styleLayers: LayerDefinition[]
   idGen = 0
   0 = new Map<number, Marker>()
   1 = new Map<number, Marker>()
@@ -39,9 +41,30 @@ export default class MarkerSource {
   5 = new Map<number, Marker>()
   session: Session
   textEncoder: TextEncoder = new TextEncoder()
-  constructor (name: string, session: Session) {
+  constructor (name: string, session: Session, layers: LayerDefinition[]) {
     this.name = name
     this.session = session
+    this.styleLayers = layers
+  }
+
+  async build (mapID: string, metadata?: SourceMetadata): Promise<void> {
+    const json: JSONFeatures | undefined = metadata?.data
+    const markers: MarkerDefinition[] = []
+    if (json !== undefined) {
+      const geojson = toProjection(json, 'WM')
+      for (const feature of geojson.features) {
+        if (feature.type === 'Feature' && feature.geometry.type === 'Point') {
+          const marker: MarkerDefinition = {
+            id: feature.id,
+            lon: feature.geometry.coordinates[0],
+            lat: feature.geometry.coordinates[1],
+            properties: feature.properties
+          }
+          markers.push(marker)
+        }
+      }
+    }
+    this.addMarkers(markers)
   }
 
   addMarkers (markers: MarkerDefinition[]): void {
@@ -72,7 +95,8 @@ export default class MarkerSource {
     }
   }
 
-  tileRequest (mapID: string, tile: TileRequest): void {
+  tileRequest (mapID: string, tile: TileRequest, flushMessage: SourceFlushMessage): void {
+    const { name } = this
     const { face, zoom, bbox, i, j } = tile
     const tileZoom = 1 << zoom
     const features: JSONVectorPointsFeature[] = []
@@ -88,15 +112,34 @@ export default class MarkerSource {
     }
     // if markers fit within bounds, create a tile
     const length = features.length
-    // TODO: Flush instead of return
-    if (length === 0) return
+    // Flush and return
+    if (length === 0) { this._flush(mapID, tile); return }
     // build data object
     const data = { extent: 8_192, face, zoom, i, j, layers: { default: { extent: 8_192, features, length: features.length } } }
     // encode for transfer
     const uint8data = (this.textEncoder.encode(JSON.stringify(data))).buffer as ArrayBuffer
     // request a worker and post
     const worker = this.session.requestWorker()
-    worker.postMessage({ mapID, type: 'jsondata', tile, sourceName: '_markers', data: uint8data }, [uint8data])
+    worker.postMessage({ mapID, type: 'jsondata', tile, sourceName: name, data: uint8data }, [uint8data])
+    // let the source know we are loading a layer
+    this.#sourceFlush(flushMessage)
+  }
+
+  // If no data, we still have to let the tile worker know so it can prepare a proper flush
+  // as well as manage cases like "invert" type data.
+  _flush (mapID: string, tile: TileRequest): void {
+    const { textEncoder, session, name } = this
+    // compress
+    const data = textEncoder.encode('{"layers":{}}').buffer as ArrayBuffer
+    // send off
+    const worker = session.requestWorker()
+    worker.postMessage({ mapID, type: 'jsondata', tile, sourceName: name, data }, [data])
+  }
+
+  #sourceFlush (flushMessage: SourceFlushMessage): void {
+    const { name } = this
+    const layers = this.styleLayers.filter(layer => layer.source === name)
+    for (const { layerIndex } of layers) flushMessage.layersToBeLoaded.add(layerIndex)
   }
 }
 

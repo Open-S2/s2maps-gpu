@@ -271,7 +271,6 @@ export interface HillshadeFeature extends FeatureBase {
 
 export interface ShadeFeature extends FeatureBase {
   tile: Tile
-  layerIndex: number
   sourceName: string
   type: 'shade'
   maskLayer: boolean

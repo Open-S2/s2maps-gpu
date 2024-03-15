@@ -50,6 +50,11 @@ module.exports = {
           }
         ],
         exclude: /node_modules/
+      },
+      {
+        test: /\.worker.ts?$/,
+        // More information here https://webpack.js.org/guides/asset-modules/
+        type: 'asset/inline'
       }
     ]
   },
@@ -62,6 +67,7 @@ module.exports = {
     ]
   },
   optimization: {
+    minimize: true,
     minimizer: [new TerserPlugin({
       extractComments: false
     })]

@@ -22,7 +22,7 @@ import type {
   Source as StyleSource
 } from 'style/style.spec'
 import type { MarkerDefinition } from './source/markerSource'
-import type { GlyphMetadataMessage, SourceWorkerMessages, TileRequest } from './worker.spec'
+import type { GlyphMetadataMessage, SourceFlushMessage, SourceWorkerMessages, TileRequest } from './worker.spec'
 import type { GlyphMetadata, GlyphMetadataUnparsed } from './source/glyphSource'
 import type { ImageMetadata } from './source/imageSource'
 
@@ -48,7 +48,7 @@ import type { ImageMetadata } from './source/imageSource'
   * GeoJSON - a json file containing geo-spatial data
   * S2JSON - a json file modeled much like geojson
   * Glyph - either a font or icon file stored in a pbf structure
-  * Tile -> local build tile
+  * LocalSource -> local build tile information
   * default -> assumed the location has a metadata. json at root with a "s2cellid.ext" file structure
 
   SESSION TOKEN
@@ -239,8 +239,10 @@ export default class SourceWorker {
     } else if (fileType === 'json' || fileType === 's2json' || fileType === 'geojson') {
       if (metadata?.cluster ?? false) source = new ClusterSource(name, layers, path, needsToken, session)
       else source = new JSONSource(name, layers, path, needsToken, session)
-    } else if (input === 'tile') {
-      source = new LocalSource()
+    } else if (input === '_local') {
+      source = new LocalSource(name, session, layers)
+    } else if (input === '_markers') {
+      source = new MarkerSource(name, session, layers)
     } else source = new Source(name, layers, path, needsToken, session) // default -> folder structure
     // store & build
     this.sources[mapID][name] = source
@@ -285,26 +287,30 @@ export default class SourceWorker {
       const source = (this.sources[mapID] !== undefined) ? this.sources[mapID][sourceName] : undefined
       if (source !== undefined) {
         // steal the layer data and rebuild
-        this.#createSource(mapID, sourceName, href, source.styleLayers ?? [])
+        this.#createSource(mapID, sourceName, href, source.styleLayers)
       }
     }
     // build requests
     for (const tile of tiles) {
+      const flush: SourceFlushMessage = { type: 'flush', from: 'source', mapID, tileID: tile.id, layersToBeLoaded: new Set<number>() }
       for (const source of Object.values(this.sources[mapID])) {
         if (sourceNames.length > 0 && !sourceNames.includes(source.name)) continue
         if (source.isTimeFormat) continue
-        void source.tileRequest(mapID, { ...tile })
+        await source.tileRequest(mapID, { ...tile }, flush)
       }
+      postMessage(flush)
     }
   }
 
   async #requestTime (mapID: string, tiles: TileRequest[], sourceNames: string[]): Promise<void> {
     // build requests
     for (const tile of tiles) {
+      const flush: SourceFlushMessage = { type: 'flush', from: 'source', mapID, tileID: tile.id, layersToBeLoaded: new Set<number>() }
       for (const source of Object.values(this.sources[mapID])) {
         if (!source.isTimeFormat || !sourceNames.includes(source.name)) continue
-        void source.tileRequest(mapID, { ...tile })
+        await source.tileRequest(mapID, { ...tile }, flush)
       }
+      postMessage(flush)
     }
   }
 
@@ -334,8 +340,9 @@ export default class SourceWorker {
 
   #getMarkerSource (mapID: string, sourceName: string): MarkerSource {
     const sources = this.sources[mapID]
+    const layers = this.layers[mapID]
     if (sources === undefined) throw new Error(`Map ${mapID} does not exist`)
-    if (sources[sourceName] === undefined) sources[sourceName] = new MarkerSource(sourceName, this.session)
+    if (sources[sourceName] === undefined) sources[sourceName] = new MarkerSource(sourceName, this.session, layers)
     return sources[sourceName] as MarkerSource
   }
 

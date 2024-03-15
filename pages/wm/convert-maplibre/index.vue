@@ -9,6 +9,11 @@ const mapOptions = ref<MapOptions>()
 
 function ready (s2map: S2Map): void {
   console.info('ready', s2map)
+  // s2map.awaitFullyRendered().then(() => {
+  //   console.info('awaitFullyRendered worked!')
+  // }).catch((error) => {
+  //   console.error('awaitFullyRendered failed: ', error)
+  // })
 }
 
 onMounted(async () => {

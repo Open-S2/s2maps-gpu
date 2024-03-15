@@ -29,7 +29,7 @@ export type LayerMetaData = Record<string, { // layer
 
 export type Attributions = Record<string, string>
 export type FaceBounds = Record<number, Record<number, BBox>>
-export type SourceType = 'vector' | 'json' | 'raster' | 'raster-dem' | 'sensor' | 'overlay'
+export type SourceType = 'vector' | 'json' | 'raster' | 'raster-dem' | 'sensor' | 'overlay' | 'markers'
 export interface VectorLayer {
   id: string
   description: string
@@ -191,9 +191,22 @@ export interface NestedKey {
   key: string | NestedKey
 }
 
-export interface InputValue<T extends NotNullOrObject> extends NestedKey {
+export interface InputValue<T extends NotNullOrObject> {
   /** If the property search for a key turns up no value, the fallback is used. */
   fallback: T
+  /**
+   * Access value in feature properties by either its key or a nested key.
+   *
+   * If the key is `class` for example, this would be used to filter feature's values where `feature.properties.class === 'ocean'`
+   *
+   * nested conditions are used to dive into nested properties
+   * ex.
+   * ```json
+   * { "filter": { "nestedKey": "class", "key": { "key": "type", "comparator": "==", "value": "ocean" } } }
+   * ```
+   * this would be used to filter features where `feature.properties.class.type === 'ocean'`
+   */
+  key: string | NestedKey
 }
 
 export interface DataCondition<T extends NotNullOrObject> {
@@ -381,7 +394,17 @@ export interface Property<T extends NotNullOrObject> {
    * You can utilize/access the `type` property with the following:
    *
    * ```json
-   * { "color": { "inputValue": { "nestedKey": "class", "key": "type", "fallback": "blue" } } }
+   * {
+   *   "color": {
+   *      "inputValue": {
+   *         "key": {
+   *            "nestedKey": "class",
+   *            "key": "type"
+   *         },
+   *         "fallback": "blue"
+   *      }
+   *   }
+   * }
    * ```
    *
    * another ex. to get a better understanding of the `nestedKey`: (this is a contrived example)
@@ -400,7 +423,20 @@ export interface Property<T extends NotNullOrObject> {
    * You can utilize/access the `type` property with the following:
    *
    * ```json
-   * { "color": { "inputValue": { "nestedKey": "a", "key": { "nestedKey": "b", "key": "c" }, "fallback": "blue" } } }
+   * {
+   *   "color": {
+   *      "inputValue": {
+   *         "key": {
+   *            "nestedKey": "a",
+   *            "key": {
+   *               "nestedKey": "b",
+   *               "key": "c"
+   *            }
+   *         },
+   *         "fallback": "blue"
+   *       }
+   *    }
+   * }
    * ```
    */
   inputValue?: InputValue<ValueType<T>>

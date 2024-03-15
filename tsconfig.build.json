@@ -31,7 +31,6 @@
       "plugins/*": ["./plugins/*"],
       "source/*": ["./source/*"],
       "style/*": ["./style/*"],
-      "svg/*": ["./svg/*"],
       "ui/*": ["./ui/*"],
       "util/*": ["./util/*"],
       "workers/*": ["./workers/*"],

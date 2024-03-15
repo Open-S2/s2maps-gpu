@@ -330,6 +330,8 @@ export default class S2Map extends EventTarget {
       window.S2WorkerPool.reorderLayers(mapID, data.layerChanges)
     } else if (type === 'screenshot') {
       this.dispatchEvent(new CustomEvent('screenshot', { detail: data.screen }))
+    } else if (type === 'rendered') {
+      this.dispatchEvent(new Event('rendered'))
     } else if (type === 'ready') {
       this.ready()
     }
@@ -684,6 +686,18 @@ export default class S2Map extends EventTarget {
       this.addEventListener('screenshot', listener, { once: true })
       offscreen?.postMessage({ type: 'screenshot' })
       map?.screenshot()
+    })
+  }
+
+  async awaitFullyRendered (): Promise<void> {
+    const { offscreen, map } = this
+    await new Promise<void>(resolve => {
+      const listener = (): void => {
+        resolve()
+      }
+      this.addEventListener('rendered', listener, { once: true })
+      offscreen?.postMessage({ type: 'awaitRendered' })
+      map?.awaitFullyRendered()
     })
   }
 }

@@ -12,6 +12,9 @@ export * from './proj.spec'
 export * from './util'
 
 /** Given either S2 or Geo JSON data, convert to the proper projection of "WM" or "S2" */
+export function toProjection (data: JSONFeatures, projection: 'WM'): FeatureCollection
+export function toProjection (data: JSONFeatures, projection: 'S2'): S2FeatureCollection
+export function toProjection (data: JSONFeatures, projection: Projection): FeatureCollection | S2FeatureCollection
 export function toProjection (data: JSONFeatures, projection: Projection): FeatureCollection | S2FeatureCollection {
   if (projection === 'S2') {
     const res: S2FeatureCollection = {

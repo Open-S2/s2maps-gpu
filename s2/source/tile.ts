@@ -6,7 +6,7 @@ import { level, toIJ } from 'geometry/s2/s2CellID'
 
 import type Projector from 'ui/camera/projector'
 import type { BBox, Face, XYZ } from 'geometry'
-import type { FlushData, InteractiveObject } from 'workers/worker.spec'
+import type { InteractiveObject, SourceFlushMessage, TileFlushMessage } from 'workers/worker.spec'
 import type { LayerDefinition, Projection } from 'style/style.spec'
 import type {
   Corners,
@@ -44,13 +44,14 @@ implements TileSpec<C, F, M> {
   featureGuides: F[] = []
   context: C
   interactiveGuide = new Map<number, InteractiveObject>()
-  rendered = false
   uniforms = new Float32Array(7) // [isS2, face, zoom, sLow, tLow, deltaS, deltaT]
   bottomTop = new Float32Array(8)
   state: 'loading' | 'loaded' | 'deleted' = 'loading'
   type: 'S2' | 'WM' = 'S2'
   faceST!: FaceST
   matrix!: Float32Array
+  layersLoaded = new Set<number>()
+  layersToBeLoaded?: Set<number>
   constructor (context: C, id: bigint) {
     this.context = context
     this.id = id
@@ -119,23 +120,38 @@ implements TileSpec<C, F, M> {
   }
 
   addFeatures (features: F[]): void {
+    const { layersLoaded } = this
     // filter parent tiles that were added
-    const layerIndexes = new Set(features.map(f => f.layerIndex))
+    const layerIndexes = new Set<number>(features.map(f => f.layerGuide.layerIndex))
     this.featureGuides = this.featureGuides.filter(f => !(
       f.parent !== undefined &&
-      layerIndexes.has(f.layerIndex)
+      layerIndexes.has(f.layerGuide.layerIndex)
     ))
     // add features
     this.featureGuides.push(...features)
+    // clear from sourceCheck then check if all sources are loaded
+    for (const layerIndex of layerIndexes) layersLoaded.add(layerIndex)
+
+    this.#checkState()
   }
 
-  flush (data: FlushData): void {
-    const { layers } = data
+  flush (msg: SourceFlushMessage | TileFlushMessage): void {
+    if (msg.from === 'source') this.#sourceFlush({ ...msg })
+    else this.#tileFlush({ ...msg })
+    this.#checkState()
+  }
+
+  // the source let's us know what data to expect
+  #sourceFlush ({ layersToBeLoaded }: SourceFlushMessage): void {
+    this.layersToBeLoaded = layersToBeLoaded
+  }
+
+  #tileFlush (msg: TileFlushMessage): void {
+    const { layersLoaded } = this
+    const { deadLayers } = msg
     // otherwise remove "left over" feature guide data from parent injection
     // or old data that wont be replaced in the future
     // NOTE: Eventually the count will be used to know what features need to be tracked (before screenshots for instance)
-    const deadLayers: number[] = []
-    for (const [id, count] of Object.entries(layers)) if (count === 0) deadLayers.push(+id)
     this.featureGuides = this.featureGuides.filter(fg => {
       return !(
         deadLayers.includes(fg.layerGuide.layerIndex) &&
@@ -145,11 +161,20 @@ implements TileSpec<C, F, M> {
         !(fg.invert ?? false)
       )
     })
+    // remove dead layers from layersToBeLoaded
+    for (const deadLayer of deadLayers) layersLoaded.add(deadLayer)
+  }
+
+  #checkState (): void {
+    const { layersLoaded, layersToBeLoaded } = this
+    if (this.state === 'deleted' || layersToBeLoaded === undefined) return
+    // if all layers are loaded, set state to loaded
+    if (setBContainsA(layersToBeLoaded, layersLoaded)) this.state = 'loaded'
   }
 
   removeLayer (index: number): void {
     // remove any references to layerIndex
-    this.featureGuides = this.featureGuides.filter(f => f.layerIndex !== index)
+    this.featureGuides = this.featureGuides.filter(f => f.layerGuide.layerIndex !== index)
     // all layerIndexes greater than index should be decremented once
     for (const { layerGuide } of this.featureGuides) {
       if (layerGuide.layerIndex > index) layerGuide.layerIndex--
@@ -329,4 +354,9 @@ export class WMTile<C extends SharedContext, F extends SharedFeatureGuide, M ext
 
     super.setScreenPositions(projector)
   }
+}
+
+function setBContainsA (setA: Set<number>, set2: Set<number>): boolean {
+  for (const item of setA) if (!set2.has(item)) return false
+  return true
 }
