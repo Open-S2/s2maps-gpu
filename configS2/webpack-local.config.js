@@ -2,7 +2,6 @@ const webpack = require('webpack')
 const path = require('path')
 const { version } = require('../package.json')
 
-const CorsWorkerPlugin = require('../config/cors-worker-plugin')
 const TerserPlugin = require('terser-webpack-plugin')
 const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin')
 
@@ -17,6 +16,7 @@ module.exports = {
   output: {
     path: path.join(__dirname, '../buildS2-local'),
     publicPath: `http://localhost:3000/s2maps-gpu/v${version}-local/`,
+    workerPublicPath: `http://localhost:3000/s2maps-gpu/v${version}-local/`,
     filename: '[name].min.js',
     // this defaults to 'window', but by setting it to 'this' then
     // module chunks which are built will work in web workers as well.
@@ -69,7 +69,6 @@ module.exports = {
       'process.env.NEXT_PUBLIC_API_URL': '\'http://192.168.0.113:8789/v1\''
     }),
     new webpack.BannerPlugin(`s2maps-gpu is Copyright © ${(new Date()).getFullYear()} Open S2 and subject to the S2 Maps Terms of Service (https://www.opens2.com/tos/).`),
-    new webpack.ProgressPlugin(),
-    new CorsWorkerPlugin()
+    new webpack.ProgressPlugin()
   ]
 }

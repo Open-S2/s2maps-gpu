@@ -4,7 +4,6 @@ const path = require('path')
 const CompressionPlugin = require('compression-webpack-plugin')
 const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin')
 const TerserPlugin = require('terser-webpack-plugin')
-const CorsWorkerPlugin = require('../config/cors-worker-plugin')
 
 // This is the production and development configuration.
 // It is focused on developer experience, fast rebuilds, and a minimal bundle.
@@ -89,7 +88,6 @@ module.exports = {
     new webpack.EnvironmentPlugin(['CORS', 'NEXT_PUBLIC_API_URL']),
     new webpack.BannerPlugin(`s2maps-gpu is Copyright © ${(new Date()).getFullYear()} Open S2 and subject to the Open S2 Terms of Service (https://www.opens2.com/tos/).`),
     new webpack.ProgressPlugin(),
-    new CorsWorkerPlugin(),
     new CompressionPlugin({
       filename: '[path][name].js.gz',
       algorithm: 'gzip',

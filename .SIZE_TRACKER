@@ -9,11 +9,21 @@
 // tile-worker.min.js            54.62 kB      18.77 kB     16.79 kB
 // all major packages            170.63 kB     59.59 kB     53.24 kB
 
+
 // SEPTEMBER 2023:
 // map-worker.min.js             6.47 kB       2.53 kB      2.29 kB
 // s2maps-gpu.min.js             20.54 kB      6.5 kB       5.7 kB
 // source-worker.min.js          30.71 kB      10.8 kB      9.68 kB
 // tile-worker.min.js            34.98 kB      13.15 kB     11.78 kB
+
+
+// March 2024:
+// s2maps-gpu.min.css            20.73 kB      5.77 kB      5.1 kB
+// map-worker.min.js             5.05 kB       1.72 kB      1.6 kB
+// s2maps-gpu.min.js             18.22 kB      5.78 kB      5.07 kB
+// source-worker.min.js          16.19 kB      4.97 kB      4.51 kB
+// tile-worker.min.js            5.89 kB       2.45 kB      2.27 kB
+
 
 // Helpful tools:
 // # integrity

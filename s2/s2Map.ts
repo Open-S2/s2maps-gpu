@@ -1,4 +1,3 @@
-import { CorsWorker as Worker } from './util/corsWorker'
 import { isSafari } from './util/polyfill'
 
 import type S2MapUI from './ui/s2mapUI'

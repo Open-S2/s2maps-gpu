@@ -6,7 +6,6 @@ const { WebpackStatsViewerPlugin } = require('webpack-stats-viewer-plugin')
 const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin')
 const CompressionPlugin = require('compression-webpack-plugin')
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin
-const CorsWorkerPlugin = require('../config/cors-worker-plugin')
 const TerserPlugin = require('terser-webpack-plugin')
 
 // This is the production and development configuration.
@@ -21,6 +20,7 @@ module.exports = {
     path: path.join(__dirname, '../buildS2'),
     // publicPath: 'http://192.168.0.189:3000/',
     publicPath: `https://opens2.com/s2maps-gpu/v${version}/`,
+    workerPublicPath: `https://opens2.com/s2maps-gpu/v${version}/`,
     filename: '[name].min.js',
     // this defaults to 'window', but by setting it to 'this' then
     // module chunks which are built will work in web workers as well.
@@ -76,7 +76,6 @@ module.exports = {
     new webpack.EnvironmentPlugin(['CORS', 'NEXT_PUBLIC_API_URL']),
     new webpack.BannerPlugin(`s2maps-gpu is Copyright © ${(new Date()).getFullYear()} Open S2 and subject to the Open S2 Terms of Service (https://www.opens2.com/tos/).`),
     new webpack.ProgressPlugin(),
-    new CorsWorkerPlugin(),
     new CompressionPlugin({
       filename: '[path][name].js.gz',
       algorithm: 'gzip',
