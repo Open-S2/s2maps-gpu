@@ -268,7 +268,7 @@ export default class Painter implements PainterSpec {
       // adjust tile uniforms
       program.setTileUniforms(parent ?? tile)
       // draw (just ignore types... they are handled in the program)
-      program.draw(feature as never, interactive) // TODO: We could wisen this up
+      program.draw(feature as never, interactive)
     }
   }
 

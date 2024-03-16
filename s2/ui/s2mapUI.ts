@@ -168,6 +168,7 @@ export default class S2MapUI extends Camera {
   }
 
   addLayer (layer: LayerStyle, nameIndex: number | string): void {
+    // TODO
     // // remove all tiles outside of view
     // const tileRequests = this._resetTileCache([], false, true)
     // // style needs to be updated on the change
@@ -177,6 +178,7 @@ export default class S2MapUI extends Camera {
   }
 
   removeLayer (nameIndex: number | string): void {
+    // TODO
     // // style needs to be updated on the change
     // const index = Style.removeLayer(nameIndex)
     // // remove all instances of the layer in each tile
@@ -186,6 +188,7 @@ export default class S2MapUI extends Camera {
   }
 
   reorderLayers (layerChanges: Record<number, number>): void {
+    // TODO
     // // style needs to updated on the change
     // this.style.reorderLayers(layerChanges)
     // // update every tile

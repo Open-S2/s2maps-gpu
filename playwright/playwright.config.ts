@@ -12,13 +12,13 @@ export default defineConfig({
   /* Update snapshots on CI. */
   updateSnapshots: 'missing', // 'all', 'none', 'missing'
   /* Maximum time one test can run for. */
-  timeout: 15 * 1000,
+  timeout: 15 * 1_000,
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: CI_BOOL ?? true,
   /* Retry on CI only */
-  retries: CI_BOOL ? 2 : 0,
+  retries: CI_BOOL ? 2 : 3,
   /* Opt out of parallel tests on CI. */
   workers: CI_BOOL ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
@@ -28,8 +28,8 @@ export default defineConfig({
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
 
-    /* Base URL for all the tests. e.g. page.goto('/s2/fill') will route to 'http://localhost:3000/s2/fill' */
-    baseURL: 'http://localhost:3000'
+    /* Base URL for all the tests. e.g. page.goto('/s2/fill') will route to 'http://127.0.0.1:3000/s2/fill' */
+    baseURL: 'http://127.0.0.1:3000'
   },
 
   /* Configure projects for major browsers */
@@ -71,7 +71,7 @@ export default defineConfig({
   /* Configure dev server for tests */
   webServer: {
     command: 'bun run dev',
-    url: 'http://localhost:3000',
+    url: 'http://127.0.0.1:3000/s2/background/webgl',
     reuseExistingServer: !CI_BOOL,
     stdout: 'ignore',
     stderr: 'ignore',

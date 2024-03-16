@@ -198,9 +198,9 @@ export default class WebGPUContext {
     }
   }
 
-  async getFeatureAtMousePosition (_x: number, _y: number): Promise<undefined | number> {
+  async getFeatureAtMousePosition (_x: number, _y: number): Promise<number[]> {
     const { device } = this
-    let result: undefined | number
+    let result: number[] = []
     // if we are already finding a feature, return undefined
     if (this.findingFeature) return result
 
@@ -217,10 +217,11 @@ export default class WebGPUContext {
     const arrayBuffer = this.#interactiveReadBuffer.getMappedRange()
     const data = new Uint32Array(arrayBuffer)
     // grab the index
-    const index = data[0]
-    // TODO: in the future we can return all the results; for now the first one
-    // if the index is 0, we didn't hit anything
-    if (index !== 0) result = data[index]
+    const size = data[0]
+    // if the size is 0, we didn't hit anything; otherwise build array filtering out dublicates
+    if (size !== 0) result = Array.from(data.slice(1, size + 1))
+    // filter out duplicates
+    result = [...new Set(result)]
 
     // unmap before we return the result
     this.#interactiveReadBuffer.unmap()

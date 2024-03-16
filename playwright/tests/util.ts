@@ -1,11 +1,17 @@
 import type { S2Map } from 's2'
 
-export async function waitMap (): Promise<void> {
+export async function waitMap (): Promise<boolean> {
   const s2Map: S2Map = window.testMap
-  await new Promise<void>((resolve) => {
-    s2Map.addEventListener('ready', async (): Promise<void> => {
-      await s2Map.awaitFullyRendered()
-      resolve()
+  let failed = false
+  if (s2Map.isReady) return true
+  return await new Promise<boolean>((resolve) => {
+    s2Map.addEventListener('ready', (): void => {
+      // wait for the map to be fully rendered
+      s2Map.awaitFullyRendered()
+        .then(() => { resolve(!failed) })
+        .catch(() => { resolve(false) })
     }, { once: true })
+    // set a timeout to catch failed renders
+    setTimeout(() => { failed = true; resolve(false) }, 5_000)
   })
 }

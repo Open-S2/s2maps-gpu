@@ -240,18 +240,20 @@ export default class Context implements ContextSpec {
     gl.renderbufferStorage(gl.RENDERBUFFER, gl.STENCIL_INDEX8, width, height)
   }
 
-  async getFeatureAtMousePosition (x: number, y: number): Promise<undefined | number> {
+  async getFeatureAtMousePosition (x: number, y: number): Promise<number[]> {
     const { gl, interactFramebuffer, featurePoint } = this
+    const res: number[] = []
     // bind the feature framebuffer
     gl.bindFramebuffer(gl.FRAMEBUFFER, interactFramebuffer)
     // grab the data
     gl.readPixels(x, gl.canvas.height - y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, featurePoint)
 
-    if (featurePoint[3] !== 255) return
+    if (featurePoint[3] !== 255) return res
     // create the actual feature id
     const featureID = featurePoint[0] + (featurePoint[1] << 8) + (featurePoint[2] << 16)
     // return if we found something
-    if (featureID > 0) return featureID
+    if (featureID > 0) res.push(featureID)
+    return res
   }
 
   delete (): void {

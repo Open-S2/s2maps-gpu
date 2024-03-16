@@ -3,7 +3,7 @@ precision highp float;
 
 layout (location = 0) in vec2 aExtent; // the quad
 layout (location = 1) in vec2 aPos; // STPoint positional data
-layout (location = 2) in vec3 aID;
+layout (location = 2) in vec4 aID;
 
 out vec2 extent;
 out float antialiasFactor;
@@ -39,7 +39,7 @@ void main () {
     stroke *= opacity;
   } else {
     opacity = 1.;
-    color = vec4(aID, 1.);
+    color = vec4(aID.rgb, 1.);
     stroke = color;
   }
 

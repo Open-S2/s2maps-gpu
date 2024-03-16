@@ -2,7 +2,7 @@ precision highp float;
 
 attribute vec2 aExtent; // the quad
 attribute vec2 aPos; // STPoint positional data
-attribute vec3 aID;
+attribute vec4 aID;
 
 varying vec2 extent;
 varying float antialiasFactor;
@@ -46,7 +46,7 @@ void main () {
     }
   } else {
     opacity = 1.;
-    color = vec4(aID, 1.);
+    color = vec4(aID.rgb, 1.);
   }
 
   // get position

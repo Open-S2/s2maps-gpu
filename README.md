@@ -33,6 +33,12 @@ You can learn more about the S2 Map Engine on [our website](https://opens2.com/s
 - [Examples](https://opens2.com/docs/maps/examples)
 - [Getting Started](https://opens2.com/docs/maps/getting-started)
 
+## Stability
+
+S2 Maps GPU is currently in **alpha**. We are actively working on it and would love to hear your feedback. We are very close to achieving beta. You can track our progress to beta on [our roadmap](https://github.com/Open-S2/s2maps-gpu/issues/2)
+
+Although it's still a young product, we are using [playwright](https://playwright.dev/) to ensure features that do exist work as intended across all major browsers. Feel free to [open an issue](https://github.com/Open-S2/s2maps-gpu/issues/new) if you find a bug or have a feature request.
+
 ---
 
 <div align="center">

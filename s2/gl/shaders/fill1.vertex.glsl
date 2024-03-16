@@ -1,7 +1,7 @@
 precision highp float;
 
 attribute vec2 aPos;
-attribute vec3 aID;
+attribute vec4 aID;
 attribute float aIndex;
 
 uniform vec4 uColors[16];
@@ -32,7 +32,8 @@ void main () {
   int index = int(aIndex);
   // decode color
   if (uInteractive) {
-    color = vec4(aID, 1.);
+    color = vec4(aID.rgb, 1.);
+    alpha = 1.;
   } else {
     color = uColors[index];
     color.rgb *= color.a;

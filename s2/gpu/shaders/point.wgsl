@@ -200,8 +200,8 @@ fn interactive(@builtin(global_invocation_id) global_id: vec3<u32>) {
   // grab radius
   var index = 0;
   var featureIndex = 0;
-  let radius = decodeFeature(false, &index, &featureIndex)[0] * view.devicePixelRatio;
-  let strokeWidth = decodeFeature(false, &index, &featureIndex)[0] * view.devicePixelRatio;
+  let radius = decodeFeature(false, &index, &featureIndex)[0];
+  let strokeWidth = decodeFeature(false, &index, &featureIndex)[0];
   // convert to screen space for x and y
   let aspect = vec2<f32>(view.aspectX, view.aspectY);
   let posScreen = (pos.xy + 1.) / 2. * aspect;

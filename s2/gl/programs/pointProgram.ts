@@ -65,7 +65,7 @@ export default async function pointProgram (context: Context): Promise<PointProg
       // bind buffers to the vertex array object
       // Create the feature index buffer
       const vertexBuffer = context.bindEnableVertexAttr(vertexA, 1, 2, gl.FLOAT, false, 8, 0, true)
-      const idBuffer = context.bindEnableVertexAttr(idA, 2, 3, gl.UNSIGNED_BYTE, true, 0, 0, true)
+      const idBuffer = context.bindEnableVertexAttr(idA, 2, 4, gl.UNSIGNED_BYTE, true, 0, 0, true)
 
       // bind the extentBuffer
       this.#bindExtentBuffer()

@@ -291,17 +291,23 @@ export interface TimeRequestMessage extends MapID {
 
 export interface MouseEnterMessage extends MapID {
   type: 'mouseenter'
-  feature: InteractiveObject
+  /** The features that the mouse just "entered" into */
+  features: InteractiveObject[]
+  /** All features including features "entered" in previous frames */
+  currentFeatures: InteractiveObject[]
 }
 
 export interface MouseLeaveMessage extends MapID {
   type: 'mouseleave'
-  feature?: InteractiveObject
+  /** The features that the mouse just "left" */
+  features: InteractiveObject[]
+  /** All features including features "left" in previous frames */
+  currentFeatures: InteractiveObject[]
 }
 
 export interface MouseClickMessage extends MapID {
   type: 'click'
-  feature: InteractiveObject
+  features: InteractiveObject[]
   lon: number
   lat: number
 }

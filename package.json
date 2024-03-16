@@ -35,6 +35,7 @@
     "build:types": "tsc --project tsconfig.build.json --emitDeclarationOnly --declaration --declarationDir dist-types",
     "tsc:version": "tsc --version",
     "dev": "nuxt dev --host",
+    "dev:playwright": "nuxt dev --host --no-watch --no-lint --no-progress --disable-telemetry --no-source-map --quiet",
     "lint:S2": "eslint s2 --ext .ts",
     "test:S2": "bun test",
     "test:S2:watch": "bun test --watch",

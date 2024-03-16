@@ -32,7 +32,8 @@ void main () {
   int featureIndex = int(aIndex);
   // decode color
   if (uInteractive) {
-    color = aID;
+    color = vec4(aID.rgb, 1.);
+    alpha = 1.;
   } else {
     color = decodeFeature(true, index, featureIndex);
     color.rgb *= color.a;

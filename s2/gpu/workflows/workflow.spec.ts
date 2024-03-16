@@ -340,6 +340,7 @@ export interface FillWorkflow extends Workflow {
   buildSource: (fillData: FillData, tile: Tile) => void
   buildMaskFeature: (maskLayer: FillDefinition, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: FillStyle) => FillDefinition
+  computeInteractive: (feature: FillFeature) => void
 }
 
 export interface GlyphWorkflow extends Workflow {

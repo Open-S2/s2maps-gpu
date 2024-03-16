@@ -16,7 +16,7 @@ import Animator from './animator'
 import { type StyleDefinition, type TimeSeriesStyle } from 'style/style.spec'
 
 import type S2Map from 's2Map'
-import type { InteractiveObject, ReadyMessageGL, SourceFlushMessage, TileFlushMessage, TileRequest, TileWorkerMessage } from 'workers/worker.spec'
+import type { InteractiveObject, MouseClickMessage, MouseEnterMessage, MouseLeaveMessage, PositionMessage, ReadyMessageGL, SourceFlushMessage, TileFlushMessage, TileRequest, TileWorkerMessage } from 'workers/worker.spec'
 import type { Combine, TileShared as Tile } from 'source/tile.spec'
 
 export interface ResizeDimensions {
@@ -50,7 +50,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   mousePosition: [number, number] = [0, 0]
   currAnimFunction?: (now: number) => void
   resizeQueued?: ResizeDimensions
-  currFeature: null | InteractiveObject = null
+  currFeatures = new Map<number, InteractiveObject>()
   constructor (options: MapOptions, canvas: HTMLCanvasElement, id: string, parent?: S2Map) {
     this.#canvas = canvas
     // setup options
@@ -233,17 +233,18 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   }
 
   #onClick ({ detail }: ClickEvent): void {
-    const { projector, currFeature, parent } = this
+    const { id: mapID, projector, currFeatures, parent } = this
     // get lon lat of cursor
     const { posX, posY } = detail
     const lonLat = projector.cursorToLonLat(posX, posY)
     if (lonLat === undefined) return
     const [lon, lat] = lonLat
     // send off the information
+    const msg: MouseClickMessage = { type: 'click', mapID, features: [...currFeatures.values()], lon, lat }
     if (this.webworker) {
-      postMessage({ type: 'click', feature: currFeature, lon, lat })
+      postMessage(msg)
     } else {
-      parent?.dispatchEvent(new CustomEvent('click', { detail: { feature: currFeature, lon, lat } }))
+      parent?.dispatchEvent(new CustomEvent('click', { detail: msg }))
     }
   }
 
@@ -268,59 +269,74 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   }
 
   _onPositionUpdate (): void {
-    const { projector } = this
+    const { id: mapID, projector } = this
     const { zoom, lon, lat } = projector
-    if (this.webworker) postMessage({ type: 'pos', zoom, lon, lat })
-    else this.parent?.dispatchEvent(new CustomEvent('pos', { detail: { zoom, lon, lat } }))
+    const msg: PositionMessage = { type: 'pos', mapID, zoom, lon, lat }
+    if (this.webworker) postMessage(msg)
+    else this.parent?.dispatchEvent(new CustomEvent('pos', { detail: msg }))
   }
 
   async _onCanvasMouseMove (): Promise<void> {
-    const { style, mousePosition, currFeature } = this
+    const { style, mousePosition } = this
     if (!style.interactive) return
-    const featureID = await this.painter.context.getFeatureAtMousePosition(...mousePosition)
+    const foundObjects = new Map<number, InteractiveObject>()
+    const featureIDs = await this.painter.context.getFeatureAtMousePosition(...mousePosition)
     // if we found an ID and said feature is not the same as the current, we dive down
-    // @ts-expect-error isNaN can check for properties that are not numbers
-    if (isNaN(featureID) && currFeature !== null) {
-      this.#handleFeatureChange(null)
-    } else if (
-      typeof featureID === 'number' &&
-      (currFeature === null || currFeature.__id !== featureID)
-    ) {
-      let found = false
-      for (const tile of this.tilesInView) {
+    for (const featureID of featureIDs) {
+      // first check if we already have the feature
+      const hasFeature = this.currFeatures.get(featureID)
+      if (hasFeature !== undefined) {
+        foundObjects.set(featureID, hasFeature)
+        continue
+      }
+      // otherwise, we check the tiles in our store
+      for (const tile of this.tileCache.getAll()) {
         const feature = tile.getInteractiveFeature(featureID)
         if (feature !== undefined) {
-          this.#handleFeatureChange(feature)
-          found = true
+          foundObjects.set(featureID, feature)
           break
         }
       }
-      if (!found && currFeature !== undefined) this.#handleFeatureChange(null)
     }
+    this.#handleFeatureChange(foundObjects)
   }
 
-  #handleFeatureChange (newFeature: null | InteractiveObject): void {
-    const oldFeature = this.currFeature
+  #handleFeatureChange (foundFeatures: Map<number, InteractiveObject>): void {
+    const previousFrameFeatures = this.currFeatures
     // ensure currFeature is up-to-date
-    this.currFeature = newFeature
-    // handle old feature
-    if (this.webworker) {
-      postMessage({ type: 'mouseleave', feature: oldFeature })
-    } else {
-      if (oldFeature !== null) this.parent?.dispatchEvent(new CustomEvent('mouseleave', { detail: oldFeature }))
-      this.#canvas.style.cursor = 'default'
+    this.currFeatures = foundFeatures
+    const currentFeatures = [...foundFeatures.values()]
+
+    // find all the new features found this frame compared to the previous frame
+    const newFeatures: InteractiveObject[] = []
+    for (const [id, feature] of foundFeatures) {
+      if (!previousFrameFeatures.has(id)) newFeatures.push(feature)
     }
-    // handle new feature
-    if (newFeature !== null) {
-      if (this.webworker) {
-        postMessage({ type: 'mouseenter', feature: newFeature })
-      } else {
-        this.parent?.dispatchEvent(new CustomEvent('mouseenter', { detail: newFeature }))
-        this.#canvas.style.cursor = newFeature?.__cursor ?? 'default'
-      }
+    this.#submitFeatureChanges('mouseenter', newFeatures, currentFeatures)
+    // find all the old features found in the previous frame compared to the current frame
+    const oldFeatures: InteractiveObject[] = []
+    for (const [id, feature] of previousFrameFeatures) {
+      if (!foundFeatures.has(id)) oldFeatures.push(feature)
     }
+    this.#submitFeatureChanges('mouseleave', oldFeatures, currentFeatures)
+
     // due to a potential change in feature draw properties (change in color/size/etc.) we draw again
     this.render()
+  }
+
+  #submitFeatureChanges (
+    type: 'mouseenter' | 'mouseleave',
+    features: InteractiveObject[],
+    currentFeatures: InteractiveObject[]
+  ): void {
+    if (features.length === 0) return
+    const { id: mapID, webworker, parent } = this
+    const msg: MouseEnterMessage | MouseLeaveMessage = { type, mapID, features, currentFeatures }
+    if (webworker) {
+      postMessage(msg)
+    } else {
+      parent?.dispatchEvent(new CustomEvent(type, { detail: msg }))
+    }
   }
 
   #onMovement (): void {

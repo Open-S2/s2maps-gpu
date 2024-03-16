@@ -67,7 +67,7 @@ export default function encodeLayerAttribute<T extends NotNullOrObject> (
     } else if ('inputCondition' in input && input.inputCondition !== undefined) {
       // set the condition bits as input-condition
       encodings[0] += (3 << 4)
-      // TODO: encode the condition type
+      // TODO: encode the condition type correctly
     } else if ('dataRange' in input && input.dataRange !== undefined) {
       const { dataRange } = input
       const { base, ease } = dataRange
@@ -97,7 +97,7 @@ export default function encodeLayerAttribute<T extends NotNullOrObject> (
         encodings.push(base ?? 1)
       }
       // encode range data and store
-      encodings.push(...encodeRange<T>(input.inputRange, lch))
+      encodings.push(...encodeRange<T>(inputRange, lch))
     } else if ('featureState' in input && input.featureState !== undefined) {
       // set the condition bits as feature-state
       encodings[0] += (6 << 4)

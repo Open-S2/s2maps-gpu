@@ -297,11 +297,11 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     this.glyphPipelineLayout = device.createPipelineLayout({
       bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.glyphBindGroupLayout]
     })
-    this.pipeline = this.#getPipeline()
-    this.testRenderPipeline = this.#getPipeline(true)
-    this.bboxPipeline = this.#getComputePipeline('boxes')
-    this.testBBoxPipeline = this.#getComputePipeline('test')
-    this.interactivePipeline = this.#getComputePipeline('interactive')
+    this.pipeline = await this.#getPipeline()
+    this.testRenderPipeline = await this.#getPipeline(true)
+    this.bboxPipeline = await this.#getComputePipeline('boxes')
+    this.testBBoxPipeline = await this.#getComputePipeline('test')
+    this.interactivePipeline = await this.#getComputePipeline('interactive')
   }
 
   destroy (): void {
@@ -465,7 +465,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
   // https://programmer.ink/think/several-best-practices-of-webgpu.html
   // BEST PRACTICE 6: it is recommended to create pipeline asynchronously (we don't want to because we WANT to block the main thread)
   // BEST PRACTICE 7: explicitly define pipeline layouts
-  #getPipeline (isTest = false): GPURenderPipeline {
+  async #getPipeline (isTest = false): Promise<GPURenderPipeline> {
     const { context, module } = this
     const { device, format, defaultBlend, sampleCount } = context
 
@@ -476,7 +476,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
       passOp: 'replace'
     }
 
-    return device.createRenderPipeline({
+    return await device.createRenderPipelineAsync({
       label: `Glyph Pipeline ${isTest ? 'Test' : 'Main'}`,
       layout: this.glyphPipelineLayout,
       vertex: {
@@ -506,10 +506,10 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     })
   }
 
-  #getComputePipeline (entryPoint: 'boxes' | 'test' | 'interactive'): GPUComputePipeline {
+  async #getComputePipeline (entryPoint: 'boxes' | 'test' | 'interactive'): Promise<GPUComputePipeline> {
     const { context, module } = this
 
-    return context.device.createComputePipeline({
+    return await context.device.createComputePipelineAsync({
       label: `Glyph Filter ${entryPoint} Compute Pipeline`,
       layout: entryPoint === 'interactive' ? this.glyphInteractivePiplineLayout : this.glyphFilterPipelineLayout,
       compute: { module, entryPoint }

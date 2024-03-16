@@ -78,6 +78,10 @@ export class FillFeature implements FillFeatureSpec {
     else workflow.draw(this)
   }
 
+  compute (): void {
+    this.workflow.computeInteractive(this)
+  }
+
   updateSharedTexture (): void {
     const { context } = this.workflow
     this.fillPatternBindGroup = context.createPatternBindGroup(this.fillTexturePositions)
@@ -415,13 +419,13 @@ export default class FillWorkflow implements FillWorkflowSpec {
   }
 
   computeInteractive ({ layerGuide, bindGroup, fillInteractiveBindGroup, count }: FillFeatureSpec): void {
-    if (!layerGuide.visible) return
+    if (!layerGuide.visible || fillInteractiveBindGroup === undefined) return
     const { computePass, interactiveBindGroup } = this.context
     this.context.setComputePipeline(this.interactivePipeline)
     // set bind group & draw
     computePass.setBindGroup(1, bindGroup)
-    computePass.setBindGroup(2, interactiveBindGroup)
-    if (fillInteractiveBindGroup !== undefined) computePass.setBindGroup(3, fillInteractiveBindGroup)
+    computePass.setBindGroup(2, fillInteractiveBindGroup)
+    computePass.setBindGroup(3, interactiveBindGroup)
     computePass.dispatchWorkgroups(Math.ceil(count / 3 / 64))
   }
 }

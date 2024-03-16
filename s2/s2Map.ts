@@ -44,6 +44,7 @@ export default class S2Map extends EventTarget {
   offscreen?: Worker
   id: string = Math.random().toString(36).replace('0.', '')
   isNative = false
+  isReady = false
   constructor (
     options: MapOptions = {
       canvasMultiplier: window.devicePixelRatio ?? 2,
@@ -74,7 +75,19 @@ export default class S2Map extends EventTarget {
     void this.#setupCanvas(this.#canvas, options)
   }
 
+  addEventListener (type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void {
+    const { isReady } = this
+    // Call the original addEventListener method
+    super.addEventListener(type, listener, options)
+    // there are cases where the map loads so quickly that the ready event is missed
+    // before the listener is added, so we need to check if the map was already ready
+    if (type === 'ready' && isReady) {
+      this.dispatchEvent(new CustomEvent('ready', { detail: this }))
+    }
+  }
+
   ready (): void {
+    this.isReady = true
     this.#onCanvasReady()
     this.dispatchEvent(new CustomEvent('ready', { detail: this }))
   }
@@ -302,16 +315,18 @@ export default class S2Map extends EventTarget {
     } else if (type === 'timerequest') {
       window.S2WorkerPool.timeRequest(mapID, data.tiles, data.sourceNames)
     } else if (type === 'mouseenter') {
-      const { feature } = data
-      this.#canvas.style.cursor = feature.__cursor
-      this.dispatchEvent(new CustomEvent('mouseenter', { detail: feature }))
+      // console.log('mouseenter', data)
+      const { features } = data
+      this.#canvas.style.cursor = features[0].__cursor
+      this.dispatchEvent(new CustomEvent('mouseenter', { detail: data }))
     } else if (type === 'mouseleave') {
-      const { feature } = data
-      this.#canvas.style.cursor = 'default'
-      this.dispatchEvent(new CustomEvent('mouseleave', { detail: feature }))
+      // console.log('mouseleave', data)
+      const { currentFeatures } = data
+      if (currentFeatures.length === 0) this.#canvas.style.cursor = 'default'
+      this.dispatchEvent(new CustomEvent('mouseleave', { detail: data }))
     } else if (type === 'click') {
-      const { feature, lon, lat } = data
-      this.dispatchEvent(new CustomEvent('click', { detail: { feature, lon, lat } }))
+      // console.log('click', data)
+      this.dispatchEvent(new CustomEvent('click', { detail: data }))
     } else if (type === 'pos') {
       const { zoom, lon, lat } = data
       this.dispatchEvent(new CustomEvent('pos', { detail: { zoom, lon, lat } }))
@@ -691,10 +706,7 @@ export default class S2Map extends EventTarget {
   async awaitFullyRendered (): Promise<void> {
     const { offscreen, map } = this
     await new Promise<void>(resolve => {
-      const listener = (): void => {
-        resolve()
-      }
-      this.addEventListener('rendered', listener, { once: true })
+      this.addEventListener('rendered', (): void => { resolve() }, { once: true })
       offscreen?.postMessage({ type: 'awaitRendered' })
       map?.awaitFullyRendered()
     })
