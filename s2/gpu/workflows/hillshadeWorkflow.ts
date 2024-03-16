@@ -187,13 +187,10 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
 
   buildSource (hillshadeData: HillshadeData, tile: Tile): void {
     const { context } = this
-    const { image, built, size } = hillshadeData
+    const { image, size } = hillshadeData
     const { mask } = tile
 
-    const texture = context.buildTexture(
-      built ? image as ImageBitmap : new Uint8ClampedArray(image as ArrayBuffer),
-      size
-    )
+    const texture = context.buildTexture(image, size)
     // prep buffers
     const source: RasterSource = {
       type: 'raster' as const,

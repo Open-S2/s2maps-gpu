@@ -296,6 +296,7 @@ export default class S2MapUI extends Camera {
   }
 
   #fullyRenderedScreen (): boolean {
+    // check tiles
     const tiles = this.getTiles()
     let fullyRendered = true
     for (const tile of tiles) {
@@ -304,6 +305,9 @@ export default class S2MapUI extends Camera {
         break
       }
     }
+    // if the painter has a skybox, check it
+    fullyRendered = this.painter.workflows.skybox?.ready ?? fullyRendered
+
     return fullyRendered
   }
 

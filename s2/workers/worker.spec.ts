@@ -396,13 +396,12 @@ export interface SourceSetStyleMessage extends MapID {
 export interface SpriteImageMessage extends MapID {
   type: 'spriteimage'
   name: string
-  built: boolean
   offsetX: number
   offsetY: number
   width: number
   height: number
   maxHeight: number
-  image: ArrayBuffer | ImageBitmap
+  image: ImageBitmap
 }
 
 export interface SourceFlushMessage extends MapID {
@@ -461,24 +460,21 @@ export interface RasterDataGuide {
 
 export interface RasterData extends WorkerMessageBase {
   type: 'raster'
-  image: ArrayBuffer | ImageBitmap
-  built: boolean
+  image: ImageBitmap
   size: number
   featureGuides: RasterDataGuide[]
 }
 
 export interface HillshadeData extends WorkerMessageBase {
   type: 'hillshade'
-  image: ArrayBuffer | ImageBitmap
-  built: boolean
+  image: ImageBitmap
   size: number
   featureGuides: RasterDataGuide[]
 }
 
 export interface SensorData extends WorkerMessageBase {
   type: 'sensor'
-  image: ArrayBuffer | ImageBitmap
-  built: boolean
+  image: ImageBitmap
   size: number
   featureGuides: RasterDataGuide[]
   time: number

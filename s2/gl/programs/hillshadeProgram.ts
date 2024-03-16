@@ -42,14 +42,11 @@ export default async function hillshadeProgram (context: Context): Promise<Hills
 
     buildSource (hillshadeData: HillshadeData, tile: Tile): void {
       const { gl, context } = this
-      const { image, built, size } = hillshadeData
+      const { image, size } = hillshadeData
       // do not premultiply
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0)
       // setup texture params
-      const texture = context.buildTexture(
-        built ? image as ImageBitmap : new Uint8ClampedArray(image as ArrayBuffer),
-        size
-      )
+      const texture = context.buildTexture(image, size)
       // create the soruce
       const source: RasterSource = { type: 'raster', texture, size }
       // build features

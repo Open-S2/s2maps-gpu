@@ -112,14 +112,7 @@ export default class RasterWorker implements RasterWorkerSpec {
     }
 
     // https://bugzilla.mozilla.org/show_bug.cgi?id=1335594 - saved for posterity
-    let built = false
-    let image: ArrayBuffer | ImageBitmap = data
-    // TODO: Had to remove !isSafari, so even though premultiplyAlpha is not supported in Safari
-    // TODO: We will just have to let sensor data be wrong for now. no idea why this doesn't work anymore
-    if (typeof createImageBitmap === 'function') {
-      image = await createImageBitmap(new Blob([data]), { premultiplyAlpha: 'none' })
-      built = true
-    }
+    const image = await createImageBitmap(new Blob([data]), { premultiplyAlpha: 'none' })
 
     // ship the raster data.
     if (rasterFeatureGuides.length > 0) {
@@ -127,7 +120,6 @@ export default class RasterWorker implements RasterWorkerSpec {
         mapID,
         type: 'raster',
         tileID: id,
-        built,
         size,
         sourceName,
         featureGuides: rasterFeatureGuides,
@@ -141,7 +133,6 @@ export default class RasterWorker implements RasterWorkerSpec {
         mapID,
         type: 'sensor',
         tileID: id,
-        built,
         size,
         sourceName,
         featureGuides: sensorFeatureGuides,
@@ -156,8 +147,7 @@ export default class RasterWorker implements RasterWorkerSpec {
         mapID,
         type: 'hillshade',
         tileID: id,
-        built,
-        size: built ? (image as ImageBitmap).width : size,
+        size: image.width,
         sourceName,
         featureGuides: HillshadeFeatureGuides,
         image

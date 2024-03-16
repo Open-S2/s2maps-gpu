@@ -262,7 +262,7 @@ export interface ShadeProgram extends ProgramSpec {
 export interface SkyboxProgram extends ProgramSpec {
   cubeMap: WebGLTexture
   facesReady: number
-  renderable: boolean
+  ready: boolean
   fov: number
   angle: number
   matrix: Float32Array

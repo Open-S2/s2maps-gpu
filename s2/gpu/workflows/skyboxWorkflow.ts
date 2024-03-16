@@ -12,6 +12,8 @@ import type Camera from 'ui/camera'
 
 export default class SkyboxWorkflow implements SkyboxWorkflowSpec {
   context: WebGPUContext
+  facesReady = 0
+  ready = false
   fov: number = degToRad(80)
   angle: number = degToRad(40)
   matrix: Float32Array = new Float32Array(16)
@@ -76,6 +78,9 @@ export default class SkyboxWorkflow implements SkyboxWorkflowSpec {
         { binding: 2, resource: this.#cubeMap.createView({ dimension: 'cube' }) }
       ]
     })
+    // reset our tracking variables
+    this.facesReady = 0
+    this.ready = false
     // request each face and assign to cube map
     for (let i = 0; i < 6; i++) void this.#getImage(i, `${path}/${size}/${i}.${type}`, camera)
   }
@@ -146,6 +151,10 @@ export default class SkyboxWorkflow implements SkyboxWorkflowSpec {
     camera.projector.reset()
     // call the full re-render
     camera.render()
+    // update the ready count
+    this.facesReady++
+    // if all faces are uploaded, set the skybox as ready
+    if (this.facesReady === 6) this.ready = true
   }
 
   #updateMatrix (projector: Projector): void {

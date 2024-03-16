@@ -58,15 +58,10 @@ export default class SpriteSource extends ImageSource {
         }
       }
       // prebuild the sprite sheet if possible
-      let built = false
-      let image: ArrayBuffer | ImageBitmap = sprites
-      if (typeof createImageBitmap === 'function') {
-        image = await createImageBitmap(new Blob([sprites]), { premultiplyAlpha: 'none', imageOrientation: 'flipY' })
-        built = true
-      }
+      const image = await createImageBitmap(new Blob([sprites]), { premultiplyAlpha: 'none', imageOrientation: 'flipY' })
 
       // ship the sprites to the map
-      const spriteImageMessage: SpriteImageMessage = { type: 'spriteimage', mapID, name, built, offsetX, offsetY, width: texW, height: texH, maxHeight: texturePack.height, image }
+      const spriteImageMessage: SpriteImageMessage = { type: 'spriteimage', mapID, name, offsetX, offsetY, width: texW, height: texH, maxHeight: texturePack.height, image }
       postMessage(spriteImageMessage, [image])
       return { name, metadata }
     }

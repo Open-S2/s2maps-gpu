@@ -86,14 +86,12 @@ export default async function rasterProgram (context: Context): Promise<RasterPr
       return layerDefinition
     }
 
-    buildSource (rasterData: RasterData, tile: Tile): void {
-      const { gl, context } = this
-      const { image, built, size } = rasterData
-      // do not premultiply
-      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0)
+    async buildSource (rasterData: RasterData, tile: Tile): Promise<void> {
+      const { context } = this
+      const { image, size } = rasterData
       // setup texture params
       const texture = context.buildTexture(
-        built ? image as ImageBitmap : new Uint8ClampedArray(image as ArrayBuffer),
+        image,
         size
       )
 

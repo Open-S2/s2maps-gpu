@@ -322,6 +322,7 @@ export type WorkflowType = 'fill' | 'glyph' | 'heatmap' | 'line' | 'point' | 'ra
 
 export interface Workflow {
   context: WebGPUContext
+
   setup: () => Promise<void>
   destroy: () => void
   resize?: (width: number, height: number) => void
@@ -335,6 +336,7 @@ export interface FillWorkflow extends Workflow {
   maskFillPipeline: GPURenderPipeline
   invertPipeline: GPURenderPipeline
   fillInteractiveBindGroupLayout: GPUBindGroupLayout
+
   draw: (feature: FillFeature) => void
   drawMask: (maskSource: TileMaskSource, feature?: FillFeature) => void
   buildSource: (fillData: FillData, tile: Tile) => void
@@ -359,6 +361,7 @@ export interface GlyphWorkflow extends Workflow {
   glyphInteractivePiplineLayout: GPUPipelineLayout
   glyphBBoxesBuffer: GPUBuffer
   glyphFilterResultBuffer: GPUBuffer
+
   buildSource: (glyphData: GlyphData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: GlyphStyle) => GlyphDefinition
   computeInteractive: (feature: GlyphFeature) => void
@@ -373,6 +376,7 @@ export interface HeatmapWorkflow extends Workflow {
   texturePipeline: GPURenderPipeline
   heatmapBindGroupLayout: GPUBindGroupLayout
   heatmapTextureBindGroupLayout: GPUBindGroupLayout
+
   buildSource: (heatmapData: HeatmapData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: HeatmapStyle) => HeatmapDefinition
   textureDraw: (features: HeatmapFeature[]) => HeatmapFeature[] | undefined
@@ -383,6 +387,7 @@ export interface LineWorkflow extends Workflow {
   layerGuides: Map<number, LineWorkflowLayerGuideGPU>
   pipeline: GPURenderPipeline
   lineBindGroupLayout: GPUBindGroupLayout
+
   buildSource: (lineData: LineData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: LineStyle) => LineDefinition
   draw: (feature: LineFeature) => void
@@ -395,6 +400,7 @@ export interface PointWorkflow extends Workflow {
   pointInteractiveBindGroupLayout: GPUBindGroupLayout
   pointBindGroupLayout: GPUBindGroupLayout
   module: GPUShaderModule
+
   buildSource: (pointData: PointData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: PointStyle) => PointDefinition
   computeInteractive: (feature: PointFeature) => void
@@ -405,6 +411,7 @@ export interface RasterWorkflow extends Workflow {
   layerGuides: Map<number, RasterWorkflowLayerGuideGPU>
   pipeline: GPURenderPipeline
   rasterBindGroupLayout: GPUBindGroupLayout
+
   buildSource: (rasterData: RasterData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: RasterStyle) => RasterDefinition
   draw: (feature: RasterFeature) => void
@@ -414,6 +421,7 @@ export interface HillshadeWorkflow extends Workflow {
   layerGuides: Map<number, HillshadeWorkflowLayerGuideGPU>
   pipeline: GPURenderPipeline
   hillshadeBindGroupLayout: GPUBindGroupLayout
+
   buildSource: (rasterData: HillshadeData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: HillshadeStyle) => HillshadeDefinition
   draw: (feature: HillshadeFeature) => void
@@ -429,6 +437,7 @@ export interface SensorWorkflow extends Workflow {
 export interface ShadeWorkflow extends Workflow {
   layerDefinition: ShadeDefinitionGPU
   pipeline: GPURenderPipeline
+
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: ShadeStyle) => ShadeDefinitionGPU
   buildMaskFeature: (maskLayer: ShadeDefinition, tile: Tile) => void
   draw: (feature: ShadeFeature) => void
@@ -439,6 +448,9 @@ export interface WallpaperWorkflow extends Workflow {
 }
 
 export interface SkyboxWorkflow extends Workflow {
+  facesReady: number
+  ready: boolean
+
   updateStyle: (style: StyleDefinition, s2mapGL: S2MapUI, urlMap?: Record<string, string>) => void
   draw: (feature: Projector) => void
 }

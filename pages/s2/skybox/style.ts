@@ -24,11 +24,6 @@ const style: StyleDefinition = {
       source: 'mask',
       opaque: true,
       color: 'rgb(9, 8, 17)'
-    },
-    {
-      name: 'sat',
-      source: 'satellite',
-      type: 'raster'
     }
   ]
 }

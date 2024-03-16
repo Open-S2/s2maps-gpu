@@ -63,14 +63,11 @@ export default async function sensorProgram (context: Context): Promise<SensorPr
 
     buildSource (sensorData: SensorData, tile: Tile): void {
       const { gl, context } = this
-      const { image, built, sourceName, size, time } = sensorData
+      const { image, sourceName, size, time } = sensorData
       // do not premultiply
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0)
       // setup texture params
-      const texture = context.buildTexture(
-        built ? image as ImageBitmap : new Uint8ClampedArray(image as ArrayBuffer),
-        size
-      )
+      const texture = context.buildTexture(image, size)
 
       // Extend mask
       const sensorSource: SensorSource = {

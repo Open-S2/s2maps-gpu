@@ -97,7 +97,8 @@ export default class Style {
     // build workflows
     await painter.buildWorkflows(workflows)
     // inject styles into programs
-    for (const workflow of Object.values(painter.workflows)) {
+    for (const [name, workflow] of Object.entries(painter.workflows)) {
+      if (name === 'background') continue
       if ('updateStyle' in workflow) workflow.updateStyle(style, camera, urlMap)
     }
   }

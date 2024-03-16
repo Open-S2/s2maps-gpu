@@ -22,7 +22,7 @@ export default async function skyboxProgram (context: Context): Promise<SkyboxPr
   class SkyboxProgram extends Program implements SkyboxProgramSpec {
     cubeMap: WebGLTexture
     facesReady = 0
-    renderable = false
+    ready = false
     fov: number = degToRad(80)
     angle: number = degToRad(40)
     matrix: Float32Array = new Float32Array(16)
@@ -56,6 +56,9 @@ export default async function skyboxProgram (context: Context): Promise<SkyboxPr
           (new Color(loadingBackground ?? 'rgb(0, 0, 0)')).getRGB()
         )
       }
+      // reset our tracking variables
+      this.facesReady = 0
+      this.ready = false
       // request each face and assign to cube map
       for (let i = 0; i < 6; i++) void this.#getImage(i, `${path}/${size}/${i}.${type}`, camera)
     }
@@ -78,7 +81,7 @@ export default async function skyboxProgram (context: Context): Promise<SkyboxPr
         gl.generateMipmap(gl.TEXTURE_CUBE_MAP)
         gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
         gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-        this.renderable = true
+        this.ready = true
         // set the projector as dirty to ensure a proper initial render
         camera.projector.reset()
         // call the full re-render
@@ -105,9 +108,9 @@ export default async function skyboxProgram (context: Context): Promise<SkyboxPr
 
     draw (projector: Projector): void {
       // setup variables
-      const { gl, context, renderable, cubeMap } = this
-      // if renderable, time to draw
-      if (renderable) {
+      const { gl, context, ready, cubeMap } = this
+      // if ready, time to draw
+      if (ready) {
         // bind the texture cube map
         gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubeMap)
         // update  matrix if necessary

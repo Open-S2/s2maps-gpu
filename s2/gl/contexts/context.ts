@@ -164,19 +164,14 @@ export default class Context implements ContextSpec {
 
   injectSpriteImage (data: SpriteImageMessage): void {
     const { gl } = this
-    const { image, built, offsetX, offsetY, width, height, maxHeight } = data
+    const { image, offsetX, offsetY, maxHeight } = data
     // increase texture size if necessary
     this.#increaseFBOSize(maxHeight)
     // do not premultiply
     gl.bindTexture(gl.TEXTURE_2D, this.sharedFBO.texture)
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0)
-    if (built) {
-      // @ts-expect-error - not sure why this is throwing an error, it works and the types account for it.
-      gl.texSubImage2D(gl.TEXTURE_2D, 0, offsetX, offsetY, gl.RGBA, gl.UNSIGNED_BYTE, image as ImageBitmap)
-    } else {
-      const srcData = new Uint8ClampedArray(image as ArrayBuffer)
-      gl.texSubImage2D(gl.TEXTURE_2D, 0, offsetX, offsetY, width, height, gl.RGBA, gl.UNSIGNED_BYTE, srcData, 0)
-    }
+    // @ts-expect-error - not sure why this is throwing an error, it works and the types account for it.
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, offsetX, offsetY, gl.RGBA, gl.UNSIGNED_BYTE, image)
   }
 
   // SETUP INTERACTIVE BUFFER
@@ -374,19 +369,22 @@ export default class Context implements ContextSpec {
   ): WebGLTexture {
     const { gl } = this
     const texture = gl.createTexture()
-    const param = repeat ? gl.REPEAT : gl.CLAMP_TO_EDGE
     if (texture === null) throw new Error('Failed to create texture')
     gl.bindTexture(gl.TEXTURE_2D, texture)
-    // check if ImageBitmap
+    // do not premultiply
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0)
+    // set the texture params
+    const param = repeat ? gl.REPEAT : gl.CLAMP_TO_EDGE
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, param)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, param)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+    // inject image data. Check if ImageBitmap or ArrayBuffer
     if (imageData instanceof ImageBitmap) {
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imageData)
     } else {
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, imageData)
     }
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, param)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, param)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
 
     return texture
   }

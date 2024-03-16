@@ -62,17 +62,12 @@ export default class ImageSource {
         advanceWidth: 0
       }
       // prebuild the sprite sheet if possible
-      let built = false
-      let image: ArrayBuffer | ImageBitmap = data
-      if (typeof createImageBitmap === 'function') {
-        image = await createImageBitmap(new Blob([image]), { premultiplyAlpha: 'none', imageOrientation: 'flipY' })
-        // update metadata width and height
-        imageMetadata.width = image.width
-        imageMetadata.height = image.height
-        imageMetadata.texW = image.width
-        imageMetadata.texH = image.height
-        built = true
-      }
+      const image = await createImageBitmap(new Blob([data]), { premultiplyAlpha: 'none', imageOrientation: 'flipY' })
+      // update metadata width and height
+      imageMetadata.width = image.width
+      imageMetadata.height = image.height
+      imageMetadata.texW = image.width
+      imageMetadata.texH = image.height
       // get offsets from texturePack
       const [offsetX, offsetY] = texturePack.addGlyph(imageMetadata.width, imageMetadata.height)
       // update imageMetadata x and y
@@ -82,7 +77,7 @@ export default class ImageSource {
       metadata[name] = imageMetadata
 
       // ship the sprites to the map
-      const spriteImageMessage: SpriteImageMessage = { type: 'spriteimage', mapID, name: this.name, built, offsetX, offsetY, width: imageMetadata.width, height: imageMetadata.height, maxHeight: texturePack.height, image }
+      const spriteImageMessage: SpriteImageMessage = { type: 'spriteimage', mapID, name: this.name, offsetX, offsetY, width: imageMetadata.width, height: imageMetadata.height, maxHeight: texturePack.height, image }
       postMessage(spriteImageMessage, [image])
     }
     return { name: this.name, metadata }
