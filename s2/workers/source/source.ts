@@ -33,6 +33,7 @@ export default class Source {
   extension = 'pbf'
   encoding: 'none' | 'br' | 'gz' = 'none'
   format: Format = 'zxy'
+  projection: Projection
   isTimeFormat = false
   attributions: Attributions = {}
   styleLayers: LayerDefinition[]
@@ -47,12 +48,14 @@ export default class Source {
   textEncoder: TextEncoder = new TextEncoder()
   constructor (
     name: string,
+    projection: Projection,
     layers: LayerDefinition[],
     path: string,
     needsToken = false,
     session: Session
   ) {
     this.name = name
+    this.projection = projection
     this.styleLayers = layers
     this.path = path
     this.needsToken = needsToken

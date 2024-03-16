@@ -1,11 +1,13 @@
 import { fromLonLat, toST } from 'geometry/s2/s2Point'
 import { toProjection } from 'geometry' // GeoJSON conversion and preprocessing
+import { transformPoint } from './jsonVT/transform'
+import { projectX, projectY } from './jsonVT/convert'
 
 import type { Session } from '.'
 import type { SourceFlushMessage, TileRequest } from '../worker.spec'
-import type { JSONFeatures, Point } from 'geometry'
+import type { Face, JSONFeatures, Point } from 'geometry'
 import type { JSONVectorPointsFeature } from './jsonVT/tile'
-import type { LayerDefinition, SourceMetadata } from 'style/style.spec'
+import type { LayerDefinition, Projection, SourceMetadata } from 'style/style.spec'
 
 export interface MarkerDefinition {
   id?: number
@@ -30,6 +32,7 @@ export interface Marker {
 
 export default class MarkerSource {
   name: string
+  projection: Projection = 'S2'
   isTimeFormat = false
   styleLayers: LayerDefinition[]
   idGen = 0
@@ -41,13 +44,14 @@ export default class MarkerSource {
   5 = new Map<number, Marker>()
   session: Session
   textEncoder: TextEncoder = new TextEncoder()
-  constructor (name: string, session: Session, layers: LayerDefinition[]) {
+  constructor (name: string, session: Session, projection: Projection, layers: LayerDefinition[]) {
     this.name = name
     this.session = session
+    this.projection = projection
     this.styleLayers = layers
   }
 
-  async build (mapID: string, metadata?: SourceMetadata): Promise<void> {
+  async build (_mapID: string, metadata?: SourceMetadata): Promise<void> {
     const json: JSONFeatures | undefined = metadata?.data
     const markers: MarkerDefinition[] = []
     if (json !== undefined) {
@@ -68,11 +72,14 @@ export default class MarkerSource {
   }
 
   addMarkers (markers: MarkerDefinition[]): void {
+    const { projection } = this
     for (const marker of markers) {
       let { id, properties, lon, lat } = marker
       if (properties === undefined) properties = {}
       // build face, s, t
-      const [face, s, t] = toST(fromLonLat(lon, lat))
+      const [face, s, t] = projection === 'S2'
+        ? toST(fromLonLat(lon, lat))
+        : [0 as Face, projectX(lon, 'WM'), projectY(lat, 'WM')]
       // if no id, let's create one
       if (id === undefined) {
         id = this.idGen++
@@ -141,13 +148,4 @@ export default class MarkerSource {
     const layers = this.styleLayers.filter(layer => layer.source === name)
     for (const { layerIndex } of layers) flushMessage.layersToBeLoaded.add(layerIndex)
   }
-}
-
-function transformPoint (i: number, j: number, extent: number, zoom: number,
-  ti: number, tj: number): [number, number] {
-  const { round } = Math
-  return [
-    round(extent * (i * zoom - ti)),
-    round(extent * (j * zoom - tj))
-  ]
 }

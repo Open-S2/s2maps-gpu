@@ -17,8 +17,8 @@ export default defineConfig({
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: CI_BOOL ?? true,
-  /* Retry on CI only */
-  retries: CI_BOOL ? 2 : 3,
+  /* Number of retries before conceding to a failure */
+  retries: 4,
   /* Opt out of parallel tests on CI. */
   workers: CI_BOOL ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
@@ -70,7 +70,7 @@ export default defineConfig({
 
   /* Configure dev server for tests */
   webServer: {
-    command: 'bun run dev',
+    command: 'bun run dev:playwright',
     url: 'http://127.0.0.1:3000/s2/background/webgl',
     reuseExistingServer: !CI_BOOL,
     stdout: 'ignore',

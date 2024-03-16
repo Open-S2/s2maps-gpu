@@ -253,10 +253,10 @@ export class S2Tile<C extends SharedContext, F extends SharedFeatureGuide, M ext
       1, // isS2
       face,
       zoom,
-      bbox[0],
-      bbox[1],
-      bbox[2] - bbox[0],
-      bbox[3] - bbox[1]
+      bbox[0], // sLow
+      bbox[1], // tLow
+      bbox[2] - bbox[0], // deltaS
+      bbox[3] - bbox[1] // deltaT
     ])
     // build division
     this.division = 16 / (1 << max(min(floor(zoom / 2), 4), 0))
@@ -313,6 +313,9 @@ export class WMTile<C extends SharedContext, F extends SharedFeatureGuide, M ext
     this.i = i
     this.j = j
     this.zoom = zoom
+    // TODO: bboxWM? And do I apply it to the uniforms?
+    // const bbox = this.bbox = bboxST(i, j, zoom)
+    this.bbox = bboxST(i, j, zoom)
     // setup uniforms
     this.uniforms = new Float32Array([
       0, // isS2

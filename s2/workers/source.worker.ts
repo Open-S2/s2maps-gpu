@@ -1,5 +1,4 @@
 import {
-  ClusterSource,
   GlyphSource,
   ImageSource,
   JSONSource,
@@ -15,8 +14,10 @@ import adjustURL from '../util/adjustURL'
 
 import type {
   Analytics,
+  GPUType,
   ImageFormats,
   LayerDefinition,
+  Projection,
   SourceMetadata,
   StylePackage,
   Source as StyleSource
@@ -58,18 +59,30 @@ import type { ImageMetadata } from './source/imageSource'
   (now - timestamp) / 1000 = seconds passed
 **/
 
-type SourceMap = Record<string, Record<string, Source | S2TilesSource | JSONSource | ClusterSource | LocalSource | MarkerSource>>
+type SourceMap = Record<string, Source | S2TilesSource | JSONSource | LocalSource | MarkerSource>
+
+interface Map {
+  projection: Projection
+  gpuType: GPUType
+  minzoom: number
+  maxzoom: number
+  analytics: Analytics
+  experimental: boolean
+  sources: SourceMap
+  layers: LayerDefinition[]
+  glyphs: Record<string, GlyphSource>
+  sprites: Record<string, SpriteSource>
+  /** e.g. { apiURL: string, ... } */
+  urls: Record<string, string>
+  texturePack: TexturePack
+  images: ImageSource
+}
 
 export default class SourceWorker {
   workers: Array<MessageChannel['port2']> = []
   session: Session = new Session()
-  layers: Record<string, LayerDefinition[]> = {}
-  mapURLS: Record<string, Record<string, string>> = {} // { mapID: { apiURL: string, ... } }
-  sources: SourceMap = {}
-  glyphs: Record<string, GlyphSource> = {} // path is key again
-  sprites: Record<string, SpriteSource> = {}
-  texturePack: TexturePack = new TexturePack()
-  images: ImageSource = new ImageSource('__images', '', this.texturePack, this.session)
+  /** { mapID: Map } */
+  maps: Record<string, Map> = {}
 
   onMessage ({ data, ports }: MessageEvent<SourceWorkerMessages>): void {
     const { type } = data
@@ -115,13 +128,23 @@ export default class SourceWorker {
 
   #loadStyle (mapID: string, style: StylePackage): void {
     // pull style data
-    const { layers, analytics, apiKey, urlMap } = style
-    // store the apiURL
-    this.mapURLS[mapID] = urlMap ?? {}
-    // create the source map, if sources already exists, we are dumping the old sources
-    this.sources[mapID] = {}
-    // create the layer map
-    this.layers[mapID] = layers
+    const { projection, gpuType, minzoom, maxzoom, layers, analytics, experimental, apiKey, urlMap } = style
+    const texturePack = new TexturePack()
+    this.maps[mapID] = {
+      projection,
+      gpuType,
+      minzoom,
+      maxzoom,
+      analytics,
+      experimental,
+      sources: {},
+      layers,
+      glyphs: {},
+      sprites: {},
+      urls: urlMap ?? {},
+      texturePack,
+      images: new ImageSource('__images', '', texturePack, this.session)
+    }
     // create a session with the style
     this.session.loadStyle(mapID, analytics, apiKey)
     // now build sources
@@ -135,7 +158,7 @@ export default class SourceWorker {
     tileRequest: TileRequest[]
   ): void {
     // add the layer to the tile
-    const layers = this.layers[mapID]
+    const { layers } = this.maps[mapID]
     layers.splice(index, 0, layer)
     for (let i = index + 1, ll = layers.length; i < ll; i++) {
       const layer = layers[i]
@@ -147,7 +170,7 @@ export default class SourceWorker {
   }
 
   #removeLayer (mapID: string, index: number): void {
-    const layers = this.layers[mapID]
+    const { layers } = this.maps[mapID]
     layers.splice(index, 1)
     for (let i = index, ll = layers.length; i < ll; i++) {
       const layer = layers[i]
@@ -156,7 +179,7 @@ export default class SourceWorker {
   }
 
   #reorderLayers (mapID: string, layerChanges: Record<string | number, number>): void {
-    const layers = this.layers[mapID]
+    const { layers } = this.maps[mapID]
     const newLayers: LayerDefinition[] = []
     // move the layer to its new position
     for (const [from, to] of Object.entries(layerChanges)) {
@@ -172,7 +195,7 @@ export default class SourceWorker {
     mapID: string,
     style: StylePackage
   ): Promise<void> {
-    const urlMap = this.mapURLS[mapID]
+    const { urls, images: mapImages } = this.maps[mapID]
     const { sources, layers, fonts, icons, glyphs, sprites, images } = style
     // sources
     for (const [name, source] of Object.entries(sources)) {
@@ -187,14 +210,14 @@ export default class SourceWorker {
     const imageAwaits: Array<Promise<undefined | ImageMetadata>> = []
     for (const [name, source] of Object.entries(sprites)) {
       if (typeof source === 'object') {
-        const path = adjustURL(source.path, urlMap)
+        const path = adjustURL(source.path, urls)
         imageAwaits.push(this.#createSpriteSheet(mapID, name, path, source.fileType))
       } else { imageAwaits.push(this.#createSpriteSheet(mapID, name, source)) }
     }
     // images
     for (const [name, href] of Object.entries(images)) {
-      const path = adjustURL(href, urlMap)
-      imageAwaits.push(this.images.addImage(mapID, name, path))
+      const path = adjustURL(href, urls)
+      imageAwaits.push(mapImages.addImage(mapID, name, path))
     }
 
     // ship the glyph metadata
@@ -219,7 +242,8 @@ export default class SourceWorker {
     input: StyleSource,
     layers: LayerDefinition[]
   ): void {
-    const { session } = this
+    const { maps, session } = this
+    const { urls, projection, sources } = maps[mapID]
     // prepare variables to build appropriate source type
     let metadata: SourceMetadata | undefined
     let fileType: string | undefined
@@ -230,32 +254,30 @@ export default class SourceWorker {
     }
     if (fileType === undefined) fileType = (input.split('.').pop() ?? '').toLowerCase()
     const needsToken = session.hasAPIKey(mapID)
-    const urlMap = this.mapURLS[mapID]
-    const path = adjustURL(input, urlMap)
+    const path = adjustURL(input, urls)
     // create the proper source type
     let source
     if (fileType === 's2tiles') {
-      source = new S2TilesSource(name, layers, path, needsToken, session)
+      source = new S2TilesSource(name, projection, layers, path, needsToken, session)
     } else if (fileType === 'json' || fileType === 's2json' || fileType === 'geojson') {
-      if (metadata?.cluster ?? false) source = new ClusterSource(name, layers, path, needsToken, session)
-      else source = new JSONSource(name, layers, path, needsToken, session)
+      source = new JSONSource(name, projection, layers, path, needsToken, session)
     } else if (input === '_local') {
       source = new LocalSource(name, session, layers)
     } else if (input === '_markers') {
-      source = new MarkerSource(name, session, layers)
-    } else source = new Source(name, layers, path, needsToken, session) // default -> folder structure
+      source = new MarkerSource(name, session, projection, layers)
+    } else source = new Source(name, projection, layers, path, needsToken, session) // default -> folder structure
     // store & build
-    this.sources[mapID][name] = source
+    sources[name] = source
     void source.build(mapID, metadata)
   }
 
   async #createGlyphSource (mapID: string, name: string, input: string): Promise<undefined | GlyphMetadataUnparsed> {
-    const { texturePack, session } = this
-    const urlMap = this.mapURLS[mapID]
+    const { maps, session } = this
+    const { urls, texturePack, glyphs } = maps[mapID]
     // check if already exists
-    if (this.glyphs[name] !== undefined) return
-    const source = new GlyphSource(name, adjustURL(input, urlMap), texturePack, session)
-    this.glyphs[name] = source
+    if (glyphs[name] !== undefined) return
+    const source = new GlyphSource(name, adjustURL(input, urls), texturePack, session)
+    glyphs[name] = source
     return await source.build(mapID)
   }
 
@@ -265,13 +287,13 @@ export default class SourceWorker {
     input: string,
     fileType?: ImageFormats
   ): Promise<undefined | ImageMetadata> {
-    const { texturePack, session } = this
-    const urlMap = this.mapURLS[mapID]
+    const { maps, session } = this
+    const { urls, texturePack, sprites } = maps[mapID]
     // check if already exists
-    if (this.sprites[name] !== undefined) return
-    const source = new SpriteSource(name, adjustURL(input, urlMap), texturePack, session, fileType)
+    if (sprites[name] !== undefined) return
+    const source = new SpriteSource(name, adjustURL(input, urls), texturePack, session, fileType)
     // store & build
-    this.sprites[name] = source
+    sprites[name] = source
     return await source.build(mapID)
   }
 
@@ -280,11 +302,12 @@ export default class SourceWorker {
     tiles: TileRequest[],
     sources: Array<[string, string | undefined]> = []
   ): Promise<void> {
+    const { sources: mapSources } = this.maps[mapID]
     const newHrefs = sources.filter(s => s[1] !== undefined) as Array<[string, string]>
     const sourceNames = sources.map(s => s[0])
     // if new hrefs update sources
     for (const [sourceName, href] of newHrefs) {
-      const source = (this.sources[mapID] !== undefined) ? this.sources[mapID][sourceName] : undefined
+      const source = mapSources[sourceName]
       if (source !== undefined) {
         // steal the layer data and rebuild
         this.#createSource(mapID, sourceName, href, source.styleLayers)
@@ -293,7 +316,7 @@ export default class SourceWorker {
     // build requests
     for (const tile of tiles) {
       const flush: SourceFlushMessage = { type: 'flush', from: 'source', mapID, tileID: tile.id, layersToBeLoaded: new Set<number>() }
-      for (const source of Object.values(this.sources[mapID])) {
+      for (const source of Object.values(mapSources)) {
         if (sourceNames.length > 0 && !sourceNames.includes(source.name)) continue
         if (source.isTimeFormat) continue
         await source.tileRequest(mapID, { ...tile }, flush)
@@ -303,10 +326,11 @@ export default class SourceWorker {
   }
 
   async #requestTime (mapID: string, tiles: TileRequest[], sourceNames: string[]): Promise<void> {
+    const { sources: mapSources } = this.maps[mapID]
     // build requests
     for (const tile of tiles) {
       const flush: SourceFlushMessage = { type: 'flush', from: 'source', mapID, tileID: tile.id, layersToBeLoaded: new Set<number>() }
-      for (const source of Object.values(this.sources[mapID])) {
+      for (const source of Object.values(mapSources)) {
         if (!source.isTimeFormat || !sourceNames.includes(source.name)) continue
         await source.tileRequest(mapID, { ...tile }, flush)
       }
@@ -321,10 +345,11 @@ export default class SourceWorker {
     sourceGlyphs: Record<string, string[]>
   ): void {
     // prep
-    const { workers } = this
+    const { maps, workers } = this
+    const { glyphs } = maps[mapID]
     // iterate the glyph sources for the unicodes
     for (const [name, codes] of Object.entries(sourceGlyphs)) {
-      void this.glyphs[name].glyphRequest(codes, mapID, reqID, workers[workerID])
+      void glyphs[name].glyphRequest(codes, mapID, reqID, workers[workerID])
     }
   }
 
@@ -339,10 +364,9 @@ export default class SourceWorker {
   }
 
   #getMarkerSource (mapID: string, sourceName: string): MarkerSource {
-    const sources = this.sources[mapID]
-    const layers = this.layers[mapID]
+    const { sources, layers, projection } = this.maps[mapID]
     if (sources === undefined) throw new Error(`Map ${mapID} does not exist`)
-    if (sources[sourceName] === undefined) sources[sourceName] = new MarkerSource(sourceName, this.session, layers)
+    if (sources[sourceName] === undefined) sources[sourceName] = new MarkerSource(sourceName, this.session, projection, layers)
     return sources[sourceName] as MarkerSource
   }
 

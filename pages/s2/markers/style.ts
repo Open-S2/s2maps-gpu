@@ -2,7 +2,7 @@ import type { StyleDefinition } from 'style/style.spec'
 
 const style: StyleDefinition = {
   version: 1,
-  name: 's2maps-hilbert',
+  name: 'S2 Markers',
   center: [0, 0],
   zoom: -0.65,
   minzoom: -1,

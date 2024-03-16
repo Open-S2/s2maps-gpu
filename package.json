@@ -1,6 +1,6 @@
 {
   "name": "s2maps-gpu",
-  "version": "0.13.6",
+  "version": "0.13.7",
   "description": "S2 Maps GPU",
   "keywords": [
     "s2",
@@ -34,7 +34,7 @@
     "build:ESM": "tsc --project tsconfig.build.json",
     "build:types": "tsc --project tsconfig.build.json --emitDeclarationOnly --declaration --declarationDir dist-types",
     "tsc:version": "tsc --version",
-    "dev": "nuxt dev --host",
+    "dev": "nuxt dev --host --disable-telemetry",
     "dev:playwright": "nuxt dev --host --no-watch --no-lint --no-progress --disable-telemetry --no-source-map --quiet",
     "lint:S2": "eslint s2 --ext .ts",
     "test:S2": "bun test",

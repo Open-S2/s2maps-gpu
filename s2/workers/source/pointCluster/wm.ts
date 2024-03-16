@@ -1,9 +1,10 @@
 import PointIndex from './pointIndex'
 import { fromID } from 'geometry/wm/mercID'
 import { transformPoint } from '../jsonVT/transform'
+import { toProjection } from 'geometry'
 
 import type { ClusterOptions } from './'
-import type { Face, Feature, PointFeature } from 'geometry'
+import type { Face, JSONFeatures, PointFeature } from 'geometry'
 import type { Point } from './pointIndex'
 import type { JSONLayers, JSONVectorPointsFeature, JSONVectorTile } from 'workers/source/jsonVT/tile'
 
@@ -52,6 +53,7 @@ export default class PointCluser {
   indexes: Array<PointIndex<Cluster>> = []
   points: PointFeature[] = []
   faces = new Set<Face>([0])
+  projection = 'WM'
   constructor (options: ClusterOptions = {}) {
     this.options = { ...this.options, ...options }
     this.minzoom = this.options.minzoom
@@ -64,8 +66,9 @@ export default class PointCluser {
     }
   }
 
-  addManyPoints (points: Feature[]): void {
-    for (const point of points) {
+  addManyPoints (data: JSONFeatures): void {
+    const points = toProjection(data, 'WM')
+    for (const point of points.features) {
       if (point.geometry.type === 'Point') this.addPoint(point as PointFeature)
     }
   }

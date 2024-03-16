@@ -11,7 +11,6 @@ const style: StyleDefinition = {
     countries: '/s2json/countriesHD.s2json',
     hilbert: {
       type: 'json',
-      projection: 'S2',
       data: {
         type: 'FeatureCollection',
         features: [
