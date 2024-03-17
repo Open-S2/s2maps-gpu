@@ -1,8 +1,6 @@
 // setup env variables
 process.env.BABEL_ENV = 'production'
 process.env.NODE_ENV = 'production'
-process.env.CORS = '1'
-process.env.NEXT_PUBLIC_API_URL = 'https://api.opens2.com'
 // grab components
 const fs = require('fs')
 const path = require('path')

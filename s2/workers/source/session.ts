@@ -2,12 +2,6 @@ import adjustURL from 'util/adjustURL'
 
 import type { Analytics, StyleDefinition } from 'style/style.spec'
 
-declare const process: {
-  env: {
-    NEXT_PUBLIC_API_URL: string
-  }
-}
-
 // an API key enables the user to construct a session token
 // a session token lasts 10 minutes and allows the user to make requests for data
 
@@ -78,7 +72,8 @@ export default class Session {
     const { gpu, context, language, width, height } = this.analytics ?? {}
     // grab a new token
     if (this.sessionPromise === undefined) {
-      this.sessionPromise = fetch(`${process.env.NEXT_PUBLIC_API_URL}/session`, {
+      // TODO: use urlMap to adjust the URL
+      this.sessionPromise = fetch(adjustURL('apiURL://session'), {
         method: 'POST',
         body: JSON.stringify({ apiKey, gpu, context, language, width, height }),
         headers: { 'Content-Type': 'application/json' }

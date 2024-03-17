@@ -39,7 +39,8 @@ const style: StyleDefinition = {
       iconSize: 1,
       iconOffset: [0, 0],
       iconPadding: [0, 0],
-      viewCollisions: true
+      viewCollisions: true,
+      overdraw: false
     }
   ]
 }

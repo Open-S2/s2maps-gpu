@@ -1,26 +1,16 @@
 // setup env variables
 process.env.BABEL_ENV = 'production'
 process.env.NODE_ENV = 'production'
-process.env.CORS = '0'
-process.env.NEXT_PUBLIC_API_URL = 'https://api.opens2.com'
 // grab components
 const fs = require('fs')
-const path = require('path')
 const webpack = require('webpack')
 const { filesize } = require('filesize')
 const { green, red, blue, yellow } = require('picocolors')
-const configurationFlat = require('./webpack-flat.config.js')
+// const configurationFlat = require('./webpack-flat.config.js')
 const configurationCSSFlat = require('./webpack-flat.css.config.js')
-// const { version } = require('../package.json')
-// const VERSION = `v${version}`
-
-// CLEAN UP FROM OLD BUILD
-const dirPath = path.join(__dirname, '../buildS2-flat')
-if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath)
-removeDir(dirPath)
 
 // SETUP COMPILER
-const jsCompiler = webpack(configurationFlat)
+// const jsCompiler = webpack(configurationFlat)
 const cssCompiler = webpack(configurationCSSFlat)
 
 // COMPILE
@@ -42,31 +32,16 @@ function build (compiler) {
 }
 
 Promise.all([
-  build(cssCompiler),
-  build(jsCompiler)
+  build(cssCompiler)
 ])
   .catch((err) => { console.info('Failed to build', err) })
   .then(res => {
-    // getFileSizes()
+    getFileSizes()
   })
-
-function removeDir (path) {
-  if (fs.existsSync(path)) {
-    const files = fs.readdirSync(path)
-
-    if (files.length > 0) {
-      files.forEach(filename => {
-        if (fs.statSync(path + '/' + filename).isDirectory()) {
-          removeDir(path + '/' + filename)
-        } else { fs.unlinkSync(path + '/' + filename) }
-      })
-    }
-  }
-}
 
 function getFileSizes () {
   const res = { js: {}, css: {}, jsTotalmin: 0, jsTotalgz: 0, jsTotalbr: 0, cssTotalmin: 0, cssTotalgz: 0, cssTotalbr: 0 }
-  const files = fs.readdirSync('./buildS2')
+  const files = fs.readdirSync('./buildS2-flat')
 
   const cssFiles = files.filter(f => f.includes('.min.css'))
   for (const file of cssFiles) {
@@ -74,7 +49,7 @@ function getFileSizes () {
     let fileType = file.split('.css').pop()
     if (fileType === '') fileType = 'min'
     else fileType = fileType.slice(1)
-    const { size } = fs.statSync(`./buildS2/${file}`)
+    const { size } = fs.statSync(`./buildS2-flat/${file}`)
     if (!res.css[name]) res.css[name] = {}
     res.css[name][fileType] = filesize(size)
     res[`cssTotal${fileType}`] += size
@@ -83,13 +58,13 @@ function getFileSizes () {
   res.cssTotalgz = filesize(res.cssTotalgz)
   res.cssTotalbr = filesize(res.cssTotalbr)
 
-  const jsFiles = files.filter(f => f.includes('.min.js') && !f.includes('.txt') && !f.includes('.map'))
+  const jsFiles = files.filter(f => f.includes('.flat.js') && !f.includes('.txt') && !f.includes('.map'))
   for (const file of jsFiles) {
     const name = file.includes('.gz') ? file.split('.gz')[0] : file.includes('.br') ? file.split('.br')[0] : file
     let fileType = file.split('.js').pop()
     if (fileType === '') fileType = 'min'
     else fileType = fileType.slice(1)
-    const { size } = fs.statSync(`./buildS2/${file}`)
+    const { size } = fs.statSync(`./buildS2-flat/${file}`)
     if (!res.js[name]) res.js[name] = {}
     res.js[name][fileType] = filesize(size)
     res[`jsTotal${fileType}`] += size

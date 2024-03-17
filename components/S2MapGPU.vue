@@ -31,6 +31,7 @@ export default {
       const options: MapOptions = {
         urlMap: {
           apiURL: config.public.dataURL,
+          dataURL: config.public.dataURL,
           baseURL: config.public.baseURL
         },
         attributionOff: true,

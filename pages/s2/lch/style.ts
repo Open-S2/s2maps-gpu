@@ -4,13 +4,12 @@ const style: StyleDefinition = {
   version: 1,
   name: 'S2 LCH color space',
   center: [-122.4585607773497, 37.778443127730476],
-  zoom: -0.5,
+  zoom: 1.5,
   minzoom: -0.5,
   maxzoom: 7,
   sources: {
     countries: '/s2json/countriesHD.s2json'
   },
-  fonts: {},
   layers: [
     {
       name: 'background',

@@ -2,7 +2,7 @@ import type { StyleDefinition } from 'style/style.spec'
 
 const style: StyleDefinition = {
   version: 1,
-  name: 'S2 Fill',
+  name: 'S2 Local Source',
   center: [-122.4585607773497, 37.778443127730476],
   zoom: -0.5,
   minzoom: -0.5,

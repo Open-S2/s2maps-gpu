@@ -2,7 +2,6 @@ import fs from 'fs'
 import webpack from 'webpack'
 import path, { dirname } from 'path'
 
-import CorsWorkerPlugin from '../config/cors-worker-plugin/index.js'
 import TerserPlugin from 'terser-webpack-plugin'
 import TsconfigPathsPlugin from 'tsconfig-paths-webpack-plugin'
 
@@ -71,14 +70,8 @@ const conifguration: Configuration = {
     })]
   },
   plugins: [
-    // new webpack.EnvironmentPlugin(['CORS', 'NEXT_PUBLIC_API_URL']),
-    new webpack.DefinePlugin({
-      'process.env.CORS': '0',
-      'process.env.NEXT_PUBLIC_API_URL': '\'http://192.168.0.113:8789/v1\''
-    }),
     new webpack.BannerPlugin(`s2maps-gpu is Copyright © ${(new Date()).getFullYear()} Open S2 and subject to the S2 Maps Terms of Service (https://www.opens2.com/tos/).`),
-    new webpack.ProgressPlugin(),
-    new CorsWorkerPlugin()
+    new webpack.ProgressPlugin()
   ]
 }
 

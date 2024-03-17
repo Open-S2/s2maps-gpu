@@ -5,7 +5,7 @@ const style: StyleDefinition = {
   projection: 'WM',
   name: 'WM LCH',
   center: [0, 0],
-  zoom: 0.95,
+  zoom: 2.5,
   minzoom: 0,
   maxzoom: 6.9,
   sources: {

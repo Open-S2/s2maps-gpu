@@ -20,7 +20,7 @@ export default defineConfig({
   /* Number of retries before conceding to a failure */
   retries: 4,
   /* Opt out of parallel tests on CI. */
-  workers: CI_BOOL ? 1 : undefined,
+  workers: CI_BOOL ? 1 : 3,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
@@ -73,8 +73,8 @@ export default defineConfig({
     command: 'bun run dev:playwright',
     url: 'http://127.0.0.1:3000/s2/background/webgl',
     reuseExistingServer: !CI_BOOL,
-    stdout: 'ignore',
-    stderr: 'ignore',
+    stdout: 'pipe',
+    stderr: 'pipe',
     cwd: '../'
   }
 })

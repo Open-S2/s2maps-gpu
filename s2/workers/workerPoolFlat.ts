@@ -17,11 +17,11 @@ export class WorkerPool {
   constructor () {
     // create source worker
     const sourceWorker = this.sourceWorker = new SourceWorker() as unknown as Worker
-    sourceWorker.onmessage = this.#onSourceMessage.bind(this)
+    sourceWorker.onmessage = this.#onMessage.bind(this)
     // create process workers
     for (let i = 0; i < this.workerCount; i++) {
       const tileWorker = new TileWorker() as unknown as Worker
-      tileWorker.onmessage = this.#onTileMessage.bind(this)
+      tileWorker.onmessage = this.#onMessage.bind(this)
       this.workers.push(tileWorker)
       // build communication channels; port1 can postMessage, and port2 can onMessage
       const channelA = new MessageChannel()
@@ -36,11 +36,7 @@ export class WorkerPool {
     }
   }
 
-  #onTileMessage ({ data }: { data: TileWorkerMessage }): void {
-    this.maps[data.mapID].injectData(data)
-  }
-
-  #onSourceMessage ({ data }: { data: SourceWorkerMessage }): void {
+  #onMessage ({ data }: { data: TileWorkerMessage | SourceWorkerMessage }): void {
     this.maps[data.mapID].injectData(data)
   }
 

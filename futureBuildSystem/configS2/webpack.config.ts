@@ -6,7 +6,6 @@ import { WebpackStatsViewerPlugin } from 'webpack-stats-viewer-plugin'
 import TsconfigPathsPlugin from 'tsconfig-paths-webpack-plugin'
 import CompressionPlugin from 'compression-webpack-plugin'
 import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer'
-import CorsWorkerPlugin from '../config/cors-worker-plugin/index.js'
 import TerserPlugin from 'terser-webpack-plugin'
 
 import { fileURLToPath } from 'url'
@@ -76,10 +75,8 @@ const conifguration: Configuration = {
     })]
   },
   plugins: [
-    new webpack.EnvironmentPlugin(['CORS', 'NEXT_PUBLIC_API_URL']),
     new webpack.BannerPlugin(`s2maps-gpu is Copyright © ${(new Date()).getFullYear()} Open S2 and subject to the Open S2 Terms of Service (https://www.opens2.com/tos/).`),
     new webpack.ProgressPlugin(),
-    new CorsWorkerPlugin(),
     new CompressionPlugin({
       filename: '[path][name].js.gz',
       algorithm: 'gzip',

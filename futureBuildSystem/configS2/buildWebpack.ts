@@ -9,7 +9,6 @@ import configuration from './webpack.config'
 import configurationDev from './webpack-dev.config'
 import configurationLocal from './webpack-local.config'
 import configurationCSS from './webpack.css.config'
-
 import { fileURLToPath } from 'url'
 
 import type { Compiler } from 'webpack'
@@ -20,9 +19,8 @@ const _dirname = dirname(_filename)
 const { blue, green, red, yellow } = picocolors
 
 process.env.BABEL_ENV = 'production'
+// @ts-expect-error - we are setting the env variable
 process.env.NODE_ENV = 'production'
-process.env.CORS = '1'
-process.env.NEXT_PUBLIC_API_URL = 'https://api.opens2.com/v1'
 const { version } = JSON.parse(fs.readFileSync(path.join(_dirname, '../package.json'), 'utf-8')) as { version: string }
 const VERSION = `v${version}`
 

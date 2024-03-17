@@ -14,6 +14,8 @@ const DEPTH_ESPILON = 1 / Math.pow(2, 16)
 
 export default class Context implements ContextSpec {
   gl: WebGLRenderingContext | WebGL2RenderingContext
+  type: GPUType = 1
+  projection: Projection = 'S2'
   presentation: { width: number, height: number } = { width: 0, height: 0 }
   renderer: string // ex: AMD Radeon Pro 560 OpenGL Engine (https://github.com/pmndrs/detect-gpu)
   devicePixelRatio: number
@@ -26,8 +28,6 @@ export default class Context implements ContextSpec {
   zTestMode = -1 // 0 -> always ; 1 -> less ; 2 -> lessThenOrEqual
   zLow = 0
   zHigh = 1
-  type: GPUType = 1
-  projection: Projection = 'S2'
   clearColorRGBA: ColorArray = [0, 0, 0, 0]
   featurePoint: Uint8Array = new Uint8Array(4)
   masks = new Map<number, MaskSource>() // <zoom, mask>
@@ -164,14 +164,16 @@ export default class Context implements ContextSpec {
 
   injectSpriteImage (data: SpriteImageMessage): void {
     const { gl } = this
-    const { image, offsetX, offsetY, maxHeight } = data
+    const { image, offsetX, offsetY, width, height, maxHeight } = data
     // increase texture size if necessary
     this.#increaseFBOSize(maxHeight)
     // do not premultiply
     gl.bindTexture(gl.TEXTURE_2D, this.sharedFBO.texture)
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0)
-    // @ts-expect-error - not sure why this is throwing an error, it works and the types account for it.
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, offsetX, offsetY, gl.RGBA, gl.UNSIGNED_BYTE, image)
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0)
+    // (target: number, level: number, xoffset: number, yoffset: number, width: number, height: number, format: number, type: number, source: ImageBitmap | ImageData | HTMLImageElement | HTMLCanvasElement | HTMLVideoElement) => void) &
+    if (this.type === 1) (gl as WebGLRenderingContext).texSubImage2D(gl.TEXTURE_2D, 0, offsetX, offsetY, gl.RGBA, gl.UNSIGNED_BYTE, image)
+    else (gl as WebGL2RenderingContext).texSubImage2D(gl.TEXTURE_2D, 0, offsetX, offsetY, width, height, gl.RGBA, gl.UNSIGNED_BYTE, image)
   }
 
   // SETUP INTERACTIVE BUFFER

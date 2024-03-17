@@ -145,6 +145,8 @@ export default class S2Map extends EventTarget {
       const Map = await import('./ui/s2mapUI').then(m => m.default)
       this.map = new Map(options, canvas, this.id, this)
     }
+    // const Map = await import('./ui/s2mapUI').then(m => m.default)
+    // this.map = new Map(options, canvas, this.id, this)
     // now that canvas is setup, add control containers as necessary
     this.#setupControlContainer(options)
     // if we interact with the map, we need to both allow interaction with styling

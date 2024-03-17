@@ -23,6 +23,8 @@
 // s2maps-gpu.min.js             18.22 kB      5.78 kB      5.07 kB
 // source-worker.min.js          16.19 kB      4.97 kB      4.51 kB
 // tile-worker.min.js            5.89 kB       2.45 kB      2.27 kB
+// NOTE: Flat doesn't support offscreen canvas as of yet
+// s2maps-gpu.flat.js            587.43 kB     141.59 kB    undefined
 
 
 // Helpful tools:
