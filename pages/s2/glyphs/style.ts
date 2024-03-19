@@ -4,8 +4,11 @@ const style: StyleDefinition = {
   version: 1,
   experimental: true,
   name: 'S2 Glyphs',
-  center: [-122.4585607773497, 37.778443127730476],
-  zoom: -0.5,
+  view: {
+    zoom: -0.5,
+    lon: -122.4585607773497,
+    lat: 37.778443127730476
+  },
   minzoom: -0.5,
   maxzoom: 5,
   sources: {

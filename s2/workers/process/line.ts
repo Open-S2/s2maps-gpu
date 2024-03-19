@@ -1,6 +1,5 @@
-import VectorWorker, { type CodeDesign, colorFunc, idToRGB } from './vectorWorker'
-import { drawLine, featureSort } from './util'
-import scaleShiftClip from './util/scaleShiftClip'
+import VectorWorker, { colorFunc, idToRGB } from './vectorWorker'
+import { drawLine, featureSort, scaleShiftClip } from './util'
 import parseFilter from 'style/parseFilter'
 import parseFeatureFunction from 'style/parseFeatureFunction'
 
@@ -9,6 +8,7 @@ import type {
   S2VectorMultiPoly,
   S2VectorPoly
 } from 's2-vector-tile'
+import type { CodeDesign } from './vectorWorker'
 import type { LineData, TileRequest } from '../worker.spec'
 import type {
   Cap,

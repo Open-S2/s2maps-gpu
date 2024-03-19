@@ -4,8 +4,11 @@ const style: StyleDefinition = {
   version: 1,
   projection: 'WM',
   name: 'WM Markers',
-  center: [0, 0],
-  zoom: 0,
+  view: {
+    lon: 0,
+    lat: 0,
+    zoom: 0
+  },
   minzoom: -1,
   maxzoom: 2.5,
   sources: {

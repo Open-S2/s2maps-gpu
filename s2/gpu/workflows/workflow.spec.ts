@@ -147,7 +147,7 @@ export interface FeatureBase {
   bindGroup: GPUBindGroup
   draw: () => void
   destroy: () => void
-  duplicate?: (tile: Tile, parent: Tile, bounds: BBox) => FeatureBase
+  duplicate?: (tile: Tile, parent?: Tile, bounds?: BBox) => FeatureBase
   compute?: () => void
   updateSharedTexture?: () => void
 }
@@ -168,7 +168,7 @@ export interface FillFeature extends FeatureBase {
   fillTexturePositions: GPUBuffer
   fillPatternBindGroup: GPUBindGroup
   fillInteractiveBindGroup?: GPUBindGroup
-  duplicate: (tile: Tile, parent: Tile) => FillFeature
+  duplicate: (tile: Tile, parent?: Tile) => FillFeature
 }
 
 // ** GLYPH + GLYPH FILTER **
@@ -193,7 +193,7 @@ export interface GlyphFeature extends FeatureBase {
   glyphFilterBindGroup: GPUBindGroup
   glyphInteractiveBindGroup: GPUBindGroup
   glyphUniformBuffer: GPUBuffer
-  duplicate: (tile: Tile, parent: Tile, bounds: BBox) => GlyphFeature
+  duplicate: (tile: Tile, parent?: Tile, bounds?: BBox) => GlyphFeature
 }
 
 // ** HEATMAP **
@@ -205,7 +205,7 @@ export interface HeatmapFeature extends FeatureBase {
   offset: number
   bounds?: BBox
   heatmapBindGroup: GPUBindGroup
-  duplicate: (tile: Tile, parent: Tile, bounds: BBox) => HeatmapFeature
+  duplicate: (tile: Tile, parent?: Tile, bounds?: BBox) => HeatmapFeature
 }
 
 // ** LINE **
@@ -220,7 +220,7 @@ export interface LineFeature extends FeatureBase {
   dashTexture: GPUTexture
   cap: number
   lineBindGroup: GPUBindGroup
-  duplicate: (tile: Tile, parent: Tile) => LineFeature
+  duplicate: (tile: Tile, parent?: Tile) => LineFeature
 }
 
 // ** POINT **
@@ -233,7 +233,7 @@ export interface PointFeature extends FeatureBase {
   bounds?: BBox
   pointBindGroup: GPUBindGroup
   pointInteractiveBindGroup: GPUBindGroup
-  duplicate: (tile: Tile, parent: Tile, bounds: BBox) => PointFeature
+  duplicate: (tile: Tile, parent?: Tile, bounds?: BBox) => PointFeature
 }
 
 // ** RASTER **
@@ -244,7 +244,7 @@ export interface RasterFeature extends FeatureBase {
   fadeDuration: number
   fadeStartTime: number
   rasterBindGroup: GPUBindGroup
-  duplicate: (tile: Tile, parent: Tile) => RasterFeature
+  duplicate: (tile: Tile, parent?: Tile) => RasterFeature
 }
 
 // ** SENSOR **
@@ -255,7 +255,7 @@ export interface SensorFeature extends FeatureBase {
   fadeStartTime: number
   colorRamp: WebGLTexture
   getTextures: () => SensorTextureDefinition
-  duplicate: (tile: Tile, parent: Tile) => SensorFeature
+  duplicate: (tile: Tile, parent?: Tile) => SensorFeature
 }
 
 // ** HILLSHADE **
@@ -266,7 +266,7 @@ export interface HillshadeFeature extends FeatureBase {
   fadeDuration: number
   fadeStartTime: number
   hillshadeBindGroup: GPUBindGroup
-  duplicate: (tile: Tile, parent: Tile) => HillshadeFeature
+  duplicate: (tile: Tile, parent?: Tile) => HillshadeFeature
 }
 
 export interface ShadeFeature extends FeatureBase {

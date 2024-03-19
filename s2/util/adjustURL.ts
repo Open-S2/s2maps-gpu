@@ -13,7 +13,7 @@ const URL_MAP: Record<string, string> = {
  */
 export default function adjustURL (input: string, userMap: Record<string, string> = {}): string {
   // replace all URL_MAP instances
-  for (const [key, value] of Object.entries({ ...userMap, ...URL_MAP })) {
+  for (const [key, value] of Object.entries({ ...URL_MAP, ...userMap })) {
     input = input.replace(`${key}://`, `${value}/`)
   }
   return input

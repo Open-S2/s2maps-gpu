@@ -2,10 +2,13 @@ import type { StyleDefinition } from 'style/style.spec'
 
 const style: StyleDefinition = {
   version: 1,
-  name: 'WM Points',
+  name: 'WM Benchmarks',
   projection: 'WM',
-  center: [-122.4585607773497, 37.778443127730476],
-  zoom: -0.5,
+  view: {
+    lon: -122.4585607773497,
+    lat: 37.778443127730476,
+    zoom: -0.5
+  },
   minzoom: -0.5,
   maxzoom: 5.5,
   sources: {

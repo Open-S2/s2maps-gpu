@@ -5,7 +5,7 @@ export { default as S2Map } from './s2Map'
 export * from './s2Map'
 export * from './style/style.spec'
 export * from './plugins'
-export * from './util/polyfill'
+export * from './util'
 
 /**
  * Creator of the library:

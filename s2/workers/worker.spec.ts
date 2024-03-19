@@ -14,6 +14,7 @@ import type { Glyph } from 'workers/process/glyph/familySource'
 import type { GlyphImages, GlyphMetadata } from './source/glyphSource'
 import type { ImageMetadata } from './source/imageSource'
 import type { MarkerDefinition } from './source/markerSource'
+import type { View } from 'ui/camera/projector'
 
 /** GENERIC WORKER TYPES **/
 
@@ -140,11 +141,6 @@ export interface NavMessage {
   lat?: number
 }
 
-export interface UpdateComassMessage {
-  type: 'updateCompass'
-  bearing: number
-}
-
 export interface MouseupCompassMessage {
   type: 'mouseupCompass'
 }
@@ -246,7 +242,7 @@ export interface DeleteMessage {
 export type S2MapMessage =
   CanvasMessage | ResizeMessage | ScrollMessage | MousedownMessage |
   MouseupMessage | MousemoveMessage | CanvasMousemoveMessage | TouchstartMessage |
-  TouchendMessage | TouchmoveMessage | NavMessage | UpdateComassMessage |
+  TouchendMessage | TouchmoveMessage | NavMessage | UpdateCompassMessage |
   MouseupCompassMessage | ResetCompassMessage | ColorModeMessage |
   SetStyleMessage | UpdateStyleMessage | JumpToMessage | EaseToMessage | FlyToMessage |
   MoveStateMessage | ZoomStateMessage | ScreenshotMessage | AwaitRenderedMessage |
@@ -280,7 +276,7 @@ export type S2MapToSourceMessage =
 export interface TileRequestMessage extends MapID {
   type: 'tilerequest'
   tiles: TileRequest[]
-  sources: Array<[string, string]>
+  sources: Array<[string, string | undefined]>
 }
 
 export interface TimeRequestMessage extends MapID {
@@ -312,11 +308,9 @@ export interface MouseClickMessage extends MapID {
   lat: number
 }
 
-export interface PositionMessage extends MapID {
-  type: 'pos'
-  lon: number
-  lat: number
-  zoom: number
+export interface ViewMessage extends MapID {
+  type: 'view'
+  view: Required<View>
 }
 
 export interface RequestStyleMessage extends MapID {
@@ -370,7 +364,7 @@ export interface ReadyMessageGL extends MapID {
 
 export type MapGLMessage =
   TileRequestMessage | TimeRequestMessage | MouseEnterMessage |
-  MouseLeaveMessage | MouseClickMessage | PositionMessage |
+  MouseLeaveMessage | MouseClickMessage | ViewMessage |
   RequestStyleMessage | StyleMessage | UpdateCompassMessage |
   AddLayerMessageGL | RemoveLayerMessageGL | ReorderLayersMessageGL |
   ScreenshotMessageGL | RenderedMessageGL | ReadyMessageGL

@@ -63,7 +63,7 @@ export class RasterFeature implements RasterFeatureSpec {
     featureCodeBuffer.destroy()
   }
 
-  duplicate (tile: Tile, parent: Tile): RasterFeature {
+  duplicate (tile: Tile, parent?: Tile): RasterFeature {
     const {
       layerGuide, workflow, source,
       featureCode, rasterFadeBuffer, featureCodeBuffer, fadeStartTime

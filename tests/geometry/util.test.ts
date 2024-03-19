@@ -9,6 +9,7 @@ import {
   MAXEXTENT,
   MAXLAT,
   degToRad,
+  mod,
   radToDeg
 } from 'geometry/util'
 import { describe, expect, it } from 'bun:test'
@@ -76,5 +77,15 @@ describe('MAXEXTENT', () => {
 describe('MAXLAT', () => {
   it('is 85.0511287798', () => {
     expect(MAXLAT).toEqual(85.0511287798)
+  })
+})
+
+describe('mod', () => {
+  it('works with positive numbers', () => {
+    expect(mod(5, 3)).toEqual(2)
+  })
+
+  it('works with negative numbers', () => {
+    expect(mod(-5, 3)).toEqual(1)
   })
 })

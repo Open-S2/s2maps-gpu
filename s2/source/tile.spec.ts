@@ -57,6 +57,8 @@ export interface TileBase<C, F, M> {
   faceST: FaceST
   corners?: Corners
   // WM specific features
+  outofBounds: boolean
+  dependents: Array<TileBase<C, F, M>>
   matrix: Float32Array
 
   context: C
@@ -79,6 +81,7 @@ export interface TileBase<C, F, M> {
   getInteractiveFeature: (id: number) => undefined | InteractiveObject
 
   injectParentTile: (parent: TileBase<C, F, M>, layers: LayerDefinition[]) => void
+  injectWrappedTile: (wrapped: TileBase<C, F, M>) => void
   // given a matrix, compute the corners screen positions
   setScreenPositions: (projector: Projector) => void
   addFeatures: (features: F[]) => void

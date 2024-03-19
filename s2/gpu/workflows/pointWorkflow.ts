@@ -74,15 +74,17 @@ export class PointFeature implements PointFeatureSpec {
     featureCodeBuffer.destroy()
   }
 
-  duplicate (tile: Tile, parent: Tile, bounds: BBox): PointFeature {
+  duplicate (tile: Tile, parent?: Tile, bounds?: BBox): PointFeature {
     const {
       workflow, source, layerGuide, count, offset, featureCode,
-      pointInteractiveBuffer, featureCodeBuffer
+      pointBoundsBuffer, pointInteractiveBuffer, featureCodeBuffer
     } = this
     const { context } = workflow
     const cE = context.device.createCommandEncoder()
     const newFeatureCodeBuffer = context.duplicateGPUBuffer(featureCodeBuffer, cE)
-    const newPointBoundsBuffer = context.buildGPUBuffer('Point Uniform Buffer', new Float32Array(bounds), GPUBufferUsage.UNIFORM)
+    const newPointBoundsBuffer = bounds !== undefined
+      ? context.buildGPUBuffer('Point Uniform Buffer', new Float32Array(bounds), GPUBufferUsage.UNIFORM)
+      : context.duplicateGPUBuffer(pointBoundsBuffer, cE)
     const newPointInteractiveBuffer = context.duplicateGPUBuffer(pointInteractiveBuffer, cE)
     context.device.queue.submit([cE.finish()])
     return new PointFeature(

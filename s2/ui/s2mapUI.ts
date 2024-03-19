@@ -6,7 +6,13 @@ import Animator from './camera/animator'
 import type { GPUType, LayerStyle, StyleDefinition } from 'style/style.spec'
 import type { AnimationDirections, AnimationType } from './camera/animator'
 import type { UserTouchEvent } from './camera/dragPan'
-import type { SourceFlushMessage, TileWorkerMessage } from 'workers/worker.spec'
+import type {
+  RenderedMessageGL,
+  ScreenshotMessageGL,
+  SourceFlushMessage,
+  TileRequestMessage,
+  TileWorkerMessage
+} from 'workers/worker.spec'
 import type { ColorMode } from 's2Map'
 
 export interface MapOptions {
@@ -24,6 +30,11 @@ export interface MapOptions {
   container?: string | HTMLElement
   /** If true, the map will be interactive; [default: true] */
   interactive?: boolean
+  /**
+   * If true, the map will update the URL Hash with it's current View
+   * e.g. `https://opens2.com/example/map#lon=0&lat=0&zoom=0&pitch=0&bearing=0`
+   * [default: false] */
+  hash?: boolean
   /** An API key will ensure control and ownership over data */
   apiKey?: string
   /**
@@ -76,8 +87,6 @@ export interface MapOptions {
   canMove?: boolean
   /** display controls, info icon, etc. in a dark style. [default: false] */
   darkMode?: boolean
-  // TODO: pushing this into options is not the play
-  webworker?: boolean
   /** Alow latitude and longitude to pass their limits (-90, 90) and (-180, 180) respectively */
   noClamp?: boolean // lat and lon can be any number
 }
@@ -99,7 +108,7 @@ export default class S2MapUI extends Camera {
 
   jumpTo (lon: number, lat: number, zoom?: number): void {
     // update the projectors position
-    this.projector.setPosition(lon, lat, zoom)
+    this.projector.setView({ lon, lat, zoom })
     // render it out
     this.render()
   }
@@ -131,7 +140,7 @@ export default class S2MapUI extends Camera {
     // // update tileCache
     // this.tileCache.forEach(tile => { tile.updateStyle(Style) })
     // // inject minzoom and maxzoom
-    // this.projector.setStyleParameters(Style, true)
+    // this._setStyle(style, true)
     // // render our first pass
     // this.render()
   }
@@ -151,18 +160,17 @@ export default class S2MapUI extends Camera {
     keepCache = false,
     awaitReplace = false
   ): void {
+    const { id: mapID, painter, webworker, parent } = this
     const tileRequests = this._resetTileCache(sources.map(s => s[0]), keepCache, awaitReplace)
     // Send off the tile request (by including sourceNames we are letting the
     // source worker know we only need to update THIS source)
     if (tileRequests.length > 0) {
-      if (this.webworker) {
-        postMessage({ mapID: this.id, type: 'tilerequest', tiles: tileRequests, sources })
-      } else {
-        window.S2WorkerPool.tileRequest(this.id, tileRequests, sources)
-      }
+      const msg: TileRequestMessage = { mapID, type: 'tilerequest', tiles: tileRequests, sources }
+      if (webworker) postMessage(msg)
+      else parent?.onMessage({ data: msg })
     }
     // let the renderer know the painter is "dirty"
-    this.painter.dirty = true
+    painter.dirty = true
     // rerender
     this.render()
   }
@@ -220,13 +228,13 @@ export default class S2MapUI extends Camera {
     this.render()
   }
 
-  updateCompass (bearing?: number, pitch?: number): void {
+  updateCompass (bearing: number, pitch: number): void {
     const { projector } = this
     this.currAnimFunction = undefined
-    projector.setCompass(
-      projector.bearing + (bearing ?? projector.bearing),
-      projector.pitch + (pitch ?? projector.pitch)
-    )
+    projector.setView({
+      bearing: projector.bearing + bearing,
+      pitch: projector.pitch + pitch
+    })
     this.render()
   }
 
@@ -268,29 +276,28 @@ export default class S2MapUI extends Camera {
   }
 
   screenshot (): void {
+    const { id: mapID, painter, parent, webworker } = this
     requestAnimationFrame(() => {
       if (this.#fullyRenderedScreen()) {
         // assuming the screen is ready for a screen shot we ask for a draw
-        void this.painter.getScreen()
-          .then(screen => {
-            if (this.webworker) {
-              postMessage({ type: 'screenshot', screen })
-            } else {
-              this.parent?.dispatchEvent(new CustomEvent('screenshot', { detail: screen }))
-            }
+        void painter.getScreen()
+          .then(data => {
+            const screen = data.buffer as ArrayBuffer
+            const msg: ScreenshotMessageGL = { mapID, type: 'screenshot', screen }
+            if (webworker) postMessage(msg, [screen])
+            else parent?.onMessage({ data: msg })
           })
       } else { this.screenshot() }
     })
   }
 
   awaitFullyRendered (): void {
+    const { id: mapID, parent, webworker } = this
     requestAnimationFrame(() => {
       if (this.#fullyRenderedScreen()) {
-        if (this.webworker) {
-          postMessage({ type: 'rendered' })
-        } else {
-          this.parent?.dispatchEvent(new Event('rendered'))
-        }
+        const msg: RenderedMessageGL = { mapID, type: 'rendered' }
+        if (webworker) postMessage({ type: 'rendered' })
+        parent?.onMessage({ data: msg })
       } else { this.awaitFullyRendered() }
     })
   }
@@ -379,7 +386,7 @@ export default class S2MapUI extends Camera {
       // if the projector was dirty (zoom or movement) we run render again just incase
       if (projectorDirty) {
         this.render()
-        this._onPositionUpdate()
+        this._onViewUpdate()
       }
       // run a draw, it will repaint framebuffers as necessary
       try {

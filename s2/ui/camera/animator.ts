@@ -59,7 +59,7 @@ export default class Animator {
     // pull in varaibles
     const lon = directions.lon ?? projector.lon
     const lat = directions.lat ?? projector.lat
-    const zoom = projector.clampZoom(directions.zoom ?? projector.zoom)
+    const zoom = directions.zoom ?? projector.zoom
     const bearing = directions.bearing ?? projector.bearing
     const pitch = directions.pitch ?? projector.pitch
     // setup variables
@@ -94,7 +94,7 @@ export default class Animator {
     // grab the positions
     const [lon, lat, zoom, bearing, pitch] = pos
     // update the projector
-    projector.setPosition(lon, lat, zoom, bearing, pitch)
+    projector.setView({ lon, lat, zoom, bearing, pitch })
     // return if time has passed or we are finished
     if (finished || time - this.startTime >= duration) return true
     return false

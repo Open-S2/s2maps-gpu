@@ -1,5 +1,5 @@
 import PointIndex from './pointIndex'
-import { fromID } from 'geometry/wm/mercID'
+import { fromID } from 'geometry/wm'
 import { transformPoint } from '../jsonVT/transform'
 import { toProjection } from 'geometry'
 

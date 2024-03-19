@@ -3,8 +3,11 @@ import type { StyleDefinition } from 'style/style.spec'
 const style: StyleDefinition = {
   version: 1,
   name: 'S2 Markers',
-  center: [0, 0],
-  zoom: -0.65,
+  view: {
+    zoom: -0.65,
+    lon: 0,
+    lat: 0
+  },
   minzoom: -1,
   maxzoom: 2.5,
   sources: {

@@ -4,8 +4,11 @@ const style: StyleDefinition = {
   version: 1,
   projection: 'WM',
   name: 'WM Hillshade Terrarium',
-  center: [0, 0],
-  zoom: 0.5,
+  view: {
+    lon: 0,
+    lat: 0,
+    zoom: 0.5
+  },
   minzoom: 0.5,
   maxzoom: 6.9,
   zoomOffset: 0.5,

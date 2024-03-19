@@ -28,3 +28,8 @@ export function radToDeg (radians: number): number {
 export function degToRad (deg: number): number {
   return deg * Math.PI / 180
 }
+
+/** a modulo function that works with negative numbers */
+export function mod (x: number, n: number): number {
+  return ((x % n) + n) % n
+}

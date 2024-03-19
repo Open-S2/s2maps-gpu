@@ -4,8 +4,11 @@ const style: StyleDefinition = {
   version: 1,
   name: 'Convert S2JSON to GeoJSON',
   projection: 'WM',
-  center: [0, 0],
-  zoom: 0.5,
+  view: {
+    lon: 0,
+    lat: 0,
+    zoom: -0.5
+  },
   minzoom: -1,
   maxzoom: 2.5,
   sources: {

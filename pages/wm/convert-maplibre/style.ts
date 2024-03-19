@@ -7,7 +7,7 @@ import type { StyleSpecification } from '@maplibre/maplibre-gl-style-spec'
 
 const maplibreStyle: StyleSpecification = {
   name: 'MapLibre',
-  zoom: 6.5,
+  zoom: 2,
   pitch: 0,
   center: [
     17.65431710431244,

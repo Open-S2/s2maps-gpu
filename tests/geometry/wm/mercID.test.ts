@@ -3,11 +3,15 @@ import {
   contains,
   fromID,
   isFace,
+  isOutOfBounds,
   level,
   neighborsXY,
   parent,
+  tileIDWrapped,
   toID,
-  toIJ
+  toIJ,
+  zagzig,
+  zigzag
 } from 'geometry/wm/mercID'
 import { describe, expect, it, test } from 'bun:test'
 
@@ -28,6 +32,21 @@ describe('managing tile x-y-z to/from ID', () => {
     expect(fromID(toID(1, 1, 0))).toEqual([1, 1, 0])
     expect(fromID(toID(1, 1, 1))).toEqual([1, 1, 1])
     expect(fromID(toID(20, 1048575, 1048575))).toEqual([20, 1048575, 1048575])
+    expect(fromID(toID(29, (1 << 29) - 1, (1 << 29) - 1))).toEqual([29, (1 << 29) - 1, (1 << 29) - 1])
+    expect(fromID(toID(30, (1 << 30) - 1, (1 << 30) - 1))).toEqual([30, (1 << 30) - 1, (1 << 30) - 1])
+  })
+
+  it('toID and fromID out of bounds tiles', () => {
+    expect(fromID(toID(0, 1, 0))).toEqual([0, 1, 0])
+    expect(fromID(toID(0, 2, 0))).toEqual([0, 2, 0])
+    expect(fromID(toID(0, 3, 0))).toEqual([0, 3, 0])
+    expect(fromID(toID(0, 4, 0))).toEqual([0, 4, 0])
+    expect(fromID(toID(0, -1, 0))).toEqual([0, -1, 0])
+    expect(fromID(toID(1, -1, 0))).toEqual([1, -1, 0])
+    expect(fromID(toID(1, -2, 0))).toEqual([1, -2, 0])
+    expect(fromID(toID(1, -3, 0))).toEqual([1, -3, 0])
+    expect(fromID(toID(4, -1, 7))).toEqual([4, -1, 7])
+    expect(fromID(toID(20, -1048575, 1000))).toEqual([20, -1048575, 1000])
   })
 })
 
@@ -85,6 +104,13 @@ describe('various neighborsXY', () => {
     ])
   })
 
+  it('zoom 1 at the end', () => {
+    expect(neighborsXY(1, 1, 1)).toEqual([
+      [1, 0, 1],
+      [1, 1, 0]
+    ])
+  })
+
   it('zoom 2', () => {
     expect(neighborsXY(2, 0, 0)).toEqual([
       [2, 1, 0],
@@ -99,6 +125,65 @@ describe('various neighborsXY', () => {
       [2, 1, 0],
       [2, 1, 2]
     ])
+  })
+})
+
+describe('various neighborsXY with includeOutOfBounds', () => {
+  it('zoom 0', () => {
+    expect(neighborsXY(0, 0, 0, true)).toEqual([
+      [0, -1, 0],
+      [0, 1, 0]
+    ])
+    expect(neighborsXY(0, -1, 0, true)).toEqual([
+      [0, -2, 0],
+      [0, 0, 0]
+    ])
+  })
+})
+
+describe('tileIDWrapped', () => {
+  it('zoom 0', () => {
+    expect(tileIDWrapped(toID(0, 0, 0))).toEqual(toID(0, 0, 0))
+    expect(tileIDWrapped(toID(0, 1, 0))).toEqual(toID(0, 0, 0))
+    expect(tileIDWrapped(toID(0, 2, 0))).toEqual(toID(0, 0, 0))
+    expect(tileIDWrapped(toID(0, 3, 0))).toEqual(toID(0, 0, 0))
+    expect(tileIDWrapped(toID(0, 4, 0))).toEqual(toID(0, 0, 0))
+    expect(tileIDWrapped(toID(0, -1, 0))).toEqual(toID(0, 0, 0))
+  })
+
+  it('zoom 1', () => {
+    expect(tileIDWrapped(toID(1, 0, 0))).toEqual(toID(1, 0, 0))
+    expect(tileIDWrapped(toID(1, 1, 0))).toEqual(toID(1, 1, 0))
+    expect(tileIDWrapped(toID(1, -1, 0))).toEqual(toID(1, 1, 0))
+  })
+
+  it('zoom 2', () => {
+    expect(tileIDWrapped(toID(2, 0, 0))).toEqual(toID(2, 0, 0))
+    expect(tileIDWrapped(toID(2, 1, 0))).toEqual(toID(2, 1, 0))
+    expect(tileIDWrapped(toID(2, -1, 0))).toEqual(toID(2, 3, 0))
+  })
+})
+
+describe('isOutOfBounds', () => {
+  it('zoom 0', () => {
+    expect(isOutOfBounds(toID(0, 0, 0))).toEqual(false)
+    expect(isOutOfBounds(toID(0, 1, 0))).toEqual(true)
+    expect(isOutOfBounds(toID(0, 2, 0))).toEqual(true)
+  })
+
+  it('zoom 1', () => {
+    expect(isOutOfBounds(toID(1, 0, 0))).toEqual(false)
+    expect(isOutOfBounds(toID(1, 1, 0))).toEqual(false)
+    expect(isOutOfBounds(toID(1, -1, 0))).toEqual(true)
+  })
+
+  it('zoom 2', () => {
+    expect(isOutOfBounds(toID(2, 0, 0))).toEqual(false)
+    expect(isOutOfBounds(toID(2, 1, 0))).toEqual(false)
+    expect(isOutOfBounds(toID(2, -1, 0))).toEqual(true)
+    expect(isOutOfBounds(toID(2, 1, 1))).toEqual(false)
+    expect(isOutOfBounds(toID(2, 3, 0))).toEqual(false)
+    expect(isOutOfBounds(toID(2, 4, 0))).toEqual(true)
   })
 })
 
@@ -196,5 +281,44 @@ test('level', () => {
   expect(level(2n)).toEqual(2)
   expect(level(toID(10, 0, 0))).toEqual(10)
   expect(level(toID(10, 500, 100))).toEqual(10)
-  expect(level(toID(30, 500, 100))).toEqual(30)
+  expect(level(toID(29, (1 << 29) - 1, (1 << 29) - 1))).toEqual(29)
+  expect(level(toID(30, (1 << 30) - 1, (1 << 30) - 1))).toEqual(30)
+})
+
+describe('zigzag & zagzig', () => {
+  test('zigzag', () => {
+    // positives
+    expect(zigzag(0)).toEqual(0)
+    expect(zigzag(1)).toEqual(2)
+    expect(zigzag(2)).toEqual(4)
+    expect(zigzag(3)).toEqual(6)
+    expect(zigzag(4)).toEqual(8)
+    expect(zigzag(100000000)).toEqual(200000000)
+    // negatives
+    expect(zigzag(-1)).toEqual(1)
+    expect(zigzag(-2)).toEqual(3)
+    expect(zigzag(-3)).toEqual(5)
+    expect(zigzag(-4)).toEqual(7)
+    expect(zigzag(-100000000)).toEqual(199999999)
+  })
+  test('zagzig', () => {
+    // positives
+    expect(zagzig(0)).toEqual(0)
+    expect(zagzig(2)).toEqual(1)
+    expect(zagzig(4)).toEqual(2)
+    expect(zagzig(6)).toEqual(3)
+    expect(zagzig(8)).toEqual(4)
+    expect(zagzig(200000000)).toEqual(100000000)
+    // negatives
+    expect(zagzig(1)).toEqual(-1)
+    expect(zagzig(3)).toEqual(-2)
+    expect(zagzig(5)).toEqual(-3)
+    expect(zagzig(7)).toEqual(-4)
+    expect(zagzig(199999999)).toEqual(-100000000)
+  })
+  test('zigzag & zagzig', () => {
+    for (let i = -1_000_000; i < 1_000_000; i++) {
+      expect(zagzig(zigzag(i))).toEqual(i)
+    }
+  })
 })

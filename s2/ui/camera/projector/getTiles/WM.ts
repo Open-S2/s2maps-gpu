@@ -1,29 +1,34 @@
 import { project } from '../mat4'
-import { llToTile, llToTilePx, neighborsXY, toID } from 'geometry/wm'
+import { isOutOfBounds, llToTile, llToTilePx, neighborsXY, toID } from 'geometry/wm'
 import { boxIntersects, pointBoundaries } from 'geometry'
 
 import type Projector from '../'
+import type { Neighbor } from 'geometry/wm'
 
-// Due to the nature of the Web Mercator design, it's easiest to store an MVP matrix for each tile
-// because of this when
-
+// Due to the nature of the Web Mercator design,
+// it's easiest to store an MVP matrix for each tile
+//
+// NOTE: Real World Tiles must be created/cached BEFORE creating out of bounds tiles
+// as the out of bounds tiles will need to reference the real world tiles.
+// So we sort all out of bounds tiles to the end of the list.
 export default function getTilesInView (
   zoom: number,
-  projector: Projector,
   lon: number,
-  lat: number
+  lat: number,
+  projector: Projector
 ): bigint[] {
-  if (zoom < 1) return [0n]
-  const tiles: bigint[] = []
-  const checkList: Array<[number, number, number]> = []
+  const { tileSize, duplicateHorizontally } = projector
+  if (zoom < 1) zoom = 0
+  const tiles = new Set<bigint>()
+  const checkList: Neighbor[] = []
   const checkedTiles = new Set<string>()
   zoom = zoom << 0 // move to whole number
 
   // let's find the current tile and store it
-  const [x, y] = llToTile([lon, lat], zoom, projector.tileSize)
-  tiles.push(toID(zoom, x, y))
+  const [x, y] = llToTile([lon, lat], zoom, tileSize)
+  tiles.add(toID(zoom, x, y))
   // add the first set of neighbors
-  addNeighbors(zoom, x, y, checkedTiles, checkList)
+  addNeighbors(zoom, x, y, duplicateHorizontally, checkedTiles, checkList)
 
   while (checkList.length > 0) {
     // grab a tile to check and get its face and bounds
@@ -43,29 +48,37 @@ export default function getTilesInView (
       boxIntersects(bl, br, tl, tr)
     ) {
       // if the tile is in view, add it to the list
-      tiles.push(toID(zCheck, xCheck, yCheck))
+      tiles.add(toID(zCheck, xCheck, yCheck))
       // add the surounding tiles we have not checked
-      addNeighbors(zCheck, xCheck, yCheck, checkedTiles, checkList)
+      addNeighbors(zCheck, xCheck, yCheck, duplicateHorizontally, checkedTiles, checkList)
     }
   }
 
-  // we sort by id to avoid text filtering to awkwardly swap back and forth
-  return tiles.sort((a, b) => {
-    if (a > b) return 1
-    else if (a < b) return -1
-    else return 0
-  })
+  return [...tiles]
+    // first we sort by id to avoid text filtering to awkwardly swap back and forth
+    .sort((a, b) => {
+      if (a > b) return 1
+      else if (a < b) return -1
+      else return 0
+    })
+    // then we sort by real world tiles first and out of bounds tiles last
+    .sort((a, b) => {
+      if (isOutOfBounds(a)) return 1
+      else if (isOutOfBounds(b)) return -1
+      else return 0
+    })
 }
 
 function addNeighbors (
   zoom: number,
   x: number,
   y: number,
+  duplicateHorizontally: boolean,
   checkedTiles: Set<string>,
   checkList: Array<[number, number, number]>
 ): void {
   // add the surounding tiles we have not checked
-  for (const [nZoom, nX, nY] of neighborsXY(zoom, x, y)) {
+  for (const [nZoom, nX, nY] of neighborsXY(zoom, x, y, duplicateHorizontally)) {
     const zxy = `${String(nZoom)}-${String(nX)}-${String(nY)}`
     if (!checkedTiles.has(zxy)) {
       checkedTiles.add(zxy)
@@ -74,7 +87,12 @@ function addNeighbors (
   }
 }
 
-function tileMatrix (projector: Projector, tileZoom: number, tileX: number, tileY: number): Float32Array {
+function tileMatrix (
+  projector: Projector,
+  tileZoom: number,
+  tileX: number,
+  tileY: number
+): Float32Array {
   const { zoom, lon, lat } = projector
   const scale = Math.pow(2, zoom - tileZoom)
   const offset = llToTilePx([lon, lat], [tileZoom, tileX, tileY], 1)

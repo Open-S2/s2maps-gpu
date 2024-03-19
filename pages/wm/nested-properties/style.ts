@@ -4,8 +4,11 @@ const style: StyleDefinition = {
   version: 1,
   name: 'WM Nested Properties',
   projection: 'WM',
-  center: [0, 0],
-  zoom: 2,
+  view: {
+    lon: 0,
+    lat: 0,
+    zoom: 2
+  },
   minzoom: -1,
   maxzoom: 2.5,
   sources: {

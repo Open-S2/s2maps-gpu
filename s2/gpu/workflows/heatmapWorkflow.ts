@@ -74,12 +74,17 @@ export class HeatmapFeature implements HeatmapFeatureSpec {
     featureCodeBuffer.destroy()
   }
 
-  duplicate (tile: Tile, parent: Tile, bounds: BBox): HeatmapFeature {
-    const { workflow, source, layerGuide, count, offset, featureCode, featureCodeBuffer } = this
+  duplicate (tile: Tile, parent?: Tile, bounds?: BBox): HeatmapFeature {
+    const {
+      workflow, source, layerGuide, count, offset, featureCode,
+      featureCodeBuffer, heatmapBoundsBuffer
+    } = this
     const { context } = workflow
     const cE = context.device.createCommandEncoder()
     const newFeatureCodeBuffer = context.duplicateGPUBuffer(featureCodeBuffer, cE)
-    const newHeatmapBoundsBuffer = context.buildGPUBuffer('Heatmap Uniform Buffer', new Float32Array(bounds), GPUBufferUsage.UNIFORM)
+    const newHeatmapBoundsBuffer = bounds !== undefined
+      ? context.buildGPUBuffer('Heatmap Uniform Buffer', new Float32Array(bounds), GPUBufferUsage.UNIFORM)
+      : context.duplicateGPUBuffer(heatmapBoundsBuffer, cE)
     context.device.queue.submit([cE.finish()])
     return new HeatmapFeature(
       workflow, source, layerGuide, tile, count, offset, featureCode,

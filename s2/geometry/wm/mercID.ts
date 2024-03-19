@@ -1,17 +1,24 @@
+import { mod } from '../util'
+
 /** Convert zoom-x-y to a singular number */
 export function toID (zoom: number, x: number, y: number): bigint {
-  return BigInt((((1 << zoom) * y + x) * 32) + zoom)
+  const maxX = 1 << zoom
+  const adjustedX = mod(x, maxX) // Adjust x to be within [0, maxX)
+  const remainder = zigzag(x - adjustedX)
+  return ((BigInt(1 << zoom) * BigInt(y) + BigInt(adjustedX)) * 32n) + BigInt(zoom) + (BigInt(remainder) << 65n)
 }
 
 /** Convert a number or bigint to [zoom, x, y] */
 export function fromID (idB: bigint): [zoom: number, x: number, y: number] {
-  let id = Number(idB)
-  const z = id % 32
-  id = (id - z) / 32
-  const x = id % (1 << z)
-  const y = (id - x) / (1 << z)
+  const remainder = idB >> 65n
+  const adjustedX = zagzig(Number(remainder))
+  idB = idB - (remainder << 65n)
+  const z = idB % 32n
+  idB = (idB - z) / 32n
+  const x = idB % (1n << z)
+  const y = (idB - x) / (1n << z)
 
-  return [z, x, y]
+  return [Number(z), Number(x) + adjustedX, Number(y)]
 }
 
 /** Given a tile ID, find the 4 children tile IDs */
@@ -27,21 +34,51 @@ export function children (
   ]
 }
 
+export type Neighbor = [zoom: number, x: number, y: number]
+
 /**
  * grab the tiles next to the current tiles zoom-x-y
- * only include adjacent tiles, not diagonal
+ * only include adjacent tiles, not diagonal.
+ * If includeOutOfBounds set to true, it will include out of bounds tiles
+ * on the x-axis
  */
 export function neighborsXY (
   zoom: number,
   x: number,
-  y: number
-): Array<[zoom: number, x: number, y: number]> {
-  const neighbors: Array<[zoom: number, x: number, y: number]> = []
-  if (x - 1 >= 0) neighbors.push([zoom, x - 1, y])
-  if (x + 1 < (1 << zoom)) neighbors.push([zoom, x + 1, y])
-  if (y - 1 >= 0) neighbors.push([zoom, x, y - 1])
-  if (y + 1 < (1 << zoom)) neighbors.push([zoom, x, y + 1])
+  y: number,
+  includeOutOfBounds = false
+): Neighbor[] {
+  const size = 1 << zoom
+  const neighbors: Neighbor[] = []
+  const xOutOfBounds = x < 0 || x >= size
+  if (x - 1 >= 0 || includeOutOfBounds) neighbors.push([zoom, x - 1, y])
+  if (x + 1 < size || includeOutOfBounds) neighbors.push([zoom, x + 1, y])
+  if (!xOutOfBounds && y - 1 >= 0) neighbors.push([zoom, x, y - 1])
+  if (!xOutOfBounds && y + 1 < size) neighbors.push([zoom, x, y + 1])
   return neighbors
+}
+
+/**
+ * Check if the tile is not a real world tile that fits inside the quad tree
+ * Out of bounds tiles exist if the map has `duplicateHorizontally` set to true.
+ * This is useful for filling in the canvas on the x axis instead of leaving it blank.
+ */
+export function isOutOfBounds (id: bigint): boolean {
+  const [zoom, x, y] = fromID(id)
+  const size = 1 << zoom
+  return x < 0 || y < 0 || x >= size || y >= size
+}
+
+/**
+ * Given a tile ID, find the "wrapped" tile ID.
+ * It may resolve to itself. This is useful for maps that have
+ * `duplicateHorizontally` set to true. It forces the tile to be
+ * within the bounds of the quad tree.
+ */
+export function tileIDWrapped (id: bigint): bigint {
+  const [zoom, x, y] = fromID(id)
+  const size = 1 << zoom
+  return toID(zoom, mod(x, size), mod(y, size))
 }
 
 /** Given a tileID, find the parent tile */
@@ -81,4 +118,14 @@ export function isFace (id: bigint): boolean {
 /** Get the zoom from the tile ID */
 export function level (id: bigint): number {
   return fromID(id)[0]
+}
+
+/** encode a number as always positive interweaving negative and postive values */
+export function zigzag (n: number): number {
+  return (n >> 31) ^ (n << 1)
+}
+
+/** decode a number that was encoded with zigzag */
+export function zagzig (n: number): number {
+  return (n >> 1) ^ (-(n & 1))
 }

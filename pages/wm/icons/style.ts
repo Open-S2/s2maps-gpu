@@ -5,8 +5,11 @@ const style: StyleDefinition = {
   experimental: true,
   projection: 'WM',
   name: 'WM Icons',
-  center: [0, 0],
-  zoom: 0.9,
+  view: {
+    lon: 0,
+    lat: 0,
+    zoom: 0.9
+  },
   minzoom: -0.5,
   maxzoom: 5,
   sources: {

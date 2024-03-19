@@ -236,14 +236,8 @@ export default class WebGPUContext {
   #resize (): void {
     this.#resizeNextFrame = false
     const { gpu, sampleCount } = this
-    const { canvas } = gpu
-    // in webGPU, you only have to edit the canvas size
-    const width = 'clientWidth' in canvas ? canvas.clientWidth : canvas.width
-    const height = 'clientHeight' in canvas ? canvas.clientHeight : canvas.height
+    const { width, height } = gpu.canvas
     this.presentation = { width, height, depthOrArrayLayers: 1 }
-    // adjust canvas to match presentation
-    canvas.width = width
-    canvas.height = height
     // fix the render target
     if (this.#renderTarget !== undefined) this.#renderTarget.destroy()
     if (sampleCount > 1) {

@@ -4,13 +4,22 @@ import findCacheDir from 'find-cache-dir'
 import fs from 'node:fs'
 import path from 'node:path'
 
-export { inlineWorkerPlugin as default }
+import type { BuildOptions, PluginBuild } from 'esbuild'
 
-function inlineWorkerPlugin (extraConfig) {
+export interface Config extends BuildOptions {
+  workerName?: string
+}
+
+export default function inlineWorkerPlugin (
+  extraConfig: Config
+): {
+    name: string
+    setup: (build: PluginBuild) => void
+  } {
   return {
     name: 'esbuild-plugin-inline-worker',
 
-    setup (build) {
+    setup (build: PluginBuild) {
       build.onLoad(
         { filter: /\.worker\.(js|jsx|ts|tsx)$/ },
         async ({ path: workerPath }) => {
@@ -30,14 +39,14 @@ export default function Worker() {
         }
       )
 
-      const name = extraConfig.workerName ? { name: extraConfig.workerName } : {}
-      name.type = 'module'
+      const workerOptions: { name?: string, type: 'module' } = { type: 'module' }
+      if (extraConfig.workerName !== undefined) workerOptions.name = extraConfig.workerName
 
       const inlineWorkerFunctionCode = `
 export default function inlineWorker(scriptText) {
   let blob = new Blob([scriptText], {type: 'text/javascript'});
   let url = URL.createObjectURL(blob);
-  let worker = new Worker(url, ${JSON.stringify(name)});
+  let worker = new Worker(url, ${JSON.stringify(workerOptions)});
   URL.revokeObjectURL(url);
   return worker;
 }
@@ -58,14 +67,17 @@ const cacheDir = findCacheDir({
   create: true
 })
 
-async function buildWorker (workerPath, extraConfig) {
+async function buildWorker (
+  workerPath: string,
+  extraConfig: Config
+): Promise<string> {
   const scriptNameParts = path.basename(workerPath).split('.')
   scriptNameParts.pop()
   scriptNameParts.push('js')
   const scriptName = scriptNameParts.join('.')
-  const bundlePath = path.resolve(cacheDir, scriptName)
+  const bundlePath = path.resolve(cacheDir ?? '', scriptName)
 
-  if (extraConfig) {
+  if (extraConfig !== undefined) {
     delete extraConfig.entryPoints
     delete extraConfig.outfile
     delete extraConfig.outdir
@@ -79,7 +91,7 @@ async function buildWorker (workerPath, extraConfig) {
     outfile: bundlePath,
     target: 'es2017',
     format: 'esm',
-    ...extraConfig
+    ...(extraConfig as BuildOptions)
   })
 
   return await fs.promises.readFile(bundlePath, { encoding: 'utf-8' })

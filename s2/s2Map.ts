@@ -1,4 +1,4 @@
-import { isSafari } from './util/polyfill'
+import { isSafari, parseHash, setHash } from './util'
 
 import type S2MapUI from './ui/s2mapUI'
 import type { MapOptions } from './ui/s2mapUI'
@@ -41,6 +41,7 @@ export default class S2Map extends EventTarget {
   pitch = 0 // degrees
   colorMode: ColorMode = 0 // 0: none - 1: protanopia - 2: deuteranopia - 3: tritanopia - 4: greyscale
   map?: S2MapUI
+  hash = false
   offscreen?: Worker
   id: string = Math.random().toString(36).replace('0.', '')
   isNative = false
@@ -54,6 +55,12 @@ export default class S2Map extends EventTarget {
   ) {
     super()
     options.canvasMultiplier = this.#canvasMultiplier = Math.max(2, options.canvasMultiplier ?? 2)
+    // set hash if necessary
+    if (options.hash === true) {
+      this.hash = true
+      // TODO: get this working even if style is a string
+      if (typeof options.style === 'object') options.style.view = { ...options.style.view, ...parseHash() }
+    }
     // get the container if we don't already have a canvas instance
     if (options.canvas === undefined) {
       if (typeof options.container === 'string') {
@@ -86,13 +93,13 @@ export default class S2Map extends EventTarget {
     }
   }
 
-  ready (): void {
+  /* BUILD/CONSTRUCTION FUNCTIONS */
+
+  #ready (): void {
     this.isReady = true
     this.#onCanvasReady()
     this.dispatchEvent(new CustomEvent('ready', { detail: this }))
   }
-
-  /* BUILD */
 
   #setupContainer (options: MapOptions): HTMLCanvasElement {
     if (this.#container === undefined) throw new Error('Container not found.')
@@ -135,18 +142,16 @@ export default class S2Map extends EventTarget {
     // @ts-expect-error - if webgl2 context was found, lose the context
     if (isBrowser && options.contextType === 2) tmpContext?.getExtension('WEBGL_lose_context').loseContext()
     // if browser supports it, create an instance of the mapWorker
-    // TODO: Maybe there is a way to get offscreencanvas to work on safari but for now not worth
+    // TODO: Safari offscreenCanvas sucks currently. It's so janky. Leave this here for when it's fixed.
     if (options.offscreen !== false && !isSafari && typeof canvas.transferControlToOffscreen === 'function') {
       const offscreenCanvas = canvas.transferControlToOffscreen()
       const mapWorker = this.offscreen = new Worker(new URL('./workers/map.worker', import.meta.url), { name: 'map-worker', type: 'module' })
-      mapWorker.onmessage = this.#mapMessage.bind(this)
+      mapWorker.onmessage = this.onMessage.bind(this)
       mapWorker.postMessage({ type: 'canvas', options, canvas: offscreenCanvas, id: this.id }, [offscreenCanvas])
     } else {
       const Map = await import('./ui/s2mapUI').then(m => m.default)
       this.map = new Map(options, canvas, this.id, this)
     }
-    // const Map = await import('./ui/s2mapUI').then(m => m.default)
-    // this.map = new Map(options, canvas, this.id, this)
     // now that canvas is setup, add control containers as necessary
     this.#setupControlContainer(options)
     // if we interact with the map, we need to both allow interaction with styling
@@ -287,6 +292,12 @@ export default class S2Map extends EventTarget {
 
   /* INTERNAL API */
 
+  /**
+   * @internal
+   * Used by the WorkerPool.
+   * Anytime a Source worker or Tile Worker has data to inject into the map,
+   * it will call this function.
+   */
   injectData (data: SourceWorkerMessage | TileWorkerMessage): void {
     const { type } = data
     const { map, offscreen } = this
@@ -310,7 +321,12 @@ export default class S2Map extends EventTarget {
     }
   }
 
-  #mapMessage ({ data }: { data: MapGLMessage }): void {
+  /**
+   * @internal
+   * Used by the MapUI either from a thread or directly. to either
+   * send messages to Source/Tile Workers or to the user.
+   */
+  onMessage ({ data }: { data: MapGLMessage }): void {
     const { mapID, type } = data
     if (type === 'tilerequest') {
       window.S2WorkerPool.tileRequest(mapID, data.tiles, data.sources)
@@ -329,9 +345,9 @@ export default class S2Map extends EventTarget {
     } else if (type === 'click') {
       // console.log('click', data)
       this.dispatchEvent(new CustomEvent('click', { detail: data }))
-    } else if (type === 'pos') {
-      const { zoom, lon, lat } = data
-      this.dispatchEvent(new CustomEvent('pos', { detail: { zoom, lon, lat } }))
+    } else if (type === 'view') {
+      if (this.hash) setHash(data.view)
+      this.dispatchEvent(new CustomEvent('view', { detail: data }))
     } else if (type === 'requestStyle') {
       window.S2WorkerPool.requestStyle(mapID, data.style, data.analytics, data.apiKey)
     } else if (type === 'style') {
@@ -345,11 +361,11 @@ export default class S2Map extends EventTarget {
     } else if (type === 'reorderLayers') {
       window.S2WorkerPool.reorderLayers(mapID, data.layerChanges)
     } else if (type === 'screenshot') {
-      this.dispatchEvent(new CustomEvent('screenshot', { detail: data.screen }))
+      this.dispatchEvent(new CustomEvent('screenshot', { detail: new Uint8ClampedArray(data.screen) }))
     } else if (type === 'rendered') {
       this.dispatchEvent(new Event('rendered'))
     } else if (type === 'ready') {
-      this.ready()
+      this.#ready()
     }
   }
 
@@ -468,8 +484,8 @@ export default class S2Map extends EventTarget {
       if (movementX !== 0) {
         totalMovementX += abs(movementX)
         totalMovementY += abs(movementY)
-        offscreen?.postMessage({ type: 'updateCompass', bearing: movementX })
-        map?.updateCompass(movementX)
+        offscreen?.postMessage({ type: 'updateCompass', bearing: movementX, pitch: movementY })
+        map?.updateCompass(movementX, movementY)
       }
     }
     window.addEventListener('mousemove', mouseMoveFunc)

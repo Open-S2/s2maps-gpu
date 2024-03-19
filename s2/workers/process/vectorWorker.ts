@@ -1,5 +1,4 @@
 import Color from 'style/color'
-import { type Properties } from 'geometry'
 import parseFeatureFunction from 'style/parseFeatureFunction'
 
 import type { BuildCodeFunction, GPUType, InteractiveWorkerLayer, LayerWorkerFunction, NotNullOrObject, Property, ValueType } from 'style/style.spec'
@@ -7,6 +6,7 @@ import type { InteractiveObject, TileRequest } from '../worker.spec'
 import type { IDGen } from './process.spec'
 import type { Callback } from 'style/parseFeatureFunction'
 import type { ColorArray } from 'style/color'
+import type { Properties } from 'geometry'
 
 export type CodeDesignInput<T extends NotNullOrObject> = [
   T | Property<T>,

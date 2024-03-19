@@ -63,7 +63,7 @@ export class HilllshadeFeature implements HillshadeFeatureSpec {
     featureCodeBuffer.destroy()
   }
 
-  duplicate (tile: Tile, parent: Tile): HilllshadeFeature {
+  duplicate (tile: Tile, parent?: Tile): HilllshadeFeature {
     const {
       layerGuide, workflow, source,
       featureCode, hillshadeFadeBuffer, featureCodeBuffer, fadeStartTime

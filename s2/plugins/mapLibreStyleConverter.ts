@@ -51,10 +51,13 @@ export default function maplibreStyleConverter (input: StyleSpecification): Styl
 
   const res: StyleDefinition = {
     version: 1,
-    center,
-    zoom,
-    bearing,
-    pitch,
+    view: {
+      lon: center?.[0],
+      lat: center?.[1],
+      zoom,
+      bearing,
+      pitch
+    },
     projection: 'WM',
     glyphs,
     sources: convertSources(sources),

@@ -4,8 +4,11 @@ const style: StyleDefinition = {
   version: 1,
   projection: 'WM',
   name: 'WM Raster',
-  center: [0, 0],
-  zoom: -0.5,
+  view: {
+    lon: 0,
+    lat: 0,
+    zoom: 0
+  },
   minzoom: -0.5,
   maxzoom: 5.5,
   sources: {

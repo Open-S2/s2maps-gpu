@@ -38,6 +38,7 @@
     "no-console": ["error", { "allow": ["info", "warn", "error"] }]
   },
   "ignorePatterns": [
+    "packages",
     "node_modules",
     "dist",
     "dist-types",

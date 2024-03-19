@@ -4,8 +4,11 @@ const style: StyleDefinition = {
   version: 1,
   name: 'WM Glyphs',
   projection: 'WM',
-  center: [0, 0],
-  zoom: 1.5,
+  view: {
+    lon: 0,
+    lat: 0,
+    zoom: 1.5
+  },
   minzoom: -0.5,
   maxzoom: 5,
   sources: {

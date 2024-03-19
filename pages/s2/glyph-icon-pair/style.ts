@@ -4,8 +4,11 @@ const style: StyleDefinition = {
   version: 1,
   experimental: true,
   name: 'S2 Glyph Icon Pair',
-  center: [0, 0],
-  zoom: -0.5,
+  view: {
+    zoom: -0.5,
+    lon: 0,
+    lat: 0
+  },
   minzoom: -0.5,
   maxzoom: 5,
   sources: {

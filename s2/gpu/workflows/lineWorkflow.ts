@@ -97,7 +97,7 @@ export class LineFeature implements LineFeatureSpec {
     lineUniformBuffer.destroy()
   }
 
-  duplicate (tile: Tile, parent: Tile): LineFeature {
+  duplicate (tile: Tile, parent?: Tile): LineFeature {
     const {
       workflow, layerGuide, source, count, offset, featureCode,
       dashTexture, featureCodeBuffer, lineUniformBuffer, cap

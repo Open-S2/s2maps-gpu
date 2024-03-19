@@ -4,19 +4,32 @@ import Style from 'style'
 import type { Painter as GLPainter } from 'gl/painter.spec'
 import type { Painter as GPUPainter } from 'gpu/painter.spec'
 import type { MapOptions } from '../s2mapUI'
-/** PROJECTIONS **/
+/** GEOMETRY / PROJECTIONS **/
 import { isFace, parent as parentID } from 'geometry/id'
+import { tileIDWrapped as tileIDWrappedWM } from 'geometry/wm'
 import Projector from './projector'
 /** SOURCES **/
 import { createTile } from 'source'
 import Cache from './cache'
 import TimeCache from './timeCache'
-import DragPan, { type ClickEvent } from './dragPan'
+import DragPan from './dragPan'
 import Animator from './animator'
-import { type StyleDefinition, type TimeSeriesStyle } from 'style/style.spec'
 
+import type { StyleDefinition, TimeSeriesStyle } from 'style/style.spec'
 import type S2Map from 's2Map'
-import type { InteractiveObject, MouseClickMessage, MouseEnterMessage, MouseLeaveMessage, PositionMessage, ReadyMessageGL, SourceFlushMessage, TileFlushMessage, TileRequest, TileWorkerMessage } from 'workers/worker.spec'
+import type { ClickEvent } from './dragPan'
+import type {
+  InteractiveObject,
+  MouseClickMessage,
+  MouseEnterMessage,
+  MouseLeaveMessage,
+  ReadyMessageGL,
+  SourceFlushMessage,
+  TileFlushMessage,
+  TileRequest,
+  TileWorkerMessage,
+  ViewMessage
+} from 'workers/worker.spec'
 import type { Combine, TileShared as Tile } from 'source/tile.spec'
 
 export interface ResizeDimensions {
@@ -42,6 +55,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   lastTileViewState: number[] = []
   requestQueue: Tile[] = []
   wasDirtyLastFrame = false
+  /** Denote this mapUI is running in a separate thread */
   webworker: boolean
   canMove = true
   canZoom = true
@@ -54,9 +68,9 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   constructor (options: MapOptions, canvas: HTMLCanvasElement, id: string, parent?: S2Map) {
     this.#canvas = canvas
     // setup options
-    const { style, webworker, interactive, scrollZoom, canMove, canZoom } = options
+    const { style, interactive, scrollZoom, canMove, canZoom } = options
     // assign webworker if applicable
-    this.webworker = webworker ?? false
+    this.webworker = parent === undefined
     // check if we can interact with the camera
     this._interactive = interactive ?? true
     this.#scrollZoom = scrollZoom ?? true
@@ -93,7 +107,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     // explain we are ready to paint
     const msg: ReadyMessageGL = { type: 'ready', mapID: this.id }
     if (this.webworker) postMessage(msg)
-    else this.parent?.ready()
+    else this.parent?.onMessage({ data: msg })
   }
 
   async _setStyle (style: string | StyleDefinition, ignorePosition: boolean): Promise<void> {
@@ -102,9 +116,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     // incase style was imported, clear cache
     this.tileCache.deleteAll()
     // build style for the map, painter, and webworkers
-    this._canDraw = await this.style.buildStyle(style)
-    // inject minzoom and maxzoom
-    if (typeof style !== 'string') this.projector.setStyleParameters(style, ignorePosition)
+    this._canDraw = await this.style.buildStyle(style, ignorePosition)
     // render our first pass
     this.render()
   }
@@ -228,12 +240,12 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   _setMousePosition (posX: number, posY: number): void {
     this.mousePosition = [posX, posY]
     this.projector.setMousePosition(posX, posY)
-    // NOTE: This is a bit of a hack. Sometimes mouse positions update before the painter is ready
-    if (this.painter !== undefined) this.painter.dirty = true
+    // NOTE: Sometimes mouse positions update before the painter is ready, so discard them
+    if (this._canDraw) this.painter.dirty = true
   }
 
   #onClick ({ detail }: ClickEvent): void {
-    const { id: mapID, projector, currFeatures, parent } = this
+    const { id: mapID, projector, currFeatures, parent, webworker } = this
     // get lon lat of cursor
     const { posX, posY } = detail
     const lonLat = projector.cursorToLonLat(posX, posY)
@@ -241,11 +253,8 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     const [lon, lat] = lonLat
     // send off the information
     const msg: MouseClickMessage = { type: 'click', mapID, features: [...currFeatures.values()], lon, lat }
-    if (this.webworker) {
-      postMessage(msg)
-    } else {
-      parent?.dispatchEvent(new CustomEvent('click', { detail: msg }))
-    }
+    if (webworker) postMessage(msg)
+    else parent?.onMessage({ data: msg })
   }
 
   #onDoubleClick ({ detail }: ClickEvent): void {
@@ -268,29 +277,29 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     this.render()
   }
 
-  _onPositionUpdate (): void {
-    const { id: mapID, projector } = this
-    const { zoom, lon, lat } = projector
-    const msg: PositionMessage = { type: 'pos', mapID, zoom, lon, lat }
-    if (this.webworker) postMessage(msg)
-    else this.parent?.dispatchEvent(new CustomEvent('pos', { detail: msg }))
+  _onViewUpdate (): void {
+    const { id: mapID, projector, webworker, parent } = this
+    const { zoom, lon, lat, bearing, pitch } = projector
+    const msg: ViewMessage = { type: 'view', mapID, view: { zoom, lon, lat, bearing, pitch } }
+    if (webworker) postMessage(msg)
+    else parent?.onMessage({ data: msg })
   }
 
   async _onCanvasMouseMove (): Promise<void> {
-    const { style, mousePosition } = this
+    const { style, mousePosition, painter, currFeatures, tileCache } = this
     if (!style.interactive) return
     const foundObjects = new Map<number, InteractiveObject>()
-    const featureIDs = await this.painter.context.getFeatureAtMousePosition(...mousePosition)
+    const featureIDs = await painter.context.getFeatureAtMousePosition(...mousePosition)
     // if we found an ID and said feature is not the same as the current, we dive down
     for (const featureID of featureIDs) {
       // first check if we already have the feature
-      const hasFeature = this.currFeatures.get(featureID)
+      const hasFeature = currFeatures.get(featureID)
       if (hasFeature !== undefined) {
         foundObjects.set(featureID, hasFeature)
         continue
       }
       // otherwise, we check the tiles in our store
-      for (const tile of this.tileCache.getAll()) {
+      for (const tile of tileCache.getAll()) {
         const feature = tile.getInteractiveFeature(featureID)
         if (feature !== undefined) {
           foundObjects.set(featureID, feature)
@@ -332,16 +341,13 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     if (features.length === 0) return
     const { id: mapID, webworker, parent } = this
     const msg: MouseEnterMessage | MouseLeaveMessage = { type, mapID, features, currentFeatures }
-    if (webworker) {
-      postMessage(msg)
-    } else {
-      parent?.dispatchEvent(new CustomEvent(type, { detail: msg }))
-    }
+    if (webworker) postMessage(msg)
+    else parent?.onMessage({ data: msg })
   }
 
   #onMovement (): void {
-    if (!this.canMove) return
-    const { projector, dragPan } = this
+    const { projector, dragPan, canMove } = this
+    if (!canMove) return
     const { movementX, movementY } = dragPan
     // update projector
     projector.onMove(movementX, movementY)
@@ -349,9 +355,9 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   }
 
   #onSwipe (): void {
-    if (!this.canMove) return
-    const { projector, dragPan } = this
+    const { projector, dragPan, canMove } = this
     const { movementX, movementY } = dragPan
+    if (!canMove) return
     // build animation
     const animator = new Animator(projector, { duration: 1.75 })
     animator.swipeTo(movementX, movementY)
@@ -376,23 +382,24 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   }
 
   _injectData (data: TileWorkerMessage | SourceFlushMessage): void {
+    const { painter, tileCache } = this
     const { type } = data
 
     if (type === 'interactive') this.#injectInteractiveData(data.tileID, data.interactiveGuideBuffer, data.interactiveDataBuffer)
     else if (type === 'flush') this.#injectFlush(data)
-    else if (type === 'glyphimages') this.painter.injectGlyphImages(data.maxHeight, data.images, this.tileCache.getAll())
-    else if (type === 'spriteimage') this.painter.injectSpriteImage(data, this.tileCache.getAll())
+    else if (type === 'glyphimages') painter.injectGlyphImages(data.maxHeight, data.images, tileCache.getAll())
+    else if (type === 'spriteimage') painter.injectSpriteImage(data, tileCache.getAll())
     else if (type === 'timesource') this._addTimeSource(data.sourceName, data.interval)
     else {
       // 1) grab the tile
-      const tile = this.tileCache.get(data.tileID)
+      const tile = tileCache.get(data.tileID)
       if (tile === undefined) return
       // 2) Build features via the painter. Said workflow will add to the tile's feature list
-      this.painter.buildFeatureData(tile, data)
+      painter.buildFeatureData(tile, data)
     }
 
     // new 'paint', so painter is dirty
-    this.painter.dirty = true
+    painter.dirty = true
     this.render()
   }
 
@@ -411,8 +418,9 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     interactiveGuideBuffer: ArrayBuffer,
     interactiveDataBuffer: ArrayBuffer
   ): void {
-    if (this.tileCache.has(tileID)) {
-      const tile = this.tileCache.get(tileID)
+    const { tileCache } = this
+    if (tileCache.has(tileID)) {
+      const tile = tileCache.get(tileID)
       if (tile === undefined) return
       tile.injectInteractiveData(
         new Uint32Array(interactiveGuideBuffer),
@@ -438,13 +446,16 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
       for (const id of tilesInView) {
         if (!tileCache.has(id)) {
           // tile not found, so we create it
-          const newTile = this.#createTile(id)
+          const createdTiles = this.#createTiles(id)
           // store reference for the style to request from webworker(s)
-          newTiles.push(newTile)
+          newTiles.push(...createdTiles)
         }
       }
       // if new tiles exist, ensture the worker and painter are updated
-      if (newTiles.length > 0) style.requestTiles(newTiles)
+      // do not request out of bounds tiles because they just reference
+      // the "wrapped" real world tiles
+      const newTilesWithoutOutofBounds = newTiles.filter(tile => !tile.outofBounds)
+      if (newTilesWithoutOutofBounds.length > 0) style.requestTiles(newTilesWithoutOutofBounds)
       // given the S2CellID, find them in cache and return them
       this.tilesInView = tileCache.getBatch(tilesInView)
     }
@@ -457,8 +468,8 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     // create the tiles
     for (const id of tileIDs) {
       if (!tileCache.has(id)) {
-        const newTile = this.#createTile(id)
-        newTiles.push(newTile)
+        const createdTiles = this.#createTiles(id)
+        newTiles.push(...createdTiles)
       }
     }
     // tell the style to make the requests
@@ -466,26 +477,39 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     style.requestTiles(newTiles)
   }
 
-  #createTile (id: bigint): Tile {
+  // although steriotypical, we only create a single tile from the S2CellID or WMID,
+  // if the tile is out of bounds, we may need to create a second tile that
+  // it references (the "wrapped" tile). Often times the tile already exists
+  #createTiles (id: bigint): Tile[] {
+    const res: Tile[] = []
     const { style, painter, tileCache, projector } = this
     const { projection } = projector
     // create tile
     const tile = createTile(projector.projection, painter.context, id)
-    // should our style have mask layers, let's add them
-    style.injectMaskLayers(tile)
-    // inject parent should one exist
-    if (!isFace(projection, id)) {
-      // get closest parent S2CellID. If actively zooming, the parent tile will pass along
-      // it's parent tile (and so forth) if its own data has not been processed yet.
-      const pID = parentID(projection, id)
-      // check if parent tile exists, if so inject
-      const parent = tileCache.get(pID)
-      if (parent !== undefined) tile.injectParentTile(parent, style.layers)
+    res.push(tile)
+    if (tile.outofBounds) {
+      // This is a WM only case. Inject "wrapped" tile's featureGuides as a reference
+      const wrappedID: bigint = tileIDWrappedWM(id)
+      if (!tileCache.has(wrappedID)) res.push(...this.#createTiles(wrappedID))
+      const wrappedTile = tileCache.get(wrappedID)
+      if (wrappedTile !== undefined) tile.injectWrappedTile(wrappedTile)
+    } else {
+      // should our style have mask layers, let's add them
+      style.injectMaskLayers(tile)
+      // inject parent should one exist
+      if (!isFace(projection, id)) {
+        // get closest parent S2CellID. If actively zooming, the parent tile will pass along
+        // it's parent tile (and so forth) if its own data has not been processed yet.
+        const pID = parentID(projection, id)
+        // check if parent tile exists, if so inject
+        const parent = tileCache.get(pID)
+        if (parent !== undefined) tile.injectParentTile(parent, style.layers)
+      }
     }
     // store the tile
     tileCache.set(id, tile)
 
-    return tile
+    return res
   }
 
   _draw (): void {

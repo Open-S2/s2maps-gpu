@@ -1,10 +1,10 @@
 import type { BBox, JSONFeatures, Properties } from 'geometry/proj.spec'
 import type { Filter, FilterFunction } from 'style/parseFilter'
 import type { EaseType } from './easingFunctions'
-import type { MapOptions } from 'ui/s2mapUI'
 import type { JSONVTOptions } from 'workers/source/jsonVT'
 import type { ClusterOptions } from 'workers/source/pointCluster'
 import type { ColorArray } from './color'
+import type { View } from 'ui/camera/projector'
 
 export type { JSONVTOptions } from 'workers/source/jsonVT'
 export type { ClusterOptions } from 'workers/source/pointCluster'
@@ -12,6 +12,7 @@ export type { Properties, JSONFeatures } from 'geometry/proj.spec'
 export type { Filter, FilterFunction } from './parseFilter'
 export type { EaseType } from './easingFunctions'
 export type { MapOptions } from 'ui/s2mapUI'
+export type { View } from 'ui/camera/projector'
 
 export type ImageFormats = 'raw' | 'png' | 'jpg' | 'jpeg' | 'jpe' | 'webp' | 'avif' | 'gif' | 'svg' | 'bmp' | 'tiff' | 'ico' | 'cur'
 
@@ -3016,16 +3017,14 @@ export interface TimeSeriesStyle {
   /** in seconds (e.g. 3 seconds) */
   pauseDuration?: number
   /** if true, start playing automatically */
-  autoPlay?: true
+  autoPlay?: boolean
   /** if true, loop the animation */
-  loop?: true
+  loop?: boolean
 }
 
 // STYLE DEFINITION //
 
 export interface StyleDefinition {
-  /** options for the map, sometimes it's easier to setup some map options in the style */
-  mapOptions?: Omit<MapOptions, 'canvas' | 'container' | 'style'>
   /** version of the style - not used for anything other than debugging */
   version?: number
   /** name of the style - not used for anything other than debugging */
@@ -3034,22 +3033,34 @@ export interface StyleDefinition {
   projection?: Projection
   /** description of the style - not used for anything other than debugging */
   description?: string
-  /** center of the map, number[] added for JSON parsing by Typescript */
-  center?: [lon: number, lat: number] | number[]
-  /** zoom level of the map */
-  zoom?: number
+  /**
+   * Set the camera view.
+   * Properties include:
+   * - `zoom`: the zoom level of the map
+   * - `lon`: the longitude of the map
+   * - `lat`: the latitude of the map
+   * - `bearing`: the bearing/compass of the map camera
+   * - `pitch`: the pitch/vertical-angle of the map camera
+   */
+  view?: View
   /** zNear is a parameter for the camera. Recommend not touching */
   zNear?: number
   /** zFar is a parameter for the camera. Recommend not touching */
   zFar?: number
-  /** bearing/compass of the map camera */
-  bearing?: number
-  /** pitch/vertical-angle of the map camera */
-  pitch?: number
   /** The furthest away from the planet you allow */
   minzoom?: number
   /** The closest you allow the camera to get to the planet */
   maxzoom?: number
+  /**
+   * Strictly a WM Projection property. Force the view to fill.
+   * Defaults to `false`.
+   */
+  constrainZoomToFill?: boolean
+  /**
+   * Strictly a WM Projection property. Render the world map as necessary to fill the screen horizontally.
+   * Defaults to `true`.
+   */
+  duplicateHorizontally?: boolean
   /** The minimum latitude position. Useful for the S2 Projection to avoid wonky movemeny at low zooms */
   minLatPosition?: number
   /** The maximum latitude position. Useful for the S2 Projection to avoid wonky movemeny at low zooms */
@@ -3168,6 +3179,11 @@ export interface StyleDefinition {
    * ```
    */
   wallpaper?: WallpaperStyle
+  /**
+   * background color for sections where the painter doesn't draw to
+   * Default is `rgba(0, 0, 0, 0)` (transparent)
+   */
+  clearColor?: ColorArray
   /** Layers are the main way to render data on the map. */
   layers?: LayerStyle[]
   /** @beta Utilize WIP experimental components that still have bugs in them. */

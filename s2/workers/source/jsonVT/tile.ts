@@ -1,5 +1,5 @@
 /** MODULES **/
-import { level, toIJ } from 'geometry/id'
+import { fromID } from 'geometry/id'
 import type JsonVT from '.'
 /** TYPES **/
 import type { Properties } from 'geometry'
@@ -114,8 +114,9 @@ export interface JSONVectorTile {
 
 export default function createTile (features: FeatureVector[], id: bigint, jsonVT: JsonVT): JSONTile {
   const { projection, maxzoom, extent } = jsonVT
-  const zoom = level(projection, id)
-  const [face, i, j] = toIJ(projection, id, zoom)
+  // const zoom = level(projection, id)
+  // const [face, i, j] = toIJ(projection, id, zoom)
+  const [face, zoom, i, j] = fromID(projection, id)
   const tolerance = (zoom === maxzoom)
     ? 0
     : jsonVT.tolerance / ((1 << zoom) * extent)

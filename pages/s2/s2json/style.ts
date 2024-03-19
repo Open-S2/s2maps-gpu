@@ -3,8 +3,11 @@ import type { StyleDefinition } from 'style/style.spec'
 const style: StyleDefinition = {
   version: 1,
   name: 'S2 JSON',
-  center: [-90, 0],
-  zoom: -0.4,
+  view: {
+    zoom: -0.4,
+    lon: -90,
+    lat: 0
+  },
   minzoom: -1,
   maxzoom: 2.5,
   sources: {

@@ -10,9 +10,9 @@ const ZERO_TILES = [fromFace(0), fromFace(1), fromFace(2), fromFace(3), fromFace
 
 export default function getTilesInView (
   zoom: number,
-  matrix: Float32Array,
   lon: number,
   lat: number,
+  matrix: Float32Array,
   radius = 1
 ): bigint[] {
   if (zoom < 1) return ZERO_TILES

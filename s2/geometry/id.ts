@@ -11,6 +11,7 @@ import {
 import {
   children as childrenWM,
   contains as containsWM,
+  fromID as fromIDWM,
   isFace as isFaceWM,
   level as levelWM,
   parent as parentWM,
@@ -20,6 +21,14 @@ import {
 
 import type { Face } from './s2'
 import type { Projection } from 'style/style.spec'
+
+export function fromID (proj: Projection, id: bigint): [face: Face, zoom: number, i: number, j: number] {
+  if (proj === 'S2') {
+    const zoom = levelS2(id)
+    const [face, i, j] = toIJS2(id, zoom)
+    return [face, zoom, i, j]
+  } else return [0, ...fromIDWM(id)]
+}
 
 /** Given the projection, get the parent tile of the input ID */
 export function parent (proj: Projection, id: bigint): bigint {

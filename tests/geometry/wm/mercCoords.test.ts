@@ -219,6 +219,16 @@ describe('llToTilePx', () => {
     expect(tileOffset).toEqual([0.5, 0.5])
   })
 
+  it('2-3-3: center point', () => {
+    const tileOffset = llToTilePx([0, 0], [2, 3, 3], 512)
+    expect(tileOffset).toEqual([-1, -1])
+  })
+
+  it('0-1-0: out of bounds tile with center point (used for world wrapping)', () => {
+    const tileOffset = llToTilePx([0, 0], [0, 2, 0], 512)
+    expect(tileOffset).toEqual([-1.5, 0.5])
+  })
+
   it('0-0-0: top left', () => {
     const tileOffset = llToTilePx([-180, 85.05], [0, 0, 0], 512)
     expect(tileOffset).toEqual([0, 0.00003634242909722474])

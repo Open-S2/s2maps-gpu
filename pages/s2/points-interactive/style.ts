@@ -2,9 +2,12 @@ import type { StyleDefinition } from 'style/style.spec'
 
 const style: StyleDefinition = {
   version: 1,
-  name: 'S2 Nested Properties',
-  center: [0, 0],
-  zoom: -0.5,
+  name: 'S2 Points Interactive',
+  view: {
+    zoom: -0.5,
+    lon: 0,
+    lat: 0
+  },
   minzoom: -1,
   maxzoom: 2.5,
   sources: {

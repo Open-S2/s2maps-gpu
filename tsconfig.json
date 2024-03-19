@@ -26,6 +26,7 @@
     }
   },
   "exclude": [
+    "packages",
     "node_modules",
     "buildS2",
     "buildS2-dev",

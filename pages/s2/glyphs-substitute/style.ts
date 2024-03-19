@@ -176,9 +176,12 @@ const data: S2FeatureCollection = {
 const style: StyleDefinition = {
   version: 1,
   experimental: true,
-  name: 'S2 Glyphs',
-  center: [0, 0],
-  zoom: 0,
+  name: 'S2 Glyphs that use Substitutions',
+  view: {
+    zoom: 0,
+    lon: 0,
+    lat: 0
+  },
   minzoom: -0.5,
   maxzoom: 5,
   sources: {

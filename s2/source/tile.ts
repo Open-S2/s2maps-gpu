@@ -1,6 +1,6 @@
 import { project } from 'ui/camera/projector/mat4'
 import { bboxST } from 'geometry/s2/s2Coords'
-import { fromID, llToTilePx } from 'geometry/wm'
+import { fromID, isOutOfBounds, llToTilePx } from 'geometry/wm'
 import { fromSTGL, mul, normalize } from 'geometry/s2/s2Point'
 import { level, toIJ } from 'geometry/s2/s2CellID'
 
@@ -41,7 +41,7 @@ implements TileSpec<C, F, M> {
   tmpMaskID = 0
   mask!: M
   bbox: BBox = [0, 0, 0, 0]
-  featureGuides: F[] = []
+  readonly featureGuides: F[] = []
   context: C
   interactiveGuide = new Map<number, InteractiveObject>()
   uniforms = new Float32Array(7) // [isS2, face, zoom, sLow, tLow, deltaS, deltaT]
@@ -52,6 +52,10 @@ implements TileSpec<C, F, M> {
   matrix!: Float32Array
   layersLoaded = new Set<number>()
   layersToBeLoaded?: Set<number>
+  // WM only feature: if the tile is "out of bounds", it references a real world tile
+  // by copying the parents featureGuides.
+  outofBounds = false
+  dependents: Array<Tile<C, F, M>> = []
   constructor (context: C, id: bigint) {
     this.context = context
     this.id = id
@@ -84,6 +88,13 @@ implements TileSpec<C, F, M> {
     for (const [id, interactive] of parent.interactiveGuide) this.interactiveGuide.set(id, interactive)
   }
 
+  injectWrappedTile (wrapped: TileSpec<C, F, M>): void {
+    // add existing features to the wrapped tile
+    this.#addFeaturesToDependents(this, wrapped.featureGuides)
+    // let the wrapped tile know that it has a dependent
+    wrapped.dependents.push(this)
+  }
+
   setScreenPositions (_: Projector): void {
     const { context, mask, bottomTop } = this
     // if WebGPU mask, we need to update the position buffer
@@ -91,6 +102,114 @@ implements TileSpec<C, F, M> {
       context.device?.queue.writeBuffer(mask.positionBuffer, 0, bottomTop)
     }
   }
+
+  getInteractiveFeature (id: number): undefined | InteractiveObject {
+    return this.interactiveGuide.get(id)
+  }
+
+  addFeatures (features: F[]): void {
+    const { featureGuides, layersLoaded } = this
+    // filter parent tiles that were added
+    const layerIndexes = new Set<number>(features.map(f => f.layerGuide.layerIndex))
+    for (let i = featureGuides.length - 1; i >= 0; i--) {
+      const feature = featureGuides[i]
+      if (
+        feature.parent !== undefined &&
+        layerIndexes.has(feature.layerGuide.layerIndex)
+      ) featureGuides.splice(i, 1)
+    }
+    // add features
+    this.featureGuides.push(...features)
+    // clear from sourceCheck then check if all sources are loaded
+    for (const layerIndex of layerIndexes) layersLoaded.add(layerIndex)
+
+    // if this tile has dependents, we need to also add these features to those tiles
+    for (const dependent of this.dependents) {
+      this.#addFeaturesToDependents(dependent, features)
+    }
+
+    this.#checkState()
+  }
+
+  flush (msg: SourceFlushMessage | TileFlushMessage): void {
+    if (msg.from === 'source') this.#sourceFlush({ ...msg })
+    else this.#tileFlush({ ...msg })
+    for (const dependent of this.dependents) dependent.flush(msg)
+    this.#checkState()
+  }
+
+  /** cleanup after itself. When a tile is deleted, it's adventageous to cleanup GPU cache. */
+  delete (): void {
+    this.state = 'deleted'
+    // remove all features
+    for (const feature of this.featureGuides) feature.destroy?.()
+    // @ts-expect-error - we need to clear the array
+    this.featureGuides = []
+    this.interactiveGuide = new Map()
+    this.mask.destroy?.()
+  }
+
+  /* STYLE CHANGES */
+
+  removeLayer (index: number): void {
+    const { featureGuides } = this
+    // remove any references to layerIndex
+    for (let i = featureGuides.length - 1; i >= 0; i--) {
+      const f = featureGuides[i]
+      if (f.layerGuide.layerIndex === index) featureGuides.splice(i, 1)
+    }
+    // all layerIndexes greater than index should be decremented once
+    for (const { layerGuide } of this.featureGuides) {
+      if (layerGuide.layerIndex > index) layerGuide.layerIndex--
+    }
+    for (const dependent of this.dependents) dependent.removeLayer(index)
+  }
+
+  reorderLayers (layerChanges: Record<number, number>): void {
+    for (const { layerGuide } of this.featureGuides) {
+      const change = layerChanges[layerGuide.layerIndex]
+      if (change !== undefined) layerGuide.layerIndex = change
+    }
+    for (const dependent of this.dependents) dependent.reorderLayers(layerChanges)
+  }
+
+  /** remove all sources that match the input sourceNames */
+  deleteSources (sourceNames: string[]): void {
+    const { featureGuides } = this
+    for (let i = featureGuides.length - 1; i >= 0; i--) {
+      const fg = featureGuides[i]
+      const fgSourceName = fg.sourceName.split(':')[0]
+      const keep = !sourceNames.includes(fgSourceName)
+      if (!keep) {
+        fg.destroy?.()
+        featureGuides.splice(i, 1)
+      }
+    }
+    for (const dependent of this.dependents) dependent.deleteSources(sourceNames)
+  }
+
+  /* DATA */
+
+  // we don't parse the interactiveData immediately to save time
+  injectInteractiveData (
+    interactiveGuide: Uint32Array,
+    interactiveData: Uint8Array
+  ): void {
+    // setup variables
+    let id: number, start: number, end: number
+    const textDecoder = new TextDecoder('utf-8')
+    // build interactive guide
+    for (let i = 0, gl = interactiveGuide.length; i < gl; i += 3) {
+      id = interactiveGuide[i]
+      start = interactiveGuide[i + 1]
+      end = interactiveGuide[i + 2]
+      // parse feature and add properties
+      const interactiveObject: InteractiveObject = JSON.parse(textDecoder.decode(interactiveData.slice(start, end)))
+      this.interactiveGuide.set(id, interactiveObject)
+    }
+  }
+
+  /* INTERNAL */
 
   /**
    * currently this is for glyphs, points, and heatmaps. By sharing glyph data with children,
@@ -119,52 +238,6 @@ implements TileSpec<C, F, M> {
     return [0 + iShift, 0 + jShift, 1 / scale + iShift, 1 / scale + jShift]
   }
 
-  addFeatures (features: F[]): void {
-    const { layersLoaded } = this
-    // filter parent tiles that were added
-    const layerIndexes = new Set<number>(features.map(f => f.layerGuide.layerIndex))
-    this.featureGuides = this.featureGuides.filter(f => !(
-      f.parent !== undefined &&
-      layerIndexes.has(f.layerGuide.layerIndex)
-    ))
-    // add features
-    this.featureGuides.push(...features)
-    // clear from sourceCheck then check if all sources are loaded
-    for (const layerIndex of layerIndexes) layersLoaded.add(layerIndex)
-
-    this.#checkState()
-  }
-
-  flush (msg: SourceFlushMessage | TileFlushMessage): void {
-    if (msg.from === 'source') this.#sourceFlush({ ...msg })
-    else this.#tileFlush({ ...msg })
-    this.#checkState()
-  }
-
-  // the source let's us know what data to expect
-  #sourceFlush ({ layersToBeLoaded }: SourceFlushMessage): void {
-    this.layersToBeLoaded = layersToBeLoaded
-  }
-
-  #tileFlush (msg: TileFlushMessage): void {
-    const { layersLoaded } = this
-    const { deadLayers } = msg
-    // otherwise remove "left over" feature guide data from parent injection
-    // or old data that wont be replaced in the future
-    // NOTE: Eventually the count will be used to know what features need to be tracked (before screenshots for instance)
-    this.featureGuides = this.featureGuides.filter(fg => {
-      return !(
-        deadLayers.includes(fg.layerGuide.layerIndex) &&
-        fg.parent !== undefined &&
-        // corner-case: empty data/missing tile -> flushes ALL layers,
-        // but that layer MAY BE inverted so we don't kill it.
-        !(fg.invert ?? false)
-      )
-    })
-    // remove dead layers from layersToBeLoaded
-    for (const deadLayer of deadLayers) layersLoaded.add(deadLayer)
-  }
-
   #checkState (): void {
     const { layersLoaded, layersToBeLoaded } = this
     if (this.state === 'deleted' || layersToBeLoaded === undefined) return
@@ -172,64 +245,39 @@ implements TileSpec<C, F, M> {
     if (setBContainsA(layersToBeLoaded, layersLoaded)) this.state = 'loaded'
   }
 
-  removeLayer (index: number): void {
-    // remove any references to layerIndex
-    this.featureGuides = this.featureGuides.filter(f => f.layerGuide.layerIndex !== index)
-    // all layerIndexes greater than index should be decremented once
-    for (const { layerGuide } of this.featureGuides) {
-      if (layerGuide.layerIndex > index) layerGuide.layerIndex--
+  #addFeaturesToDependents (dependent: Tile<C, F, M>, features: F[]): void {
+    const dFeatures = features
+      .map(f => f.duplicate?.(dependent as unknown as TileGPU, f.parent))
+      // TODO: Remove this when webgl(2) supports duplication
+      .filter(f => f !== undefined) as F[]
+    dependent.addFeatures(dFeatures)
+  }
+
+  // the source let's us know what data to expect
+  #sourceFlush (msg: SourceFlushMessage): void {
+    this.layersToBeLoaded = msg.layersToBeLoaded
+    for (const dependent of this.dependents) dependent.#sourceFlush(msg)
+    this.#checkState()
+  }
+
+  #tileFlush (msg: TileFlushMessage): void {
+    const { featureGuides, layersLoaded } = this
+    const { deadLayers } = msg
+    // otherwise remove "left over" feature guide data from parent injection
+    // or old data that wont be replaced in the future
+    // NOTE: Eventually the count will be used to know what features need to be tracked (before screenshots for instance)
+    for (let i = featureGuides.length - 1; i >= 0; i--) {
+      const fg = featureGuides[i]
+      if (
+        deadLayers.includes(fg.layerGuide.layerIndex) &&
+        fg.parent !== undefined &&
+        // corner-case: empty data/missing tile -> flushes ALL layers,
+        // but that layer MAY BE inverted so we don't kill it.
+        !(fg.invert ?? false)
+      ) featureGuides.splice(i, 1)
     }
-  }
-
-  reorderLayers (layerChanges: Record<number, number>): void {
-    for (const { layerGuide } of this.featureGuides) {
-      const change = layerChanges[layerGuide.layerIndex]
-      if (change !== undefined) layerGuide.layerIndex = change
-    }
-  }
-
-  // we don't parse the interactiveData immediately to save time
-  injectInteractiveData (
-    interactiveGuide: Uint32Array,
-    interactiveData: Uint8Array
-  ): void {
-    // setup variables
-    let id: number, start: number, end: number
-    const textDecoder = new TextDecoder('utf-8')
-    // build interactive guide
-    for (let i = 0, gl = interactiveGuide.length; i < gl; i += 3) {
-      id = interactiveGuide[i]
-      start = interactiveGuide[i + 1]
-      end = interactiveGuide[i + 2]
-      // parse feature and add properties
-      const interactiveObject: InteractiveObject = JSON.parse(textDecoder.decode(interactiveData.slice(start, end)))
-      this.interactiveGuide.set(id, interactiveObject)
-    }
-  }
-
-  getInteractiveFeature (id: number): undefined | InteractiveObject {
-    return this.interactiveGuide.get(id)
-  }
-
-  /** cleanup after itself. When a tile is deleted, it's adventageous to cleanup GPU cache. */
-  delete (): void {
-    this.state = 'deleted'
-    // remove all features
-    for (const feature of this.featureGuides) feature.destroy?.()
-    this.featureGuides = []
-    this.interactiveGuide = new Map()
-    this.mask.destroy?.()
-  }
-
-  /** remove all sources that match the input sourceNames */
-  deleteSources (sourceNames: string[]): void {
-    this.featureGuides = this.featureGuides.filter(fg => {
-      const fgSourceName = fg.sourceName.split(':')[0]
-      const keep = !sourceNames.includes(fgSourceName)
-      // GPU case: destroy any/all buffers that are no longer needed
-      if (!keep) fg.destroy?.()
-      return keep
-    })
+    // remove dead layers from layersToBeLoaded
+    for (const deadLayer of deadLayers) layersLoaded.add(deadLayer)
   }
 }
 
@@ -313,6 +361,8 @@ export class WMTile<C extends SharedContext, F extends SharedFeatureGuide, M ext
     this.i = i
     this.j = j
     this.zoom = zoom
+    // if i or j are out of bounds, we need to reference the parent tile's featureGuides
+    this.outofBounds = isOutOfBounds(id)
     // TODO: bboxWM? And do I apply it to the uniforms?
     // const bbox = this.bbox = bboxST(i, j, zoom)
     this.bbox = bboxST(i, j, zoom)

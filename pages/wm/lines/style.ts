@@ -4,8 +4,11 @@ const style: StyleDefinition = {
   version: 1,
   projection: 'WM',
   name: 'WM Lines',
-  center: [0, 0],
-  zoom: 0.95,
+  view: {
+    lon: 0,
+    lat: 0,
+    zoom: 0.95
+  },
   minzoom: 0,
   maxzoom: 6.9,
   sources: {

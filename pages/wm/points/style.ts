@@ -4,8 +4,11 @@ const style: StyleDefinition = {
   version: 1,
   name: 'WM Points',
   projection: 'WM',
-  center: [-122.4585607773497, 37.778443127730476],
-  zoom: -0.5,
+  view: {
+    lon: 0,
+    lat: 0,
+    zoom: -0.5
+  },
   minzoom: -0.5,
   maxzoom: 5.5,
   sources: {

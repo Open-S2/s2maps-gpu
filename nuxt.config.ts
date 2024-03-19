@@ -22,7 +22,7 @@ export default defineNuxtConfig({
   // ],
   modules: [
     // TODO: find a way to run this while using dev but not playwright
-    // '@nuxtjs/eslint-module'
+    '@nuxtjs/eslint-module'
   ],
   css: [
     fileURLToPath(new URL('./assets/styles/globals.css', import.meta.url))

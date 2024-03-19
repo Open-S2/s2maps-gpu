@@ -132,14 +132,16 @@ export class GlyphFeature implements GlyphFeatureSpec {
     this.featureCodeBuffer.destroy()
   }
 
-  duplicate (tile: Tile, parent: Tile, bounds: BBox): GlyphFeature {
+  duplicate (tile: Tile, parent?: Tile, bounds?: BBox): GlyphFeature {
     const {
       workflow, source, layerGuide, featureCodeBuffer, count, offset, filterCount, filterOffset,
-      isIcon, featureCode, glyphUniformBuffer, glyphAttributeBuffer, glyphAttributeNoStrokeBuffer
+      isIcon, featureCode, glyphBoundsBuffer, glyphUniformBuffer, glyphAttributeBuffer, glyphAttributeNoStrokeBuffer
     } = this
     const { context } = workflow
     const cE = context.device.createCommandEncoder()
-    const newGlyphBoundsBuffer = context.buildGPUBuffer('Glyph Bounds Buffer', new Float32Array(bounds), GPUBufferUsage.UNIFORM)
+    const newGlyphBoundsBuffer = bounds !== undefined
+      ? context.buildGPUBuffer('Glyph Bounds Buffer', new Float32Array(bounds), GPUBufferUsage.UNIFORM)
+      : context.duplicateGPUBuffer(glyphBoundsBuffer, cE)
     const newGlyphUniformBuffer = context.duplicateGPUBuffer(glyphUniformBuffer, cE)
     const newGlyphAttributeBuffer = context.duplicateGPUBuffer(glyphAttributeBuffer, cE)
     const newGlyphAttributeNoStrokeBuffer = context.duplicateGPUBuffer(glyphAttributeNoStrokeBuffer, cE)

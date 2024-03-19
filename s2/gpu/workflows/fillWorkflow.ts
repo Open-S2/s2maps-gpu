@@ -93,7 +93,7 @@ export class FillFeature implements FillFeatureSpec {
     this.fillInteractiveBuffer?.destroy()
   }
 
-  duplicate (tile: Tile, parent: Tile): FillFeature {
+  duplicate (tile: Tile, parent?: Tile): FillFeature {
     const { workflow, layerGuide, maskLayer, source, count, offset, featureCodeBuffer, fillInteractiveBuffer, featureCode, fillTexturePositions } = this
     const { context } = this.workflow
     const cE = context.device.createCommandEncoder()
@@ -105,6 +105,13 @@ export class FillFeature implements FillFeatureSpec {
       workflow, layerGuide, maskLayer, source, count, offset, tile,
       newFeatureCodeBuffer, newFillTexturePositions, newFillInteractiveBuffer, featureCode,
       parent
+    )
+  }
+
+  dependent (tile: Tile): FillFeature {
+    return new FillFeature(
+      this.workflow, this.layerGuide, this.maskLayer, this.source, this.count, this.offset, tile,
+      this.featureCodeBuffer, this.fillTexturePositions, this.fillInteractiveBuffer, this.featureCode
     )
   }
 

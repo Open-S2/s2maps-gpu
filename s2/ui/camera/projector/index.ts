@@ -4,25 +4,23 @@ import { getTilesS2, getTilesWM } from './getTiles'
 import { cursorToLonLatS2, cursorToLonLatWM } from './cursorToLonLat'
 import { EARTH_RADIUS, EARTH_RADIUS_EQUATORIAL, EARTH_RADIUS_POLAR, degToRad } from 'geometry'
 import { fromLonLatGL, mul, normalize } from 'geometry/s2/s2Point'
-import { mercatorLatScale } from 'geometry/wm'
+import { mercatorLatScale, pxToLL } from 'geometry/wm'
 
 import type { MapOptions } from 'ui/s2mapUI'
-import type { Projection } from 'style/style.spec'
+import type { Projection, StyleDefinition } from 'style/style.spec'
 import type { Point, XYZ } from 'geometry'
 
-export interface ProjectionConfig {
-  minLatPosition?: number
-  maxLatPosition?: number
+export interface View {
+  /** the longitude of the map */
+  lon?: number
+  /** the latitude of the map */
+  lat?: number
+  /** zoom level of the map */
   zoom?: number
-  minzoom?: number
-  maxzoom?: number
-  center?: [number, number] | number[]
-  zNear?: number
-  zFar?: number
+  /** bearing/compass of the map camera */
   bearing?: number
+  /** pitch/vertical-angle of the map camera */
   pitch?: number
-  noClamp?: boolean
-  zoomOffset?: number
 }
 
 export type MatrixType = 'm' | 'km' // meters or kilometers
@@ -45,6 +43,8 @@ export default class Projector {
   aspect: [number, number] = [400, 300] // default canvas width x height
   matrices: { [key in MatrixType]?: Float32Array } = {}
   eye: XYZ = [0, 0, 0] // [x, y, z] only z should change for visual effects
+  constrainZoomToFill = true
+  duplicateHorizontally = true
   minLatPosition = 70
   maxLatPosition = 89.99999 // deg
   prevZoom = 0
@@ -62,11 +62,11 @@ export default class Projector {
   multiplier = 1
   dirty = true
   constructor (config: MapOptions, camera: Camera) {
-    const { canvasMultiplier, positionalZoom, webworker, noClamp, style } = config
+    const { canvasMultiplier, positionalZoom, noClamp, style } = config
     if (typeof style === 'object' && style.projection === 'WM') this.projection = 'WM'
     if (canvasMultiplier !== undefined) this.multiplier = canvasMultiplier
     if (positionalZoom === false) this.positionalZoom = false
-    if (webworker === true) this.webworker = true
+    this.webworker = camera.webworker
     if (noClamp === true) this.noClamp = true
     this.camera = camera
     // setup deltaMouse positions to middle of 0 and 2^32
@@ -100,15 +100,23 @@ export default class Projector {
     this.dirty = true
   }
 
-  setStyleParameters (config: ProjectionConfig, ignorePosition: boolean): void {
+  setStyleParameters (style: StyleDefinition, ignorePosition: boolean): void {
     const { min, max } = Math
     const {
+      constrainZoomToFill, duplicateHorizontally,
       noClamp, minLatPosition, maxLatPosition, zoomOffset,
-      zoom, center, bearing, pitch, zNear, zFar
-    } = config
-    const [lon, lat] = center ?? [this.lon, this.lat]
-    const maxzoom = config.maxzoom ?? this.maxzoom
-    const minzoom = config.minzoom ?? this.minzoom
+      zNear, zFar, view
+    } = style
+    const { lon, lat, zoom, bearing, pitch } = view ?? {}
+    const maxzoom = style.maxzoom ?? this.maxzoom
+    const minzoom = style.minzoom ?? this.minzoom
+    // setup wm properties if needed
+    if (constrainZoomToFill !== undefined) this.constrainZoomToFill = constrainZoomToFill
+    if (duplicateHorizontally !== undefined) this.duplicateHorizontally = duplicateHorizontally
+    if (!this.constrainZoomToFill && this.duplicateHorizontally) {
+      console.warn('duplicateHorizontally may only be used if constrainZoomToFill is true. Setting duplicateHorizontally to false.')
+      this.duplicateHorizontally = false
+    }
     // clamp values and ensure minzoom is less than maxzoom
     this.minzoom = (minzoom < -2) ? -2 : (minzoom > maxzoom) ? maxzoom - 1 : (minzoom > 19) ? 19 : minzoom
     this.maxzoom = (maxzoom > 20) ? 20 : (maxzoom < this.minzoom) ? this.minzoom + 1 : maxzoom
@@ -119,34 +127,17 @@ export default class Projector {
     if (zNear !== undefined) this.zNear = zNear
     if (zFar !== undefined) this.zFar = zFar
     // set position
-    if (!ignorePosition) this.setPosition(lon, lat, zoom, bearing, pitch)
+    if (!ignorePosition) this.setView({ lon, lat, zoom, bearing, pitch })
   }
 
-  setPosition (lon: number, lat: number, zoom?: number, bearing?: number, pitch?: number): void {
-    // set lon lat
-    this.#setLonLat(lon, lat)
-    // set zoom
-    if (zoom !== undefined) this.#setZoom(zoom)
-    // set bearing & pitch
-    this.setCompass(bearing, pitch)
-  }
-
-  setLonLat (lon: number, lat: number): void {
-    this.#setLonLat(lon, lat)
-  }
-
-  setZoom (zoom: number): void {
-    this.#setZoom(zoom)
-  }
-
-  setCompass (bearing?: number, pitch?: number): void {
-    let update = false
-    // set bearing
-    if (bearing !== undefined) update ||= this.#setBearing(bearing)
-    // set pitch
-    if (pitch !== undefined) update ||= this.#setPitch(pitch)
-    // if update we let the map know
-    if (update) this.camera._updateCompass(this.bearing, this.pitch)
+  setView ({ zoom, lon, lat, bearing, pitch }: View): void {
+    this.#setView({
+      zoom: zoom ?? this.zoom,
+      lon: lon ?? this.lon,
+      lat: lat ?? this.lat,
+      bearing: bearing ?? this.bearing,
+      pitch: pitch ?? this.pitch
+    })
   }
 
   zoomChange (): number {
@@ -159,30 +150,11 @@ export default class Projector {
     return Math.pow(2, zoom)
   }
 
-  clampLat (input: number): number {
-    const { maxLatPosition, minLatPosition, zoom } = this
-    const { min, max } = Math
-    // prep current boundaries
-    const latPosDiff = maxLatPosition - minLatPosition
-    const curMaxLat = min(minLatPosition + min(latPosDiff, (latPosDiff / 3) * zoom), maxLatPosition)
-    // clamp
-    return max(min(curMaxLat, input), -curMaxLat)
-  }
-
-  clampZoom (input: number): number {
-    const { minzoom, maxzoom } = this
-    return Math.max(Math.min(input, maxzoom), minzoom)
-  }
-
-  clampDeg (input: number): number {
-    while (input >= 180) { input -= 360 }
-    while (input < -180) { input += 360 }
-    return input
-  }
-
   resize (width: number, height: number): void {
     this.view[6] = this.aspect[0] = width
     this.view[7] = this.aspect[1] = height
+    // update view
+    this.setView({})
     // cleanup
     this.reset()
   }
@@ -191,7 +163,7 @@ export default class Projector {
   onZoom (zoomInput: number, canvasX: number, canvasY: number): void {
     const { positionalZoom, multiplier, aspect } = this
     // set zoom
-    this.#setZoom(this.zoom - (0.003 * zoomInput))
+    this.setView({ zoom: this.zoom - (0.003 * zoomInput) })
     if (this.prevZoom === this.zoom) return
     // if positionalZoom, we adjust the lon and lat according to the mouse position.
     // consider the distance between the lon-lat of our current "center" position and
@@ -247,15 +219,15 @@ export default class Projector {
     if (isS2) {
       // https://math.stackexchange.com/questions/377445/given-a-latitude-how-many-miles-is-the-corresponding-longitude
       const lonMultiplier = min(30, 1 / cos(abs(lat) * PI / 180))
-      this.#setLonLat(
-        lon - (movementX / (multiplierX * zScale) * 360 * lonMultiplier),
-        lat + (movementY / (multiplierY * zScale) * 180)
-      )
+      this.setView({
+        lon: lon - (movementX / (multiplierX * zScale) * 360 * lonMultiplier),
+        lat: lat + (movementY / (multiplierY * zScale) * 180)
+      })
     } else {
-      this.#setLonLat(
-        lon - (movementX / (multiplierX * zScale)),
-        lat + (movementY / (multiplierY * zScale * mercatorLatScale(lat)))
-      )
+      this.setView({
+        lon: lon - (movementX / (multiplierX * zScale)),
+        lat: lat + (movementY / (multiplierY * zScale * mercatorLatScale(lat)))
+      })
     }
   }
 
@@ -282,23 +254,23 @@ export default class Projector {
     return mat4.clone(matrix)
   }
 
-  getTilesInView (): bigint[] { // (S2CellIDs)
+  getTilesInView (): bigint[] { // (Tile IDs)
     const { projection, radius, zoom, zoomOffset, lon, lat } = this
     if (projection === 'S2') {
       const matrix = this.getMatrix('m')
-      return getTilesS2(zoom + zoomOffset, matrix, lon, lat, radius)
+      return getTilesS2(zoom + zoomOffset, lon, lat, matrix, radius)
     }
-    return getTilesWM(zoom + zoomOffset, this, lon, lat)
+    return getTilesWM(zoom + zoomOffset, lon, lat, this)
   }
 
   getTilesAtPosition (lon: number, lat: number, zoom: number, bearing: number, pitch: number): bigint[] { // (S2CellIDs)
     const { projection, radius, zoomOffset } = this
     if (projection === 'S2') {
       const matrix = this.#getMatrixS2('m', false, lon, lat, zoom, bearing, pitch)
-      return getTilesS2(zoom + zoomOffset, matrix, lon, lat, radius)
+      return getTilesS2(zoom + zoomOffset, lon, lat, matrix, radius)
     }
     // TODO: bearing and pitch without editing the projection?
-    return getTilesWM(zoom + zoomOffset, this, lon, lat)
+    return getTilesWM(zoom + zoomOffset, lon, lat, this)
   }
 
   /* INTERNAL FUNCTIONS */
@@ -314,59 +286,89 @@ export default class Projector {
     if (view[11] < 0 || view[11] > maxValue) view[11] = midValue
   }
 
-  #setLonLat (lon: number, lat: number): void {
-    if (!this.noClamp) {
-      lon = this.clampDeg(lon)
-      lat = this.clampLat(lat)
-    }
-    if (this.lon !== lon || this.lat !== lat) {
+  #setView (view: Required<View>): void {
+    // clamp the view based upon the current settings
+    this.#clampView(view)
+    // update if any changes found:
+    const { zoom, lon, lat, bearing, pitch } = view
+    const bearingPitchChange = this.bearing !== bearing || this.pitch !== pitch
+    if (
+      // zoom change?
+      this.zoom !== zoom || this.prevZoom !== zoom ||
+      // lon-lat change?
+      this.lon !== lon || this.lat !== lat ||
+      // bearing or pitch change?
+      bearingPitchChange
+    ) {
+      // keep track of the old zoom and adjust the zoom
+      this.prevZoom = this.zoom
+      this.zoom = zoom
+      // adjust the lon-lat
       this.lon = lon
       this.lat = lat
-      // update view
-      this.view[1] = this.lon
-      this.view[2] = this.lat
-      // cleanup for next render
-      this.reset()
-    }
-  }
-
-  #setZoom (zoom: number): void {
-    zoom = this.clampZoom(zoom)
-    if (this.zoom !== zoom || this.prevZoom !== zoom) {
-      // keep track of the old zoom
-      this.prevZoom = this.zoom
-      // adjust the zoom
-      this.zoom = zoom
-      // update view
-      this.view[0] = this.zoom
-      // cleanup for next render
-      this.reset()
-    }
-  }
-
-  #setBearing (bearing: number): boolean {
-    bearing = this.clampDeg(bearing)
-    if (this.bearing !== bearing) {
+      // adjust the bearing and pitch
       this.bearing = bearing
-      // update view
-      this.view[3] = this.bearing
-      // cleanup for next render
-      this.reset()
-      return true
-    }
-    return false
-  }
-
-  #setPitch (pitch: number): boolean {
-    if (this.pitch !== pitch) {
       this.pitch = pitch
       // update view
+      this.view[0] = this.zoom
+      this.view[1] = this.lon
+      this.view[2] = this.lat
+      this.view[3] = this.bearing
       this.view[4] = this.pitch
+      // if bearing or pitch change we let the map know
+      if (bearingPitchChange) this.camera._updateCompass(this.bearing, this.pitch)
       // cleanup for next render
       this.reset()
-      return true
     }
-    return false
+  }
+
+  #clampView (view: Required<View>): void {
+    const { noClamp, constrainZoomToFill, projection } = this
+    // adjust zoom
+    this.#clampZoom(view)
+    // adjust lon-lat
+    if (!noClamp) {
+      view.lon = this.#clampDeg(view.lon)
+      this.#clampLat(view)
+    }
+    // adjust bearing
+    view.bearing = this.#clampDeg(view.bearing)
+    // adjust view if constrained to fill
+    if (projection === 'WM' && constrainZoomToFill) this.#clampConstraint(view)
+  }
+
+  #clampZoom (view: Required<View>): void {
+    const { minzoom, maxzoom } = this
+    view.zoom = Math.max(Math.min(view.zoom, maxzoom), minzoom)
+  }
+
+  #clampLat (view: Required<View>): void {
+    const { maxLatPosition, minLatPosition, zoom } = this
+    const { min, max } = Math
+    // prep current boundaries
+    const latPosDiff = maxLatPosition - minLatPosition
+    const curMaxLat = min(minLatPosition + min(latPosDiff, (latPosDiff / 3) * zoom), maxLatPosition)
+    // clamp
+    view.lat = max(min(curMaxLat, view.lat), -curMaxLat)
+  }
+
+  #clampConstraint (view: Required<View>): void {
+    const { aspect, tileSize } = this
+    // if tileSize relative to zoom is smaller than aspect, we adjust zoom
+    if (tileSize * Math.pow(2, view.zoom) < aspect[1]) view.zoom = Math.log2(aspect[1] / tileSize)
+    // now that we have the min zoom, we can adjust the latitude to ensure the view is within bounds
+    const worldSize = tileSize * Math.pow(2, view.zoom)
+    const center = worldSize / 2
+    const worldMinusAspectHalfed = (worldSize - aspect[1]) / 2
+    const [,maxLat] = pxToLL([0, center - worldMinusAspectHalfed], view.zoom, tileSize)
+    const [,minLat] = pxToLL([0, center + worldMinusAspectHalfed], view.zoom, tileSize)
+    view.lat = Math.min(maxLat, Math.max(minLat, view.lat))
+  }
+
+  #clampDeg (input: number): number {
+    while (input >= 180) { input -= 360 }
+    while (input < -180) { input += 360 }
+    return input
   }
 
   // * S2

@@ -36,7 +36,12 @@ export default class Style {
     this.urlMap = urlMap
   }
 
-  async buildStyle (style: string | StyleDefinition): Promise<boolean> {
+  async buildStyle (
+    style: string | StyleDefinition,
+    ignorePosition = false
+  ): Promise<boolean> {
+    const { camera } = this
+    const { painter, projector } = camera
     if (typeof style === 'string') {
       this.#requestStyle(style)
       return false
@@ -44,17 +49,23 @@ export default class Style {
     if (typeof style !== 'object') throw Error('style must be an object')
     this.dirty = true
     // inform the projection
-    this.camera.painter.context.setProjection(style.projection ?? 'S2')
+    painter.context.setProjection(style.projection ?? 'S2')
+    // set the clear color if present
+    if (style.clearColor !== undefined) {
+      painter.context.setClearColor(style.clearColor)
+    }
     // build programs that don't exist yet (depends on projection)
     await this.#buildWorkflows(style)
     // build layer definitions
     this.#buildLayers(style.layers)
     // built layers let us know if we have an interactive layer or not (depends on layers)
-    this.camera.painter.context.setInteractive(this.interactive)
+    painter.context.setInteractive(this.interactive)
     // build time series if exists
-    if (style.timeSeries !== undefined) this.camera.buildTimeCache(style.timeSeries)
+    if (style.timeSeries !== undefined) camera.buildTimeCache(style.timeSeries)
     // ship to Tile Workers
     this.#sendStyleDataToWorkers(style)
+    // update the projector with our style
+    projector.setStyleParameters(style, ignorePosition)
     // return we can start rendering
     return true
   }

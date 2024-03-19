@@ -19,7 +19,7 @@ export default class MapWorker {
     else if (type === 'touchend') this.s2mapUI.dragPan.onTouchEnd(data.touchEvent)
     else if (type === 'touchmove') this.s2mapUI.dragPan.onTouchMove(data.touchEvent)
     else if (type === 'nav') this.s2mapUI.navEvent(data.ctrl, data.lon, data.lat)
-    else if (type === 'updateCompass') this.s2mapUI.updateCompass(data.bearing)
+    else if (type === 'updateCompass') this.s2mapUI.updateCompass(data.bearing, data.pitch)
     else if (type === 'mouseupCompass') this.s2mapUI.mouseupCompass()
     else if (type === 'resetCompass') this.s2mapUI.resetCompass()
     else if (type === 'colorMode') this.s2mapUI.colorMode(data.mode)
@@ -42,7 +42,6 @@ export default class MapWorker {
   }
 
   _prepCanvas (options: MapOptions, canvas: HTMLCanvasElement, id: string): void {
-    options.webworker = true
     this.s2mapUI = new S2MapUI(options, canvas, id)
   }
 }
