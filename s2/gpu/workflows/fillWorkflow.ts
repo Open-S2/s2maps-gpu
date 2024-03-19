@@ -108,13 +108,6 @@ export class FillFeature implements FillFeatureSpec {
     )
   }
 
-  dependent (tile: Tile): FillFeature {
-    return new FillFeature(
-      this.workflow, this.layerGuide, this.maskLayer, this.source, this.count, this.offset, tile,
-      this.featureCodeBuffer, this.fillTexturePositions, this.fillInteractiveBuffer, this.featureCode
-    )
-  }
-
   #buildBindGroup (): GPUBindGroup {
     const { workflow, tile, parent, layerGuide, featureCodeBuffer } = this
     const { context } = workflow
