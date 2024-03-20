@@ -1,7 +1,7 @@
 import Cache from './cache'
 
 import type Camera from '.'
-import type { SensorSource } from 'gl/contexts/context.spec'
+import type { SensorSource } from 'gl/workflows/workflow.spec'
 import type { TileRequest } from 'workers/worker.spec'
 import type { TileShared as Tile } from 'source/tile.spec'
 import type { TimeSeriesStyle } from 'style/style.spec'

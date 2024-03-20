@@ -19,11 +19,11 @@ import type {
   TileBase as TileSpec
 } from './tile.spec'
 import type { WebGPUContext } from 'gpu/context'
-import type { WebGL2Context, WebGLContext } from 'gl'
+import type { Context as WebGLContext } from 'gl/context'
 
 export function createTile (
   projection: Projection,
-  context: WebGPUContext | WebGLContext | WebGL2Context,
+  context: WebGPUContext | WebGLContext,
   id: bigint
 ): TileGL & TileGPU {
   const Tile = projection === 'S2' ? S2Tile : WMTile

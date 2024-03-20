@@ -151,7 +151,7 @@ export default class PointWorkflow implements PointWorkflowSpec {
     }
   }
 
-  // programs helps design the appropriate layer parameters
+  // workflow helps design the appropriate layer parameters
   buildLayerDefinition (layerBase: LayerDefinitionBase, layer: PointStyle): PointDefinition {
     const { context } = this
     const { source, layerIndex, lch, visible } = layerBase

@@ -130,7 +130,7 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
     }
   }
 
-  // programs helps design the appropriate layer parameters
+  // workflow helps design the appropriate layer parameters
   buildLayerDefinition (layerBase: LayerDefinitionBase, layer: HillshadeStyle): HillshadeDefinition {
     const { context } = this
     const { source, layerIndex, lch, visible } = layerBase

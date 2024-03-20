@@ -50,7 +50,7 @@ export default class Painter {
 
   async buildWorkflows (buildSet: Set<WorkflowType>): Promise<void> {
     const { workflows, context } = this
-    const programCases: WorkflowImports = {
+    const workflowCases: WorkflowImports = {
       fill: () => new FillWorkflow(context),
       raster: () => new RasterWorkflow(context),
       // sensor: () => new SensorWorkflow(context),
@@ -66,7 +66,7 @@ export default class Painter {
     const promises: Array<Promise<void>> = []
     for (const set of buildSet) {
       // TODO: Figure out why eslint and tsc don't see an error but vscode does:
-      const workflow: Workflow = workflows[set] = programCases[set]()
+      const workflow: Workflow = workflows[set] = workflowCases[set]()
       if (set === 'wallpaper' || set === 'skybox') workflows.background = workflows[set]
       promises.push(workflow.setup())
     }

@@ -1,5 +1,5 @@
 import type { WebGL2Context, WebGLContext } from '.'
-import type { MaskSource } from './context.spec'
+import type { MaskSource } from '../workflows/workflow.spec'
 
 /** Given a Tile division size, build a Mask Source */
 export default function buildMask (division: number, context: WebGL2Context | WebGLContext): MaskSource {

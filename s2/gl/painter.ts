@@ -1,32 +1,36 @@
-/** CONTEXTS **/
+/** CONTEXTS */
 import { WebGL2Context, WebGLContext } from './contexts'
-/** SOURCES **/
+/** WORKFLOWS */
+import {
+  FillWorkflow,
+  GlyphFilterWorkflow,
+  GlyphWorkflow,
+  HeatmapWorkflow,
+  HillshadeWorkflow,
+  LineWorkflow,
+  PointWorkflow,
+  RasterWorkflow,
+  ShadeWorkflow,
+  SkyboxWorkflow,
+  WallpaperWorkflow
+} from './workflows'
 import type { Painter as PainterSpec } from './painter.spec'
 import type { TileGL as Tile } from 'source/tile.spec'
 
 import type { MapOptions } from 'ui/s2mapUI'
 import type Projector from 'ui/camera/projector'
 import type TimeCache from 'ui/camera/timeCache'
-import type { FeatureGuide, GlyphFeatureGuide, HeatmapFeatureGuide } from './contexts/context.spec'
 import type {
-  FillProgram,
-  GlyphFilterProgram,
-  GlyphProgram,
-  HeatmapProgram,
-  HillshadeProgram,
-  LineProgram,
-  PointProgram,
-  Program,
-  RasterProgram,
-  SensorProgram,
-  ShadeProgram,
-  SkyboxProgram,
-  WallpaperProgram,
+  FeatureGuide,
+  GlyphFeature,
+  HeatmapFeature,
+  SensorWorkflow,
+  Workflow,
   WorkflowImports,
   WorkflowKey,
   WorkflowType,
   Workflows
-} from './programs/program.spec'
+} from './workflows/workflow.spec'
 import type { GlyphImages } from 'workers/source/glyphSource'
 import type { ColorMode } from 's2Map'
 import type { PainterData, SpriteImageMessage } from 'workers/worker.spec'
@@ -34,7 +38,7 @@ import type { PainterData, SpriteImageMessage } from 'workers/worker.spec'
 export default class Painter implements PainterSpec {
   context: WebGL2Context | WebGLContext
   workflows: Workflows = {}
-  curProgram?: WorkflowKey
+  curWorkflow?: WorkflowKey
   dirty = true
   constructor (
     context: WebGL2RenderingContext | WebGLRenderingContext,
@@ -50,7 +54,7 @@ export default class Painter implements PainterSpec {
 
   delete (): void {
     const { context, workflows } = this
-    for (const program of Object.values(workflows)) program.delete()
+    for (const workflow of Object.values(workflows)) workflow.delete()
     context.delete()
   }
 
@@ -63,35 +67,40 @@ export default class Painter implements PainterSpec {
     const { workflows, context } = this
     const promises: Array<Promise<void>> = []
     const workflowImports: WorkflowImports = {
-      fill: async () => { return await import('./programs/fillProgram') },
-      raster: async () => { return await import('./programs/rasterProgram') },
-      hillshade: async () => { return await import('./programs/hillshadeProgram') },
-      sensor: async () => { return await import('./programs/sensorProgram') },
-      line: async () => { return await import('./programs/lineProgram') },
-      point: async () => { return await import('./programs/pointProgram') },
-      heatmap: async () => { return await import('./programs/heatmapProgram') },
-      shade: async () => { return await import('./programs/shadeProgram') },
-      glyph: async () => { return await import('./programs/glyphProgram') },
-      glyphFilter: async () => { return await import('./programs/glyphFilterProgram') },
-      wallpaper: async () => { return await import('./programs/wallpaperProgram') },
-      skybox: async () => { return await import('./programs/skyboxProgram') }
+      fill: async () => { return new FillWorkflow(context) },
+      glyphFilter: async () => { return new GlyphFilterWorkflow(context) },
+      glyph: async () => { return new GlyphWorkflow(context) },
+      heatmap: async () => { return new HeatmapWorkflow(context) },
+      hillshade: async () => { return new HillshadeWorkflow(context) },
+      line: async () => { return new LineWorkflow(context) },
+      point: async () => { return new PointWorkflow(context) },
+      raster: async () => { return new RasterWorkflow(context) },
+      sensor: async () => { return await import('./workflows/sensorWorkflow') },
+      shade: async () => { return new ShadeWorkflow(context) },
+      skybox: async () => { return new SkyboxWorkflow(context) },
+      wallpaper: async () => { return new WallpaperWorkflow(context) }
     }
-    const programKeys: Array<keyof Omit<Workflows, 'background'>> = []
-    for (const program of buildSet) {
-      if (program in workflows) continue
-      if (program === 'glyph') programKeys.push('glyphFilter')
-      programKeys.push(program)
+    const workflowKeys: Array<keyof Omit<Workflows, 'background'>> = []
+    for (const workflow of buildSet) {
+      if (workflow in workflows) continue
+      if (workflow === 'glyph') workflowKeys.push('glyphFilter')
+      workflowKeys.push(workflow)
     }
-    // actually import the programs
-    for (const key of programKeys) {
+    // actually import the workflows
+    for (const key of workflowKeys) {
       promises.push(workflowImports[key]?.()
-        .then(async ({ default: pModule }) => {
-          // TODO: Figure out why eslint and tsc don't see an error but vscode does:
-          workflows[key] = await pModule(context)
+        .then(async (res) => {
+          if ('default' in res) {
+            const { default: pModule } = res
+            // TODO: Figure out why eslint and tsc don't see an error but vscode does:
+            workflows[key] = await pModule(context)
+          } else {
+            workflows[key] = res
+          }
           if (key === 'wallpaper' || key === 'skybox') workflows.background = workflows[key]
         })
         .catch((err) => {
-          console.error(`FAILED to import painter program ${key}`, err)
+          console.error(`FAILED to import painter workflow ${key}`, err)
         })
       )
     }
@@ -104,8 +113,8 @@ export default class Painter implements PainterSpec {
 
   injectFrameUniforms (matrix: Float32Array, view: Float32Array, aspect: [number, number]): void {
     const { workflows } = this
-    for (const programName in workflows) {
-      workflows[programName as keyof Workflows]?.injectFrameUniforms(matrix, view, aspect)
+    for (const workflowName in workflows) {
+      workflows[workflowName as keyof Workflows]?.injectFrameUniforms(matrix, view, aspect)
     }
   }
 
@@ -113,31 +122,31 @@ export default class Painter implements PainterSpec {
     this.workflows.sensor?.injectTimeCache(timeCache)
   }
 
-  useWorkflow (programName: 'fill'): FillProgram
-  useWorkflow (programName: 'glyph'): GlyphProgram | undefined
-  useWorkflow (programName: 'heatmap'): HeatmapProgram | undefined
-  useWorkflow (programName: 'line'): LineProgram | undefined
-  useWorkflow (programName: 'point'): PointProgram | undefined
-  useWorkflow (programName: 'raster'): RasterProgram | undefined
-  useWorkflow (programName: 'hillshade'): HillshadeProgram | undefined
-  useWorkflow (programName: 'sensor'): SensorProgram | undefined
-  useWorkflow (programName: 'shade'): ShadeProgram | undefined
-  useWorkflow (programName: 'glyphFilter'): GlyphFilterProgram | undefined
-  useWorkflow (programName: 'background'): WallpaperProgram | SkyboxProgram | undefined
-  useWorkflow (programName: WorkflowKey): Program | undefined
-  useWorkflow (programName: WorkflowKey): Program | undefined {
-    const program = this.workflows[programName]
-    if (program === undefined && programName !== 'background') throw new Error(`Program ${programName} not found`)
-    if (this.curProgram !== programName) {
-      this.curProgram = programName
-      program?.use()
-    } else { program?.flush() }
-    return program
+  useWorkflow (workflowName: 'fill'): FillWorkflow
+  useWorkflow (workflowName: 'glyph'): GlyphWorkflow | undefined
+  useWorkflow (workflowName: 'heatmap'): HeatmapWorkflow | undefined
+  useWorkflow (workflowName: 'line'): LineWorkflow | undefined
+  useWorkflow (workflowName: 'point'): PointWorkflow | undefined
+  useWorkflow (workflowName: 'raster'): RasterWorkflow | undefined
+  useWorkflow (workflowName: 'hillshade'): HillshadeWorkflow | undefined
+  useWorkflow (workflowName: 'sensor'): SensorWorkflow | undefined
+  useWorkflow (workflowName: 'shade'): ShadeWorkflow | undefined
+  useWorkflow (workflowName: 'glyphFilter'): GlyphFilterWorkflow | undefined
+  useWorkflow (workflowName: 'background'): WallpaperWorkflow | SkyboxWorkflow | undefined
+  useWorkflow (workflowName: WorkflowKey): Workflow | undefined
+  useWorkflow (workflowName: WorkflowKey): Workflow | undefined {
+    const workflow = this.workflows[workflowName]
+    if (workflow === undefined && workflowName !== 'background') throw new Error(`Workflow ${workflowName} not found`)
+    if (this.curWorkflow !== workflowName) {
+      this.curWorkflow = workflowName
+      workflow?.use()
+    } else { workflow?.flush() }
+    return workflow
   }
 
   resize (_width: number, _height: number): void {
     const { context } = this
-    // If we are using the text program, update the text program's framebuffer component's sizes
+    // If we are using the text workflow, update the text workflow's framebuffer component's sizes
     const glyphFilter = this.workflows.glyphFilter
     const heatmap = this.workflows.heatmap
     if (glyphFilter !== undefined) glyphFilter.resize()
@@ -153,7 +162,7 @@ export default class Painter implements PainterSpec {
   paint (projector: Projector, tiles: Tile[]): void {
     const { context } = this
     // PREPARE PHASE
-    this.curProgram = undefined
+    this.curWorkflow = undefined
     // prep frame uniforms
     const { view, aspect } = projector
     const matrix = projector.getMatrix('m')
@@ -174,12 +183,12 @@ export default class Painter implements PainterSpec {
     const features = allFeatures.filter(f => f.type !== 'heatmap')
 
     // draw heatmap data if applicable
-    const heatmapFeatures = allFeatures.filter(f => f.type === 'heatmap') as HeatmapFeatureGuide[]
+    const heatmapFeatures = allFeatures.filter(f => f.type === 'heatmap') as HeatmapFeature[]
     if (heatmapFeatures.length > 0) features.push(this.paintHeatmap(heatmapFeatures))
     // sort features
     features.sort(featureSort)
     // prep glyph features for drawing box filters
-    const glyphFeatures = features.filter(feature => feature.type === 'glyph' && !feature.overdraw) as GlyphFeatureGuide[]
+    const glyphFeatures = features.filter(feature => feature.type === 'glyph' && !feature.overdraw) as GlyphFeature[]
     // use text boxes to filter out overlap
     if (glyphFeatures.length > 0) this.paintGlyphFilter(glyphFeatures)
     // return to our default framebuffer
@@ -196,7 +205,7 @@ export default class Painter implements PainterSpec {
     const opaqueFillFeatures = features.filter(f => f.opaque).reverse()
     this.paintFeatures(opaqueFillFeatures)
     // paint features that are potentially transparent
-    const residualFeatures = features.filter(f => !(f.opaque ?? false))
+    const residualFeatures = features.filter(f => !(f.layerGuide.opaque ?? false))
     this.paintFeatures(residualFeatures)
     // cleanup
     context.cleanup()
@@ -205,7 +214,7 @@ export default class Painter implements PainterSpec {
   computeInteractive (tiles: Tile[]): void {
     const interactiveFeatures = tiles
       .flatMap(tile => tile.featureGuides)
-      .filter(feature => feature.interactive === true)
+      .filter(feature => feature.layerGuide.interactive)
       .sort(featureSort)
       .reverse()
     if (interactiveFeatures.length > 0) {
@@ -219,8 +228,8 @@ export default class Painter implements PainterSpec {
   paintMasks (tiles: Tile[]): void {
     // get context
     const { context } = this
-    // prep the fill program
-    const fillProgram = this.useWorkflow('fill')
+    // prep the fill workflow
+    const fillWorkflow = this.useWorkflow('fill')
     // set proper states
     context.enableMaskTest()
 
@@ -231,11 +240,11 @@ export default class Painter implements PainterSpec {
       if (type === 'S2') context.enableCullFace()
       else context.disableCullFace()
       // set tile uniforms
-      fillProgram.setTileUniforms(tile)
+      fillWorkflow.setTileUniforms(tile)
       // set correct tile mask
       context.stencilFuncAlways(tmpMaskID)
       // draw mask
-      fillProgram.drawMask(mask)
+      fillWorkflow.drawMask(mask)
     }
     // lock in the stencil, draw colors again
     context.flushMask()
@@ -247,58 +256,58 @@ export default class Painter implements PainterSpec {
     const { context } = this
     // setup variables
     let curLayer = -1
-    let program: Program | undefined
-    // run through the features, and upon tile, layer, or program change, adjust accordingly
+    let workflow: Workflow | undefined
+    // run through the features, and upon tile, layer, or workflow change, adjust accordingly
     for (const feature of features) {
-      const { tile, parent, layerGuide: { layerIndex }, type, layerCode, lch } = feature
+      const { tile, parent, layerGuide: { layerIndex, layerCode, lch }, type } = feature
       const { tmpMaskID } = tile
-      // set program
-      program = this.useWorkflow(type)
-      if (program === undefined) throw new Error(`Program ${type} not found`)
+      // set workflow
+      workflow = this.useWorkflow(type)
+      if (workflow === undefined) throw new Error(`Workflow ${type} not found`)
       // set stencil
       context.stencilFuncEqual(tmpMaskID)
       // update layerCode if the current layer has changed
       if (curLayer !== layerIndex) {
         // now setup new layercode
         curLayer = layerIndex
-        program.setLayerCode(layerCode, lch)
+        workflow.setLayerCode(layerCode, lch)
         // set interactive if applicable
-        program.setInteractive(interactive)
+        workflow.setInteractive(interactive)
       }
       // adjust tile uniforms
-      program.setTileUniforms(parent ?? tile)
-      // draw (just ignore types... they are handled in the program)
-      program.draw(feature as never, interactive)
+      workflow.setTileUniforms(parent ?? tile)
+      // draw (just ignore types... they are handled in the workflow)
+      workflow.draw(feature as never, interactive)
     }
   }
 
-  paintHeatmap (features: HeatmapFeatureGuide[]): HeatmapFeatureGuide {
-    // grab heatmap program
-    const heatmapProgram = this.useWorkflow('heatmap')
-    if (heatmapProgram === undefined) throw new Error('Heatmap program not found')
+  paintHeatmap (features: HeatmapFeature[]): HeatmapFeature {
+    // grab heatmap workflow
+    const heatmapWorkflow = this.useWorkflow('heatmap')
+    if (heatmapWorkflow === undefined) throw new Error('Heatmap workflow not found')
     // setup texture draws
-    heatmapProgram.setupTextureDraw()
+    heatmapWorkflow.setupTextureDraw()
     // draw all features
     for (const feature of features) {
-      const { tile, parent, layerCode, lch } = feature
+      const { tile, parent, layerGuide: { layerCode, lch } } = feature
       // set tile uniforms & layercode, bind vao, and draw
-      heatmapProgram.setTileUniforms(parent ?? tile)
-      heatmapProgram.setLayerCode(layerCode, lch)
-      heatmapProgram.drawTexture(feature)
+      heatmapWorkflow.setTileUniforms(parent ?? tile)
+      heatmapWorkflow.setLayerCode(layerCode, lch)
+      heatmapWorkflow.drawTexture(feature)
     }
     // return a "featureGuide" to draw to the screen
     return features[0]
   }
 
-  paintGlyphFilter (glyphFeatures: GlyphFeatureGuide[]): void {
-    const glyphFilterProgram = this.useWorkflow('glyphFilter')
-    if (glyphFilterProgram === undefined) throw new Error('GlyphFilter program not found')
+  paintGlyphFilter (glyphFeatures: GlyphFeature[]): void {
+    const glyphFilterWorkflow = this.useWorkflow('glyphFilter')
+    if (glyphFilterWorkflow === undefined) throw new Error('GlyphFilter workflow not found')
     // Step 1: draw quads
-    glyphFilterProgram.bindQuadFrameBuffer()
-    this.#paintGlyphFilter(glyphFilterProgram, glyphFeatures, 1)
+    glyphFilterWorkflow.bindQuadFrameBuffer()
+    this.#paintGlyphFilter(glyphFilterWorkflow, glyphFeatures, 1)
     // Step 2: draw result points
-    glyphFilterProgram.bindResultFramebuffer()
-    this.#paintGlyphFilter(glyphFilterProgram, glyphFeatures, 2)
+    glyphFilterWorkflow.bindResultFramebuffer()
+    this.#paintGlyphFilter(glyphFilterWorkflow, glyphFeatures, 2)
   }
 
   async getScreen (): Promise<Uint8ClampedArray> {
@@ -312,27 +321,27 @@ export default class Painter implements PainterSpec {
   }
 
   #paintGlyphFilter (
-    glyphFilterProgram: GlyphFilterProgram,
-    glyphFeatures: GlyphFeatureGuide[],
+    glyphFilterWorkflow: GlyphFilterWorkflow,
+    glyphFeatures: GlyphFeature[],
     mode: 1 | 2
   ): void {
     const { context } = this
     const { gl } = context
     let curLayer = -1
     // set mode
-    glyphFilterProgram.setMode(mode)
+    glyphFilterWorkflow.setMode(mode)
     // draw each feature
     for (const glyphFeature of glyphFeatures) {
-      const { lch, tile, parent, layerGuide: { layerIndex }, source, layerCode } = glyphFeature
+      const { tile, parent, layerGuide: { layerIndex, layerCode, lch }, source } = glyphFeature
       // update layerIndex
       if (curLayer !== layerIndex) {
         curLayer = layerIndex
-        glyphFilterProgram.setLayerCode(layerCode, lch)
+        glyphFilterWorkflow.setLayerCode(layerCode, lch)
       }
-      glyphFilterProgram.setTileUniforms(parent ?? tile)
+      glyphFilterWorkflow.setTileUniforms(parent ?? tile)
       gl.bindVertexArray(source.filterVAO)
       // draw
-      glyphFilterProgram.draw(glyphFeature, false)
+      glyphFilterWorkflow.draw(glyphFeature, false)
     }
   }
 
@@ -349,9 +358,9 @@ export default class Painter implements PainterSpec {
     this.dirty = true
     // tell all the workflows
     const { workflows } = this
-    for (const programName in workflows) {
-      const program = workflows[programName as WorkflowKey] as unknown as Program
-      program.updateColorBlindMode = mode
+    for (const workflowName in workflows) {
+      const workflow = workflows[workflowName as WorkflowKey] as unknown as Workflow
+      workflow.updateColorBlindMode = mode
     }
   }
 }

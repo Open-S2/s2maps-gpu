@@ -1,9 +1,9 @@
+import type WebGLContext from 'gl/contexts/context'
+import type WebGPUContext from 'gpu/context/context'
 import type {
   FeatureGuide as FeatureGuideGL,
-  MaskSource as MaskSourceGL,
-  Context as WebGLContext
-} from 'gl/contexts/context.spec'
-import type WebGPUContext from 'gpu/context/context'
+  MaskSource as MaskSourceGL
+} from 'gl/workflows/workflow.spec'
 import type {
   Features as FeaturesGPU,
   TileMaskSource as MaskSourceGPU

@@ -315,7 +315,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     this.glyphFilterResultBuffer.destroy()
   }
 
-  // programs helps design the appropriate layer parameters
+  // workflow helps design the appropriate layer parameters
   buildLayerDefinition (layerBase: LayerDefinitionBase, layer: GlyphStyle): GlyphDefinition {
     const { context } = this
     const { source, layerIndex, lch, visible } = layerBase

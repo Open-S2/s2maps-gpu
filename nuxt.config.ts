@@ -13,17 +13,18 @@ export default defineNuxtConfig({
       baseURL: process.env.BASE_URL ?? 'https://opens2.com'
     }
   },
-  // watch: [
-  //   './s2/**/*',
-  //   './components/**/*',
-  //   './pages/**/*',
-  //   './plugins/**/*',
-  //   './public/**/*'
-  // ],
-  modules: [
-    // TODO: find a way to run this while using dev but not playwright
-    '@nuxtjs/eslint-module'
+  watch: [
+    './s2/**/*',
+    './components/**/*',
+    './pages/**/*',
+    './plugins/**/*',
+    './public/**/*'
   ],
+  modules: process.env.DEV === 'true'
+    ? [
+        // 'nuxtjs-eslint-module'
+      ]
+    : [],
   css: [
     fileURLToPath(new URL('./assets/styles/globals.css', import.meta.url))
   ],

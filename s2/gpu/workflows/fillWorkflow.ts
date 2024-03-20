@@ -165,7 +165,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
     }
   }
 
-  // programs helps design the appropriate layer parameters
+  // workflows helps design the appropriate layer parameters
   buildLayerDefinition (layerBase: LayerDefinitionBase, layer: FillStyle): FillDefinition {
     const { context } = this
     const { source, layerIndex, lch, visible } = layerBase
@@ -286,11 +286,10 @@ export default class FillWorkflow implements FillWorkflowSpec {
       const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array(featureCode), GPUBufferUsage.STORAGE)
       const fillTexturePositions = context.buildGPUBuffer('Fill Texture Positions', new Float32Array([texX, texY, texW, texH, patternMovement]), GPUBufferUsage.UNIFORM)
       const fillInteractiveBuffer = context.buildGPUBuffer('Fill Interactive Buffer', new Uint32Array([offset / 3, count / 3]), GPUBufferUsage.UNIFORM)
-      const feature = new FillFeature(
+      features.push(new FillFeature(
         this, layerGuide, false, source, count, offset, tile,
         featureCodeBuffer, fillTexturePositions, fillInteractiveBuffer, featureCode
-      )
-      features.push(feature)
+      ))
     }
 
     tile.addFeatures(features)

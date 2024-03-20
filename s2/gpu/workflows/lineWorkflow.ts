@@ -161,7 +161,7 @@ export default class LineWorkflow implements LineWorkflowSpec {
     }
   }
 
-  // programs helps design the appropriate layer parameters
+  // workflow helps design the appropriate layer parameters
   buildLayerDefinition (layerBase: LayerDefinitionBase, layer: LineStyle): LineDefinition {
     const { context } = this
     const { devicePixelRatio, nullTexture } = context

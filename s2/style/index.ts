@@ -9,14 +9,14 @@ import type {
   StylePackage
 } from './style.spec'
 import type { RequestStyleMessage, TileRequest } from 'workers/worker.spec'
-import type { WorkflowType as GLWorkflowType } from 'gl/programs/program.spec'
+import type { WorkflowType as GLWorkflowType } from 'gl/workflows/workflow.spec'
 import type { WorkflowType as GPUWorkflowType } from 'gpu/workflows/workflow.spec'
 import type Camera from 'ui/camera'
 import type { MapOptions } from 'ui/s2mapUI'
 import type { TileShared as Tile } from 'source/tile.spec'
 
 // PRE) If style is a string (url), ship it off to Source Worker to fetch the style
-// 1) Build programs necessary to render the style
+// 1) Build workflows necessary to render the style
 // 2) Build out the layers
 // 3) Ship off appropriate style params to Tile Workers so they know how to build the tiles
 // 4) Build the layers for the painter
@@ -54,7 +54,7 @@ export default class Style {
     if (style.clearColor !== undefined) {
       painter.context.setClearColor(style.clearColor)
     }
-    // build programs that don't exist yet (depends on projection)
+    // build workflows that don't exist yet (depends on projection)
     await this.#buildWorkflows(style)
     // build layer definitions
     this.#buildLayers(style.layers)
@@ -95,7 +95,7 @@ export default class Style {
     const { camera, urlMap } = this
     const { painter } = camera
     const { skybox, wallpaper, layers } = style
-    const workflows = new Set<GLWorkflowType & GPUWorkflowType>(['fill'])
+    const workflows = new Set<GLWorkflowType | GPUWorkflowType>(['fill'])
     // setup appropriate background if it exists
     if (skybox !== undefined) workflows.add('skybox')
     if (wallpaper !== undefined) workflows.add('wallpaper')
@@ -107,7 +107,7 @@ export default class Style {
     }
     // build workflows
     await painter.buildWorkflows(workflows)
-    // inject styles into programs
+    // inject styles into workflows
     for (const [name, workflow] of Object.entries(painter.workflows)) {
       if (name === 'background') continue
       if ('updateStyle' in workflow) workflow.updateStyle(style, camera, urlMap)
@@ -127,7 +127,7 @@ export default class Style {
           (layerDefinition.type === 'fill' || layerDefinition.type === 'shade')
         ) this.maskLayers.push(layerDefinition)
         layerDefinitions.push(layerDefinition)
-        if ('interactive' in layerDefinition && layerDefinition.interactive) this.interactive = true
+        if (layerDefinition.interactive === true) this.interactive = true
         layerIndex++
       }
     }
@@ -231,7 +231,7 @@ export default class Style {
 
 // addLayer (layer: Layer, nameIndex?: number | string, tileRequests: Array<TileRequest>) {
 //   const { painter } = this.map
-//   const programs = new Set()
+//   const workflows = new Set()
 //   // prebuild & convert nameIndex to index
 //   const index = this.#findLayerIndex(nameIndex)
 //   this._prebuildLayer(layer, index)
@@ -250,9 +250,9 @@ export default class Style {
 //     layer.depthPos++
 //   }
 //   // build layer
-//   this._buildLayer(layer, index + 1, programs)
-//   // tell the painter that we might be using a new program
-//   painter.buildPrograms(programs)
+//   this._buildLayer(layer, index + 1, workflows)
+//   // tell the painter that we might be using a new workflow
+//   painter.buildWorkflows(workflows)
 //   // let the renderer know the style is dirty
 //   this.dirty = true
 // }

@@ -136,10 +136,10 @@ export type Sprites = Record<string, string | {
 // LAYER MANAGMENT
 // User defined layers are stored in the style.layers array.
 // To ensure proper ordering (future GPU use) and ensure valid data,
-// the layer data is sent to the appropriate program to process into a "Definition" version.
+// the layer data is sent to the appropriate workflow to process into a "Definition" version.
 // Style -> Definition
 //
-// The next step deviates upon whether the layer is used for rendering (program), or for filtering (worker).
+// The next step deviates upon whether the layer is used for rendering (workflow), or for filtering (worker).
 //
 // Worflow (program / pipeline):
 // Definition[paint + layout] ->
@@ -806,9 +806,11 @@ export interface LayerDefinitionBase {
   layer: string
   minzoom: number
   maxzoom: number
-  filter?: Filter
   lch: boolean
   visible: boolean
+  filter?: Filter
+  interactive?: boolean
+  opaque?: boolean
 }
 // uses definition to create a guide for the workflow (program/pipeline)
 export interface LayerWorkflowGuideBase {
@@ -817,6 +819,8 @@ export interface LayerWorkflowGuideBase {
   layerCode: number[]
   lch: boolean
   visible: boolean
+  interactive: boolean
+  opaque: boolean
 }
 // worker takes the definition and creates a layer to prep input data for workflow (program/pipeline)
 export interface LayerWorkerBase {
@@ -1035,8 +1039,6 @@ export interface FillWorkflowLayerGuide extends LayerWorkflowGuideBase {
   color?: LayerWorkerFunction<ColorArray>
   opacity?: LayerWorkerFunction<number[]>
   invert: boolean
-  opaque: boolean
-  interactive: boolean
   pattern: boolean
 }
 export interface FillWorkflowLayerGuideGPU extends FillWorkflowLayerGuide {
@@ -1720,7 +1722,6 @@ export interface GlyphDefinition extends LayerDefinitionBase {
   cursor: Cursor
 }
 export interface GlyphWorkflowLayerGuide extends LayerWorkflowGuideBase {
-  interactive: boolean
   cursor: Cursor
   overdraw: boolean
   viewCollisions: boolean
@@ -2356,7 +2357,6 @@ export interface PointDefinition extends LayerDefinitionBase {
   cursor: Cursor
 }
 export interface PointWorkflowLayerGuide extends LayerWorkflowGuideBase {
-  interactive: boolean
   cursor: Cursor
 }
 export interface PointWorkflowLayerGuideGPU extends PointWorkflowLayerGuide {
@@ -2925,6 +2925,7 @@ export interface ShadeDefinitionGPU extends ShadeDefinition {
   layerBuffer: GPUBuffer
   layerCodeBuffer: GPUBuffer
 }
+export interface ShadeWorkflowLayerGuide extends LayerWorkflowGuideBase {}
 export interface ShadeWorkerLayer extends LayerWorkerBase {
   type: 'shade'
 }

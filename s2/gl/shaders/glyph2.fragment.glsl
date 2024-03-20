@@ -24,14 +24,13 @@ void main () {
   } else {
     bool noAlpha = vColor.a < 0.01;
     vec4 tex = texture(uGlyphTex, vTexcoord);
-    // if (tex.a < 0.01) discard;
     if (noAlpha && uIsIcon) {
       fragColor = vColor;
       return;
     } else {
+      if (tex.a < 0.01) discard;
       float opacityS = smoothstep(vBuf - vGamma, vBuf + vGamma, median(tex.r, tex.g, tex.b));
       fragColor = opacityS * vColor;
     }
-    fragColor = vColor;
   }
 }

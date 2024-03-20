@@ -1,18 +1,27 @@
 import buildMask from './buildMask'
 
 import type { MapOptions } from 'ui/s2mapUI'
-import type { Context as ContextSpec, FBO, MaskSource } from './context.spec'
 import type { GPUType, Projection } from 'style/style.spec'
 import type { ColorArray } from 'style/color'
 import type { BBox } from 'geometry'
 import type { GlyphImages } from 'workers/source/glyphSource'
 import type { SpriteImageMessage } from 'workers/worker.spec'
+import type { MaskSource } from '../workflows/workflow.spec'
+
+export interface FBO {
+  width: number
+  height: number
+  texSize: number[]
+  texture: WebGLTexture
+  stencil: WebGLRenderbuffer
+  glyphFramebuffer: WebGLFramebuffer
+}
 
 const DEPTH_ESPILON = 1 / Math.pow(2, 16)
 
 // CONSIDER: get apple devices https://github.com/pmndrs/detect-gpu/blob/master/src/internal/deobfuscateAppleGPU.ts
 
-export default class Context implements ContextSpec {
+export default class Context {
   gl: WebGLRenderingContext | WebGL2RenderingContext
   type: GPUType = 1
   projection: Projection = 'S2'
@@ -295,12 +304,12 @@ export default class Context implements ContextSpec {
   getMask (division: number): MaskSource {
     const { masks } = this
     // check if we have a mask for this level
-    let mask = masks.get(division)
+    const mask = masks.get(division)
     if (mask !== undefined) return mask
     // otherwise, create a new mask
-    mask = buildMask(division, this)
-    masks.set(division, mask)
-    return mask
+    const newMask: MaskSource = buildMask(division, this)
+    masks.set(division, newMask)
+    return newMask
   }
 
   drawQuad (): void {
@@ -464,16 +473,6 @@ export default class Context implements ContextSpec {
       this.zLow = 0
       this.zHigh = 1
     }
-  }
-
-  /** WALLPAPER **/
-
-  wallpaperState (): void {
-    this.defaultBlend()
-    this.disableCullFace()
-    this.disableDepthTest()
-    this.enableStencilTest()
-    this.stencilFuncEqual(0)
   }
 
   /** CULLING **/

@@ -1,29 +1,27 @@
 import type {
-  FeatureGuide,
-  GlyphFeatureGuide,
-  HeatmapFeatureGuide
-} from './contexts/context.spec'
-import type {
   WebGL2Context,
   WebGLContext
 } from './contexts'
 import type {
-  FillProgram,
-  GlyphFilterProgram,
-  GlyphProgram,
-  HeatmapProgram,
-  HillshadeProgram,
-  LineProgram,
-  PointProgram,
-  RasterProgram,
-  SensorProgram,
-  ShadeProgram,
-  SkyboxProgram,
-  WallpaperProgram,
+  FeatureGuide,
+  FillWorkflow,
+  GlyphFeature,
+  GlyphFilterWorkflow,
+  GlyphWorkflow,
+  HeatmapFeature,
+  HeatmapWorkflow,
+  HillshadeWorkflow,
+  LineWorkflow,
+  PointWorkflow,
+  RasterWorkflow,
+  SensorWorkflow,
+  ShadeWorkflow,
+  SkyboxWorkflow,
+  WallpaperWorkflow,
   WorkflowKey,
   WorkflowType,
   Workflows
-} from './programs/program.spec'
+} from './workflows/workflow.spec'
 import type { TileGL as Tile } from 'source/tile.spec'
 import type { PainterData, SpriteImageMessage } from 'workers/worker.spec'
 import type { GlyphImages } from 'workers/source/glyphSource'
@@ -34,23 +32,23 @@ export interface Painter {
   context: WebGLContext | WebGL2Context
   workflows: Workflows
   dirty: boolean
-  currProgram?: WorkflowKey
+  currWorkflow?: WorkflowKey
 
   prepare: () => Promise<void>
 
   buildFeatureData: (tile: Tile, data: PainterData) => void
   useWorkflow: (
-    ((programName: 'fill') => FillProgram) &
-    ((programName: 'glyph') => GlyphProgram | undefined) &
-    ((programName: 'heatmap') => HeatmapProgram | undefined) &
-    ((programName: 'line') => LineProgram | undefined) &
-    ((programName: 'point') => PointProgram | undefined) &
-    ((programName: 'raster') => RasterProgram | undefined) &
-    ((programName: 'hillshade') => HillshadeProgram | undefined) &
-    ((programName: 'sensor') => SensorProgram | undefined) &
-    ((programName: 'shade') => ShadeProgram | undefined) &
-    ((programName: 'glyphFilter') => GlyphFilterProgram | undefined) &
-    ((programName: 'background') => WallpaperProgram | SkyboxProgram | undefined)
+    ((workflowName: 'fill') => FillWorkflow) &
+    ((workflowName: 'glyph') => GlyphWorkflow | undefined) &
+    ((workflowName: 'heatmap') => HeatmapWorkflow | undefined) &
+    ((workflowName: 'line') => LineWorkflow | undefined) &
+    ((workflowName: 'point') => PointWorkflow | undefined) &
+    ((workflowName: 'raster') => RasterWorkflow | undefined) &
+    ((workflowName: 'hillshade') => HillshadeWorkflow | undefined) &
+    ((workflowName: 'sensor') => SensorWorkflow | undefined) &
+    ((workflowName: 'shade') => ShadeWorkflow | undefined) &
+    ((workflowName: 'glyphFilter') => GlyphFilterWorkflow | undefined) &
+    ((workflowName: 'background') => WallpaperWorkflow | SkyboxWorkflow | undefined)
   )
   buildWorkflows: (buildSet: Set<WorkflowType>) => Promise<void>
   resize: (width: number, height: number) => void
@@ -65,6 +63,6 @@ export interface Painter {
   computeInteractive: (tiles: Tile[]) => void
   paintMasks: (tiles: Tile[]) => void
   paintFeatures: (features: FeatureGuide[], interactive: boolean) => void
-  paintHeatmap: (features: HeatmapFeatureGuide[]) => HeatmapFeatureGuide
-  paintGlyphFilter: (glyphFeatures: GlyphFeatureGuide[]) => void
+  paintHeatmap: (features: HeatmapFeature[]) => HeatmapFeature
+  paintGlyphFilter: (glyphFeatures: GlyphFeature[]) => void
 }

@@ -1,0 +1,52 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ESNext",
+      "WebWorker"
+    ],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Declaration files */
+    "declaration": true,
+    "declarationDir": "dist",
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+
+    /* Paths */
+    "baseUrl": ".", // This must be specified if "paths" is.
+    "paths": {    
+      "*" : ["./*"],
+      "s2": ["../../s2"],
+      "geometry/*": ["../../s2/geometry/*"],
+      "gl/*": ["../../s2/gl/*"],
+      "gpu/*": ["../../s2/gpu/*"],
+      "plugins/*": ["../../s2/plugins/*"],
+      "source/*": ["../../s2/source/*"],
+      "style/*": ["../../s2/style/*"],
+      "ui/*": ["../../s2/ui/*"],
+      "util/*": ["../../s2/util/*"],
+      "workers/*": ["../../s2/workers/*"],
+    }
+  },
+  "include": [
+    "src/index.ts",
+    "src/components/S2MapsGPU.vue",
+  ]
+}

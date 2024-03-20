@@ -17,7 +17,8 @@
   },
   "plugins": [
     "@typescript-eslint",
-    "vue"
+    "vue",
+    "svelte3"
   ],
   "rules": {
     "vue/multi-word-component-names": "off",
@@ -37,8 +38,10 @@
     }],
     "no-console": ["error", { "allow": ["info", "warn", "error"] }]
   },
+  "settings": {
+    "svelte3/typescript": true // load TypeScript as peer dependency
+  },
   "ignorePatterns": [
-    "packages",
     "node_modules",
     "dist",
     "dist-types",
@@ -49,9 +52,28 @@
     "public",
     "TODO",
     "examples",
+    "vite-env.d.ts",
     "**/*.js"
   ],
   "overrides": [
+    {
+      "files": ["*.vue"],
+      "parser": "vue-eslint-parser",
+      "parserOptions": {
+        "parser": "@typescript-eslint/parser",
+        "extraFileExtensions": [".vue"],
+        "project": "./tsconfig.json"
+      }
+    },
+    {
+      "files": ["*.svelte"],
+      "processor": "svelte3/svelte3",
+      "parserOptions": {
+        "parser": "@typescript-eslint/parser",
+        "extraFileExtensions": [".svelte"],
+        "project": "./tsconfig.json"
+      }
+    },
     {
       "files": ["*.ts", "*.mts"],
       "extends": [

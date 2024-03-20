@@ -29,7 +29,7 @@ export interface Painter {
   context: WebGPUContext
   workflows: Workflows
   dirty: boolean
-  currProgram?: WorkflowKey
+  currWorkflow?: WorkflowKey
 
   prepare: () => Promise<void>
 

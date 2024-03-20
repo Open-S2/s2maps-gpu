@@ -170,7 +170,7 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
     }
   }
 
-  // programs helps design the appropriate layer parameters
+  // workflow helps design the appropriate layer parameters
   buildLayerDefinition (layerBase: LayerDefinitionBase, layer: HeatmapStyle): HeatmapDefinition {
     const { context } = this
     const { source, layerIndex, lch, visible } = layerBase

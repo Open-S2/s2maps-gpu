@@ -128,7 +128,7 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
     }
   }
 
-  // programs helps design the appropriate layer parameters
+  // workflow helps design the appropriate layer parameters
   buildLayerDefinition (layerBase: LayerDefinitionBase, layer: RasterStyle): RasterDefinition {
     const { context } = this
     const { source, layerIndex, lch, visible } = layerBase
