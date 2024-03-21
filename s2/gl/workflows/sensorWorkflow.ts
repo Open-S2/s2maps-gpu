@@ -8,7 +8,7 @@ import frag1 from '../shaders/sensors1.fragment.glsl'
 import vert2 from '../shaders/sensors2.vertex.glsl'
 import frag2 from '../shaders/sensors2.fragment.glsl'
 
-import type Context from '../contexts/context'
+import type Context from '../context/context'
 import type { SensorData } from 'workers/worker.spec'
 import type { TileGL as Tile } from 'source/tile.spec'
 import type {
@@ -18,13 +18,57 @@ import type {
   SensorWorkflowLayerGuide
 } from 'style/style.spec'
 import type {
-  SensorFeature,
+  SensorFeature as SensorFeatureSpec,
   SensorSource,
   SensorWorkflow as SensorWorkflowSpec,
   SensorWorkflowUniforms
 } from './workflow.spec'
 import type TimeCache from 'ui/camera/timeCache'
 import type { SensorTextureDefinition } from 'ui/camera/timeCache'
+
+export class SensorFeature implements SensorFeatureSpec {
+  type = 'sensor' as const
+  opacity?: number // webgl1
+  constructor (
+    public layerGuide: SensorWorkflowLayerGuide,
+    public workflow: SensorWorkflowSpec,
+    public featureCode: number[],
+    public tile: Tile,
+    public fadeStartTime = Date.now(),
+    public parent?: Tile
+  ) {}
+
+  draw (interactive = false): void {
+    const { tile: { tmpMaskID }, workflow } = this
+    workflow.context.stencilFuncEqual(tmpMaskID)
+    workflow.draw(this, interactive)
+  }
+
+  destroy (): void {}
+
+  duplicate (tile: Tile, parent?: Tile): SensorFeature {
+    const {
+      layerGuide, workflow, featureCode, fadeStartTime,
+      opacity
+    } = this
+    const newFeature = new SensorFeature(
+      layerGuide, workflow, featureCode, tile, fadeStartTime, parent
+    )
+    newFeature.setWebGL1Attributes(opacity)
+    return newFeature
+  }
+
+  getTextures (): SensorTextureDefinition {
+    const { tile: { id }, workflow: { timeCache }, layerGuide: { sourceName } } = this
+    return timeCache?.getTextures(id, sourceName) ?? {}
+  }
+
+  setWebGL1Attributes (
+    opacity?: number
+  ): void {
+    this.opacity = opacity
+  }
+}
 
 export default async function sensorWorkflow (context: Context): Promise<SensorWorkflowSpec> {
   const Workflow = await import('./workflow').then(m => m.default)
@@ -85,43 +129,24 @@ export default async function sensorWorkflow (context: Context): Promise<SensorW
     }
 
     #buildFeatures (rasterData: SensorData, tile: Tile): void {
-      const { timeCache } = this
-      const { sourceName, featureGuides } = rasterData
+      const { featureGuides } = rasterData
+      const features: SensorFeatureSpec[] = []
       // for each layer that maches the source, build the feature
-
-      const features: SensorFeature[] = []
-
       for (const { code, layerIndex } of featureGuides) {
         const layerGuide = this.layerGuides.get(layerIndex)
         if (layerGuide === undefined) continue
-        const { fadeDuration, colorRamp, lch, layerCode } = layerGuide
-        let opacity = 1
-        if (this.type === 1) {
-          opacity = code[0]
-        }
-        features.push({
-          type: 'sensor',
-          tile,
-          sourceName,
-          layerGuide,
-          layerCode,
-          lch,
-          featureCode: code,
-          fadeDuration,
-          fadeStartTime: Date.now(),
-          colorRamp,
-          opacity,
-          getTextures: (): SensorTextureDefinition => { return timeCache?.getTextures(tile.id, sourceName) ?? {} }
-        })
+        const feature = new SensorFeature(layerGuide, this, [0], tile)
+        if (this.type === 1) feature.setWebGL1Attributes(code[0])
+        features.push(feature)
       }
 
       tile.addFeatures(features)
     }
 
     buildLayerDefinition (layerBase: LayerDefinitionBase, layer: SensorStyle): SensorDefinition {
-      const { source, layerIndex, lch, visible } = layerBase
+      const { source, layerIndex, lch, visible, interactive } = layerBase
       // PRE) get layer properties
-      let { colorRamp, opacity, fadeDuration, interactive, cursor } = layer
+      let { colorRamp, opacity, fadeDuration, cursor } = layer
       opacity = opacity ?? 1
       colorRamp = colorRamp ?? 'sinebow'
       fadeDuration = fadeDuration ?? 300
@@ -145,7 +170,9 @@ export default async function sensorWorkflow (context: Context): Promise<SensorW
         lch,
         fadeDuration,
         colorRamp: context.buildTexture(buildColorRamp(colorRamp, lch), 256, 4),
-        visible
+        visible,
+        interactive: interactive ?? false,
+        opaque: false
       })
 
       return layerDefinition
@@ -160,13 +187,16 @@ export default async function sensorWorkflow (context: Context): Promise<SensorW
       super.use()
     }
 
-    draw (featureGuide: SensorFeature, _interactive = false): void {
+    draw (featureGuide: SensorFeatureSpec, _interactive = false): void {
       // grab gl from the context
       const { gl, type, context, nullTexture, uniforms } = this
       const { uTime, uOpacity } = uniforms
 
       // get current source data. Time is a uniform
-      const { tile, parent, featureCode, colorRamp, opacity, layerGuide: { layerIndex, visible } } = featureGuide
+      const {
+        tile, parent, featureCode, opacity,
+        layerGuide: { layerIndex, visible, colorRamp }
+      } = featureGuide
       if (!visible) return
       const { time, texture, textureNext } = featureGuide.getTextures()
       const { mask } = parent ?? tile

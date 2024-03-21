@@ -72,10 +72,6 @@ const TEST_SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
 
 export class GlyphFeature implements GlyphFeatureSpec {
   type = 'glyph' as const
-  sourceName: string
-  interactive: boolean
-  overdraw: boolean
-  viewCollisions: boolean
   bindGroup: GPUBindGroup
   glyphBindGroup: GPUBindGroup
   glyphStrokeBindGroup: GPUBindGroup
@@ -99,11 +95,6 @@ export class GlyphFeature implements GlyphFeatureSpec {
     public featureCodeBuffer: GPUBuffer,
     public parent?: Tile
   ) {
-    const { sourceName, interactive, overdraw, viewCollisions } = layerGuide
-    this.sourceName = sourceName
-    this.interactive = interactive
-    this.overdraw = overdraw
-    this.viewCollisions = viewCollisions
     this.bindGroup = this.#buildBindGroup()
     this.glyphBindGroup = this.#buildGlyphBindGroup()
     this.glyphStrokeBindGroup = this.#buildStrokeBindGroup()
@@ -396,7 +387,8 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
       cursor,
       overdraw,
       viewCollisions,
-      visible
+      visible,
+      opaque: false
     })
 
     return layerDefinition
@@ -571,19 +563,11 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
   }
 
   draw ({
-    layerGuide,
-    viewCollisions,
-    isIcon,
-    bindGroup,
-    glyphBindGroup,
-    glyphStrokeBindGroup,
-    source,
-    count,
-    offset,
-    filterCount,
-    filterOffset
+    layerGuide: { viewCollisions, visible }, isIcon, bindGroup,
+    glyphBindGroup, glyphStrokeBindGroup, source,
+    count, offset, filterCount, filterOffset
   }: GlyphFeatureSpec): void {
-    if (!layerGuide.visible) return
+    if (!visible) return
     // get current source data
     const { context, pipeline } = this
     const { passEncoder } = context

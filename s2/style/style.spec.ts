@@ -1,4 +1,4 @@
-import type { BBox, JSONFeatures, Properties } from 'geometry/proj.spec'
+import type { BBox, JSONFeatures, Point, Properties } from 'geometry'
 import type { Filter, FilterFunction } from 'style/parseFilter'
 import type { EaseType } from './easingFunctions'
 import type { JSONVTOptions } from 'workers/source/jsonVT'
@@ -8,10 +8,11 @@ import type { View } from 'ui/camera/projector'
 
 export type { JSONVTOptions } from 'workers/source/jsonVT'
 export type { ClusterOptions } from 'workers/source/pointCluster'
-export type { Properties, JSONFeatures } from 'geometry/proj.spec'
+export type { BBox, JSONFeatures, Point, Properties } from 'geometry'
 export type { Filter, FilterFunction } from './parseFilter'
 export type { EaseType } from './easingFunctions'
 export type { MapOptions } from 'ui/s2mapUI'
+export type { ColorArray } from './color'
 export type { View } from 'ui/camera/projector'
 
 export type ImageFormats = 'raw' | 'png' | 'jpg' | 'jpeg' | 'jpe' | 'webp' | 'avif' | 'gif' | 'svg' | 'bmp' | 'tiff' | 'ico' | 'cur'
@@ -1380,7 +1381,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  textOffset?: [x: number, y: number] | PropertyOnlyStep<[x: number, y: number]>
+  textOffset?: Point | PropertyOnlyStep<Point>
   /**
    * A LAYOUT `PropertyOnlyStep`.
    * @defaultValue `[0, 0]`
@@ -1405,7 +1406,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  textPadding?: [x: number, y: number] | PropertyOnlyStep<[x: number, y: number]>
+  textPadding?: Point | PropertyOnlyStep<Point>
   /**
    * A PAINT `Property`.
    * @defaultValue `0`
@@ -1650,7 +1651,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  iconOffset?: [x: number, y: number] | PropertyOnlyStep<[x: number, y: number]>
+  iconOffset?: Point | PropertyOnlyStep<Point>
   /**
    * A LAYOUT `PropertyOnlyStep`.
    * @defaultValue `[0, 0]`
@@ -1675,7 +1676,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  iconPadding?: [x: number, y: number] | PropertyOnlyStep<[x: number, y: number]>
+  iconPadding?: Point | PropertyOnlyStep<Point>
   // properties
   /** if true, only points will be drawn not lines or polygons. Default false */
   onlyPoints?: boolean
@@ -1702,8 +1703,8 @@ export interface GlyphDefinition extends LayerDefinitionBase {
   textFamily: string | string[] | PropertyOnlyStep<string | string[]>
   textField: string | string[] | PropertyOnlyStep<string | string[]>
   textAnchor: Anchor | PropertyOnlyStep<Anchor>
-  textOffset: [x: number, y: number] | PropertyOnlyStep<[x: number, y: number]>
-  textPadding: [x: number, y: number] | PropertyOnlyStep<[x: number, y: number]>
+  textOffset: Point | PropertyOnlyStep<Point>
+  textPadding: Point | PropertyOnlyStep<Point>
   textWordWrap: number | PropertyOnlyStep<number>
   textAlign: Alignment | PropertyOnlyStep<Alignment>
   textKerning: number | PropertyOnlyStep<number>
@@ -1711,8 +1712,8 @@ export interface GlyphDefinition extends LayerDefinitionBase {
   iconFamily: string | string[] | PropertyOnlyStep<string | string[]>
   iconField: string | string[] | PropertyOnlyStep<string | string[]>
   iconAnchor: Anchor | PropertyOnlyStep<Anchor>
-  iconOffset: [x: number, y: number] | PropertyOnlyStep<[x: number, y: number]>
-  iconPadding: [x: number, y: number] | PropertyOnlyStep<[x: number, y: number]>
+  iconOffset: Point | PropertyOnlyStep<Point>
+  iconPadding: Point | PropertyOnlyStep<Point>
   // properties
   onlyPoints: boolean
   onlyLines: boolean
@@ -1742,8 +1743,8 @@ export interface GlyphWorkerLayer extends LayerWorkerBase {
   textFamily: LayerWorkerFunction<string | string[]>
   textField: LayerWorkerFunction<string | string[]>
   textAnchor: LayerWorkerFunction<string>
-  textOffset: LayerWorkerFunction<[x: number, y: number]>
-  textPadding: LayerWorkerFunction<[x: number, y: number]>
+  textOffset: LayerWorkerFunction<Point>
+  textPadding: LayerWorkerFunction<Point>
   textWordWrap: LayerWorkerFunction<number>
   textAlign: LayerWorkerFunction<Alignment>
   textKerning: LayerWorkerFunction<number>
@@ -1751,8 +1752,8 @@ export interface GlyphWorkerLayer extends LayerWorkerBase {
   iconFamily: LayerWorkerFunction<string | string[]>
   iconField: LayerWorkerFunction<string | string[]>
   iconAnchor: LayerWorkerFunction<Anchor>
-  iconOffset: LayerWorkerFunction<[x: number, y: number]>
-  iconPadding: LayerWorkerFunction<[x: number, y: number]>
+  iconOffset: LayerWorkerFunction<Point>
+  iconPadding: LayerWorkerFunction<Point>
   // properties
   onlyPoints: boolean
   onlyLines: boolean
@@ -2865,6 +2866,9 @@ export interface SensorWorkflowLayerGuide extends LayerWorkflowGuideBase {
   fadeDuration: number
   colorRamp: WebGLTexture
 }
+export interface SensorWorkflowLayerGuideGPU extends SensorWorkflowLayerGuide {
+  colorRame: GPUTexture
+}
 export interface SensorWorkerLayer extends LayerWorkerBaseRaster {
   type: 'sensor'
   getCode: BuildCodeFunctionZoom
@@ -2921,11 +2925,11 @@ export interface ShadeDefinition extends LayerDefinitionBase {
   // layout
   color: string | PropertyOnlyStep<string>
 }
-export interface ShadeDefinitionGPU extends ShadeDefinition {
+export interface ShadeWorkflowLayerGuide extends LayerWorkflowGuideBase {}
+export interface ShadeWorkflowLayerGuideGPU extends ShadeWorkflowLayerGuide {
   layerBuffer: GPUBuffer
   layerCodeBuffer: GPUBuffer
 }
-export interface ShadeWorkflowLayerGuide extends LayerWorkflowGuideBase {}
 export interface ShadeWorkerLayer extends LayerWorkerBase {
   type: 'shade'
 }

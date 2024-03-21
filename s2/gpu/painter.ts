@@ -145,10 +145,10 @@ export default class Painter {
     // draw the wallpaper
     workflows.background?.draw(projector)
     // paint opaque fills
-    const opaqueFillFeatures = features.filter(f => f.opaque).reverse()
+    const opaqueFillFeatures = features.filter(f => f.layerGuide.opaque).reverse()
     for (const feature of opaqueFillFeatures) feature.draw()
     // paint features that are potentially transparent
-    const residualFeatures = features.filter(f => !(f.opaque ?? false))
+    const residualFeatures = features.filter(f => !(f.layerGuide.opaque ?? false))
     for (const feature of residualFeatures) feature.draw()
 
     // finish
@@ -158,7 +158,7 @@ export default class Painter {
   computeInteractive (tiles: Tile[]): void {
     const interactiveFeatures = tiles
       .flatMap(tile => tile.featureGuides)
-      .filter(feature => feature.interactive === true)
+      .filter(({ layerGuide }) => layerGuide.interactive)
       .sort(featureSort)
       .reverse()
     if (interactiveFeatures.length > 0) {

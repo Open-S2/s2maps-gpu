@@ -133,7 +133,7 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
   // workflow helps design the appropriate layer parameters
   buildLayerDefinition (layerBase: LayerDefinitionBase, layer: HillshadeStyle): HillshadeDefinition {
     const { context } = this
-    const { source, layerIndex, lch, visible } = layerBase
+    const { source, layerIndex, lch, visible, interactive } = layerBase
     // PRE) get layer properties
     let { unpack, shadowColor, accentColor, highlightColor, opacity, azimuth, altitude, fadeDuration } = layer
     shadowColor = shadowColor ?? '#000'
@@ -179,7 +179,9 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
       layerBuffer,
       layerCodeBuffer,
       unpackBuffer,
-      visible
+      visible,
+      interactive: interactive ?? false,
+      opaque: false
     })
 
     return layerDefinition
@@ -294,8 +296,11 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
     })
   }
 
-  draw ({ layerGuide, bindGroup, hillshadeBindGroup, source }: HillshadeFeatureSpec): void {
-    if (!layerGuide.visible) return
+  draw ({
+    layerGuide: { visible }, bindGroup,
+    hillshadeBindGroup, source
+  }: HillshadeFeatureSpec): void {
+    if (!visible) return
     // get current source data
     const { passEncoder } = this.context
     const { vertexBuffer, indexBuffer, count, offset } = source

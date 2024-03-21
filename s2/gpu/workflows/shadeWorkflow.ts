@@ -10,8 +10,8 @@ import type { WebGPUContext } from '../context'
 import type {
   LayerDefinitionBase,
   ShadeDefinition,
-  ShadeDefinitionGPU,
-  ShadeStyle
+  ShadeStyle,
+  ShadeWorkflowLayerGuideGPU
 } from 'style/style.spec'
 import type { TileGPU as Tile } from 'source/tile.spec'
 
@@ -29,7 +29,6 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
 export class ShadeFeature implements ShadeFeatureSpec {
   type = 'shade' as const
   maskLayer = true
-  sourceName = 'mask'
   source: MaskSource
   count: number
   offset: number
@@ -39,7 +38,7 @@ export class ShadeFeature implements ShadeFeatureSpec {
     public workflow: ShadeWorkflowSpec,
     public tile: Tile,
     public layerIndex: number,
-    public layerGuide: ShadeDefinitionGPU,
+    public layerGuide: ShadeWorkflowLayerGuideGPU,
     public featureCodeBuffer: GPUBuffer
   ) {
     const { mask } = tile
@@ -74,7 +73,7 @@ export class ShadeFeature implements ShadeFeatureSpec {
 
 export default class ShadeWorkflow implements ShadeWorkflowSpec {
   context: WebGPUContext
-  layerDefinition!: ShadeDefinitionGPU
+  layerGuide?: ShadeWorkflowLayerGuideGPU
   pipeline!: GPURenderPipeline
   constructor (context: WebGPUContext) {
     this.context = context
@@ -85,12 +84,14 @@ export default class ShadeWorkflow implements ShadeWorkflowSpec {
   }
 
   destroy (): void {
-    const { layerBuffer, layerCodeBuffer } = this.layerDefinition
+    const { layerGuide } = this
+    if (layerGuide === undefined) return
+    const { layerBuffer, layerCodeBuffer } = layerGuide
     layerBuffer.destroy()
     layerCodeBuffer.destroy()
   }
 
-  buildLayerDefinition (layerBase: LayerDefinitionBase, layer: ShadeStyle): ShadeDefinitionGPU {
+  buildLayerDefinition (layerBase: LayerDefinitionBase, layer: ShadeStyle): ShadeDefinition {
     const { context } = this
     const { lch, layerIndex } = layerBase
     let { color } = layer
@@ -102,28 +103,35 @@ export default class ShadeWorkflow implements ShadeWorkflowSpec {
     const layerBuffer = context.buildGPUBuffer('Layer Uniform Buffer', new Float32Array([context.getDepthPosition(layerIndex), ~~lch]), GPUBufferUsage.UNIFORM)
     const layerCodeBuffer = context.buildGPUBuffer('Layer Code Buffer', new Float32Array(layerCode), GPUBufferUsage.STORAGE)
     // 4) store the layerDefinition and return
-    this.layerDefinition = {
+    const definition: ShadeDefinition = {
       ...layerBase,
       type: 'shade' as const,
       // layout
-      color,
-      // GPU buffers
+      color
+    }
+    // 5) store the layerGuide
+    this.layerGuide = {
+      ...definition,
+      sourceName: 'mask',
+      layerCode,
       layerBuffer,
-      layerCodeBuffer
+      layerCodeBuffer,
+      interactive: false,
+      opaque: false
     }
 
-    return this.layerDefinition
+    return definition
   }
 
   // given a set of layerIndexes that use Masks and the tile of interest
   buildMaskFeature ({ layerIndex, minzoom, maxzoom }: ShadeDefinition, tile: Tile): void {
-    const { context, layerDefinition } = this
+    const { context, layerGuide } = this
     const { zoom } = tile
     // not in the zoom range, ignore
-    if (zoom < minzoom || zoom > maxzoom) return
+    if (layerGuide === undefined || zoom < minzoom || zoom > maxzoom) return
 
     const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array([0]), GPUBufferUsage.STORAGE)
-    const feature = new ShadeFeature(this, tile, layerIndex, layerDefinition, featureCodeBuffer)
+    const feature = new ShadeFeature(this, tile, layerIndex, layerGuide, featureCodeBuffer)
     tile.addFeatures([feature])
   }
 
@@ -190,8 +198,8 @@ export default class ShadeWorkflow implements ShadeWorkflowSpec {
     })
   }
 
-  draw ({ layerGuide, source, bindGroup }: ShadeFeatureSpec): void {
-    if (!layerGuide.visible) return
+  draw ({ layerGuide: { visible }, source, bindGroup }: ShadeFeatureSpec): void {
+    if (!visible) return
     const { context, pipeline } = this
     const { passEncoder } = context
     const { vertexBuffer, indexBuffer, count, offset } = source

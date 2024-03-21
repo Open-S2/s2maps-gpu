@@ -6,7 +6,7 @@ import frag1 from '../shaders/shade1.fragment.glsl'
 import vert2 from '../shaders/shade2.vertex.glsl'
 import frag2 from '../shaders/shade2.fragment.glsl'
 
-import type Context from '../contexts/context'
+import type Context from '../context/context'
 import type {
   MaskSource,
   ShadeFeature as ShadeFeatureSpec,
@@ -32,7 +32,7 @@ export class ShadeFeature implements ShadeFeatureSpec {
     public tile: Tile
   ) {}
 
-  draw (interactive = false): void {
+  draw (): void {
     const { tile, workflow } = this
     workflow.context.stencilFuncEqual(tile.tmpMaskID)
     workflow.draw(this)

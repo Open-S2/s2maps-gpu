@@ -1,6 +1,6 @@
 import loadShader from './loadShader'
 
-import type Context from '../contexts/context'
+import type Context from '../context/context'
 import type {
   AttributeLocations,
   Attributes,
@@ -10,6 +10,7 @@ import type {
 } from './workflow.spec'
 import type { ColorMode } from 's2Map'
 import type { TileGL } from 'source/tile.spec'
+import type { Point } from 'geometry'
 
 export default class Workflow implements WorkflowSpec {
   vertexShader!: WebGLShader
@@ -22,7 +23,7 @@ export default class Workflow implements WorkflowSpec {
   updateColorBlindMode: null | ColorMode = null
   updateMatrix: null | Float32Array = null // pointer
   updateInputs: null | Float32Array = null // pointer
-  updateAspect: null | [number, number] = null // pointer
+  updateAspect: null | Point = null // pointer
   curMode = -1
   LCH?: boolean
   interactive?: boolean
@@ -97,7 +98,7 @@ export default class Workflow implements WorkflowSpec {
     this.flush()
   }
 
-  injectFrameUniforms (matrix: Float32Array, view: Float32Array, aspect: [number, number]): void {
+  injectFrameUniforms (matrix: Float32Array, view: Float32Array, aspect: Point): void {
     this.updateMatrix = matrix
     this.updateInputs = view
     this.updateAspect = aspect
@@ -161,7 +162,7 @@ export default class Workflow implements WorkflowSpec {
     this.updateInputs = null // ensure updateInputs is "flushed"
   }
 
-  setAspect (aspect: [number, number]): void {
+  setAspect (aspect: Point): void {
     const { uniforms } = this
     if (uniforms.uAspect === undefined) return
     this.gl.uniform2fv(uniforms.uAspect, aspect)

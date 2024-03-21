@@ -1,5 +1,5 @@
 import type { ColorMode } from 's2Map'
-import type { BBox } from 'geometry'
+import type { BBox, Point } from 'geometry'
 import type { TileGL as Tile } from 'source/tile.spec'
 import type {
   FillDefinition,
@@ -30,8 +30,7 @@ import type {
   ShadeDefinition,
   ShadeStyle,
   ShadeWorkflowLayerGuide,
-  StyleDefinition,
-  UnpackData
+  StyleDefinition
 } from 'style/style.spec'
 import type { SensorTextureDefinition } from 'ui/camera/timeCache'
 import type Projector from 'ui/camera/projector'
@@ -48,7 +47,8 @@ import type {
   RasterData,
   SensorData
 } from 'workers/worker.spec'
-import type Context from '../contexts/context'
+import type Context from '../context/context'
+import type { ColorArray } from 'style/color'
 
 export type Uniforms = Record<string, string>
 
@@ -135,11 +135,9 @@ export type LayerGuides = FillWorkflowLayerGuide | GlyphWorkflowLayerGuide | Hea
 export interface FeatureBase {
   tile: Tile
   parent?: Tile
-  maskLayer?: boolean
   layerGuide: LayerGuides
   featureCode: number[] // webgl2
   bounds?: BBox
-  opaque?: boolean
   draw: (interactive?: boolean) => void
   destroy: () => void
   duplicate?: (tile: Tile, parent?: Tile, bounds?: BBox) => FeatureBase
@@ -154,7 +152,7 @@ export interface FillFeature extends FeatureBase {
   layerGuide: FillWorkflowLayerGuide
   count: number
   offset: number
-  patternXY: [x: number, y: number]
+  patternXY: Point
   patternWH: [w: number, h: number]
   patternMovement: number
   color?: number[] // webgl1
@@ -173,15 +171,12 @@ export interface GlyphFeature extends FeatureBase {
   offset: number
   filterCount: number
   filterOffset: number
-  overdraw: boolean
   isIcon: boolean
-  interactive: boolean
   textureName?: string
-  bounds?: [number, number, number, number]
-  size?: number
-  fill?: [number, number, number, number]
-  stroke?: [number, number, number, number]
-  strokeWidth?: number
+  size?: number // webgl1
+  fill?: ColorArray // webgl1
+  stroke?: ColorArray // webgl1
+  strokeWidth?: number // webgl1
 }
 
 // ** HEATMAP **
@@ -191,14 +186,12 @@ export interface HeatmapFeature extends FeatureBase {
   layerGuide: HeatmapWorkflowLayerGuide
   count: number
   offset: number
-  colorRamp: WebGLTexture
   radiusLo?: number // webgl1
   opacityLo?: number // webgl1
   intensityLo?: number // webgl1
   radiusHi?: number // webgl1
   opacityHi?: number // webgl1
   intensityHi?: number // webgl1
-  bounds?: [number, number, number, number]
 }
 
 // ** LINE **
@@ -206,15 +199,10 @@ export interface LineFeature extends FeatureBase {
   type: 'line'
   source: LineSource
   layerGuide: LineWorkflowLayerGuide
-  interactive: boolean
   count: number
   offset: number
-  dashed: boolean
-  dashCount: number
-  dashLength: number
-  dashTexture: WebGLTexture
   cap: number
-  color?: [number, number, number, number] // webgl1
+  color?: ColorArray // webgl1
   opacity?: number // webgl1
   width?: number // webgl1
   gapwidth?: number // webgl1
@@ -227,12 +215,11 @@ export interface PointFeature extends FeatureBase {
   layerGuide: PointWorkflowLayerGuide
   count: number
   offset: number
-  color?: [number, number, number, number] // webgl1
+  color?: ColorArray // webgl1
   radius?: number // webgl1
-  stroke?: [number, number, number, number] // webgl1
+  stroke?: ColorArray // webgl1
   strokeWidth?: number // webgl1
   opacity?: number // webgl1
-  bounds?: [number, number, number, number]
 }
 
 // ** RASTER **
@@ -251,13 +238,11 @@ export interface HillshadeFeature extends FeatureBase {
   type: 'hillshade'
   source: RasterSource
   layerGuide: HillshadeWorkflowLayerGuide
-  fadeDuration: number
   fadeStartTime: number
-  unpack: UnpackData
   opacity?: number // webgl1
-  shadowColor?: [number, number, number, number] // webgl1
-  accentColor?: [number, number, number, number] // webgl1
-  highlightColor?: [number, number, number, number] // webgl1
+  shadowColor?: ColorArray // webgl1
+  accentColor?: ColorArray // webgl1
+  highlightColor?: ColorArray // webgl1
   azimuth?: number // webgl1
   altitude?: number // webgl1
 }
@@ -265,9 +250,7 @@ export interface HillshadeFeature extends FeatureBase {
 // ** SENSOR **
 export interface SensorFeature extends FeatureBase {
   type: 'sensor'
-  fadeDuration: number
   fadeStartTime: number
-  colorRamp: WebGLTexture
   layerGuide: SensorWorkflowLayerGuide
   getTextures: () => SensorTextureDefinition
   opacity?: number // webgl1
@@ -280,7 +263,7 @@ export interface ShadeFeature extends FeatureBase {
   layerGuide: ShadeWorkflowLayerGuide
 }
 
-export type FeatureGuide =
+export type Features =
   FillFeature | GlyphFeature | HeatmapFeature |
   LineFeature | PointFeature | RasterFeature |
   SensorFeature | ShadeFeature | HillshadeFeature
@@ -330,7 +313,7 @@ export interface WorkflowSpec {
   updateColorBlindMode: null | ColorMode
   updateMatrix: null | Float32Array
   updateInputs: null | Float32Array
-  updateAspect: null | [number, number]
+  updateAspect: null | Point
   curMode: number
   LCH?: boolean
 
@@ -339,7 +322,7 @@ export interface WorkflowSpec {
   setupAttributes: (attributes: Attributes, attributeLocations: AttributeLocations) => void
   delete: () => void
   use: () => void
-  injectFrameUniforms: (matrix: Float32Array, view: Float32Array, aspect: [number, number]) => void
+  injectFrameUniforms: (matrix: Float32Array, view: Float32Array, aspect: Point) => void
   flush: () => void
   // set uniforms:
   setTileUniforms: (tile: Tile) => void
@@ -347,7 +330,7 @@ export interface WorkflowSpec {
   setColorBlindMode: (colorMode: ColorMode) => void
   setMatrix: (matrix: Float32Array) => void
   setInputs: (inputs: Float32Array) => void
-  setAspect: (aspect: [number, number]) => void
+  setAspect: (aspect: Point) => void
   setFaceST: (faceST: number[]) => void
   setTilePos: (bottomTop: Float32Array) => void
   setLayerCode: (layerCode: number[], lch: boolean) => void
@@ -490,7 +473,7 @@ export interface SkyboxWorkflow extends Omit<WorkflowSpec, 'draw'> {
 export interface WallpaperWorkflow extends Omit<WorkflowSpec, 'draw'> {
   scheme: Scheme
   tileSize: number
-  scale: [number, number]
+  scale: Point
   uniforms: { [key in WallpaperWorkflowUniforms]: WebGLUniformLocation }
 
   updateStyle: (style: StyleDefinition, s2mapGL: S2MapUI) => void

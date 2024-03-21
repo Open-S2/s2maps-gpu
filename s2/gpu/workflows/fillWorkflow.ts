@@ -39,10 +39,6 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
 
 export class FillFeature implements FillFeatureSpec {
   type = 'fill' as const
-  sourceName: string
-  invert: boolean
-  opaque: boolean
-  interactive: boolean
   bindGroup: GPUBindGroup
   fillPatternBindGroup: GPUBindGroup
   fillInteractiveBindGroup?: GPUBindGroup | undefined
@@ -60,11 +56,6 @@ export class FillFeature implements FillFeatureSpec {
     public featureCode: number[] = [0],
     public parent?: Tile
   ) {
-    const { sourceName, invert, opaque, interactive } = layerGuide
-    this.sourceName = sourceName
-    this.invert = invert
-    this.opaque = opaque
-    this.interactive = interactive
     this.fillPatternBindGroup = tile.context.createPatternBindGroup(fillTexturePositions)
     this.bindGroup = this.#buildBindGroup()
     if (fillInteractiveBuffer !== undefined) this.fillInteractiveBindGroup = this.#buildInteractiveBindGroup()
@@ -377,12 +368,15 @@ export default class FillWorkflow implements FillWorkflowSpec {
     const { context, invertPipeline, fillPipeline } = this
     // get current source data
     const { passEncoder } = context
-    const { layerGuide, tile, parent, invert, bindGroup, fillPatternBindGroup, source, count, offset } = featureGuide
+    const {
+      tile, parent, bindGroup, fillPatternBindGroup, source, count, offset,
+      layerGuide: { visible, invert }
+    } = featureGuide
     const { vertexBuffer, indexBuffer, codeTypeBuffer } = source
     const pipeline = invert ? invertPipeline : fillPipeline
     const { mask } = parent ?? tile
     // if the layer is not visible, move on
-    if (!layerGuide.visible) return
+    if (!visible) return
 
     // setup pipeline, bind groups, & buffers
     context.setRenderPipeline(pipeline)
@@ -398,7 +392,10 @@ export default class FillWorkflow implements FillWorkflowSpec {
   }
 
   drawMask (
-    { vertexBuffer, indexBuffer, codeTypeBuffer, bindGroup, fillPatternBindGroup, count, offset }: TileMaskSource,
+    {
+      vertexBuffer, indexBuffer, codeTypeBuffer, bindGroup,
+      fillPatternBindGroup, count, offset
+    }: TileMaskSource,
     featureGuide?: FillFeatureSpec
   ): void {
     const { context, maskPipeline, maskFillPipeline } = this
@@ -417,8 +414,11 @@ export default class FillWorkflow implements FillWorkflowSpec {
     passEncoder.drawIndexed(count, 1, offset)
   }
 
-  computeInteractive ({ layerGuide, bindGroup, fillInteractiveBindGroup, count }: FillFeatureSpec): void {
-    if (!layerGuide.visible || fillInteractiveBindGroup === undefined) return
+  computeInteractive ({
+    layerGuide: { visible }, bindGroup,
+    fillInteractiveBindGroup, count
+  }: FillFeatureSpec): void {
+    if (!visible || fillInteractiveBindGroup === undefined) return
     const { computePass, interactiveBindGroup } = this.context
     this.context.setComputePipeline(this.interactivePipeline)
     // set bind group & draw

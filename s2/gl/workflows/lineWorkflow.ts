@@ -9,9 +9,9 @@ import frag1 from '../shaders/line1.fragment.glsl'
 import vert2 from '../shaders/line2.vertex.glsl'
 import frag2 from '../shaders/line2.fragment.glsl'
 
-import type Context from '../contexts/context'
+import type Context from '../context/context'
 import type {
-  LineFeature,
+  LineFeature as LineFeatureSpec,
   LineSource,
   LineWorkflow as LineWorkflowSpec,
   LineWorkflowUniforms
@@ -19,11 +19,64 @@ import type {
 import type { TileGL as Tile } from 'source/tile.spec'
 import type { LineData } from 'workers/worker.spec'
 import type {
+  ColorArray,
   LayerDefinitionBase,
   LineDefinition,
   LineStyle,
   LineWorkflowLayerGuide
 } from 'style/style.spec'
+
+export class LineFeature implements LineFeatureSpec {
+  type = 'line' as const
+  color?: ColorArray // webgl1
+  opacity?: number // webgl1
+  width?: number // webgl1
+  gapwidth?: number // webgl1
+  constructor (
+    public workflow: LineWorkflowSpec,
+    public layerGuide: LineWorkflowLayerGuide,
+    public source: LineSource,
+    public tile: Tile,
+    public count: number,
+    public offset: number,
+    public featureCode: number[],
+    public cap: number,
+    public parent?: Tile
+  ) {}
+
+  draw (interactive = false): void {
+    const { tile, workflow } = this
+    workflow.context.stencilFuncEqual(tile.tmpMaskID)
+    workflow.draw(this, interactive)
+  }
+
+  destroy (): void {}
+
+  duplicate (tile: Tile, parent?: Tile): LineFeature {
+    const {
+      workflow, layerGuide, source, count, offset, featureCode, cap,
+      color, opacity, width, gapwidth
+    } = this
+    const newFeature = new LineFeature(
+      workflow, layerGuide, source, tile, count, offset, featureCode,
+      cap, parent
+    )
+    newFeature.setWebGL1Attributes(color, opacity, width, gapwidth)
+    return newFeature
+  }
+
+  setWebGL1Attributes (
+    color?: ColorArray,
+    opacity?: number,
+    width?: number,
+    gapwidth?: number
+  ): void {
+    this.color = color
+    this.opacity = opacity
+    this.width = width
+    this.gapwidth = gapwidth
+  }
+}
 
 export default class LineWorkflow extends Workflow implements LineWorkflowSpec {
   curTexture = -1
@@ -124,7 +177,8 @@ export default class LineWorkflow extends Workflow implements LineWorkflowSpec {
       dashTexture,
       interactive,
       cursor,
-      visible
+      visible,
+      opaque: false
     })
 
     return layerDefinition
@@ -169,7 +223,7 @@ export default class LineWorkflow extends Workflow implements LineWorkflowSpec {
   }
 
   #buildFeatures (source: LineSource, tile: Tile, featureGuideArray: Float32Array): void {
-    const features: LineFeature[] = []
+    const features: LineFeatureSpec[] = []
 
     const lgl = featureGuideArray.length
     let i = 0
@@ -177,53 +231,23 @@ export default class LineWorkflow extends Workflow implements LineWorkflowSpec {
       // grab the size, layerIndex, count, and offset, and update the index
       const [cap, layerIndex, count, offset, encodingSize] = featureGuideArray.slice(i, i + 5)
       i += 5
-      // build featureCode
-      let featureCode: number[] = [0]
-      let color: [number, number, number, number] | undefined
-      let opacity: number | undefined
-      let width: number | undefined
-      let gapwidth: number | undefined
+      // pull in the layerGuide
+      const layerGuide = this.layerGuides.get(layerIndex)
+      if (layerGuide === undefined) continue
+      // build feature
+      const feature = new LineFeature(
+        this, layerGuide, source, tile, count, offset, [0], cap
+      )
       if (this.type === 1) {
         const [r, g, b, a, o, w, gw] = featureGuideArray.slice(i, i + 7)
-        color = [r, g, b, a]
-        opacity = o
-        width = w
-        gapwidth = gw
+        feature.setWebGL1Attributes([r, g, b, a], o, w, gw)
         i += 7
-      } else {
-        featureCode = encodingSize > 0
-          ? [...featureGuideArray.slice(i, i + encodingSize)]
-          : [0]
+      } else if (this.type === 2 && encodingSize > 0) {
+        feature.featureCode = [...featureGuideArray.slice(i, i + encodingSize)]
         // update index
         i += encodingSize
       }
-
-      const layerGuide = this.layerGuides.get(layerIndex)
-      if (layerGuide === undefined) continue
-      const { sourceName, layerCode, lch, dashed, dashCount, dashLength, dashTexture, interactive } = layerGuide
-
-      features.push({
-        type: 'line',
-        source,
-        tile,
-        count,
-        offset,
-        sourceName,
-        dashed,
-        dashCount,
-        dashLength,
-        dashTexture,
-        cap,
-        layerGuide,
-        layerCode,
-        featureCode,
-        lch,
-        color,
-        opacity,
-        width,
-        gapwidth,
-        interactive
-      })
+      features.push(feature)
     }
 
     tile.addFeatures(features)
@@ -242,13 +266,14 @@ export default class LineWorkflow extends Workflow implements LineWorkflowSpec {
     super.use()
   }
 
-  draw (featureGuide: LineFeature, _interactive = false): void {
+  draw (featureGuide: LineFeatureSpec, _interactive = false): void {
     // grab context
     const { gl, context, type, uniforms } = this
     const { uCap, uDashed, uDashCount, uTexLength, uColor, uOpacity, uWidth } = uniforms
     // get current source data
     const {
-      count, offset, layerGuide: { layerIndex, visible }, featureCode, source, cap, dashed, dashCount, dashLength, dashTexture, color, opacity, width
+      count, offset, featureCode, source, cap, color, opacity, width,
+      layerGuide: { dashed, dashCount, dashLength, dashTexture, layerIndex, visible }
     } = featureGuide
     if (!visible) return
     const { vao, vertexBuffer, lengthSoFarBuffer } = source

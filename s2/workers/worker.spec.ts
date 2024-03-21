@@ -9,7 +9,7 @@ import type {
 import type { AnimationDirections } from 'ui/camera/animator'
 import type { UserTouchEvent } from 'ui/camera/dragPan'
 import type { MapOptions } from 'ui/s2mapUI'
-import type { Face, Properties } from 'geometry'
+import type { BBox, Face, Properties } from 'geometry'
 import type { Glyph } from 'workers/process/glyph/familySource'
 import type { GlyphImages, GlyphMetadata } from './source/glyphSource'
 import type { ImageMetadata } from './source/imageSource'
@@ -43,7 +43,7 @@ export interface TileRequest {
   i: number
   j: number
   type: Projection
-  bbox: [left: number, bottom: number, right: number, top: number]
+  bbox: BBox
   division: number
   time?: number
   parent?: ParentLayer

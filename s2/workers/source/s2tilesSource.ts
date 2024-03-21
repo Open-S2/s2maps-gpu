@@ -2,6 +2,7 @@ import Source from './source'
 
 import type { Metadata } from './source'
 import type { TileRequest } from '../worker.spec'
+import type { ZXY } from 'geometry/proj.spec'
 // import type { Face } projections'
 
 const MAX_SIZE = 2_000_000 // ~2 MB
@@ -91,7 +92,7 @@ export default class S2TilesSource extends Source {
     } else { this._flush(mapID, tile, sourceName) }
   }
 
-  async #walk (mapID: string, dir: DataView, zoom: number, i: number, j: number): Promise<undefined | [number, number]> {
+  async #walk (mapID: string, dir: DataView, zoom: number, i: number, j: number): Promise<undefined | [offset: number, length: number]> {
     const { maxzoom } = this
     const path = getPath(zoom, i, j)
     let offset = 0
@@ -155,7 +156,7 @@ const getUint48 = (dataview: DataView, pos: number): number => {
 
 const getPath = (zoom: number, x: number, y: number): number[] => {
   const { max, pow } = Math
-  const path: Array<[number, number, number]> = []
+  const path: ZXY[] = []
 
   // grab 6 bits at a time
   while (zoom >= 5) {

@@ -1,4 +1,4 @@
-import type { Properties } from '../proj.spec'
+import type { Point, Properties } from '../proj.spec'
 import type { Attributions } from 'style/style.spec'
 
 export type Sources = '900913' | 'WGS84'
@@ -69,7 +69,6 @@ export type Geometry =
   MultiLineStringGeometry | PolygonGeometry | MultiPolygonGeometry
 
 // [x, y]
-export type Point = [x: number, y: number]
 export type MultiPoint = Point[]
 export type LineString = Point[]
 export type MultiLineString = LineString[]

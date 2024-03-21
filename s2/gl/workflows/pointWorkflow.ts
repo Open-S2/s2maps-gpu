@@ -8,21 +8,77 @@ import frag1 from '../shaders/point1.fragment.glsl'
 import vert2 from '../shaders/point2.vertex.glsl'
 import frag2 from '../shaders/point2.fragment.glsl'
 
-import type Context from '../contexts/context'
+import type Context from '../context/context'
 import type { PointData } from 'workers/worker.spec'
 import type { TileGL as Tile } from 'source/tile.spec'
 import type {
+  BBox,
+  ColorArray,
   LayerDefinitionBase,
   PointDefinition,
   PointStyle,
   PointWorkflowLayerGuide
 } from 'style/style.spec'
 import type {
-  PointFeature,
+  PointFeature as PointFeatureSpec,
   PointSource,
   PointWorkflow as PointWorkflowSpec,
   PointWorkflowUniforms
 } from './workflow.spec'
+
+export class PointFeature implements PointFeatureSpec {
+  type = 'point' as const
+  color?: ColorArray // webgl1
+  radius?: number // webgl1
+  stroke?: ColorArray // webgl1
+  strokeWidth?: number // webgl1
+  opacity?: number // webgl1
+  constructor (
+    public workflow: PointWorkflow,
+    public source: PointSource,
+    public layerGuide: PointWorkflowLayerGuide,
+    public tile: Tile,
+    public count: number,
+    public offset: number,
+    public featureCode: number[],
+    public parent?: Tile,
+    public bounds?: BBox
+  ) {}
+
+  draw (interactive = false): void {
+    const { tile, workflow } = this
+    workflow.context.stencilFuncEqual(tile.tmpMaskID)
+    workflow.draw(this, interactive)
+  }
+
+  destroy (): void {}
+
+  duplicate (tile: Tile, parent?: Tile, bounds?: BBox): PointFeature {
+    const {
+      workflow, source, layerGuide, count, offset, featureCode,
+      color, radius, stroke, strokeWidth, opacity
+    } = this
+    const newFeature = new PointFeature(
+      workflow, source, layerGuide, tile, count, offset, featureCode, parent, bounds
+    )
+    newFeature.setWebGL1Attributes(color, radius, stroke, strokeWidth, opacity)
+    return newFeature
+  }
+
+  setWebGL1Attributes (
+    color?: ColorArray,
+    radius?: number,
+    stroke?: ColorArray,
+    strokeWidth?: number,
+    opacity?: number
+  ): void {
+    this.color = color
+    this.radius = radius
+    this.stroke = stroke
+    this.strokeWidth = strokeWidth
+    this.opacity = opacity
+  }
+}
 
 export default class PointWorkflow extends Workflow implements PointWorkflowSpec {
   extentBuffer?: WebGLBuffer
@@ -86,7 +142,7 @@ export default class PointWorkflow extends Workflow implements PointWorkflowSpec
   }
 
   #buildFeatures (source: PointSource, tile: Tile, featureGuideArray: Float32Array): void {
-    const features: PointFeature[] = []
+    const features: PointFeatureSpec[] = []
 
     const lgl = featureGuideArray.length
     let i = 0
@@ -94,51 +150,20 @@ export default class PointWorkflow extends Workflow implements PointWorkflowSpec
       // grab the size, layerIndex, count, and offset, and update the index
       const [layerIndex, count, offset, encodingSize] = featureGuideArray.slice(i, i + 4)
       i += 4
-      // build featureCode
-      let featureCode: number[] = [0]
-      let radius: number | undefined
-      let color: [number, number, number, number] | undefined
-      let stroke: [number, number, number, number] | undefined
-      let opacity: number | undefined
-      let strokeWidth: number | undefined
-      if (this.type === 1) {
-        const [ra, o, cr, cg, cb, ca, sr, sg, sb, sa, sw] = featureGuideArray.slice(i, i + 11)
-        radius = ra
-        opacity = o
-        color = [cr, cg, cb, ca]
-        stroke = [sr, sg, sb, sa]
-        strokeWidth = sw
-        i += 11
-      } else {
-        featureCode = encodingSize > 0
-          ? [...featureGuideArray.slice(i, i + encodingSize)]
-          : [0]
-        // update index
-        i += encodingSize
-      }
-
+      // grab the layerGuide
       const layerGuide = this.layerGuides.get(layerIndex)
       if (layerGuide === undefined) continue
-      const { sourceName, layerCode, lch, interactive } = layerGuide
-
-      features.push({
-        type: 'point',
-        source,
-        tile,
-        count,
-        offset,
-        sourceName,
-        layerGuide,
-        layerCode,
-        featureCode,
-        lch,
-        radius,
-        opacity,
-        color,
-        stroke,
-        strokeWidth,
-        interactive
-      })
+      // create the feature
+      const feature = new PointFeature(this, source, layerGuide, tile, count, offset, [0])
+      if (this.type === 1) {
+        const [ra, o, cr, cg, cb, ca, sr, sg, sb, sa, sw] = featureGuideArray.slice(i, i + 11)
+        feature.setWebGL1Attributes([cr, cg, cb, ca], ra, [sr, sg, sb, sa], sw, o)
+        i += 11
+      } else if (this.type === 2 && encodingSize > 0) {
+        feature.featureCode = [...featureGuideArray.slice(i, i + encodingSize)]
+        i += encodingSize
+      }
+      features.push(feature)
     }
 
     tile.addFeatures(features)
@@ -184,7 +209,8 @@ export default class PointWorkflow extends Workflow implements PointWorkflowSpec
       lch,
       interactive,
       cursor,
-      visible
+      visible,
+      opaque: false
     })
 
     return layerDefinition
@@ -201,7 +227,7 @@ export default class PointWorkflow extends Workflow implements PointWorkflowSpec
     context.lequalDepth()
   }
 
-  draw (featureGuide: PointFeature, _interactive = false): void {
+  draw (featureGuide: PointFeatureSpec, _interactive = false): void {
     // grab context
     const { gl, type, context, uniforms } = this
     const { uColor, uRadius, uStroke, uSWidth, uOpacity, uBounds } = uniforms

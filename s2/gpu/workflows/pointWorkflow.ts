@@ -31,8 +31,6 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
 
 export class PointFeature implements PointFeatureSpec {
   type = 'point' as const
-  sourceName: string
-  interactive: boolean
   bindGroup: GPUBindGroup
   pointBindGroup: GPUBindGroup
   pointInteractiveBindGroup: GPUBindGroup
@@ -49,9 +47,6 @@ export class PointFeature implements PointFeatureSpec {
     public featureCodeBuffer: GPUBuffer,
     public parent?: Tile
   ) {
-    const { sourceName, interactive } = layerGuide
-    this.sourceName = sourceName
-    this.interactive = interactive
     this.bindGroup = this.#buildBindGroup()
     this.pointBindGroup = this.#buildPointBindGroup()
     this.pointInteractiveBindGroup = this.#buildPointInteractiveBindGroup()
@@ -196,7 +191,8 @@ export default class PointWorkflow implements PointWorkflowSpec {
       lch,
       interactive,
       cursor,
-      visible
+      visible,
+      opaque: false
     })
 
     return layerDefinition
@@ -332,8 +328,11 @@ export default class PointWorkflow implements PointWorkflowSpec {
     })
   }
 
-  draw ({ layerGuide, bindGroup, pointBindGroup, source, count, offset }: PointFeatureSpec): void {
-    if (!layerGuide.visible) return
+  draw ({
+    layerGuide: { visible }, bindGroup,
+    pointBindGroup, source, count, offset
+  }: PointFeatureSpec): void {
+    if (!visible) return
     // get current source data
     const { passEncoder } = this.context
     const { vertexBuffer } = source
@@ -347,8 +346,11 @@ export default class PointWorkflow implements PointWorkflowSpec {
     passEncoder.draw(6, count, 0, offset)
   }
 
-  computeInteractive ({ layerGuide, bindGroup, pointInteractiveBindGroup, count }: PointFeatureSpec): void {
-    if (!layerGuide.visible) return
+  computeInteractive ({
+    layerGuide: { visible }, bindGroup,
+    pointInteractiveBindGroup, count
+  }: PointFeatureSpec): void {
+    if (!visible) return
     const { interactiveBindGroup, computePass } = this.context
     this.context.setComputePipeline(this.interactivePipeline)
     // set bind group & draw

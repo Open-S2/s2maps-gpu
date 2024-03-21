@@ -8,7 +8,7 @@ import frag1 from '../shaders/glyph1.fragment.glsl'
 import vert2 from '../shaders/glyph2.vertex.glsl'
 import frag2 from '../shaders/glyph2.fragment.glsl'
 
-import type Context from '../contexts/context'
+import type Context from '../context/context'
 import type { ColorArray } from 'style/color'
 import type {
   GlyphDefinition,
@@ -19,12 +19,68 @@ import type {
 import type { GlyphData } from 'workers/worker.spec'
 import type { TileGL as Tile } from 'source/tile.spec'
 import type {
-  GlyphFeature,
+  GlyphFeature as GlyphFeatureSpec,
   GlyphFilterWorkflow,
   GlyphSource,
   GlyphWorkflow as GlyphWorkflowSpec,
   GlyphWorkflowUniforms
 } from './workflow.spec'
+import type { BBox } from 'geometry'
+
+export class GlyphFeature implements GlyphFeatureSpec {
+  type = 'glyph' as const
+  size?: number // webgl1
+  fill?: ColorArray // webgl1
+  stroke?: ColorArray // webgl1
+  strokeWidth?: number // webgl1
+  constructor (
+    public workflow: GlyphWorkflowSpec,
+    public source: GlyphSource,
+    public tile: Tile,
+    public layerGuide: GlyphWorkflowLayerGuide,
+    public count: number,
+    public offset: number,
+    public filterCount: number,
+    public filterOffset: number,
+    public isIcon: boolean,
+    public featureCode: number[],
+    public parent?: Tile,
+    public bounds?: BBox
+  ) {}
+
+  draw (interactive = false): void {
+    const { tile, workflow } = this
+    workflow.context.stencilFuncEqual(tile.tmpMaskID)
+    workflow.draw(this, interactive)
+  }
+
+  destroy (): void {}
+
+  duplicate (tile: Tile, parent?: Tile, bounds?: BBox): GlyphFeature {
+    const {
+      workflow, source, layerGuide, count, offset, filterCount, filterOffset,
+      isIcon, featureCode, size, fill, stroke, strokeWidth
+    } = this
+    const newFeature = new GlyphFeature(
+      workflow, source, tile, layerGuide, count, offset, filterCount, filterOffset,
+      isIcon, featureCode, parent, bounds
+    )
+    this.setWebGL1Attributes(size, fill, stroke, strokeWidth)
+    return newFeature
+  }
+
+  setWebGL1Attributes (
+    size?: number,
+    fill?: ColorArray,
+    stroke?: ColorArray,
+    strokeWidth?: number
+  ): void {
+    this.size = size
+    this.fill = fill
+    this.stroke = stroke
+    this.strokeWidth = strokeWidth
+  }
+}
 
 export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec {
   stepBuffer?: WebGLBuffer
@@ -149,53 +205,31 @@ export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec
       // curlayerIndex, curType, filterOffset, filterCount, quadOffset, quadCount, encoding.length, ...encoding
       const [layerIndex, type, filterOffset, filterCount, offset, count, encodingSize] = featureGuideArray.slice(i, i + 7)
       i += 7
-      // If webgl1, we pull out the color and opacity otherwise build featureCode
-      let featureCode: number[] = [0]
-      let size: number | undefined
-      let fill: ColorArray | undefined
-      let stroke: ColorArray | undefined
-      let strokeWidth: number | undefined
-      if (this.type === 1) {
-        if (type === 0) { // text
-          // get fill, stroke, and stroke width. Increment
-          size = featureGuideArray[i]
-          fill = [...featureGuideArray.slice(i + 1, i + 5)] as ColorArray
-          strokeWidth = featureGuideArray[i + 5]
-          stroke = [...featureGuideArray.slice(i + 6, i + 10)] as ColorArray
-        } else { // icon
-          size = featureGuideArray[i]
-        }
-      } else {
-        if (encodingSize > 0) featureCode = [...featureGuideArray.slice(i, i + encodingSize)]
-      }
-      // update index
-      i += encodingSize
-
+      // grab the layerGuide
       const layerGuide = this.layerGuides.get(layerIndex)
       if (layerGuide === undefined) continue
-      const { sourceName, layerCode, lch, interactive, overdraw } = layerGuide
-
-      features.push({
-        type: 'glyph',
-        source,
-        tile,
-        count,
-        offset,
-        filterCount,
-        filterOffset,
-        sourceName,
-        layerGuide,
-        layerCode,
-        featureCode,
-        lch,
-        interactive,
-        overdraw,
-        size,
-        fill,
-        stroke,
-        strokeWidth,
-        isIcon: type === 1
-      })
+      // create the feature
+      const feature = new GlyphFeature(
+        this, source, tile, layerGuide, count, offset, filterCount, filterOffset,
+        type === 1, [0]
+      )
+      if (this.type === 1) {
+        if (type === 0) { // text
+          feature.setWebGL1Attributes(
+            featureGuideArray[i],
+            [...featureGuideArray.slice(i + 1, i + 5)] as ColorArray,
+            [...featureGuideArray.slice(i + 6, i + 10)] as ColorArray,
+            featureGuideArray[i + 5]
+          )
+        } else { // icon
+          feature.size = featureGuideArray[i]
+        }
+      } else if (this.type === 2 && encodingSize > 0) {
+        feature.featureCode = [...featureGuideArray.slice(i, i + encodingSize)]
+      }
+      features.push(feature)
+      // update index
+      i += encodingSize
     }
 
     tile.addFeatures(features)
@@ -275,7 +309,8 @@ export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec
       cursor,
       overdraw,
       viewCollisions,
-      visible
+      visible,
+      opaque: false
     })
 
     return layerDefinition
@@ -294,13 +329,13 @@ export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec
     gl.uniform2fv(uniforms.uTexSize, sharedFBO.texSize)
   }
 
-  draw (featureGuide: GlyphFeature, interactive = false): void {
+  draw (featureGuide: GlyphFeatureSpec, interactive = false): void {
     const { gl, context, glyphFilterWorkflow, uniforms } = this
     const { type, defaultBounds, sharedFBO } = context
     const { uSize, uFill, uStroke, uSWidth, uBounds, uIsStroke } = uniforms
     // pull out the appropriate data from the source
     const {
-      source, overdraw, isIcon, layerGuide: { layerIndex, visible }, featureCode, offset,
+      source, isIcon, layerGuide: { layerIndex, visible, overdraw }, featureCode, offset,
       count, size, fill, stroke, strokeWidth, bounds
     } = featureGuide
     if (!visible) return

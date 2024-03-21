@@ -1,7 +1,7 @@
 import { degToRad, radToDeg } from '../util'
 
 import type { Face } from './s2Proj.spec'
-import type { BBox, XYZ } from '../proj.spec'
+import type { BBox, FaceIJ, Point, XYZ } from '../proj.spec'
 
 export const K_LIMIT_IJ = 1 << 30
 
@@ -156,7 +156,7 @@ export function lonLatToXYZGL (lon: number, lat: number): XYZ {
 }
 
 /** Convert an u-v-zoom coordinate to a tile coordinate */
-export function tileXYFromUVZoom (u: number, v: number, zoom: number): [x: number, y: number] {
+export function tileXYFromUVZoom (u: number, v: number, zoom: number): Point {
   const s = quadraticUVtoST(u)
   const t = quadraticUVtoST(v)
 
@@ -164,7 +164,7 @@ export function tileXYFromUVZoom (u: number, v: number, zoom: number): [x: numbe
 }
 
 /** Convert an s-t-zoom coordinate to a tile coordinate */
-export function tileXYFromSTZoom (s: number, t: number, zoom: number): [x: number, y: number] {
+export function tileXYFromSTZoom (s: number, t: number, zoom: number): Point {
   const divisionFactor = (2 / (1 << zoom)) * 0.5
 
   return [Math.floor(s / divisionFactor), Math.floor(t / divisionFactor)]
@@ -198,7 +198,7 @@ export function bboxST (s: number, t: number, zoom: number): BBox {
  * Find the face-i-j coordinates of neighbors for a specific face-i-j coordinate.
  * Define an adjusted level (zoom) for the i-j coordinates. The level is 30 by default.
  */
-export function neighborsIJ (face: Face, i: number, j: number, level = 30): Array<[face: number, i: number, j: number]> {
+export function neighborsIJ (face: Face, i: number, j: number, level = 30): FaceIJ[] {
   const size = 1 << (30 - level)
 
   if (level !== 30) {
@@ -217,7 +217,7 @@ export function neighborsIJ (face: Face, i: number, j: number, level = 30): Arra
 /**
  * Adjust a manipulated face-i-j coordinate to a legal one if necessary.
  */
-function fromIJWrap (face: Face, i: number, j: number, level: number, sameFace = false): [face: number, i: number, j: number] {
+function fromIJWrap (face: Face, i: number, j: number, level: number, sameFace = false): FaceIJ {
   if (sameFace) return [face, i >> (30 - level), j >> (30 - level)]
   const { max, min } = Math
   const kMaxSize = 1073741824

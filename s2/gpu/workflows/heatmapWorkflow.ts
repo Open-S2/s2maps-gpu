@@ -41,7 +41,6 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
 
 export class HeatmapFeature implements HeatmapFeatureSpec {
   type = 'heatmap' as const
-  sourceName: string
   bindGroup: GPUBindGroup
   heatmapBindGroup: GPUBindGroup
   constructor (
@@ -56,8 +55,6 @@ export class HeatmapFeature implements HeatmapFeatureSpec {
     public featureCodeBuffer: GPUBuffer,
     public parent?: Tile
   ) {
-    const { sourceName } = layerGuide
-    this.sourceName = sourceName
     this.bindGroup = this.#buildBindGroup()
     this.heatmapBindGroup = this.#buildHeatmapBindGroup()
   }
@@ -219,7 +216,9 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
       renderTarget,
       renderPassDescriptor: this.#buildLayerPassDescriptor(renderTarget),
       textureBindGroup: this.#buildLayerBindGroup(renderTarget, colorRampTexture),
-      visible
+      visible,
+      interactive: false,
+      opaque: false
     })
 
     return layerDefinition
@@ -412,14 +411,14 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
     return output
   }
 
-  draw ({ layerGuide, bindGroup }: HeatmapFeatureSpec): void {
+  draw ({ layerGuide: { textureBindGroup, visible }, bindGroup }: HeatmapFeatureSpec): void {
     // get current source data
     const { passEncoder } = this.context
-    if (layerGuide === undefined || !layerGuide.visible) return
+    if (!visible) return
     // setup pipeline, bind groups, & buffers
     this.context.setRenderPipeline(this.pipeline)
     passEncoder.setBindGroup(1, bindGroup)
-    passEncoder.setBindGroup(2, layerGuide.textureBindGroup)
+    passEncoder.setBindGroup(2, textureBindGroup)
     // draw a screen quad
     passEncoder.draw(6)
   }

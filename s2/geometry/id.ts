@@ -21,6 +21,7 @@ import {
 
 import type { Face } from './s2'
 import type { Projection } from 'style/style.spec'
+import type { FaceIJ } from './proj.spec'
 
 export function fromID (proj: Projection, id: bigint): [face: Face, zoom: number, i: number, j: number] {
   if (proj === 'S2') {
@@ -72,7 +73,7 @@ export function toIJ (
   id: bigint,
   level?: number | bigint
 ): [faceOrZoom: number, i: number, j: number] {
-  if (proj === 'S2') return toIJS2(id, level).slice(0, 3) as [number, number, number]
+  if (proj === 'S2') return toIJS2(id, level).slice(0, 3) as FaceIJ
   else return toIJWM(id, level)
 }
 

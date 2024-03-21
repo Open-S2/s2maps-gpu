@@ -1,5 +1,5 @@
 /** CONTEXTS */
-import { WebGL2Context, WebGLContext } from './contexts'
+import { WebGL2Context, WebGLContext } from './context'
 /** WORKFLOWS */
 import {
   FillWorkflow,
@@ -21,7 +21,7 @@ import type { MapOptions } from 'ui/s2mapUI'
 import type Projector from 'ui/camera/projector'
 import type TimeCache from 'ui/camera/timeCache'
 import type {
-  FeatureGuide,
+  Features,
   GlyphFeature,
   HeatmapFeature,
   SensorWorkflow,
@@ -34,6 +34,7 @@ import type {
 import type { GlyphImages } from 'workers/source/glyphSource'
 import type { ColorMode } from 's2Map'
 import type { PainterData, SpriteImageMessage } from 'workers/worker.spec'
+import type { Point } from 'geometry'
 
 export default class Painter implements PainterSpec {
   context: WebGL2Context | WebGLContext
@@ -111,7 +112,7 @@ export default class Painter implements PainterSpec {
     }
   }
 
-  injectFrameUniforms (matrix: Float32Array, view: Float32Array, aspect: [number, number]): void {
+  injectFrameUniforms (matrix: Float32Array, view: Float32Array, aspect: Point): void {
     const { workflows } = this
     for (const workflowName in workflows) {
       workflows[workflowName as keyof Workflows]?.injectFrameUniforms(matrix, view, aspect)
@@ -188,7 +189,7 @@ export default class Painter implements PainterSpec {
     // sort features
     features.sort(featureSort)
     // prep glyph features for drawing box filters
-    const glyphFeatures = features.filter(feature => feature.type === 'glyph' && !feature.overdraw) as GlyphFeature[]
+    const glyphFeatures = features.filter(({ type, layerGuide }) => type === 'glyph' && !layerGuide.overdraw) as GlyphFeature[]
     // use text boxes to filter out overlap
     if (glyphFeatures.length > 0) this.paintGlyphFilter(glyphFeatures)
     // return to our default framebuffer
@@ -202,7 +203,7 @@ export default class Painter implements PainterSpec {
     // draw the wallpaper
     this.useWorkflow('background')?.draw(projector)
     // paint opaque fills
-    const opaqueFillFeatures = features.filter(f => f.opaque).reverse()
+    const opaqueFillFeatures = features.filter(f => f.layerGuide.opaque).reverse()
     this.paintFeatures(opaqueFillFeatures)
     // paint features that are potentially transparent
     const residualFeatures = features.filter(f => !(f.layerGuide.opaque ?? false))
@@ -250,7 +251,7 @@ export default class Painter implements PainterSpec {
     context.flushMask()
   }
 
-  paintFeatures (features: FeatureGuide[], interactive = false): void {
+  paintFeatures (features: Features[], interactive = false): void {
     if (features.length === 0) return
     // setup context
     const { context } = this
@@ -365,7 +366,7 @@ export default class Painter implements PainterSpec {
   }
 }
 
-function featureSort (a: FeatureGuide, b: FeatureGuide): number {
+function featureSort (a: Features, b: Features): number {
   // first check if the layer is the same
   let diff = a.layerGuide.layerIndex - b.layerGuide.layerIndex
   if (diff !== 0) return diff

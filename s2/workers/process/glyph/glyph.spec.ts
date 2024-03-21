@@ -1,6 +1,7 @@
 import type { Alignment, Anchor } from 'style/style.spec'
 import type { S2VectorGeometry, S2VectorTileFeatureType } from 's2-vector-tile'
 import type { ColorArray } from 'style/color'
+import type { Point } from 'geometry'
 
 export interface SquareNode {
   minX: number
@@ -35,8 +36,8 @@ export interface GlyphBase {
   family: string[]
   field: string
   fieldCodes: string[]
-  offset: [x: number, y: number]
-  padding: [x: number, y: number]
+  offset: Point
+  padding: Point
   kerning: number
   lineHeight: number
   type: 'text' | 'icon'

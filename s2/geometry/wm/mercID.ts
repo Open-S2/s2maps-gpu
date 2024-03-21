@@ -1,3 +1,4 @@
+import type { ZXY } from '../proj.spec'
 import { mod } from '../util'
 
 /** Convert zoom-x-y to a singular number */
@@ -9,7 +10,7 @@ export function toID (zoom: number, x: number, y: number): bigint {
 }
 
 /** Convert a number or bigint to [zoom, x, y] */
-export function fromID (idB: bigint): [zoom: number, x: number, y: number] {
+export function fromID (idB: bigint): ZXY {
   const remainder = idB >> 65n
   const adjustedX = zagzig(Number(remainder))
   idB = idB - (remainder << 65n)
@@ -34,8 +35,6 @@ export function children (
   ]
 }
 
-export type Neighbor = [zoom: number, x: number, y: number]
-
 /**
  * grab the tiles next to the current tiles zoom-x-y
  * only include adjacent tiles, not diagonal.
@@ -47,9 +46,9 @@ export function neighborsXY (
   x: number,
   y: number,
   includeOutOfBounds = false
-): Neighbor[] {
+): ZXY[] {
   const size = 1 << zoom
-  const neighbors: Neighbor[] = []
+  const neighbors: ZXY[] = []
   const xOutOfBounds = x < 0 || x >= size
   if (x - 1 >= 0 || includeOutOfBounds) neighbors.push([zoom, x - 1, y])
   if (x + 1 < size || includeOutOfBounds) neighbors.push([zoom, x + 1, y])
@@ -88,7 +87,7 @@ export function parent (id: bigint): bigint {
 }
 
 /** convert an id to a zoom-x-y after setting it to a new parent zoom */
-export function toIJ (id: bigint, level?: number | bigint): [zoom: number, i: number, j: number] {
+export function toIJ (id: bigint, level?: number | bigint): ZXY {
   if (level !== undefined) {
     let [currentZoom] = fromID(id)
     while (level < currentZoom) {

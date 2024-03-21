@@ -9,21 +9,80 @@ import frag1 from '../shaders/heatmap1.fragment.glsl'
 import vert2 from '../shaders/heatmap2.vertex.glsl'
 import frag2 from '../shaders/heatmap2.fragment.glsl'
 
-import type Context from '../contexts/context'
+import type Context from '../context/context'
 import type { HeatmapData } from 'workers/worker.spec'
 import type { TileGL as Tile } from 'source/tile.spec'
 import type {
+  BBox,
   HeatmapDefinition,
   HeatmapStyle,
   HeatmapWorkflowLayerGuide,
   LayerDefinitionBase
 } from 'style/style.spec'
 import type {
-  HeatmapFeature,
+  HeatmapFeature as HeatmapFeatureSpec,
   HeatmapSource,
   HeatmapWorkflow as HeatmapWorkflowSpec,
   HeatmapWorkflowUniforms
 } from './workflow.spec'
+
+export class HeatmapFeature implements HeatmapFeatureSpec {
+  type = 'heatmap' as const
+  radiusLo?: number // webgl1
+  opacityLo?: number // webgl1
+  intensityLo?: number // webgl1
+  radiusHi?: number // webgl1
+  opacityHi?: number // webgl1
+  intensityHi?: number // webgl1
+  constructor (
+    public workflow: HeatmapWorkflow,
+    public source: HeatmapSource,
+    public layerGuide: HeatmapWorkflowLayerGuide,
+    public tile: Tile,
+    public count: number,
+    public offset: number,
+    public featureCode: number[] = [0],
+    public parent?: Tile,
+    public bounds?: BBox
+  ) {}
+
+  draw (interactive?: boolean): void {
+    const { tile, workflow } = this
+    workflow.context.stencilFuncEqual(tile.tmpMaskID)
+    workflow.draw(this, interactive)
+  }
+
+  destroy (): void {}
+
+  duplicate (tile: Tile, parent?: Tile, bounds?: BBox): HeatmapFeature {
+    const {
+      workflow, source, layerGuide, count, offset, featureCode,
+      radiusLo, opacityLo, intensityLo, radiusHi, opacityHi, intensityHi
+    } = this
+    const newFeature = new HeatmapFeature(
+      workflow, source, layerGuide, tile, count, offset, featureCode,
+      parent, bounds
+    )
+    newFeature.setWebGL1Attributes(radiusLo, opacityLo, intensityLo, radiusHi, opacityHi, intensityHi)
+    return newFeature
+  }
+
+  setWebGL1Attributes (
+    radiusLo?: number,
+    opacityLo?: number,
+    intensityLo?: number,
+    radiusHi?: number,
+    opacityHi?: number,
+    intensityHi?: number
+  ): void {
+    this.radiusLo = radiusLo
+    this.opacityLo = opacityLo
+    this.intensityLo = intensityLo
+    this.radiusHi = radiusHi
+    this.opacityHi = opacityHi
+    this.intensityHi = intensityHi
+  }
+}
 
 export default class HeatmapWorkflow extends Workflow implements HeatmapWorkflowSpec {
   texture!: WebGLTexture
@@ -95,7 +154,7 @@ export default class HeatmapWorkflow extends Workflow implements HeatmapWorkflow
   }
 
   #buildFeatures (source: HeatmapSource, tile: Tile, featureGuideArray: Float32Array): void {
-    const features: HeatmapFeature[] = []
+    const features: HeatmapFeatureSpec[] = []
 
     const lgl = featureGuideArray.length
     let i = 0
@@ -103,54 +162,20 @@ export default class HeatmapWorkflow extends Workflow implements HeatmapWorkflow
       // grab the size, layerIndex, count, and offset, and update the index
       const [layerIndex, count, offset, encodingSize] = featureGuideArray.slice(i, i + 4)
       i += 4
-      // build featureCode
-      let featureCode: number[] = [0]
-      let radiusLo: number | undefined
-      let opacityLo: number | undefined
-      let intensityLo: number | undefined
-      let radiusHi: number | undefined
-      let opacityHi: number | undefined
-      let intensityHi: number | undefined
-      if (this.type === 1) {
-        const [rLo, oLo, iLo, rHi, oHi, iHi] = featureGuideArray.slice(i, i + 6)
-        radiusLo = rLo
-        opacityLo = oLo
-        intensityLo = iLo
-        radiusHi = rHi
-        opacityHi = oHi
-        intensityHi = iHi
-        i += 6
-      } else {
-        featureCode = encodingSize > 0
-          ? [...featureGuideArray.slice(i, i + encodingSize)]
-          : [0]
-        // update index
-        i += encodingSize
-      }
-
+      // grab the layerGuide
       const layerGuide = this.layerGuides.get(layerIndex)
       if (layerGuide === undefined) continue
-      const { sourceName, layerCode, lch, colorRamp } = layerGuide
-
-      features.push({
-        type: 'heatmap',
-        source,
-        tile,
-        count,
-        offset,
-        sourceName,
-        layerGuide,
-        layerCode,
-        featureCode,
-        lch,
-        radiusLo,
-        opacityLo,
-        intensityLo,
-        radiusHi,
-        opacityHi,
-        intensityHi,
-        colorRamp
-      })
+      // create the feature and set the correct properties
+      const feature = new HeatmapFeature(this, source, layerGuide, tile, count, offset)
+      if (this.type === 1) {
+        const [rLo, oLo, iLo, rHi, oHi, iHi] = featureGuideArray.slice(i, i + 6)
+        feature.setWebGL1Attributes(rLo, oLo, iLo, rHi, oHi, iHi)
+      } else if (this.type === 2 && encodingSize > 0) {
+        feature.featureCode = [...featureGuideArray.slice(i, i + encodingSize)]
+      }
+      features.push(feature)
+      // update index
+      i += encodingSize
     }
 
     tile.addFeatures(features)
@@ -195,7 +220,9 @@ export default class HeatmapWorkflow extends Workflow implements HeatmapWorkflow
       layerCode,
       lch,
       colorRamp: context.buildTexture(buildColorRamp(colorRamp, lch), 256, 4),
-      visible
+      visible,
+      interactive: false,
+      opaque: false
     })
 
     return layerDefinition
@@ -260,7 +287,7 @@ export default class HeatmapWorkflow extends Workflow implements HeatmapWorkflow
     context.lessDepth()
   }
 
-  drawTexture (featureGuide: HeatmapFeature): void {
+  drawTexture (featureGuide: HeatmapFeatureSpec): void {
     // grab context
     const { context, uniforms } = this
     const { gl, type, defaultBounds } = context
@@ -290,12 +317,12 @@ export default class HeatmapWorkflow extends Workflow implements HeatmapWorkflow
     gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, count)
   }
 
-  draw (featureGuide: HeatmapFeature, _interactive = false): void {
+  draw (featureGuide: HeatmapFeatureSpec, _interactive = false): void {
     // grab the context
     const { gl, context } = this
     const { vao } = context
     // get current featureGuide data
-    const { colorRamp, layerGuide: { layerIndex, visible } } = featureGuide
+    const { layerGuide: { layerIndex, visible, colorRamp } } = featureGuide
     if (!visible) return
     // set context's full screen fbo
     gl.bindVertexArray(vao)

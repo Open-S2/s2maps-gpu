@@ -11,7 +11,7 @@ import frag1 from '../shaders/skybox1.fragment.glsl'
 import vert2 from '../shaders/skybox2.vertex.glsl'
 import frag2 from '../shaders/skybox2.fragment.glsl'
 
-import type Context from '../contexts/context'
+import type Context from '../context/context'
 import type { StyleDefinition } from 'style/style.spec'
 import type {
   SkyboxWorkflow as SkyboxWorkflowSpec,

@@ -29,8 +29,6 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
 
 export class RasterFeature implements RasterFeatureSpec {
   type = 'raster' as const
-  sourceName: string
-  fadeDuration: number
   bindGroup: GPUBindGroup
   rasterBindGroup: GPUBindGroup
   constructor (
@@ -44,9 +42,6 @@ export class RasterFeature implements RasterFeatureSpec {
     public fadeStartTime = Date.now(),
     public parent?: Tile
   ) {
-    const { sourceName, fadeDuration } = layerGuide
-    this.sourceName = sourceName
-    this.fadeDuration = fadeDuration
     this.bindGroup = this.#buildBindGroup()
     this.rasterBindGroup = this.#buildRasterBindGroup()
   }
@@ -163,7 +158,9 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
       resampling: resampling ?? 'linear',
       layerBuffer,
       layerCodeBuffer,
-      visible
+      visible,
+      interactive: false,
+      opaque: false
     })
 
     return layerDefinition
@@ -276,8 +273,8 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
     })
   }
 
-  draw ({ layerGuide, bindGroup, rasterBindGroup, source }: RasterFeatureSpec): void {
-    if (!layerGuide.visible) return
+  draw ({ layerGuide: { visible }, bindGroup, rasterBindGroup, source }: RasterFeatureSpec): void {
+    if (!visible) return
     // get current source data
     const { passEncoder } = this.context
     const { vertexBuffer, indexBuffer, count, offset } = source

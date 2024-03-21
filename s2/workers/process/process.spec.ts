@@ -2,6 +2,7 @@ import type { VectorTileFeature } from 's2-vector-tile'
 import type { TileRequest } from '../worker.spec'
 import type {
   Cap,
+  ColorArray,
   FillDefinition,
   FillWorkerLayer,
   GPUType,
@@ -43,7 +44,7 @@ export interface FeatureBase {
   gl2Code: number[]
 }
 export interface InteractiveFeatureBase extends FeatureBase {
-  idRGB: [number, number, number, number]
+  idRGB: ColorArray
 }
 
 export type GlyphFeature = GlyphObject

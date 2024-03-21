@@ -16,7 +16,7 @@ import type {
 } from './glyph.spec'
 import type { GlyphData, TileRequest } from 'workers/worker.spec'
 import type { GlyphFeature, GlyphWorker as GlyphWorkerSpec, IDGen, VTFeature } from '../process.spec'
-import type { Alignment, Anchor, GPUType, GlyphDefinition, GlyphWorkerLayer } from 'style/style.spec'
+import type { Alignment, Anchor, GPUType, GlyphDefinition, GlyphWorkerLayer, Point } from 'style/style.spec'
 import type { CodeDesign } from '../vectorWorker'
 import type { S2VectorPoints } from 's2-vector-tile'
 import type ImageStore from '../imageStore'
@@ -83,8 +83,8 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       textFamily: parseFeatureFunction<string | string[]>(textFamily),
       textField: parseFeatureFunction<string | string[]>(textField),
       textAnchor: parseFeatureFunction<Anchor>(textAnchor),
-      textOffset: parseFeatureFunction<[number, number]>(textOffset),
-      textPadding: parseFeatureFunction<[number, number]>(textPadding),
+      textOffset: parseFeatureFunction<Point>(textOffset),
+      textPadding: parseFeatureFunction<Point>(textPadding),
       textWordWrap: parseFeatureFunction<number>(textWordWrap),
       textAlign: parseFeatureFunction<Alignment>(textAlign),
       textKerning: parseFeatureFunction<number>(textKerning),
@@ -92,8 +92,8 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       iconFamily: parseFeatureFunction<string | string[]>(iconFamily),
       iconField: parseFeatureFunction<string | string[]>(iconField),
       iconAnchor: parseFeatureFunction<Anchor>(iconAnchor),
-      iconOffset: parseFeatureFunction<[number, number]>(iconOffset),
-      iconPadding: parseFeatureFunction<[number, number]>(iconPadding),
+      iconOffset: parseFeatureFunction<Point>(iconOffset),
+      iconPadding: parseFeatureFunction<Point>(iconPadding),
       // properties
       onlyPoints,
       onlyLines,

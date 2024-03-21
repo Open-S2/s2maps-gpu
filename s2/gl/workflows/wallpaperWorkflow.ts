@@ -8,11 +8,12 @@ import frag1 from '../shaders/wallpaper1.fragment.glsl'
 import vert2 from '../shaders/wallpaper2.vertex.glsl'
 import frag2 from '../shaders/wallpaper2.fragment.glsl'
 
-import type Context from '../contexts/context'
+import type Context from '../context/context'
 import type Projector from 'ui/camera/projector'
 import type { WallpaperWorkflow as WallpaperWorkflowSpec, WallpaperWorkflowUniforms } from './workflow.spec'
 import type { StyleDefinition } from 'style/style.spec'
 import type { ColorBlindAdjust } from 'style/color/colorBlindAdjust'
+import type { Point } from 'geometry'
 
 export interface Scheme {
   background: Color
@@ -24,7 +25,7 @@ export interface Scheme {
 export default class WallpaperWorkflow extends Workflow implements WallpaperWorkflowSpec {
   scheme: Scheme
   tileSize = 512
-  scale: [x: number, y: number] = [0, 0]
+  scale: Point = [0, 0]
   declare uniforms: { [key in WallpaperWorkflowUniforms]: WebGLUniformLocation }
   constructor (context: Context) {
     // get gl from context

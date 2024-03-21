@@ -1,7 +1,7 @@
 import { A, EARTH_RADIUS, MAXEXTENT, degToRad, radToDeg } from '../util'
 
-import type { Point, Sources } from './mercProj.spec'
-import type { BBox } from '../proj.spec'
+import type { Sources } from './mercProj.spec'
+import type { BBox, Point, ZXY } from '../proj.spec'
 
 /** Given a zoom and tilesize, build mercator positional attributes */
 function getZoomSize (zoom: number, tileSize: number): BBox {
@@ -79,7 +79,7 @@ export function pxToTile (px: Point, tileSize = 512): Point {
 }
 
 /** Convert a tile x-y-z to a bbox of the form `[w, s, e, n]` */
-export function tilePxBounds (tile: [zoom: number, x: number, y: number], tileSize = 512): BBox {
+export function tilePxBounds (tile: ZXY, tileSize = 512): BBox {
   const [, x, y] = tile
   const minX = x * tileSize
   const minY = y * tileSize
@@ -95,7 +95,7 @@ export function llToTile (ll: Point, zoom: number, tileSize = 512): Point {
 }
 
 /** given a lon-lat and tile, find the offset in pixels */
-export function llToTilePx (ll: Point, tile: [zoom: number, x: number, y: number], tileSize = 512): Point {
+export function llToTilePx (ll: Point, tile: ZXY, tileSize = 512): Point {
   const [zoom, x, y] = tile
   const px = llToPX(ll, zoom, false, tileSize)
   const tileXStart = x * tileSize

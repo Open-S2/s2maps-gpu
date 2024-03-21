@@ -5,6 +5,7 @@ import parseFeatureFunction from 'style/parseFeatureFunction'
 import type { HillshadeData, RasterData, RasterDataGuide, SensorData, TileRequest } from '../worker.spec'
 import type {
   BuildCodeFunctionZoom,
+  ColorArray,
   GPUType,
   HillshadeDefinition,
   HillshadeWorkerLayer,
@@ -70,9 +71,9 @@ export default class RasterWorker implements RasterWorkerSpec {
   buildCode (design: CodeDesign<number>): BuildCodeFunctionZoom {
     const { gpuType } = this
 
-    const featureFunctions: Array<LayerWorkerFunction<number | [number, number, number, number]>> = []
+    const featureFunctions: Array<LayerWorkerFunction<number | ColorArray>> = []
     for (const [input, cb] of design) {
-      featureFunctions.push(parseFeatureFunction<number, [number, number, number, number]>(input, cb))
+      featureFunctions.push(parseFeatureFunction<number, ColorArray>(input, cb))
     }
 
     return (zoom: number) => {
@@ -96,15 +97,15 @@ export default class RasterWorker implements RasterWorkerSpec {
     // prep variables
     const { zoom, id, time } = tile
     // prebuild feature code if webgl1
-    const rasterFeatureGuides: RasterDataGuide[] = []
-    const sensorFeatureGuides: RasterDataGuide[] = []
-    const HillshadeFeatureGuides: RasterDataGuide[] = []
+    const rasterFeatures: RasterDataGuide[] = []
+    const sensorFeatures: RasterDataGuide[] = []
+    const HillshadeFeatures: RasterDataGuide[] = []
     for (const { type, getCode, layerIndex } of layers) {
       const guide = type === 'raster'
-        ? rasterFeatureGuides
+        ? rasterFeatures
         : (type === 'sensor')
-            ? sensorFeatureGuides
-            : HillshadeFeatureGuides
+            ? sensorFeatures
+            : HillshadeFeatures
       guide.push({
         code: getCode(zoom),
         layerIndex
@@ -115,41 +116,41 @@ export default class RasterWorker implements RasterWorkerSpec {
     const image = await createImageBitmap(new Blob([data]), { premultiplyAlpha: 'none' })
 
     // ship the raster data.
-    if (rasterFeatureGuides.length > 0) {
+    if (rasterFeatures.length > 0) {
       const rasterData: RasterData = {
         mapID,
         type: 'raster',
         tileID: id,
         size,
         sourceName,
-        featureGuides: rasterFeatureGuides,
+        featureGuides: rasterFeatures,
         image
       }
 
       postMessage(rasterData, [image])
     }
-    if (sensorFeatureGuides.length > 0 && time !== undefined) {
+    if (sensorFeatures.length > 0 && time !== undefined) {
       const sensorData: SensorData = {
         mapID,
         type: 'sensor',
         tileID: id,
         size,
         sourceName,
-        featureGuides: sensorFeatureGuides,
+        featureGuides: sensorFeatures,
         image,
         time
       }
 
       postMessage(sensorData, [image])
     }
-    if (HillshadeFeatureGuides.length > 0) {
+    if (HillshadeFeatures.length > 0) {
       const hillshadeData: HillshadeData = {
         mapID,
         type: 'hillshade',
         tileID: id,
         size: image.width,
         sourceName,
-        featureGuides: HillshadeFeatureGuides,
+        featureGuides: HillshadeFeatures,
         image
       }
 

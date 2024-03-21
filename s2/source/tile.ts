@@ -12,7 +12,7 @@ import type {
   Corners,
   FaceST,
   SharedContext,
-  SharedFeatureGuide,
+  SharedFeatures,
   SharedMaskSource,
   TileGL,
   TileGPU,
@@ -30,7 +30,7 @@ export function createTile (
   return new Tile(context as unknown as SharedContext, id) as unknown as TileGL & TileGPU
 }
 
-class Tile<C extends SharedContext, F extends SharedFeatureGuide, M extends SharedMaskSource>
+class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMaskSource>
 implements TileSpec<C, F, M> {
   id: bigint
   face: Face = 0
@@ -71,17 +71,8 @@ implements TileSpec<C, F, M> {
       const actualParent = feature.parent ?? parent
       if (this.zoom <= maxzoom) {
         const bounds = this.#buildBounds(actualParent)
-        if (feature.duplicate !== undefined) {
-          // @ts-expect-error - there is no easy way to solve this typescript error
-          this.featureGuides.push(feature.duplicate(this, actualParent, bounds))
-        } else {
-          this.featureGuides.push({
-            ...feature,
-            tile: this,
-            parent: actualParent,
-            bounds
-          })
-        }
+        // @ts-expect-error - we need fix this one day
+        this.featureGuides.push(feature.duplicate(this, actualParent, bounds))
       }
     }
     // interactive guides
@@ -178,7 +169,7 @@ implements TileSpec<C, F, M> {
     const { featureGuides } = this
     for (let i = featureGuides.length - 1; i >= 0; i--) {
       const fg = featureGuides[i]
-      const fgSourceName = fg.sourceName.split(':')[0]
+      const fgSourceName: string = fg.layerGuide.sourceName.split(':')[0]
       const keep = !sourceNames.includes(fgSourceName)
       if (!keep) {
         fg.destroy?.()
@@ -246,10 +237,10 @@ implements TileSpec<C, F, M> {
   }
 
   #addFeaturesToDependents (dependent: Tile<C, F, M>, features: F[]): void {
-    const dFeatures = features
-      .map(f => f.duplicate?.(dependent as unknown as TileGPU, f.parent))
-      // TODO: Remove this when webgl(2) supports duplication
-      .filter(f => f !== undefined) as F[]
+    // @ts-expect-error - no reason this should be failing buit it is
+    const dFeatures: F[] = features
+      // @ts-expect-error - no reason this should be failing buit it is
+      .map((f: F) => f.duplicate(dependent, f.parent))
     dependent.addFeatures(dFeatures)
   }
 
@@ -267,13 +258,13 @@ implements TileSpec<C, F, M> {
     // or old data that wont be replaced in the future
     // NOTE: Eventually the count will be used to know what features need to be tracked (before screenshots for instance)
     for (let i = featureGuides.length - 1; i >= 0; i--) {
-      const fg = featureGuides[i]
+      const { layerGuide, parent } = featureGuides[i]
       if (
-        deadLayers.includes(fg.layerGuide.layerIndex) &&
-        fg.parent !== undefined &&
+        deadLayers.includes(layerGuide.layerIndex) &&
+        parent !== undefined &&
         // corner-case: empty data/missing tile -> flushes ALL layers,
         // but that layer MAY BE inverted so we don't kill it.
-        !(fg.invert ?? false)
+        !(('invert' in layerGuide && layerGuide.invert) ?? false)
       ) featureGuides.splice(i, 1)
     }
     // remove dead layers from layersToBeLoaded
@@ -281,7 +272,7 @@ implements TileSpec<C, F, M> {
   }
 }
 
-export class S2Tile<C extends SharedContext, F extends SharedFeatureGuide, M extends SharedMaskSource>
+export class S2Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMaskSource>
   extends Tile<C, F, M> {
   type = 'S2' as const
   corners?: Corners
@@ -351,7 +342,7 @@ export class S2Tile<C extends SharedContext, F extends SharedFeatureGuide, M ext
   }
 }
 
-export class WMTile<C extends SharedContext, F extends SharedFeatureGuide, M extends SharedMaskSource>
+export class WMTile<C extends SharedContext, F extends SharedFeatures, M extends SharedMaskSource>
   extends Tile<C, F, M> {
   type = 'WM' as const
   matrix = new Float32Array(16)

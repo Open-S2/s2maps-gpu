@@ -3,7 +3,7 @@ import { isOutOfBounds, llToTile, llToTilePx, neighborsXY, toID } from 'geometry
 import { boxIntersects, pointBoundaries } from 'geometry'
 
 import type Projector from '../'
-import type { Neighbor } from 'geometry/wm'
+import type { ZXY } from 'geometry'
 
 // Due to the nature of the Web Mercator design,
 // it's easiest to store an MVP matrix for each tile
@@ -20,7 +20,7 @@ export default function getTilesInView (
   const { tileSize, duplicateHorizontally } = projector
   if (zoom < 1) zoom = 0
   const tiles = new Set<bigint>()
-  const checkList: Neighbor[] = []
+  const checkList: ZXY[] = []
   const checkedTiles = new Set<string>()
   zoom = zoom << 0 // move to whole number
 
@@ -75,7 +75,7 @@ function addNeighbors (
   y: number,
   duplicateHorizontally: boolean,
   checkedTiles: Set<string>,
-  checkList: Array<[number, number, number]>
+  checkList: ZXY[]
 ): void {
   // add the surounding tiles we have not checked
   for (const [nZoom, nX, nY] of neighborsXY(zoom, x, y, duplicateHorizontally)) {

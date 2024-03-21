@@ -58,9 +58,6 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
 
 export class LineFeature implements LineFeatureSpec {
   type = 'line' as const
-  sourceName: string
-  interactive: boolean
-  dashed: boolean
   bindGroup: GPUBindGroup
   lineBindGroup: GPUBindGroup
   constructor (
@@ -77,10 +74,6 @@ export class LineFeature implements LineFeatureSpec {
     public cap: number,
     public parent?: Tile
   ) {
-    const { sourceName, interactive, dashed } = layerGuide
-    this.sourceName = sourceName
-    this.interactive = interactive
-    this.dashed = dashed
     this.bindGroup = this.#buildBindGroup()
     this.lineBindGroup = this.#buildLineBindGroup()
   }
@@ -222,7 +215,8 @@ export default class LineWorkflow implements LineWorkflowSpec {
       dashTexture,
       interactive,
       cursor,
-      visible
+      visible,
+      opaque: false
     })
 
     return layerDefinition
@@ -341,8 +335,11 @@ export default class LineWorkflow implements LineWorkflowSpec {
     })
   }
 
-  draw ({ layerGuide, bindGroup, lineBindGroup, source, count, offset }: LineFeatureSpec): void {
-    if (!layerGuide.visible) return
+  draw ({
+    layerGuide: { visible }, bindGroup,
+    lineBindGroup, source, count, offset
+  }: LineFeatureSpec): void {
+    if (!visible) return
     // get current source data
     const { passEncoder } = this.context
     const { vertexBuffer, lengthSoFarBuffer } = source

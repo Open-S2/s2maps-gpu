@@ -2,7 +2,7 @@ import { isSafari, parseHash, setHash } from './util'
 
 import type S2MapUI from './ui/s2mapUI'
 import type { MapOptions } from './ui/s2mapUI'
-import type { Attributions, LayerStyle, StyleDefinition } from './style/style.spec'
+import type { Attributions, LayerStyle, Point, StyleDefinition } from './style/style.spec'
 import type { MarkerDefinition } from './workers/source/markerSource'
 import type { AnimationDirections } from './ui/camera/animator'
 import type { UserTouchEvent } from './ui/camera/dragPan'
@@ -573,7 +573,7 @@ export default class S2Map extends EventTarget {
     return this.#canvasContainer
   }
 
-  getContainerDimensions (): null | [number, number] {
+  getContainerDimensions (): null | Point {
     return [this.#container?.clientWidth ?? 0, this.#container?.clientHeight ?? 0]
   }
 

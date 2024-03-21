@@ -6,6 +6,7 @@ import type {
   S2VectorPoints,
   S2VectorPoly
 } from 's2-vector-tile'
+import type { Point } from 'geometry'
 import type { TileRequest } from 'workers/worker.spec'
 
 // 1) scale up by distance between tiles (if parent is 2 zooms above, you double size twice)
@@ -149,7 +150,7 @@ function _clipLine (
   axis: 0 | 1,
   isPolygon: boolean
 ): void {
-  let slice: Array<[number, number]> = []
+  let slice: Point[] = []
   const intersect = axis === 0 ? intersectX : intersectY
   const len = line.length - 1
 
@@ -206,7 +207,7 @@ function _clipLine (
 }
 
 function intersectX (
-  out: Array<[number, number]>,
+  out: Point[],
   ax: number,
   ay: number,
   bx: number,
@@ -218,7 +219,7 @@ function intersectX (
 }
 
 function intersectY (
-  out: Array<[number, number]>,
+  out: Point[],
   ax: number,
   ay: number,
   bx: number,

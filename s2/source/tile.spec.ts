@@ -1,7 +1,7 @@
-import type WebGLContext from 'gl/contexts/context'
+import type WebGLContext from 'gl/context/context'
 import type WebGPUContext from 'gpu/context/context'
 import type {
-  FeatureGuide as FeatureGuideGL,
+  Features as FeaturesGL,
   MaskSource as MaskSourceGL
 } from 'gl/workflows/workflow.spec'
 import type {
@@ -29,7 +29,7 @@ export type Get<T, K extends keyof any, Fallback=undefined> = T extends Record<K
 export type Combine<T> = { [K in AllKeysOf<T>]: Get<T, K> }
 
 export type SharedContext = Combine<WebGLContext | WebGPUContext>
-export type SharedFeatureGuide = Combine<FeatureGuideGL | FeaturesGPU>
+export type SharedFeatures = Combine<FeaturesGL | FeaturesGPU>
 export type SharedMaskSource = Combine<MaskSourceGL | MaskSourceGPU>
 
 export type FaceST = [face: number, zoom: number, sLow: number, deltaS: number, tLow: number, deltaT: number]
@@ -91,7 +91,7 @@ export interface TileBase<C, F, M> {
   deleteSources: (sourceNames: string[]) => void
 }
 
-export type Tile = TileBase<SharedContext, SharedFeatureGuide, SharedMaskSource>
-export type TileGL = TileBase<WebGLContext, FeatureGuideGL, MaskSourceGL>
+export type Tile = TileBase<SharedContext, SharedFeatures, SharedMaskSource>
+export type TileGL = TileBase<WebGLContext, FeaturesGL, MaskSourceGL>
 export type TileGPU = TileBase<WebGPUContext, FeaturesGPU, MaskSourceGPU>
 export type TileShared = TileGL & TileGPU

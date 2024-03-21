@@ -40,7 +40,7 @@ export default class Projector {
   positionalZoom = true
   // [zoom, lon, lat, bearing, pitch, time, aspectX, aspectY, mouseX, mouseY, deltaMouseX, deltaMouseY, featureState, currFeature]
   view: Float32Array = new Float32Array(14)
-  aspect: [number, number] = [400, 300] // default canvas width x height
+  aspect: Point = [400, 300] // default canvas width x height
   matrices: { [key in MatrixType]?: Float32Array } = {}
   eye: XYZ = [0, 0, 0] // [x, y, z] only z should change for visual effects
   constrainZoomToFill = true
@@ -398,7 +398,7 @@ export default class Projector {
     return matrix
   }
 
-  #updateEyeS2 (lon: number, lat: number, zoom: number, update = true): [number, number, number] {
+  #updateEyeS2 (lon: number, lat: number, zoom: number, update = true): XYZ {
     const { radius, zTranslateEnd, zTranslateStart, zoomEnd } = this
     // find radial distance from core of ellipsoid
     const radialMultiplier = Math.max(

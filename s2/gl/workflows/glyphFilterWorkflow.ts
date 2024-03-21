@@ -7,7 +7,7 @@ import frag1 from '../shaders/glyphFilter1.fragment.glsl'
 import vert2 from '../shaders/glyphFilter2.vertex.glsl'
 import frag2 from '../shaders/glyphFilter2.fragment.glsl'
 
-import type Context from '../contexts/context'
+import type Context from '../context/context'
 import type {
   GlyphFeature,
   GlyphFilterUniforms,

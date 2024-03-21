@@ -6,6 +6,7 @@ import type { GlyphPath, GlyphPoint } from './glyph.spec'
 // import type { MapGlyphSource } from '../imageStore'
 import type { MapGlyphSource } from '../imageStore'
 import type { Glyph } from './familySource'
+import type { Point } from 'geometry'
 
 // [s, t, xOffset, yOffset, xPos, yPos, width, height, texX, texY, texWidth, texHeight, id]
 export type Quad = number[]
@@ -14,6 +15,8 @@ export type Quad = number[]
 
 // [s, t, anchorOffsetX, anchorOffsetY, paddingX, paddingY, maxWidth, maxHeight, index, id]
 export type Filter = number[]
+
+export type Row = [rowCount: number, rowWidth: number, rowHeight: number]
 
 export const QUAD_SIZE = 12
 
@@ -59,7 +62,7 @@ export function buildGlyphPointQuads (
   // update field codes if it contains joining characters
   if (type === 'text') fieldCodes = adjustMedials(fieldCodes)
   // setup variable
-  const rows: Array<[number, number, number]> = [] // a row: [glyph count, rowMaxWidth, rowMaxHeight]
+  const rows: Row[] = [] // a row: [glyph count, rowMaxWidth, rowMaxHeight]
   let rowCount = 0
   let rowWidth = 0
   let rowHeight = 0
@@ -225,7 +228,7 @@ function updateoffset (quads: Quad, adjustX: number, adjustY: number): void {
   }
 }
 
-function anchorOffset (anchor: Anchor, width: number, height: number): [number, number] {
+function anchorOffset (anchor: Anchor, width: number, height: number): Point {
   if (anchor === 'center') return [-width / 2, -height / 2]
   else if (anchor === 'top') return [-width / 2, -height]
   else if (anchor === 'top-right') return [-width, -height]
@@ -241,7 +244,7 @@ function anchorOffset (anchor: Anchor, width: number, height: number): [number, 
 function alignText (
   align: Alignment,
   quads: Quad,
-  rows: Array<[number, number, number]>,
+  rows: Row[],
   maxWidth: number
 ): void {
   if (align !== 'center' && align !== 'right') return

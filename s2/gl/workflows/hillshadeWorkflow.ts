@@ -8,10 +8,11 @@ import frag1 from '../shaders/hillshade1.fragment.glsl'
 import vert2 from '../shaders/hillshade2.vertex.glsl'
 import frag2 from '../shaders/hillshade2.fragment.glsl'
 
-import type Context from '../contexts/context'
+import type Context from '../context/context'
 import type { HillshadeData } from 'workers/worker.spec'
 import type { TileGL as Tile } from 'source/tile.spec'
 import type {
+  ColorArray,
   HillshadeDefinition,
   HillshadeStyle,
   HillshadeWorkflowLayerGuide,
@@ -19,11 +20,77 @@ import type {
   UnpackData
 } from 'style/style.spec'
 import type {
-  HillshadeFeature,
+  HillshadeFeature as HillshadeFeatureSpec,
   HillshadeWorkflow as HillshadeWorkflowSpec,
   HillshadeWorkflowUniforms,
   RasterSource
 } from './workflow.spec'
+
+export class HilllshadeFeature implements HillshadeFeatureSpec {
+  type = 'hillshade' as const
+  featureCode: number[] = [0]
+  opacity?: number // webgl1
+  shadowColor?: ColorArray // webgl1
+  accentColor?: ColorArray // webgl1
+  highlightColor?: ColorArray // webgl1
+  azimuth?: number // webgl1
+  altitude?: number // webgl1
+  constructor (
+    public workflow: HillshadeWorkflowSpec,
+    public layerGuide: HillshadeWorkflowLayerGuide,
+    public tile: Tile,
+    public source: RasterSource,
+    public fadeStartTime = Date.now(),
+    public parent?: Tile
+  ) {}
+
+  draw (interactive = false): void {
+    const { tile, workflow } = this
+    workflow.context.stencilFuncEqual(tile.tmpMaskID)
+    workflow.draw(this, interactive)
+  }
+
+  destroy (): void {}
+
+  duplicate (tile: Tile, parent?: Tile): HilllshadeFeature {
+    const {
+      layerGuide, workflow, source, fadeStartTime,
+      opacity, shadowColor, accentColor, highlightColor, azimuth, altitude
+    } = this
+    const newFeature = new HilllshadeFeature(
+      workflow, layerGuide, tile, source, fadeStartTime, parent
+    )
+    newFeature.setWebGL1Attributes(opacity, shadowColor, accentColor, highlightColor, azimuth, altitude)
+    return newFeature
+  }
+
+  setWebGL1Attributes (
+    opacity?: number,
+    shadowColor?: ColorArray,
+    accentColor?: ColorArray,
+    highlightColor?: ColorArray,
+    azimuth?: number,
+    altitude?: number
+  ): void {
+    this.opacity = opacity
+    this.shadowColor = shadowColor
+    this.accentColor = accentColor
+    this.highlightColor = highlightColor
+    this.azimuth = azimuth
+    this.altitude = altitude
+  }
+
+  setWebGL1AttributesCode (code: number[]): void {
+    this.setWebGL1Attributes(
+      code[0],
+      code.slice(1, 5) as ColorArray,
+      code.slice(5, 9) as ColorArray,
+      code.slice(9, 13) as ColorArray,
+      code[13],
+      code[14]
+    )
+  }
+}
 
 export default class HillshadeWorkflow extends Workflow implements HillshadeWorkflowSpec {
   layerGuides = new Map<number, HillshadeWorkflowLayerGuide>()
@@ -57,48 +124,17 @@ export default class HillshadeWorkflow extends Workflow implements HillshadeWork
   }
 
   #buildFeatures (source: RasterSource, hillshadeData: HillshadeData, tile: Tile): void {
-    const { sourceName, featureGuides } = hillshadeData
+    const { featureGuides } = hillshadeData
     // for each layer that maches the source, build the feature
 
-    const features: HillshadeFeature[] = []
+    const features: HillshadeFeatureSpec[] = []
 
     for (const { code, layerIndex } of featureGuides) {
       const layerGuide = this.layerGuides.get(layerIndex)
       if (layerGuide === undefined) continue
-      const { fadeDuration, lch, layerCode, unpack } = layerGuide
-      let opacity = 1
-      let shadowColor: [number, number, number, number] | undefined
-      let accentColor: [number, number, number, number] | undefined
-      let highlightColor: [number, number, number, number] | undefined
-      let azimuth: number | undefined
-      let altitude: number | undefined
-      if (this.type === 1) {
-        opacity = code[0]
-        shadowColor = code.slice(1, 5) as [number, number, number, number]
-        accentColor = code.slice(5, 9) as [number, number, number, number]
-        highlightColor = code.slice(9, 13) as [number, number, number, number]
-        azimuth = code[13]
-        altitude = code[14]
-      }
-      features.push({
-        type: 'hillshade',
-        tile,
-        source,
-        sourceName,
-        layerGuide,
-        layerCode,
-        lch,
-        featureCode: code,
-        fadeDuration,
-        fadeStartTime: Date.now(),
-        opacity,
-        shadowColor,
-        accentColor,
-        highlightColor,
-        azimuth,
-        altitude,
-        unpack
-      })
+      const feature = new HilllshadeFeature(this, layerGuide, tile, source)
+      if (this.type === 1) feature.setWebGL1AttributesCode(code)
+      features.push(feature)
     }
 
     tile.addFeatures(features)
@@ -106,7 +142,7 @@ export default class HillshadeWorkflow extends Workflow implements HillshadeWork
 
   buildLayerDefinition (layerBase: LayerDefinitionBase, layer: HillshadeStyle): HillshadeDefinition {
     const { type } = this
-    const { source, layerIndex, lch, visible } = layerBase
+    const { source, layerIndex, lch, visible, interactive } = layerBase
     // PRE) get layer properties
     let { unpack, shadowColor, accentColor, highlightColor, opacity, azimuth, altitude, fadeDuration } = layer
     shadowColor = shadowColor ?? '#000'
@@ -146,7 +182,9 @@ export default class HillshadeWorkflow extends Workflow implements HillshadeWork
       lch,
       fadeDuration,
       unpack: unpackData,
-      visible
+      visible,
+      interactive: interactive ?? false,
+      opaque: false
     })
 
     return layerDefinition
@@ -163,7 +201,7 @@ export default class HillshadeWorkflow extends Workflow implements HillshadeWork
     context.lessDepth()
   }
 
-  draw (featureGuide: HillshadeFeature): void {
+  draw (featureGuide: HillshadeFeatureSpec, _interactive = false): void {
     // grab gl from the context
     const { type, gl, context, uniforms } = this
     const { uFade, uTexLength, uUnpack, uOpacity, uShadowColor, uAccentColor, uHighlightColor, uAzimuth, uAltitude } = uniforms
@@ -171,7 +209,7 @@ export default class HillshadeWorkflow extends Workflow implements HillshadeWork
 
     // get current source data
     const {
-      tile, parent, source, layerGuide: { layerIndex, visible }, featureCode, unpack,
+      tile, parent, source, layerGuide: { layerIndex, visible, unpack }, featureCode,
       opacity, shadowColor, accentColor, highlightColor, azimuth, altitude
     } = featureGuide
     if (!visible) return

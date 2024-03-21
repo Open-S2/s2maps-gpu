@@ -4,7 +4,7 @@ import { fromLonLat, fromSTGL, mul, normalize, toIJ } from 'geometry/s2/s2Point'
 import { fromFace, fromIJ, parent } from 'geometry/s2/s2CellID'
 import { boxIntersects, lessThanZero, pointBoundaries } from 'geometry'
 
-import type { BBox, Face, XYZ } from 'geometry'
+import type { BBox, Face, FaceIJ, XYZ } from 'geometry'
 
 const ZERO_TILES = [fromFace(0), fromFace(1), fromFace(2), fromFace(3), fromFace(4), fromFace(5)]
 
@@ -17,7 +17,7 @@ export default function getTilesInView (
 ): bigint[] {
   if (zoom < 1) return ZERO_TILES
   const tiles: bigint[] = []
-  const checkList: Array<[number, number, number]> = []
+  const checkList: FaceIJ[] = []
   const checkedTiles = new Set<string>()
   zoom = zoom << 0 // move to whole number
   let stBbox: BBox, tLProj: XYZ, tRProj: XYZ, bLProj: XYZ, bRProj: XYZ
@@ -68,7 +68,7 @@ function addNeighbors (
   i: number,
   j: number,
   checkedTiles: Set<string>,
-  checkList: Array<[number, number, number]>
+  checkList: FaceIJ[]
 ): void {
   // add the surounding tiles we have not checked
   for (const [nFace, nI, nJ] of neighborsIJ(face, i, j, zoom)) {

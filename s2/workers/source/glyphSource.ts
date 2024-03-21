@@ -226,7 +226,7 @@ export default class GlyphSource {
   }
 }
 
-type MergeResult = Array<string | number | [number, number]>
+type MergeResult = Array<string | number | [from: number, to: number]>
 function mergeRanges (unicodes: Array<string | number>): MergeResult {
   return unicodes.reduce<MergeResult>((acc, cur): MergeResult => {
     if (acc.length === 0) return [cur]

@@ -23,9 +23,10 @@ import type {
   RasterWorkflowLayerGuideGPU,
   SensorDefinition,
   SensorStyle,
+  SensorWorkflowLayerGuideGPU,
   ShadeDefinition,
-  ShadeDefinitionGPU,
   ShadeStyle,
+  ShadeWorkflowLayerGuideGPU,
   StyleDefinition
 } from 'style/style.spec'
 import type { WebGPUContext } from '../context'
@@ -131,7 +132,7 @@ export interface SensorSource {
 }
 
 export type FeatureSource = MaskSource | FillSource | LineSource | PointSource | HeatmapSource | RasterSource | GlyphSource
-export type LayerGuides = FillWorkflowLayerGuideGPU | GlyphWorkflowLayerGuideGPU | HeatmapWorkflowLayerGuideGPU | HillshadeWorkflowLayerGuideGPU | LineWorkflowLayerGuideGPU | PointWorkflowLayerGuideGPU | RasterWorkflowLayerGuideGPU | SensorDefinition | ShadeDefinitionGPU
+export type LayerGuides = FillWorkflowLayerGuideGPU | GlyphWorkflowLayerGuideGPU | HeatmapWorkflowLayerGuideGPU | HillshadeWorkflowLayerGuideGPU | LineWorkflowLayerGuideGPU | PointWorkflowLayerGuideGPU | RasterWorkflowLayerGuideGPU | SensorWorkflowLayerGuideGPU | ShadeWorkflowLayerGuideGPU
 
 // Features
 
@@ -139,12 +140,9 @@ export interface FeatureBase {
   tile: Tile
   parent?: Tile
   layerGuide: LayerGuides
-  maskLayer?: boolean
-  sourceName: string
-  opaque?: boolean
-  interactive?: boolean
   featureCode: number[]
   bindGroup: GPUBindGroup
+  bounds?: BBox
   draw: () => void
   destroy: () => void
   duplicate?: (tile: Tile, parent?: Tile, bounds?: BBox) => FeatureBase
@@ -161,9 +159,6 @@ export interface FillFeature extends FeatureBase {
   layerGuide: FillWorkflowLayerGuideGPU
   count: number
   offset: number
-  invert: boolean
-  interactive: boolean
-  opaque: boolean
   featureCodeBuffer: GPUBuffer
   fillTexturePositions: GPUBuffer
   fillPatternBindGroup: GPUBindGroup
@@ -181,13 +176,7 @@ export interface GlyphFeature extends FeatureBase {
   offset: number
   filterCount: number
   filterOffset: number
-  overdraw: boolean
   isIcon: boolean
-  interactive: boolean
-  viewCollisions: boolean
-  bounds?: BBox
-  size?: number
-  strokeWidth?: number
   glyphBindGroup: GPUBindGroup
   glyphStrokeBindGroup: GPUBindGroup
   glyphFilterBindGroup: GPUBindGroup
@@ -203,7 +192,6 @@ export interface HeatmapFeature extends FeatureBase {
   layerGuide: HeatmapWorkflowLayerGuideGPU
   count: number
   offset: number
-  bounds?: BBox
   heatmapBindGroup: GPUBindGroup
   duplicate: (tile: Tile, parent?: Tile, bounds?: BBox) => HeatmapFeature
 }
@@ -213,11 +201,8 @@ export interface LineFeature extends FeatureBase {
   type: 'line'
   source: LineSource
   layerGuide: LineWorkflowLayerGuideGPU
-  interactive: boolean
   count: number
   offset: number
-  dashed: boolean
-  dashTexture: GPUTexture
   cap: number
   lineBindGroup: GPUBindGroup
   duplicate: (tile: Tile, parent?: Tile) => LineFeature
@@ -230,7 +215,6 @@ export interface PointFeature extends FeatureBase {
   layerGuide: PointWorkflowLayerGuideGPU
   count: number
   offset: number
-  bounds?: BBox
   pointBindGroup: GPUBindGroup
   pointInteractiveBindGroup: GPUBindGroup
   duplicate: (tile: Tile, parent?: Tile, bounds?: BBox) => PointFeature
@@ -241,7 +225,6 @@ export interface RasterFeature extends FeatureBase {
   type: 'raster'
   source: RasterSource
   layerGuide: RasterWorkflowLayerGuideGPU
-  fadeDuration: number
   fadeStartTime: number
   rasterBindGroup: GPUBindGroup
   duplicate: (tile: Tile, parent?: Tile) => RasterFeature
@@ -250,8 +233,7 @@ export interface RasterFeature extends FeatureBase {
 // ** SENSOR **
 export interface SensorFeature extends FeatureBase {
   type: 'sensor'
-  layerGuide: SensorDefinition
-  fadeDuration: number
+  layerGuide: SensorWorkflowLayerGuideGPU
   fadeStartTime: number
   colorRamp: WebGLTexture
   getTextures: () => SensorTextureDefinition
@@ -263,7 +245,6 @@ export interface HillshadeFeature extends FeatureBase {
   type: 'hillshade'
   source: RasterSource
   layerGuide: HillshadeWorkflowLayerGuideGPU
-  fadeDuration: number
   fadeStartTime: number
   hillshadeBindGroup: GPUBindGroup
   duplicate: (tile: Tile, parent?: Tile) => HillshadeFeature
@@ -271,11 +252,10 @@ export interface HillshadeFeature extends FeatureBase {
 
 export interface ShadeFeature extends FeatureBase {
   tile: Tile
-  sourceName: string
   type: 'shade'
   maskLayer: boolean
   source: MaskSource
-  layerGuide: ShadeDefinitionGPU
+  layerGuide: ShadeWorkflowLayerGuideGPU
   count: number
   offset: number
 }
@@ -435,10 +415,10 @@ export interface SensorWorkflow extends Workflow {
 }
 
 export interface ShadeWorkflow extends Workflow {
-  layerDefinition: ShadeDefinitionGPU
+  layerGuide?: ShadeWorkflowLayerGuideGPU
   pipeline: GPURenderPipeline
 
-  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: ShadeStyle) => ShadeDefinitionGPU
+  buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: ShadeStyle) => ShadeDefinition
   buildMaskFeature: (maskLayer: ShadeDefinition, tile: Tile) => void
   draw: (feature: ShadeFeature) => void
 }

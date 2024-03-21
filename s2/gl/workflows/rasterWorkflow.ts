@@ -8,7 +8,7 @@ import frag1 from '../shaders/raster1.fragment.glsl'
 import vert2 from '../shaders/raster2.vertex.glsl'
 import frag2 from '../shaders/raster2.fragment.glsl'
 
-import type Context from '../contexts/context'
+import type Context from '../context/context'
 import type {
   RasterFeature as RasterFeatureSpec,
   RasterSource,
@@ -28,8 +28,8 @@ import type {
 export class RasterFeature implements RasterFeatureSpec {
   type = 'raster' as const
   opacity?: number // webgl1
-  contrast?: number // webgl1
   saturation?: number // webgl1
+  contrast?: number // webgl1
   constructor (
     public layerGuide: RasterWorkflowLayerGuide,
     public workflow: RasterWorkflowSpec,
@@ -49,10 +49,25 @@ export class RasterFeature implements RasterFeatureSpec {
   destroy (): void {}
 
   duplicate (tile: Tile, parent?: Tile): RasterFeature {
-    const { layerGuide, workflow, source, featureCode, fadeStartTime } = this
-    return new RasterFeature(
+    const {
+      layerGuide, workflow, source, featureCode, fadeStartTime,
+      opacity, saturation, contrast
+    } = this
+    const newFeature = new RasterFeature(
       layerGuide, workflow, source, featureCode, tile, fadeStartTime, parent
     )
+    newFeature.setWebGL1Attributes(opacity, saturation, contrast)
+    return newFeature
+  }
+
+  setWebGL1Attributes (
+    opacity?: number,
+    saturation?: number,
+    contrast?: number
+  ): void {
+    this.opacity = opacity
+    this.saturation = saturation
+    this.contrast = contrast
   }
 }
 
@@ -148,9 +163,7 @@ export default class RasterWorkflow extends Workflow implements RasterWorkflowSp
       if (layerGuide === undefined) continue
       const feature = new RasterFeature(layerGuide, this, source, code, tile)
       if (this.type === 1) {
-        feature.opacity = code[0]
-        feature.saturation = code[1]
-        feature.contrast = code[2]
+        feature.setWebGL1Attributes(code[0], code[1], code[2])
       }
     }
 

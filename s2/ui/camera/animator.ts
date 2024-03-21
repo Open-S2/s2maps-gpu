@@ -283,7 +283,7 @@ export default class Animator {
     const tileSet = new Set(projector.camera.getTiles().map(tile => tile.id))
     const newTiles = new Map()
     let tilesFound: boolean
-    const batch: Array<[number, number, number, bigint[]]> = [
+    const batch: Array<[low: number, high: number, pos: number, tiles: bigint[]]> = [
       [0, duration, duration, projector.getTilesAtPosition(endLon, endLat, endZoom, endBearing, endPitch)],
       [0, duration, duration / 2, projector.getTilesAtPosition(...this.#increment(duration / 2)[1])]
     ]

@@ -13,7 +13,7 @@ import {
 import { toIJ as S2PointToIJ, fromS2CellID } from './s2Point'
 
 import type { Face } from './s2Proj.spec'
-import type { BBox, XYZ } from '../proj.spec'
+import type { BBox, FaceIJ, XYZ } from '../proj.spec'
 
 /** CONSTANTS **/
 const LOOKUP_POS: bigint[] = []
@@ -332,7 +332,7 @@ export function isLeaf (id: bigint): boolean {
 }
 
 /** Given an S2CellID and level (zoom), get the center point of that cell in S-T space */
-export function centerST (id: bigint): [face: number, s: number, t: number] {
+export function centerST (id: bigint): FaceIJ {
   const [face, i, j] = toIJ(id)
   const delta = ((id & 1n) !== 0n)
     ? 1

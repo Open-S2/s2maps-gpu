@@ -10,7 +10,7 @@ import frag1 from '../shaders/fill1.fragment.glsl'
 import vert2 from '../shaders/fill2.vertex.glsl'
 import frag2 from '../shaders/fill2.fragment.glsl'
 
-import type Context from '../contexts/context'
+import type Context from '../context/context'
 import type {
   FillFeature as FillFeatureSpec,
   FillSource,
@@ -21,11 +21,13 @@ import type {
 import type { FillData } from 'workers/worker.spec'
 import type { TileGL as Tile } from 'source/tile.spec'
 import type {
+  ColorArray,
   FillDefinition,
   FillStyle,
   FillWorkflowLayerGuide,
   LayerDefinitionBase
 } from 'style/style.spec'
+import type { Point } from 'geometry'
 
 export class FillFeature implements FillFeatureSpec {
   type = 'fill' as const
@@ -39,7 +41,7 @@ export class FillFeature implements FillFeatureSpec {
     public mode: number,
     public count: number,
     public offset: number,
-    public patternXY: [x: number, y: number],
+    public patternXY: Point,
     public patternWH: [w: number, h: number],
     public patternMovement: number,
     public featureCode: number[] = [0],
@@ -60,12 +62,20 @@ export class FillFeature implements FillFeatureSpec {
   duplicate (tile: Tile, parent?: Tile): FillFeature {
     const {
       workflow, layerGuide, maskLayer, source, mode, count, offset,
-      patternXY, patternWH, patternMovement, featureCode
+      patternXY, patternWH, patternMovement, featureCode,
+      color, opacity
     } = this
-    return new FillFeature(
+    const newFeature = new FillFeature(
       workflow, layerGuide, maskLayer, source, mode, count, offset,
       patternXY, patternWH, patternMovement, featureCode, tile, parent
     )
+    newFeature.setWebGL1Attributes(color, opacity)
+    return newFeature
+  }
+
+  setWebGL1Attributes (color?: number[], opacity?: number[]): void {
+    this.color = color
+    this.opacity = opacity
   }
 }
 
@@ -132,7 +142,7 @@ export default class FillWorkflow extends Workflow implements FillWorkflowSpec {
       opaque,
       interactive,
       pattern: pattern !== undefined,
-      color: isGL1Mask ? parseFeatureFunction<string, [number, number, number, number]>(color, colorFunc(lch)) : undefined,
+      color: isGL1Mask ? parseFeatureFunction<string, ColorArray>(color, colorFunc(lch)) : undefined,
       opacity: isGL1Mask ? parseFeatureFunction<number, number[]>(opacity, (i: number) => [i]) : undefined,
       visible
     })
@@ -142,22 +152,24 @@ export default class FillWorkflow extends Workflow implements FillWorkflowSpec {
 
   // given a set of layerIndexes that use Masks and the tile of interest
   buildMaskFeature ({ layerIndex, minzoom, maxzoom }: FillDefinition, tile: Tile): void {
-    const { type } = this
+    const { type, gl, layerGuides } = this
     const { zoom, mask } = tile
     // not in the zoom range, ignore
     if (zoom < minzoom || zoom > maxzoom) return
 
-    const layerGuide = this.layerGuides.get(layerIndex)
+    const layerGuide = layerGuides.get(layerIndex)
     if (layerGuide === undefined) return
     const { color, opacity } = layerGuide
     const feature = new FillFeature(
-      this, layerGuide, true, mask, this.gl.TRIANGLE_STRIP, mask.count, mask.offset,
-      [0, 0], [0, 0], 0, [0], tile
+      this, layerGuide, true, mask, gl.TRIANGLE_STRIP,
+      mask.count, mask.offset, [0, 0], [0, 0], 0, [0], tile
     )
     // If webgl1 add color and opacity
     if (type === 1) {
-      feature.color = color?.([], {}, zoom)
-      feature.opacity = opacity?.([], {}, zoom)
+      feature.setWebGL1Attributes(
+        color?.([], {}, zoom),
+        opacity?.([], {}, zoom)
+      )
     }
     tile.addFeatures([feature])
   }
@@ -218,8 +230,8 @@ export default class FillWorkflow extends Workflow implements FillWorkflowSpec {
         }
         if (color.length === 0) color = undefined
         if (opacity.length === 0) opacity = undefined
-      } else {
-        if (encodingSize > 0) featureCode = [...featureGuideArray.slice(i, i + encodingSize)]
+      } else if (this.type === 2 && encodingSize > 0) {
+        featureCode = [...featureGuideArray.slice(i, i + encodingSize)]
       }
       // update index
       i += encodingSize
@@ -230,10 +242,15 @@ export default class FillWorkflow extends Workflow implements FillWorkflowSpec {
       if (layerGuide === undefined) continue
 
       if (count > 0) {
-        features.push(new FillFeature(
+        const feature = new FillFeature(
           this, layerGuide, false, source, gl.TRIANGLES, count, offset,
           [patternX, patternY], [patternW, patternH], patternMovement, featureCode, tile
-        ))
+        )
+        if (this.type === 1) {
+          feature.color = color
+          feature.opacity = opacity
+        }
+        features.push(feature)
       }
     }
 

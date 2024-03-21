@@ -1,9 +1,9 @@
 import type {
   WebGL2Context,
   WebGLContext
-} from './contexts'
+} from './context'
 import type {
-  FeatureGuide,
+  Features,
   FillWorkflow,
   GlyphFeature,
   GlyphFilterWorkflow,
@@ -27,6 +27,7 @@ import type { PainterData, SpriteImageMessage } from 'workers/worker.spec'
 import type { GlyphImages } from 'workers/source/glyphSource'
 import type Projector from 'ui/camera/projector'
 import type TimeCache from 'ui/camera/timeCache'
+import type { Point } from 'geometry'
 
 export interface Painter {
   context: WebGLContext | WebGL2Context
@@ -56,13 +57,13 @@ export interface Painter {
   injectGlyphImages: (maxHeight: number, images: GlyphImages, tile: Tile[]) => void
   setColorMode: (mode: 0 | 1 | 2 | 3 | 4) => void
   delete: () => void
-  injectFrameUniforms: (matrix: Float32Array, view: Float32Array, aspect: [number, number]) => void
+  injectFrameUniforms: (matrix: Float32Array, view: Float32Array, aspect: Point) => void
   injectSpriteImage: (data: SpriteImageMessage, tiles: Tile[]) => boolean
   injectTimeCache: (timeCache: TimeCache) => void
   paint: (projector: Projector, tiles: Tile[]) => void
   computeInteractive: (tiles: Tile[]) => void
   paintMasks: (tiles: Tile[]) => void
-  paintFeatures: (features: FeatureGuide[], interactive: boolean) => void
+  paintFeatures: (features: Features[], interactive: boolean) => void
   paintHeatmap: (features: HeatmapFeature[]) => HeatmapFeature
   paintGlyphFilter: (glyphFeatures: GlyphFeature[]) => void
 }

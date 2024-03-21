@@ -19,7 +19,7 @@ export interface LayerMeta { // layer
 }
 export type LayerMetaData = Record<string, LayerMeta>
 
-// export type FaceBounds = Record<number, Record<number, [number, number, number, number]>>
+// export type FaceBounds = Record<number, Record<number, BBox>>
 
 export interface Metadata extends Omit<SourceMetadata, 'path'> {}
 

@@ -31,6 +31,7 @@ import type {
   ViewMessage
 } from 'workers/worker.spec'
 import type { Combine, TileShared as Tile } from 'source/tile.spec'
+import type { Point } from 'geometry'
 
 export interface ResizeDimensions {
   width: number
@@ -61,7 +62,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   canZoom = true
   dragPan: DragPan = new DragPan()
   mouseMoved = true
-  mousePosition: [number, number] = [0, 0]
+  mousePosition: Point = [0, 0]
   currAnimFunction?: (now: number) => void
   resizeQueued?: ResizeDimensions
   currFeatures = new Map<number, InteractiveObject>()
