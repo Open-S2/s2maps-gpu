@@ -1,4 +1,4 @@
-import UnicodeShaper from 'unicode-shaper-zig'
+import UnicodeShaper, { DEFAULT_OPTIONS_WITHOUT_SHAPING } from 'unicode-shaper-zig'
 import VectorWorker, { colorFunc, idToRGB } from '../vectorWorker'
 import featureSort from '../util/featureSort'
 import { QUAD_SIZE, buildGlyphPointQuads } from './buildGlyphQuads'
@@ -45,7 +45,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     const {
       name, layerIndex, source, layer, minzoom, maxzoom,
       filter, interactive, cursor, lch, overdraw,
-      onlyPoints, onlyLines,
+      onlyPoints, onlyLines, noShaping,
       // paint
       textSize, textFill, textStroke, textStrokeWidth, iconSize,
       // layout
@@ -98,6 +98,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       onlyPoints,
       onlyLines,
       interactive,
+      noShaping,
       cursor,
       overdraw
     }
@@ -124,7 +125,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     // preprocess geometry
     const clip = scaleShiftClip(geometry, featureType, extent, tile)
     const { idGen } = this
-    const { layerIndex, overdraw, interactive, onlyPoints, onlyLines } = glyphLayer
+    const { layerIndex, overdraw, interactive, onlyPoints, onlyLines, noShaping } = glyphLayer
     const { zoom } = tile
     if (clip.length === 0) return false
     if (onlyPoints && featureType !== 1) return false
@@ -150,12 +151,10 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       let missing = false
       if (type === 'text') {
         field = decodeHtmlEntities(field)
-        if (this.experimental) {
-          try {
-            field = this.uShaper.shapeString(field)
-          } catch (err) {
-            console.error(field, field.split('').map(c => c.charCodeAt(0)), err)
-          }
+        try {
+          field = this.uShaper.shapeString(field, noShaping ? DEFAULT_OPTIONS_WITHOUT_SHAPING : undefined)
+        } catch (err) {
+          console.error(field, field.split('').map(c => c.charCodeAt(0)), err)
         }
         fieldCodes = field.split('').map(char => char.charCodeAt(0)).map(String)
         imageStore.parseLigatures(mapID, family, fieldCodes)

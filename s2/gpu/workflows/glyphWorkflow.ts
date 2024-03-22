@@ -320,7 +320,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
       iconOffset, iconPadding,
       // properties
       onlyPoints, onlyLines,
-      interactive, cursor, overdraw, viewCollisions
+      interactive, cursor, overdraw, noShaping, viewCollisions
     } = layer
     textSize = textSize ?? 16
     iconSize = iconSize ?? 16
@@ -332,6 +332,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     interactive = interactive ?? false
     cursor = cursor ?? 'default'
     overdraw = overdraw ?? false
+    noShaping = noShaping ?? false
     viewCollisions = viewCollisions ?? false
     // 1) build definition
     // 1) build definition
@@ -365,6 +366,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
       interactive,
       cursor,
       overdraw,
+      noShaping,
       viewCollisions
     }
     // 2) build the layerCode

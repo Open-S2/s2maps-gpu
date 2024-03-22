@@ -95,7 +95,7 @@ export default class ImageStore {
     // rejoin the splitGlyphs back into the glyphs array
     glyphs.splice(0, glyphs.length)
     for (const splitGlyph of splitGlyphs) {
-      glyphs.push(...splitGlyph.glyphs)
+      for (const glyph of splitGlyph.glyphs) glyphs.push(glyph)
       if (splitGlyph.splitValue !== undefined) glyphs.push(splitGlyph.splitValue)
     }
   }

@@ -219,9 +219,8 @@ export default class Painter implements PainterSpec {
       .sort(featureSort)
       .reverse()
     if (interactiveFeatures.length > 0) {
-      // prepare
+      // prepare & compute
       this.context.clearInteractBuffer()
-      // draw
       this.paintFeatures(interactiveFeatures, true)
     }
   }

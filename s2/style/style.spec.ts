@@ -1688,6 +1688,8 @@ export interface GlyphStyle extends LayerStyleBase {
   interactive?: boolean
   /** if true, the layer glyphs will display the collision boxes and colorize them based on if they are colliding or not. Default false */
   viewCollisions?: boolean
+  /** if true, it's assumed RTL text has been preshaped so do not invert it again. Defaults to false */
+  noShaping?: boolean
   /** the cursor to use when hovering over the glyph. Default "default" */
   cursor?: Cursor
 }
@@ -1719,6 +1721,7 @@ export interface GlyphDefinition extends LayerDefinitionBase {
   onlyLines: boolean
   overdraw: boolean
   interactive: boolean
+  noShaping: boolean
   viewCollisions: boolean
   cursor: Cursor
 }
@@ -1759,6 +1762,7 @@ export interface GlyphWorkerLayer extends LayerWorkerBase {
   onlyLines: boolean
   overdraw: boolean
   interactive: boolean
+  noShaping: boolean
   cursor: Cursor
 }
 
