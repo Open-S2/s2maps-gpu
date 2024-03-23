@@ -488,24 +488,23 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     // create tile
     const tile = createTile(projector.projection, painter.context, id)
     res.push(tile)
+    // should our style have mask layers, let's add them
+    style.injectMaskLayers(tile)
+    // inject parent should one exist
+    if (!isFace(projection, id)) {
+      // get closest parent S2CellID. If actively zooming, the parent tile will pass along
+      // it's parent tile (and so forth) if its own data has not been processed yet.
+      const pID = parentID(projection, id)
+      // check if parent tile exists, if so inject
+      const parent = tileCache.get(pID)
+      if (parent !== undefined) tile.injectParentTile(parent, style.layers)
+    }
     if (tile.outofBounds) {
       // This is a WM only case. Inject "wrapped" tile's featureGuides as a reference
       const wrappedID: bigint = tileIDWrappedWM(id)
       if (!tileCache.has(wrappedID)) res.push(...this.#createTiles(wrappedID))
       const wrappedTile = tileCache.get(wrappedID)
       if (wrappedTile !== undefined) tile.injectWrappedTile(wrappedTile)
-    } else {
-      // should our style have mask layers, let's add them
-      style.injectMaskLayers(tile)
-      // inject parent should one exist
-      if (!isFace(projection, id)) {
-        // get closest parent S2CellID. If actively zooming, the parent tile will pass along
-        // it's parent tile (and so forth) if its own data has not been processed yet.
-        const pID = parentID(projection, id)
-        // check if parent tile exists, if so inject
-        const parent = tileCache.get(pID)
-        if (parent !== undefined) tile.injectParentTile(parent, style.layers)
-      }
     }
     // store the tile
     tileCache.set(id, tile)

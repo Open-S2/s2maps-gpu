@@ -239,8 +239,10 @@ implements TileSpec<C, F, M> {
   #addFeaturesToDependents (dependent: Tile<C, F, M>, features: F[]): void {
     // @ts-expect-error - no reason this should be failing buit it is
     const dFeatures: F[] = features
+      .filter((f) => f.parent === undefined)
       // @ts-expect-error - no reason this should be failing buit it is
-      .map((f: F) => f.duplicate(dependent, f.parent))
+      .map((f: F) => f.duplicate(dependent, f.parent, f.bounds))
+
     dependent.addFeatures(dFeatures)
   }
 
