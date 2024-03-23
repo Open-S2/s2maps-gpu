@@ -4,13 +4,45 @@ import type Context from '../context/context'
 import type {
   AttributeLocations,
   Attributes,
+  FeatureBase,
+  LayerGuides,
   ShaderSource,
   Uniforms,
+  Workflow as WorkflowFeature,
   WorkflowSpec
 } from './workflow.spec'
 import type { ColorMode } from 's2Map'
-import type { TileGL } from 'source/tile.spec'
-import type { Point } from 'geometry'
+import type { TileGL as Tile } from 'source/tile.spec'
+import type { BBox, Point } from 'geometry'
+
+export class Feature implements FeatureBase {
+  constructor (
+    public workflow: WorkflowFeature,
+    public tile: Tile,
+    public layerGuide: LayerGuides,
+    public featureCode: number[] = [0],
+    public parent?: Tile,
+    public bounds?: BBox
+  ) {}
+
+  draw (interactive = false): void {
+    const { tile, parent, workflow, layerGuide } = this
+    const { context } = workflow
+    const { layerIndex, layerCode, lch } = layerGuide
+    // let the context know the current workflow
+    workflow.context.setWorkflow(workflow)
+    // ensure the tile information is set
+    workflow.setTileUniforms(tile, parent)
+    // setup stencil
+    context.stencilFuncEqual(tile.tmpMaskID)
+    // set layer code
+    workflow.setLayerCode(layerIndex, layerCode, lch)
+    // set interactive if applicable
+    workflow.setInteractive(interactive)
+  }
+
+  destroy (): void {}
+}
 
 export default class Workflow implements WorkflowSpec {
   vertexShader!: WebGLShader
@@ -24,7 +56,9 @@ export default class Workflow implements WorkflowSpec {
   updateMatrix: null | Float32Array = null // pointer
   updateInputs: null | Float32Array = null // pointer
   updateAspect: null | Point = null // pointer
+  curLayer = -1
   curMode = -1
+  curTile = -1n
   LCH?: boolean
   interactive?: boolean
   uniforms!: Record<string, WebGLUniformLocation>
@@ -93,6 +127,8 @@ export default class Workflow implements WorkflowSpec {
 
   use (): void {
     const { gl, glProgram } = this
+    // reset tile tracker since it impacts wether we update our matrix or not
+    this.curTile = -1n
 
     gl.useProgram(glProgram)
     this.flush()
@@ -111,16 +147,16 @@ export default class Workflow implements WorkflowSpec {
     if (this.updateAspect !== null) this.setAspect(this.updateAspect)
   }
 
-  setTileUniforms (tile: TileGL): void {
+  setTileUniforms (tile: Tile, parent?: Tile): void {
     const { gl, uniforms } = this
-    const { type, bottomTop } = tile
+    const { id, type, bottomTop, faceST, matrix } = (parent ?? tile)
+    if (id === this.curTile) return
+    this.curTile = id
     this.setTilePos(bottomTop)
     if (type === 'S2') {
-      const { faceST } = tile
       this.setFaceST(faceST)
       gl.uniform1i(uniforms.uIsS2, 1)
     } else {
-      const { matrix } = tile
       this.setMatrix(matrix)
       gl.uniform1i(uniforms.uIsS2, 0)
     }
@@ -182,8 +218,10 @@ export default class Workflow implements WorkflowSpec {
     gl.uniform4fv(uniforms.uTop, bottomTop.subarray(4, 8))
   }
 
-  setLayerCode (layerCode: number[], lch = false): void {
+  setLayerCode (layerIndex: number, layerCode: number[], lch = false): void {
     const { uniforms, gl } = this
+    if (this.curLayer === layerIndex) return
+    this.curLayer = layerIndex
     if (uniforms.uLayerCode !== undefined && layerCode.length > 0) gl.uniform1fv(uniforms.uLayerCode, layerCode)
     // also set lch if we need to
     if (uniforms.uLCH !== undefined && this.LCH !== lch) {

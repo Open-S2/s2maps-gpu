@@ -1,7 +1,7 @@
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
 import { colorFunc } from 'workers/process/vectorWorker'
 import parseFeatureFunction from 'style/parseFeatureFunction'
-import Workflow from './workflow'
+import Workflow, { Feature } from './workflow'
 
 // WEBGL1
 import vert1 from '../shaders/fill1.vertex.glsl'
@@ -16,7 +16,7 @@ import type {
   FillSource,
   FillWorkflow as FillWorkflowSpec,
   FillWorkflowUniforms,
-  MaskSource
+  TileMaskSource
 } from './workflow.spec'
 import type { FillData } from 'workers/worker.spec'
 import type { TileGL as Tile } from 'source/tile.spec'
@@ -29,7 +29,7 @@ import type {
 } from 'style/style.spec'
 import type { Point } from 'geometry'
 
-export class FillFeature implements FillFeatureSpec {
+export class FillFeature extends Feature implements FillFeatureSpec {
   type = 'fill' as const
   color?: number[] // webgl1
   opacity?: number[] // webgl1
@@ -37,27 +37,28 @@ export class FillFeature implements FillFeatureSpec {
     public workflow: FillWorkflowSpec,
     public layerGuide: FillWorkflowLayerGuide,
     public maskLayer: boolean,
-    public source: FillSource | MaskSource,
+    public source: FillSource | TileMaskSource,
     public mode: number,
     public count: number,
     public offset: number,
     public patternXY: Point,
     public patternWH: [w: number, h: number],
     public patternMovement: number,
-    public featureCode: number[] = [0],
+    public featureCode: number[],
     public tile: Tile,
     public parent?: Tile
-  ) {}
+  ) {
+    super(workflow, tile, layerGuide, featureCode, parent)
+  }
 
   draw (interactive = false): void {
+    super.draw(interactive)
     const { maskLayer, tile, parent, workflow } = this
     const { mask } = parent ?? tile
-    workflow.context.stencilFuncEqual(tile.tmpMaskID)
+    // draw
     if (maskLayer) workflow.drawMask(mask)
     else workflow.draw(this, interactive)
   }
-
-  destroy (): void {}
 
   duplicate (tile: Tile, parent?: Tile): FillFeature {
     const {
@@ -80,6 +81,7 @@ export class FillFeature implements FillFeatureSpec {
 }
 
 export default class FillWorkflow extends Workflow implements FillWorkflowSpec {
+  label = 'fill' as const
   declare uniforms: { [key in FillWorkflowUniforms]: WebGLUniformLocation }
   layerGuides = new Map<number, FillWorkflowLayerGuide>()
   constructor (context: Context) {
@@ -201,7 +203,7 @@ export default class FillWorkflow extends Workflow implements FillWorkflowSpec {
       vao
     }
 
-    context.cleanup() // flush vao
+    context.finish() // flush vao
 
     this.#buildFeatures(source, tile, new Float32Array(featureGuideBuffer))
   }
@@ -303,9 +305,11 @@ export default class FillWorkflow extends Workflow implements FillWorkflowSpec {
     }
   }
 
-  drawMask (mask: MaskSource): void {
-    const { gl } = this
-    const { count, offset, vao } = mask
+  drawMask (mask: TileMaskSource): void {
+    const { gl, context } = this
+    const { count, offset, vao, tile: { type } } = mask
+    if (type === 'S2') context.enableCullFace()
+    else context.disableCullFace()
     // bind vao & draw
     gl.bindVertexArray(vao)
     gl.drawElements(gl.TRIANGLE_STRIP, count, gl.UNSIGNED_INT, offset * 4)

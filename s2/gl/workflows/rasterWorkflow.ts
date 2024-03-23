@@ -1,4 +1,4 @@
-import Workflow from './workflow'
+import Workflow, { Feature } from './workflow'
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
 
 // WEBGL1
@@ -25,7 +25,7 @@ import type {
   Resampling
 } from 'style/style.spec'
 
-export class RasterFeature implements RasterFeatureSpec {
+export class RasterFeature extends Feature implements RasterFeatureSpec {
   type = 'raster' as const
   opacity?: number // webgl1
   saturation?: number // webgl1
@@ -38,15 +38,14 @@ export class RasterFeature implements RasterFeatureSpec {
     public tile: Tile,
     public fadeStartTime = Date.now(),
     public parent?: Tile
-  ) {}
-
-  draw (interactive = false): void {
-    const { tile, workflow } = this
-    workflow.context.stencilFuncEqual(tile.tmpMaskID)
-    workflow.draw(this, interactive)
+  ) {
+    super(workflow, tile, layerGuide, featureCode, parent)
   }
 
-  destroy (): void {}
+  draw (interactive = false): void {
+    super.draw(interactive)
+    this.workflow.draw(this, interactive)
+  }
 
   duplicate (tile: Tile, parent?: Tile): RasterFeature {
     const {
@@ -72,6 +71,7 @@ export class RasterFeature implements RasterFeatureSpec {
 }
 
 export default class RasterWorkflow extends Workflow implements RasterWorkflowSpec {
+  label = 'raster' as const
   curSample: 'none' | 'linear' | 'nearest' = 'none'
   layerGuides = new Map<number, RasterWorkflowLayerGuide>()
   declare uniforms: { [key in RasterWorkflowUniforms]: WebGLUniformLocation }
@@ -162,22 +162,21 @@ export default class RasterWorkflow extends Workflow implements RasterWorkflowSp
       const layerGuide = this.layerGuides.get(layerIndex)
       if (layerGuide === undefined) continue
       const feature = new RasterFeature(layerGuide, this, source, code, tile)
-      if (this.type === 1) {
-        feature.setWebGL1Attributes(code[0], code[1], code[2])
-      }
+      if (this.type === 1) feature.setWebGL1Attributes(code[0], code[1], code[2])
+      features.push(feature)
     }
 
     tile.addFeatures(features)
   }
 
   use (): void {
+    super.use()
     const { context } = this
     context.defaultBlend()
     context.enableDepthTest()
     context.enableCullFace()
     context.enableStencilTest()
     context.lessDepth()
-    super.use()
   }
 
   draw (featureGuide: RasterFeatureSpec, _interactive = false): void {

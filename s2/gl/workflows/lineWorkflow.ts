@@ -1,4 +1,4 @@
-import Workflow from './workflow'
+import Workflow, { Feature } from './workflow'
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
 import { buildDashImage } from 'style/color'
 
@@ -26,7 +26,7 @@ import type {
   LineWorkflowLayerGuide
 } from 'style/style.spec'
 
-export class LineFeature implements LineFeatureSpec {
+export class LineFeature extends Feature implements LineFeatureSpec {
   type = 'line' as const
   color?: ColorArray // webgl1
   opacity?: number // webgl1
@@ -42,15 +42,14 @@ export class LineFeature implements LineFeatureSpec {
     public featureCode: number[],
     public cap: number,
     public parent?: Tile
-  ) {}
-
-  draw (interactive = false): void {
-    const { tile, workflow } = this
-    workflow.context.stencilFuncEqual(tile.tmpMaskID)
-    workflow.draw(this, interactive)
+  ) {
+    super(workflow, tile, layerGuide, featureCode, parent)
   }
 
-  destroy (): void {}
+  draw (interactive = false): void {
+    super.draw(interactive)
+    this.workflow.draw(this, interactive)
+  }
 
   duplicate (tile: Tile, parent?: Tile): LineFeature {
     const {
@@ -79,6 +78,7 @@ export class LineFeature implements LineFeatureSpec {
 }
 
 export default class LineWorkflow extends Workflow implements LineWorkflowSpec {
+  label = 'line' as const
   curTexture = -1
   typeBuffer?: WebGLBuffer
   layerGuides = new Map<number, LineWorkflowLayerGuide>()
@@ -217,7 +217,7 @@ export default class LineWorkflow extends Workflow implements LineWorkflowSpec {
       // fillIDBuffer,
       vao
     }
-    context.cleanup() // flush vao
+    context.finish() // flush vao
 
     this.#buildFeatures(source, tile, new Float32Array(featureGuideBuffer))
   }
@@ -254,6 +254,7 @@ export default class LineWorkflow extends Workflow implements LineWorkflowSpec {
   }
 
   use (): void {
+    super.use()
     const { context } = this
     const { gl } = context
     // setup context
@@ -263,7 +264,6 @@ export default class LineWorkflow extends Workflow implements LineWorkflowSpec {
     context.enableStencilTest()
     context.lequalDepth()
     gl.activeTexture(gl.TEXTURE0)
-    super.use()
   }
 
   draw (featureGuide: LineFeatureSpec, _interactive = false): void {

@@ -24,7 +24,7 @@ import type {
   Features,
   GlyphFeature,
   HeatmapFeature,
-  SensorWorkflow,
+  // SensorWorkflow,
   Workflow,
   WorkflowImports,
   WorkflowKey,
@@ -47,8 +47,8 @@ export default class Painter implements PainterSpec {
     options: MapOptions
   ) {
     // build a context API
-    if (type === 2) this.context = new WebGL2Context(context as WebGL2RenderingContext, options)
-    else this.context = new WebGLContext(context as WebGLRenderingContext, options)
+    if (type === 2) this.context = new WebGL2Context(context as WebGL2RenderingContext, options, this)
+    else this.context = new WebGLContext(context as WebGLRenderingContext, options, this)
   }
 
   async prepare (): Promise<void> {}
@@ -93,8 +93,7 @@ export default class Painter implements PainterSpec {
         .then(async (res) => {
           if ('default' in res) {
             const { default: pModule } = res
-            // TODO: Figure out why eslint and tsc don't see an error but vscode does:
-            workflows[key] = await pModule(context)
+            workflows[key as 'sensor'] = await pModule(context)
           } else {
             workflows[key] = res
           }
@@ -123,28 +122,6 @@ export default class Painter implements PainterSpec {
     this.workflows.sensor?.injectTimeCache(timeCache)
   }
 
-  useWorkflow (workflowName: 'fill'): FillWorkflow
-  useWorkflow (workflowName: 'glyph'): GlyphWorkflow | undefined
-  useWorkflow (workflowName: 'heatmap'): HeatmapWorkflow | undefined
-  useWorkflow (workflowName: 'line'): LineWorkflow | undefined
-  useWorkflow (workflowName: 'point'): PointWorkflow | undefined
-  useWorkflow (workflowName: 'raster'): RasterWorkflow | undefined
-  useWorkflow (workflowName: 'hillshade'): HillshadeWorkflow | undefined
-  useWorkflow (workflowName: 'sensor'): SensorWorkflow | undefined
-  useWorkflow (workflowName: 'shade'): ShadeWorkflow | undefined
-  useWorkflow (workflowName: 'glyphFilter'): GlyphFilterWorkflow | undefined
-  useWorkflow (workflowName: 'background'): WallpaperWorkflow | SkyboxWorkflow | undefined
-  useWorkflow (workflowName: WorkflowKey): Workflow | undefined
-  useWorkflow (workflowName: WorkflowKey): Workflow | undefined {
-    const workflow = this.workflows[workflowName]
-    if (workflow === undefined && workflowName !== 'background') throw new Error(`Workflow ${workflowName} not found`)
-    if (this.curWorkflow !== workflowName) {
-      this.curWorkflow = workflowName
-      workflow?.use()
-    } else { workflow?.flush() }
-    return workflow
-  }
-
   resize (_width: number, _height: number): void {
     const { context } = this
     // If we are using the text workflow, update the text workflow's framebuffer component's sizes
@@ -161,9 +138,9 @@ export default class Painter implements PainterSpec {
   }
 
   paint (projector: Projector, tiles: Tile[]): void {
-    const { context } = this
-    // PREPARE PHASE
-    this.curWorkflow = undefined
+    const { context, workflows } = this
+    // reset the current workflow as undefined to ensure a new flush happens
+    context.resetWorkflow()
     // prep frame uniforms
     const { view, aspect } = projector
     const matrix = projector.getMatrix('m')
@@ -182,34 +159,36 @@ export default class Painter implements PainterSpec {
 
     // prep all tile's features to draw
     const features = allFeatures.filter(f => f.type !== 'heatmap')
+    // draw heatmap data if applicable, and a singular feature for the main render thread to draw the texture to the screen
+    const heatmapFeatures = allFeatures.filter((f): f is HeatmapFeature => f.type === 'heatmap')
 
-    // draw heatmap data if applicable
-    const heatmapFeatures = allFeatures.filter(f => f.type === 'heatmap') as HeatmapFeature[]
-    if (heatmapFeatures.length > 0) features.push(this.paintHeatmap(heatmapFeatures))
+    // compute heatmap data
+    const hfs = workflows.heatmap?.textureDraw(heatmapFeatures)
+    if (hfs !== undefined) features.push(...hfs)
     // sort features
     features.sort(featureSort)
     // prep glyph features for drawing box filters
-    const glyphFeatures = features.filter(({ type, layerGuide }) => type === 'glyph' && !layerGuide.overdraw) as GlyphFeature[]
-    // use text boxes to filter out overlap
-    if (glyphFeatures.length > 0) this.paintGlyphFilter(glyphFeatures)
-    // return to our default framebuffer
-    context.bindMainBuffer()
-    // clear main buffer
-    context.newScene()
+    const glyphFeatures = features.filter((f): f is GlyphFeature => f.type === 'glyph')
+    workflows.glyph?.computeFilters(glyphFeatures)
 
     // DRAW PHASE
-    // prep masks
-    this.paintMasks(tiles)
+    // setup for the next frame
+    context.newScene()
+    // draw masks
+    context.enableMaskTest()
+    for (const { mask } of tiles) mask.draw()
+    context.flushMask()
     // draw the wallpaper
-    this.useWorkflow('background')?.draw(projector)
+    workflows.background?.draw(projector)
     // paint opaque fills
     const opaqueFillFeatures = features.filter(f => f.layerGuide.opaque).reverse()
-    this.paintFeatures(opaqueFillFeatures)
+    for (const feature of opaqueFillFeatures) feature.draw()
     // paint features that are potentially transparent
     const residualFeatures = features.filter(f => !(f.layerGuide.opaque ?? false))
-    this.paintFeatures(residualFeatures)
-    // cleanup
-    context.cleanup()
+    for (const feature of residualFeatures) feature.draw()
+
+    // finish
+    context.finish()
   }
 
   computeInteractive (tiles: Tile[]): void {
@@ -221,93 +200,8 @@ export default class Painter implements PainterSpec {
     if (interactiveFeatures.length > 0) {
       // prepare & compute
       this.context.clearInteractBuffer()
-      this.paintFeatures(interactiveFeatures, true)
+      for (const f of interactiveFeatures) f.draw(true)
     }
-  }
-
-  paintMasks (tiles: Tile[]): void {
-    // get context
-    const { context } = this
-    // prep the fill workflow
-    const fillWorkflow = this.useWorkflow('fill')
-    // set proper states
-    context.enableMaskTest()
-
-    // create mask for each tile
-    for (const tile of tiles) {
-      const { type, tmpMaskID, mask } = tile
-      // set culling
-      if (type === 'S2') context.enableCullFace()
-      else context.disableCullFace()
-      // set tile uniforms
-      fillWorkflow.setTileUniforms(tile)
-      // set correct tile mask
-      context.stencilFuncAlways(tmpMaskID)
-      // draw mask
-      fillWorkflow.drawMask(mask)
-    }
-    // lock in the stencil, draw colors again
-    context.flushMask()
-  }
-
-  paintFeatures (features: Features[], interactive = false): void {
-    if (features.length === 0) return
-    // setup context
-    const { context } = this
-    // setup variables
-    let curLayer = -1
-    let workflow: Workflow | undefined
-    // run through the features, and upon tile, layer, or workflow change, adjust accordingly
-    for (const feature of features) {
-      const { tile, parent, layerGuide: { layerIndex, layerCode, lch }, type } = feature
-      const { tmpMaskID } = tile
-      // set workflow
-      workflow = this.useWorkflow(type)
-      if (workflow === undefined) throw new Error(`Workflow ${type} not found`)
-      // set stencil
-      context.stencilFuncEqual(tmpMaskID)
-      // update layerCode if the current layer has changed
-      if (curLayer !== layerIndex) {
-        // now setup new layercode
-        curLayer = layerIndex
-        workflow.setLayerCode(layerCode, lch)
-        // set interactive if applicable
-        workflow.setInteractive(interactive)
-      }
-      // adjust tile uniforms
-      workflow.setTileUniforms(parent ?? tile)
-      // draw (just ignore types... they are handled in the workflow)
-      workflow.draw(feature as never, interactive)
-    }
-  }
-
-  paintHeatmap (features: HeatmapFeature[]): HeatmapFeature {
-    // grab heatmap workflow
-    const heatmapWorkflow = this.useWorkflow('heatmap')
-    if (heatmapWorkflow === undefined) throw new Error('Heatmap workflow not found')
-    // setup texture draws
-    heatmapWorkflow.setupTextureDraw()
-    // draw all features
-    for (const feature of features) {
-      const { tile, parent, layerGuide: { layerCode, lch } } = feature
-      // set tile uniforms & layercode, bind vao, and draw
-      heatmapWorkflow.setTileUniforms(parent ?? tile)
-      heatmapWorkflow.setLayerCode(layerCode, lch)
-      heatmapWorkflow.drawTexture(feature)
-    }
-    // return a "featureGuide" to draw to the screen
-    return features[0]
-  }
-
-  paintGlyphFilter (glyphFeatures: GlyphFeature[]): void {
-    const glyphFilterWorkflow = this.useWorkflow('glyphFilter')
-    if (glyphFilterWorkflow === undefined) throw new Error('GlyphFilter workflow not found')
-    // Step 1: draw quads
-    glyphFilterWorkflow.bindQuadFrameBuffer()
-    this.#paintGlyphFilter(glyphFilterWorkflow, glyphFeatures, 1)
-    // Step 2: draw result points
-    glyphFilterWorkflow.bindResultFramebuffer()
-    this.#paintGlyphFilter(glyphFilterWorkflow, glyphFeatures, 2)
   }
 
   async getScreen (): Promise<Uint8ClampedArray> {
@@ -320,38 +214,12 @@ export default class Painter implements PainterSpec {
     return pixels
   }
 
-  #paintGlyphFilter (
-    glyphFilterWorkflow: GlyphFilterWorkflow,
-    glyphFeatures: GlyphFeature[],
-    mode: 1 | 2
-  ): void {
-    const { context } = this
-    const { gl } = context
-    let curLayer = -1
-    // set mode
-    glyphFilterWorkflow.setMode(mode)
-    // draw each feature
-    for (const glyphFeature of glyphFeatures) {
-      const { tile, parent, layerGuide: { layerIndex, layerCode, lch }, source } = glyphFeature
-      // update layerIndex
-      if (curLayer !== layerIndex) {
-        curLayer = layerIndex
-        glyphFilterWorkflow.setLayerCode(layerCode, lch)
-      }
-      glyphFilterWorkflow.setTileUniforms(parent ?? tile)
-      gl.bindVertexArray(source.filterVAO)
-      // draw
-      glyphFilterWorkflow.draw(glyphFeature, false)
-    }
-  }
-
   injectGlyphImages (maxHeight: number, images: GlyphImages): void {
     this.context.injectImages(maxHeight, images)
   }
 
-  injectSpriteImage (data: SpriteImageMessage): boolean {
+  injectSpriteImage (data: SpriteImageMessage): void {
     this.context.injectSpriteImage(data)
-    return true
   }
 
   setColorMode (mode: ColorMode): void {

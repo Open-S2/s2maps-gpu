@@ -120,13 +120,14 @@ export default class WallpaperWorkflow implements WallpaperWorkflowSpec {
   }
 
   draw (projector: Projector): void {
+    const { context } = this
     // get current source data
-    const { passEncoder } = this.context
+    const { passEncoder } = context
 
     // update scale if needed
     if (projector.dirty) this.#updateScale(projector)
     // setup pipeline, bind groups, & buffers
-    this.context.setRenderPipeline(this.pipeline)
+    context.setRenderPipeline(this.pipeline)
     passEncoder.setBindGroup(1, this.#bindGroup)
     // draw the quad
     passEncoder.draw(6)

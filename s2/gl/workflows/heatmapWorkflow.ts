@@ -1,4 +1,4 @@
-import Workflow from './workflow'
+import Workflow, { Feature } from './workflow'
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
 import { buildColorRamp } from 'style/color'
 
@@ -26,7 +26,7 @@ import type {
   HeatmapWorkflowUniforms
 } from './workflow.spec'
 
-export class HeatmapFeature implements HeatmapFeatureSpec {
+export class HeatmapFeature extends Feature implements HeatmapFeatureSpec {
   type = 'heatmap' as const
   radiusLo?: number // webgl1
   opacityLo?: number // webgl1
@@ -44,15 +44,28 @@ export class HeatmapFeature implements HeatmapFeatureSpec {
     public featureCode: number[] = [0],
     public parent?: Tile,
     public bounds?: BBox
-  ) {}
-
-  draw (interactive?: boolean): void {
-    const { tile, workflow } = this
-    workflow.context.stencilFuncEqual(tile.tmpMaskID)
-    workflow.draw(this, interactive)
+  ) {
+    super(workflow, tile, layerGuide, featureCode, parent)
   }
 
-  destroy (): void {}
+  draw (interactive?: boolean): void {
+    super.draw(interactive)
+    this.workflow.draw(this, interactive)
+  }
+
+  drawTexture (): void {
+    const { tile, parent, workflow, layerGuide } = this
+    const { context } = workflow
+    const { layerIndex, layerCode, lch } = layerGuide
+    // ensure the tile information is set
+    workflow.setTileUniforms(tile, parent)
+    // setup stencil
+    context.stencilFuncEqual(tile.tmpMaskID)
+    // set layer code
+    workflow.setLayerCode(layerIndex, layerCode, lch)
+    // tell the workflow to draw the texture
+    this.workflow.drawToTexture(this)
+  }
 
   duplicate (tile: Tile, parent?: Tile, bounds?: BBox): HeatmapFeature {
     const {
@@ -85,6 +98,7 @@ export class HeatmapFeature implements HeatmapFeatureSpec {
 }
 
 export default class HeatmapWorkflow extends Workflow implements HeatmapWorkflowSpec {
+  label = 'heatmap' as const
   texture!: WebGLTexture
   nullTextureA!: WebGLTexture
   nullTextureB!: WebGLTexture
@@ -148,7 +162,7 @@ export default class HeatmapWorkflow extends Workflow implements HeatmapWorkflow
       vao
     }
 
-    context.cleanup() // flush vao
+    context.finish() // flush vao
 
     this.#buildFeatures(source, tile, new Float32Array(featureGuideBuffer))
   }
@@ -255,6 +269,9 @@ export default class HeatmapWorkflow extends Workflow implements HeatmapWorkflow
 
   setupTextureDraw (): void {
     const { gl, context, uniforms } = this
+    // set workflow. Will run use, but will also flush.
+    context.setWorkflow(this, false)
+    super.use()
     // attach and clear framebuffer
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer)
     // ensure null textures
@@ -272,22 +289,32 @@ export default class HeatmapWorkflow extends Workflow implements HeatmapWorkflow
     context.disableStencilTest()
   }
 
-  use (): void {
-    super.use()
-    const { gl, context, uniforms } = this
-    // set draw state
-    gl.uniform1f(uniforms.uDrawState, 1)
-    // revert back to texture 0
-    gl.activeTexture(gl.TEXTURE0)
-    // setup context
-    context.defaultBlend()
-    context.enableDepthTest()
-    context.enableStencilTest()
-    context.disableCullFace()
-    context.lessDepth()
+  textureDraw (features: HeatmapFeatureSpec[]): HeatmapFeatureSpec[] | undefined {
+    if (features.length === 0) return undefined
+    // setup texture draws
+    this.setupTextureDraw()
+    // store a feature per layerIndex
+    const output: HeatmapFeatureSpec[] = []
+    // group by layerIndex
+    const layerFeatures = new Map<number, HeatmapFeatureSpec[]>()
+    for (const feature of features) {
+      const { layerIndex } = feature.layerGuide
+      const layer = layerFeatures.get(layerIndex)
+      if (layer === undefined) {
+        layerFeatures.set(layerIndex, [feature])
+        output.push(feature)
+      } else layer.push(feature)
+    }
+
+    // draw each layer to their own render target
+    for (const [, features] of layerFeatures.entries()) {
+      for (const feature of features) feature.drawTexture()
+    }
+
+    return output
   }
 
-  drawTexture (featureGuide: HeatmapFeatureSpec): void {
+  drawToTexture (featureGuide: HeatmapFeatureSpec): void {
     // grab context
     const { context, uniforms } = this
     const { gl, type, defaultBounds } = context
@@ -315,6 +342,21 @@ export default class HeatmapWorkflow extends Workflow implements HeatmapWorkflow
     gl.bindBuffer(gl.ARRAY_BUFFER, weightBuffer)
     gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 4, offset * 4)
     gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, count)
+  }
+
+  use (): void {
+    super.use()
+    const { gl, context, uniforms } = this
+    // set draw state
+    gl.uniform1f(uniforms.uDrawState, 1)
+    // revert back to texture 0
+    gl.activeTexture(gl.TEXTURE0)
+    // setup context
+    context.defaultBlend()
+    context.enableDepthTest()
+    context.enableStencilTest()
+    context.disableCullFace()
+    context.lessDepth()
   }
 
   draw (featureGuide: HeatmapFeatureSpec, _interactive = false): void {

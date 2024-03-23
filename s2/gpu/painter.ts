@@ -14,7 +14,7 @@ import {
 
 import type { MapOptions } from 'ui/s2mapUI'
 import type {
-  FeatureBase,
+  Features,
   GlyphFeature,
   HeatmapFeature,
   Workflow,
@@ -168,7 +168,7 @@ export default class Painter {
     }
   }
 
-  #computeInteractive (features: FeatureBase[]): void {
+  #computeInteractive (features: Features[]): void {
     const { device, frameBufferBindGroup } = this.context
     // prepare
     const commandEncoder = device.createCommandEncoder()
@@ -188,7 +188,7 @@ export default class Painter {
   }
 }
 
-function featureSort (a: FeatureBase, b: FeatureBase): number {
+function featureSort (a: Features, b: Features): number {
   // first check if the layer is the same
   let diff = a.layerGuide.layerIndex - b.layerGuide.layerIndex
   if (diff !== 0) return diff

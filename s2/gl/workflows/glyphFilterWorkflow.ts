@@ -15,6 +15,7 @@ import type {
 } from './workflow.spec'
 
 export default class GlyphFilterWorkflow extends Workflow implements GlyphFilterWorkflowSpec {
+  label = 'glyphFilter' as const
   quadTexture!: WebGLTexture
   resultTexture!: WebGLTexture
   quadFramebuffer!: WebGLFramebuffer

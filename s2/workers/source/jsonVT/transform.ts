@@ -70,7 +70,7 @@ export default function transformTile (tile: JSONTile, extent: number): JSONVect
 
         feature.geometry = newGeometry
       }
-      layer.features = layer.features.filter(f => f.geometry.length > 0) as JSONVectorFeature[] & VTFeature[]
+      layer.features = layer.features.filter((f): f is JSONVectorFeature & VTFeature => f.geometry.length > 0)
     }
 
     tile.transformed = true

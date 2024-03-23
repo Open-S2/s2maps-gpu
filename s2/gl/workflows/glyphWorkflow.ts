@@ -1,4 +1,4 @@
-import Workflow from './workflow'
+import Workflow, { Feature } from './workflow'
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
 
 // WEBGL1
@@ -27,7 +27,7 @@ import type {
 } from './workflow.spec'
 import type { BBox } from 'geometry'
 
-export class GlyphFeature implements GlyphFeatureSpec {
+export class GlyphFeature extends Feature implements GlyphFeatureSpec {
   type = 'glyph' as const
   size?: number // webgl1
   fill?: ColorArray // webgl1
@@ -46,15 +46,14 @@ export class GlyphFeature implements GlyphFeatureSpec {
     public featureCode: number[],
     public parent?: Tile,
     public bounds?: BBox
-  ) {}
-
-  draw (interactive = false): void {
-    const { tile, workflow } = this
-    workflow.context.stencilFuncEqual(tile.tmpMaskID)
-    workflow.draw(this, interactive)
+  ) {
+    super(workflow, tile, layerGuide, featureCode, parent, bounds)
   }
 
-  destroy (): void {}
+  draw (interactive = false): void {
+    super.draw(interactive)
+    this.workflow.draw(this, interactive)
+  }
 
   duplicate (tile: Tile, parent?: Tile, bounds?: BBox): GlyphFeature {
     const {
@@ -83,6 +82,7 @@ export class GlyphFeature implements GlyphFeatureSpec {
 }
 
 export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec {
+  label = 'glyph' as const
   stepBuffer?: WebGLBuffer
   uvBuffer?: WebGLBuffer
   glyphFilterWorkflow!: GlyphFilterWorkflow
@@ -192,7 +192,7 @@ export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec
       vao
     }
     // cleanup
-    context.cleanup()
+    context.finish()
     this.#buildFeatures(source, tile, new Float32Array(featureGuideBuffer))
   }
 
@@ -318,7 +318,40 @@ export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec
     return layerDefinition
   }
 
+  computeFilters (glyphFeatures: GlyphFeatureSpec[]): void {
+    const { glyphFilterWorkflow } = this
+    glyphFilterWorkflow.use()
+    // Step 1: draw quads
+    glyphFilterWorkflow.bindQuadFrameBuffer()
+    this.#computeFilters(glyphFeatures, 1)
+    // Step 2: draw result points
+    glyphFilterWorkflow.bindResultFramebuffer()
+    this.#computeFilters(glyphFeatures, 2)
+  }
+
+  #computeFilters (glyphFeatures: GlyphFeatureSpec[], mode: 1 | 2): void {
+    const { context, glyphFilterWorkflow } = this
+    const { gl } = context
+    let curLayer = -1
+    // set mode
+    glyphFilterWorkflow.setMode(mode)
+    // draw each feature
+    for (const glyphFeature of glyphFeatures) {
+      const { tile, parent, layerGuide: { layerIndex, layerCode, lch }, source } = glyphFeature
+      // update layerIndex
+      if (curLayer !== layerIndex) {
+        curLayer = layerIndex
+        glyphFilterWorkflow.setLayerCode(layerIndex, layerCode, lch)
+      }
+      glyphFilterWorkflow.setTileUniforms(parent ?? tile)
+      gl.bindVertexArray(source.filterVAO)
+      // draw
+      glyphFilterWorkflow.draw(glyphFeature, false)
+    }
+  }
+
   use (): void {
+    super.use()
     const { context, uniforms } = this
     const { gl, sharedFBO } = context
     // prepare context
@@ -326,7 +359,6 @@ export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec
     context.enableDepthTest()
     context.disableCullFace()
     context.disableStencilTest()
-    super.use()
     // set the texture size uniform
     gl.uniform2fv(uniforms.uTexSize, sharedFBO.texSize)
   }

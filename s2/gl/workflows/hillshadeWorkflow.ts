@@ -1,4 +1,4 @@
-import Workflow from './workflow'
+import Workflow, { Feature } from './workflow'
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
 
 // WEBGL1
@@ -26,7 +26,7 @@ import type {
   RasterSource
 } from './workflow.spec'
 
-export class HilllshadeFeature implements HillshadeFeatureSpec {
+export class HilllshadeFeature extends Feature implements HillshadeFeatureSpec {
   type = 'hillshade' as const
   featureCode: number[] = [0]
   opacity?: number // webgl1
@@ -42,15 +42,14 @@ export class HilllshadeFeature implements HillshadeFeatureSpec {
     public source: RasterSource,
     public fadeStartTime = Date.now(),
     public parent?: Tile
-  ) {}
-
-  draw (interactive = false): void {
-    const { tile, workflow } = this
-    workflow.context.stencilFuncEqual(tile.tmpMaskID)
-    workflow.draw(this, interactive)
+  ) {
+    super(workflow, tile, layerGuide, [0], parent)
   }
 
-  destroy (): void {}
+  draw (interactive = false): void {
+    super.draw(interactive)
+    this.workflow.draw(this, interactive)
+  }
 
   duplicate (tile: Tile, parent?: Tile): HilllshadeFeature {
     const {
@@ -93,6 +92,7 @@ export class HilllshadeFeature implements HillshadeFeatureSpec {
 }
 
 export default class HillshadeWorkflow extends Workflow implements HillshadeWorkflowSpec {
+  label = 'hillshade' as const
   layerGuides = new Map<number, HillshadeWorkflowLayerGuide>()
   declare uniforms: { [key in HillshadeWorkflowUniforms]: WebGLUniformLocation }
   constructor (context: Context) {

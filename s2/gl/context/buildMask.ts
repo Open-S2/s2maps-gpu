@@ -43,7 +43,7 @@ export default function buildMask (division: number, context: WebGL2Context | We
   // Create an index buffer
   const indexBuffer = context.bindElementArray(indexArray)
   // flush vao
-  context.cleanup()
+  context.finish()
 
   // return the mask
   return {

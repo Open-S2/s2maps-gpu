@@ -21,6 +21,7 @@ import type Camera from 'ui/camera'
 import type Projector from 'ui/camera/projector'
 
 export default class SkyboxWorkflow extends Workflow implements SkyboxWorkflowSpec {
+  label = 'skybox' as const
   cubeMap: WebGLTexture
   facesReady = 0
   ready = false
@@ -108,8 +109,8 @@ export default class SkyboxWorkflow extends Workflow implements SkyboxWorkflowSp
   flush (): void { /* no-op */ }
 
   use (): void {
-    const { context } = this
     super.use()
+    const { context } = this
     // ignore z-fighting and only pass where stencil is 0
     context.defaultBlend()
     context.disableCullFace()
@@ -121,13 +122,15 @@ export default class SkyboxWorkflow extends Workflow implements SkyboxWorkflowSp
   draw (projector: Projector): void {
     // setup variables
     const { gl, context, ready, cubeMap } = this
+    // let the context know the current workflow
+    context.setWorkflow(this)
     // if ready, time to draw
     if (ready) {
       // bind the texture cube map
       gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubeMap)
       // update  matrix if necessary
       if (projector.dirty) this.#updateMatrix(projector)
-      // Draw the geometry.
+      // Draw the skybox
       context.drawQuad()
     }
   }

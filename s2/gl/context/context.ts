@@ -6,7 +6,9 @@ import type { ColorArray } from 'style/color'
 import type { BBox } from 'geometry'
 import type { GlyphImages } from 'workers/source/glyphSource'
 import type { SpriteImageMessage } from 'workers/worker.spec'
-import type { MaskSource } from '../workflows/workflow.spec'
+import type { MaskSource, TileMaskSource, Workflow } from '../workflows/workflow.spec'
+import type { TileGL as Tile } from 'source/tile.spec'
+import type { Painter } from '../painter.spec'
 
 export interface FBO {
   width: number
@@ -23,6 +25,7 @@ const DEPTH_ESPILON = 1 / Math.pow(2, 16)
 
 export default class Context {
   gl: WebGLRenderingContext | WebGL2RenderingContext
+  painter: Painter
   type: GPUType = 1
   projection: Projection = 'S2'
   presentation: { width: number, height: number } = { width: 0, height: 0 }
@@ -33,10 +36,12 @@ export default class Context {
   cullState: boolean
   stencilState: boolean
   blendState: boolean
+  stencilRef = -1
   blendMode = -1 // 0 -> default ; 1 ->
   zTestMode = -1 // 0 -> always ; 1 -> less ; 2 -> lessThenOrEqual
   zLow = 0
   zHigh = 1
+  currWorkflow: undefined | Workflow = undefined
   clearColorRGBA: ColorArray = [0, 0, 0, 0]
   featurePoint: Uint8Array = new Uint8Array(4)
   masks = new Map<number, MaskSource>() // <zoom, mask>
@@ -48,9 +53,14 @@ export default class Context {
   defaultBounds: BBox = [0, 0, 1, 1]
   nullTexture!: WebGLTexture
   sharedFBO: FBO
-  constructor (context: WebGLRenderingContext | WebGL2RenderingContext, options: MapOptions) {
+  constructor (
+    context: WebGLRenderingContext | WebGL2RenderingContext,
+    options: MapOptions,
+    painter: Painter
+  ) {
     const { canvasMultiplier } = options
     const gl = this.gl = context
+    this.painter = painter
     this.devicePixelRatio = canvasMultiplier ?? 1
     this.#buildNullTexture()
     this.sharedFBO = this.#buildFramebuffer(200)
@@ -301,15 +311,32 @@ export default class Context {
   // so division is less useful.
   // 0, 1 => 16  ;  2, 3 => 8  ;  4, 5 => 4  ;  6, 7 => 2  ;  8+ => 1
   // context stores masks so we don't keep recreating them and put excess stress and memory on the GPU
-  getMask (division: number): MaskSource {
+  getMask (division: number, tile: Tile): TileMaskSource {
     const { masks } = this
     // check if we have a mask for this level
-    const mask = masks.get(division)
-    if (mask !== undefined) return mask
-    // otherwise, create a new mask
-    const newMask: MaskSource = buildMask(division, this)
-    masks.set(division, newMask)
-    return newMask
+    let mask = masks.get(division)
+    if (mask === undefined) {
+      mask = buildMask(division, this)
+      masks.set(division, mask)
+    }
+
+    const tileMaskSource: TileMaskSource = {
+      ...mask,
+      tile,
+      draw: () => {
+        const { fill } = this.painter.workflows
+        if (fill === undefined) return
+        // let the context know the current workflow
+        this.setWorkflow(fill)
+        this.stencilFuncAlways(tile.tmpMaskID)
+        // ensure the tile information is set
+        fill.setTileUniforms(tile)
+        fill.drawMask(tileMaskSource)
+      },
+      destroy: () => {}
+    }
+
+    return tileMaskSource
   }
 
   drawQuad (): void {
@@ -338,10 +365,24 @@ export default class Context {
 
   newScene (): void {
     const { gl } = this
+    // ensure we are attached to the main buffer
+    this.bindMainBuffer()
+    // prep context variables
     this.clearColor()
+    this.stencilRef = -1
     gl.clearStencil(0x0)
     gl.clearDepth(1)
     gl.clear(gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT | gl.COLOR_BUFFER_BIT)
+  }
+
+  resetWorkflow (): void {
+    this.currWorkflow = undefined
+  }
+
+  setWorkflow (workflow: Workflow, use = true): void {
+    if (this.currWorkflow?.label === workflow.label) return
+    if (use) workflow?.use()
+    this.currWorkflow = workflow
   }
 
   clearInteractBuffer (): void {
@@ -576,11 +617,15 @@ export default class Context {
 
   stencilFuncAlways (ref: number): void {
     const { gl } = this
+    if (this.stencilRef === ref) return
+    this.stencilRef = ref
     gl.stencilFunc(gl.ALWAYS, ref, 0xFF)
   }
 
   stencilFuncEqual (ref: number): void {
     const { gl } = this
+    if (this.stencilRef === ref) return
+    this.stencilRef = ref
     gl.stencilFunc(gl.EQUAL, ref, 0xFF)
   }
 
@@ -704,7 +749,7 @@ export default class Context {
 
   /** CLEANUP **/
 
-  cleanup (): void {
+  finish (): void {
     const { gl } = this
     gl.bindVertexArray(null)
     // gl.bindBuffer(gl.ARRAY_BUFFER, null)

@@ -1,4 +1,4 @@
-import Workflow from './workflow'
+import Workflow, { Feature } from './workflow'
 
 import vert1 from '../shaders/shade1.vertex.glsl'
 import frag1 from '../shaders/shade1.fragment.glsl'
@@ -21,7 +21,7 @@ import type {
 } from 'style/style.spec'
 import type { TileGL as Tile } from 'source/tile.spec'
 
-export class ShadeFeature implements ShadeFeatureSpec {
+export class ShadeFeature extends Feature implements ShadeFeatureSpec {
   type = 'shade' as const
   maskLayer = true
   constructor (
@@ -30,15 +30,14 @@ export class ShadeFeature implements ShadeFeatureSpec {
     public source: MaskSource,
     public featureCode: number[],
     public tile: Tile
-  ) {}
-
-  draw (): void {
-    const { tile, workflow } = this
-    workflow.context.stencilFuncEqual(tile.tmpMaskID)
-    workflow.draw(this)
+  ) {
+    super(workflow, tile, layerGuide, featureCode)
   }
 
-  destroy (): void {}
+  draw (): void {
+    super.draw()
+    this.workflow.draw(this)
+  }
 
   duplicate (tile: Tile): ShadeFeature {
     const { layerGuide, workflow, source, featureCode } = this
@@ -49,6 +48,7 @@ export class ShadeFeature implements ShadeFeatureSpec {
 }
 
 export default class ShadeWorkflow extends Workflow implements ShadeWorkflowSpec {
+  label = 'shade' as const
   declare uniforms: { [key in ShadeWorkflowUniforms]: WebGLUniformLocation }
   constructor (context: Context) {
     // get gl from context
@@ -94,6 +94,7 @@ export default class ShadeWorkflow extends Workflow implements ShadeWorkflowSpec
   }
 
   use (): void {
+    super.use()
     // grab context & prep
     const { context } = this
     context.enableCullFace()
@@ -101,10 +102,9 @@ export default class ShadeWorkflow extends Workflow implements ShadeWorkflowSpec
     context.disableStencilTest()
     context.shadeBlend()
     context.lessDepth()
-    super.use()
   }
 
-  setLayerCode (_layerCode: number[], _lch = false): void {
+  setLayerCode (): void {
     // noop
   }
 

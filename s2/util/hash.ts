@@ -24,7 +24,7 @@ export function parseHash (): View {
   // corner case: no hash
   if (hash === undefined) return view
   // parse hash
-  const [zoom, lon, lat, bearing, pitch] = hash.split('/') as [string, string, string, string | undefined, string | undefined]
+  const [zoom, lon, lat, bearing, pitch] = hash.split('/') as [zoom: string, lon: string, lat: string, bearing: string | undefined, pitch: string | undefined]
   view.zoom = parseFloat(zoom)
   view.lon = parseFloat(lon)
   view.lat = parseFloat(lat)

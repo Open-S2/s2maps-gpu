@@ -57,17 +57,11 @@ export interface MaskSource {
   count: number
   offset: number
 }
-export interface TileMaskSource {
-  type: 'mask'
-  vertexBuffer: GPUBuffer
-  indexBuffer: GPUBuffer
-  codeTypeBuffer: GPUBuffer
+export interface TileMaskSource extends MaskSource {
   bindGroup: GPUBindGroup
   fillPatternBindGroup: GPUBindGroup
   uniformBuffer: GPUBuffer
   positionBuffer: GPUBuffer
-  count: number
-  offset: number
   draw: () => void
   destroy: () => void
 }

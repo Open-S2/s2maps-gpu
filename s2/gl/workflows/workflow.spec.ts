@@ -73,6 +73,12 @@ export interface MaskSource {
   vao: WebGLVertexArrayObject
 }
 
+export interface TileMaskSource extends MaskSource {
+  tile: Tile
+  draw: () => void
+  destroy: () => void
+}
+
 export interface FillSource {
   type: 'fill'
   vertexBuffer: WebGLBuffer
@@ -133,6 +139,7 @@ export type LayerGuides = FillWorkflowLayerGuide | GlyphWorkflowLayerGuide | Hea
 /* FEATURE GUIDES */
 
 export interface FeatureBase {
+  workflow: Workflow
   tile: Tile
   parent?: Tile
   layerGuide: LayerGuides
@@ -148,7 +155,7 @@ export interface FillFeature extends FeatureBase {
   type: 'fill'
   maskLayer: boolean
   workflow: FillWorkflow
-  source: FillSource | MaskSource
+  source: FillSource | TileMaskSource
   layerGuide: FillWorkflowLayerGuide
   count: number
   offset: number
@@ -192,6 +199,7 @@ export interface HeatmapFeature extends FeatureBase {
   radiusHi?: number // webgl1
   opacityHi?: number // webgl1
   intensityHi?: number // webgl1
+  drawTexture: () => void
 }
 
 // ** LINE **
@@ -325,7 +333,7 @@ export interface WorkflowSpec {
   injectFrameUniforms: (matrix: Float32Array, view: Float32Array, aspect: Point) => void
   flush: () => void
   // set uniforms:
-  setTileUniforms: (tile: Tile) => void
+  setTileUniforms: (tile: Tile, parent?: Tile) => void
   setDevicePixelRatio: (ratio: number) => void
   setColorBlindMode: (colorMode: ColorMode) => void
   setMatrix: (matrix: Float32Array) => void
@@ -333,13 +341,14 @@ export interface WorkflowSpec {
   setAspect: (aspect: Point) => void
   setFaceST: (faceST: number[]) => void
   setTilePos: (bottomTop: Float32Array) => void
-  setLayerCode: (layerCode: number[], lch: boolean) => void
+  setLayerCode: (layerIndex: number, layerCode: number[], lch: boolean) => void
   setInteractive: (interactive: boolean) => void
   setFeatureCode: (featureCode: number[]) => void
   setMode: (mode: number) => void
 }
 
 export interface FillWorkflow extends WorkflowSpec {
+  label: 'fill'
   uniforms: { [key in FillWorkflowUniforms]: WebGLUniformLocation }
   layerGuides: Map<number, FillWorkflowLayerGuide>
 
@@ -347,10 +356,11 @@ export interface FillWorkflow extends WorkflowSpec {
   buildSource: (fillData: FillData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: FillStyle) => FillDefinition
   draw: (featureGuide: FillFeature, interactive?: boolean) => void
-  drawMask: (mask: MaskSource) => void
+  drawMask: (mask: TileMaskSource) => void
 }
 
 export interface GlyphFilterWorkflow extends WorkflowSpec {
+  label: 'glyphFilter'
   quadTexture: WebGLTexture
   resultTexture: WebGLTexture
   quadFramebuffer: WebGLFramebuffer
@@ -368,6 +378,7 @@ export interface GlyphFilterWorkflow extends WorkflowSpec {
 }
 
 export interface GlyphWorkflow extends WorkflowSpec {
+  label: 'glyph'
   stepBuffer?: WebGLBuffer
   uvBuffer?: WebGLBuffer
   glyphFilterWorkflow: GlyphFilterWorkflow
@@ -377,10 +388,12 @@ export interface GlyphWorkflow extends WorkflowSpec {
   injectFilter: (glyphFilterWorkflow: GlyphFilterWorkflow) => void
   buildSource: (glyphData: GlyphData, tile: Tile) => void
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: GlyphStyle) => GlyphDefinition
+  computeFilters: (glyphFeatures: GlyphFeature[]) => void
   draw: (featureGuide: GlyphFeature, interactive: boolean) => void
 }
 
 export interface HeatmapWorkflow extends WorkflowSpec {
+  label: 'heatmap'
   texture: WebGLTexture
   nullTextureA: WebGLTexture
   nullTextureB: WebGLTexture
@@ -393,11 +406,13 @@ export interface HeatmapWorkflow extends WorkflowSpec {
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: HeatmapStyle) => HeatmapDefinition
   setupTextureDraw: () => void
   resize: () => void
-  drawTexture: (featureGuide: HeatmapFeature) => void
+  textureDraw: (featureGuides: HeatmapFeature[]) => HeatmapFeature[] | undefined
+  drawToTexture: (featureGuide: HeatmapFeature) => void
   draw: (featureGuide: HeatmapFeature) => void
 }
 
 export interface LineWorkflow extends WorkflowSpec {
+  label: 'line'
   curTexture: number
   typeBuffer?: WebGLBuffer
   layerGuides: Map<number, LineWorkflowLayerGuide>
@@ -409,6 +424,7 @@ export interface LineWorkflow extends WorkflowSpec {
 }
 
 export interface PointWorkflow extends WorkflowSpec {
+  label: 'point'
   extentBuffer?: WebGLBuffer
   layerGuides: Map<number, PointWorkflowLayerGuide>
   uniforms: { [key in PointWorkflowUniforms]: WebGLUniformLocation }
@@ -419,6 +435,7 @@ export interface PointWorkflow extends WorkflowSpec {
 }
 
 export interface RasterWorkflow extends WorkflowSpec {
+  label: 'raster'
   curSample: 'none' | 'linear' | 'nearest'
   layerGuides: Map<number, RasterWorkflowLayerGuide>
   uniforms: { [key in RasterWorkflowUniforms]: WebGLUniformLocation }
@@ -429,6 +446,7 @@ export interface RasterWorkflow extends WorkflowSpec {
 }
 
 export interface HillshadeWorkflow extends WorkflowSpec {
+  label: 'hillshade'
   layerGuides: Map<number, HillshadeWorkflowLayerGuide>
   uniforms: { [key in HillshadeWorkflowUniforms]: WebGLUniformLocation }
 
@@ -438,6 +456,7 @@ export interface HillshadeWorkflow extends WorkflowSpec {
 }
 
 export interface SensorWorkflow extends WorkflowSpec {
+  label: 'sensor'
   nullTexture: WebGLTexture
   timeCache?: TimeCache
   layerGuides: Map<number, SensorWorkflowLayerGuide>
@@ -450,6 +469,7 @@ export interface SensorWorkflow extends WorkflowSpec {
 }
 
 export interface ShadeWorkflow extends WorkflowSpec {
+  label: 'shade'
   uniforms: { [key in ShadeWorkflowUniforms]: WebGLUniformLocation }
 
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: ShadeStyle) => ShadeDefinition
@@ -458,6 +478,7 @@ export interface ShadeWorkflow extends WorkflowSpec {
 }
 
 export interface SkyboxWorkflow extends Omit<WorkflowSpec, 'draw'> {
+  label: 'skybox'
   cubeMap: WebGLTexture
   facesReady: number
   ready: boolean
@@ -471,6 +492,7 @@ export interface SkyboxWorkflow extends Omit<WorkflowSpec, 'draw'> {
 }
 
 export interface WallpaperWorkflow extends Omit<WorkflowSpec, 'draw'> {
+  label: 'wallpaper'
   scheme: Scheme
   tileSize: number
   scale: Point

@@ -23,6 +23,7 @@ export interface Scheme {
 }
 
 export default class WallpaperWorkflow extends Workflow implements WallpaperWorkflowSpec {
+  label = 'wallpaper' as const
   scheme: Scheme
   tileSize = 512
   scale: Point = [0, 0]
@@ -91,8 +92,8 @@ export default class WallpaperWorkflow extends Workflow implements WallpaperWork
   }
 
   use (): void {
-    const { context } = this
     super.use()
+    const { context } = this
     // ignore z-fighting and only pass where stencil is 0
     context.defaultBlend()
     context.disableCullFace()
@@ -104,7 +105,11 @@ export default class WallpaperWorkflow extends Workflow implements WallpaperWork
   draw (projector: Projector): void {
     // setup variables
     const { context } = this
+    // let the context know the current workflow
+    context.setWorkflow(this)
+    // update scale if necessary
     this.#updateScale(projector)
+    // draw the wallpaper
     context.drawQuad()
   }
 }

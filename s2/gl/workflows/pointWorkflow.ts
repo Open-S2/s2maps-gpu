@@ -1,4 +1,4 @@
-import Workflow from './workflow'
+import Workflow, { Feature } from './workflow'
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
 
 // WEBGL1
@@ -26,7 +26,7 @@ import type {
   PointWorkflowUniforms
 } from './workflow.spec'
 
-export class PointFeature implements PointFeatureSpec {
+export class PointFeature extends Feature implements PointFeatureSpec {
   type = 'point' as const
   color?: ColorArray // webgl1
   radius?: number // webgl1
@@ -43,15 +43,14 @@ export class PointFeature implements PointFeatureSpec {
     public featureCode: number[],
     public parent?: Tile,
     public bounds?: BBox
-  ) {}
-
-  draw (interactive = false): void {
-    const { tile, workflow } = this
-    workflow.context.stencilFuncEqual(tile.tmpMaskID)
-    workflow.draw(this, interactive)
+  ) {
+    super(workflow, tile, layerGuide, featureCode, parent)
   }
 
-  destroy (): void {}
+  draw (interactive = false): void {
+    super.draw(interactive)
+    this.workflow.draw(this, interactive)
+  }
 
   duplicate (tile: Tile, parent?: Tile, bounds?: BBox): PointFeature {
     const {
@@ -81,6 +80,7 @@ export class PointFeature implements PointFeatureSpec {
 }
 
 export default class PointWorkflow extends Workflow implements PointWorkflowSpec {
+  label = 'point' as const
   extentBuffer?: WebGLBuffer
   layerGuides = new Map<number, PointWorkflowLayerGuide>()
   declare uniforms: { [key in PointWorkflowUniforms]: WebGLUniformLocation }
@@ -136,7 +136,7 @@ export default class PointWorkflow extends Workflow implements PointWorkflowSpec
       vao
     }
 
-    context.cleanup() // flush vao
+    context.finish() // flush vao
 
     this.#buildFeatures(source, tile, new Float32Array(featureGuideBuffer))
   }
@@ -217,8 +217,8 @@ export default class PointWorkflow extends Workflow implements PointWorkflowSpec
   }
 
   use (): void {
-    const { context } = this
     super.use()
+    const { context } = this
     // Prepare context
     context.defaultBlend()
     context.enableDepthTest()

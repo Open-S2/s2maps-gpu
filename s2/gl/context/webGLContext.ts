@@ -1,5 +1,6 @@
 import Context from './context'
 
+import type { Painter } from '../painter.spec'
 import type { MapOptions } from 'ui/s2mapUI'
 
 export default class WebGLContext extends Context {
@@ -7,8 +8,8 @@ export default class WebGLContext extends Context {
   angledInstancedArrays: ANGLE_instanced_arrays | null
   vertexArrayObject: OES_vertex_array_object | null
   textureFloat: OES_texture_float | null
-  constructor (context: WebGLRenderingContext, options: MapOptions) {
-    super(context, options)
+  constructor (context: WebGLRenderingContext, options: MapOptions, painter: Painter) {
+    super(context, options, painter)
     // let the painter know it's a WebGLContext
     this.type = 1
     const { gl } = this

@@ -1,3 +1,4 @@
+import { Feature } from './workflow'
 import encodeLayerAttribute from 'style/encodeLayerAttribute'
 import { buildColorRamp } from 'style/color'
 
@@ -26,7 +27,7 @@ import type {
 import type TimeCache from 'ui/camera/timeCache'
 import type { SensorTextureDefinition } from 'ui/camera/timeCache'
 
-export class SensorFeature implements SensorFeatureSpec {
+export class SensorFeature extends Feature implements SensorFeatureSpec {
   type = 'sensor' as const
   opacity?: number // webgl1
   constructor (
@@ -36,15 +37,14 @@ export class SensorFeature implements SensorFeatureSpec {
     public tile: Tile,
     public fadeStartTime = Date.now(),
     public parent?: Tile
-  ) {}
-
-  draw (interactive = false): void {
-    const { tile: { tmpMaskID }, workflow } = this
-    workflow.context.stencilFuncEqual(tmpMaskID)
-    workflow.draw(this, interactive)
+  ) {
+    super(workflow, tile, layerGuide, featureCode, parent)
   }
 
-  destroy (): void {}
+  draw (interactive = false): void {
+    super.draw(interactive)
+    this.workflow.draw(this, interactive)
+  }
 
   duplicate (tile: Tile, parent?: Tile): SensorFeature {
     const {
@@ -74,6 +74,7 @@ export default async function sensorWorkflow (context: Context): Promise<SensorW
   const Workflow = await import('./workflow').then(m => m.default)
 
   class SensorWorkflow extends Workflow implements SensorWorkflowSpec {
+    label = 'sensor' as const
     nullTexture!: WebGLTexture
     timeCache?: TimeCache
     layerGuides = new Map<number, SensorWorkflowLayerGuide>()
@@ -179,12 +180,12 @@ export default async function sensorWorkflow (context: Context): Promise<SensorW
     }
 
     use (): void {
+      super.use()
       context.oneBlend()
       context.enableDepthTest()
       context.enableCullFace()
       context.enableStencilTest()
       context.lessDepth()
-      super.use()
     }
 
     draw (featureGuide: SensorFeatureSpec, _interactive = false): void {
