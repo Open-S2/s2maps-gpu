@@ -90,7 +90,7 @@ export default class Painter implements PainterSpec {
     // actually import the workflows
     for (const key of workflowKeys) {
       promises.push(workflowImports[key]?.()
-        .then(async (res) => {
+        .then(async (res): Promise<void> => {
           if ('default' in res) {
             const { default: pModule } = res
             workflows[key as 'sensor'] = await pModule(context)
