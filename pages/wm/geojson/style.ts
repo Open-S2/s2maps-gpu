@@ -12,15 +12,14 @@ const style: StyleDefinition = {
   minzoom: 0,
   maxzoom: 6.9,
   sources: {
-    planet: '/tiles/wm/osm',
+    land: '/geojson/land.geojson',
     usa: '/geojson/usa.geojson'
   },
   fonts: {},
   layers: [
     {
       name: 'water-fill',
-      source: 'planet',
-      layer: 'water',
+      source: 'land',
       type: 'fill',
       color: '#b4c1c6'
     },

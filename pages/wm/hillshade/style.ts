@@ -13,7 +13,7 @@ const style: StyleDefinition = {
   maxzoom: 6.9,
   zoomOffset: 0.5,
   sources: {
-    planet: '/tiles/wm/osm',
+    land: '/geojson/land.geojson',
     terrain: '/tiles/wm/terrain-v2'
   },
   layers: [
@@ -26,10 +26,9 @@ const style: StyleDefinition = {
     },
     {
       name: 'water-fill',
-      source: 'planet',
-      layer: 'water',
+      source: 'land',
       type: 'fill',
-      invert: false,
+      invert: true,
       opaque: false,
       color: '#b4c1c6'
     },

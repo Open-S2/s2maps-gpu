@@ -12,7 +12,7 @@ const style: StyleDefinition = {
   minzoom: 0,
   maxzoom: 6.9,
   sources: {
-    planet: '/tiles/wm/osm'
+    land: '/geojson/land.geojson'
   },
   images: {
     pattern: '/images/pattern.jpg'
@@ -20,8 +20,7 @@ const style: StyleDefinition = {
   layers: [
     {
       name: 'water-fill',
-      source: 'planet',
-      layer: 'water',
+      source: 'land',
       type: 'fill',
       pattern: 'pattern',
       patternMovement: true,

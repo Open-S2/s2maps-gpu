@@ -12,14 +12,13 @@ const style: StyleDefinition = {
   minzoom: 0,
   maxzoom: 6.9,
   sources: {
-    planet: '/tiles/wm/osm'
+    land: '/geojson/land.geojson'
   },
   fonts: {},
   layers: [
     {
       name: 'water-fill',
-      source: 'planet',
-      layer: 'water',
+      source: 'land',
       type: 'fill',
       invert: false,
       opaque: false,

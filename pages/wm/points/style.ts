@@ -12,20 +12,19 @@ const style: StyleDefinition = {
   minzoom: -0.5,
   maxzoom: 5.5,
   sources: {
-    planet: '/tiles/wm/osm'
+    land: '/geojson/land.geojson',
+    ports: '/geojson/ports.geojson'
   },
   layers: [
     {
       name: 'water-fill',
-      source: 'planet',
-      layer: 'water',
+      source: 'land',
       type: 'fill',
       color: '#b4c1c6'
     },
     {
       name: 'country-points',
-      source: 'planet',
-      layer: 'place',
+      source: 'ports',
       type: 'point',
       color: '#007bfe',
       radius: {

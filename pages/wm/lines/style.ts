@@ -12,29 +12,22 @@ const style: StyleDefinition = {
   minzoom: 0,
   maxzoom: 6.9,
   sources: {
-    planet: '/tiles/wm/osm'
+    land: '/geojson/land.geojson',
+    boundaries: '/geojson/boundaries.geojson'
   },
   fonts: {},
   layers: [
     {
       name: 'water-fill',
-      source: 'planet',
-      layer: 'water',
+      source: 'land',
       type: 'fill',
-      invert: false,
+      invert: true,
       opaque: false,
       color: '#b4c1c6'
     },
     {
       name: 'country-line',
-      source: 'planet',
-      layer: 'boundary',
-      filter: {
-        or: [
-          { key: 'admin_level', comparator: 'has', value: [3, 4, 5, 6, 7, 8, 9, 10] },
-          { key: 'maritime', comparator: '==', value: 0 }
-        ]
-      },
+      source: 'boundaries',
       type: 'line',
       color: '#bbd3de',
       width: 1.85

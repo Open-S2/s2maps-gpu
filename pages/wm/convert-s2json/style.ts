@@ -12,7 +12,7 @@ const style: StyleDefinition = {
   minzoom: -1,
   maxzoom: 2.5,
   sources: {
-    planet: '/tiles/wm/osm',
+    land: '/geojson/land.geojson',
     hilbert: {
       type: 'json',
       data: {
@@ -40,8 +40,7 @@ const style: StyleDefinition = {
   layers: [
     {
       name: 'water-fill',
-      source: 'planet',
-      layer: 'water',
+      source: 'land',
       type: 'fill',
       invert: false,
       opaque: false,

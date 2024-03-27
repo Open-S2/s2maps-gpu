@@ -12,7 +12,7 @@ const style: StyleDefinition = {
   minzoom: -0.5,
   maxzoom: 5,
   sources: {
-    planet: '/tiles/wm/osm'
+    land: '/geojson/land.geojson'
   },
   sprites: {
     streets: '/sprites/streets/sprite@2x'
@@ -20,8 +20,7 @@ const style: StyleDefinition = {
   layers: [
     {
       name: 'water-fill',
-      source: 'planet',
-      layer: 'water',
+      source: 'land',
       type: 'fill',
       pattern: 'star_15',
       patternFamily: 'streets',

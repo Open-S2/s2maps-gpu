@@ -12,7 +12,8 @@ const style: StyleDefinition = {
   minzoom: -0.5,
   maxzoom: 5,
   sources: {
-    planet: '/tiles/wm/osm'
+    land: '/geojson/land.geojson',
+    ports: '/geojson/ports.geojson'
   },
   sprites: {
     streets: '/sprites/streets/sprite@2x'
@@ -20,20 +21,13 @@ const style: StyleDefinition = {
   layers: [
     {
       name: 'water-fill',
-      source: 'planet',
-      layer: 'water',
+      source: 'land',
       type: 'fill',
       color: '#b4c1c6'
     },
     {
-      name: 'planet-icons',
-      filter: {
-        key: 'class',
-        comparator: '==',
-        value: 'country'
-      },
-      source: 'planet',
-      layer: 'place',
+      name: 'ports-icons',
+      source: 'ports',
       type: 'glyph',
       iconFamily: 'streets',
       iconField: 'amusement_park_15',
