@@ -2,12 +2,13 @@
 precision highp float;
 
 layout (location = 0) in float aStep; // either 0 or 1
-layout (location = 1) in vec2 aST; // float [s, t]    (INSTANCED)
-layout (location = 2) in vec2 aXY; // float [x, y]    (INSTANCED)
-layout (location = 3) in vec2 aPad; // float [x, y]   (INSTANCED)
-layout (location = 4) in vec2 aWH; // float [w, h]    (INSTANCED)
-layout (location = 5) in float aIndex; // float index (INSTANCED)
-layout (location = 6) in vec4 aID; // [r, g, b, a]    (INSTANCED)
+layout (location = 1) in vec2 aST; // float [s, t]     (INSTANCED)
+layout (location = 2) in vec2 aXY; // float [x, y]     (INSTANCED)
+layout (location = 3) in vec2 aOffset; // float [x, y] (INSTANCED)
+layout (location = 4) in vec2 aPad; // float [x, y]    (INSTANCED)
+layout (location = 5) in vec2 aWH; // float [w, h]     (INSTANCED)
+layout (location = 6) in float aIndex; // float index  (INSTANCED)
+layout (location = 7) in vec4 aID; // [r, g, b, a]     (INSTANCED)
 
 out vec4 vColor;
 
@@ -64,7 +65,7 @@ void main () {
     // place the x1, y1, x2, y2 into the texture
     // I add the length and width of the canvas to the total just incase a glyph filter
     // starts slightly below or to the left of the canvas
-    vec2 bottomLeft = (((glPos.xy + 1.) / 2.) * uAspect) + 1000. + (aXY * size * uDevicePixelRatio);
+    vec2 bottomLeft = (((glPos.xy + 1.) / 2.) * uAspect) + 1000. + (((aXY * size) + aOffset) * uDevicePixelRatio);
     // convert to uAspect integer value and split horizontal and vertical into two 8 bit pieces
     if (glPos.z > zero.z) {
       vColor = vec4(0.);

@@ -81,6 +81,7 @@ struct Attributes {
 struct GlyphContainer {
   st: vec2<f32>, // s & t position relative to the tile's 0-1 bounds
   xy: vec2<f32>, // xy starting position of the glyph box relative to the final computed position
+  offset: vec2<f32>, // offset from the xy position
   pad: vec2<f32>, // padding around the container
   wh: vec2<f32>, // width & height of the container
   index: u32, // index in the collision result array without offset (needed because some Containers share indexes)
@@ -172,8 +173,8 @@ const ICON_GAMMA = 0.08;
 fn vMain(
   @builtin(vertex_index) VertexIndex: u32,
   @location(0) st: vec2<f32>,
-  @location(1) xy: vec2<f32>,
-  @location(2) offset: vec2<f32>,
+  @location(1) adjustXY: vec2<f32>,
+  @location(2) xy: vec2<f32>,
   @location(3) wh: vec2<f32>,
   @location(4) texXY: vec2<f32>,
   @location(5) texWH: vec2<f32>,
@@ -229,7 +230,8 @@ fn vMain(
 
   // add x-y offset as well as use the UV to map the quad
   let uAspect = vec2<f32>(view.aspectX, view.aspectY);
-  var XY = (xy + (offset * size)) / uAspect; // setup the xy positional change in pixels
+  var adjust = adjustXY * view.devicePixelRatio;
+  var XY = (adjust + (xy * size)) / uAspect; // setup the xy positional change in pixels
   var quad = (wh * size) / uAspect * uv;
   posXY += XY + quad;
   // set texture position (don't bother wasting time looking up if drawing "interactive quad")
@@ -349,9 +351,10 @@ fn vTest(
   @builtin(vertex_index) VertexIndex: u32,
   @location(0) st: vec2<f32>,
   @location(1) xy: vec2<f32>,
-  @location(2) pad: vec2<f32>,
-  @location(3) wh: vec2<f32>,
-  @location(4) collisionIndex: u32, // index to check in collisionResults
+  @location(2) offsetXY: vec2<f32>,
+  @location(3) pad: vec2<f32>,
+  @location(4) wh: vec2<f32>,
+  @location(5) collisionIndex: u32, // index to check in collisionResults
 ) -> TestOutput {
   var output: TestOutput;
   let uv = TestPos[VertexIndex];
@@ -381,7 +384,8 @@ fn vTest(
 
   let uAspect = vec2<f32>(view.aspectX, view.aspectY);
   var padding = pad * view.devicePixelRatio * 2.;
-  var XY = ((xy * size) - padding) / uAspect; // setup the xy positional change in pixels
+  var offset = offsetXY * view.devicePixelRatio;
+  var XY = ((xy * size) + offset - padding) / uAspect; // setup the xy positional change in pixels
   var WH = ((wh * size) + (padding * 2)) / uAspect;
   tmpPosXY += XY + (WH * uv);
 
@@ -554,8 +558,9 @@ fn boxes(@builtin(global_invocation_id) global_id: vec3<u32>) {
   if (size == 0.) { return; } // early return if no size (collision)
   // build bbox
   let uAspect = vec2<f32>(view.aspectX, view.aspectY);
+  var offset = container.offset * view.devicePixelRatio;
   var padding = container.pad * view.devicePixelRatio * 2.;
-  var XY = ((container.xy * size) - padding) / uAspect; // setup the xy positional change in pixels
+  var XY = ((container.xy * size) + offset - padding) / uAspect; // setup the xy positional change in pixels
   var WH = ((container.wh * size) + (padding * 2)) / uAspect;
   var bottomLeft = position.xy + XY;
   var topRight = bottomLeft + WH;
@@ -646,7 +651,7 @@ fn interactive(@builtin(global_invocation_id) global_id: vec3<u32>) {
   if (collisionResultsReadOnly[box.index] != 0u) { return; }
 
   // check if mouse is inside box
-  let mousePos = vec2<f32>(view.mouseX, view.mouseY);
+  let mousePos = vec2<f32>(view.mouseX * view.aspectX, view.mouseY * view.aspectY);
   if (box.top == CIRCLE_CONDITION) {
     // check if mouse is inside circle
     // (box.left -> circle.x; box.bottom -> circle.y; box.right -> circle.radius)

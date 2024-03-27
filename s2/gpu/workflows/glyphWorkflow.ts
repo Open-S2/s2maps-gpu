@@ -17,7 +17,7 @@ import type { GlyphData } from 'workers/worker.spec'
 import type { TileGPU as Tile } from 'source/tile.spec'
 import type { BBox } from 'geometry'
 
-// st (0), xy (1), offsetXY (2), wh (3), texXY (4), texWH (5)
+// st (0), adjustXY (1), xy (2), wh (3), texXY (4), texWH (5)
 const SUB_SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [0, 1, 2, 3, 4, 5].map(i => ({
   arrayStride: 4 * 2 * 6, // 4 bytes * 2 floats * 6 attributes
   stepMode: 'instance',
@@ -48,8 +48,8 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
     }]
   }
 ]
-const SUB_TEST_SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [0, 1, 2, 3].map(i => ({
-  arrayStride: 4 * 10, // 4 bytes per float * 10 floats
+const SUB_TEST_SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [0, 1, 2, 3, 4].map(i => ({
+  arrayStride: 4 * 12, // 4 bytes per float at 12 float intervals
   stepMode: 'instance',
   attributes: [{
     shaderLocation: i,
@@ -60,11 +60,11 @@ const SUB_TEST_SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [0, 1, 2,
 const TEST_SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
   ...SUB_TEST_SHADER_BUFFER_LAYOUT,
   { // collision result index (without the proper offset)
-    arrayStride: 4 * 10, // 4 bytes * 1 float
+    arrayStride: 4 * 12, // 4 bytes * 1 uint32 at 12 float intervals
     stepMode: 'instance',
     attributes: [{
-      shaderLocation: 4,
-      offset: 4 * 2 * 4,
+      shaderLocation: 5,
+      offset: 5 * 4 * 2, // index 5 * size of uint32/float32 * 2 floats
       format: 'uint32'
     }]
   }
@@ -290,11 +290,11 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     this.glyphPipelineLayout = device.createPipelineLayout({
       bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.glyphBindGroupLayout]
     })
-    this.pipeline = await this.#getPipeline()
-    this.testRenderPipeline = await this.#getPipeline(true)
-    this.bboxPipeline = await this.#getComputePipeline('boxes')
-    this.testBBoxPipeline = await this.#getComputePipeline('test')
-    this.interactivePipeline = await this.#getComputePipeline('interactive')
+    this.pipeline = this.#getPipeline()
+    this.testRenderPipeline = this.#getPipeline(true)
+    this.bboxPipeline = this.#getComputePipeline('boxes')
+    this.testBBoxPipeline = this.#getComputePipeline('test')
+    this.interactivePipeline = this.#getComputePipeline('interactive')
   }
 
   destroy (): void {
@@ -400,7 +400,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     const { context } = this
     const { glyphFilterBuffer, glyphQuadBuffer, glyphQuadIDBuffer: glyphQuadIndexBuffer, glyphColorBuffer, featureGuideBuffer } = glyphData
     // prep buffers
-    const filterLength = glyphFilterBuffer.byteLength / 4 / 10
+    const filterLength = glyphFilterBuffer.byteLength / 4 / 12 // 4 bytes per float * 12 floats
     const source: GlyphSource = {
       type: 'glyph' as const,
       glyphFilterBuffer: context.buildGPUBuffer('Glyph Filter Buffer', glyphFilterBuffer, GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX),
@@ -461,7 +461,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
   // https://programmer.ink/think/several-best-practices-of-webgpu.html
   // BEST PRACTICE 6: it is recommended to create pipeline asynchronously (we don't want to because we WANT to block the main thread)
   // BEST PRACTICE 7: explicitly define pipeline layouts
-  async #getPipeline (isTest = false): Promise<GPURenderPipeline> {
+  #getPipeline (isTest = false): GPURenderPipeline {
     const { context, module } = this
     const { device, format, defaultBlend, sampleCount } = context
 
@@ -472,7 +472,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
       passOp: 'replace'
     }
 
-    return await device.createRenderPipelineAsync({
+    return device.createRenderPipeline({
       label: `Glyph Pipeline ${isTest ? 'Test' : 'Main'}`,
       layout: this.glyphPipelineLayout,
       vertex: {
@@ -502,10 +502,10 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     })
   }
 
-  async #getComputePipeline (entryPoint: 'boxes' | 'test' | 'interactive'): Promise<GPUComputePipeline> {
+  #getComputePipeline (entryPoint: 'boxes' | 'test' | 'interactive'): GPUComputePipeline {
     const { context, module } = this
 
-    return await context.device.createComputePipelineAsync({
+    return context.device.createComputePipeline({
       label: `Glyph Filter ${entryPoint} Compute Pipeline`,
       layout: entryPoint === 'interactive' ? this.glyphInteractivePiplineLayout : this.glyphFilterPipelineLayout,
       compute: { module, entryPoint }
@@ -601,6 +601,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
       passEncoder.setVertexBuffer(2, glyphFilterBuffer)
       passEncoder.setVertexBuffer(3, glyphFilterBuffer)
       passEncoder.setVertexBuffer(4, glyphFilterBuffer)
+      passEncoder.setVertexBuffer(5, glyphFilterBuffer)
       passEncoder.draw(8, filterCount, 0, filterOffset)
     }
   }

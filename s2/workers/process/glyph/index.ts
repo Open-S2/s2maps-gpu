@@ -209,7 +209,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
             // tile position
             s: point[0] / extent,
             t: point[1] / extent,
-            filter: [0, 0, 0, 0, 0, 0, 0, 0],
+            filter: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             // node proeprties
             minX: Infinity,
             minY: Infinity,

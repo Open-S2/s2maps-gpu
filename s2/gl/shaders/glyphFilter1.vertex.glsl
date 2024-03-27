@@ -1,12 +1,13 @@
 precision highp float;
 
 attribute float aStep; // either 0 or 1
-attribute vec2 aST; // float [s, t]    (INSTANCED)
-attribute vec2 aXY; // float [x, y]    (INSTANCED)
-attribute vec2 aPad; // float [x, y]   (INSTANCED)
-attribute vec2 aWH; // float [w, h]    (INSTANCED)
-attribute float aIndex; // float index (INSTANCED)
-attribute vec4 aID; // float ID        (INSTANCED)
+attribute vec2 aST; // float [s, t]     (INSTANCED)
+attribute vec2 aXY; // float [x, y]     (INSTANCED)
+attribute vec2 aOffset; // float [x, y] (INSTANCED)
+attribute vec2 aPad; // float [x, y]    (INSTANCED)
+attribute vec2 aWH; // float [w, h]     (INSTANCED)
+attribute float aIndex; // float index  (INSTANCED)
+attribute vec4 aID; // float ID         (INSTANCED)
 
 varying vec4 vColor;
 
@@ -93,7 +94,7 @@ void main () {
     // place the x1, y1, x2, y2 into the texture
     // I add the length and width of the canvas to the total just incase a glyph filter
     // starts slightly below or to the left of the canvas
-    vec2 bottomLeft = (((glPos.xy + 1.) / 2.) * uAspect) + 1000. + (aXY * size * uDevicePixelRatio);
+    vec2 bottomLeft = (((glPos.xy + 1.) / 2.) * uAspect) + 1000. + (((aXY * size) + aOffset) * uDevicePixelRatio);
     // convert to uAspect integer value and split horizontal and vertical into two 8 bit pieces
     if (glPos.z > zero.z) {
       vColor = vec4(0.);

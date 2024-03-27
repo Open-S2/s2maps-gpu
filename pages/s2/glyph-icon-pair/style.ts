@@ -79,11 +79,12 @@ const style: StyleDefinition = {
       name: 'icon-examples',
       source: 'iconFeatures',
       type: 'glyph',
-      interactive: false,
+      interactive: true,
+      cursor: 'pointer',
       textFamily: 'robotoMedium',
       textField: '?name',
       textAnchor: 'center',
-      textOffset: [0, -100],
+      textOffset: [0, -55],
       textPadding: [2, 2],
       textSize: 20,
       textFill: '#1a73e7',
@@ -94,7 +95,7 @@ const style: StyleDefinition = {
       iconAnchor: 'center',
       iconOffset: [0, 0],
       iconPadding: [2, 2],
-      iconSize: 32,
+      iconSize: 42,
       overdraw: false,
       viewCollisions: false
     }

@@ -119,7 +119,7 @@ export function buildGlyphPointQuads (
   feature.maxX = feature.minX + (maxWidth * size) + (padding[0] * 2)
   feature.maxY = feature.minY + (maxHeight * size) + (padding[1] * 2)
   // store the filter
-  feature.filter = [s, t, anchorOffsetX, anchorOffsetY, ...padding, maxWidth, maxHeight]
+  feature.filter = [s, t, anchorOffsetX, anchorOffsetY, ...offset, ...padding, maxWidth, maxHeight]
 }
 
 // IDEATION: https://blog.mapbox.com/map-label-placement-in-mapbox-gl-c6f843a7caaa

@@ -4,6 +4,7 @@ import type { ColorArray } from 'style/color'
 import type { Point } from 'geometry'
 
 export interface SquareNode {
+  id: number
   minX: number
   minY: number
   maxX: number
@@ -11,6 +12,7 @@ export interface SquareNode {
 }
 
 export interface RoundNode {
+  id: number
   x: number
   y: number
   r: number
@@ -61,7 +63,7 @@ export interface GlyphPoint extends GlyphBase, SquareNode {
   s: number
   t: number
   // [s, t, anchorOffsetX, anchorOffsetY, paddingX, paddingY, maxWidth, maxHeight, index, id]
-  filter: [s: number, t: number, anchorOffsetX: number, anchorOffsetY: number, paddingX: number, paddingY: number, maxWidth: number, maxHeight: number]
+  filter: [s: number, t: number, anchorOffsetX: number, anchorOffsetY: number, offsetX: number, offsetY: number, paddingX: number, paddingY: number, maxWidth: number, maxHeight: number]
 }
 
 export interface GlyphPath extends GlyphBase, RoundNodes {
@@ -70,8 +72,8 @@ export interface GlyphPath extends GlyphBase, RoundNodes {
   extent: number
   geometry: S2VectorGeometry
   geometryType: S2VectorTileFeatureType
-  // [s, t, anchorOffsetX, anchorOffsetY, paddingX, paddingY, maxWidth, maxHeight, index, id]
-  filters: Array<[s: number, t: number, anchorOffsetX: number, anchorOffsetY: number, padding: number, radius: number]>
+  // [s, t, anchorOffsetX, anchorOffsetY, padding, maxWidth, maxHeight, index, id]
+  filters: Array<[s: number, t: number, anchorOffsetX: number, anchorOffsetY: number, offsetX: number, offsetY: number, padding: number, radius: number]>
 }
 
 export type GlyphObject = GlyphPoint | GlyphPath

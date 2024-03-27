@@ -149,15 +149,16 @@ export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec
     const glyphFilterVerts = new Float32Array(glyphData.glyphFilterBuffer)
     const glyphFilterBuffer = context.bindEnableVertexAttrMulti(glyphFilterVerts, [
       // [indx, size, type, normalized, stride, offset]
-      [1, 2, gl.FLOAT, false, 36, 0], // s, t
-      [2, 2, gl.FLOAT, false, 36, 8], // x, y
-      [3, 2, gl.FLOAT, false, 36, 16], // padding
-      [4, 2, gl.FLOAT, false, 36, 24], // width, height
-      [5, 1, gl.FLOAT, false, 36, 32] // index
+      [1, 2, gl.FLOAT, false, 44, 0], // st
+      [2, 2, gl.FLOAT, false, 44, 8], // xy
+      [3, 2, gl.FLOAT, false, 44, 16], // offset
+      [4, 2, gl.FLOAT, false, 44, 24], // padding
+      [5, 2, gl.FLOAT, false, 44, 32], // wh
+      [6, 1, gl.FLOAT, false, 44, 40] // index
     ], true)
     // id buffer
     const glyphFilterIDs = new Uint8Array(glyphData.glyphFilterIDBuffer)
-    const glyphFilterIDBuffer = context.bindEnableVertexAttr(glyphFilterIDs, 6, 4, gl.UNSIGNED_BYTE, true, 4, 0, true)
+    const glyphFilterIDBuffer = context.bindEnableVertexAttr(glyphFilterIDs, 7, 4, gl.UNSIGNED_BYTE, true, 4, 0, true)
 
     // STEP 2 - QUADS
     const vao = context.buildVAO()
@@ -167,11 +168,11 @@ export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec
     const glyphQuadVerts = new Float32Array(glyphData.glyphQuadBuffer)
     const glyphQuadBuffer = context.bindEnableVertexAttrMulti(glyphQuadVerts, [
       // [indx, size, type, normalized, stride, offset]
-      [1, 2, gl.FLOAT, false, 48, 0], // s, t
-      [2, 2, gl.FLOAT, false, 48, 8], // x, y
-      [3, 2, gl.FLOAT, false, 48, 16], // xOffset, yOffset
-      [4, 2, gl.FLOAT, false, 48, 24], // width, height
-      [5, 2, gl.FLOAT, false, 48, 32], // texture-x, texture-y
+      [1, 2, gl.FLOAT, false, 48, 0], // st
+      [2, 2, gl.FLOAT, false, 48, 8], // xy
+      [3, 2, gl.FLOAT, false, 48, 16], // offsetXY
+      [4, 2, gl.FLOAT, false, 48, 24], // wh
+      [5, 2, gl.FLOAT, false, 48, 32], // textureXY
       [6, 2, gl.FLOAT, false, 48, 40] // texture-width, texture-height
     ], true)
     // create id buffer

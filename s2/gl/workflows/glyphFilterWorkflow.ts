@@ -29,7 +29,7 @@ export default class GlyphFilterWorkflow extends Workflow implements GlyphFilter
     // inject Program
     super(context)
     // build shaders
-    if (type === 1) this.buildShaders(vert1, frag1, { aStep: 0, aST: 1, aXY: 2, aPad: 3, aWH: 4, aIndex: 5, aID: 6 })
+    if (type === 1) this.buildShaders(vert1, frag1, { aStep: 0, aST: 1, aXY: 2, aOffset: 3, aPad: 4, aWH: 5, aIndex: 6, aID: 7 })
     else this.buildShaders(vert2, frag2)
     // finish building the textures
     this.#buildTextures()
@@ -155,13 +155,14 @@ export default class GlyphFilterWorkflow extends Workflow implements GlyphFilter
     gl.bindVertexArray(filterVAO)
     // apply the appropriate offset
     gl.bindBuffer(gl.ARRAY_BUFFER, glyphFilterBuffer)
-    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 36, filterOffset * 36) // s, t
-    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 36, 8 + (filterOffset * 36)) // x, y
-    gl.vertexAttribPointer(3, 2, gl.FLOAT, false, 36, 16 + (filterOffset * 36)) // paddingX, paddingY
-    gl.vertexAttribPointer(4, 2, gl.FLOAT, false, 36, 24 + (filterOffset * 36)) // width, height
-    gl.vertexAttribPointer(5, 1, gl.FLOAT, false, 36, 32 + (filterOffset * 36)) // index
+    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 44, filterOffset * 44) // s, t
+    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 44, 8 + (filterOffset * 44)) // x, y
+    gl.vertexAttribPointer(3, 2, gl.FLOAT, false, 44, 16 + (filterOffset * 44)) // offsetX, offsetY
+    gl.vertexAttribPointer(4, 2, gl.FLOAT, false, 44, 24 + (filterOffset * 44)) // paddingX, paddingY
+    gl.vertexAttribPointer(5, 2, gl.FLOAT, false, 44, 32 + (filterOffset * 44)) // width, height
+    gl.vertexAttribPointer(6, 1, gl.FLOAT, false, 44, 40 + (filterOffset * 44)) // index
     gl.bindBuffer(gl.ARRAY_BUFFER, glyphFilterIDBuffer)
-    gl.vertexAttribPointer(6, 4, gl.UNSIGNED_BYTE, true, 4, filterOffset * 4)
+    gl.vertexAttribPointer(7, 4, gl.UNSIGNED_BYTE, true, 4, filterOffset * 4)
     // draw based upon mode
     if (mode === 1) gl.drawArraysInstanced(gl.POINTS, 0, 2, filterCount)
     else gl.drawArraysInstanced(gl.POINTS, 0, 1, filterCount)
