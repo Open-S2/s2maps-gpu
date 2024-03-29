@@ -91,7 +91,7 @@ export default class MarkerSource {
     }
   }
 
-  removeMarkers (ids: number[]): void {
+  deleteMarkers (ids: number[]): void {
     for (const id of ids) {
       if (this[0].has(id)) this[0].delete(id)
       else if (this[1].has(id)) this[1].delete(id)

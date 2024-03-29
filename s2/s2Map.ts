@@ -356,8 +356,8 @@ export default class S2Map extends EventTarget {
       this._updateCompass(data.bearing, data.pitch)
     } else if (type === 'addLayer') {
       window.S2WorkerPool.addLayer(mapID, data.layer, data.index, data.tileRequest)
-    } else if (type === 'removeLayer') {
-      window.S2WorkerPool.removeLayer(mapID, data.index)
+    } else if (type === 'deleteLayer') {
+      window.S2WorkerPool.deleteLayer(mapID, data.index)
     } else if (type === 'reorderLayers') {
       window.S2WorkerPool.reorderLayers(mapID, data.layerChanges)
     } else if (type === 'screenshot') {
@@ -673,10 +673,10 @@ export default class S2Map extends EventTarget {
   }
 
   // nameIndex -> if name it finds the layer name to update, otherwise gives up
-  removeLayer (nameIndex: number | string): void {
+  deleteLayer (nameIndex: number | string): void {
     const { offscreen, map } = this
-    offscreen?.postMessage({ type: 'removeLayer', nameIndex })
-    map?.removeLayer(nameIndex)
+    offscreen?.postMessage({ type: 'deleteLayer', nameIndex })
+    map?.deleteLayer(nameIndex)
   }
 
   // { [+from]: +to }
@@ -703,7 +703,7 @@ export default class S2Map extends EventTarget {
   ): void {
     if (!Array.isArray(ids)) ids = [ids]
     // 1) let the worker pool know we need to remove marker(s)
-    window.S2WorkerPool.removeMarkers(this.id, ids, sourceName)
+    window.S2WorkerPool.deleteMarkers(this.id, ids, sourceName)
     // 2) tell the map that (a) marker(s) has/have to be removed
     this.resetSource([[sourceName, undefined]], true, false)
   }

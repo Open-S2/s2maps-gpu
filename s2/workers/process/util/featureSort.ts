@@ -1,7 +1,10 @@
 import type { Feature } from '../process.spec'
 import type { GlyphObject } from '../glyph/glyph.spec'
 
-export default function featureSort (a: Feature | GlyphObject, b: Feature | GlyphObject): number {
+export default function featureSort (
+  a: Feature | GlyphObject,
+  b: Feature | GlyphObject
+): number {
   // layerIndex
   let diff = a.layerIndex - b.layerIndex
   // glyph -> sort text and icon

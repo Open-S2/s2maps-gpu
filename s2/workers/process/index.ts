@@ -37,12 +37,14 @@ export default class ProcessManager {
   layers: Record<string, WorkerLayer[]> = {}
   workers: Workers = {}
   imageStore = new ImageStore()
+  mapStyles: Record<string, StylePackage> = {}
 
   _buildIDGen (totalWorkers: number): void {
     this.idGen = buildIDGen(this.id, totalWorkers)
   }
 
   setupStyle (mapID: string, style: StylePackage): void {
+    this.mapStyles[mapID] = style
     const { layers, gpuType, experimental } = style
     this.gpuType = gpuType
     this.experimental = experimental
@@ -50,7 +52,7 @@ export default class ProcessManager {
 
     // first we need to build the workers
     for (const layer of layers) workerTypes.add(layer.type)
-    this.#buildWorkers(workerTypes)
+    this.#buildWorkers(workerTypes, style)
 
     // Convert LayerDefinition to WorkerLayer and store in layers
     const workerLayers = layers
@@ -67,8 +69,9 @@ export default class ProcessManager {
     return this.workers[layer.type]?.setupLayer(layer as never)
   }
 
-  #buildWorkers (names: Set<LayerType>): void {
-    const { idGen, gpuType, experimental, workers, sourceWorker, imageStore } = this
+  #buildWorkers (names: Set<LayerType>, style: StylePackage): void {
+    const { idGen, gpuType, workers, sourceWorker, imageStore } = this
+    const { tileSize } = style
     // setup imageStore
     imageStore.setup(idGen, sourceWorker)
     for (const name of names) {
@@ -79,7 +82,7 @@ export default class ProcessManager {
       } else if (name === 'point' || name === 'heatmap') {
         workers.point = workers.heatmap = new PointWorker(idGen, gpuType)
       } else if (name === 'glyph') {
-        workers.glyph = new GlyphWorker(idGen, gpuType, sourceWorker, imageStore, experimental)
+        workers.glyph = new GlyphWorker(idGen, gpuType, sourceWorker, imageStore, tileSize)
       } else if (
         (name === 'raster' || name === 'sensor' || name === 'hillshade') &&
         this.workers.raster === undefined

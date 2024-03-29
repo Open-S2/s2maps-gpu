@@ -142,7 +142,7 @@ implements TileSpec<C, F, M> {
 
   /* STYLE CHANGES */
 
-  removeLayer (index: number): void {
+  deleteLayer (index: number): void {
     const { featureGuides } = this
     // remove any references to layerIndex
     for (let i = featureGuides.length - 1; i >= 0; i--) {
@@ -153,7 +153,7 @@ implements TileSpec<C, F, M> {
     for (const { layerGuide } of this.featureGuides) {
       if (layerGuide.layerIndex > index) layerGuide.layerIndex--
     }
-    for (const dependent of this.dependents) dependent.removeLayer(index)
+    for (const dependent of this.dependents) dependent.deleteLayer(index)
   }
 
   reorderLayers (layerChanges: Record<number, number>): void {

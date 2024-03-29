@@ -225,8 +225,8 @@ export interface UpdateLayerMessage {
   fullUpdate: boolean
 }
 
-export interface RemoveLayerMessage {
-  type: 'removeLayer'
+export interface DeleteLayerMessage {
+  type: 'deleteLayer'
   nameIndex: number | string
 }
 
@@ -247,7 +247,7 @@ export type S2MapMessage =
   SetStyleMessage | UpdateStyleMessage | JumpToMessage | EaseToMessage | FlyToMessage |
   MoveStateMessage | ZoomStateMessage | ScreenshotMessage | AwaitRenderedMessage |
   ResetSourceMessage | ClearSourceMessage | AddLayerMessage | UpdateLayerMessage |
-  RemoveLayerMessage | ReorderLayersMessage | DeleteMessage
+  DeleteLayerMessage | ReorderLayersMessage | DeleteMessage
 
 /** FRONT END TO SOURCE WORKER MESSAGES */
 
@@ -257,8 +257,8 @@ export interface AddMarkersMessage extends MapID {
   sourceName: string
 }
 
-export interface RemoveMarkersMessage extends MapID {
-  type: 'removeMarkers'
+export interface DeleteMarkersMessage extends MapID {
+  type: 'deleteMarkers'
   ids: number[]
   sourceName: string
 }
@@ -269,7 +269,7 @@ export interface DeleteSourceMessage extends MapID {
 }
 
 export type S2MapToSourceMessage =
-  AddMarkersMessage | RemoveMarkersMessage | DeleteSourceMessage
+  AddMarkersMessage | DeleteMarkersMessage | DeleteSourceMessage
 
 /** UI GL REQUESTS -> S2Map or Worker Pool **/
 
@@ -339,8 +339,8 @@ export interface AddLayerMessageGL extends MapID {
   tileRequest: TileRequest[]
 }
 
-export interface RemoveLayerMessageGL extends MapID {
-  type: 'removeLayer'
+export interface DeleteLayerMessageGL extends MapID {
+  type: 'deleteLayer'
   index: number
 }
 
@@ -366,12 +366,12 @@ export type MapGLMessage =
   TileRequestMessage | TimeRequestMessage | MouseEnterMessage |
   MouseLeaveMessage | MouseClickMessage | ViewMessage |
   RequestStyleMessage | StyleMessage | UpdateCompassMessage |
-  AddLayerMessageGL | RemoveLayerMessageGL | ReorderLayersMessageGL |
+  AddLayerMessageGL | DeleteLayerMessageGL | ReorderLayersMessageGL |
   ScreenshotMessageGL | RenderedMessageGL | ReadyMessageGL
 
 export type MapGLToSourceMessage =
   RequestStyleMessage | StyleMessage | TileRequestMessage |
-  TimeRequestMessage | AddLayerMessageGL | RemoveLayerMessageGL |
+  TimeRequestMessage | AddLayerMessageGL | DeleteLayerMessageGL |
   ReorderLayersMessageGL
 
 /** SOURCE WORKER MESSAGES **/
@@ -586,4 +586,4 @@ export type SourceWorkerMessages =
 export type TileWorkerMessages =
   WorkerPoolMessage | StyleMessage | VectorMessage |
   RasterMessage | JSONDataMessage | GlyphResponseMessage | GlyphMetadataMessage |
-  AddLayerMessageTileWorker | RemoveLayerMessageGL | ReorderLayersMessageGL
+  AddLayerMessageTileWorker | DeleteLayerMessageGL | ReorderLayersMessageGL

@@ -25,7 +25,7 @@ export default class TileWorker extends ProcessManager {
       else if (type === 'glyphmetadata') this.processMetadata(mapID, data.glyphMetadata, data.imageMetadata)
       else if (type === 'glyphresponse') this.processGlyphResponse(mapID, data.reqID, data.glyphMetadata, data.familyName)
       else if (type === 'addLayer') this.#addLayer(mapID, data.layer, data.index)
-      else if (type === 'removeLayer') this.#removeLayer(mapID, data.index)
+      else if (type === 'deleteLayer') this.#deleteLayer(mapID, data.index)
       else if (type === 'reorderLayers') this.#reorderLayers(mapID, data.layerChanges)
     }
   }
@@ -58,7 +58,7 @@ export default class TileWorker extends ProcessManager {
     // }
   }
 
-  #removeLayer (mapID: string, index: number): void {
+  #deleteLayer (mapID: string, index: number): void {
     // const layers = this.maps[mapID]
     // layers.splice(index, 1)
     // for (let i = index, ll = layers.length; i < ll; i++) {

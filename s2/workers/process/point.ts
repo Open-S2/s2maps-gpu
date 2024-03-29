@@ -1,5 +1,5 @@
 import VectorWorker, { colorFunc, idToRGB } from './vectorWorker'
-import { featureSort, scaleShiftClip } from './util'
+import { featureSort, flattenGeometryToPoints, scaleShiftClip } from './util'
 import parseFilter from 'style/parseFilter'
 import parseFeatureFunction from 'style/parseFeatureFunction'
 
@@ -32,7 +32,7 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
   ): PointWorkerLayer | HeatmapWorkerLayer {
     const {
       type, name, layerIndex, source, layer, minzoom, maxzoom,
-      filter, radius, opacity, lch
+      filter, geoFilter, radius, opacity, lch
     } = layerDefinition
 
     // build featureCode design
@@ -67,10 +67,10 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
 
     if (type === 'point') {
       const { interactive, cursor } = layerDefinition
-      return { type, interactive, cursor, ...base }
+      return { type, geoFilter, interactive, cursor, ...base }
     } else {
       const weight = parseFeatureFunction<number>(layerDefinition.weight)
-      return { type, weight, ...base }
+      return { type, geoFilter, weight, ...base }
     }
   }
 
@@ -83,12 +83,20 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
   ): boolean {
     const { gpuType } = this
     const { zoom } = tile
-    const { extent, properties } = feature
-    const { type, getCode, layerIndex } = layer
+    const { extent, properties, type: featureType } = feature
+    const { type, getCode, layerIndex, geoFilter } = layer
+    if (
+      geoFilter.includes('poly') &&
+      (featureType === 3 || featureType === 4)
+    ) return false
+    if (geoFilter.includes('line') && featureType === 2) return false
+    if (geoFilter.includes('point') && featureType === 1) return false
+    // load geometry
     const geometry = feature.loadGeometry?.() as S2VectorPoints
     if (geometry === undefined) return false
     // preprocess geometry
-    const clip = scaleShiftClip(geometry, feature.type, extent, tile) as S2VectorPoints
+    const points = flattenGeometryToPoints(geometry, featureType)
+    const clip = scaleShiftClip(points, 1, extent, tile) as S2VectorPoints
     if (clip === undefined) return false
     const vertices: number[] = []
     const weights: number[] = []

@@ -184,8 +184,9 @@ export default class Style {
 
   #sendStyleDataToWorkers (style: StyleDefinition): void {
     const { apiKey, urlMap, layers } = this
-    const { id, webworker, painter } = this.camera
+    const { id, webworker, painter, projector } = this.camera
     const { type } = painter.context
+    const { tileSize } = projector
     const { projection, sources, glyphs, fonts, icons, sprites, images, minzoom, maxzoom, experimental } = style
     const analytics = this.#buildAnalytics()
     // now that we have various source data, package up the style objects we need and send it off:
@@ -201,6 +202,7 @@ export default class Style {
       layers: layers.filter(l => l.source !== 'mask'),
       minzoom: minzoom ?? 0,
       maxzoom: maxzoom ?? 20,
+      tileSize,
       analytics,
       apiKey,
       urlMap,
@@ -257,14 +259,14 @@ export default class Style {
 //   this.dirty = true
 // }
 
-// removeLayer (nameIndex?: number | string): number {
+// deleteLayer (nameIndex?: number | string): number {
 //   // grab the index
 //   const index = this.#findLayerIndex(nameIndex)
 //   // let the workers know
 //   if (this.webworker) {
-//     postMessage({ mapID: this.map.id, type: 'removeLayer', index })
+//     postMessage({ mapID: this.map.id, type: 'deleteLayer', index })
 //   } else {
-//     window.S2WorkerPool.removeLayer(this.map.id, index)
+//     window.S2WorkerPool.deleteLayer(this.map.id, index)
 //   }
 //   // remove index from layers and update layerIndex & depthPos
 //   const { layers } = this

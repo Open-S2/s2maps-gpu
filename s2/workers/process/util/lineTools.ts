@@ -16,7 +16,10 @@ export interface Line {
 }
 
 // if line, return, if poly or multipoly, flatten to lines
-export function flattenGeometry (geometry: S2VectorGeometry, type: S2VectorTileFeatureType): S2VectorLines {
+export function flattenGeometryToLines (
+  geometry: S2VectorGeometry,
+  type: S2VectorTileFeatureType
+): S2VectorLines {
   if (type === 2 || type === 3) return geometry as S2VectorLines
   else if (type === 4) {
     // manage poly
@@ -49,15 +52,22 @@ export function findPointsAlongLine (
   return res
 }
 
-function lineLength (line: S2VectorLine): { length: number } {
+export interface LineLengthRes {
+  length: number
+  distIndex: number[]
+}
+
+export function lineLength (line: S2VectorLine): LineLengthRes {
   let length = 0
   let prev = line[0]
+  const distIndex: number[] = [0]
   for (let i = 1, ll = line.length; i < ll; i++) {
     const curr = line[i]
     length += distance(prev, curr)
+    distIndex.push(length)
     prev = curr
   }
-  return { length }
+  return { length, distIndex }
 }
 
 export function drawLine (

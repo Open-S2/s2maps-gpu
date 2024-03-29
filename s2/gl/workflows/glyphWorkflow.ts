@@ -244,11 +244,12 @@ export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec
       // paint
       textSize, iconSize, textFill, textStrokeWidth, textStroke,
       // layout
-      textFamily, textField, textAnchor, textOffset, textPadding, textWordWrap,
-      textAlign, textKerning, textLineHeight, iconFamily, iconField, iconAnchor,
-      iconOffset, iconPadding,
+      placement, spacing,
+      textFamily, textField, textAnchor, textOffset, textPadding,
+      textWordWrap, textAlign, textKerning, textLineHeight,
+      iconFamily, iconField, iconAnchor, iconOffset, iconPadding,
       // properties
-      interactive, cursor, overdraw, viewCollisions, noShaping, onlyPoints, onlyLines
+      interactive, cursor, overdraw, viewCollisions, noShaping, geoFilter
     } = layer
     textSize = textSize ?? 16
     iconSize = iconSize ?? 16
@@ -260,8 +261,7 @@ export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec
     overdraw = overdraw ?? false
     viewCollisions = viewCollisions ?? false
     noShaping = noShaping ?? false
-    onlyPoints = onlyPoints ?? false
-    onlyLines = onlyLines ?? false
+    geoFilter = geoFilter ?? []
     // 1) build definition
     const layerDefinition: GlyphDefinition = {
       ...layerBase,
@@ -273,6 +273,8 @@ export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec
       textStrokeWidth,
       textStroke,
       // layout
+      placement: placement ?? 'line',
+      spacing: spacing ?? 325,
       textFamily: textFamily ?? '',
       textField: textField ?? '',
       textAnchor: textAnchor ?? 'center',
@@ -293,8 +295,7 @@ export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec
       interactive,
       cursor,
       overdraw,
-      onlyPoints,
-      onlyLines
+      geoFilter
     }
     // 2) Store layer workflow, building code if webgl2
     const layerCode: number[] = []

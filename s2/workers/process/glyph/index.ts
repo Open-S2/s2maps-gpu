@@ -3,23 +3,36 @@ import VectorWorker, { colorFunc, idToRGB } from '../vectorWorker'
 import featureSort from '../util/featureSort'
 import { QUAD_SIZE, buildGlyphPointQuads } from './buildGlyphQuads'
 import CollisionTester from './collisionTester'
-import { scaleShiftClip } from '../util'
+import { findCenterPoints, findSpacedPoints, scaleShiftClip } from '../util'
 import coalesceField from 'style/coalesceField'
 import parseFilter from 'style/parseFilter'
 import parseFeatureFunction from 'style/parseFeatureFunction'
 
+import type ImageStore from '../imageStore'
+import type { CodeDesign } from '../vectorWorker'
+import type { S2VectorPoints } from 's2-vector-tile'
+import type { GlyphData, TileRequest } from 'workers/worker.spec'
 import type {
   GlyphBase,
   GlyphObject,
   GlyphPath,
   GlyphPoint
 } from './glyph.spec'
-import type { GlyphData, TileRequest } from 'workers/worker.spec'
-import type { GlyphFeature, GlyphWorker as GlyphWorkerSpec, IDGen, VTFeature } from '../process.spec'
-import type { Alignment, Anchor, GPUType, GlyphDefinition, GlyphWorkerLayer, Point } from 'style/style.spec'
-import type { CodeDesign } from '../vectorWorker'
-import type { S2VectorPoints } from 's2-vector-tile'
-import type ImageStore from '../imageStore'
+import type {
+  GlyphFeature,
+  GlyphWorker as GlyphWorkerSpec,
+  IDGen,
+  VTFeature
+} from '../process.spec'
+import type {
+  Alignment,
+  Anchor,
+  GPUType,
+  GlyphDefinition,
+  GlyphWorkerLayer,
+  Placement,
+  Point
+} from 'style/style.spec'
 
 export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec {
   collisionTest: CollisionTester = new CollisionTester()
@@ -27,31 +40,32 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
   featureStore = new Map<string, GlyphObject[]>() // tileID -> features
   sourceWorker: MessagePort
   uShaper = new UnicodeShaper()
-  experimental: boolean
+  tileSize: number
   constructor (
     idGen: IDGen,
     gpuType: GPUType,
     sourceWorker: MessagePort,
     imageStore: ImageStore,
-    experimental: boolean
+    tileSize: number
   ) {
     super(idGen, gpuType)
     this.sourceWorker = sourceWorker
     this.imageStore = imageStore
-    this.experimental = experimental
+    this.tileSize = tileSize
   }
 
   setupLayer (glyphLayer: GlyphDefinition): GlyphWorkerLayer {
     const {
       name, layerIndex, source, layer, minzoom, maxzoom,
       filter, interactive, cursor, lch, overdraw,
-      onlyPoints, onlyLines, noShaping,
+      geoFilter, noShaping,
       // paint
       textSize, textFill, textStroke, textStrokeWidth, iconSize,
       // layout
-      textFamily, textField, textAnchor, textOffset, textPadding, textWordWrap,
-      textAlign, textKerning, textLineHeight, iconFamily, iconField, iconAnchor,
-      iconOffset, iconPadding
+      placement, spacing,
+      textFamily, textField, textAnchor, textOffset, textPadding,
+      textWordWrap, textAlign, textKerning, textLineHeight,
+      iconFamily, iconField, iconAnchor, iconOffset, iconPadding
     } = glyphLayer
 
     // build featureCode designs
@@ -80,6 +94,8 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       textSize: parseFeatureFunction<number>(textSize),
       iconSize: parseFeatureFunction<number>(iconSize),
       // layout
+      placement: parseFeatureFunction<Placement>(placement),
+      spacing: parseFeatureFunction<number>(spacing),
       textFamily: parseFeatureFunction<string | string[]>(textFamily),
       textField: parseFeatureFunction<string | string[]>(textField),
       textAnchor: parseFeatureFunction<Anchor>(textAnchor),
@@ -95,8 +111,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       iconOffset: parseFeatureFunction<Point>(iconOffset),
       iconPadding: parseFeatureFunction<Point>(iconPadding),
       // properties
-      onlyPoints,
-      onlyLines,
+      geoFilter,
       interactive,
       noShaping,
       cursor,
@@ -113,30 +128,43 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     mapID: string,
     sourceName: string
   ): Promise<boolean> {
+    const { idGen, tileSize } = this
+    const { zoom } = tile
+    // TODO: placement is `line`
+    const { layerIndex, overdraw, interactive, geoFilter, noShaping } = glyphLayer
     const { gpuType, imageStore, featureStore } = this
+    const { extent, properties } = feature
+    let featureType = feature.type
     const storeID: string = `${mapID}:${String(tile.id)}:${sourceName}`
     if (!featureStore.has(storeID)) featureStore.set(storeID, [])
     // ensure that our imageStore is ready
     await imageStore.getReady(mapID)
-    // creating both a text and icon version as applicable
-    const { type: featureType, extent, properties } = feature
-    const geometry = feature.loadGeometry?.()
+    // filter as necessary
+    if (
+      geoFilter.includes('poly') &&
+      (featureType === 3 || featureType === 4)
+    ) return false
+    if (geoFilter.includes('line') && featureType === 2) return false
+    if (geoFilter.includes('point') && featureType === 1) return false
+    // load geometry
+    let geometry = feature.loadGeometry?.()
     if (geometry === undefined) return false
+    // get the placement, spacing, and orientation
+    const placement = glyphLayer.placement([], properties, zoom)
+    const spacing = glyphLayer.spacing([], properties, zoom) / tileSize * extent
+    // if geometry is a line or poly, we may need to flatten it depending upon the placement
+    if (featureType !== 1 && placement !== 'line') {
+      if (placement === 'point') geometry = findSpacedPoints(geometry, featureType, spacing)
+      else if (placement === 'line-center') geometry = findCenterPoints(geometry, featureType)
+      featureType = 1
+    }
     // preprocess geometry
     const clip = scaleShiftClip(geometry, featureType, extent, tile)
-    const { idGen } = this
-    const { layerIndex, overdraw, interactive, onlyPoints, onlyLines, noShaping } = glyphLayer
-    const { zoom } = tile
     if (clip.length === 0) return false
-    if (onlyPoints && featureType !== 1) return false
-    if (onlyLines && featureType === 1) return false
 
     // build out all the individual s,t tile positions from the feature geometry
-    const id = idGen.getNum()
-    const idRGB = idToRGB(id)
+    const glyphs: GlyphBase[] = []
     for (const type of ['icon', 'text'] as Array<'icon' | 'text'>) { // icon FIRST incase text draws over the icon
-      if (glyphLayer[`${type}Size`] === undefined) continue
-
       // build all layout and paint parameters
       // per tile properties
       const deadCode: number[] = []
@@ -158,11 +186,10 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
         }
         fieldCodes = field.split('').map(char => char.charCodeAt(0)).map(String)
         imageStore.parseLigatures(mapID, family, fieldCodes)
-        missing ||= imageStore.addMissingGlyph(mapID, tile.id, fieldCodes, family)
       } else {
         fieldCodes = this.#mapIcon(mapID, family, field, color)
-        missing ||= imageStore.addMissingGlyph(mapID, tile.id, fieldCodes, family)
       }
+      missing ||= imageStore.addMissingGlyph(mapID, tile.id, fieldCodes, family)
       // for rtree tests
       const size = glyphLayer[`${type}Size`](deadCode, properties, zoom)
 
@@ -172,8 +199,8 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       // prep glyph object
       const glyphBase: GlyphBase = {
         // organization parameters
-        id,
-        idRGB,
+        id: 0,
+        idRGB: [0, 0, 0, 0],
         type,
         overdraw,
         layerIndex,
@@ -198,13 +225,24 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
         // track if this feature is missing char or icon data
         missing
       }
+      glyphs.push(glyphBase)
+    }
 
-      // prep store
-      const store = featureStore.get(storeID)
-      if (featureType === 1) {
-        for (const point of clip as S2VectorPoints) {
+    if (glyphs.length === 0) return false
+
+    // prep id tracker and store
+    const ids: number[] = []
+    const store = featureStore.get(storeID)
+    if (featureType === 1) {
+      for (const point of clip as S2VectorPoints) {
+        const id = idGen.getNum()
+        const idRGB = idToRGB(id)
+        ids.push(id)
+        for (const glyphBase of glyphs) {
           const glyph: GlyphPoint = {
             ...glyphBase,
+            id,
+            idRGB,
             glyphType: 'point',
             // tile position
             s: point[0] / extent,
@@ -218,10 +256,17 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
           }
           store?.push(glyph)
         }
-      } else {
+      }
+    } else {
+      const id = idGen.getNum()
+      const idRGB = idToRGB(id)
+      ids.push(id)
+      for (const glyphBase of glyphs) {
         // path type
         const glyph: GlyphPath = {
           ...glyphBase,
+          id,
+          idRGB,
           glyphType: 'path',
           // store geometry data and type to properly build later
           extent,
@@ -239,7 +284,9 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     }
 
     // if interactive, store interactive properties
-    if (interactive) this._addInteractiveFeature(id, properties, glyphLayer)
+    if (interactive) {
+      for (const id of ids) this._addInteractiveFeature(id, properties, glyphLayer)
+    }
     return true
   }
 

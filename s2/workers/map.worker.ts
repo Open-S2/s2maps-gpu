@@ -35,7 +35,7 @@ export default class MapWorker {
     else if (type === 'clearSource') this.s2mapUI.clearSource(data.sourceNames)
     else if (type === 'addLayer') this.s2mapUI.addLayer(data.layer, data.nameIndex)
     else if (type === 'updateLayer') this.s2mapUI.updateLayer(data.layer, data.nameIndex, data.fullUpdate)
-    else if (type === 'removeLayer') this.s2mapUI.removeLayer(data.nameIndex)
+    else if (type === 'deleteLayer') this.s2mapUI.deleteLayer(data.nameIndex)
     else if (type === 'reorderLayers') this.s2mapUI.reorderLayers(data.layerChanges)
     else if (type === 'delete') this.s2mapUI.delete()
     else this.s2mapUI.injectData(data)

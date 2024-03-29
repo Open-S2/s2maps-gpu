@@ -315,11 +315,12 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
       // paint
       textSize, iconSize, textFill, textStrokeWidth, textStroke,
       // layout
-      textFamily, textField, textAnchor, textOffset, textPadding, textWordWrap,
-      textAlign, textKerning, textLineHeight, iconFamily, iconField, iconAnchor,
-      iconOffset, iconPadding,
+      placement, spacing,
+      textFamily, textField, textAnchor, textOffset, textPadding,
+      textWordWrap, textAlign, textKerning, textLineHeight,
+      iconFamily, iconField, iconAnchor, iconOffset, iconPadding,
       // properties
-      onlyPoints, onlyLines,
+      geoFilter,
       interactive, cursor, overdraw, noShaping, viewCollisions
     } = layer
     textSize = textSize ?? 16
@@ -327,14 +328,12 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     textFill = textFill ?? 'rgb(0, 0, 0)'
     textStrokeWidth = textStrokeWidth ?? 0
     textStroke = textStroke ?? 'rgb(0, 0, 0)'
-    onlyPoints = onlyPoints ?? false
-    onlyLines = onlyLines ?? false
+    geoFilter = geoFilter ?? []
     interactive = interactive ?? false
     cursor = cursor ?? 'default'
     overdraw = overdraw ?? false
     noShaping = noShaping ?? false
     viewCollisions = viewCollisions ?? false
-    // 1) build definition
     // 1) build definition
     const layerDefinition: GlyphDefinition = {
       ...layerBase,
@@ -346,6 +345,8 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
       textStrokeWidth,
       textStroke,
       // layout
+      placement: placement ?? 'line',
+      spacing: spacing ?? 325,
       textFamily: textFamily ?? '',
       textField: textField ?? '',
       textAnchor: textAnchor ?? 'center',
@@ -361,8 +362,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
       iconOffset: iconOffset ?? [0, 0],
       iconPadding: iconPadding ?? [0, 0],
       // properties
-      onlyPoints,
-      onlyLines,
+      geoFilter,
       interactive,
       cursor,
       overdraw,

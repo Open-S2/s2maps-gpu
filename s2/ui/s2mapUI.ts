@@ -185,12 +185,12 @@ export default class S2MapUI extends Camera {
     // this.render()
   }
 
-  removeLayer (nameIndex: number | string): void {
+  deleteLayer (nameIndex: number | string): void {
     // TODO
     // // style needs to be updated on the change
-    // const index = Style.removeLayer(nameIndex)
+    // const index = Style.deleteLayer(nameIndex)
     // // remove all instances of the layer in each tile
-    // this.tileCache.forEach(tile => { tile.removeLayer(index) })
+    // this.tileCache.forEach(tile => { tile.deleteLayer(index) })
     // // rerender
     // this.render()
   }

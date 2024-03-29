@@ -176,12 +176,15 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
       // paint
       radius, opacity, intensity,
       // layout
-      colorRamp, weight
+      colorRamp, weight,
+      // properties
+      geoFilter
     } = layer
     radius = radius ?? 1
     opacity = opacity ?? 1
     intensity = intensity ?? 1
     colorRamp = colorRamp ?? 'sinebow'
+    geoFilter = geoFilter ?? ['line', 'poly']
     // 1) build definition
     const layerDefinition: HeatmapDefinition = {
       ...layerBase,
@@ -191,8 +194,10 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
       opacity,
       intensity,
       // layout
+      weight: weight ?? 1,
+      // properties
       colorRamp,
-      weight: weight ?? 1
+      geoFilter
     }
     // 2) build layer code
     const layerCode: number[] = []

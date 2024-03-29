@@ -28,7 +28,7 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
   setupLayer (lineLayer: LineDefinition): LineWorkerLayer {
     const {
       name, layerIndex, source, layer, minzoom, maxzoom, filter,
-      dashed, onlyLines, interactive, cursor, lch, cap, join,
+      dashed, geoFilter, interactive, cursor, lch, cap, join,
       color, opacity, width, gapwidth
     } = lineLayer
 
@@ -54,7 +54,7 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
       filter: parseFilter(filter),
       getCode: this.buildCode(design),
       dashed,
-      onlyLines,
+      geoFilter,
       interactive,
       cursor
     }
@@ -71,14 +71,17 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
     const { zoom, division } = tile
     const { extent, properties } = feature
     let { type } = feature
-    const { getCode, layerIndex, onlyLines } = lineLayer
+    const { getCode, layerIndex, geoFilter } = lineLayer
+    if (type === 1) return false
+    if (geoFilter.includes('line') && type === 2) return false
     if (
-      type === 1 ||
-      type > 4 ||
-      ((type === 3 || type === 4) && onlyLines)
+      geoFilter.includes('poly') &&
+      (type === 3 || type === 4)
     ) return false
+    // load geometry
     const geometry = feature.loadGeometry?.()
     if (geometry === undefined) return false
+    // TODO: Fix this in the s2-vector-tile package. This is a temporary fix for WebMercator Tiles
     if (
       type === 3 &&
       Array.isArray(geometry[0]) &&

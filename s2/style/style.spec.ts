@@ -1065,6 +1065,7 @@ export type Anchor =
   'center' | 'left' | 'right' | 'top' | 'bottom' |
   'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 export type Alignment = 'auto' | 'center' | 'left' | 'right'
+export type Placement = 'point' | 'line' | 'line-center'
 export interface GlyphStyle extends LayerStyleBase {
   /**
    * Glyph type
@@ -1088,11 +1089,14 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `iconSize`
    *
    * Optional layout properties:
+   * - `placement`
+   * - `spacing`
    * - `textFamily`
    * - `textField`
    * - `textAnchor`
    * - `textOffset`
    * - `textPadding`
+   * - `textRotate`
    * - `textWordWrap`
    * - `textAlign`
    * - `textKerning`
@@ -1102,10 +1106,10 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `iconAnchor`
    * - `iconOffset`
    * - `iconPadding`
+   * - `iconRotate`
    *
    * Optional properties:
-   * - `onlyPoints` - if true, only points will be drawn not lines or polygons
-   * - `onlyLines` - if true, only lines and polygons will be drawn not points
+   * - `geoFilter` - filter the geometry types that will be drawn
    * - `overdraw` - if true, the layer will be drawn regardless of other glyph layers
    * - `interactive` - if true, when hovering over the glyph, the property data will be sent to the UI via an Event
    * - `viewCollisions` - if true, the layer glyphs will display the collision boxes and colorize them based on if they are colliding or not
@@ -1239,6 +1243,71 @@ export interface GlyphStyle extends LayerStyleBase {
    */
   iconSize?: number | Property<number>
   // layout
+  /**
+   * A LAYOUT `PropertyOnlyStep`.
+   * @defaultValue `"line"`
+   *
+   * Can be `point`, `line` or `line-center`. Only relavent if geometry is not a point.
+   * Line and Polygon geometries will use the `placement` type to determine
+   * how the glyphs are drawn. Regardless of the placement type, the glyphs
+   * will be drawn at `spacing` intervals.
+   *
+   * If set to `point`, the geometry will be simplified down to a set
+   * of points of minimum distance `spacing` apart.
+   *
+   * If set to `line`, the glyphs will draw along the line path.
+   *
+   * If set to `line-center`, the geometry will resolve to a single point
+   * at the center of the line. The `spacing` property will have no effect.
+   *
+   * ex.
+   *
+   * ```json
+   * { "type": "glyph", "placement": "point" }
+   * ```
+   *
+   * ex.
+   *
+   * ```json
+   * { "placement": { "inputValue": { "key": "placementType", "fallback": "point" } } }
+   * ```
+   *
+   * Your list of PropertyOnlyStep options are:
+   * - `inputValue` - access value in feature properties
+   * - `dataCondition` - filter based on feature property conditions
+   * - `dataRange` - filter based on feature property ranges (but only allows an ease type of "step")
+   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
+   * - `featureState` - filter based on feature state
+   * - `fallback` - if all else fails, use this value
+   */
+  placement?: Placement | PropertyOnlyStep<Placement>
+  /**
+   * A LAYOUT `Property`.
+   * @defaultValue `325`
+   *
+   * The distance between glyphs. Only relavent if geometry is not a point.
+   *
+   * ex.
+   *
+   * ```json
+   * { "spacing": 250 }
+   * ```
+   *
+   * ex.
+   *
+   * ```json
+   * { "spacing": { "inputValue": { "key": "space-between", "fallback": 350 } } }
+   * ```
+   *
+   * Your list of Property options are:
+   * - `inputValue` - access value in feature properties
+   * - `dataCondition` - filter based on feature property conditions
+   * - `dataRange` - filter based on feature property ranges
+   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState` - filter based on feature state
+   * - `fallback` - if all else fails, use this value
+   */
+  spacing?: number | Property<number>
   /**
    * A LAYOUT `PropertyOnlyStep`.
    * @defaultValue `""` (empty string)
@@ -1408,7 +1477,7 @@ export interface GlyphStyle extends LayerStyleBase {
    */
   textPadding?: Point | PropertyOnlyStep<Point>
   /**
-   * A PAINT `Property`.
+   * A LAYOUT `Property`.
    * @defaultValue `0`
    *
    * ex.
@@ -1460,7 +1529,7 @@ export interface GlyphStyle extends LayerStyleBase {
    */
   textAlign?: Alignment | PropertyOnlyStep<Alignment>
   /**
-   * A PAINT `Property`.
+   * A LAYOUT `Property`.
    * @defaultValue `0`
    *
    * ex.
@@ -1485,7 +1554,7 @@ export interface GlyphStyle extends LayerStyleBase {
    */
   textKerning?: number | PropertyOnlyStep<number>
   /**
-   * A PAINT `Property`.
+   * A LAYOUT `Property`.
    * @defaultValue `0`
    *
    * ex.
@@ -1678,17 +1747,18 @@ export interface GlyphStyle extends LayerStyleBase {
    */
   iconPadding?: Point | PropertyOnlyStep<Point>
   // properties
-  /** if true, only points will be drawn not lines or polygons. Default false */
-  onlyPoints?: boolean
-  /** if true, only lines and polygons will be drawn not points. Default false */
-  onlyLines?: boolean
+  /**
+   * Filter the geometry types that will be drawn.
+   * An empty array will support all geometry types.
+   * Defaults to empty. */
+  geoFilter?: Array<'point' | 'line' | 'poly'>
   /** if true, the layer will be drawn regardless of other glyph layers. Default false */
   overdraw?: boolean
   /** if true, when hovering over the glyph, the property data will be sent to the UI via an Event. Default false */
   interactive?: boolean
   /** if true, the layer glyphs will display the collision boxes and colorize them based on if they are colliding or not. Default false */
   viewCollisions?: boolean
-  /** if true, it's assumed RTL text has been preshaped so do not invert it again. Defaults to false */
+  /** if true, it's assumed RTL text has been preshaped so do not apply RTL inversion again. Defaults to false */
   noShaping?: boolean
   /** the cursor to use when hovering over the glyph. Default "default" */
   cursor?: Cursor
@@ -1702,6 +1772,8 @@ export interface GlyphDefinition extends LayerDefinitionBase {
   textStrokeWidth: number | Property<number>
   iconSize: number | Property<number>
   // layout
+  placement: Placement | PropertyOnlyStep<Placement>
+  spacing: number | Property<number>
   textFamily: string | string[] | PropertyOnlyStep<string | string[]>
   textField: string | string[] | PropertyOnlyStep<string | string[]>
   textAnchor: Anchor | PropertyOnlyStep<Anchor>
@@ -1717,8 +1789,7 @@ export interface GlyphDefinition extends LayerDefinitionBase {
   iconOffset: Point | PropertyOnlyStep<Point>
   iconPadding: Point | PropertyOnlyStep<Point>
   // properties
-  onlyPoints: boolean
-  onlyLines: boolean
+  geoFilter: Array<'point' | 'line' | 'poly'>
   overdraw: boolean
   interactive: boolean
   noShaping: boolean
@@ -1743,6 +1814,8 @@ export interface GlyphWorkerLayer extends LayerWorkerBase {
   textSize: LayerWorkerFunction<number>
   iconSize: LayerWorkerFunction<number>
   // layout
+  placement: LayerWorkerFunction<Placement>
+  spacing: LayerWorkerFunction<number>
   textFamily: LayerWorkerFunction<string | string[]>
   textField: LayerWorkerFunction<string | string[]>
   textAnchor: LayerWorkerFunction<string>
@@ -1758,8 +1831,7 @@ export interface GlyphWorkerLayer extends LayerWorkerBase {
   iconOffset: LayerWorkerFunction<Point>
   iconPadding: LayerWorkerFunction<Point>
   // properties
-  onlyPoints: boolean
-  onlyLines: boolean
+  geoFilter: Array<'point' | 'line' | 'poly'>
   overdraw: boolean
   interactive: boolean
   noShaping: boolean
@@ -1789,8 +1861,11 @@ export interface HeatmapStyle extends LayerStyleBase {
    * - `intensity`
    *
    * Optional layout properties:
-   * - `colorRamp`
    * - `weight`
+   *
+   * Optional properties:
+   * - `geoFilter` - filter the geometry types that will be drawn.
+   * - `colorRamp` - the color ramp to use for the heatmap. Defaults to `sinebow`
    */
   type: 'heatmap'
   // paint
@@ -1909,6 +1984,12 @@ export interface HeatmapStyle extends LayerStyleBase {
    * ```
    */
   colorRamp?: 'sinebow' | 'sinebow-extended' | Array<{ stop: number, color: string }>
+  /**
+   * Filter the geometry types that will be drawn.
+   * An empty array will support all geometry types.
+   * Defaults to `['line', 'poly']` (only points will be drawn).
+   */
+  geoFilter?: Array<'point' | 'line' | 'poly'>
 }
 export interface HeatmapDefinition extends LayerDefinitionBase {
   type: 'heatmap'
@@ -1919,6 +2000,7 @@ export interface HeatmapDefinition extends LayerDefinitionBase {
   weight: number | Property<number>
   // properties
   colorRamp: 'sinebow' | 'sinebow-extended' | Array<{ stop: number, color: string }>
+  geoFilter: Array<'point' | 'line' | 'poly'>
 }
 export interface HeatmapWorkflowLayerGuide extends LayerWorkflowGuideBase {
   colorRamp: WebGLTexture
@@ -1935,6 +2017,7 @@ export interface HeatmapWorkerLayer extends LayerWorkerBase {
   type: 'heatmap'
   getCode: BuildCodeFunction
   weight: LayerWorkerFunction<number>
+  geoFilter: Array<'point' | 'line' | 'poly'>
 }
 
 // LINE //
@@ -1967,7 +2050,7 @@ export interface LineStyle extends LayerStyleBase {
    * - `dasharray`
    *
    * Optional properties:
-   * - `onlyLines` - if true, only lines will be drawn not points or polygons
+   * - `geoFilter` - filter the geometry types that will be drawn.
    * - `interactive` - if true, when hovering over the line, the property data will be sent to the UI via an Event
    * - `cursor` - the cursor to use when hovering over the line
    */
@@ -2140,8 +2223,11 @@ export interface LineStyle extends LayerStyleBase {
    * ```
    */
   dasharray?: Array<[number, string]>
-  /** if true, only lines will be drawn not points or polygons. Defaults to `false` */
-  onlyLines?: boolean
+  /**
+   * Filter the geometry types that will be drawn.
+   * An empty array will supports both `line` & `polygon` geometry types.
+   * Defaults to empty. */
+  geoFilter?: Array<'line' | 'poly'>
   /** if true, when hovering over the line, the property data will be sent to the UI via an Event. Defaults to `false` */
   interactive?: boolean
   /** the cursor to use when hovering over the line. Defaults to "default" */
@@ -2160,7 +2246,7 @@ export interface LineDefinition extends LayerDefinitionBase {
   // properties
   dasharray: Array<[number, string]>
   dashed: boolean
-  onlyLines: boolean
+  geoFilter: Array<'line' | 'poly'>
   interactive: boolean
   cursor: Cursor
 }
@@ -2184,7 +2270,7 @@ export interface LineWorkerLayer extends LayerWorkerBase {
   // properties
   getCode: BuildCodeFunction
   dashed: boolean
-  onlyLines: boolean
+  geoFilter: Array<'line' | 'poly'>
   interactive: boolean
   cursor: Cursor
 }
@@ -2214,6 +2300,7 @@ export interface PointStyle extends LayerStyleBase {
    * - `opacity`
    *
    * Optional properties:
+   * - `geoFilter` - filter the geometry types that will be drawn.
    * - `interactive` - if true, when hovering over the line, the property data will be sent to the UI via an Event
    * - `cursor` - the cursor to use when hovering over the line
    */
@@ -2344,6 +2431,12 @@ export interface PointStyle extends LayerStyleBase {
    */
   opacity?: number | Property<number>
   // properties
+  /**
+   * Filter the geometry types that will be drawn.
+   * An empty array will support all geometry types.
+   * Defaults to `['line', 'poly']`.
+   */
+  geoFilter?: Array<'point' | 'line' | 'poly'>
   /** if true, when hovering over the line, the property data will be sent to the UI via an Event. Defaults to `false` */
   interactive?: boolean
   /** the cursor to use when hovering over the line. Defaults to "default" */
@@ -2358,6 +2451,7 @@ export interface PointDefinition extends LayerDefinitionBase {
   strokeWidth: number | Property<number>
   opacity: number | Property<number>
   // properties
+  geoFilter: Array<'point' | 'line' | 'poly'>
   interactive: boolean
   cursor: Cursor
 }
@@ -2371,6 +2465,7 @@ export interface PointWorkflowLayerGuideGPU extends PointWorkflowLayerGuide {
 export interface PointWorkerLayer extends LayerWorkerBase {
   type: 'point'
   getCode: BuildCodeFunction
+  geoFilter: Array<'point' | 'line' | 'poly'>
   interactive: boolean
   cursor: Cursor
 }
@@ -2985,6 +3080,7 @@ export interface StylePackage {
   layers: LayerDefinition[]
   minzoom: number
   maxzoom: number
+  tileSize: number
   analytics: Analytics
   experimental: boolean
   apiKey?: string

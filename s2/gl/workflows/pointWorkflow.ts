@@ -173,7 +173,10 @@ export default class PointWorkflow extends Workflow implements PointWorkflowSpec
     const { type } = this
     const { source, layerIndex, lch, visible } = layerBase
     // PRE) get layer base
-    let { radius, opacity, color, stroke, strokeWidth, interactive, cursor } = layer
+    let {
+      radius, opacity, color, stroke, strokeWidth,
+      geoFilter, interactive, cursor
+    } = layer
     radius = radius ?? 1
     opacity = opacity ?? 1
     color = color ?? 'rgba(0, 0, 0, 0)'
@@ -181,6 +184,7 @@ export default class PointWorkflow extends Workflow implements PointWorkflowSpec
     strokeWidth = strokeWidth ?? 1
     interactive = interactive ?? false
     cursor = cursor ?? 'default'
+    geoFilter = geoFilter ?? ['line', 'poly']
     // 1) build definition
     const layerDefinition: PointDefinition = {
       ...layerBase,
@@ -192,6 +196,7 @@ export default class PointWorkflow extends Workflow implements PointWorkflowSpec
       stroke,
       strokeWidth,
       // propreties
+      geoFilter,
       interactive,
       cursor
     }

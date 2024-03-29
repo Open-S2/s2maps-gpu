@@ -161,7 +161,7 @@ export default class LineWorkflow implements LineWorkflowSpec {
     const { source, layerIndex, lch, visible } = layerBase
     // PRE) get layer base
     let {
-      interactive, cursor, onlyLines,
+      interactive, cursor, geoFilter,
       // paint
       color, opacity, width, gapwidth,
       // layout
@@ -171,6 +171,7 @@ export default class LineWorkflow implements LineWorkflowSpec {
     opacity = opacity ?? 1
     width = width ?? 1
     gapwidth = gapwidth ?? 0
+    geoFilter = geoFilter ?? []
     // 1) build definition
     const dashed = Array.isArray(dasharray) && dasharray.length > 0
     interactive = interactive ?? false
@@ -186,7 +187,7 @@ export default class LineWorkflow implements LineWorkflowSpec {
       cap: cap ?? 'butt',
       join: join ?? 'miter',
       dasharray,
-      onlyLines: onlyLines ?? false,
+      geoFilter,
       dashed,
       interactive,
       cursor

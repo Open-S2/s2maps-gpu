@@ -75,8 +75,8 @@ export class WorkerPool {
     this.sourceWorker.postMessage({ mapID, type: 'addMarkers', markers, sourceName })
   }
 
-  removeMarkers (mapID: string, ids: number[], sourceName: string): void {
-    this.sourceWorker.postMessage({ mapID, type: 'removeMarkers', ids, sourceName })
+  deleteMarkers (mapID: string, ids: number[], sourceName: string): void {
+    this.sourceWorker.postMessage({ mapID, type: 'deleteMarkers', ids, sourceName })
   }
 
   deleteSource (mapID: string, sourceNames: string[]): void {
@@ -88,9 +88,9 @@ export class WorkerPool {
     this.sourceWorker.postMessage({ mapID, type: 'addLayer', layer, index, tileRequest })
   }
 
-  removeLayer (mapID: string, index: number): void {
-    for (const worker of this.workers) worker.postMessage({ mapID, type: 'removeLayer', index })
-    this.sourceWorker.postMessage({ mapID, type: 'removeLayer', index })
+  deleteLayer (mapID: string, index: number): void {
+    for (const worker of this.workers) worker.postMessage({ mapID, type: 'deleteLayer', index })
+    this.sourceWorker.postMessage({ mapID, type: 'deleteLayer', index })
   }
 
   reorderLayers (mapID: string, layerChanges: Record<string | number, number>): void {

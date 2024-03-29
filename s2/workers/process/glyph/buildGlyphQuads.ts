@@ -1,4 +1,4 @@
-import { findPointsAlongLine, flattenGeometry } from '../util'
+import { findPointsAlongLine, flattenGeometryToLines } from '../util'
 import { clipLines } from '../util/scaleShiftClip'
 
 import type { Alignment, Anchor } from 'style/style.spec'
@@ -8,12 +8,12 @@ import type { MapGlyphSource } from '../imageStore'
 import type { Glyph } from './familySource'
 import type { Point } from 'geometry'
 
-// [s, t, xOffset, yOffset, xPos, yPos, width, height, texX, texY, texWidth, texHeight, id]
+// [s, t, xOffset, yOffset, xPos, yPos, width, height, texX, texY, texWidth, texHeight]
 export type Quad = number[]
 // the xPos and yPos are for the 0->1 ratio placement. This is computed internally with size
 // meanwhile xOffset and yOffset are where to start from the s, t position (the pixel based offset)
 
-// [s, t, anchorOffsetX, anchorOffsetY, paddingX, paddingY, maxWidth, maxHeight, index, id]
+// [s, t, anchorOffsetX, anchorOffsetY, offsetX, offsetY, paddingX, paddingY, maxWidth, maxHeight, index, id]
 export type Filter = number[]
 
 export type Row = [rowCount: number, rowWidth: number, rowHeight: number]
@@ -72,7 +72,10 @@ export function buildGlyphPointQuads (
     // word-wrap if line break or length exceeds max allowed.
     if (
       type === 'text' && // is text
-      (unicode === '10' || unicode === '13' || (unicode === '32' && wordWrap !== 0 && cursorX >= wordWrap))
+      (
+        unicode === '10' || unicode === '13' ||
+        (unicode === '32' && wordWrap !== 0 && cursorX >= wordWrap)
+      )
     ) {
       cursorX = 0
       const heightAdjust = rowCount > 0 ? rowHeight + lineHeight : 0
@@ -162,7 +165,7 @@ export function buildGlyphPathQuads (
   // reset cursor
   cursorX = 0
   // grab geometry lines and clip
-  let lines = flattenGeometry(geometry, geometryType)
+  let lines = flattenGeometryToLines(geometry, geometryType)
   // clip any data outside the 0->extent boundary
   lines = clipLines(lines, extent, geometryType > 2, 0)
   if (lines.length === 0) return

@@ -69,7 +69,7 @@ export interface TileBase<C, F, M> {
   layersToBeLoaded?: Set<number>
 
   flush: (data: TileFlushMessage | SourceFlushMessage) => void
-  removeLayer: (index: number) => void
+  deleteLayer: (index: number) => void
   reorderLayers: (layerChanges: Record<number, number>) => void
 
   // we don't parse the interactiveData immediately to save time

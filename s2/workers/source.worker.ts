@@ -95,10 +95,10 @@ export default class SourceWorker {
       else if (type === 'timerequest') void this.#requestTime(mapID, data.tiles, data.sourceNames)
       else if (type === 'glyphrequest') this.#glyphRequest(mapID, data.workerID, data.reqID, data.glyphList)
       else if (type === 'addMarkers') this.#addMarkers(mapID, data.markers, data.sourceName)
-      else if (type === 'removeMarkers') this.#removeMarkers(mapID, data.ids, data.sourceName)
+      else if (type === 'deleteMarkers') this.#deleteMarkers(mapID, data.ids, data.sourceName)
       else if (type === 'deleteSource') this.#deleteSource(mapID, data.sourceNames)
       else if (type === 'addLayer') this.#addLayer(mapID, data.layer, data.index, data.tileRequest)
-      else if (type === 'removeLayer') this.#removeLayer(mapID, data.index)
+      else if (type === 'deleteLayer') this.#deleteLayer(mapID, data.index)
       else if (type === 'reorderLayers') this.#reorderLayers(mapID, data.layerChanges)
     }
   }
@@ -169,7 +169,7 @@ export default class SourceWorker {
     // for (const tile of tiles) source.tileRequest(mapID, { ...tile }, [index])
   }
 
-  #removeLayer (mapID: string, index: number): void {
+  #deleteLayer (mapID: string, index: number): void {
     const { layers } = this.maps[mapID]
     layers.splice(index, 1)
     for (let i = index, ll = layers.length; i < ll; i++) {
@@ -358,9 +358,9 @@ export default class SourceWorker {
     markerSource.addMarkers(markers)
   }
 
-  #removeMarkers (mapID: string, ids: number[], sourceName: string): void {
+  #deleteMarkers (mapID: string, ids: number[], sourceName: string): void {
     const markerSource = this.#getMarkerSource(mapID, sourceName)
-    markerSource.removeMarkers(ids)
+    markerSource.deleteMarkers(ids)
   }
 
   #getMarkerSource (mapID: string, sourceName: string): MarkerSource {

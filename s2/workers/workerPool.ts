@@ -1,7 +1,17 @@
 import type S2Map from '../s2Map'
-import type { Analytics, LayerDefinition, StylePackage } from 'style/style.spec'
 import type { MarkerDefinition } from './source/markerSource'
-import type { SourceWorkerMessage, TileRequest, TileWorkerMessage, WorkerPoolPortMessage } from './worker.spec'
+import type {
+  Analytics,
+  LayerDefinition,
+  Source,
+  StylePackage
+} from 'style/style.spec'
+import type {
+  SourceWorkerMessage,
+  TileRequest,
+  TileWorkerMessage,
+  WorkerPoolPortMessage
+} from './worker.spec'
 
 declare global {
   interface Window { S2WorkerPool: WorkerPool }
@@ -27,9 +37,7 @@ export class WorkerPool {
       const channelA = new MessageChannel()
       const channelB = new MessageChannel()
       const portMessage: WorkerPoolPortMessage = {
-        type: 'port',
-        id: i,
-        totalWorkers: this.workerCount
+        type: 'port', id: i, totalWorkers: this.workerCount
       }
       sourceWorker.postMessage(portMessage, [channelA.port1, channelB.port2])
       tileWorker.postMessage(portMessage, [channelB.port1, channelA.port2])
@@ -44,13 +52,20 @@ export class WorkerPool {
     this.maps[map.id] = map
   }
 
-  requestStyle (mapID: string, style: string, analytics: Analytics, apiKey?: string, urlMap?: Record<string, string>): void {
+  requestStyle (
+    mapID: string,
+    style: string,
+    analytics: Analytics,
+    apiKey?: string,
+    urlMap?: Record<string, string>
+  ): void {
     this.sourceWorker.postMessage({ mapID, type: 'requestStyle', style, apiKey, urlMap, analytics })
   }
 
   injectStyle (mapID: string, style: StylePackage): void {
-    this.sourceWorker.postMessage({ mapID, type: 'style', style })
-    for (const worker of this.workers) worker.postMessage({ mapID, type: 'style', style })
+    const msg = { mapID, type: 'style', style }
+    this.sourceWorker.postMessage(msg)
+    for (const worker of this.workers) worker.postMessage(msg)
   }
 
   // NOTE: TEMPORARY SOLUTION :(
@@ -75,27 +90,48 @@ export class WorkerPool {
     this.sourceWorker.postMessage({ mapID, type: 'addMarkers', markers, sourceName })
   }
 
-  removeMarkers (mapID: string, ids: number[], sourceName: string): void {
-    this.sourceWorker.postMessage({ mapID, type: 'removeMarkers', ids, sourceName })
+  deleteMarkers (mapID: string, ids: number[], sourceName: string): void {
+    this.sourceWorker.postMessage({ mapID, type: 'deleteMarkers', ids, sourceName })
+  }
+
+  addSource (
+    mapID: string,
+    sourceName: string,
+    source: Source,
+    tileRequest: TileRequest[]
+  ): void {
+    const msg = { mapID, type: 'addSource', sourceName, source, tileRequest }
+    this.sourceWorker.postMessage(msg)
+    for (const worker of this.workers) worker.postMessage(msg)
   }
 
   deleteSource (mapID: string, sourceNames: string[]): void {
-    this.sourceWorker.postMessage({ mapID, type: 'deleteSource', sourceNames })
+    const msg = { mapID, type: 'deleteSource', sourceNames }
+    this.sourceWorker.postMessage(msg)
+    for (const worker of this.workers) worker.postMessage(msg)
   }
 
-  addLayer (mapID: string, layer: LayerDefinition, index: number, tileRequest: TileRequest[]): void {
-    for (const worker of this.workers) worker.postMessage({ mapID, type: 'addLayer', layer, index })
-    this.sourceWorker.postMessage({ mapID, type: 'addLayer', layer, index, tileRequest })
+  addLayer (
+    mapID: string,
+    layer: LayerDefinition,
+    index: number,
+    tileRequest: TileRequest[]
+  ): void {
+    const msg = { mapID, type: 'addLayer', layer, index, tileRequest }
+    this.sourceWorker.postMessage(msg)
+    for (const worker of this.workers) worker.postMessage(msg)
   }
 
-  removeLayer (mapID: string, index: number): void {
-    for (const worker of this.workers) worker.postMessage({ mapID, type: 'removeLayer', index })
-    this.sourceWorker.postMessage({ mapID, type: 'removeLayer', index })
+  deleteLayer (mapID: string, index: number): void {
+    const msg = { mapID, type: 'deleteLayer', index }
+    this.sourceWorker.postMessage(msg)
+    for (const worker of this.workers) worker.postMessage(msg)
   }
 
   reorderLayers (mapID: string, layerChanges: Record<string | number, number>): void {
-    for (const worker of this.workers) worker.postMessage({ mapID, type: 'reorderLayers', layerChanges })
-    this.sourceWorker.postMessage({ mapID, type: 'reorderLayers', layerChanges })
+    const msg = { mapID, type: 'reorderLayers', layerChanges }
+    this.sourceWorker.postMessage(msg)
+    for (const worker of this.workers) worker.postMessage(msg)
   }
 }
 
