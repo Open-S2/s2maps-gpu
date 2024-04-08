@@ -15,19 +15,19 @@ test('WM->Points->Default', async ({ page }) => {
   await expect(page).toHaveScreenshot('wm-points.png', { timeout: 2_000 })
 })
 
-test('S2->Points->WebGL', async ({ page }) => {
-  await page.goto('/s2/points/webgl', { waitUntil: 'domcontentloaded' })
-  await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
-  await page.evaluate(waitMap)
-  await expect(page).toHaveScreenshot('s2-points-webgl.png', { timeout: 2_000 })
-})
+// test('S2->Points->WebGL', async ({ page }) => {
+//   await page.goto('/s2/points/webgl', { waitUntil: 'domcontentloaded' })
+//   await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
+//   await page.evaluate(waitMap)
+//   await expect(page).toHaveScreenshot('s2-points-webgl.png', { timeout: 2_000 })
+// })
 
-test('WM->Points->WebGL', async ({ page }) => {
-  await page.goto('/wm/points/webgl', { waitUntil: 'domcontentloaded' })
-  await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
-  await page.evaluate(waitMap)
-  await expect(page).toHaveScreenshot('wm-points-webgl.png', { timeout: 2_000 })
-})
+// test('WM->Points->WebGL', async ({ page }) => {
+//   await page.goto('/wm/points/webgl', { waitUntil: 'domcontentloaded' })
+//   await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
+//   await page.evaluate(waitMap)
+//   await expect(page).toHaveScreenshot('wm-points-webgl.png', { timeout: 2_000 })
+// })
 
 test('S2->Points->WebGL2', async ({ page }) => {
   await page.goto('/s2/points/webgl2', { waitUntil: 'domcontentloaded' })

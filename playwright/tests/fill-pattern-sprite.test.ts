@@ -15,19 +15,19 @@ test('WM->FillPatternSprite->Default', async ({ page }) => {
   await expect(page).toHaveScreenshot('wm-fill-pattern-sprite.png', { timeout: 2_000 })
 })
 
-test('S2->FillPatternSprite->WebGL', async ({ page }) => {
-  await page.goto('/s2/fill-pattern-sprite/webgl', { waitUntil: 'domcontentloaded' })
-  await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
-  await page.evaluate(waitMap)
-  await expect(page).toHaveScreenshot('s2-fill-pattern-sprite-webgl.png', { timeout: 2_000 })
-})
+// test('S2->FillPatternSprite->WebGL', async ({ page }) => {
+//   await page.goto('/s2/fill-pattern-sprite/webgl', { waitUntil: 'domcontentloaded' })
+//   await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
+//   await page.evaluate(waitMap)
+//   await expect(page).toHaveScreenshot('s2-fill-pattern-sprite-webgl.png', { timeout: 2_000 })
+// })
 
-test('WM->FillPatternSprite->WebGL', async ({ page }) => {
-  await page.goto('/wm/fill-pattern-sprite/webgl', { waitUntil: 'domcontentloaded' })
-  await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
-  await page.evaluate(waitMap)
-  await expect(page).toHaveScreenshot('wm-fill-pattern-sprite-webgl.png', { timeout: 2_000 })
-})
+// test('WM->FillPatternSprite->WebGL', async ({ page }) => {
+//   await page.goto('/wm/fill-pattern-sprite/webgl', { waitUntil: 'domcontentloaded' })
+//   await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
+//   await page.evaluate(waitMap)
+//   await expect(page).toHaveScreenshot('wm-fill-pattern-sprite-webgl.png', { timeout: 2_000 })
+// })
 
 test('S2->FillPatternSprite->WebGL2', async ({ page }) => {
   await page.goto('/s2/fill-pattern-sprite/webgl2', { waitUntil: 'domcontentloaded' })

@@ -97,7 +97,7 @@ const style: StyleDefinition = {
       iconPadding: [2, 2],
       iconSize: 42,
       overdraw: false,
-      viewCollisions: false
+      viewCollisions: true
     }
   ]
 }

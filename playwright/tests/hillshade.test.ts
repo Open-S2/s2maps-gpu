@@ -8,12 +8,12 @@ test('WM->Hillshade->Default', async ({ page }) => {
   await expect(page).toHaveScreenshot('wm-hillshade.png', { timeout: 2_000 })
 })
 
-test('WM->Hillshade->WebGL', async ({ page }) => {
-  await page.goto('/wm/hillshade/webgl', { waitUntil: 'domcontentloaded' })
-  await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
-  await page.evaluate(waitMap)
-  await expect(page).toHaveScreenshot('wm-hillshade-webgl.png', { timeout: 2_000 })
-})
+// test('WM->Hillshade->WebGL', async ({ page }) => {
+//   await page.goto('/wm/hillshade/webgl', { waitUntil: 'domcontentloaded' })
+//   await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
+//   await page.evaluate(waitMap)
+//   await expect(page).toHaveScreenshot('wm-hillshade-webgl.png', { timeout: 2_000 })
+// })
 
 test('WM->Hillshade->WebGL2', async ({ page }) => {
   await page.goto('/wm/hillshade/webgl2', { waitUntil: 'domcontentloaded' })

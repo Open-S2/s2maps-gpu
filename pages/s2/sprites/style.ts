@@ -43,7 +43,8 @@ const style: StyleDefinition = {
       iconOffset: [0, 0],
       iconPadding: [0, 0],
       viewCollisions: true,
-      overdraw: false
+      overdraw: false,
+      geoFilter: ['line', 'poly']
     }
   ]
 }

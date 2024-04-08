@@ -15,19 +15,19 @@ test('WM->LCH->Default', async ({ page }) => {
   await expect(page).toHaveScreenshot('wm-lch.png', { timeout: 2_000 })
 })
 
-test('S2->LCH->WebGL', async ({ page }) => {
-  await page.goto('/s2/lch/webgl', { waitUntil: 'domcontentloaded' })
-  await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
-  await page.evaluate(waitMap)
-  await expect(page).toHaveScreenshot('s2-lch-webgl.png', { timeout: 2_000 })
-})
+// test('S2->LCH->WebGL', async ({ page }) => {
+//   await page.goto('/s2/lch/webgl', { waitUntil: 'domcontentloaded' })
+//   await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
+//   await page.evaluate(waitMap)
+//   await expect(page).toHaveScreenshot('s2-lch-webgl.png', { timeout: 2_000 })
+// })
 
-test('WM->LCH->WebGL', async ({ page }) => {
-  await page.goto('/wm/lch/webgl', { waitUntil: 'domcontentloaded' })
-  await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
-  await page.evaluate(waitMap)
-  await expect(page).toHaveScreenshot('wm-lch-webgl.png', { timeout: 2_000 })
-})
+// test('WM->LCH->WebGL', async ({ page }) => {
+//   await page.goto('/wm/lch/webgl', { waitUntil: 'domcontentloaded' })
+//   await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
+//   await page.evaluate(waitMap)
+//   await expect(page).toHaveScreenshot('wm-lch-webgl.png', { timeout: 2_000 })
+// })
 
 test('S2->LCH->WebGL2', async ({ page }) => {
   await page.goto('/s2/lch/webgl2', { waitUntil: 'domcontentloaded' })

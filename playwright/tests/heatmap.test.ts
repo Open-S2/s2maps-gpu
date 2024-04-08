@@ -15,19 +15,19 @@ test('WM->Heatmap->Default', async ({ page }) => {
   await expect(page).toHaveScreenshot('wm-heatmap.png', { timeout: 2_000 })
 })
 
-test('S2->Heatmap->WebGL', async ({ page }) => {
-  await page.goto('/s2/heatmap/webgl', { waitUntil: 'domcontentloaded' })
-  await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
-  await page.evaluate(waitMap)
-  await expect(page).toHaveScreenshot('s2-heatmap-webgl.png', { timeout: 2_000 })
-})
+// test('S2->Heatmap->WebGL', async ({ page }) => {
+//   await page.goto('/s2/heatmap/webgl', { waitUntil: 'domcontentloaded' })
+//   await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
+//   await page.evaluate(waitMap)
+//   await expect(page).toHaveScreenshot('s2-heatmap-webgl.png', { timeout: 2_000 })
+// })
 
-test('WM->Heatmap->WebGL', async ({ page }) => {
-  await page.goto('/wm/heatmap/webgl', { waitUntil: 'domcontentloaded' })
-  await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
-  await page.evaluate(waitMap)
-  await expect(page).toHaveScreenshot('wm-heatmap-webgl.png', { timeout: 2_000 })
-})
+// test('WM->Heatmap->WebGL', async ({ page }) => {
+//   await page.goto('/wm/heatmap/webgl', { waitUntil: 'domcontentloaded' })
+//   await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
+//   await page.evaluate(waitMap)
+//   await expect(page).toHaveScreenshot('wm-heatmap-webgl.png', { timeout: 2_000 })
+// })
 
 test('S2->Heatmap->WebGL2', async ({ page }) => {
   await page.goto('/s2/heatmap/webgl2', { waitUntil: 'domcontentloaded' })

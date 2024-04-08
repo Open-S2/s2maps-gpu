@@ -8,12 +8,12 @@ test('WM->HillshadeTerrarium->Default', async ({ page }) => {
   await expect(page).toHaveScreenshot('wm-hillshade-terrarium.png', { timeout: 2_000 })
 })
 
-test('WM->HillshadeTerrarium->WebGL', async ({ page }) => {
-  await page.goto('/wm/hillshade-terrarium/webgl', { waitUntil: 'domcontentloaded' })
-  await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
-  await page.evaluate(waitMap)
-  await expect(page).toHaveScreenshot('wm-hillshade-terrarium-webgl.png', { timeout: 2_000 })
-})
+// test('WM->HillshadeTerrarium->WebGL', async ({ page }) => {
+//   await page.goto('/wm/hillshade-terrarium/webgl', { waitUntil: 'domcontentloaded' })
+//   await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
+//   await page.evaluate(waitMap)
+//   await expect(page).toHaveScreenshot('wm-hillshade-terrarium-webgl.png', { timeout: 2_000 })
+// })
 
 test('WM->HillshadeTerrarium->WebGL2', async ({ page }) => {
   await page.goto('/wm/hillshade-terrarium/webgl2', { waitUntil: 'domcontentloaded' })

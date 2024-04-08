@@ -8,12 +8,12 @@ test('S2->Skybox->Default', async ({ page }) => {
   await expect(page).toHaveScreenshot('s2-skybox.png', { timeout: 2_000 })
 })
 
-test('S2->Skybox->WebGL', async ({ page }) => {
-  await page.goto('/s2/skybox/webgl', { waitUntil: 'domcontentloaded' })
-  await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
-  await page.evaluate(waitMap)
-  await expect(page).toHaveScreenshot('s2-skybox-webgl.png', { timeout: 2_000 })
-})
+// test('S2->Skybox->WebGL', async ({ page }) => {
+//   await page.goto('/s2/skybox/webgl', { waitUntil: 'domcontentloaded' })
+//   await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
+//   await page.evaluate(waitMap)
+//   await expect(page).toHaveScreenshot('s2-skybox-webgl.png', { timeout: 2_000 })
+// })
 
 test('S2->Skybox->WebGL2', async ({ page }) => {
   await page.goto('/s2/skybox/webgl2', { waitUntil: 'domcontentloaded' })

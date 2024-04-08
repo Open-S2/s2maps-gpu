@@ -1065,7 +1065,7 @@ export type Anchor =
   'center' | 'left' | 'right' | 'top' | 'bottom' |
   'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 export type Alignment = 'auto' | 'center' | 'left' | 'right'
-export type Placement = 'point' | 'line' | 'line-center'
+export type Placement = 'point' | 'line' | 'line-center-point' | 'line-center-path'
 export interface GlyphStyle extends LayerStyleBase {
   /**
    * Glyph type
@@ -1247,7 +1247,8 @@ export interface GlyphStyle extends LayerStyleBase {
    * A LAYOUT `PropertyOnlyStep`.
    * @defaultValue `"line"`
    *
-   * Can be `point`, `line` or `line-center`. Only relavent if geometry is not a point.
+   * Can be `point`, `line`, `line-center-path` or `line-center-point`.
+   * Only relavent if geometry is not a point.
    * Line and Polygon geometries will use the `placement` type to determine
    * how the glyphs are drawn. Regardless of the placement type, the glyphs
    * will be drawn at `spacing` intervals.
@@ -1257,8 +1258,15 @@ export interface GlyphStyle extends LayerStyleBase {
    *
    * If set to `line`, the glyphs will draw along the line path.
    *
-   * If set to `line-center`, the geometry will resolve to a single point
+   * If set to `line-center-path`, the geometry will resolve to a single point
    * at the center of the line. The `spacing` property will have no effect.
+   * The starting point will be at the center of each line, and the glyphs will be drawn
+   * along the line path.
+   *
+   * If set to `line-center-point`, the geometry will resolve to a single point
+   * at the center of the line. The `spacing` property will have no effect.
+   * The starting point will be at the center of each line, and the glyphs will be drawn
+   * as points are (box shaped).
    *
    * ex.
    *

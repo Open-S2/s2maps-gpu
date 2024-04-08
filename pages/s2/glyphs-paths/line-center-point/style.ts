@@ -3,7 +3,7 @@ import type { StyleDefinition } from 'style/style.spec'
 const style: StyleDefinition = {
   version: 1,
   experimental: true,
-  name: 'S2 Glyphs Paths using placement of line-center',
+  name: 'S2 Glyphs Paths using placement of line-center-point',
   view: {
     zoom: -0.5,
     lon: -122.4585607773497,
@@ -38,7 +38,7 @@ const style: StyleDefinition = {
       name: 'line-glyphs',
       source: 'lineGlyphs',
       type: 'line',
-      color: '#1a73e7',
+      color: '#4a4a4a',
       width: 1.75,
       interactive: false
     },
@@ -46,8 +46,9 @@ const style: StyleDefinition = {
       name: 'poi-labels',
       source: 'lineGlyphs',
       type: 'glyph',
-      interactive: false,
-      placement: 'line-center',
+      interactive: true,
+      cursor: 'pointer',
+      placement: 'line-center-point',
       textFamily: ['robotoMedium'],
       textField: '?!Uname',
       textAnchor: 'center',

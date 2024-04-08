@@ -1,24 +1,26 @@
-import { findPointsAlongLine, flattenGeometryToLines } from '../util'
-import { clipLines } from '../util/scaleShiftClip'
+import { getPathPos } from '../util'
 
 import type { Alignment, Anchor } from 'style/style.spec'
-import type { GlyphPath, GlyphPoint } from './glyph.spec'
-// import type { MapGlyphSource } from '../imageStore'
+import type { GlyphPath, GlyphPoint, PathFilter } from './glyph.spec'
 import type { MapGlyphSource } from '../imageStore'
 import type { Glyph } from './familySource'
 import type { Point } from 'geometry'
+import type { Path, QuadPos } from '../util'
 
-// [s, t, xOffset, yOffset, xPos, yPos, width, height, texX, texY, texWidth, texHeight]
+// BOX: [s, t, xOffset, yOffset, xPos, yPos, width, height, texX, texY, texWidth, texHeight]
+// CIRCLE: [s, t, xOffset, yOffset, path1X, path1Y, path2X, path2Y, path3X, path3Y, path4X, path4Y, distance, texX, texY, texWidth, texHeight]
 export type Quad = number[]
 // the xPos and yPos are for the 0->1 ratio placement. This is computed internally with size
 // meanwhile xOffset and yOffset are where to start from the s, t position (the pixel based offset)
 
-// [s, t, anchorOffsetX, anchorOffsetY, offsetX, offsetY, paddingX, paddingY, maxWidth, maxHeight, index, id]
+// BOX: [s, t, anchorOffsetX, anchorOffsetY, offsetX, offsetY, paddingX, paddingY, maxWidth, maxHeight, index, id]
+// CIRCLE: [s, t, anchorOffsetX, anchorOffsetY, offsetX, offsetY, paddingX, paddingY, maxWidth, maxHeight, index, id]
 export type Filter = number[]
 
 export type Row = [rowCount: number, rowWidth: number, rowHeight: number]
 
-export const QUAD_SIZE = 12
+export const QUAD_SIZE_TEXT = 12
+export const QUAD_SIZE_PATH = 20
 
 export const MEDIALS_AND_VOWELS = [
   // MYANMAR MEDIALS
@@ -48,17 +50,17 @@ export const NULL_GLYPH = { code: '0', texX: 0, texY: 0, texW: 0, texH: 0, xOffs
 // TODO: https://blog.mapbox.com/beautifying-map-labels-with-better-line-breaking-2a6ce3ed432
 export function buildGlyphPointQuads (
   feature: GlyphPoint,
-  glyphSource: MapGlyphSource
+  glyphSource: MapGlyphSource,
+  tileSize: number
 ): void {
-  // safety check
-  feature.quads = []
   const { max } = Math
   const {
     s, t, size, offset, padding, family, anchor,
     wordWrap, align, kerning, lineHeight, type, quads
   } = feature
   let { fieldCodes } = feature
-  const [adjustX, adjustY] = offset
+  const [offsetX, offsetY] = offset
+  const [paddingX, paddingY] = padding
   // update field codes if it contains joining characters
   if (type === 'text') fieldCodes = adjustMedials(fieldCodes)
   // setup variable
@@ -79,7 +81,7 @@ export function buildGlyphPointQuads (
     ) {
       cursorX = 0
       const heightAdjust = rowCount > 0 ? rowHeight + lineHeight : 0
-      updateoffset(quads, 0, heightAdjust) // we move all previous content up a row
+      updateGlyphPos(quads, 0, heightAdjust) // we move all previous content up a row
       rows.push([rowCount, rowWidth, heightAdjust])
       rowCount = 0
       rowWidth = 0
@@ -89,20 +91,30 @@ export function buildGlyphPointQuads (
     // grab the unicode information
     const unicodeData = getGlyph(glyphSource, family, unicode)
     if (unicodeData === undefined) continue
-    const { texX, texY, texW, texH, xOffset, yOffset, width, height, advanceWidth } = unicodeData
+    const {
+      texX, texY, texW, texH, xOffset, yOffset,
+      width, height, advanceWidth
+    } = unicodeData
     // prep x-y positions
     const xPos = cursorX + xOffset
     const yPos = yOffset
     if (texW > 0 && texH > 0) {
       // store quad
-      quads.push(s, t, adjustX, adjustY, xPos, yPos, width, height, texX, texY, texW, texH)
+      quads.push(
+        // NOTE: offsetX and offsetY are the pixel based offset
+        // while xPos and yPos are the 0->1 glyph ratio placement
+        // position data
+        s, t, offsetX, offsetY, xPos, yPos, width, height,
+        // texture data
+        texX, texY, texW, texH
+      )
       // update number of glyphs and draw box height
       rowCount++
       rowHeight = max(rowHeight, height)
     }
     // always update rowWidth by advanceWidth
     rowWidth = max(rowWidth, xPos + width, xPos + advanceWidth)
-    // advance cursor psoition
+    // advance cursor position
     cursorX += advanceWidth + kerning
   }
   // store the last row
@@ -114,30 +126,37 @@ export function buildGlyphPointQuads (
   alignText(align, quads, rows, maxWidth)
   // now adjust all glyphs and max-values by the anchor and alignment
   const [anchorOffsetX, anchorOffsetY] = anchorOffset(anchor, maxWidth, maxHeight)
-  updateoffset(quads, anchorOffsetX, anchorOffsetY)
+  updateGlyphPos(quads, anchorOffsetX, anchorOffsetY)
 
   // set minX, maxX, minY, maxY in the feature
-  feature.minX = (s * 768) + adjustX + (anchorOffsetX * size) - padding[0]
-  feature.minY = (t * 768) + adjustY + (anchorOffsetY * size) - padding[1]
-  feature.maxX = feature.minX + (maxWidth * size) + (padding[0] * 2)
-  feature.maxY = feature.minY + (maxHeight * size) + (padding[1] * 2)
+  feature.minX = (s * tileSize) + offsetX + (anchorOffsetX * size) - paddingX
+  feature.minY = (t * tileSize) + offsetY + (anchorOffsetY * size) - paddingY
+  feature.maxX = feature.minX + (maxWidth * size) + (paddingX * 2)
+  feature.maxY = feature.minY + (maxHeight * size) + (paddingY * 2)
   // store the filter
-  feature.filter = [s, t, anchorOffsetX, anchorOffsetY, ...offset, ...padding, maxWidth, maxHeight]
+  feature.filter = [
+    s, t, anchorOffsetX, anchorOffsetY,
+    offsetX, offsetY, paddingX, paddingY,
+    maxWidth, maxHeight
+  ]
 }
 
 // IDEATION: https://blog.mapbox.com/map-label-placement-in-mapbox-gl-c6f843a7caaa
 export function buildGlyphPathQuads (
   feature: GlyphPath,
-  glyphSource: MapGlyphSource
+  glyphSource: MapGlyphSource,
+  tileSize: number
 ): void {
   const { max } = Math
   // NOTE: missing "size" and "padding"
   const {
-    offset, family, anchor, geometry,
-    geometryType, extent, align, kerning, type, quads
+    size, offset, family, anchor,
+    pathData, align, kerning, type
   } = feature
   let { fieldCodes } = feature
-  const [adjustX, adjustY] = offset
+  const [offsetX, offsetY] = offset
+  const padding = max(...feature.padding)
+  const { point: [s, t], pathLeft, pathRight } = pathData
   // update field codes if it contains joining characters
   if (type === 'text') fieldCodes = adjustMedials(fieldCodes)
   // first replace all newlines with spaces
@@ -149,55 +168,50 @@ export function buildGlyphPathQuads (
   let maxWidth = 0
   let maxHeight = 0
   let cursorX = 0
-  // first run builds maxWidth and maxHeight
+  // run through string using the glyphSet as a guide to build the quads
+  const quads: number[] = []
   for (const unicode of fieldCodes) {
+    // grab the unicode information
     const unicodeData = getGlyph(glyphSource, family, unicode)
     if (unicodeData === undefined) continue
-    const { texW, texH, xOffset, width, height, advanceWidth } = unicodeData
+    const { texX, texY, texW, texH, xOffset, yOffset, width, height, advanceWidth } = unicodeData
     maxHeight = max(maxHeight, height)
-    const xPos = cursorX + xOffset
-    if (texW > 0 && texH > 0) maxHeight = max(maxHeight, height)
-    // always update rowWidth by advanceWidth
+    // prep x-y positions & distance
+    const xPos = cursorX + xOffset + (width / 2)
+    const yPos = yOffset + (height / 2)
+    // skip no texture data like spaces
+    if (texW > 0 && texH > 0) {
+      // NOTE: texX, texY, texW, texH, offsetX, and offsetY are the pixel based values
+      // while xPos, yPos, width, and height are the 0->1 ratio placement to user defined size
+      // st is 0->1 ratio relative to tile size
+      quads.push(
+        // position data
+        s, t, offsetX, offsetY, xPos, yPos, width, height,
+        // texture data
+        texX, texY, texW, texH,
+        // tmp path data
+        0, 0, 0, 0, 0, 0, 0, 0
+      )
+    }
     maxWidth = max(maxWidth, xPos + width, xPos + advanceWidth)
     // advance cursor position
     cursorX += advanceWidth + kerning
   }
-  // reset cursor
-  cursorX = 0
-  // grab geometry lines and clip
-  let lines = flattenGeometryToLines(geometry, geometryType)
-  // clip any data outside the 0->extent boundary
-  lines = clipLines(lines, extent, geometryType > 2, 0)
-  if (lines.length === 0) return
-  // build points for each line
-  const points = findPointsAlongLine(lines, maxWidth, extent)
-  // TODO: given the geometry, check if the line is long enough to fit the glyph
-  // TODO: given the geometry, find the anchor points to place the glyph
-  // TODO: build the filters + x,y,r for each set of glyphs
-  // run through string using the glyphSet as a guide to build the quads
-  for (const [s, t] of points) {
-    for (const unicode of fieldCodes) {
-      // grab the unicode information
-      const unicodeData = getGlyph(glyphSource, family, unicode)
-      if (unicodeData === undefined) continue
-      const { texX, texY, texW, texH, xOffset, yOffset, width, height, advanceWidth } = unicodeData
-      // prep x-y positions
-      const xPos = cursorX + xOffset
-      const yPos = yOffset
-      if (texW > 0 && texH > 0) {
-        // store quad
-        quads.push(s, t, adjustX, adjustY, xPos, yPos, width, height, texX, texY, texW, texH)
-      }
-      // advance cursor position
-      cursorX += advanceWidth + kerning
-    }
-    // adjust text based upon center-align or right-align
-    alignText(align, quads, [[0, maxWidth, 0]], maxWidth)
-    // now adjust all glyphs and max-values by the anchor and alignment
-    const [anchorOffsetX, anchorOffsetY] = anchorOffset(anchor, maxWidth, maxHeight)
-    updateoffset(quads, anchorOffsetX, anchorOffsetY)
-    // last step is to build the filter container for both worker and render filtering
-  }
+  // adjust text based upon center-align or right-align
+  alignText(align, quads, [[0, maxWidth, 0]], maxWidth, 'path')
+  // now adjust all glyphs and max-values by the anchor and alignment
+  const [anchorOffsetX, anchorOffsetY] = anchorOffsetPath(anchor, maxWidth, maxHeight)
+  updateGlyphPos(quads, anchorOffsetX, anchorOffsetY, 'path')
+  // set the correct path data relative to whether the glyph is traveling
+  // left or right from the anchor point
+  updatePathData(quads, pathLeft, pathRight)
+  // add nodes to the feature for each quad
+  buildFeatureNodes(feature, quads, pathLeft, pathRight, size, padding, tileSize)
+  // last step is to build the filter container paths. For each quad just
+  // copy paste a slice from st to end of path, add padding, and store to filters
+  storePathFeatureFilters(feature, quads, padding)
+  // store quads in feature
+  feature.quads.push(...quads)
 }
 
 function getGlyph (glyphSource: MapGlyphSource, family: string[], code: string): Glyph {
@@ -210,7 +224,7 @@ function getGlyph (glyphSource: MapGlyphSource, family: string[], code: string):
   return NULL_GLYPH
 }
 
-// NOTE: Tempporary solution; remove whne zig module implements more languages
+// NOTE: Temporary solution; remove when zig module implements more languages
 // MYANMAR MEDIALS go after the characters they are attached to
 function adjustMedials (fieldCodes: string[]): string[] {
   for (let i = 1, fl = fieldCodes.length; i < fl; i++) {
@@ -224,13 +238,20 @@ function adjustMedials (fieldCodes: string[]): string[] {
   return fieldCodes
 }
 
-function updateoffset (quads: Quad, adjustX: number, adjustY: number): void {
-  for (let i = 0, ql = quads.length; i < ql; i += QUAD_SIZE) {
-    quads[i + 4] += adjustX
-    quads[i + 5] += adjustY
+function updateGlyphPos (
+  quads: Quad,
+  offsetX: number,
+  offsetY: number,
+  glyphType: 'text' | 'path' = 'text'
+): void {
+  const quadSize = glyphType === 'text' ? QUAD_SIZE_TEXT : QUAD_SIZE_PATH
+  for (let i = 0, ql = quads.length; i < ql; i += quadSize) {
+    quads[i + 4] += offsetX
+    quads[i + 5] += offsetY
   }
 }
 
+// boxes start at the bottom left as UV [0,0] to [1, 1]
 function anchorOffset (anchor: Anchor, width: number, height: number): Point {
   if (anchor === 'center') return [-width / 2, -height / 2]
   else if (anchor === 'top') return [-width / 2, -height]
@@ -243,13 +264,28 @@ function anchorOffset (anchor: Anchor, width: number, height: number): Point {
   else if (anchor === 'top-left') return [0, -height]
   else return [-width / 2, -height / 2] // default to center
 }
+// the path drawing takes [-0.5, -0.5] to [0.5, 0.5] quads
+function anchorOffsetPath (anchor: Anchor, width: number, height: number): Point {
+  if (anchor === 'center') return [-width / 2, 0]
+  else if (anchor === 'top') return [-width / 2, -height / 2]
+  else if (anchor === 'top-right') return [-width, -height / 2]
+  else if (anchor === 'right') return [-width, 0]
+  else if (anchor === 'bottom-right') return [-width, height / 2]
+  else if (anchor === 'bottom') return [-width / 2, height / 2]
+  else if (anchor === 'bottom-left') return [0, height / 2]
+  else if (anchor === 'left') return [0, 0]
+  else if (anchor === 'top-left') return [0, -height / 2]
+  else return [-width / 2, 0] // default to center
+}
 
 function alignText (
   align: Alignment,
   quads: Quad,
   rows: Row[],
-  maxWidth: number
+  maxWidth: number,
+  glyphType: 'text' | 'path' = 'text'
 ): void {
+  const quadSize = glyphType === 'text' ? QUAD_SIZE_TEXT : QUAD_SIZE_PATH
   if (align !== 'center' && align !== 'right') return
   const alignFunc = (align === 'center')
     ? (mW: number, rW: number): number => (mW - rW) / 2 // center align
@@ -268,9 +304,52 @@ function alignText (
     const adjust = alignFunc(maxWidth, rowWidth)
     // iterate the rows, adding the x-y adjustment as appropriate
     for (let i = 0; i < rowCount; i++) {
-      idx = currPos * QUAD_SIZE
+      idx = currPos * quadSize
       quads[idx + 4] += adjust
       currPos++
     }
+  }
+}
+
+function updatePathData (
+  quads: Quad,
+  pathLeft: Path,
+  pathRight: Path
+): void {
+  for (let i = 0, ql = quads.length; i < ql; i += QUAD_SIZE_PATH) {
+    const path = quads[i + 4] >= 0 ? pathRight : pathLeft
+    for (let j = 0; j < 4; j++) {
+      quads[i + 12 + (j * 2)] = path[j][0]
+      quads[i + 13 + (j * 2)] = path[j][1]
+    }
+  }
+}
+
+function buildFeatureNodes (
+  feature: GlyphPath,
+  quads: Quad,
+  pathLeft: Path,
+  pathRight: Path,
+  size: number,
+  padding: number,
+  tileSize: number
+): void {
+  for (let i = 0, ql = quads.length; i < ql; i += QUAD_SIZE_PATH) {
+    const quadPos = quads.slice(i, i + 6) as QuadPos
+    const [x, y] = getPathPos(quadPos, pathLeft, pathRight, tileSize, size)
+    feature.nodes.push({ x, y, r: size / 2 + padding })
+  }
+}
+
+function storePathFeatureFilters (feature: GlyphPath, quads: Quad, padding: number): void {
+  for (let i = 0, ql = quads.length; i < ql; i += QUAD_SIZE_PATH) {
+    feature.filters.push([
+      // st, offsetXY, xy
+      ...quads.slice(i, i + 6),
+      // paths
+      ...quads.slice(i + 12, i + 20),
+      // padding
+      padding
+    ] as PathFilter)
   }
 }

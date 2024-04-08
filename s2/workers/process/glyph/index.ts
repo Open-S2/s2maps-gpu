@@ -1,29 +1,30 @@
 import UnicodeShaper, { DEFAULT_OPTIONS_WITHOUT_SHAPING } from 'unicode-shaper-zig'
 import VectorWorker, { colorFunc, idToRGB } from '../vectorWorker'
 import featureSort from '../util/featureSort'
-import { QUAD_SIZE, buildGlyphPointQuads } from './buildGlyphQuads'
 import CollisionTester from './collisionTester'
-import { findCenterPoints, findSpacedPoints, scaleShiftClip } from '../util'
 import coalesceField from 'style/coalesceField'
 import parseFilter from 'style/parseFilter'
 import parseFeatureFunction from 'style/parseFeatureFunction'
+import {
+  QUAD_SIZE_PATH,
+  QUAD_SIZE_TEXT,
+  buildGlyphPathQuads,
+  buildGlyphPointQuads
+} from './buildGlyphQuads'
+import {
+  getCenterPoints,
+  getPointsAndPathsAlongLines,
+  getPointsAndPathsAtCenterOfLines,
+  getSpacedPoints,
+  scaleShiftClip
+} from '../util'
 
 import type ImageStore from '../imageStore'
 import type { CodeDesign } from '../vectorWorker'
 import type { S2VectorPoints } from 's2-vector-tile'
 import type { GlyphData, TileRequest } from 'workers/worker.spec'
-import type {
-  GlyphBase,
-  GlyphObject,
-  GlyphPath,
-  GlyphPoint
-} from './glyph.spec'
-import type {
-  GlyphFeature,
-  GlyphWorker as GlyphWorkerSpec,
-  IDGen,
-  VTFeature
-} from '../process.spec'
+import type { GlyphBase, GlyphObject, GlyphPath, GlyphPoint } from './glyph.spec'
+import type { GlyphFeature, GlyphWorker as GlyphWorkerSpec, IDGen, VTFeature } from '../process.spec'
 import type {
   Alignment,
   Anchor,
@@ -150,12 +151,14 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     let geometry = feature.loadGeometry?.()
     if (geometry === undefined) return false
     // get the placement, spacing, and orientation
-    const placement = glyphLayer.placement([], properties, zoom)
+    let placement = glyphLayer.placement([], properties, zoom)
     const spacing = glyphLayer.spacing([], properties, zoom) / tileSize * extent
+    // if we are placing along a line, but the geometry is a point, we skip
+    if (featureType === 1 && placement !== 'point') placement = 'point'
     // if geometry is a line or poly, we may need to flatten it depending upon the placement
-    if (featureType !== 1 && placement !== 'line') {
-      if (placement === 'point') geometry = findSpacedPoints(geometry, featureType, spacing)
-      else if (placement === 'line-center') geometry = findCenterPoints(geometry, featureType)
+    if (featureType !== 1 && placement !== 'line' && placement !== 'line-center-path') {
+      if (placement === 'point') geometry = getSpacedPoints(geometry, featureType, spacing, extent)
+      else if (placement === 'line-center-point') geometry = getCenterPoints(geometry, featureType)
       featureType = 1
     }
     // preprocess geometry
@@ -210,6 +213,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
         family,
         field,
         fieldCodes,
+        spacing,
         offset: glyphLayer[`${type}Offset`](deadCode, properties, zoom),
         padding: glyphLayer[`${type}Padding`](deadCode, properties, zoom),
         kerning: (type === 'text') ? glyphLayer.textKerning(deadCode, properties, zoom) : 0,
@@ -244,6 +248,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
             id,
             idRGB,
             glyphType: 'point',
+            quads: [],
             // tile position
             s: point[0] / extent,
             t: point[1] / extent,
@@ -258,28 +263,33 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
         }
       }
     } else {
-      const id = idGen.getNum()
-      const idRGB = idToRGB(id)
-      ids.push(id)
-      for (const glyphBase of glyphs) {
-        // path type
-        const glyph: GlyphPath = {
-          ...glyphBase,
-          id,
-          idRGB,
-          glyphType: 'path',
-          // store geometry data and type to properly build later
-          extent,
-          geometry: clip,
-          geometryType: featureType,
-          // ensure wordWrap is 0
-          wordWrap: 0,
-          // setup filters
-          filters: [],
-          // node Properties
-          nodes: []
+      const pathDataList = (placement === 'line-center-path')
+        ? getPointsAndPathsAtCenterOfLines(geometry, featureType, extent)
+        : getPointsAndPathsAlongLines(geometry, featureType, spacing, extent)
+      for (const pathData of pathDataList) {
+        const id = idGen.getNum()
+        const idRGB = idToRGB(id)
+        ids.push(id)
+        for (const glyphBase of glyphs) {
+          // path type
+          const glyph: GlyphPath = {
+            ...glyphBase,
+            id,
+            idRGB,
+            glyphType: 'path',
+            quads: [],
+            // store geometry data and type to properly build later
+            extent,
+            pathData,
+            // ensure wordWrap is 0
+            wordWrap: 0,
+            // setup filters
+            filters: [],
+            // node Properties
+            nodes: []
+          }
+          store?.push(glyph)
         }
-        store?.push(glyph)
       }
     }
 
@@ -312,7 +322,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     sourceName: string,
     features: GlyphFeature[]
   ): void {
-    const { imageStore, collisionTest } = this
+    const { imageStore, collisionTest, tileSize } = this
     const storeID: string = `${mapID}:${String(tile.id)}:${sourceName}`
     // prepare
     collisionTest.clear()
@@ -330,8 +340,9 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     features = features.sort(featureSort)
     for (const feature of features) {
       // Step 1: prebuild the glyph positions and bbox
-      if (feature.glyphType === 'point') buildGlyphPointQuads(feature, imageStore.getGlyphSource(mapID))
-      // else buildGlyphLineQuads(feature, imageStore.glyphMap)
+      const glyphMap = imageStore.getGlyphSource(mapID)
+      if (feature.glyphType === 'point') buildGlyphPointQuads(feature, glyphMap, tileSize)
+      else buildGlyphPathQuads(feature, glyphMap, tileSize)
       // Step 2: check the collisionTest if we want to pre filter
       if (
         feature.quads.length !== 0 &&
@@ -362,18 +373,16 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     const storeID: string = `${mapID}:${tileID}:${sourceName}`
     const features = this.featureStore.get(storeID) ?? []
     if (features.length === 0) return
-    const glyphPointFeatures = features.filter(f => f.glyphType === 'point') as GlyphPoint[]
-    if (glyphPointFeatures.length === 0) return
     if (this.gpuType === 3) {
-      this.#flushPoints3(mapID, sourceName, tileID, glyphPointFeatures)
-    } else this.#flushPoints2(mapID, sourceName, tileID, glyphPointFeatures)
+      this.#flushPoints3(mapID, sourceName, tileID, features)
+    } else this.#flushPoints2(mapID, sourceName, tileID, features)
     // cleanup
     this.featureStore.delete(storeID)
   }
 
-  #flushPoints2 (mapID: string, sourceName: string, tileID: bigint, features: GlyphPoint[]): void {
+  #flushPoints2 (mapID: string, sourceName: string, tileID: bigint, features: GlyphObject[]): void {
     // setup draw thread variables
-    const glyphFilterVertices: number[] = []
+    const glyphFilterData: number[] = []
     const glyphFilterIDs: number[] = []
     const glyphQuads: number[] = []
     const glyphQuadIDs: number[] = []
@@ -381,6 +390,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     const featureGuide: number[] = []
     // run through features and store
     let curlayerIndex = features[0].layerIndex
+    const curGlyphType = features[0].glyphType
     let curType = features[0].type
     let encoding: number[] = features[0].code
     let codeStr: string = features[0].code.toString()
@@ -396,12 +406,19 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       // if there is a change in layer index or not the same feature set
       if (
         (quadCount > 0 || filterCount > 0) &&
-        (curlayerIndex !== layerIndex || codeStr !== code.toString() || curType !== type)
+        (
+          curlayerIndex !== layerIndex ||
+          codeStr !== code.toString() ||
+          curType !== type
+        )
       ) {
         // store featureGuide
         featureGuide.push(
-          curlayerIndex, ~~(curType === 'icon'), filterOffset, filterCount,
-          quadOffset, quadCount, encoding.length, ...encoding
+          curlayerIndex,
+          ~~(curGlyphType === 'path'), ~~(curType === 'icon'),
+          filterOffset, filterCount,
+          quadOffset, quadCount,
+          encoding.length, ...encoding
         )
         // update to new codes
         curlayerIndex = layerIndex
@@ -417,11 +434,12 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
         indexPos = 0
       }
       // store the quads and colors
-      glyphFilterVertices.push(...filter, indexPos++)
+      glyphFilterData.push(...filter, indexPos++)
       glyphFilterIDs.push(...idRGB)
       filterCount++
       glyphQuads.push(...quads)
-      const qCount = quads.length / QUAD_SIZE
+      const quadSize = curGlyphType === 'point' ? QUAD_SIZE_TEXT : QUAD_SIZE_PATH
+      const qCount = quads.length / quadSize
       quadCount += qCount
       // add the feature's id for each quad
       for (let i = 0; i < qCount; i++) glyphQuadIDs.push(...idRGB)
@@ -432,13 +450,16 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     // store last set
     if (quadCount > 0 || filterCount > 0) {
       featureGuide.push(
-        curlayerIndex, ~~(curType === 'icon'), filterOffset, filterCount,
-        quadOffset, quadCount, encoding.length, ...encoding
+        curlayerIndex,
+        ~~(curGlyphType === 'path'), ~~(curType === 'icon'),
+        filterOffset, filterCount,
+        quadOffset, quadCount,
+        encoding.length, ...encoding
       )
     }
 
     // filter data
-    const glyphFilterBuffer = new Float32Array(glyphFilterVertices).buffer as ArrayBuffer
+    const glyphFilterBuffer = new Float32Array(glyphFilterData).buffer as ArrayBuffer
     const glyphFilterIDBuffer = new Uint8ClampedArray(glyphFilterIDs).buffer as ArrayBuffer
     // quad draw data
     const glyphQuadBuffer = new Float32Array(glyphQuads).buffer as ArrayBuffer
@@ -465,7 +486,12 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     )
   }
 
-  #flushPoints3 (mapID: string, sourceName: string, tileID: bigint, features: GlyphPoint[]): void {
+  #flushPoints3 (
+    mapID: string,
+    sourceName: string,
+    tileID: bigint,
+    features: GlyphObject[]
+  ): void {
     // ID => { index: resultIndex, count: how many share the same resultIndex }
     let currIndex = 0
     const resultIndexMap = new Map<number, number>()
@@ -474,7 +500,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     }
 
     // setup draw thread variables
-    const glyphFilterVertices: number[] = []
+    const glyphFilterData: number[] = []
     const glyphQuads: number[] = []
     const glyphQuadIDs: number[] = []
     const glyphColors: number[] = []
@@ -482,6 +508,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     // run through features and store
     let curlayerIndex = features[0].layerIndex
     let curType = features[0].type
+    let curGlyphType = features[0].glyphType
     let encoding: number[] = features[0].code
     let codeStr: string = features[0].code.toString()
     let filterOffset = 0
@@ -490,21 +517,29 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     let quadCount = 0
     // iterate features, store as we go
     for (const feature of features) {
-      if (feature.glyphType !== 'point') continue
-      const { id, type, layerIndex, code, color, quads, filter } = feature
+      const { id, glyphType, type, layerIndex, code, color, quads } = feature
       // if there is a change in layer index or
       if (
         (quadCount > 0 || filterCount > 0) &&
-        (curlayerIndex !== layerIndex || codeStr !== code.toString() || curType !== type)
+        (
+          curlayerIndex !== layerIndex ||
+          codeStr !== code.toString() ||
+          curGlyphType !== glyphType ||
+          curType !== type
+        )
       ) {
         // store featureGuide
         featureGuide.push(
-          curlayerIndex, ~~(curType === 'icon'), filterOffset, filterCount,
-          quadOffset, quadCount, encoding.length, ...encoding
+          curlayerIndex,
+          ~~(curGlyphType === 'path'), ~~(curType === 'icon'),
+          filterOffset, filterCount,
+          quadOffset, quadCount,
+          encoding.length, ...encoding
         )
         // update to new codes
         curlayerIndex = layerIndex
         codeStr = code.toString()
+        curGlyphType = glyphType
         curType = type
         encoding = code
         // update offests
@@ -516,10 +551,26 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       }
       // update filters index, store it, and store the ID, hiding the count inside the id
       const resultMap = resultIndexMap.get(id) ?? 0
-      glyphFilterVertices.push(...filter, storeAsFloat32(resultMap), storeAsFloat32(id))
-      filterCount++
+      if (glyphType === 'point') {
+        glyphFilterData.push(
+          ...feature.filter,
+          storeAsFloat32(resultMap), storeAsFloat32(id),
+          -1, -1, -1, -1, -1, -1 // padding
+        )
+        filterCount++
+      } else {
+        for (const filter of feature.filters) {
+          glyphFilterData.push(
+            ...filter,
+            storeAsFloat32(resultMap), storeAsFloat32(id),
+            -1 // padding
+          )
+          filterCount++
+        }
+      }
       glyphQuads.push(...quads)
-      const qCount = quads.length / QUAD_SIZE
+      const quadSize = curGlyphType === 'point' ? QUAD_SIZE_TEXT : QUAD_SIZE_PATH
+      const qCount = quads.length / quadSize
       quadCount += qCount
       // add the feature's index for each quad
       for (let i = 0; i < qCount; i++) glyphQuadIDs.push(resultMap)
@@ -530,13 +581,16 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     // store last set
     if (quadCount > 0 || filterCount > 0) {
       featureGuide.push(
-        curlayerIndex, ~~(curType === 'icon'), filterOffset, filterCount,
-        quadOffset, quadCount, encoding.length, ...encoding
+        curlayerIndex,
+        ~~(curGlyphType === 'path'), ~~(curType === 'icon'),
+        filterOffset, filterCount,
+        quadOffset, quadCount,
+        encoding.length, ...encoding
       )
     }
 
     // filter data
-    const glyphFilterBuffer = new Float32Array(glyphFilterVertices).buffer as ArrayBuffer
+    const glyphFilterBuffer = new Float32Array(glyphFilterData).buffer as ArrayBuffer
     // unused by WebGPU
     const glyphFilterIDBuffer = new Uint8ClampedArray([0]).buffer as ArrayBuffer
     // quad draw data

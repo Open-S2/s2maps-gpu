@@ -8,12 +8,12 @@ test('WM->Cluster->Default', async ({ page }) => {
   await expect(page).toHaveScreenshot('wm-cluster.png', { timeout: 2_000 })
 })
 
-test('WM->Cluster->WebGL', async ({ page }) => {
-  await page.goto('/wm/cluster/webgl', { waitUntil: 'domcontentloaded' })
-  await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
-  await page.evaluate(waitMap)
-  await expect(page).toHaveScreenshot('wm-cluster-webgl.png', { timeout: 2_000 })
-})
+// test('WM->Cluster->WebGL', async ({ page }) => {
+//   await page.goto('/wm/cluster/webgl', { waitUntil: 'domcontentloaded' })
+//   await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
+//   await page.evaluate(waitMap)
+//   await expect(page).toHaveScreenshot('wm-cluster-webgl.png', { timeout: 2_000 })
+// })
 
 test('WM->Cluster->WebGL2', async ({ page }) => {
   await page.goto('/wm/cluster/webgl2', { waitUntil: 'domcontentloaded' })

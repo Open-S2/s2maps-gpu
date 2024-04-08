@@ -42,6 +42,7 @@ export class GlyphFeature extends Feature implements GlyphFeatureSpec {
     public offset: number,
     public filterCount: number,
     public filterOffset: number,
+    public isPath: boolean,
     public isIcon: boolean,
     public featureCode: number[],
     public parent?: Tile,
@@ -58,11 +59,11 @@ export class GlyphFeature extends Feature implements GlyphFeatureSpec {
   duplicate (tile: Tile, parent?: Tile, bounds?: BBox): GlyphFeature {
     const {
       workflow, source, layerGuide, count, offset, filterCount, filterOffset,
-      isIcon, featureCode, size, fill, stroke, strokeWidth
+      isPath, isIcon, featureCode, size, fill, stroke, strokeWidth
     } = this
     const newFeature = new GlyphFeature(
       workflow, source, tile, layerGuide, count, offset, filterCount, filterOffset,
-      isIcon, featureCode, parent, bounds
+      isPath, isIcon, featureCode, parent, bounds
     )
     this.setWebGL1Attributes(size, fill, stroke, strokeWidth)
     return newFeature
@@ -204,18 +205,21 @@ export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec
     let i = 0
     while (i < lgl) {
       // curlayerIndex, curType, filterOffset, filterCount, quadOffset, quadCount, encoding.length, ...encoding
-      const [layerIndex, type, filterOffset, filterCount, offset, count, encodingSize] = featureGuideArray.slice(i, i + 7)
-      i += 7
+      const [
+        layerIndex, isPath, isIcon, filterOffset, filterCount,
+        offset, count, encodingSize
+      ] = featureGuideArray.slice(i, i + 8)
+      i += 8
       // grab the layerGuide
       const layerGuide = this.layerGuides.get(layerIndex)
       if (layerGuide === undefined) continue
       // create the feature
       const feature = new GlyphFeature(
         this, source, tile, layerGuide, count, offset, filterCount, filterOffset,
-        type === 1, [0]
+        isPath === 1, isIcon === 1, [0]
       )
       if (this.type === 1) {
-        if (type === 0) { // text
+        if (isIcon === 0) { // text
           feature.setWebGL1Attributes(
             featureGuideArray[i],
             [...featureGuideArray.slice(i + 1, i + 5)] as ColorArray,

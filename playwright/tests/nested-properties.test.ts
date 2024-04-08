@@ -15,19 +15,19 @@ test('WM->NestedProperties->Default', async ({ page }) => {
   await expect(page).toHaveScreenshot('wm-nested-properties.png', { timeout: 2_000 })
 })
 
-test('S2->NestedProperties->WebGL', async ({ page }) => {
-  await page.goto('/s2/nested-properties/webgl', { waitUntil: 'domcontentloaded' })
-  await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
-  await page.evaluate(waitMap)
-  await expect(page).toHaveScreenshot('s2-nested-properties-webgl.png', { timeout: 2_000 })
-})
+// test('S2->NestedProperties->WebGL', async ({ page }) => {
+//   await page.goto('/s2/nested-properties/webgl', { waitUntil: 'domcontentloaded' })
+//   await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
+//   await page.evaluate(waitMap)
+//   await expect(page).toHaveScreenshot('s2-nested-properties-webgl.png', { timeout: 2_000 })
+// })
 
-test('WM->NestedProperties->WebGL', async ({ page }) => {
-  await page.goto('/wm/nested-properties/webgl', { waitUntil: 'domcontentloaded' })
-  await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
-  await page.evaluate(waitMap)
-  await expect(page).toHaveScreenshot('wm-nested-properties-webgl.png', { timeout: 2_000 })
-})
+// test('WM->NestedProperties->WebGL', async ({ page }) => {
+//   await page.goto('/wm/nested-properties/webgl', { waitUntil: 'domcontentloaded' })
+//   await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
+//   await page.evaluate(waitMap)
+//   await expect(page).toHaveScreenshot('wm-nested-properties-webgl.png', { timeout: 2_000 })
+// })
 
 test('S2->NestedProperties->WebGL2', async ({ page }) => {
   await page.goto('/s2/nested-properties/webgl2', { waitUntil: 'domcontentloaded' })

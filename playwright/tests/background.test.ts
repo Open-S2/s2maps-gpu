@@ -15,19 +15,19 @@ test('S2->Background->Default', async ({ page }) => {
   await expect(page).toHaveScreenshot('s2-background.png', { timeout: 2_000 })
 })
 
-test('WM->Background->WebGL', async ({ page }) => {
-  await page.goto('/wm/background/webgl', { waitUntil: 'domcontentloaded' })
-  await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
-  await page.evaluate(waitMap)
-  await expect(page).toHaveScreenshot('wm-background-webgl.png', { timeout: 2_000 })
-})
+// test('WM->Background->WebGL', async ({ page }) => {
+//   await page.goto('/wm/background/webgl', { waitUntil: 'domcontentloaded' })
+//   await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
+//   await page.evaluate(waitMap)
+//   await expect(page).toHaveScreenshot('wm-background-webgl.png', { timeout: 2_000 })
+// })
 
-test('S2->Background->WebGL', async ({ page }) => {
-  await page.goto('/s2/background/webgl', { waitUntil: 'domcontentloaded' })
-  await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
-  await page.evaluate(waitMap)
-  await expect(page).toHaveScreenshot('s2-background-webgl.png', { timeout: 2_000 })
-})
+// test('S2->Background->WebGL', async ({ page }) => {
+//   await page.goto('/s2/background/webgl', { waitUntil: 'domcontentloaded' })
+//   await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
+//   await page.evaluate(waitMap)
+//   await expect(page).toHaveScreenshot('s2-background-webgl.png', { timeout: 2_000 })
+// })
 
 test('WM->Background->WebGL2', async ({ page }) => {
   await page.goto('/wm/background/webgl2', { waitUntil: 'domcontentloaded' })

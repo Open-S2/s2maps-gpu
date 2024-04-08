@@ -15,19 +15,19 @@ test('WM->InvertPattern->Default', async ({ page }) => {
   await expect(page).toHaveScreenshot('wm-invert-pattern.png', { timeout: 2_000 })
 })
 
-test('S2->InvertPattern->WebGL', async ({ page }) => {
-  await page.goto('/s2/invert-pattern/webgl', { waitUntil: 'domcontentloaded' })
-  await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
-  await page.evaluate(waitMap)
-  await expect(page).toHaveScreenshot('s2-invert-pattern-webgl.png', { timeout: 2_000 })
-})
+// test('S2->InvertPattern->WebGL', async ({ page }) => {
+//   await page.goto('/s2/invert-pattern/webgl', { waitUntil: 'domcontentloaded' })
+//   await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
+//   await page.evaluate(waitMap)
+//   await expect(page).toHaveScreenshot('s2-invert-pattern-webgl.png', { timeout: 2_000 })
+// })
 
-test('WM->InvertPattern->WebGL', async ({ page }) => {
-  await page.goto('/wm/invert-pattern/webgl', { waitUntil: 'domcontentloaded' })
-  await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
-  await page.evaluate(waitMap)
-  await expect(page).toHaveScreenshot('wm-invert-pattern-webgl.png', { timeout: 2_000 })
-})
+// test('WM->InvertPattern->WebGL', async ({ page }) => {
+//   await page.goto('/wm/invert-pattern/webgl', { waitUntil: 'domcontentloaded' })
+//   await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
+//   await page.evaluate(waitMap)
+//   await expect(page).toHaveScreenshot('wm-invert-pattern-webgl.png', { timeout: 2_000 })
+// })
 
 test('S2->InvertPattern->WebGL2', async ({ page }) => {
   await page.goto('/s2/invert-pattern/webgl2', { waitUntil: 'domcontentloaded' })

@@ -1,6 +1,6 @@
 {
   "name": "s2maps-gpu",
-  "version": "0.14.3",
+  "version": "0.15.0",
   "description": "S2 Maps GPU",
   "keywords": [
     "s2",
@@ -50,7 +50,6 @@
   "main": "./dist/index.js",
   "types": "./dist-types/index.d.ts",
   "dependencies": {
-    "@playwright/test": "^1.42.1",
     "earclip": "^0.10.0",
     "s2-vector-tile": "^2.0.12",
     "unicode-shaper-zig": "0.4.0"
@@ -60,6 +59,7 @@
     "@maplibre/maplibre-gl-style-spec": "^20.1.1",
     "@nuxtjs/eslint-module": "^4.1.0",
     "@playwright/experimental-ct-vue": "^1.42.1",
+    "@playwright/test": "^1.42.1",
     "@rollup/pluginutils": "^5.1.0",
     "@types/better-sqlite3": "^7.6.9",
     "@types/bun": "^1.0.8",

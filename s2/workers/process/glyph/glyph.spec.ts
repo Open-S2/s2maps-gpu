@@ -1,7 +1,7 @@
 import type { Alignment, Anchor } from 'style/style.spec'
-import type { S2VectorGeometry, S2VectorTileFeatureType } from 's2-vector-tile'
 import type { ColorArray } from 'style/color'
 import type { Point } from 'geometry'
+import type { PathData } from '../util'
 
 export interface SquareNode {
   id: number
@@ -12,13 +12,13 @@ export interface SquareNode {
 }
 
 export interface RoundNode {
-  id: number
   x: number
   y: number
   r: number
 }
 
 export interface RoundNodes {
+  id: number
   nodes: RoundNode[]
 }
 
@@ -38,6 +38,7 @@ export interface GlyphBase {
   family: string[]
   field: string
   fieldCodes: string[]
+  spacing: number
   offset: Point
   padding: Point
   kerning: number
@@ -62,18 +63,36 @@ export interface GlyphPoint extends GlyphBase, SquareNode {
   // tile's position
   s: number
   t: number
-  // [s, t, anchorOffsetX, anchorOffsetY, paddingX, paddingY, maxWidth, maxHeight, index, id]
-  filter: [s: number, t: number, anchorOffsetX: number, anchorOffsetY: number, offsetX: number, offsetY: number, paddingX: number, paddingY: number, maxWidth: number, maxHeight: number]
+  // NOTE: offsetX and offsetY are the pixel based offset
+  // while xPos and yPos are the 0->1 ratio placement that will be multiplied by size
+  // [s, t, xPos, yPos, offsetX, offsetY, paddingX, paddingY, maxWidth, maxHeight, index, id]
+  // NOTE: index and id will be added later
+  filter: [
+    s: number, t: number,
+    xPos: number, yPos: number,
+    offsetX: number, offsetY: number,
+    paddingX: number, paddingY: number,
+    maxWidth: number, maxHeight: number
+  ]
 }
+
+export type PathFilter = [
+  s: number, t: number,
+  offsetX: number, offsetY: number,
+  xPos: number, yPos: number,
+  path1X: number, path1Y: number,
+  path2X: number, path2Y: number,
+  path3X: number, path3Y: number,
+  padding: number
+]
 
 export interface GlyphPath extends GlyphBase, RoundNodes {
   glyphType: 'path'
   // store geometry data and type to properly build later
   extent: number
-  geometry: S2VectorGeometry
-  geometryType: S2VectorTileFeatureType
-  // [s, t, anchorOffsetX, anchorOffsetY, padding, maxWidth, maxHeight, index, id]
-  filters: Array<[s: number, t: number, anchorOffsetX: number, anchorOffsetY: number, offsetX: number, offsetY: number, padding: number, radius: number]>
+  pathData: PathData
+  // [s, t, offsetX, offsetY, posX, posY, path1X, path1Y, path2X, path2Y, path3X, path3Y, padding, index, id]
+  filters: PathFilter[]
 }
 
 export type GlyphObject = GlyphPoint | GlyphPath

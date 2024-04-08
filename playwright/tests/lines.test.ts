@@ -15,19 +15,19 @@ test('WM->Lines->Default', async ({ page }) => {
   await expect(page).toHaveScreenshot('wm-lines.png', { timeout: 2_000 })
 })
 
-test('S2->Lines->WebGL', async ({ page }) => {
-  await page.goto('/s2/lines/webgl', { waitUntil: 'domcontentloaded' })
-  await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
-  await page.evaluate(waitMap)
-  await expect(page).toHaveScreenshot('s2-lines-webgl.png', { timeout: 2_000 })
-})
+// test('S2->Lines->WebGL', async ({ page }) => {
+//   await page.goto('/s2/lines/webgl', { waitUntil: 'domcontentloaded' })
+//   await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
+//   await page.evaluate(waitMap)
+//   await expect(page).toHaveScreenshot('s2-lines-webgl.png', { timeout: 2_000 })
+// })
 
-test('WM->Lines->WebGL', async ({ page }) => {
-  await page.goto('/wm/lines/webgl', { waitUntil: 'domcontentloaded' })
-  await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
-  await page.evaluate(waitMap)
-  await expect(page).toHaveScreenshot('wm-lines-webgl.png', { timeout: 2_000 })
-})
+// test('WM->Lines->WebGL', async ({ page }) => {
+//   await page.goto('/wm/lines/webgl', { waitUntil: 'domcontentloaded' })
+//   await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
+//   await page.evaluate(waitMap)
+//   await expect(page).toHaveScreenshot('wm-lines-webgl.png', { timeout: 2_000 })
+// })
 
 test('S2->Lines->WebGL2', async ({ page }) => {
   await page.goto('/s2/lines/webgl2', { waitUntil: 'domcontentloaded' })

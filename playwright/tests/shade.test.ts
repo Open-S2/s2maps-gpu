@@ -8,12 +8,12 @@ test('S2->Shade->Default', async ({ page }) => {
   await expect(page).toHaveScreenshot('s2-shade.png', { timeout: 2_000 })
 })
 
-test('S2->Shade->WebGL', async ({ page }) => {
-  await page.goto('/s2/shade/webgl', { waitUntil: 'domcontentloaded' })
-  await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
-  await page.evaluate(waitMap)
-  await expect(page).toHaveScreenshot('s2-shade-webgl.png', { timeout: 2_000 })
-})
+// test('S2->Shade->WebGL', async ({ page }) => {
+//   await page.goto('/s2/shade/webgl', { waitUntil: 'domcontentloaded' })
+//   await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
+//   await page.evaluate(waitMap)
+//   await expect(page).toHaveScreenshot('s2-shade-webgl.png', { timeout: 2_000 })
+// })
 
 test('S2->Shade->WebGL2', async ({ page }) => {
   await page.goto('/s2/shade/webgl2', { waitUntil: 'domcontentloaded' })

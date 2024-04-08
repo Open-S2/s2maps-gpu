@@ -19,54 +19,93 @@ import type { BBox } from 'geometry'
 
 // st (0), adjustXY (1), xy (2), wh (3), texXY (4), texWH (5)
 const SUB_SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [0, 1, 2, 3, 4, 5].map(i => ({
-  arrayStride: 4 * 2 * 6, // 4 bytes * 2 floats * 6 attributes
+  arrayStride: 6 * 4 * 2, // 6 attributes * 4 bytes * 2 floats
   stepMode: 'instance',
   attributes: [{
     shaderLocation: i,
-    offset: i * 4 * 2, // 4 bytes * 2 floats * attribute position
+    offset: i * 4 * 2, // attribute position * 4 bytes * 2 floats
     format: 'float32x2'
   }]
 }))
-const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
-  ...SUB_SHADER_BUFFER_LAYOUT,
+// st - offsetXY (0), xy - wh (1), texXY - textWH (2), paths12 (3), paths34 (4)
+const SUB_SHADER_BUFFER_LAYOUT_PATH: Iterable<GPUVertexBufferLayout> = [0, 1, 2, 3, 4].map(i => ({
+  arrayStride: 5 * 4 * 4, // 5 attributes * 4 floats * 4 bytes
+  stepMode: 'instance',
+  attributes: [{
+    shaderLocation: i,
+    offset: i * 4 * 4, // attribute position * 4 floats * 4 bytes
+    format: 'float32x4'
+  }]
+}))
+const SHADER_BUFFER_COLLISION_COLOR_LAYOUT: (l: number) => Iterable<GPUVertexBufferLayout> = (location: number) => [
   { // collision result index (without the proper offset)
     arrayStride: 4, // 4 bytes * 1 float
     stepMode: 'instance',
     attributes: [{
-      shaderLocation: 6,
+      shaderLocation: location,
       offset: 0,
       format: 'uint32'
     }]
   },
   { // color
-    arrayStride: 4 * 4, // 4 bytes * 4 floats
+    arrayStride: 4 * 4, // 4 floats * 4 bytes
     stepMode: 'instance',
     attributes: [{
-      shaderLocation: 7,
+      shaderLocation: location + 1,
       offset: 0,
       format: 'float32x4'
     }]
   }
 ]
-const SUB_TEST_SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [0, 1, 2, 3, 4].map(i => ({
-  arrayStride: 4 * 12, // 4 bytes per float at 12 float intervals
-  stepMode: 'instance',
-  attributes: [{
-    shaderLocation: i,
-    offset: i * 4 * 2, // 4 bytes * 2 floats * attribute position
-    format: 'float32x2'
-  }]
+const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
+  ...SUB_SHADER_BUFFER_LAYOUT,
+  ...SHADER_BUFFER_COLLISION_COLOR_LAYOUT(6)
+]
+const SHADER_BUFFER_LAYOUT_PATH: Iterable<GPUVertexBufferLayout> = [
+  ...SUB_SHADER_BUFFER_LAYOUT_PATH,
+  ...SHADER_BUFFER_COLLISION_COLOR_LAYOUT(5)
+]
+const SUB_TEST_SHADER_BUFFER_LAYOUT_ATTR: Iterable<GPUVertexAttribute> = [0, 1, 2, 3, 4].map(i => ({
+  shaderLocation: i,
+  offset: i * 4 * 2, // 4 bytes * 2 floats * attribute position
+  format: 'float32x2'
 }))
 const TEST_SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
-  ...SUB_TEST_SHADER_BUFFER_LAYOUT,
   { // collision result index (without the proper offset)
-    arrayStride: 4 * 12, // 4 bytes * 1 uint32 at 12 float intervals
+    arrayStride: 4 * 18, // 4 bytes * 1 uint32 at 18 float intervals
     stepMode: 'instance',
-    attributes: [{
-      shaderLocation: 5,
-      offset: 5 * 4 * 2, // index 5 * size of uint32/float32 * 2 floats
-      format: 'uint32'
-    }]
+    attributes: [
+      ...SUB_TEST_SHADER_BUFFER_LAYOUT_ATTR,
+      {
+        shaderLocation: 5,
+        offset: 4 * 10, // 4 bytes * 15 floats prior
+        format: 'uint32'
+      }
+    ]
+  }
+]
+// the reason for the stride being 18 not 16 is to allow for the padding of the unused ID
+// which you can see inside the glyph.wgsl struct `GlyphContainerPath`
+const TEST_SHADER_BUFFER_LAYOUT_PATH: Iterable<GPUVertexBufferLayout> = [
+  {
+    arrayStride: 4 * 18, // 4 bytes per float * 18 floats total
+    stepMode: 'instance',
+    attributes: [
+      // st
+      { shaderLocation: 0, offset: 0, format: 'float32x2' },
+      // offset (location 1 * 4 bytes per float * 2 floats)
+      { shaderLocation: 1, offset: 1 * 4 * 2, format: 'float32x2' },
+      // xy (4 bytes per float * 4 floats prior)
+      { shaderLocation: 2, offset: 4 * 4, format: 'float32x2' },
+      // stPaths12 (4 bytes per float * 6 floats prior)
+      { shaderLocation: 3, offset: 4 * 6, format: 'float32x4' },
+      // stPaths34 (4 bytes per float * 10 floats prior)
+      { shaderLocation: 4, offset: 4 * 10, format: 'float32x4' },
+      // padding (4 bytes per float * 14 floats prior)
+      { shaderLocation: 5, offset: 4 * 14, format: 'float32' },
+      // collision result index (4 bytes per float * 15 floats prior)
+      { shaderLocation: 6, offset: 4 * 15, format: 'uint32' }
+    ]
   }
 ]
 
@@ -86,6 +125,7 @@ export class GlyphFeature implements GlyphFeatureSpec {
     public offset: number,
     public filterCount: number,
     public filterOffset: number,
+    public isPath: boolean,
     public isIcon: boolean,
     public featureCode: number[],
     public glyphUniformBuffer: GPUBuffer,
@@ -125,8 +165,10 @@ export class GlyphFeature implements GlyphFeatureSpec {
 
   duplicate (tile: Tile, parent?: Tile, bounds?: BBox): GlyphFeature {
     const {
-      workflow, source, layerGuide, featureCodeBuffer, count, offset, filterCount, filterOffset,
-      isIcon, featureCode, glyphBoundsBuffer, glyphUniformBuffer, glyphAttributeBuffer, glyphAttributeNoStrokeBuffer
+      workflow, source, layerGuide, featureCodeBuffer, count, offset,
+      filterCount, filterOffset, isPath, isIcon, featureCode,
+      glyphBoundsBuffer, glyphUniformBuffer,
+      glyphAttributeBuffer, glyphAttributeNoStrokeBuffer
     } = this
     const { context } = workflow
     const cE = context.device.createCommandEncoder()
@@ -140,8 +182,9 @@ export class GlyphFeature implements GlyphFeatureSpec {
     context.device.queue.submit([cE.finish()])
     return new GlyphFeature(
       workflow, source, tile, layerGuide, count, offset, filterCount, filterOffset,
-      isIcon, featureCode, newGlyphUniformBuffer, newGlyphBoundsBuffer,
-      newGlyphAttributeBuffer, newGlyphAttributeNoStrokeBuffer, newFeatureCodeBuffer, parent
+      isPath, isIcon, featureCode, newGlyphUniformBuffer, newGlyphBoundsBuffer,
+      newGlyphAttributeBuffer, newGlyphAttributeNoStrokeBuffer,
+      newFeatureCodeBuffer, parent
     )
   }
 
@@ -196,7 +239,9 @@ export class GlyphFeature implements GlyphFeatureSpec {
       entries: [
         { binding: 0, resource: { buffer: glyphBoundsBuffer } },
         { binding: 1, resource: { buffer: glyphUniformBuffer } },
+        // assign the filter to both 4 or 5 as later the right binding will be used
         { binding: 4, resource: { buffer: source.glyphFilterBuffer } },
+        { binding: 5, resource: { buffer: source.glyphFilterBuffer } },
         { binding: 6, resource: { buffer: glyphBBoxesBuffer } },
         { binding: 7, resource: { buffer: glyphFilterResultBuffer } },
         { binding: 9, resource: { buffer: glyphAttributeBuffer } }
@@ -213,6 +258,7 @@ export class GlyphFeature implements GlyphFeatureSpec {
       entries: [
         { binding: 1, resource: { buffer: glyphUniformBuffer } },
         { binding: 4, resource: { buffer: source.glyphFilterBuffer } },
+        { binding: 5, resource: { buffer: source.glyphFilterBuffer } },
         { binding: 6, resource: { buffer: glyphBBoxesBuffer } },
         { binding: 8, resource: { buffer: glyphFilterResultBuffer } },
         { binding: 9, resource: { buffer: glyphAttributeBuffer } }
@@ -226,9 +272,13 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
   module!: GPUShaderModule
   layerGuides = new Map<number, GlyphWorkflowLayerGuideGPU>()
   pipeline!: GPURenderPipeline
+  pipelineC!: GPURenderPipeline
   testRenderPipeline!: GPURenderPipeline
+  testCircleRenderPipeline!: GPURenderPipeline
   bboxPipeline!: GPUComputePipeline
-  testBBoxPipeline!: GPUComputePipeline
+  circlePipeline!: GPUComputePipeline
+  testFiltersPipeline!: GPUComputePipeline
+  testCirclePipeline!: GPUComputePipeline
   interactivePipeline!: GPUComputePipeline
   glyphBindGroupLayout!: GPUBindGroupLayout
   glyphPipelineLayout!: GPUPipelineLayout
@@ -254,6 +304,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
         { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } }, // bounds
         { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } }, // uniforms
         { binding: 4, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } }, // containers
+        { binding: 5, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } }, // pathContainers
         { binding: 6, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }, // bboxes
         { binding: 7, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }, // collision results
         { binding: 9, visibility: GPUShaderStage.COMPUTE | GPUShaderStage.VERTEX, buffer: { type: 'uniform' } } // [offset, count, isStroke]
@@ -264,6 +315,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
       entries: [
         { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } }, // uniforms
         { binding: 4, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } }, // containers
+        { binding: 5, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } }, // pathContainers
         { binding: 6, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }, // bboxes
         { binding: 8, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } }, // collision results
         { binding: 9, visibility: GPUShaderStage.COMPUTE | GPUShaderStage.VERTEX, buffer: { type: 'uniform' } } // [offset, count, isStroke]
@@ -291,9 +343,12 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
       bindGroupLayouts: [frameBindGroupLayout, featureBindGroupLayout, this.glyphBindGroupLayout]
     })
     this.pipeline = this.#getPipeline()
+    this.pipelineC = this.#getPipeline(false, true)
     this.testRenderPipeline = this.#getPipeline(true)
+    this.testCircleRenderPipeline = this.#getPipeline(true, true)
     this.bboxPipeline = this.#getComputePipeline('boxes')
-    this.testBBoxPipeline = this.#getComputePipeline('test')
+    this.circlePipeline = this.#getComputePipeline('circles')
+    this.testFiltersPipeline = this.#getComputePipeline('test')
     this.interactivePipeline = this.#getComputePipeline('interactive')
   }
 
@@ -400,7 +455,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     const { context } = this
     const { glyphFilterBuffer, glyphQuadBuffer, glyphQuadIDBuffer: glyphQuadIndexBuffer, glyphColorBuffer, featureGuideBuffer } = glyphData
     // prep buffers
-    const filterLength = glyphFilterBuffer.byteLength / 4 / 12 // 4 bytes per float * 12 floats
+    const filterLength = glyphFilterBuffer.byteLength / 4 / 18 // 4 bytes per float at 18 float intervals
     const source: GlyphSource = {
       type: 'glyph' as const,
       glyphFilterBuffer: context.buildGPUBuffer('Glyph Filter Buffer', glyphFilterBuffer, GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX),
@@ -429,8 +484,11 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     let i = 0
     while (i < lgl) {
       // curlayerIndex, curType, filterOffset, filterCount, quadOffset, quadCount, encoding.length, ...encoding
-      const [layerIndex, isIcon, filterOffset, filterCount, offset, count, encodingSize] = featureGuideArray.slice(i, i + 7)
-      i += 7
+      const [
+        layerIndex, isPath, isIcon, filterOffset, filterCount,
+        offset, count, encodingSize
+      ] = featureGuideArray.slice(i, i + 8)
+      i += 8
       // If webgl1, we pull out the color and opacity otherwise build featureCode
       let featureCode: number[] = [0]
       if (encodingSize > 0) featureCode = [...featureGuideArray.slice(i, i + encodingSize)]
@@ -442,13 +500,13 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
       const { overdraw } = layerGuide
 
       const glyphBoundsBuffer = context.buildGPUBuffer('Glyph Bounds Buffer', new Float32Array([0, 0, 1, 1]), GPUBufferUsage.UNIFORM)
-      const glyphUniformBuffer = context.buildGPUBuffer('Glyph Uniform Buffer', new Float32Array([0, isIcon, ~~overdraw, 1, 1]), GPUBufferUsage.UNIFORM)
-      const glyphAttributeBuffer = context.buildGPUBuffer('Glyph Bounds Buffer', new Uint32Array([filterOffset, filterCount, 1]), GPUBufferUsage.UNIFORM)
-      const glyphAttributeNoStrokeBuffer = context.buildGPUBuffer('Glyph Bounds Buffer', new Uint32Array([filterOffset, filterCount, 0]), GPUBufferUsage.UNIFORM)
+      const glyphUniformBuffer = context.buildGPUBuffer('Glyph Uniform Buffer', new Float32Array([0, isPath, isIcon, ~~overdraw, 1, 1]), GPUBufferUsage.UNIFORM)
+      const glyphAttributeBuffer = context.buildGPUBuffer('Glyph Attributes with Stroke Buffer', new Uint32Array([filterOffset, filterCount, 1]), GPUBufferUsage.UNIFORM)
+      const glyphAttributeNoStrokeBuffer = context.buildGPUBuffer('Glyph Attributes Buffer', new Uint32Array([filterOffset, filterCount, 0]), GPUBufferUsage.UNIFORM)
       const featureCodeBuffer = context.buildGPUBuffer('Feature Code Buffer', new Float32Array(featureCode), GPUBufferUsage.STORAGE)
       const feature = new GlyphFeature(
         this, source, tile, layerGuide, count, offset, filterCount, filterOffset,
-        isIcon === 1, featureCode, glyphUniformBuffer, glyphBoundsBuffer,
+        isPath === 1, isIcon === 1, featureCode, glyphUniformBuffer, glyphBoundsBuffer,
         glyphAttributeBuffer, glyphAttributeNoStrokeBuffer, featureCodeBuffer
       )
 
@@ -461,7 +519,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
   // https://programmer.ink/think/several-best-practices-of-webgpu.html
   // BEST PRACTICE 6: it is recommended to create pipeline asynchronously (we don't want to because we WANT to block the main thread)
   // BEST PRACTICE 7: explicitly define pipeline layouts
-  #getPipeline (isTest = false): GPURenderPipeline {
+  #getPipeline (isTest = false, isPath = false): GPURenderPipeline {
     const { context, module } = this
     const { device, format, defaultBlend, sampleCount } = context
 
@@ -472,13 +530,23 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
       passOp: 'replace'
     }
 
+    const namingPathPoint = isPath ? ' Path' : ''
+    const namingTestMain = isTest ? 'Test' : 'Main'
+    const vEntryPoint = `v${isPath ? 'Path' : ''}${namingTestMain}`
+
     return device.createRenderPipeline({
-      label: `Glyph Pipeline ${isTest ? 'Test' : 'Main'}`,
+      label: `Glyph Pipeline${namingPathPoint} ${namingTestMain}`,
       layout: this.glyphPipelineLayout,
       vertex: {
         module,
-        entryPoint: isTest ? 'vTest' : 'vMain',
-        buffers: isTest ? TEST_SHADER_BUFFER_LAYOUT : SHADER_BUFFER_LAYOUT
+        entryPoint: vEntryPoint,
+        buffers: isTest
+          ? isPath
+            ? TEST_SHADER_BUFFER_LAYOUT_PATH
+            : TEST_SHADER_BUFFER_LAYOUT
+          : isPath
+            ? SHADER_BUFFER_LAYOUT_PATH
+            : SHADER_BUFFER_LAYOUT
       },
       fragment: {
         module,
@@ -502,7 +570,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     })
   }
 
-  #getComputePipeline (entryPoint: 'boxes' | 'test' | 'interactive'): GPUComputePipeline {
+  #getComputePipeline (entryPoint: 'boxes' | 'circles' | 'test' | 'interactive'): GPUComputePipeline {
     const { context, module } = this
 
     return context.device.createComputePipeline({
@@ -514,11 +582,12 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
 
   computeFilters (features: GlyphFeatureSpec[]): void {
     if (features.length === 0) return
-    const { context, bboxPipeline, testBBoxPipeline } = this
+    const { context, bboxPipeline, circlePipeline, testFiltersPipeline } = this
     const { device, frameBufferBindGroup } = context
+    const { ceil } = Math
     // prepare
     const commandEncoder = device.createCommandEncoder()
-    const computePass = commandEncoder.beginComputePass()
+    const computePass = this.context.computePass = commandEncoder.beginComputePass()
     computePass.setBindGroup(0, frameBufferBindGroup)
 
     // Step 1: Setup source offsets
@@ -534,17 +603,17 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
       device.queue.writeBuffer(glyphUniformBuffer, 0, new Uint32Array([source.indexOffset]))
     }
 
-    // Step 2: build bboxes
-    computePass.setPipeline(bboxPipeline)
-    for (const { bindGroup, glyphFilterBindGroup, filterCount } of features) {
+    // Step 2: build bboxes or circles
+    for (const { isPath, bindGroup, glyphFilterBindGroup, filterCount } of features) {
+      context.setComputePipeline(isPath ? circlePipeline : bboxPipeline)
       // set bind groups
       computePass.setBindGroup(1, bindGroup)
       computePass.setBindGroup(2, glyphFilterBindGroup)
-      computePass.dispatchWorkgroups(Math.ceil(filterCount / 64))
+      computePass.dispatchWorkgroups(ceil(filterCount / 64))
     }
     // Step 3: test bboxes against each other
-    computePass.setPipeline(testBBoxPipeline)
-    computePass.dispatchWorkgroups(Math.ceil(filterCountOffset / 64))
+    context.setComputePipeline(testFiltersPipeline)
+    computePass.dispatchWorkgroups(ceil(filterCountOffset / 64))
 
     // finish
     computePass.end()
@@ -552,10 +621,11 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
   }
 
   computeInteractive (feature: GlyphFeatureSpec): void {
-    const { interactiveBindGroup, computePass } = this.context
+    const { context, interactivePipeline } = this
+    const { interactiveBindGroup, computePass } = context
     const { bindGroup, glyphInteractiveBindGroup, filterCount } = feature
     // set pipeline
-    this.context.setComputePipeline(this.interactivePipeline)
+    context.setComputePipeline(interactivePipeline)
     // set bind groups
     computePass.setBindGroup(1, bindGroup)
     computePass.setBindGroup(2, glyphInteractiveBindGroup)
@@ -565,27 +635,32 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
   }
 
   draw ({
-    layerGuide: { viewCollisions, visible }, isIcon, bindGroup,
-    glyphBindGroup, glyphStrokeBindGroup, source,
+    layerGuide: { viewCollisions, visible }, isPath, isIcon,
+    bindGroup, glyphBindGroup, glyphStrokeBindGroup, source,
     count, offset, filterCount, filterOffset
   }: GlyphFeatureSpec): void {
     if (!visible) return
     // get current source data
-    const { context, pipeline } = this
+    const {
+      context, pipeline, pipelineC, testRenderPipeline, testCircleRenderPipeline
+    } = this
+    const {
+      glyphQuadBuffer, glyphFilterBuffer, glyphQuadIndexBuffer, glyphColorBuffer
+    } = source
     const { passEncoder } = context
-    const { glyphQuadBuffer, glyphFilterBuffer, glyphQuadIndexBuffer, glyphColorBuffer } = source
 
     // setup pipeline, bind groups, & buffers
-    context.setRenderPipeline(pipeline)
+    context.setRenderPipeline(isPath ? pipelineC : pipeline)
     passEncoder.setBindGroup(1, bindGroup)
-    passEncoder.setVertexBuffer(0, glyphQuadBuffer)
-    passEncoder.setVertexBuffer(1, glyphQuadBuffer)
-    passEncoder.setVertexBuffer(2, glyphQuadBuffer)
-    passEncoder.setVertexBuffer(3, glyphQuadBuffer)
-    passEncoder.setVertexBuffer(4, glyphQuadBuffer)
-    passEncoder.setVertexBuffer(5, glyphQuadBuffer)
-    passEncoder.setVertexBuffer(6, glyphQuadIndexBuffer)
-    passEncoder.setVertexBuffer(7, glyphColorBuffer)
+    for (let i = 0; i <= 4; i++) passEncoder.setVertexBuffer(i, glyphQuadBuffer)
+    if (isPath) {
+      passEncoder.setVertexBuffer(5, glyphQuadIndexBuffer)
+      passEncoder.setVertexBuffer(6, glyphColorBuffer)
+    } else {
+      passEncoder.setVertexBuffer(5, glyphQuadBuffer)
+      passEncoder.setVertexBuffer(6, glyphQuadIndexBuffer)
+      passEncoder.setVertexBuffer(7, glyphColorBuffer)
+    }
     // draw
     if (!isIcon) {
       passEncoder.setBindGroup(2, glyphStrokeBindGroup)
@@ -595,14 +670,10 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     passEncoder.draw(6, count, 0, offset)
     // draw test if needed
     if (viewCollisions) {
-      context.setRenderPipeline(this.testRenderPipeline)
-      passEncoder.setVertexBuffer(0, glyphFilterBuffer)
-      passEncoder.setVertexBuffer(1, glyphFilterBuffer)
-      passEncoder.setVertexBuffer(2, glyphFilterBuffer)
-      passEncoder.setVertexBuffer(3, glyphFilterBuffer)
-      passEncoder.setVertexBuffer(4, glyphFilterBuffer)
-      passEncoder.setVertexBuffer(5, glyphFilterBuffer)
-      passEncoder.draw(8, filterCount, 0, filterOffset)
+      context.setRenderPipeline(isPath ? testCircleRenderPipeline : testRenderPipeline)
+      for (let i = 0; i <= 5; i++) passEncoder.setVertexBuffer(i, glyphFilterBuffer)
+      if (isPath) passEncoder.setVertexBuffer(6, glyphFilterBuffer)
+      passEncoder.draw(isPath ? 64 : 8, filterCount, 0, filterOffset)
     }
   }
 }

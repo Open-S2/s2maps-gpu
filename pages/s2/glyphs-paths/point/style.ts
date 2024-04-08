@@ -38,7 +38,7 @@ const style: StyleDefinition = {
       name: 'line-glyphs',
       source: 'lineGlyphs',
       type: 'line',
-      color: '#1a73e7',
+      color: '#4a4a4a',
       width: 1.75,
       interactive: false
     },

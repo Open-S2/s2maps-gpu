@@ -19,6 +19,9 @@ if (Array.isArray(slug)) {
 
 function ready (s2map: S2Map): void {
   console.info('ready', s2map)
+  // void s2map.awaitFullyRendered().then(() => {
+  //   console.info('fully rendered')
+  // })
 }
 
 const mapOptions: MapOptions = { style, contextType }

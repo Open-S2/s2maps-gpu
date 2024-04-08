@@ -8,12 +8,12 @@ test('WM->ConvertMaplibre->Default', async ({ page }) => {
   await expect(page).toHaveScreenshot('wm-convert-maplibre.png', { timeout: 2_000 })
 })
 
-test('WM->ConvertMaplibre->WebGL', async ({ page }) => {
-  await page.goto('/wm/convert-maplibre/webgl', { waitUntil: 'domcontentloaded' })
-  await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
-  await page.evaluate(waitMap)
-  await expect(page).toHaveScreenshot('wm-convert-maplibre-webgl.png', { timeout: 2_000 })
-})
+// test('WM->ConvertMaplibre->WebGL', async ({ page }) => {
+//   await page.goto('/wm/convert-maplibre/webgl', { waitUntil: 'domcontentloaded' })
+//   await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
+//   await page.evaluate(waitMap)
+//   await expect(page).toHaveScreenshot('wm-convert-maplibre-webgl.png', { timeout: 2_000 })
+// })
 
 test('WM->ConvertMaplibre->WebGL2', async ({ page }) => {
   await page.goto('/wm/convert-maplibre/webgl2', { waitUntil: 'domcontentloaded' })

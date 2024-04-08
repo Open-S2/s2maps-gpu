@@ -25,6 +25,7 @@ export default class CollisionTester {
   }
 
   #collides (a: Node, b: Node): boolean {
+    if (a.id === b.id) return false
     if ('r' in a && 'r' in b) return this.#collidesRoundRound(a as RoundNodes, b as RoundNodes)
     else if ('r' in a) return this.#collidesRoundSquare(a as RoundNodes, b as SquareNode)
     else if ('r' in b) return this.#collidesRoundSquare(b as RoundNodes, a as SquareNode)
@@ -34,7 +35,6 @@ export default class CollisionTester {
   #collidesRoundRound (a: RoundNodes, b: RoundNodes): boolean {
     for (const aNode of a.nodes) {
       for (const bNode of b.nodes) {
-        if (aNode.id === bNode.id) continue
         const dx = aNode.x - bNode.x
         const dy = aNode.y - bNode.y
         const distance = Math.sqrt(dx * dx + dy * dy)
@@ -47,7 +47,6 @@ export default class CollisionTester {
   #collidesRoundSquare (a: RoundNodes, b: SquareNode): boolean {
     // https://stackoverflow.com/questions/401847/circle-rectangle-collision-detection-intersection
     for (const node of a.nodes) {
-      if (node.id === b.id) continue
       const dx = node.x - Math.max(b.minX, Math.min(node.x, b.maxX))
       const dy = node.y - Math.max(b.minY, Math.min(node.y, b.maxY))
       if ((dx * dx) + (dy * dy) < node.r * node.r) return true

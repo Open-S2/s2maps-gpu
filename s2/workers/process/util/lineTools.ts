@@ -1,5 +1,7 @@
+import { findCenterPoints, findSpacedPoints, pointAngle } from './pointTools'
+
+import type { Point } from 'geometry'
 import type {
-  Point,
   S2VectorGeometry,
   S2VectorLine,
   S2VectorLines,
@@ -31,25 +33,95 @@ export function flattenGeometryToLines (
   } else return []
 }
 
-export function findPointsAlongLine (
-  lines: S2VectorLines,
-  minWidth: number,
+export type Path = [Point, Point, Point, Point]
+
+export interface PathData {
+  point: Point
+  pathLeft: Path
+  pathRight: Path
+}
+
+// TODO: given the geometry, check if the line is long enough to fit the glyph otherwise return empty array
+// TODO: If the path has sharp corners, simplify the path to be smoother without losing the original shape
+export function getPointsAndPathsAlongLines (
+  geometry: S2VectorGeometry,
+  type: S2VectorTileFeatureType,
+  spacing: number,
   extent: number
-): Array<[s: number, t: number]> {
-  const res: Array<[s: number, t: number]> = []
-  // step 1: cleanup the lines to not include data outside the 0->1 boundary
-  for (const line of lines) {
-    // iterate through the line. Find:
-    // 1: If the line passes through the 0->1 boundary of the tile
-    // 2: If the line is long enough to fit the glyph
-    // 3: Find the anchor points to place the glyph
-    const { length } = lineLength(line)
-    if (length < minWidth) continue
-    // find the anchor points to place the glyph
-    const numPoints = Math.floor(length / minWidth)
-    console.info(numPoints)
+): PathData[] {
+  const res: PathData[] = []
+  for (const { point, pathLeft, pathRight } of findSpacedPoints(geometry, type, spacing, extent)) {
+    // for now just slice the first 3 points
+    res.push({
+      point: point.map(p => p / extent) as Point,
+      pathLeft: pathLeft.map(p => [p[0] / extent, p[1] / extent]) as Path,
+      pathRight: pathRight.map(p => [p[0] / extent, p[1] / extent]) as Path
+    })
   }
   return res
+}
+
+export function getPointsAndPathsAtCenterOfLines (
+  geometry: S2VectorGeometry,
+  type: S2VectorTileFeatureType,
+  extent: number
+): PathData[] {
+  const res: PathData[] = []
+  for (const { point, pathLeft, pathRight } of findCenterPoints(geometry, type, extent)) {
+    // for now just slice the first 3 points
+    res.push({
+      point: point.map(p => p / extent) as Point,
+      pathLeft: pathLeft.map(p => [p[0] / extent, p[1] / extent]) as Path,
+      pathRight: pathRight.map(p => [p[0] / extent, p[1] / extent]) as Path
+    })
+  }
+  return res
+}
+
+export type QuadPos = [s: number, t: number, offsetX: number, offsetY: number, xPos: number, yPos: number]
+
+export function getPathPos (
+  quadPos: QuadPos,
+  pathLeft: Path,
+  pathRight: Path,
+  tileSize: number,
+  size: number
+): Point {
+  // note: st is 0->1 ratio relative to tile size
+  // note: offset is in pixels
+  // note: xPos and yPos are 0->1 ratio relative to glyph size
+  let [s, t, offsetX, offsetY, xPos, yPos] = quadPos
+  yPos *= size
+  offsetY += yPos
+  // get the path but in pixel coordinates
+  s = s * tileSize + offsetX
+  t = t * tileSize + offsetY
+  xPos = Math.abs(xPos) * size
+  const path: Point[] = (xPos >= 0 ? pathRight : pathLeft).map(p => [p[0] * tileSize + offsetX, p[1] * tileSize + offsetY])
+  // now setup an x-y and travel xPos distance along the path
+  let dist = 0
+  let pathIndex = 0
+  let currAngle = 0
+  // using the current s-t as the starting point and the distance function
+  // travel xPos distance along the path
+  while (dist < xPos && pathIndex < path.length - 1) {
+    currAngle = pointAngle(path[pathIndex], path[pathIndex + 1]) ?? currAngle
+    const next = path[pathIndex]
+    const d = distance([s, t], next)
+    if (dist + d < xPos) {
+      dist += d
+      pathIndex++
+    } else {
+      const [x1, y1] = path[pathIndex]
+      const [x2, y2] = next
+      const ratio = (xPos - dist) / d
+      s = x1 + (x2 - x1) * ratio
+      t = y1 + (y2 - y1) * ratio
+      break
+    }
+  }
+
+  return [s, t]
 }
 
 export interface LineLengthRes {

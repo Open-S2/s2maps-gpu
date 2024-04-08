@@ -37,10 +37,12 @@ const style: StyleDefinition = {
       name: 'poi-labels',
       source: 'countries',
       type: 'glyph',
-      interactive: false,
+      interactive: true,
+      cursor: 'pointer',
       textFamily: ['robotoMedium'],
       textField: '?!Uname',
       textAnchor: 'center',
+      textAlign: 'left',
       textOffset: [0, 0],
       textPadding: [2, 2],
       textSize: {
@@ -60,7 +62,8 @@ const style: StyleDefinition = {
       textStrokeWidth: 0.5,
       textWordWrap: 8,
       overdraw: false,
-      viewCollisions: true
+      viewCollisions: true,
+      geoFilter: ['line', 'poly']
     }
   ]
 }

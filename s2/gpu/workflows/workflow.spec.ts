@@ -170,6 +170,7 @@ export interface GlyphFeature extends FeatureBase {
   offset: number
   filterCount: number
   filterOffset: number
+  isPath: boolean
   isIcon: boolean
   glyphBindGroup: GPUBindGroup
   glyphStrokeBindGroup: GPUBindGroup
@@ -325,7 +326,7 @@ export interface GlyphWorkflow extends Workflow {
   pipeline: GPURenderPipeline
   testRenderPipeline: GPURenderPipeline
   bboxPipeline: GPUComputePipeline
-  testBBoxPipeline: GPUComputePipeline
+  testFiltersPipeline: GPUComputePipeline
   interactivePipeline: GPUComputePipeline
   glyphBindGroupLayout: GPUBindGroupLayout
   glyphPipelineLayout: GPUPipelineLayout

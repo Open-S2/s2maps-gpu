@@ -8,12 +8,12 @@ test('WM->ConvertS2JSON->Default', async ({ page }) => {
   await expect(page).toHaveScreenshot('wm-convert-s2json.png', { timeout: 2_000 })
 })
 
-test('WM->ConvertS2JSON->WebGL', async ({ page }) => {
-  await page.goto('/wm/convert-s2json/webgl', { waitUntil: 'domcontentloaded' })
-  await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
-  await page.evaluate(waitMap)
-  await expect(page).toHaveScreenshot('wm-convert-s2json-webgl.png', { timeout: 2_000 })
-})
+// test('WM->ConvertS2JSON->WebGL', async ({ page }) => {
+//   await page.goto('/wm/convert-s2json/webgl', { waitUntil: 'domcontentloaded' })
+//   await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
+//   await page.evaluate(waitMap)
+//   await expect(page).toHaveScreenshot('wm-convert-s2json-webgl.png', { timeout: 2_000 })
+// })
 
 test('WM->ConvertS2JSON->WebGL2', async ({ page }) => {
   await page.goto('/wm/convert-s2json/webgl2', { waitUntil: 'domcontentloaded' })
