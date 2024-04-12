@@ -42,6 +42,38 @@ const style: StyleDefinition = {
       width: 1.75,
       interactive: false
     },
+    // {
+    //   name: 'poi-labels',
+    //   source: 'lineGlyphs',
+    //   type: 'glyph',
+    //   interactive: true,
+    //   cursor: 'pointer',
+    //   placement: 'point',
+    //   textFamily: ['robotoMedium'],
+    //   textField: '?name',
+    //   textAnchor: 'center',
+    //   textOffset: [0, 0],
+    //   textPadding: [4, 4],
+    //   textSize: {
+    //     inputRange: {
+    //       type: 'zoom',
+    //       ease: 'lin',
+    //       ranges: [
+    //         { stop: 0, input: 14 },
+    //         { stop: 3, input: 22 },
+    //         { stop: 4, input: 24 }
+    //       ]
+    //     }
+    //   },
+    //   // textSize: 14,
+    //   textFill: '#1a73e7',
+    //   textStroke: 'rgba(255, 255, 255, 0.75)',
+    //   textStrokeWidth: 0.5,
+    //   textWordWrap: 8,
+    //   overdraw: false,
+    //   viewCollisions: true,
+    //   geoFilter: ['line', 'poly']
+    // },
     {
       name: 'poi-labels',
       source: 'lineGlyphs',
@@ -71,7 +103,8 @@ const style: StyleDefinition = {
       textStrokeWidth: 0.5,
       textWordWrap: 8,
       overdraw: false,
-      viewCollisions: false
+      viewCollisions: true,
+      geoFilter: ['point']
     }
   ]
 }

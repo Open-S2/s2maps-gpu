@@ -4,6 +4,17 @@
     {
       "type": "S2Feature",
       "face": 4,
+      "properties": {
+        "name": "USA"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [0.1013977885240514, 0.4242334275789996]
+      }
+    },
+    {
+      "type": "S2Feature",
+      "face": 4,
       "bbox": [
         0.0379621142108828,
         0.20436573512433176,

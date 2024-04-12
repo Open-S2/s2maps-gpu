@@ -120,6 +120,7 @@ function buildPointAtDistance (
   distance: number,
   extent: number
 ): PathData {
+  const fourthExtent = extent * 0.25
   let i = 0
   while (i < index.length - 1 && index[i + 1] < distance) i++
   const p1 = line[i]
@@ -145,7 +146,7 @@ function buildPointAtDistance (
   // pathLeft length needs to be 4; add 1 at pathAngle
   while (pathLeft.length < 4) {
     const [x, y] = pathLeft[pathLeft.length - 1]
-    pathLeft.push([x + extent * Math.cos(curAngle), y + extent * Math.sin(curAngle)])
+    pathLeft.push([x + fourthExtent * Math.cos(curAngle), y + fourthExtent * Math.sin(curAngle)])
   }
   curAngle = pointAngle(point, line[r]) ?? 0
   while (r < line.length && pathRight.length < 3) {
@@ -155,7 +156,7 @@ function buildPointAtDistance (
   }
   while (pathRight.length < 4) {
     const [x, y] = pathRight[pathRight.length - 1]
-    pathRight.push([x + extent * Math.cos(curAngle), y + extent * Math.sin(curAngle)])
+    pathRight.push([x + fourthExtent * Math.cos(curAngle), y + fourthExtent * Math.sin(curAngle)])
   }
 
   return {

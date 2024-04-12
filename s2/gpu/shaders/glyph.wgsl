@@ -340,7 +340,7 @@ fn vPathMain(
   let paths = array<vec2<f32>, 4>(stPath1, stPath2, stPath3, stPath4);
   // get the offset and distance in pixel space
   var distance = xy.x * size;
-  var offsetXY = adjust + vec2<f32>(0., (xy.y * size) - (size / (view.devicePixelRatio * 2)));
+  var offsetXY = adjust + vec2<f32>(0., (xy.y * size) - tmpSize);
   // var offsetXY = adjust;
   // use the XY as a guide and follow the paths to our destination point
   var pPos = pathPosition(stPos, offsetXY, distance, paths);
@@ -486,7 +486,7 @@ fn vPathTest(
   let paths = array<vec2<f32>, 4>(stPath1, stPath2, stPath3, stPath4);
   // get the offset and distance in pixel space
   var distance = xy.x * size;
-  var offsetXY = adjust + vec2<f32>(0., xy.y * size);
+  var offsetXY = adjust + vec2<f32>(0., (xy.y * size) - tmpSize);
   // use the XY as a guide and follow the paths to our destination point
   var pPos = pathPosition(stPos, offsetXY, distance, paths);
   var posXY = pPos.xy / uAspect;
@@ -715,7 +715,7 @@ fn circles(@builtin(global_invocation_id) global_id: vec3<u32>) {
   let uAspect = vec2<f32>(view.aspectX, view.aspectY);
   let padding = containerPath.pad * view.devicePixelRatio * 2.;
   let adjust = containerPath.offset * view.devicePixelRatio;
-  let offsetXY = adjust + vec2<f32>(0., xy.y * size);
+  let offsetXY = adjust + vec2<f32>(0., (xy.y * size) - (size / 2. / view.devicePixelRatio));
   var distance = xy.x * size;
   let radius = (size / 2.) + padding;
   let posXY = pathPosition(stPos, offsetXY, distance, paths).xy;

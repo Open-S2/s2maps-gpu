@@ -415,7 +415,8 @@ function convertLayerSymbol (input: SymbolLayerSpecification, glyphs: Glyphs): u
     iconOffset: convertDataDrivenPropertyValueSpecification(layout['icon-offset']) as PropertyOnlyStep<[number, number]>,
     // TODO: support PaddingSpecification
     iconPadding: convertDataDrivenPropertyValueSpecification(layout['icon-padding']) as PropertyOnlyStep<[number, number]>,
-    visible: layout.visibility !== 'none'
+    visible: layout.visibility !== 'none',
+    geoFilter: ['line', 'poly']
   }
 }
 

@@ -1,4 +1,4 @@
-import UnicodeShaper, { DEFAULT_OPTIONS_WITHOUT_SHAPING } from 'unicode-shaper-zig'
+import UnicodeShaper, { DEFAULT_OPTIONS_WITHOUT_BIDI_SHAPING } from 'unicode-shaper-rust'
 import VectorWorker, { colorFunc, idToRGB } from '../vectorWorker'
 import featureSort from '../util/featureSort'
 import CollisionTester from './collisionTester'
@@ -131,7 +131,6 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
   ): Promise<boolean> {
     const { idGen, tileSize } = this
     const { zoom } = tile
-    // TODO: placement is `line`
     const { layerIndex, overdraw, interactive, geoFilter, noShaping } = glyphLayer
     const { gpuType, imageStore, featureStore } = this
     const { extent, properties } = feature
@@ -183,7 +182,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       if (type === 'text') {
         field = decodeHtmlEntities(field)
         try {
-          field = this.uShaper.shapeString(field, noShaping ? DEFAULT_OPTIONS_WITHOUT_SHAPING : undefined)
+          field = this.uShaper.shapeString(field, noShaping ? DEFAULT_OPTIONS_WITHOUT_BIDI_SHAPING : undefined)
         } catch (err) {
           console.error(field, field.split('').map(c => c.charCodeAt(0)), err)
         }

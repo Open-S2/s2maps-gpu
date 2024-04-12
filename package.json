@@ -1,6 +1,6 @@
 {
   "name": "s2maps-gpu",
-  "version": "0.15.0",
+  "version": "0.15.2",
   "description": "S2 Maps GPU",
   "keywords": [
     "s2",
@@ -52,7 +52,7 @@
   "dependencies": {
     "earclip": "^0.10.0",
     "s2-vector-tile": "^2.0.12",
-    "unicode-shaper-zig": "0.4.0"
+    "unicode-shaper-rust": "0.1.0"
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^13.6.2",
