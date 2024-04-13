@@ -22,22 +22,6 @@ export type Row = [rowCount: number, rowWidth: number, rowHeight: number]
 export const QUAD_SIZE_TEXT = 12
 export const QUAD_SIZE_PATH = 20
 
-export const MEDIALS_AND_VOWELS = [
-  // MYANMAR MEDIALS
-  '4155', '4156', '4157', '4158', '4190', '4191', '4192', '4226',
-  // TIBETAN VOWELS
-  '3953', '3954', '3955', '3956', '3957', '3958', '3959', '3960', '3961', '3962', '3963', '3964', '3965',
-  // TAMIL VOWELS
-  '3006', '3007', '3008', '3009', '3010', '3011', '3012', '3013', '3014', '3015', '3016'
-  // ORIYA VOWELS
-  // '2878' to '2888'
-  // TODO: Maybe consider Decompose these? Not sure if something along the way is bugged or I'm missing something else
-  // 0 decompose 2888(0B48): 2887(0B47) ->  -> previous char
-  // 1 decompose 2891(0B4B): 2887(0B47) -> previous char -> 2878(0B3E)
-  // 2 decompose 2892(0B4C): 2887(0B47) -> previous char -> 2903(0B57)
-  // '2888', '2891', '2892'
-]
-
 export const NULL_GLYPH = { code: '0', texX: 0, texY: 0, texW: 0, texH: 0, xOffset: 0, yOffset: 0, width: 0, height: 0, advanceWidth: 0 }
 
 // This step exclusively creates quad data, E.G. How to draw each glyph on the screen,
@@ -55,14 +39,11 @@ export function buildGlyphPointQuads (
 ): void {
   const { max } = Math
   const {
-    s, t, size, offset, padding, family, anchor,
+    s, t, size, offset, padding, family, anchor, fieldCodes,
     wordWrap, align, kerning, lineHeight, type, quads
   } = feature
-  let { fieldCodes } = feature
   const [offsetX, offsetY] = offset
   const [paddingX, paddingY] = padding
-  // update field codes if it contains joining characters
-  if (type === 'text') fieldCodes = adjustMedials(fieldCodes)
   // setup variable
   const rows: Row[] = [] // a row: [glyph count, rowMaxWidth, rowMaxHeight]
   let rowCount = 0
@@ -151,14 +132,12 @@ export function buildGlyphPathQuads (
   // NOTE: missing "size" and "padding"
   const {
     size, offset, family, anchor,
-    pathData, align, kerning, type
+    pathData, align, kerning
   } = feature
   let { fieldCodes } = feature
   const [offsetX, offsetY] = offset
   const padding = max(...feature.padding)
   const { point: [s, t], pathLeft, pathRight } = pathData
-  // update field codes if it contains joining characters
-  if (type === 'text') fieldCodes = adjustMedials(fieldCodes)
   // first replace all newlines with spaces
   fieldCodes = fieldCodes.map(unicode => {
     if (unicode === '10' || unicode === '13') return '32'
@@ -222,20 +201,6 @@ function getGlyph (glyphSource: MapGlyphSource, family: string[], code: string):
     if (glyph !== undefined) return glyph
   }
   return NULL_GLYPH
-}
-
-// NOTE: Temporary solution; remove when zig module implements more languages
-// MYANMAR MEDIALS go after the characters they are attached to
-function adjustMedials (fieldCodes: string[]): string[] {
-  for (let i = 1, fl = fieldCodes.length; i < fl; i++) {
-    if (MEDIALS_AND_VOWELS.includes(fieldCodes[i])) {
-      // swap with previous char
-      const prev = fieldCodes[i - 1]
-      fieldCodes[i - 1] = fieldCodes[i]
-      fieldCodes[i] = prev
-    }
-  }
-  return fieldCodes
 }
 
 function updateGlyphPos (

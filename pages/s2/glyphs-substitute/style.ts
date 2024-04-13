@@ -3,13 +3,14 @@ import type { S2FeatureCollection } from 's2/geometry'
 
 const data: S2FeatureCollection = {
   type: 'S2FeatureCollection',
-  faces: [0, 1, 3, 4],
+  faces: [0, 1, 2, 3, 4, 5],
   features: [
     {
       type: 'S2Feature',
       face: 0,
       properties: {
-        name: 'བོད་རང་སྐྱོང་ལྗོངས།'
+        name: 'བོད་རང་སྐྱོང་ལྗོངས། ༒',
+        type: 'tibetan'
       },
       geometry: {
         type: 'Point',
@@ -20,7 +21,8 @@ const data: S2FeatureCollection = {
       type: 'S2Feature',
       face: 0,
       properties: {
-        name: 'السودان'
+        name: 'السودان',
+        type: 'arabic'
       },
       geometry: {
         type: 'Point',
@@ -31,7 +33,8 @@ const data: S2FeatureCollection = {
       type: 'S2Feature',
       face: 0,
       properties: {
-        name: 'ישראל'
+        name: 'ישראל',
+        type: 'hebrew'
       },
       geometry: {
         type: 'Point',
@@ -42,7 +45,8 @@ const data: S2FeatureCollection = {
       type: 'S2Feature',
       face: 0,
       properties: {
-        name: '中国'
+        name: '中国',
+        type: 'chinese'
       },
       geometry: {
         type: 'Point',
@@ -53,7 +57,8 @@ const data: S2FeatureCollection = {
       type: 'S2Feature',
       face: 0,
       properties: {
-        name: 'မြန်မာ'
+        name: 'မြန်မာ',
+        type: 'myanmar'
       },
       geometry: {
         type: 'Point',
@@ -64,7 +69,8 @@ const data: S2FeatureCollection = {
       type: 'S2Feature',
       face: 0,
       properties: {
-        name: '대한민국'
+        name: '대한민국',
+        type: 'hangul'
       },
       geometry: {
         type: 'Point',
@@ -75,7 +81,8 @@ const data: S2FeatureCollection = {
       type: 'S2Feature',
       face: 0,
       properties: {
-        name: 'বাংলাদেশ'
+        name: 'বাংলাদেশ',
+        type: 'bengali'
       },
       geometry: {
         type: 'Point',
@@ -86,7 +93,8 @@ const data: S2FeatureCollection = {
       type: 'S2Feature',
       face: 0,
       properties: {
-        name: 'ประเทศไทย'
+        name: 'ประเทศไทย',
+        type: 'thai'
       },
       geometry: {
         type: 'Point',
@@ -97,7 +105,8 @@ const data: S2FeatureCollection = {
       type: 'S2Feature',
       face: 0,
       properties: {
-        name: 'រាជធានីភ្នំពេញ'
+        name: 'င်္က္ကျြွှေို့်ာှီ့ၤဲံ့းႍ',
+        type: 'myanmar'
       },
       geometry: {
         type: 'Point',
@@ -108,7 +117,8 @@ const data: S2FeatureCollection = {
       type: 'S2Feature',
       face: 1,
       properties: {
-        name: 'ᑭᙵᐃᓚᒃ'
+        name: 'ᑭᙵᐃᓚᒃ',
+        type: 'canadian syllabics'
       },
       geometry: {
         type: 'Point',
@@ -119,7 +129,8 @@ const data: S2FeatureCollection = {
       type: 'S2Feature',
       face: 1,
       properties: {
-        name: 'ශ්‍රී ලංකාව இலங்கை'
+        name: 'ශ්‍රී ලංකාව இலங்கை',
+        type: 'sinhala'
       },
       geometry: {
         type: 'Point',
@@ -130,7 +141,8 @@ const data: S2FeatureCollection = {
       type: 'S2Feature',
       face: 1,
       properties: {
-        name: 'ދިވެހިރާއްޖެ'
+        name: 'ދިވެހިރާއްޖެ',
+        type: 'Thaana'
       },
       geometry: {
         type: 'Point',
@@ -141,7 +153,8 @@ const data: S2FeatureCollection = {
       type: 'S2Feature',
       face: 1,
       properties: {
-        name: 'ኢትዮጵያ'
+        name: 'ኢትዮጵያ',
+        type: 'ethiopic'
       },
       geometry: {
         type: 'Point',
@@ -152,7 +165,8 @@ const data: S2FeatureCollection = {
       type: 'S2Feature',
       face: 4,
       properties: {
-        name: 'ഇന്ത്യ'
+        name: 'ഇന്ത്യ',
+        type: 'malayalam'
       },
       geometry: {
         type: 'Point',
@@ -163,11 +177,60 @@ const data: S2FeatureCollection = {
       type: 'S2Feature',
       face: 3,
       properties: {
-        name: 'କମ୍ବୋଡ଼ିଆ'
+        name: 'କମ୍ବୋଡ଼ିଆ',
+        type: 'oriya'
       },
       geometry: {
         type: 'Point',
         coordinates: [0.5, 0.5]
+      }
+    },
+    {
+      type: 'S2Feature',
+      face: 3,
+      properties: {
+        name: 'ᨑᨗ ᨍᨍᨗᨕᨂᨗ',
+        type: 'buginese'
+      },
+      geometry: {
+        type: 'Point',
+        coordinates: [0, 0.5]
+      }
+    },
+    {
+      type: 'S2Feature',
+      face: 3,
+      properties: {
+        name: 'ꦧꦺꦲꦏ꧀ꦠꦸꦩꦿꦥ꧀ꦲ',
+        type: 'javanese'
+      },
+      geometry: {
+        type: 'Point',
+        coordinates: [1, 0.5]
+      }
+    },
+    {
+      type: 'S2Feature',
+      face: 3,
+      properties: {
+        name: 'រាជធានីភ្នំពេញ',
+        type: 'khmer'
+      },
+      geometry: {
+        type: 'Point',
+        coordinates: [0.5, 1]
+      }
+    },
+    {
+      type: 'S2Feature',
+      face: 3,
+      properties: {
+        name: 'මනුෂ්‍යයෝ',
+        type: 'sinhala'
+      },
+      geometry: {
+        type: 'Point',
+        coordinates: [0.5, 1]
       }
     }
   ]

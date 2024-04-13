@@ -137,7 +137,9 @@ implements TileSpec<C, F, M> {
     // @ts-expect-error - we need to clear the array
     this.featureGuides = []
     this.interactiveGuide = new Map()
-    this.mask.destroy?.()
+    // TODO: WebGPU needs the data past it's lifetime...
+    // IDEA: Copy the parent mask so that any data used is always isolated to the tile in question
+    // this.mask.destroy?.()
   }
 
   /* STYLE CHANGES */
