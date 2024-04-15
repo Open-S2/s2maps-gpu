@@ -6,7 +6,7 @@ interface CachedObject {
 export default class Cache<U, T extends CachedObject> extends Map<U, T> {
   maxCacheSize: number
   #order: U[] = []
-  constructor (maxCacheSize = 15) {
+  constructor (maxCacheSize = 100) {
     super()
     this.maxCacheSize = maxCacheSize
   }
