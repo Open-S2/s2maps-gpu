@@ -2,6 +2,7 @@ import { version } from 'package.json'
 import path from 'node:path'
 import zlib from 'node:zlib'
 import {
+  copyFileSync,
   createReadStream,
   createWriteStream,
   existsSync,
@@ -60,6 +61,16 @@ inputStream.pipe(gzip).pipe(outputStream)
 // const inputStream2 = createReadStream(inputFile)
 // const outputStream2 = createWriteStream(brotliOutputFile)
 // inputStream2.pipe(brotli).pipe(outputStream2)
+
+// store
+const dest = `../opens2.com/public/s2maps-gpu/v${version}-flat`
+const existsFolder = existsSync(dest)
+if (!existsFolder) {
+  mkdirSync(dest)
+  copyFileSync(inputFile, `${dest}/s2maps-gpu.flat.js`)
+} else {
+  console.info('[flat] already exists!', dest)
+}
 
 console.info('Build complete', result, version)
 

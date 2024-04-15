@@ -50,11 +50,6 @@ module.exports = {
           }
         ],
         exclude: /node_modules/
-      },
-      {
-        test: /\.worker.ts?$/,
-        // More information here https://webpack.js.org/guides/asset-modules/
-        type: 'asset/inline'
       }
     ]
   },

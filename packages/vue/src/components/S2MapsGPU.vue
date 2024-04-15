@@ -59,6 +59,7 @@ export default {
           ? `https://opens2.com/s2maps-gpu/v${version}-local/s2maps-gpu.min.js`
           : `https://opens2.com/s2maps-gpu/v${version}/s2maps-gpu.min.js`
       const script = document.createElement('script')
+      if (build === 'flat') script.type = 'module'
       script.src = jsSrc
       script.async = true
       script.defer = true

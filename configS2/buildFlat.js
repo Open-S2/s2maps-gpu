@@ -8,6 +8,8 @@ const { filesize } = require('filesize')
 const { green, red, blue, yellow } = require('picocolors')
 // const configurationFlat = require('./webpack-flat.config.js')
 const configurationCSSFlat = require('./webpack-flat.css.config.js')
+const { version } = require('../package.json')
+const VERSION = `v${version}`
 
 // SETUP COMPILER
 // const jsCompiler = webpack(configurationFlat)
@@ -37,6 +39,7 @@ Promise.all([
   .catch((err) => { console.info('Failed to build', err) })
   .then(res => {
     getFileSizes()
+    store()
   })
 
 function getFileSizes () {
@@ -94,4 +97,10 @@ function getFileSizes () {
   console.info(`\n${green('TOTAL:')}${' '.repeat(30 - 6)}${red(res.jsTotalmin)}${' '.repeat(14 - res.jsTotalmin.length)}${blue(res.jsTotalgz)}${' '.repeat(13 - res.jsTotalgz.length)}${yellow(res.jsTotalbr)}`)
 
   console.info()
+}
+
+function store () {
+  const input = './buildS2-flat/s2maps-gpu.min.css'
+  const dest = `../opens2.com/public/s2maps-gpu/${VERSION}-flat`
+  fs.copyFileSync(input, `${dest}/s2maps-gpu.min.css`)
 }

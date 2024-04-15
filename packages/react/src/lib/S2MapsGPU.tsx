@@ -44,6 +44,8 @@ export default function S2MapsGPU ({
           ...mapOptions,
           container: container.current
         }
+        // TODO: When flat build can handle offscreen, remove this
+        if (build === 'flat') options.offscreen = false
         const map = new window.S2Map(options);
         mapInstance.current = map;
 
@@ -83,6 +85,7 @@ async function loadScript (version: string, build: BuildType): Promise<void> {
         ? `https://opens2.com/s2maps-gpu/v${version}-local/s2maps-gpu.min.js`
         : `https://opens2.com/s2maps-gpu/v${version}/s2maps-gpu.min.js`
     const script = document.createElement('script')
+    if (build === 'flat') script.type = 'module'
     script.src = jsSrc
     script.async = true
     script.defer = true
