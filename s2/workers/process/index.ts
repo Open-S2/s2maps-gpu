@@ -5,7 +5,7 @@ import PointWorker from './point'
 import RasterWorker from './raster'
 import ImageStore from './imageStore'
 
-import type { VectorTile } from 's2-vector-tile'
+import type { VectorTile } from 'open-vector-tile'
 import type { TileFlushMessage, TileRequest } from '../worker.spec'
 import type {
   GPUType,

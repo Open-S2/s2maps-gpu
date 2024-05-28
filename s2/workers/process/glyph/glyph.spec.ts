@@ -1,6 +1,6 @@
 import type { Alignment, Anchor } from 'style/style.spec'
 import type { ColorArray } from 'style/color'
-import type { Point } from 'geometry'
+import type { FlatPoint } from 'geometry'
 import type { PathData } from '../util'
 
 export interface SquareNode {
@@ -39,8 +39,8 @@ export interface GlyphBase {
   field: string
   fieldCodes: string[]
   spacing: number
-  offset: Point
-  padding: Point
+  offset: FlatPoint
+  padding: FlatPoint
   kerning: number
   lineHeight: number
   type: 'text' | 'icon'

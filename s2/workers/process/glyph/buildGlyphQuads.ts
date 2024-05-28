@@ -4,7 +4,7 @@ import type { Alignment, Anchor } from 'style/style.spec'
 import type { GlyphPath, GlyphPoint, PathFilter } from './glyph.spec'
 import type { MapGlyphSource } from '../imageStore'
 import type { Glyph } from './familySource'
-import type { Point } from 'geometry'
+import type { FlatPoint } from 'geometry'
 import type { Path, QuadPos } from '../util'
 
 // BOX: [s, t, xOffset, yOffset, xPos, yPos, width, height, texX, texY, texWidth, texHeight]
@@ -137,7 +137,7 @@ export function buildGlyphPathQuads (
   let { fieldCodes } = feature
   const [offsetX, offsetY] = offset
   const padding = max(...feature.padding)
-  const { point: [s, t], pathLeft, pathRight } = pathData
+  const { point: { x: s, y: t }, pathLeft, pathRight } = pathData
   // first replace all newlines with spaces
   fieldCodes = fieldCodes.map(unicode => {
     if (unicode === '10' || unicode === '13') return '32'
@@ -217,7 +217,7 @@ function updateGlyphPos (
 }
 
 // boxes start at the bottom left as UV [0,0] to [1, 1]
-function anchorOffset (anchor: Anchor, width: number, height: number): Point {
+function anchorOffset (anchor: Anchor, width: number, height: number): FlatPoint {
   if (anchor === 'center') return [-width / 2, -height / 2]
   else if (anchor === 'top') return [-width / 2, -height]
   else if (anchor === 'top-right') return [-width, -height]
@@ -230,7 +230,7 @@ function anchorOffset (anchor: Anchor, width: number, height: number): Point {
   else return [-width / 2, -height / 2] // default to center
 }
 // the path drawing takes [-0.5, -0.5] to [0.5, 0.5] quads
-function anchorOffsetPath (anchor: Anchor, width: number, height: number): Point {
+function anchorOffsetPath (anchor: Anchor, width: number, height: number): FlatPoint {
   if (anchor === 'center') return [-width / 2, 0]
   else if (anchor === 'top') return [-width / 2, -height / 2]
   else if (anchor === 'top-right') return [-width, -height / 2]
@@ -284,8 +284,8 @@ function updatePathData (
   for (let i = 0, ql = quads.length; i < ql; i += QUAD_SIZE_PATH) {
     const path = quads[i + 4] >= 0 ? pathRight : pathLeft
     for (let j = 0; j < 4; j++) {
-      quads[i + 12 + (j * 2)] = path[j][0]
-      quads[i + 13 + (j * 2)] = path[j][1]
+      quads[i + 12 + (j * 2)] = path[j].x
+      quads[i + 13 + (j * 2)] = path[j].y
     }
   }
 }
@@ -301,7 +301,7 @@ function buildFeatureNodes (
 ): void {
   for (let i = 0, ql = quads.length; i < ql; i += QUAD_SIZE_PATH) {
     const quadPos = quads.slice(i, i + 6) as QuadPos
-    const [x, y] = getPathPos(quadPos, pathLeft, pathRight, tileSize, size)
+    const { x, y } = getPathPos(quadPos, pathLeft, pathRight, tileSize, size)
     feature.nodes.push({ x, y, r: size / 2 + padding })
   }
 }

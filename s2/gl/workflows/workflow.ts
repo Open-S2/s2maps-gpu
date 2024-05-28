@@ -201,7 +201,7 @@ export default class Workflow implements WorkflowSpec {
   setAspect (aspect: Point): void {
     const { uniforms } = this
     if (uniforms.uAspect === undefined) return
-    this.gl.uniform2fv(uniforms.uAspect, aspect)
+    this.gl.uniform2fv(uniforms.uAspect, [aspect.x, aspect.y])
     this.updateAspect = null
   }
 

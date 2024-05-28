@@ -4,7 +4,7 @@ import parseFilter from 'style/parseFilter'
 import parseFeatureFunction from 'style/parseFeatureFunction'
 
 import type { HeatmapData, PointData, TileRequest } from '../worker.spec'
-import type { S2VectorPoints } from 's2-vector-tile'
+import type { VectorPoints } from 'open-vector-tile'
 import type {
   HeatmapDefinition,
   HeatmapWorkerLayer,
@@ -38,10 +38,7 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
     // build featureCode design
     // heatmap: radius -> opacity -> intensity
     // point:  radius -> opacity -> color -> stroke -> strokeWidth
-    const design: CodeDesign = [
-      [radius],
-      [opacity]
-    ]
+    const design: CodeDesign = [[radius], [opacity]]
     if (type === 'point') {
       const { color, stroke, strokeWidth } = layerDefinition
       design.push(
@@ -92,11 +89,11 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
     if (geoFilter.includes('line') && featureType === 2) return false
     if (geoFilter.includes('point') && featureType === 1) return false
     // load geometry
-    const geometry = feature.loadGeometry?.() as S2VectorPoints
+    const geometry = feature.loadGeometry?.() as VectorPoints
     if (geometry === undefined) return false
     // preprocess geometry
     const points = flattenGeometryToPoints(geometry, featureType)
-    const clip = scaleShiftClip(points, 1, extent, tile) as S2VectorPoints
+    const clip = scaleShiftClip(points, 1, extent, tile) as VectorPoints
     if (clip === undefined) return false
     const vertices: number[] = []
     const weights: number[] = []
@@ -107,7 +104,7 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
     const multiplier = 1 / extent
     // if weight, then it is a heatmap and we add weight data
     for (const point of clip) {
-      vertices.push(point[0] * multiplier, point[1] * multiplier)
+      vertices.push(point.x * multiplier, point.y * multiplier)
       if (isHeatmap) weights.push(weight)
     }
 

@@ -164,7 +164,7 @@ export default class FillWorkflow extends Workflow implements FillWorkflowSpec {
     const { color, opacity } = layerGuide
     const feature = new FillFeature(
       this, layerGuide, true, mask, gl.TRIANGLE_STRIP,
-      mask.count, mask.offset, [0, 0], [0, 0], 0, [0], tile
+      mask.count, mask.offset, { x: 0, y: 0 }, [0, 0], 0, [0], tile
     )
     // If webgl1 add color and opacity
     if (type === 1) {
@@ -246,7 +246,7 @@ export default class FillWorkflow extends Workflow implements FillWorkflowSpec {
       if (count > 0) {
         const feature = new FillFeature(
           this, layerGuide, false, source, gl.TRIANGLES, count, offset,
-          [patternX, patternY], [patternW, patternH], patternMovement, featureCode, tile
+          { x: patternX, y: patternY }, [patternW, patternH], patternMovement, featureCode, tile
         )
         if (this.type === 1) {
           feature.color = color
@@ -285,7 +285,7 @@ export default class FillWorkflow extends Workflow implements FillWorkflowSpec {
     gl.activeTexture(gl.TEXTURE0)
     gl.bindTexture(gl.TEXTURE_2D, texture)
     gl.uniform2fv(uTexSize, texSize)
-    gl.uniform2fv(uPatternXY, patternXY)
+    gl.uniform2fv(uPatternXY, [patternXY.x, patternXY.y])
     gl.uniform2fv(uPatternWH, patternWH)
     gl.uniform1i(uPatternMovement, patternMovement)
     if (interactive) context.stencilFuncAlways(0)

@@ -91,3 +91,5 @@ test-results/
 blob-report/
 playwright/.cache/
 
+# experiment data
+public/geojson/utah.geojson

@@ -1,4 +1,4 @@
-import { VectorTile } from 's2-vector-tile'
+import { VectorTile } from 'open-vector-tile'
 // import { parseLayers } style/conditionals'
 import ProcessManager from './process'
 

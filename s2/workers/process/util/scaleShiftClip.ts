@@ -1,11 +1,11 @@
 import type {
-  S2VectorGeometry,
-  S2VectorLine,
-  S2VectorLines,
-  S2VectorMultiPoly,
-  S2VectorPoints,
-  S2VectorPoly
-} from 's2-vector-tile'
+  VectorGeometry,
+  VectorLine,
+  VectorLines,
+  VectorMultiPoly,
+  VectorPoints,
+  VectorPoly
+} from 'open-vector-tile'
 import type { Point } from 'geometry'
 import type { TileRequest } from 'workers/worker.spec'
 
@@ -13,11 +13,11 @@ import type { TileRequest } from 'workers/worker.spec'
 // 2) shift x and y by position of current tile
 // 3) clip the geometry by 0->extent (include buffer if not points)
 export default function scaleShiftClip (
-  geometry: S2VectorGeometry,
+  geometry: VectorGeometry,
   type: number,
   extent: number,
   tile: TileRequest
-): S2VectorGeometry {
+): VectorGeometry {
   const { parent } = tile
   if (parent === undefined) return geometry
   const parentZoom = parent.zoom
@@ -37,41 +37,41 @@ export default function scaleShiftClip (
     zoom--
   }
   // build
-  if (type === 1) return scaleShiftClipPoints(geometry as S2VectorPoints, extent, xShift, yShift, scale)
-  else if (type === 2 || type === 3 || type === 4) return scaleShiftClipLines(geometry as S2VectorLines, type, extent, xShift, yShift, scale)
+  if (type === 1) return scaleShiftClipPoints(geometry as VectorPoints, extent, xShift, yShift, scale)
+  else if (type === 2 || type === 3 || type === 4) return scaleShiftClipLines(geometry as VectorLines, type, extent, xShift, yShift, scale)
   else return geometry
 }
 
 function scaleShiftClipLines (
-  geometry: S2VectorLines | S2VectorPoly | S2VectorMultiPoly,
+  geometry: VectorLines | VectorPoly | VectorMultiPoly,
   type: 2 | 3 | 4,
   extent: number,
   xShift: number,
   yShift: number,
   scale: number
-): S2VectorGeometry {
+): VectorGeometry {
   // shift & scale
   if (type === 4) {
     for (const poly of geometry) {
-      for (const line of poly) shiftScale(line as S2VectorLine, xShift, yShift, scale)
+      for (const line of poly) shiftScale(line as VectorLine, xShift, yShift, scale)
     }
   } else {
-    for (const line of geometry) shiftScale(line as S2VectorLine, xShift, yShift, scale)
+    for (const line of geometry) shiftScale(line as VectorLine, xShift, yShift, scale)
   }
   // clip
-  let newGeometry: S2VectorGeometry = []
+  let newGeometry: VectorGeometry = []
   if (type === 4) {
-    const newGeo: S2VectorMultiPoly = []
+    const newGeo: VectorMultiPoly = []
     for (const poly of geometry) {
-      const newPoly: S2VectorLines = []
-      for (const line of poly) newPoly.push(...clipLine(line as S2VectorLine, extent, true))
+      const newPoly: VectorLines = []
+      for (const line of poly) newPoly.push(...clipLine(line as VectorLine, extent, true))
       if (newPoly.length > 0) newGeo.push(newPoly)
     }
     newGeometry = newGeo
   } else {
-    const newGeo: S2VectorLines = []
+    const newGeo: VectorLines = []
     for (const line of geometry) {
-      newGeo.push(...clipLine(line as S2VectorLine, extent, type === 3))
+      newGeo.push(...clipLine(line as VectorLine, extent, type === 3))
     }
     newGeometry = newGeo
   }
@@ -81,18 +81,18 @@ function scaleShiftClipLines (
 }
 
 function scaleShiftClipPoints (
-  geometry: S2VectorPoints,
+  geometry: VectorPoints,
   extent: number,
   xShift: number,
   yShift: number,
   scale: number
-): S2VectorPoints {
+): VectorPoints {
   // shift & scale
   shiftScale(geometry, xShift, yShift, scale)
   // clip
   for (let i = 0; i < geometry.length; i++) {
     const point = geometry[i]
-    if (point[0] < 0 || point[0] > extent || point[1] < 0 || point[1] > extent) {
+    if (point.x < 0 || point.x > extent || point.y < 0 || point.y > extent) {
       geometry.splice(i, 1)
       i--
     }
@@ -102,37 +102,37 @@ function scaleShiftClipPoints (
 }
 
 function shiftScale (
-  points: S2VectorPoints,
+  points: VectorPoints,
   xShift: number,
   yShift: number,
   scale: number
 ): void {
   for (const point of points) {
-    point[0] = (point[0] - xShift) * scale
-    point[1] = (point[1] - yShift) * scale
+    point.x = (point.x - xShift) * scale
+    point.y = (point.y - yShift) * scale
   }
 }
 
 export function clipLines (
-  lines: S2VectorLines,
+  lines: VectorLines,
   extent: number,
   isPolygon: boolean,
   buffer: number = 80
-): S2VectorLines {
-  const res: S2VectorLines = []
+): VectorLines {
+  const res: VectorLines = []
   for (const line of lines) res.push(...clipLine(line, extent, isPolygon, buffer))
   return res
 }
 
 // uses a buffer of 80 as default
 function clipLine (
-  line: S2VectorLine,
+  line: VectorLine,
   extent: number,
   isPolygon: boolean,
   buffer: number = 80
-): S2VectorLines {
-  const res: S2VectorLines = []
-  const vertical: S2VectorLines = []
+): VectorLines {
+  const res: VectorLines = []
+  const vertical: VectorLines = []
 
   // slice vertically
   _clipLine(line, vertical, -buffer, extent + buffer, 1, isPolygon)
@@ -143,8 +143,8 @@ function clipLine (
 }
 
 function _clipLine (
-  line: S2VectorLine,
-  newGeom: S2VectorLines,
+  line: VectorLine,
+  newGeom: VectorLines,
   k1: number,
   k2: number,
   axis: 0 | 1,
@@ -155,10 +155,10 @@ function _clipLine (
   const len = line.length - 1
 
   for (let i = 0; i < len; i++) {
-    const ax = line[i][0]
-    const ay = line[i][1]
-    const bx = line[i + 1][0]
-    const by = line[i + 1][1]
+    const ax = line[i].x
+    const ay = line[i].y
+    const bx = line[i + 1].x
+    const by = line[i + 1].y
     const a = axis === 0 ? ax : ay
     const b = axis === 0 ? bx : by
     let exited = false
@@ -170,7 +170,7 @@ function _clipLine (
       // |  <--|--- (line enters the clip region from the right)
       if (b < k2) intersect(slice, ax, ay, bx, by, k2)
     } else {
-      slice.push([ax, ay])
+      slice.push({ x: ax, y: ay })
     }
     if (b < k1 && a >= k1) {
       // <--|---  | or <--|-----|--- (line exits the clip region on the left)
@@ -190,16 +190,16 @@ function _clipLine (
   }
 
   // add the last point
-  const ax = line[len][0]
-  const ay = line[len][1]
+  const ax = line[len].x
+  const ay = line[len].y
   const a = axis === 0 ? ax : ay
-  if (a >= k1 && a <= k2) slice.push([ax, ay])
+  if (a >= k1 && a <= k2) slice.push({ x: ax, y: ay })
 
   // close the polygon if its endpoints are not the same after clipping
   if (isPolygon && slice.length < 3) return
   const last = slice.length - 1
-  if (isPolygon && (slice[last][0] !== slice[0][0] || slice[last][1] !== slice[0][1])) {
-    slice.push([slice[0][0], slice[0][1]])
+  if (isPolygon && (slice[last].x !== slice[0].x || slice[last].y !== slice[0].y)) {
+    slice.push({ x: slice[0].x, y: slice[0].y })
   }
 
   // add the final slice
@@ -215,7 +215,7 @@ function intersectX (
   x: number
 ): void {
   const t = (x - ax) / (bx - ax)
-  out.push([x, ay + (by - ay) * t])
+  out.push({ x, y: ay + (by - ay) * t })
 }
 
 function intersectY (
@@ -227,5 +227,5 @@ function intersectY (
   y: number
 ): void {
   const t = (y - ay) / (by - ay)
-  out.push([ax + (bx - ax) * t, y])
+  out.push({ x: ax + (bx - ax) * t, y })
 }

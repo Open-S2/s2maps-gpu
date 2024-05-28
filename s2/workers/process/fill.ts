@@ -5,10 +5,11 @@ import parseFilter from 'style/parseFilter'
 import parseFeatureFunction from 'style/parseFeatureFunction'
 
 import type {
-  S2VectorGeometry,
-  S2VectorMultiPoly,
-  S2VectorPoly
-} from 's2-vector-tile'
+  Point,
+  VectorGeometry,
+  VectorMultiPoly,
+  VectorPoly
+} from 'open-vector-tile'
 import type { FillData, TileRequest } from '../worker.spec'
 import type {
   FillDefinition,
@@ -113,18 +114,18 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     // if not parent and indices, the polygon has already been "solved"
     if (hasParent || indices.length === 0) {
       // prep polys
-      const polys: number[][][][] = []
+      const polys: Point[][][] = []
       // preprocess geometry
       const clip = scaleShiftClip(
-        geometry as S2VectorGeometry,
+        geometry as VectorGeometry,
         type,
         extent,
         tile
-      ) as S2VectorPoly | S2VectorMultiPoly
+      ) as VectorPoly | VectorMultiPoly
       // prep for processing
       if (type === 4) {
-        for (const poly of clip as S2VectorMultiPoly) polys.push(poly)
-      } else { polys.push(clip as S2VectorPoly) }
+        for (const poly of clip as VectorMultiPoly) polys.push(poly)
+      } else { polys.push(clip as VectorPoly) }
       // create multiplier
       const multiplier = 1 / extent
       // process

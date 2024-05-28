@@ -8,8 +8,7 @@
 !dist-types/
 
 # Exclude all contents of dist folder except plugins
-/dist/*
-!/dist/plugins/
+!/dist/
 
 # playwright
 playwright-report/

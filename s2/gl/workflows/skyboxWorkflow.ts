@@ -95,7 +95,7 @@ export default class SkyboxWorkflow extends Workflow implements SkyboxWorkflowSp
     const { gl, uniforms, fov, angle, matrix } = this
     const { aspect, lon, lat } = projector
     // create a perspective matrix
-    perspective(matrix, fov, aspect[0] / aspect[1], 1, 10000)
+    perspective(matrix, fov, aspect.x / aspect.y, 1, 10000)
     // rotate perspective
     rotate(matrix, [degToRad(lat), degToRad(lon), angle])
     // this is a simplified "lookat", since we maintain a set camera position

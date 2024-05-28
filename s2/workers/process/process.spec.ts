@@ -1,4 +1,4 @@
-import type { VectorTileFeature } from 's2-vector-tile'
+import type { MapboxVectorFeature, OVectorFeature } from 'open-vector-tile'
 import type { TileRequest } from '../worker.spec'
 import type {
   Cap,
@@ -36,7 +36,7 @@ export interface IDGen {
   getNum: () => number
 }
 
-/** FEATURES **/
+/** FEATURES */
 
 export interface FeatureBase {
   layerIndex: number
@@ -77,9 +77,9 @@ export interface HeatmapFeature extends FeatureBase {
 
 export type Feature = GlyphFeature | FillFeature | LineFeature | PointFeature | HeatmapFeature
 
-/** WORKERS **/
+/** WORKERS */
 
-export type VTFeature = VectorTileFeature | JSONVectorFeature
+export type VTFeature = OVectorFeature | MapboxVectorFeature | JSONVectorFeature
 
 export interface VectorWorker {
   idGen: IDGen

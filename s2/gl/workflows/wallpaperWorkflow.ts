@@ -26,7 +26,7 @@ export default class WallpaperWorkflow extends Workflow implements WallpaperWork
   label = 'wallpaper' as const
   scheme: Scheme
   tileSize = 512
-  scale: Point = [0, 0]
+  scale: Point = { x: 0, y: 0 }
   declare uniforms: { [key in WallpaperWorkflowUniforms]: WebGLUniformLocation }
   constructor (context: Context) {
     // get gl from context
@@ -53,9 +53,9 @@ export default class WallpaperWorkflow extends Workflow implements WallpaperWork
     if (!dirty) return
     const radius = this.tileSize * min(pow(2, zoom), 32_768)
     const mult2 = multiplier / 2
-    this.scale[0] = radius / (aspect[0] / mult2)
-    this.scale[1] = radius / (aspect[1] / mult2)
-    gl.uniform2fv(uScale, this.scale)
+    const x = this.scale.x = radius / (aspect.x / mult2)
+    const y = this.scale.y = radius / (aspect.y / mult2)
+    gl.uniform2fv(uScale, [x, y])
   }
 
   updateStyle (style: StyleDefinition): void {

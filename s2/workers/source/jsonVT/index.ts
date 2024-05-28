@@ -1,4 +1,4 @@
-/** MODULES **/
+/** MODULES */
 import {
   childrenIJ,
   contains,
@@ -12,7 +12,7 @@ import convert from './convert' // GeoJSON conversion and preprocessing
 import clip from './clip'
 import transformTile from './transform' // coordinate transformation
 import createTile from './tile' // final simplified tile generation
-/** TYPES **/
+/** TYPES */
 import type { JSONTile, JSONVectorTile } from './tile'
 import type { FeatureVector } from './feature'
 import type { Face, JSONFeatures } from 'geometry'

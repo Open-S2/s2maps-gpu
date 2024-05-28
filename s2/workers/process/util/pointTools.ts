@@ -2,17 +2,18 @@ import { flattenGeometryToLines, lineLength } from './lineTools'
 
 import type {
   Point,
-  S2VectorGeometry,
-  S2VectorPoints,
-  S2VectorTileFeatureType
-} from 's2-vector-tile'
+  VectorFeatureType,
+  VectorGeometry,
+  VectorPoints
+} from 'open-vector-tile'
+import type { Path, PathData } from './lineTools'
 
 export function flattenGeometryToPoints (
-  geometry: S2VectorGeometry,
-  type: S2VectorTileFeatureType
-): S2VectorPoints {
-  if (type === 1) return geometry as S2VectorPoints
-  const res: S2VectorPoints = []
+  geometry: VectorGeometry,
+  type: VectorFeatureType
+): VectorPoints {
+  if (type === 1) return geometry as VectorPoints
+  const res: VectorPoints = []
 
   const lines = flattenGeometryToLines(geometry, type)
   for (const line of lines) {
@@ -23,20 +24,20 @@ export function flattenGeometryToPoints (
 }
 
 export function getCenterPoints (
-  geometry: S2VectorGeometry,
-  type: S2VectorTileFeatureType
-): S2VectorPoints {
-  if (type === 1) return geometry as S2VectorPoints
+  geometry: VectorGeometry,
+  type: VectorFeatureType
+): VectorPoints {
+  if (type === 1) return geometry as VectorPoints
   return findCenterPoints(geometry, type, 0).map(sp => sp.point)
 }
 
 export function getSpacedPoints (
-  geometry: S2VectorGeometry,
-  type: S2VectorTileFeatureType,
+  geometry: VectorGeometry,
+  type: VectorFeatureType,
   spacing: number,
   extent: number
-): S2VectorPoints {
-  if (type === 1) return geometry as S2VectorPoints
+): VectorPoints {
+  if (type === 1) return geometry as VectorPoints
   return findSpacedPoints(geometry, type, spacing, extent).map(sp => sp.point)
 }
 
@@ -48,8 +49,8 @@ export interface SpacedPoints {
 }
 
 export function findCenterPoints (
-  geometry: S2VectorGeometry,
-  type: S2VectorTileFeatureType,
+  geometry: VectorGeometry,
+  type: VectorFeatureType,
   extent: number
 ): SpacedPoints[] {
   const res: SpacedPoints[] = []
@@ -72,8 +73,8 @@ export function findCenterPoints (
 }
 
 export function findSpacedPoints (
-  geometry: S2VectorGeometry,
-  type: S2VectorTileFeatureType,
+  geometry: VectorGeometry,
+  type: VectorFeatureType,
   spacing: number,
   extent: number
 ): SpacedPoints[] {
@@ -106,16 +107,9 @@ export function findSpacedPoints (
   return res
 }
 
-export type Path = [Point, Point, Point, Point]
-export interface PathData {
-  point: Point
-  pathLeft: Path
-  pathRight: Path
-}
-
 // NOTE: Assumes the line is longer then the distance
 function buildPointAtDistance (
-  line: S2VectorPoints,
+  line: VectorPoints,
   index: number[],
   distance: number,
   extent: number
@@ -128,10 +122,10 @@ function buildPointAtDistance (
   const d1 = index[i]
   const d2 = index[i + 1]
   const t = (distance - d1) / (d2 - d1)
-  const point: Point = [
-    p1[0] + (p2[0] - p1[0]) * t,
-    p1[1] + (p2[1] - p1[1]) * t
-  ]
+  const point: Point = {
+    x: p1.x + (p2.x - p1.x) * t,
+    y: p1.y + (p2.y - p1.y) * t
+  }
   // store either 7 points or as many as possible
   const pathLeft: Point[] = []
   const pathRight: Point[] = []
@@ -145,8 +139,8 @@ function buildPointAtDistance (
   }
   // pathLeft length needs to be 4; add 1 at pathAngle
   while (pathLeft.length < 4) {
-    const [x, y] = pathLeft[pathLeft.length - 1]
-    pathLeft.push([x + fourthExtent * Math.cos(curAngle), y + fourthExtent * Math.sin(curAngle)])
+    const { x, y } = pathLeft[pathLeft.length - 1]
+    pathLeft.push({ x: x + fourthExtent * Math.cos(curAngle), y: y + fourthExtent * Math.sin(curAngle) })
   }
   curAngle = pointAngle(point, line[r]) ?? 0
   while (r < line.length && pathRight.length < 3) {
@@ -155,8 +149,8 @@ function buildPointAtDistance (
     curAngle = pointAngle(line[r - 1], line[r]) ?? curAngle
   }
   while (pathRight.length < 4) {
-    const [x, y] = pathRight[pathRight.length - 1]
-    pathRight.push([x + fourthExtent * Math.cos(curAngle), y + fourthExtent * Math.sin(curAngle)])
+    const { x, y } = pathRight[pathRight.length - 1]
+    pathRight.push({ x: x + fourthExtent * Math.cos(curAngle), y: y + fourthExtent * Math.sin(curAngle) })
   }
 
   return {
@@ -167,10 +161,10 @@ function buildPointAtDistance (
 }
 
 export function duplicatePoint (point: Point): Point {
-  return [point[0], point[1]]
+  return { x: point.x, y: point.y, m: point.m }
 }
 
 export function pointAngle (a: Point, b?: Point): number | undefined {
-  if (b === undefined || (a[0] === b[0] && a[1] === b[1])) return undefined
-  return Math.atan2(b[1] - a[1], b[0] - a[0])
+  if (b === undefined || (a.x === b.x && a.y === b.y)) return undefined
+  return Math.atan2(b.y - a.y, b.x - a.x)
 }

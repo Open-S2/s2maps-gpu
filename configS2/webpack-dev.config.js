@@ -63,7 +63,7 @@ module.exports = {
     })]
   },
   plugins: [
-    new webpack.BannerPlugin(`s2maps-gpu is Copyright © ${(new Date()).getFullYear()} OpenS2 and subject to the S2 Maps Terms of Service (https://www.opens2.com/tos/).`),
+    new webpack.BannerPlugin(`s2maps-gpu is Copyright © ${(new Date()).getFullYear()} OpenS2 and subject to the Open S2 Terms of Service (https://www.opens2.com/legal/tos).`),
     new webpack.ProgressPlugin()
   ]
 }

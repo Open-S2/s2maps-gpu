@@ -1,4 +1,7 @@
-// calculate simplification of line vector data using optimized Douglas-Peucker algorithm
+/**
+ * calculate simplification of line vector data using
+ * optimized Douglas-Peucker algorithm
+ */
 export default function simplify (
   coords: number[],
   first: number,

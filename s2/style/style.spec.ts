@@ -1,4 +1,4 @@
-import type { BBox, JSONFeatures, Point, Properties } from 'geometry'
+import type { BBox, FlatPoint, JSONFeatures, Properties } from 'geometry'
 import type { Filter, FilterFunction } from 'style/parseFilter'
 import type { EaseType } from './easingFunctions'
 import type { JSONVTOptions } from 'workers/source/jsonVT'
@@ -1458,7 +1458,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  textOffset?: Point | PropertyOnlyStep<Point>
+  textOffset?: FlatPoint | PropertyOnlyStep<FlatPoint>
   /**
    * A LAYOUT `PropertyOnlyStep`.
    * @defaultValue `[0, 0]`
@@ -1483,7 +1483,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  textPadding?: Point | PropertyOnlyStep<Point>
+  textPadding?: FlatPoint | PropertyOnlyStep<FlatPoint>
   /**
    * A LAYOUT `Property`.
    * @defaultValue `0`
@@ -1728,7 +1728,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  iconOffset?: Point | PropertyOnlyStep<Point>
+  iconOffset?: FlatPoint | PropertyOnlyStep<FlatPoint>
   /**
    * A LAYOUT `PropertyOnlyStep`.
    * @defaultValue `[0, 0]`
@@ -1753,11 +1753,12 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  iconPadding?: Point | PropertyOnlyStep<Point>
+  iconPadding?: FlatPoint | PropertyOnlyStep<FlatPoint>
   // properties
   /**
    * Filter the geometry types that will be drawn.
    * An empty array will support all geometry types.
+   * Ex. `["line"]` - only draw lines
    * Defaults to empty. */
   geoFilter?: Array<'point' | 'line' | 'poly'>
   /** if true, the layer will be drawn regardless of other glyph layers. Default false */
@@ -1785,8 +1786,8 @@ export interface GlyphDefinition extends LayerDefinitionBase {
   textFamily: string | string[] | PropertyOnlyStep<string | string[]>
   textField: string | string[] | PropertyOnlyStep<string | string[]>
   textAnchor: Anchor | PropertyOnlyStep<Anchor>
-  textOffset: Point | PropertyOnlyStep<Point>
-  textPadding: Point | PropertyOnlyStep<Point>
+  textOffset: FlatPoint | PropertyOnlyStep<FlatPoint>
+  textPadding: FlatPoint | PropertyOnlyStep<FlatPoint>
   textWordWrap: number | PropertyOnlyStep<number>
   textAlign: Alignment | PropertyOnlyStep<Alignment>
   textKerning: number | PropertyOnlyStep<number>
@@ -1794,8 +1795,8 @@ export interface GlyphDefinition extends LayerDefinitionBase {
   iconFamily: string | string[] | PropertyOnlyStep<string | string[]>
   iconField: string | string[] | PropertyOnlyStep<string | string[]>
   iconAnchor: Anchor | PropertyOnlyStep<Anchor>
-  iconOffset: Point | PropertyOnlyStep<Point>
-  iconPadding: Point | PropertyOnlyStep<Point>
+  iconOffset: FlatPoint | PropertyOnlyStep<FlatPoint>
+  iconPadding: FlatPoint | PropertyOnlyStep<FlatPoint>
   // properties
   geoFilter: Array<'point' | 'line' | 'poly'>
   overdraw: boolean
@@ -1827,8 +1828,8 @@ export interface GlyphWorkerLayer extends LayerWorkerBase {
   textFamily: LayerWorkerFunction<string | string[]>
   textField: LayerWorkerFunction<string | string[]>
   textAnchor: LayerWorkerFunction<string>
-  textOffset: LayerWorkerFunction<Point>
-  textPadding: LayerWorkerFunction<Point>
+  textOffset: LayerWorkerFunction<FlatPoint>
+  textPadding: LayerWorkerFunction<FlatPoint>
   textWordWrap: LayerWorkerFunction<number>
   textAlign: LayerWorkerFunction<Alignment>
   textKerning: LayerWorkerFunction<number>
@@ -1836,8 +1837,8 @@ export interface GlyphWorkerLayer extends LayerWorkerBase {
   iconFamily: LayerWorkerFunction<string | string[]>
   iconField: LayerWorkerFunction<string | string[]>
   iconAnchor: LayerWorkerFunction<Anchor>
-  iconOffset: LayerWorkerFunction<Point>
-  iconPadding: LayerWorkerFunction<Point>
+  iconOffset: LayerWorkerFunction<FlatPoint>
+  iconPadding: LayerWorkerFunction<FlatPoint>
   // properties
   geoFilter: Array<'point' | 'line' | 'poly'>
   overdraw: boolean
@@ -1995,6 +1996,7 @@ export interface HeatmapStyle extends LayerStyleBase {
   /**
    * Filter the geometry types that will be drawn.
    * An empty array will support all geometry types.
+   * Ex. `["line"]` - only draw lines
    * Defaults to `['line', 'poly']` (only points will be drawn).
    */
   geoFilter?: Array<'point' | 'line' | 'poly'>
@@ -2234,6 +2236,7 @@ export interface LineStyle extends LayerStyleBase {
   /**
    * Filter the geometry types that will be drawn.
    * An empty array will supports both `line` & `polygon` geometry types.
+   * Ex. `["line"]` - only draw lines
    * Defaults to empty. */
   geoFilter?: Array<'line' | 'poly'>
   /** if true, when hovering over the line, the property data will be sent to the UI via an Event. Defaults to `false` */
@@ -2442,6 +2445,7 @@ export interface PointStyle extends LayerStyleBase {
   /**
    * Filter the geometry types that will be drawn.
    * An empty array will support all geometry types.
+   * Ex. `["line"]` - only draw lines
    * Defaults to `['line', 'poly']`.
    */
   geoFilter?: Array<'point' | 'line' | 'poly'>
@@ -2878,7 +2882,7 @@ export interface HillshadeWorkerLayer extends LayerWorkerBaseRaster {
   getCode: BuildCodeFunctionZoom
 }
 
-// SENSOR **/
+// SENSOR */
 
 export interface SensorStyle extends LayerStyleBase {
   /**
@@ -3095,7 +3099,7 @@ export interface StylePackage {
   urlMap?: Record<string, string>
 }
 
-/** WALLPAPER **/
+/** WALLPAPER */
 export interface SkyboxStyle {
   /** path to the skybox image folder */
   path: string

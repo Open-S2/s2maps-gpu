@@ -16,7 +16,7 @@ import type { ImageMetadata } from './source/imageSource'
 import type { MarkerDefinition } from './source/markerSource'
 import type { View } from 'ui/camera/projector'
 
-/** GENERIC WORKER TYPES **/
+/** GENERIC WORKER TYPES */
 
 export type CancelTileRequest = number[] // S2CellIDs of tiles e.g. ['204', '1003', '1245', ...]
 
@@ -271,7 +271,7 @@ export interface DeleteSourceMessage extends MapID {
 export type S2MapToSourceMessage =
   AddMarkersMessage | DeleteMarkersMessage | DeleteSourceMessage
 
-/** UI GL REQUESTS -> S2Map or Worker Pool **/
+/** UI GL REQUESTS -> S2Map or Worker Pool */
 
 export interface TileRequestMessage extends MapID {
   type: 'tilerequest'
@@ -374,7 +374,7 @@ export type MapGLToSourceMessage =
   TimeRequestMessage | AddLayerMessageGL | DeleteLayerMessageGL |
   ReorderLayersMessageGL
 
-/** SOURCE WORKER MESSAGES **/
+/** SOURCE WORKER MESSAGES */
 
 export interface AttributionsMessage extends MapID {
   type: 'attributions'
@@ -408,7 +408,7 @@ export interface SourceFlushMessage extends MapID {
 export type SourceWorkerMessage =
   AttributionsMessage | SourceSetStyleMessage | SpriteImageMessage | SourceFlushMessage
 
-/** TILE WORKER MESSAGES **/
+/** TILE WORKER MESSAGES */
 
 export interface WorkerMessageBase extends MapID {
   tileID: bigint

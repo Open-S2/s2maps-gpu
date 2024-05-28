@@ -21,7 +21,7 @@ import {
 
 import type ImageStore from '../imageStore'
 import type { CodeDesign } from '../vectorWorker'
-import type { S2VectorPoints } from 's2-vector-tile'
+import type { VectorPoints } from 'open-vector-tile'
 import type { GlyphData, TileRequest } from 'workers/worker.spec'
 import type { GlyphBase, GlyphObject, GlyphPath, GlyphPoint } from './glyph.spec'
 import type { GlyphFeature, GlyphWorker as GlyphWorkerSpec, IDGen, VTFeature } from '../process.spec'
@@ -31,9 +31,9 @@ import type {
   GPUType,
   GlyphDefinition,
   GlyphWorkerLayer,
-  Placement,
-  Point
+  Placement
 } from 'style/style.spec'
+import type { FlatPoint } from 's2/geometry'
 
 export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec {
   collisionTest: CollisionTester = new CollisionTester()
@@ -100,8 +100,8 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       textFamily: parseFeatureFunction<string | string[]>(textFamily),
       textField: parseFeatureFunction<string | string[]>(textField),
       textAnchor: parseFeatureFunction<Anchor>(textAnchor),
-      textOffset: parseFeatureFunction<Point>(textOffset),
-      textPadding: parseFeatureFunction<Point>(textPadding),
+      textOffset: parseFeatureFunction<FlatPoint>(textOffset),
+      textPadding: parseFeatureFunction<FlatPoint>(textPadding),
       textWordWrap: parseFeatureFunction<number>(textWordWrap),
       textAlign: parseFeatureFunction<Alignment>(textAlign),
       textKerning: parseFeatureFunction<number>(textKerning),
@@ -109,8 +109,8 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       iconFamily: parseFeatureFunction<string | string[]>(iconFamily),
       iconField: parseFeatureFunction<string | string[]>(iconField),
       iconAnchor: parseFeatureFunction<Anchor>(iconAnchor),
-      iconOffset: parseFeatureFunction<Point>(iconOffset),
-      iconPadding: parseFeatureFunction<Point>(iconPadding),
+      iconOffset: parseFeatureFunction<FlatPoint>(iconOffset),
+      iconPadding: parseFeatureFunction<FlatPoint>(iconPadding),
       // properties
       geoFilter,
       interactive,
@@ -237,7 +237,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     const ids: number[] = []
     const store = featureStore.get(storeID)
     if (featureType === 1) {
-      for (const point of clip as S2VectorPoints) {
+      for (const point of clip as VectorPoints) {
         const id = idGen.getNum()
         const idRGB = idToRGB(id)
         ids.push(id)
@@ -249,8 +249,8 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
             glyphType: 'point',
             quads: [],
             // tile position
-            s: point[0] / extent,
-            t: point[1] / extent,
+            s: point.x / extent,
+            t: point.y / extent,
             filter: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             // node proeprties
             minX: Infinity,

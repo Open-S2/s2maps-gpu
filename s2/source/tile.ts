@@ -380,7 +380,7 @@ export class WMTile<C extends SharedContext, F extends SharedFeatures, M extends
   setScreenPositions (projector: Projector): void {
     const { zoom, lon, lat } = projector
     const scale = Math.pow(2, zoom - this.zoom)
-    const offset = llToTilePx([lon, lat], [this.zoom, this.i, this.j], 1)
+    const offset = llToTilePx({ x: lon, y: lat }, [this.zoom, this.i, this.j], 1)
 
     this.matrix = projector.getMatrix(scale, offset)
 
