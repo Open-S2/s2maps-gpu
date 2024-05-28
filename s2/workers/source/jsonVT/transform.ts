@@ -1,10 +1,10 @@
-/** TYPES **/
+/** TYPES */
 import type {
-  S2VectorLines,
-  S2VectorMultiPoly,
-  S2VectorPoints,
-  S2VectorPoly
-} from 's2-vector-tile'
+  VectorLines,
+  VectorMultiPoly,
+  VectorPoints,
+  VectorPoly
+} from 'open-vector-tile'
 import type {
   JSONTile,
   JSONVectorFeature,
@@ -13,6 +13,7 @@ import type {
   VTFeatureGeometry
 } from './tile'
 import type { Point } from 'geometry'
+
 // Transforms the coordinates of each feature in the given tile from
 // uv-projected space into (extent x extent) tile space.
 export default function transformTile (tile: JSONTile, extent: number): JSONVectorTile {
@@ -35,7 +36,7 @@ export default function transformTile (tile: JSONTile, extent: number): JSONVect
           for (let j = 0; j < geometry.length; j += 2) {
             newGeo.push(transformPoint(geometry[j], geometry[j + 1], extent, zoom, ti, tj))
           }
-          newGeometry = newGeo as (S2VectorPoints & number[])
+          newGeometry = newGeo as (VectorPoints & number[])
         } else if (type === 4) { // MultiPolygon
           const geometry = feature.geometry as number[][][]
           const newGeo: Point[][][] = []
@@ -51,7 +52,7 @@ export default function transformTile (tile: JSONTile, extent: number): JSONVect
             }
             if (newPoly[0].length >= 4) newGeo.push(newPoly) // ignore polygons that are not big enough
           }
-          newGeometry = newGeo as (S2VectorMultiPoly & number[][][])
+          newGeometry = newGeo as (VectorMultiPoly & number[][][])
         } else { // LineString, MultiLineString, or Polygon
           const geometry = feature.geometry as number[][]
           const newGeo: Point[][] = []
@@ -60,12 +61,10 @@ export default function transformTile (tile: JSONTile, extent: number): JSONVect
             for (let k = 0, rl = geometry[j].length; k < rl; k += 2) {
               ring.push(transformPoint(geometry[j][k], geometry[j][k + 1], extent, zoom, ti, tj))
             }
-            if (j === 0 || (type === 3 && j > 0 && ring.length >= 4)) {
-              newGeo.push(ring)
-            }
+            if (j === 0 || (type === 3 && j > 0 && ring.length >= 4)) newGeo.push(ring)
           }
           if (type === 3 && newGeo[0].length <= 4) newGeometry = []
-          newGeometry = newGeo as ((S2VectorLines & number[][]) | (S2VectorPoly & number[][]))
+          newGeometry = newGeo as ((VectorLines & number[][]) | (VectorPoly & number[][]))
         }
 
         feature.geometry = newGeometry
@@ -89,8 +88,8 @@ export function transformPoint (
   tj: number
 ): Point {
   const { round } = Math
-  return [
-    round(extent * (i * zoom - ti)),
-    round(extent * (j * zoom - tj))
-  ]
+  return {
+    x: round(extent * (i * zoom - ti)),
+    y: round(extent * (j * zoom - tj))
+  }
 }

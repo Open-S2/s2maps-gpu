@@ -208,7 +208,7 @@ export default class Animator {
     const bearingPitchEase = ease ?? easeInOutExpo
 
     // w₀: Initial visible span, measured in pixels at the initial scale.
-    const [width, height] = projector.aspect
+    const { x: width, y: height } = projector.aspect
     const w0 = max(width, height)
     // w₁: Final visible span, measured in pixels with respect to the initial scale.
     const w1 = w0 / scale

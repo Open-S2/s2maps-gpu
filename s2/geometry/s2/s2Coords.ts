@@ -165,9 +165,10 @@ export function tileXYFromUVZoom (u: number, v: number, zoom: number): Point {
 
 /** Convert an s-t-zoom coordinate to a tile coordinate */
 export function tileXYFromSTZoom (s: number, t: number, zoom: number): Point {
+  const { floor } = Math
   const divisionFactor = (2 / (1 << zoom)) * 0.5
 
-  return [Math.floor(s / divisionFactor), Math.floor(t / divisionFactor)]
+  return { x: floor(s / divisionFactor), y: floor(t / divisionFactor) }
 }
 
 /** Given a quad-based tile schema of "zoom-x-y", get the local UV bounds of said tile. */

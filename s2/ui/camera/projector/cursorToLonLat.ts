@@ -1,5 +1,7 @@
 import { MAXLAT, llToPX, pxToLL } from 'geometry'
 
+import type { Point } from 'geometry'
+
 // https://github.com/proj4js/proj4js/blob/master/lib/projections/ortho.js
 const EPSLN = 1.0e-10
 const D2R = 0.01745329251994329577 // eslint-disable-line
@@ -13,7 +15,7 @@ export function cursorToLonLatS2 (
   xOffset: number,
   yOffset: number,
   radius: number
-): undefined | [lon: number, lat: number] {
+): undefined | Point {
   // pre adjust to radians
   centerLon *= D2R
   centerLat *= D2R
@@ -31,7 +33,7 @@ export function cursorToLonLatS2 (
   let lat = centerLat
   const con = abs(centerLat) - (PI / 2)
   // corner case: basically on the dot center
-  if (abs(rh) <= EPSLN) return [lon * R2D, lat * R2D]
+  if (abs(rh) <= EPSLN) return { x: lon * R2D, y: lat * R2D }
   // build lat
   lat = asinz(cosz * sinP14 + (yOffset * sinz * cosP14) / rh)
   // negative angles
@@ -41,7 +43,7 @@ export function cursorToLonLatS2 (
   } else { // positive angles
     lon = adjustLon(centerLon + atan2((xOffset * sinz), rh * cosP14 * cosz - yOffset * sinP14 * sinz))
   }
-  return [lon * R2D, lat * R2D]
+  return { x: lon * R2D, y: lat * R2D }
 }
 
 export function cursorToLonLatWM (
@@ -51,16 +53,16 @@ export function cursorToLonLatWM (
   yOffset: number,
   zoom: number,
   tileSize: number
-): undefined | [lon: number, lat: number] {
+): undefined | Point {
   // grab the px position of lon lat
-  const px = llToPX([lon, lat], zoom, false, tileSize)
+  const px = llToPX({ x: lon, y: lat }, zoom, false, tileSize)
   // if px + offset is outside of min and max, return undefined
   // adjust by the offset
-  px[0] += xOffset
-  px[1] -= yOffset
+  px.x += xOffset
+  px.y -= yOffset
   // convert back to lon lat
   const ll = pxToLL(px, zoom, tileSize)
-  if (ll[0] > 180 || ll[0] < -180 || ll[1] > MAXLAT || ll[1] < -MAXLAT) return
+  if (ll.x > 180 || ll.x < -180 || ll.y > MAXLAT || ll.y < -MAXLAT) return
   return ll
 }
 

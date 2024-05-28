@@ -14,8 +14,8 @@ $ npm run dev
 ## Add S2 Maps dependencies to index.html
 
 ```html
-<script src="https://opens2.com/s2maps-gl/v0.1.0/s2maps-gl.min.js"></script>
-<link href="https://opens2.com/s2maps-gl/v0.1.0/s2maps-gl.min.css" rel="stylesheet" />
+<script src="https://opens2.com/s2maps-gpu/v0.1.0/s2maps-gpu.min.js"></script>
+<link href="https://opens2.com/s2maps-gpu/v0.1.0/s2maps-gpu.min.css" rel="stylesheet" />
 ```
 
 ## Copy-Paste App.vue code

@@ -5,7 +5,7 @@ import { projectX, projectY } from './jsonVT/convert'
 
 import type { Session } from '.'
 import type { SourceFlushMessage, TileRequest } from '../worker.spec'
-import type { Face, JSONFeatures, Point } from 'geometry'
+import type { Face, JSONFeatures, Point, Properties } from 'geometry'
 import type { JSONVectorPointsFeature } from './jsonVT/tile'
 import type { LayerDefinition, Projection, SourceMetadata } from 'style/style.spec'
 
@@ -18,8 +18,7 @@ export interface MarkerDefinition {
   geometry?: Point
 }
 
-interface MarkerProperties {
-  [key: string]: unknown
+interface MarkerProperties extends Properties {
   __markerID: number
 }
 
@@ -77,7 +76,7 @@ export default class MarkerSource {
       let { id, properties, lon, lat } = marker
       if (properties === undefined) properties = {}
       // build face, s, t
-      const [face, s, t] = projection === 'S2'
+      const [face, x, y] = projection === 'S2'
         ? toST(fromLonLat(lon, lat))
         : [0 as Face, projectX(lon, 'WM'), projectY(lat, 'WM')]
       // if no id, let's create one
@@ -87,7 +86,7 @@ export default class MarkerSource {
       }
       // store
       properties.__markerID = id
-      this[face].set(id, { properties: properties as MarkerProperties, geometry: [s, t] })
+      this[face].set(id, { properties: properties as MarkerProperties, geometry: { x, y } })
     }
   }
 
@@ -112,9 +111,9 @@ export default class MarkerSource {
     // find all markers in st bounds
     for (const [, marker] of this[face]) {
       const { properties, geometry } = marker
-      const [s, t] = geometry
-      if (s >= minS && s < maxS && t >= minT && t < maxT) {
-        features.push({ type: 1, properties, extent: 8_192, geometry: [transformPoint(s, t, 8_192, tileZoom, i, j)] })
+      const { x, y } = geometry
+      if (x >= minS && x < maxS && y >= minT && y < maxT) {
+        features.push({ type: 1, properties, extent: 8_192, geometry: [transformPoint(x, y, 8_192, tileZoom, i, j)] })
       }
     }
     // if markers fit within bounds, create a tile

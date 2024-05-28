@@ -1,4 +1,4 @@
-/** TYPES **/
+/** TYPES */
 import type { Face, S2GeometryType } from 'geometry'
 import type { Properties } from 'geometry/proj.spec'
 

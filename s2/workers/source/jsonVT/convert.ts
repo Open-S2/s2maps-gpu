@@ -5,7 +5,7 @@ import createFeature from './feature'
 import { toProjection } from 'geometry'
 /** TYPES **/
 import type { FeatureVector } from './feature'
-import type { Feature, JSONFeatures, Point, S2Feature } from 'geometry'
+import type { Feature, FlatPoint, JSONFeatures, S2Feature } from 'geometry'
 import type { Projection } from 'style/style.spec'
 
 // convert S2JSON to a geometry with simplification data
@@ -75,7 +75,7 @@ function convertPoint (coords: number[], out: number[], projection: Projection):
 }
 
 function convertLine (
-  ring: Point[],
+  ring: FlatPoint[],
   out: number[],
   tolerance: number,
   projection: Projection
@@ -101,7 +101,7 @@ function convertLine (
 }
 
 function convertLines (
-  rings: Point[][],
+  rings: FlatPoint[][],
   out: number[][],
   tolerance: number,
   projection: Projection

@@ -75,7 +75,7 @@ const conifguration: Configuration = {
     })]
   },
   plugins: [
-    new webpack.BannerPlugin(`s2maps-gpu is Copyright © ${(new Date()).getFullYear()} Open S2 and subject to the Open S2 Terms of Service (https://www.opens2.com/tos/).`),
+    new webpack.BannerPlugin(`s2maps-gpu is Copyright © ${(new Date()).getFullYear()} Open S2 and subject to the Open S2 Terms of Service (https://www.opens2.com/legal/tos).`),
     new webpack.ProgressPlugin(),
     new CompressionPlugin({
       filename: '[path][name].js.gz',

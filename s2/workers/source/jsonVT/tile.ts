@@ -1,42 +1,42 @@
-/** MODULES **/
+/** MODULES */
 import { fromID } from 'geometry/id'
+/** TYPES */
 import type JsonVT from '.'
-/** TYPES **/
 import type { Properties } from 'geometry'
 import type { FeatureVector } from './feature'
 import type {
-  S2VectorGeometry,
-  S2VectorLines,
-  S2VectorMultiPoly,
-  S2VectorPoints,
-  S2VectorPoly
-} from 's2-vector-tile'
+  VectorGeometry,
+  VectorLines,
+  VectorMultiPoly,
+  VectorPoints,
+  VectorPoly
+} from 'open-vector-tile'
 
 export interface JSONVectorFeatureBase {
   extent: number
   properties: Properties
-  loadGeometry?: () => S2VectorGeometry
+  loadGeometry?: () => VectorGeometry
   loadGeometryFlat?: undefined
 }
 
 export interface JSONVectorPointsFeature extends JSONVectorFeatureBase {
   type: 1
-  geometry: S2VectorPoints
+  geometry: VectorPoints
 }
 
 export interface JSONVectorLinesFeature extends JSONVectorFeatureBase {
   type: 2
-  geometry: S2VectorLines
+  geometry: VectorLines
 }
 
 export interface JSONVectorPolyFeature extends JSONVectorFeatureBase {
   type: 3
-  geometry: S2VectorPoly
+  geometry: VectorPoly
 }
 
 export interface JSONVectorMultiPolyFeature extends JSONVectorFeatureBase {
   type: 4
-  geometry: S2VectorMultiPoly
+  geometry: VectorMultiPoly
 }
 
 export type JSONVectorFeature =
@@ -68,7 +68,7 @@ export interface VTMultiPolyFeature extends VTFeatureBase {
   geometry: number[][][]
 }
 
-export type VTFeatureGeometry = (S2VectorPoints & number[]) | (S2VectorLines & number[][]) | (S2VectorPoly & number[][]) | (S2VectorMultiPoly & number[][][])
+export type VTFeatureGeometry = (VectorPoints & number[]) | (VectorLines & number[][]) | (VectorPoly & number[][]) | (VectorMultiPoly & number[][][])
 
 export type VTFeature =
   VTPointsFeature | VTLinesFeature |

@@ -440,7 +440,7 @@ const style: StyleDefinition = {
       name: 'water_lines',
       source: 'streets',
       layer: 'water',
-      onlyLines: true,
+      geoFilter: ['line'],
       minzoom: 10,
       filter: {
         key: 'class',

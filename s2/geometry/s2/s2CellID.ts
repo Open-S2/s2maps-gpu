@@ -1,4 +1,4 @@
-/** COMPONENTS **/
+/** COMPONENTS */
 import {
   IJtoST,
   STtoIJ,
@@ -15,7 +15,7 @@ import { toIJ as S2PointToIJ, fromS2CellID } from './s2Point'
 import type { Face } from './s2Proj.spec'
 import type { BBox, FaceIJ, XYZ } from '../proj.spec'
 
-/** CONSTANTS **/
+/** CONSTANTS */
 const LOOKUP_POS: bigint[] = []
 const LOOKUP_IJ: bigint[] = []
 const FACE_BITS = 3n
@@ -25,7 +25,7 @@ const POS_BITS = 61n
 const K_WRAP_OFFSET = 13835058055282163712n
 const K_MAX_SIZE = 1073741824
 
-/** INITIALIZATION **/
+/** INITIALIZATION */
 for (let i = 0; i < 4; i++) initLookupCell(0, 0, 0, i, 0, i)
 function initLookupCell (
   level: number, i: number, j: number, origOrientation: number,

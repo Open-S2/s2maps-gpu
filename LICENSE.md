@@ -1,4 +1,4 @@
-# S2 Maps GPU License
+# Open S2 GPU License
 
 ## NOTICE
 

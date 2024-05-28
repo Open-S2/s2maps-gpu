@@ -1,14 +1,14 @@
-/** STYLE **/
+/** STYLE */
 import Style from 'style'
-/** PAINT **/
+/** PAINT */
 import type { Painter as GLPainter } from 'gl/painter.spec'
 import type { Painter as GPUPainter } from 'gpu/painter.spec'
 import type { MapOptions } from '../s2mapUI'
-/** GEOMETRY / PROJECTIONS **/
+/** GEOMETRY / PROJECTIONS */
 import { isFace, parent as parentID } from 'geometry/id'
 import { tileIDWrapped as tileIDWrappedWM } from 'geometry/wm'
 import Projector from './projector'
-/** SOURCES **/
+/** SOURCES */
 import { createTile } from 'source'
 import Cache from './cache'
 import TimeCache from './timeCache'
@@ -62,7 +62,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   canZoom = true
   dragPan: DragPan = new DragPan()
   mouseMoved = true
-  mousePosition: Point = [0, 0]
+  mousePosition: Point = { x: 0, y: 0 }
   currAnimFunction?: (now: number) => void
   resizeQueued?: ResizeDimensions
   currFeatures = new Map<number, InteractiveObject>()
@@ -239,7 +239,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   }
 
   _setMousePosition (posX: number, posY: number): void {
-    this.mousePosition = [posX, posY]
+    this.mousePosition = { x: posX, y: posY }
     this.projector.setMousePosition(posX, posY)
     // NOTE: Sometimes mouse positions update before the painter is ready, so discard them
     if (this._canDraw) this.painter.dirty = true
@@ -251,7 +251,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     const { posX, posY } = detail
     const lonLat = projector.cursorToLonLat(posX, posY)
     if (lonLat === undefined) return
-    const [lon, lat] = lonLat
+    const { x: lon, y: lat } = lonLat
     // send off the information
     const msg: MouseClickMessage = { type: 'click', mapID, features: [...currFeatures.values()], lon, lat }
     if (webworker) postMessage(msg)
@@ -262,7 +262,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     const { posX, posY } = detail
     const lonLat = this.projector.cursorToLonLat(posX, posY)
     if (lonLat === undefined) return
-    const [lon, lat] = lonLat
+    const { x: lon, y: lat } = lonLat
     this._navEvent('zoomIn', lon, lat)
   }
 
@@ -287,10 +287,10 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   }
 
   async _onCanvasMouseMove (): Promise<void> {
-    const { style, mousePosition, painter, currFeatures, tileCache } = this
+    const { style, mousePosition: { x, y }, painter, currFeatures, tileCache } = this
     if (!style.interactive) return
     const foundObjects = new Map<number, InteractiveObject>()
-    const featureIDs = await painter.context.getFeatureAtMousePosition(...mousePosition)
+    const featureIDs = await painter.context.getFeatureAtMousePosition(x, y)
     // if we found an ID and said feature is not the same as the current, we dive down
     for (const featureID of featureIDs) {
       // first check if we already have the feature

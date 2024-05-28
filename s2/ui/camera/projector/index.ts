@@ -40,7 +40,7 @@ export default class Projector {
   positionalZoom = true
   // [zoom, lon, lat, bearing, pitch, time, aspectX, aspectY, mouseX, mouseY, deltaMouseX, deltaMouseY, featureState, currFeature]
   view: Float32Array = new Float32Array(14)
-  aspect: Point = [400, 300] // default canvas width x height
+  aspect: Point = { x: 400, y: 300 } // default canvas width x height
   matrices: { [key in MatrixType]?: Float32Array } = {}
   eye: XYZ = [0, 0, 0] // [x, y, z] only z should change for visual effects
   constrainZoomToFill = true
@@ -85,7 +85,7 @@ export default class Projector {
 
   /// Input is the pixel position (0->width, 0->height). Convert to -1->1 for the GPU
   setMousePosition (x: number, y: number): void {
-    const [width, height] = this.aspect
+    const { x: width, y: height } = this.aspect
     this.view[8] = (x / width) * 2 - 1
     this.view[9] = (y / height) * -2 + 1
   }
@@ -151,8 +151,8 @@ export default class Projector {
   }
 
   resize (width: number, height: number): void {
-    this.view[6] = this.aspect[0] = width
-    this.view[7] = this.aspect[1] = height
+    this.view[6] = this.aspect.x = width
+    this.view[7] = this.aspect.y = height
     // update view
     this.setView({})
     // cleanup
@@ -172,7 +172,7 @@ export default class Projector {
     if (positionalZoom) {
       // STEP 1: Get the distance from the center in pixels (up is +y, right is +x)
       // this value is considered our "previous" distance metric.
-      const [width, height] = aspect
+      const { x: width, y: height } = aspect
       const posX = canvasX - (width / multiplier / 2)
       const posY = (height / multiplier / 2) - canvasY
       // STEP 2: find the distance POST-zoom adjustment. In other words,
@@ -232,7 +232,7 @@ export default class Projector {
   }
 
   // x and y are the distances from the center of the screen
-  cursorToLonLat (xOffset: number, yOffset: number): undefined | [lon: number, lat: number] {
+  cursorToLonLat (xOffset: number, yOffset: number): undefined | Point {
     const { projection, lon, lat, zoom, tileSize, multiplier } = this
     if (projection === 'S2') return cursorToLonLatS2(lon, lat, xOffset, yOffset, (tileSize * Math.pow(2, zoom)) / 2)
     return cursorToLonLatWM(lon, lat, xOffset, yOffset, zoom, tileSize / multiplier)
@@ -240,7 +240,7 @@ export default class Projector {
 
   // S2 -> type of meters or kilometers
   // WM -> scale and offset
-  getMatrix (typeOrScale: number | MatrixType, offset: Point = [0, 0]): Float32Array {
+  getMatrix (typeOrScale: number | MatrixType, offset: Point = { x: 0, y: 0 }): Float32Array {
     if (typeof typeOrScale === 'number') { // WM case
       const matrix = this.#getMatrixWM(typeOrScale, offset)
       return mat4.clone(matrix)
@@ -279,8 +279,8 @@ export default class Projector {
     const { view, aspect } = this
     const maxValue = 2 ** 11
     const midValue = 2 ** 10
-    view[10] -= movementX / aspect[0]
-    view[11] += movementY / aspect[1]
+    view[10] -= movementX / aspect.x
+    view[11] += movementY / aspect.y
     // if we ever hit the min-max values, we reset to the middle
     if (view[10] < 0 || view[10] > maxValue) view[10] = midValue
     if (view[11] < 0 || view[11] > maxValue) view[11] = midValue
@@ -355,13 +355,13 @@ export default class Projector {
   #clampConstraint (view: Required<View>): void {
     const { aspect, tileSize } = this
     // if tileSize relative to zoom is smaller than aspect, we adjust zoom
-    if (tileSize * Math.pow(2, view.zoom) < aspect[1]) view.zoom = Math.log2(aspect[1] / tileSize)
+    if (tileSize * Math.pow(2, view.zoom) < aspect.y) view.zoom = Math.log2(aspect.y / tileSize)
     // now that we have the min zoom, we can adjust the latitude to ensure the view is within bounds
     const worldSize = tileSize * Math.pow(2, view.zoom)
     const center = worldSize / 2
-    const worldMinusAspectHalfed = (worldSize - aspect[1]) / 2
-    const [,maxLat] = pxToLL([0, center - worldMinusAspectHalfed], view.zoom, tileSize)
-    const [,minLat] = pxToLL([0, center + worldMinusAspectHalfed], view.zoom, tileSize)
+    const worldMinusAspectHalfed = (worldSize - aspect.y) / 2
+    const { y: maxLat } = pxToLL({ x: 0, y: center - worldMinusAspectHalfed }, view.zoom, tileSize)
+    const { y: minLat } = pxToLL({ x: 0, y: center + worldMinusAspectHalfed }, view.zoom, tileSize)
     view.lat = Math.min(maxLat, Math.max(minLat, view.lat))
   }
 
@@ -422,7 +422,7 @@ export default class Projector {
     const multpl = radius / multiplier / (tileSize * Math.pow(2, zoom))
 
     // create projection
-    mat4.ortho(matrix, aspect[0] * multpl, aspect[1] * multpl, 100_000)
+    mat4.ortho(matrix, aspect.x * multpl, aspect.y * multpl, 100_000)
 
     return matrix
   }
@@ -435,7 +435,7 @@ export default class Projector {
     bearing: number = this.bearing,
     pitch: number = this.pitch
   ): Float32Array {
-    const [offsetX, offsetY] = offset
+    const { x: offsetX, y: offsetY } = offset
     // get projection matrix
     let matrix = this.#getProjectionMatrixWM(scale)
     // create view matrix
@@ -458,7 +458,7 @@ export default class Projector {
     // adjust aspect ratio by zoom
     const multpl = 1 / multiplier / (tileSize * scale)
     // create projection
-    mat4.ortho(matrix, aspect[0] * multpl, aspect[1] * multpl, 1_000)
+    mat4.ortho(matrix, aspect.x * multpl, aspect.y * multpl, 1_000)
 
     return matrix
   }

@@ -48,7 +48,7 @@ await Bun.write('./buildS2-flat/workers/map.worker.js', '/* dummy worker */')
 // step 4:
 const inputFile = './buildS2-flat/s2maps-gpu.flat.js'
 const gzipOutputFile = './buildS2-flat/s2maps-gpu.flat.js.gz'
-// const brotliOutputFile = './buildS2-flat/s2maps-gpu.flat.js.br'
+const brotliOutputFile = './buildS2-flat/s2maps-gpu.flat.js.br'
 
 // Gzip compression
 const gzip = zlib.createGzip()
@@ -56,11 +56,10 @@ const inputStream = createReadStream(inputFile)
 const outputStream = createWriteStream(gzipOutputFile)
 inputStream.pipe(gzip).pipe(outputStream)
 
-// TODO: Brotli compression (bun doesn't support brotli yet)
-// const brotli = zlib.createBrotliCompress()
-// const inputStream2 = createReadStream(inputFile)
-// const outputStream2 = createWriteStream(brotliOutputFile)
-// inputStream2.pipe(brotli).pipe(outputStream2)
+const brotli = zlib.createBrotliCompress()
+const inputStream2 = createReadStream(inputFile)
+const outputStream2 = createWriteStream(brotliOutputFile)
+inputStream2.pipe(brotli).pipe(outputStream2)
 
 // store
 const dest = `../opens2.com/public/s2maps-gpu/v${version}-flat`

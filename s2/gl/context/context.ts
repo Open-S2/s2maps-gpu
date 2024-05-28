@@ -293,7 +293,7 @@ export default class Context {
     gl.getExtension('WEBGL_lose_context')?.loseContext()
   }
 
-  /** CONSTRUCTION **/
+  /** CONSTRUCTION */
 
   _createDefaultQuad (): void {
     const { gl } = this
@@ -347,7 +347,7 @@ export default class Context {
     gl.drawArrays(gl.TRIANGLE_FAN, 0, 4)
   }
 
-  /** PREP PHASE **/
+  /** PREP PHASE */
 
   resetViewport (): void {
     const { gl } = this
@@ -411,7 +411,7 @@ export default class Context {
     gl.clear(gl.COLOR_BUFFER_BIT)
   }
 
-  /** TEXTURE **/
+  /** TEXTURE */
 
   buildTexture (
     imageData: null | ArrayBufferView | ImageBitmap,
@@ -456,7 +456,7 @@ export default class Context {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
   }
 
-  /** DEPTH **/
+  /** DEPTH */
 
   enableDepthTest (): void {
     const { gl, depthState } = this
@@ -516,7 +516,7 @@ export default class Context {
     }
   }
 
-  /** CULLING **/
+  /** CULLING */
 
   enableCullFace (): void {
     const { gl, cullState } = this
@@ -534,7 +534,7 @@ export default class Context {
     }
   }
 
-  /** BLENDING **/
+  /** BLENDING */
 
   enableBlend (): void {
     const { gl, blendState } = this
@@ -597,7 +597,7 @@ export default class Context {
     }
   }
 
-  /** STENCILING **/
+  /** STENCILING */
 
   enableStencilTest (): void {
     const { gl, stencilState } = this
@@ -649,7 +649,7 @@ export default class Context {
     gl.stencilFunc(gl.NOTEQUAL, 0, 0xFF)
   }
 
-  /** MASKING **/
+  /** MASKING */
 
   enableMaskTest (): void {
     const { gl } = this
@@ -665,7 +665,7 @@ export default class Context {
     this.gl.colorMask(true, true, true, true)
   }
 
-  /** VAO **/
+  /** VAO */
   buildVAO (): WebGLVertexArrayObject {
     const { gl } = this
     const vao = gl.createVertexArray()
@@ -676,7 +676,7 @@ export default class Context {
     return vao
   }
 
-  /** Attributes **/
+  /** Attributes */
 
   bindEnableVertexAttr (
     ab: ArrayBufferView,
@@ -747,7 +747,7 @@ export default class Context {
     return buf
   }
 
-  /** CLEANUP **/
+  /** CLEANUP */
 
   finish (): void {
     const { gl } = this

@@ -25,7 +25,7 @@ export default function getTilesInView (
   zoom = zoom << 0 // move to whole number
 
   // let's find the current tile and store it
-  const [x, y] = llToTile([lon, lat], zoom, tileSize)
+  const { x, y } = llToTile({ x: lon, y: lat }, zoom, tileSize)
   tiles.add(toID(zoom, x, y))
   // add the first set of neighbors
   addNeighbors(zoom, x, y, duplicateHorizontally, checkedTiles, checkList)
@@ -95,7 +95,7 @@ function tileMatrix (
 ): Float32Array {
   const { zoom, lon, lat } = projector
   const scale = Math.pow(2, zoom - tileZoom)
-  const offset = llToTilePx([lon, lat], [tileZoom, tileX, tileY], 1)
+  const offset = llToTilePx({ x: lon, y: lat }, [tileZoom, tileX, tileY], 1)
 
   return projector.getMatrix(scale, offset)
 }

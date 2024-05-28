@@ -1,9 +1,9 @@
-import type { Point, Properties } from '../proj.spec'
+import type { FlatPoint, Properties } from '../proj.spec'
 import type { Attributions } from 'style/style.spec'
 
 export type Sources = '900913' | 'WGS84'
 
-/** GEOMETRY **/
+/** GEOMETRY */
 
 export interface FeatureCollection {
   type: 'FeatureCollection'
@@ -69,15 +69,15 @@ export type Geometry =
   MultiLineStringGeometry | PolygonGeometry | MultiPolygonGeometry
 
 // [x, y]
-export type MultiPoint = Point[]
-export type LineString = Point[]
+export type MultiPoint = FlatPoint[]
+export type LineString = FlatPoint[]
 export type MultiLineString = LineString[]
-export type Polygon = Point[][]
+export type Polygon = FlatPoint[][]
 export type MultiPolygon = Polygon[]
 
 export interface PointGeometry {
   type: 'Point'
-  coordinates: Point
+  coordinates: FlatPoint
 }
 
 export interface MultiPointGeometry {

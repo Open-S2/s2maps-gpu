@@ -4,10 +4,10 @@ import parseFilter from 'style/parseFilter'
 import parseFeatureFunction from 'style/parseFeatureFunction'
 
 import type {
-  S2VectorLines,
-  S2VectorMultiPoly,
-  S2VectorPoly
-} from 's2-vector-tile'
+  VectorLines,
+  VectorMultiPoly,
+  VectorPoly
+} from 'open-vector-tile'
 import type { CodeDesign } from './vectorWorker'
 import type { LineData, TileRequest } from '../worker.spec'
 import type {
@@ -81,7 +81,7 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
     // load geometry
     const geometry = feature.loadGeometry?.()
     if (geometry === undefined) return false
-    // TODO: Fix this in the s2-vector-tile package. This is a temporary fix for WebMercator Tiles
+    // TODO: Fix this in the open-vector-tile package. This is a temporary fix for WebMercator Tiles
     if (
       type === 3 &&
       Array.isArray(geometry[0]) &&
@@ -97,11 +97,11 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
     // find a max distance to modify lines too large (round off according to the sphere)
     const maxDistance = (division === 1) ? 0 : extent / division
     // preprocess geometry
-    const clip = scaleShiftClip(geometry, type, extent, tile) as S2VectorLines | S2VectorPoly | S2VectorMultiPoly
+    const clip = scaleShiftClip(geometry, type, extent, tile) as VectorLines | VectorPoly | VectorMultiPoly
     // if multi-polygon, join all outer rings and holes together
-    let geo: S2VectorLines = []
-    if (type === 4) for (const poly of clip) geo.push(...(poly as S2VectorPoly))
-    else geo = clip as S2VectorLines
+    let geo: VectorLines = []
+    if (type === 4) for (const poly of clip) geo.push(...(poly as VectorPoly))
+    else geo = clip as VectorLines
     // draw
     for (const lineString of geo) {
       // build the vertex, normal, and index data

@@ -1,6 +1,6 @@
-/** CAMERA **/
+/** CAMERA */
 import Camera from './camera/index'
-/** SOURCES **/
+/** SOURCES */
 import Animator from './camera/animator'
 
 import type { GPUType, LayerStyle, StyleDefinition } from 'style/style.spec'

@@ -25,13 +25,13 @@ export function llToPX (
   const [Bc, Cc, Zc, Ac] = getZoomSize(zoom, tileSize)
   const expansion = antiMeridian ? 2 : 1
   const d = Zc
-  const f = min(max(sin(degToRad(ll[1])), -0.999999999999), 0.999999999999)
-  let x = d + ll[0] * Bc
+  const f = min(max(sin(degToRad(ll.y)), -0.999999999999), 0.999999999999)
+  let x = d + ll.x * Bc
   let y = d + 0.5 * log((1 + f) / (1 - f)) * (-Cc)
   if (x > Ac * expansion) x = Ac * expansion
   if (y > Ac) y = Ac
 
-  return [x, y]
+  return { x, y }
 }
 
 /** Convert mercator pixel coordinates to Longitude and Latitude */
@@ -42,40 +42,40 @@ export function pxToLL (
 ): Point {
   const { atan, exp, PI } = Math
   const [Bc, Cc, Zc] = getZoomSize(zoom, tileSize)
-  const g = (px[1] - Zc) / (-Cc)
-  const lon = (px[0] - Zc) / Bc
+  const g = (px.y - Zc) / (-Cc)
+  const lon = (px.x - Zc) / Bc
   const lat = radToDeg(2 * atan(exp(g)) - 0.5 * PI)
-  return [lon, lat]
+  return { x: lon, y: lat }
 }
 
 /** Convert Longitude and Latitude to a mercator x-y coordinates */
 export function llToMerc (ll: Point): Point {
   const { tan, log, PI } = Math
-  let x = degToRad(A * ll[0])
-  let y = A * log(tan((PI * 0.25) + degToRad(0.5 * ll[1])))
+  let x = degToRad(A * ll.x)
+  let y = A * log(tan((PI * 0.25) + degToRad(0.5 * ll.y)))
   // if xy value is beyond maxextent (e.g. poles), return maxextent.
   if (x > MAXEXTENT) x = MAXEXTENT
   if (x < -MAXEXTENT) x = -MAXEXTENT
   if (y > MAXEXTENT) y = MAXEXTENT
   if (y < -MAXEXTENT) y = -MAXEXTENT
 
-  return [x, y]
+  return { x, y }
 }
 
 /** Convert mercator x-y coordinates to Longitude and Latitude */
 export function mercToLL (merc: Point): Point {
   const { atan, exp, PI } = Math
-  const x = radToDeg(merc[0] / A)
-  const y = radToDeg((0.5 * PI) - 2 * atan(exp(-merc[1] / A)))
-  return [x, y]
+  const x = radToDeg(merc.x / A)
+  const y = radToDeg((0.5 * PI) - 2 * atan(exp(-merc.y / A)))
+  return { x, y }
 }
 
 /** Convert a pixel coordinate to a tile x-y coordinate */
 export function pxToTile (px: Point, tileSize = 512): Point {
   const { floor } = Math
-  const x = floor(px[0] / tileSize)
-  const y = floor(px[1] / tileSize)
-  return [x, y]
+  const x = floor(px.x / tileSize)
+  const y = floor(px.y / tileSize)
+  return { x, y }
 }
 
 /** Convert a tile x-y-z to a bbox of the form `[w, s, e, n]` */
@@ -101,7 +101,7 @@ export function llToTilePx (ll: Point, tile: ZXY, tileSize = 512): Point {
   const tileXStart = x * tileSize
   const tileYStart = y * tileSize
 
-  return [(px[0] - tileXStart) / tileSize, (px[1] - tileYStart) / tileSize]
+  return { x: (px.x - tileXStart) / tileSize, y: (px.y - tileYStart) / tileSize }
 }
 
 /**
@@ -110,8 +110,15 @@ export function llToTilePx (ll: Point, tile: ZXY, tileSize = 512): Point {
  * If the input is in WebMercator (900913), the outSource should be set to 'WGS84'
  */
 export function convert (bbox: BBox, outSource: Sources): BBox {
-  if (outSource === 'WGS84') return [...mercToLL([bbox[0], bbox[1]]), ...mercToLL([bbox[2], bbox[3]])]
-  return [...llToMerc([bbox[0], bbox[1]]), ...llToMerc([bbox[2], bbox[3]])]
+  if (outSource === 'WGS84') {
+    const low = mercToLL({ x: bbox[0], y: bbox[1] })
+    const high = mercToLL({ x: bbox[2], y: bbox[3] })
+    return [low.x, low.y, high.x, high.y]
+  } else {
+    const low = llToMerc({ x: bbox[0], y: bbox[1] })
+    const high = llToMerc({ x: bbox[2], y: bbox[3] })
+    return [low.x, low.y, high.x, high.y]
+  }
 }
 
 /**
@@ -131,21 +138,20 @@ export function xyzToBBOX (
   // if tmsStyle, the y is inverted
   if (tmsStyle) y = (Math.pow(2, zoom) - 1) - y
   // Use +y to make sure it's a number to avoid inadvertent concatenation.
-  const bl: Point = [x * tileSize, (y + 1) * tileSize] // bottom left
+  const bl: Point = { x: x * tileSize, y: (y + 1) * tileSize } // bottom left
   // Use +x to make sure it's a number to avoid inadvertent concatenation.
-  const tr: Point = [(x + 1) * tileSize, y * tileSize] // top right
+  const tr: Point = { x: (x + 1) * tileSize, y: y * tileSize } // top right
   // to pixel-coordinates
   const pxBL = pxToLL(bl, zoom, tileSize)
   const pxTR = pxToLL(tr, zoom, tileSize)
 
   // If web mercator requested reproject to 900913.
   if (source === '900913') {
-    return [
-      ...llToMerc(pxBL),
-      ...llToMerc(pxTR)
-    ]
+    const llBL = llToMerc(pxBL)
+    const llTR = llToMerc(pxTR)
+    return [llBL.x, llBL.y, llTR.x, llTR.y]
   }
-  return [...pxBL, ...pxTR]
+  return [pxBL.x, pxBL.y, pxTR.x, pxTR.y]
 }
 
 /**
@@ -162,8 +168,8 @@ export function bboxToXYZBounds (
   tileSize = 512
 ): { minX: number, maxX: number, minY: number, maxY: number } {
   const { min, max, pow, floor } = Math
-  let bl: Point = [bbox[0], bbox[1]] // bottom left
-  let tr: Point = [bbox[2], bbox[3]] // top right
+  let bl: Point = { x: bbox[0], y: bbox[1] } // bottom left
+  let tr: Point = { x: bbox[2], y: bbox[3] } // top right
 
   if (source === '900913') {
     bl = llToMerc(bl)
@@ -173,8 +179,8 @@ export function bboxToXYZBounds (
   const pxBL = llToPX(bl, zoom, false, tileSize)
   const pxTR = llToPX(tr, zoom, false, tileSize)
   // Y = 0 for XYZ is the top hence minY uses pxTR[1].
-  const x = [floor(pxBL[0] / tileSize), floor((pxTR[0] - 1) / tileSize)]
-  const y = [floor(pxTR[1] / tileSize), floor((pxBL[1] - 1) / tileSize)]
+  const x = [floor(pxBL.x / tileSize), floor((pxTR.x - 1) / tileSize)]
+  const y = [floor(pxTR.y / tileSize), floor((pxBL.y - 1) / tileSize)]
 
   const bounds = {
     minX: min(...x) < 0 ? 0 : min(...x),

@@ -64,8 +64,8 @@ export default class WallpaperWorkflow implements WallpaperWorkflowSpec {
     if (!dirty) return
     const radius = this.tileSize * min(pow(2, zoom), 32_768)
     const mult2 = multiplier / 2
-    this.scale[0] = radius / (aspect[0] / mult2)
-    this.scale[1] = radius / (aspect[1] / mult2)
+    this.scale[0] = radius / (aspect.x / mult2)
+    this.scale[1] = radius / (aspect.y / mult2)
     this.context.device.queue.writeBuffer(this.#uniformBuffer, 16 * 4, this.scale)
   }
 

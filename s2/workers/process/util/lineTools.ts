@@ -2,12 +2,12 @@ import { findCenterPoints, findSpacedPoints, pointAngle } from './pointTools'
 
 import type { Point } from 'geometry'
 import type {
-  S2VectorGeometry,
-  S2VectorLine,
-  S2VectorLines,
-  S2VectorMultiPoly,
-  S2VectorTileFeatureType
-} from 's2-vector-tile'
+  VectorFeatureType,
+  VectorGeometry,
+  VectorLine,
+  VectorLines,
+  VectorMultiPoly
+} from 'open-vector-tile'
 import type { Cap } from 'style/style.spec'
 
 export interface Line {
@@ -19,14 +19,14 @@ export interface Line {
 
 // if line, return, if poly or multipoly, flatten to lines
 export function flattenGeometryToLines (
-  geometry: S2VectorGeometry,
-  type: S2VectorTileFeatureType
-): S2VectorLines {
-  if (type === 2 || type === 3) return geometry as S2VectorLines
+  geometry: VectorGeometry,
+  type: VectorFeatureType
+): VectorLines {
+  if (type === 2 || type === 3) return geometry as VectorLines
   else if (type === 4) {
     // manage poly
-    const res = [] as S2VectorLines
-    for (const poly of geometry as S2VectorMultiPoly) {
+    const res = [] as VectorLines
+    for (const poly of geometry as VectorMultiPoly) {
       for (const line of poly) res.push(line)
     }
     return res
@@ -44,8 +44,8 @@ export interface PathData {
 // TODO: given the geometry, check if the line is long enough to fit the glyph otherwise return empty array
 // TODO: If the path has sharp corners, simplify the path to be smoother without losing the original shape
 export function getPointsAndPathsAlongLines (
-  geometry: S2VectorGeometry,
-  type: S2VectorTileFeatureType,
+  geometry: VectorGeometry,
+  type: VectorFeatureType,
   spacing: number,
   extent: number
 ): PathData[] {
@@ -53,26 +53,26 @@ export function getPointsAndPathsAlongLines (
   for (const { point, pathLeft, pathRight } of findSpacedPoints(geometry, type, spacing, extent)) {
     // for now just slice the first 3 points
     res.push({
-      point: point.map(p => p / extent) as Point,
-      pathLeft: pathLeft.map(p => [p[0] / extent, p[1] / extent]) as Path,
-      pathRight: pathRight.map(p => [p[0] / extent, p[1] / extent]) as Path
+      point: { x: point.x / extent, y: point.y / extent },
+      pathLeft: pathLeft.map(p => ({ x: p.x / extent, y: p.y / extent })) as Path,
+      pathRight: pathRight.map(p => ({ x: p.x / extent, y: p.y / extent })) as Path
     })
   }
   return res
 }
 
 export function getPointsAndPathsAtCenterOfLines (
-  geometry: S2VectorGeometry,
-  type: S2VectorTileFeatureType,
+  geometry: VectorGeometry,
+  type: VectorFeatureType,
   extent: number
 ): PathData[] {
   const res: PathData[] = []
   for (const { point, pathLeft, pathRight } of findCenterPoints(geometry, type, extent)) {
     // for now just slice the first 3 points
     res.push({
-      point: point.map(p => p / extent) as Point,
-      pathLeft: pathLeft.map(p => [p[0] / extent, p[1] / extent]) as Path,
-      pathRight: pathRight.map(p => [p[0] / extent, p[1] / extent]) as Path
+      point: { x: point.x / extent, y: point.y / extent },
+      pathLeft: pathLeft.map(p => ({ x: p.x / extent, y: p.y / extent })) as Path,
+      pathRight: pathRight.map(p => ({ x: p.x / extent, y: p.y / extent })) as Path
     })
   }
   return res
@@ -97,7 +97,7 @@ export function getPathPos (
   s = s * tileSize + offsetX
   t = t * tileSize + offsetY
   xPos = Math.abs(xPos) * size
-  const path: Point[] = (xPos >= 0 ? pathRight : pathLeft).map(p => [p[0] * tileSize + offsetX, p[1] * tileSize + offsetY])
+  const path: Point[] = (xPos >= 0 ? pathRight : pathLeft).map(p => ({ x: p.x * tileSize + offsetX, y: p.y * tileSize + offsetY }))
   // now setup an x-y and travel xPos distance along the path
   let dist = 0
   let pathIndex = 0
@@ -107,13 +107,13 @@ export function getPathPos (
   while (dist < xPos && pathIndex < path.length - 1) {
     currAngle = pointAngle(path[pathIndex], path[pathIndex + 1]) ?? currAngle
     const next = path[pathIndex]
-    const d = distance([s, t], next)
+    const d = distance({ x: s, y: t }, next)
     if (dist + d < xPos) {
       dist += d
       pathIndex++
     } else {
-      const [x1, y1] = path[pathIndex]
-      const [x2, y2] = next
+      const { x: x1, y: y1 } = path[pathIndex]
+      const { x: x2, y: y2 } = next
       const ratio = (xPos - dist) / d
       s = x1 + (x2 - x1) * ratio
       t = y1 + (y2 - y1) * ratio
@@ -121,7 +121,7 @@ export function getPathPos (
     }
   }
 
-  return [s, t]
+  return { x: s, y: t }
 }
 
 export interface LineLengthRes {
@@ -129,7 +129,7 @@ export interface LineLengthRes {
   distIndex: number[]
 }
 
-export function lineLength (line: S2VectorLine): LineLengthRes {
+export function lineLength (line: VectorLine): LineLengthRes {
   let length = 0
   let prev = line[0]
   const distIndex: number[] = [0]
@@ -143,7 +143,7 @@ export function lineLength (line: S2VectorLine): LineLengthRes {
 }
 
 export function drawLine (
-  points: S2VectorLine,
+  points: VectorLine,
   cap: Cap = 'butt',
   maxDistance = 0
 ): Line {
@@ -152,7 +152,7 @@ export function drawLine (
   if (ll < 2) return { prev: [], curr: [], next: [], lengthSoFar: [] }
 
   // check line type
-  const closed: boolean = (points[0][0] === points[ll - 1][0] && points[0][1] === points[ll - 1][1])
+  const closed: boolean = (points[0].x === points[ll - 1].x && points[0].y === points[ll - 1].y)
 
   // step pre: If maxDistance is not Infinity we need to ensure no point is too far from another
   if (maxDistance > 0) {
@@ -160,8 +160,8 @@ export function drawLine (
     prev = points[0]
     for (let i = 1; i < points.length; i++) {
       curr = points[i]
-      while (Math.abs(prev[0] - curr[0]) > maxDistance || Math.abs(prev[1] - curr[1]) > maxDistance) {
-        curr = [(prev[0] + curr[0]) / 2, (prev[1] + curr[1]) / 2] // set new current
+      while (Math.abs(prev.x - curr.x) > maxDistance || Math.abs(prev.y - curr.y) > maxDistance) {
+        curr = { x: (prev.x + curr.x) / 2, y: (prev.y + curr.y) / 2 } // set new current
         points.splice(i, 0, curr) // store current
       }
       prev = curr
@@ -170,8 +170,8 @@ export function drawLine (
     ll = points.length
   }
 
-  const prev = [...points[0]]
-  const curr = [...points[0]]
+  const prev: number[] = [points[0].x, points[0].y]
+  const curr: number[] = [points[0].x, points[0].y]
   const next: number[] = []
   const lengthSoFar = [0]
   let curLength = 0
@@ -181,13 +181,13 @@ export function drawLine (
     // get the next point
     const point = points[i]
     // move on if duplicate point
-    if (prevPoint[0] === point[0] && prevPoint[1] === point[1]) continue
+    if (prevPoint.x === point.x && prevPoint.y === point.y) continue
     // store the next pair
-    next.push(...point)
+    next.push(point.x, point.y)
     // store the point as the next "start"
-    curr.push(...point)
+    curr.push(point.x, point.y)
     // store the previous point
-    prev.push(...prevPoint)
+    prev.push(prevPoint.x, prevPoint.y)
     // build the lengthSoFar
     curLength += distance(prevPoint, point)
     lengthSoFar.push(curLength)
@@ -195,13 +195,14 @@ export function drawLine (
     prevPoint = point
   }
   // here we actually just store 'next'
-  next.push(...points[ll - 1])
+  const p2 = points[ll - 1]
+  next.push(p2.x, p2.y)
   // if closed, add a 'final' point for the connector piece
   if (closed) {
-    prev.push(...points[ll - 2])
-    curr.push(...points[ll - 1])
-    next.push(...points[1])
-    curLength += distance(points[ll - 1], points[1])
+    prev.push(points[ll - 2].x, points[ll - 2].y)
+    curr.push(p2.x, p2.y)
+    next.push(points[1].x, points[1].y)
+    curLength += distance(p2, points[1])
     lengthSoFar.push(curLength)
   }
 
@@ -225,5 +226,5 @@ export function drawLine (
 }
 
 function distance (a: Point, b: Point): number {
-  return Math.sqrt(Math.pow(a[0] - b[0], 2) + Math.pow(a[1] - b[1], 2))
+  return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2))
 }
