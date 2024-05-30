@@ -4,6 +4,7 @@ import {
   JSONSource,
   LocalSource,
   MarkerSource,
+  S2PMTilesSource,
   S2TilesSource,
   Session,
   Source,
@@ -59,7 +60,7 @@ import type { ImageMetadata } from './source/imageSource'
   (now - timestamp) / 1000 = seconds passed
 **/
 
-type SourceMap = Record<string, Source | S2TilesSource | JSONSource | LocalSource | MarkerSource>
+type SourceMap = Record<string, Source | S2PMTilesSource | S2TilesSource | JSONSource | LocalSource | MarkerSource>
 
 interface Map {
   projection: Projection
@@ -257,7 +258,9 @@ export default class SourceWorker {
     const path = adjustURL(input, urls)
     // create the proper source type
     let source
-    if (fileType === 's2tiles') {
+    if (fileType === 's2pm' || fileType === 'pmtiles') {
+      source = new S2PMTilesSource(name, projection, layers, path, needsToken, session)
+    } else if (fileType === 's2tiles') {
       source = new S2TilesSource(name, projection, layers, path, needsToken, session)
     } else if (fileType === 'json' || fileType === 's2json' || fileType === 'geojson') {
       source = new JSONSource(name, projection, layers, path, needsToken, session)

@@ -81,13 +81,7 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
     // load geometry
     const geometry = feature.loadGeometry?.()
     if (geometry === undefined) return false
-    // TODO: Fix this in the open-vector-tile package. This is a temporary fix for WebMercator Tiles
-    if (
-      type === 3 &&
-      Array.isArray(geometry[0]) &&
-      Array.isArray(geometry[0][0]) &&
-      Array.isArray(geometry[0][0][0])
-    ) type = 4
+    if (type === 3) type = 4
     const cap = lineLayer.cap([], properties, zoom)
     const vertices: number[] = []
     const lengthSoFar: number[] = []

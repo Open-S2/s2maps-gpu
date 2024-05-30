@@ -9,7 +9,7 @@
   ],
   "compilerOptions": {
     "esModuleInterop": true,
-    "moduleResolution": "node",
+    "moduleResolution": "Bundler",
     "types": ["@webgpu/types"],
     "baseUrl": ".", // This must be specified if "paths" is.
     "paths": {    
@@ -23,6 +23,7 @@
       "ui/*": ["./s2/ui/*"],
       "util/*": ["./s2/util/*"],
       "workers/*": ["./s2/workers/*"],
+      // "s2-pmtiles/browser": ["./node_modules/s2-pmtiles/dist/browser.d.ts"]
     }
   },
   "exclude": [

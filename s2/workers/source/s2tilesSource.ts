@@ -1,9 +1,13 @@
 import Source from './source'
+import { DirCache } from 's2-pmtiles/browser'
 
 import type { Metadata } from './source'
 import type { TileRequest } from '../worker.spec'
 import type { ZXY } from 'geometry/proj.spec'
 // import type { Face } projections'
+
+// NOTE: This is officially deprecated and will be removed in the future to be replaced
+// by S2PMTilesSource.
 
 const MAX_SIZE = 2_000_000 // ~2 MB
 const NODE_SIZE = 10
@@ -11,32 +15,10 @@ const DIR_SIZE = 1_365 * NODE_SIZE // (13_650) -> 6 levels, the 6th level has bo
 const ROOT_DIR_SIZE = DIR_SIZE * 6 // (81_900) -> 6 faces of 6 level directories + their leaves
 const DB_METADATA_SIZE = ROOT_DIR_SIZE + 20 // (81_920) -> 6 faces of 6 level directories + their leaves + 20 bytes for the header
 
-class DirCache extends Map<number, DataView> {
-  order: number[] = []
-
-  set (key: number, dir: DataView): this {
-    // place in front the new
-    this.order.unshift(key)
-    while (this.order.length > 7) this.delete(this.order.pop() ?? 0)
-    return super.set(key, dir)
-  }
-
-  get (key: number): DataView | undefined {
-    // update the place in the array and than get
-    this.order.splice(this.order.indexOf(key), 1)
-    this.order.unshift(key)
-    return super.get(key)
-  }
-
-  delete (key: number): boolean {
-    return super.delete(key)
-  }
-}
-
 export default class S2TilesSource extends Source {
   version = 1
   rootDir: Record<number, DataView> = {}
-  dirCache: DirCache = new DirCache()
+  dirCache = new DirCache<number, DataView>(15)
   async build (mapID: string): Promise<void> {
     // fetch the metadata
     const ab = await this.getRange(`${this.path}?type=dir`, 0, DB_METADATA_SIZE, mapID) as ArrayBuffer | undefined

@@ -238,17 +238,17 @@ describe('tanUVtoST', () => {
 
 describe('tileXYFromSTZoom', () => {
   it('should convert an ST to a tile coordinate', () => {
-    expect(tileXYFromSTZoom(0, 0, 0)).toEqual([0, 0])
-    expect(tileXYFromSTZoom(0.5, 0, 1)).toEqual([1, 0])
-    expect(tileXYFromSTZoom(0.5, 0.5, 2)).toEqual([2, 2])
+    expect(tileXYFromSTZoom(0, 0, 0)).toEqual({ x: 0, y: 0 })
+    expect(tileXYFromSTZoom(0.5, 0, 1)).toEqual({ x: 1, y: 0 })
+    expect(tileXYFromSTZoom(0.5, 0.5, 2)).toEqual({ x: 2, y: 2 })
   })
 })
 
 describe('tileXYFromUVZoom', () => {
   it('should convert a UV to a tile coordinate', () => {
-    expect(tileXYFromUVZoom(-1, -1, 0)).toEqual([0, 0])
-    expect(tileXYFromUVZoom(0, -1, 1)).toEqual([1, 0])
-    expect(tileXYFromUVZoom(0, 0, 2)).toEqual([2, 2])
+    expect(tileXYFromUVZoom(-1, -1, 0)).toEqual({ x: 0, y: 0 })
+    expect(tileXYFromUVZoom(0, -1, 1)).toEqual({ x: 1, y: 0 })
+    expect(tileXYFromUVZoom(0, 0, 2)).toEqual({ x: 2, y: 2 })
   })
 })
 

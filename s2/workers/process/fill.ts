@@ -104,12 +104,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     let vertices: number[] = []
 
     if (geometry === undefined) return false
-    if (
-      type === 3 &&
-      Array.isArray(geometry[0]) &&
-      Array.isArray(geometry[0][0]) &&
-      Array.isArray(geometry[0][0][0])
-    ) type = 4
+    if (type === 3) type = 4
 
     // if not parent and indices, the polygon has already been "solved"
     if (hasParent || indices.length === 0) {

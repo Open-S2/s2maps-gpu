@@ -73,8 +73,10 @@ export default class Source {
 
   _buildMetadata (metadata: Metadata, mapID: string): void {
     this.active = true // incase we use a "broken" aproach for metadata and insert later
-    this.minzoom = Number(metadata.minzoom) ?? 0
-    this.maxzoom = Math.min(Number(metadata.maxzoom) ?? 20, this.maxzoom)
+    const minzoom = Number(metadata.minzoom)
+    const maxzoom = Number(metadata.maxzoom)
+    this.minzoom = !isNaN(minzoom) ? minzoom : 0
+    this.maxzoom = Math.min(!isNaN(maxzoom) ? maxzoom : 20, this.maxzoom)
     if (Array.isArray(metadata.faces)) this.faces = new Set(metadata.faces ?? [0, 1, 2, 3, 4, 5])
     if (typeof metadata.extension === 'string') this.extension = metadata.extension
     this.attributions = metadata.attributions ?? {}
