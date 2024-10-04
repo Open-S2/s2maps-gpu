@@ -26,7 +26,7 @@ export type Projection = 'WM' | 'S2'
 export type LayerMetaData = Record<string, { // layer
   minzoom: number
   maxzoom: number
-  fields?: Record<string, Array<string | number | boolean>> // max fields size of 50
+  fields: Record<string, Array<string | number | boolean>> // max fields size of 50
 }>
 
 export type Attributions = Record<string, string>

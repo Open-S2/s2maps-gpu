@@ -1,4 +1,4 @@
-import { fromST, toLonLat } from 'geometry/s2/s2Point'
+import { fromST, toLonLat } from './s2Point'
 
 import type { Face, S2Feature, S2Geometry } from './s2Proj.spec'
 import type { Feature, Geometry } from '../wm/mercProj.spec'

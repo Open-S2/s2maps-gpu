@@ -574,7 +574,7 @@ export default class S2Map extends EventTarget {
   }
 
   getContainerDimensions (): null | Point {
-    return [this.#container?.clientWidth ?? 0, this.#container?.clientHeight ?? 0]
+    return { x: this.#container?.clientWidth ?? 0, y: this.#container?.clientHeight ?? 0 }
   }
 
   // in this case, reset the style from scratch

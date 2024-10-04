@@ -10,6 +10,7 @@ struct VertexOutput {
   @location(7) exaggeration: f32,
 };
 
+// https://webgpufundamentals.org/webgpu/lessons/resources/wgsl-offset-computer.html
 struct ViewUniforms {
   cBlind: f32, // colorblind support
   zoom: f32, // exact zoom

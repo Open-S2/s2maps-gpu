@@ -84,7 +84,6 @@ export default class Source {
     if (typeof metadata.size === 'number') this.size = metadata.size
     this.encoding = metadata.encoding ?? 'none'
     if (typeof metadata.layers === 'object') { // cleanup the fields property
-      for (const value of Object.values(metadata.layers)) delete value.fields
       this.layers = metadata.layers
     }
     // other engines that have built data store layer data differently  :

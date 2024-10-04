@@ -12,11 +12,11 @@ type Sections = [
   FeatureVector[]
 ]
 
-export default function clip (features: FeatureVector[], tile: JSONTile, s2json: JsonVT): Sections {
+export default function clip (features: FeatureVector[], tile: JSONTile, jsonVT: JsonVT): Sections {
   const sections: Sections = [[], [], [], []] // [bl, br, tl, tr]
   const { i, j, zoom, minS, minT, maxS, maxT } = tile
   const scale = 1 << zoom
-  const k1 = 0.5 / s2json.extent
+  const k1 = 0.5 / jsonVT.extent
   const k2 = 0.5 - k1
   const k3 = 0.5 + k1
   const k4 = 1 + k1
@@ -26,19 +26,19 @@ export default function clip (features: FeatureVector[], tile: JSONTile, s2json:
   let tr: null | FeatureVector[] = null
   let br: null | FeatureVector[] = null
 
-  const left = _clip(features, scale, i - k1, i + k3, 0, minS, maxS, s2json)
-  const right = _clip(features, scale, i + k2, i + k4, 0, minS, maxS, s2json)
+  const left = _clip(features, scale, i - k1, i + k3, 0, minS, maxS, jsonVT)
+  const right = _clip(features, scale, i + k2, i + k4, 0, minS, maxS, jsonVT)
 
   if (left !== null) {
-    bl = _clip(left, scale, j - k1, j + k3, 1, minT, maxT, s2json)
-    tl = _clip(left, scale, j + k2, j + k4, 1, minT, maxT, s2json)
+    bl = _clip(left, scale, j - k1, j + k3, 1, minT, maxT, jsonVT)
+    tl = _clip(left, scale, j + k2, j + k4, 1, minT, maxT, jsonVT)
     if (bl !== null) for (const d of bl) sections[0].push(d)
     if (tl !== null) for (const d of tl) sections[2].push(d)
   }
 
   if (right !== null) {
-    br = _clip(right, scale, j - k1, j + k3, 1, minT, maxT, s2json)
-    tr = _clip(right, scale, j + k2, j + k4, 1, minT, maxT, s2json)
+    br = _clip(right, scale, j - k1, j + k3, 1, minT, maxT, jsonVT)
+    tr = _clip(right, scale, j + k2, j + k4, 1, minT, maxT, jsonVT)
     if (br !== null) for (const d of br) sections[1].push(d)
     if (tr !== null) for (const d of tr) sections[3].push(d)
   }
@@ -64,13 +64,13 @@ function _clip (
   axis: 0 | 1,
   minAxis: number,
   maxAxis: number,
-  s2json: JsonVT
+  jsonVT: JsonVT
 ): null | FeatureVector[] {
   // scale
   k1 /= scale
   k2 /= scale
   // prep buffer
-  const buffer = (k2 - k1) / s2json.extent * s2json.buffer
+  const buffer = (k2 - k1) / jsonVT.extent * jsonVT.buffer
 
   if (minAxis >= k1 && maxAxis < k2) return features // trivial accept
   else if (maxAxis < k1 || minAxis >= k2) return null // trivial reject

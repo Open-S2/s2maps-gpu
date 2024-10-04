@@ -1,4 +1,5 @@
-import { toS2, toWM } from 'geometry'
+import { toS2 } from './wm/convert'
+import { toWM } from './s2/convert'
 
 import type { JSONFeatures, XYZ } from './proj.spec'
 import type { Projection } from 'style/style.spec'
