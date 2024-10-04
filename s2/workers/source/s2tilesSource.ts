@@ -1,5 +1,5 @@
 import Source from './source'
-import { DirCache } from 's2-pmtiles/browser'
+import { DirCache } from 's2-pmtiles'
 
 import type { Metadata } from './source'
 import type { TileRequest } from '../worker.spec'

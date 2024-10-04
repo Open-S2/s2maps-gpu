@@ -5,6 +5,7 @@ import glsl from './config/glsl-loader/vite'
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   devtools: { enabled: false },
+
   runtimeConfig: {
     public: {
       state: process.env.STATE ?? 'prod',
@@ -13,6 +14,7 @@ export default defineNuxtConfig({
       baseURL: process.env.BASE_URL ?? 'https://opens2.com'
     }
   },
+
   watch: [
     './s2/**/*',
     './components/**/*',
@@ -20,17 +22,21 @@ export default defineNuxtConfig({
     './plugins/**/*',
     './public/**/*'
   ],
+
   modules: process.env.DEV === 'true'
     ? [
         // 'nuxtjs-eslint-module'
       ]
     : [],
+
   css: [
     fileURLToPath(new URL('./assets/styles/globals.css', import.meta.url))
   ],
+
   vite: {
     plugins: [wgsl(), glsl()]
   },
+
   alias: {
     s2: fileURLToPath(new URL('./s2', import.meta.url)),
     geometry: fileURLToPath(new URL('./s2/geometry', import.meta.url)),
@@ -43,5 +49,7 @@ export default defineNuxtConfig({
     ui: fileURLToPath(new URL('./s2/ui', import.meta.url)),
     util: fileURLToPath(new URL('./s2/util', import.meta.url)),
     workers: fileURLToPath(new URL('./s2/workers', import.meta.url))
-  }
+  },
+
+  compatibilityDate: '2024-10-04'
 })

@@ -1,5 +1,5 @@
 import Source from './source'
-import S2PMTilesReader from 's2-pmtiles/browser'
+import { S2PMTilesReader } from 's2-pmtiles'
 
 import type { Metadata } from './source'
 import type { TileRequest } from '../worker.spec'
