@@ -1,6 +1,6 @@
 import coalesceField from './coalesceField';
 
-import type { Properties } from 'geometry';
+import type { Properties } from 'gis-tools';
 import type { Comparator, NestedKey, NotNullOrObject } from './style.spec';
 
 // examples:

@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 'style/style.spec'
+import type { StyleDefinition } from 'style/style.spec';
 
 const style: StyleDefinition = {
   version: 1,
@@ -7,12 +7,12 @@ const style: StyleDefinition = {
   view: {
     lon: 0,
     lat: 0,
-    zoom: 2.5
+    zoom: 2.5,
   },
   minzoom: 0,
   maxzoom: 6.9,
   sources: {
-    land: '/geojson/land.geojson'
+    land: '/geojson/land.geojson',
   },
   fonts: {},
   layers: [
@@ -27,13 +27,13 @@ const style: StyleDefinition = {
           type: 'zoom',
           ranges: [
             { stop: 1, input: 'rgb(33, 49, 62)' },
-            { stop: 6, input: 'rgb(239, 238, 105)' }
-          ]
-        }
+            { stop: 6, input: 'rgb(239, 238, 105)' },
+          ],
+        },
       },
-      lch: true
-    }
-  ]
-}
+      lch: true,
+    },
+  ],
+};
 
-export default style
+export default style;

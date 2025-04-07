@@ -6,7 +6,6 @@ import type { Projection } from 'style/style.spec';
 import type { S2FeatureCollection } from './s2';
 import type { JSONFeatures, XYZ } from './proj.spec';
 
-export * from './lonlat';
 export * from './s2';
 export * from './wm';
 export * from './proj.spec';

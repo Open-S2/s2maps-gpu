@@ -1,7 +1,8 @@
 import { A, EARTH_RADIUS, MAXEXTENT, degToRad, radToDeg } from '../util';
 
 import type { Sources } from './mercProj.spec';
-import type { BBox, Point, ZXY } from '../proj.spec';
+import type { ZXY } from '../proj.spec';
+import type { BBox, VectorPoint } from 'gis-tools';
 
 /**
  * Given a zoom and tilesize, build mercator positional attributes
@@ -20,7 +21,12 @@ function getZoomSize(zoom: number, tileSize: number): BBox {
  * @param antiMeridian
  * @param tileSize
  */
-export function llToPX(ll: Point, zoom: number, antiMeridian = false, tileSize = 512): Point {
+export function llToPX(
+  ll: VectorPoint,
+  zoom: number,
+  antiMeridian = false,
+  tileSize = 512,
+): VectorPoint {
   const { min, max, sin, log } = Math;
   const [Bc, Cc, Zc, Ac] = getZoomSize(zoom, tileSize);
   const expansion = antiMeridian ? 2 : 1;
@@ -40,7 +46,7 @@ export function llToPX(ll: Point, zoom: number, antiMeridian = false, tileSize =
  * @param zoom
  * @param tileSize
  */
-export function pxToLL(px: Point, zoom: number, tileSize = 512): Point {
+export function pxToLL(px: VectorPoint, zoom: number, tileSize = 512): VectorPoint {
   const { atan, exp, PI } = Math;
   const [Bc, Cc, Zc] = getZoomSize(zoom, tileSize);
   const g = (px.y - Zc) / -Cc;
@@ -53,7 +59,7 @@ export function pxToLL(px: Point, zoom: number, tileSize = 512): Point {
  * Convert Longitude and Latitude to a mercator x-y coordinates
  * @param ll
  */
-export function llToMerc(ll: Point): Point {
+export function llToMerc(ll: VectorPoint): VectorPoint {
   const { tan, log, PI } = Math;
   let x = degToRad(A * ll.x);
   let y = A * log(tan(PI * 0.25 + degToRad(0.5 * ll.y)));
@@ -70,7 +76,7 @@ export function llToMerc(ll: Point): Point {
  * Convert mercator x-y coordinates to Longitude and Latitude
  * @param merc
  */
-export function mercToLL(merc: Point): Point {
+export function mercToLL(merc: VectorPoint): VectorPoint {
   const { atan, exp, PI } = Math;
   const x = radToDeg(merc.x / A);
   const y = radToDeg(0.5 * PI - 2 * atan(exp(-merc.y / A)));
@@ -82,7 +88,7 @@ export function mercToLL(merc: Point): Point {
  * @param px
  * @param tileSize
  */
-export function pxToTile(px: Point, tileSize = 512): Point {
+export function pxToTile(px: VectorPoint, tileSize = 512): VectorPoint {
   const { floor } = Math;
   const x = floor(px.x / tileSize);
   const y = floor(px.y / tileSize);
@@ -109,7 +115,7 @@ export function tilePxBounds(tile: ZXY, tileSize = 512): BBox {
  * @param zoom
  * @param tileSize
  */
-export function llToTile(ll: Point, zoom: number, tileSize = 512): Point {
+export function llToTile(ll: VectorPoint, zoom: number, tileSize = 512): VectorPoint {
   const px = llToPX(ll, zoom, false, tileSize);
   return pxToTile(px, tileSize);
 }
@@ -120,7 +126,7 @@ export function llToTile(ll: Point, zoom: number, tileSize = 512): Point {
  * @param tile
  * @param tileSize
  */
-export function llToTilePx(ll: Point, tile: ZXY, tileSize = 512): Point {
+export function llToTilePx(ll: VectorPoint, tile: ZXY, tileSize = 512): VectorPoint {
   const [zoom, x, y] = tile;
   const px = llToPX(ll, zoom, false, tileSize);
   const tileXStart = x * tileSize;
@@ -171,9 +177,9 @@ export function xyzToBBOX(
   // if tmsStyle, the y is inverted
   if (tmsStyle) y = Math.pow(2, zoom) - 1 - y;
   // Use +y to make sure it's a number to avoid inadvertent concatenation.
-  const bl: Point = { x: x * tileSize, y: (y + 1) * tileSize }; // bottom left
+  const bl: VectorPoint = { x: x * tileSize, y: (y + 1) * tileSize }; // bottom left
   // Use +x to make sure it's a number to avoid inadvertent concatenation.
-  const tr: Point = { x: (x + 1) * tileSize, y: y * tileSize }; // top right
+  const tr: VectorPoint = { x: (x + 1) * tileSize, y: y * tileSize }; // top right
   // to pixel-coordinates
   const pxBL = pxToLL(bl, zoom, tileSize);
   const pxTR = pxToLL(tr, zoom, tileSize);
@@ -206,8 +212,8 @@ export function bboxToXYZBounds(
   tileSize = 512,
 ): { minX: number; maxX: number; minY: number; maxY: number } {
   const { min, max, pow, floor } = Math;
-  let bl: Point = { x: bbox[0], y: bbox[1] }; // bottom left
-  let tr: Point = { x: bbox[2], y: bbox[3] }; // top right
+  let bl: VectorPoint = { x: bbox[0], y: bbox[1] }; // bottom left
+  let tr: VectorPoint = { x: bbox[2], y: bbox[3] }; // top right
 
   if (source === '900913') {
     bl = llToMerc(bl);

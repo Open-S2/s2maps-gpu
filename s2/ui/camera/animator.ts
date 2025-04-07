@@ -1,4 +1,4 @@
-import { Orthodrome } from 'geometry';
+import { Orthodrome } from 'gis-tools';
 
 import type Projector from './projector';
 
@@ -260,10 +260,12 @@ export default class Animator {
      */
     this.#increment = (time: number): IncrementResponse => {
       if (time >= duration) return [true, [endLon, endLat, endZoom, endBearing, endPitch]];
+      const { x, y } = orthodrome.intermediatePoint(lonLatEase(time, 0, 1, duration));
       return [
         false,
         [
-          ...orthodrome.intermediatePoint(lonLatEase(time, 0, 1, duration)),
+          x,
+          y,
           zoomEase(time, startZoom, deltaZoom, duration),
           bearingPitchEase(time, startBearing, deltaBearing, duration),
           bearingPitchEase(time, startPitch, deltaPitch, duration),
@@ -408,11 +410,13 @@ export default class Animator {
       const s = (time / duration) * S;
       const uS = u(s);
       const curScale = 1 / w(s);
+      const { x, y } = orthodrome.intermediatePoint(uS);
 
       return [
         false,
         [
-          ...orthodrome.intermediatePoint(uS),
+          x,
+          y,
           startZoom + log(curScale) / LN2,
           bearingPitchEase(time, startBearing, deltaBearing, duration),
           bearingPitchEase(time, startPitch, deltaPitch, duration),

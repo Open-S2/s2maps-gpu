@@ -1,85 +1,113 @@
-import Workflow, { Feature } from './workflow'
+import Workflow, { Feature } from './workflow';
 
-import vert1 from '../shaders/shade1.vertex.glsl'
-import frag1 from '../shaders/shade1.fragment.glsl'
+import frag1 from '../shaders/shade1.fragment.glsl';
+import vert1 from '../shaders/shade1.vertex.glsl';
 
-import vert2 from '../shaders/shade2.vertex.glsl'
-import frag2 from '../shaders/shade2.fragment.glsl'
+import frag2 from '../shaders/shade2.fragment.glsl';
+import vert2 from '../shaders/shade2.vertex.glsl';
 
-import type Context from '../context/context'
-import type {
-  MaskSource,
-  ShadeFeature as ShadeFeatureSpec,
-  ShadeWorkflow as ShadeWorkflowSpec,
-  ShadeWorkflowUniforms
-} from './workflow.spec'
+import type Context from '../context/context';
+import type { TileGL as Tile } from 'source/tile.spec';
 import type {
   LayerDefinitionBase,
   ShadeDefinition,
   ShadeStyle,
-  ShadeWorkflowLayerGuide
-} from 'style/style.spec'
-import type { TileGL as Tile } from 'source/tile.spec'
+  ShadeWorkflowLayerGuide,
+} from 'style/style.spec';
+import type {
+  MaskSource,
+  ShadeFeature as ShadeFeatureSpec,
+  ShadeWorkflow as ShadeWorkflowSpec,
+  ShadeWorkflowUniforms,
+} from './workflow.spec';
 
+/**
+ *
+ */
 export class ShadeFeature extends Feature implements ShadeFeatureSpec {
-  type = 'shade' as const
-  maskLayer = true
-  constructor (
-    public layerGuide: ShadeWorkflowLayerGuide,
-    public workflow: ShadeWorkflowSpec,
+  type = 'shade' as const;
+  maskLayer = true;
+  /**
+   * @param layerGuide
+   * @param workflow
+   * @param source
+   * @param featureCode
+   * @param tile
+   */
+  constructor(
+    public override layerGuide: ShadeWorkflowLayerGuide,
+    public override workflow: ShadeWorkflowSpec,
     public source: MaskSource,
-    public featureCode: number[],
-    public tile: Tile
+    public override featureCode: number[],
+    public override tile: Tile,
   ) {
-    super(workflow, tile, layerGuide, featureCode)
+    super(workflow, tile, layerGuide, featureCode);
   }
 
-  draw (): void {
-    super.draw()
-    this.workflow.draw(this)
+  /**
+   *
+   */
+  override draw(): void {
+    super.draw();
+    this.workflow.draw(this);
   }
 
-  duplicate (tile: Tile): ShadeFeature {
-    const { layerGuide, workflow, source, featureCode } = this
-    return new ShadeFeature(
-      layerGuide, workflow, source, featureCode, tile
-    )
+  /**
+   * @param tile
+   */
+  duplicate(tile: Tile): ShadeFeature {
+    const { layerGuide, workflow, source, featureCode } = this;
+    return new ShadeFeature(layerGuide, workflow, source, featureCode, tile);
   }
 }
 
+/**
+ *
+ */
 export default class ShadeWorkflow extends Workflow implements ShadeWorkflowSpec {
-  label = 'shade' as const
-  declare uniforms: { [key in ShadeWorkflowUniforms]: WebGLUniformLocation }
-  constructor (context: Context) {
+  label = 'shade' as const;
+  declare uniforms: { [key in ShadeWorkflowUniforms]: WebGLUniformLocation };
+  /**
+   * @param context
+   */
+  constructor(context: Context) {
     // get gl from context
-    const { type, devicePixelRatio } = context
+    const { type, devicePixelRatio } = context;
     // inject Program
-    super(context)
+    super(context);
     // build shaders
-    if (type === 1) this.buildShaders(vert1, frag1, { aPos: 0 })
-    else this.buildShaders(vert2, frag2)
+    if (type === 1) this.buildShaders(vert1, frag1, { aPos: 0 });
+    else this.buildShaders(vert2, frag2);
     // activate so we can setup devicePixelRatio
-    this.use()
+    this.use();
     // set pixel ratio
-    this.setDevicePixelRatio(devicePixelRatio)
+    this.setDevicePixelRatio(devicePixelRatio);
   }
 
-  buildLayerDefinition (layerBase: LayerDefinitionBase, layer: ShadeStyle): ShadeDefinition {
-    let { color } = layer
-    color = color ?? 'rgb(0.6, 0.6, 0.6)'
+  /**
+   * @param layerBase
+   * @param layer
+   */
+  buildLayerDefinition(layerBase: LayerDefinitionBase, layer: ShadeStyle): ShadeDefinition {
+    let { color } = layer;
+    color = color ?? 'rgb(0.6, 0.6, 0.6)';
     return {
       ...layerBase,
       type: 'shade',
-      color
-    }
+      color,
+    };
   }
 
   // given a set of layerIndexes that use Masks and the tile of interest
-  buildMaskFeature (layerDefinition: ShadeDefinition, tile: Tile): void {
-    const { mask, zoom } = tile
-    const { minzoom, maxzoom } = layerDefinition
+  /**
+   * @param layerDefinition
+   * @param tile
+   */
+  buildMaskFeature(layerDefinition: ShadeDefinition, tile: Tile): void {
+    const { mask, zoom } = tile;
+    const { minzoom, maxzoom } = layerDefinition;
     // not in the zoom range, ignore
-    if (zoom < minzoom || zoom > maxzoom) return
+    if (zoom < minzoom || zoom > maxzoom) return;
 
     // set the layer guide
     const layerGuide: ShadeWorkflowLayerGuide = {
@@ -87,35 +115,47 @@ export default class ShadeWorkflow extends Workflow implements ShadeWorkflowSpec
       sourceName: 'mask',
       layerCode: [],
       interactive: false,
-      opaque: false
-    }
+      opaque: false,
+    };
 
-    tile.addFeatures([new ShadeFeature(layerGuide, this, mask, [0], tile)])
+    tile.addFeatures([new ShadeFeature(layerGuide, this, mask, [0], tile)]);
   }
 
-  use (): void {
-    super.use()
+  /**
+   *
+   */
+  override use(): void {
+    super.use();
     // grab context & prep
-    const { context } = this
-    context.enableCullFace()
-    context.enableDepthTest()
-    context.disableStencilTest()
-    context.shadeBlend()
-    context.lessDepth()
+    const { context } = this;
+    context.enableCullFace();
+    context.enableDepthTest();
+    context.disableStencilTest();
+    context.shadeBlend();
+    context.lessDepth();
   }
 
-  setLayerCode (): void {
+  /**
+   *
+   */
+  override setLayerCode(): void {
     // noop
   }
 
-  draw (feature: ShadeFeatureSpec): void {
-    const { gl, context } = this
-    const { source, layerGuide: { layerIndex, visible } } = feature
-    const { count, offset, vao } = source
-    if (!visible) return
+  /**
+   * @param feature
+   */
+  draw(feature: ShadeFeatureSpec): void {
+    const { gl, context } = this;
+    const {
+      source,
+      layerGuide: { layerIndex, visible },
+    } = feature;
+    const { count, offset, vao } = source;
+    if (!visible) return;
     // bind vao & draw
-    context.setDepthRange(layerIndex)
-    gl.bindVertexArray(vao)
-    gl.drawElements(gl.TRIANGLE_STRIP, count, gl.UNSIGNED_INT, offset * 4)
+    context.setDepthRange(layerIndex);
+    gl.bindVertexArray(vao);
+    gl.drawElements(gl.TRIANGLE_STRIP, count, gl.UNSIGNED_INT, offset * 4);
   }
 }

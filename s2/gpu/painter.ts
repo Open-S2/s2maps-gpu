@@ -12,7 +12,12 @@ import {
   WallpaperWorkflow,
 } from './workflows';
 
+import type { ColorMode } from 's2Map';
+import type { GlyphImages } from 'workers/source/glyphSource';
 import type { MapOptions } from 'ui/s2mapUI';
+import type Projector from 'ui/camera/projector';
+import type { TileGPU as Tile } from 'source/tile.spec';
+import type TimeCache from 'ui/camera/timeCache';
 import type {
   Features,
   GlyphFeature,
@@ -22,12 +27,7 @@ import type {
   WorkflowType,
   Workflows,
 } from './workflows/workflow.spec';
-import type { GlyphImages } from 'workers/source/glyphSource';
-import type { TileGPU as Tile } from 'source/tile.spec';
-import type Projector from 'ui/camera/projector';
 import type { PainterData, SpriteImageMessage } from 'workers/worker.spec';
-import type TimeCache from 'ui/camera/timeCache';
-import type { ColorMode } from 's2Map';
 
 /**
  *

@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 'style/style.spec'
+import type { StyleDefinition } from 'style/style.spec';
 
 const style: StyleDefinition = {
   version: 1,
@@ -7,13 +7,13 @@ const style: StyleDefinition = {
   view: {
     lon: 0,
     lat: 0,
-    zoom: 2.5
+    zoom: 2.5,
   },
   minzoom: -0.5,
   maxzoom: 5,
   sources: {
     land: '/geojson/land.geojson',
-    local: '_local'
+    local: '_local',
   },
   fonts: {},
   layers: [
@@ -23,7 +23,7 @@ const style: StyleDefinition = {
       type: 'fill',
       invert: false,
       opaque: false,
-      color: '#b4c1c6'
+      color: '#b4c1c6',
     },
     {
       name: 'local-line',
@@ -31,9 +31,9 @@ const style: StyleDefinition = {
       layer: 'boundary',
       type: 'line',
       color: '#000000',
-      width: 2.5
-    }
-  ]
-}
+      width: 2.5,
+    },
+  ],
+};
 
-export default style
+export default style;

@@ -1,6 +1,6 @@
 import buildMask from './buildMask';
 
-import type { BBox } from 'geometry';
+import type { BBox } from 'gis-tools';
 import type { ColorArray } from 'style/color';
 import type { GlyphImages } from 'workers/source/glyphSource';
 import type { MapOptions } from 'ui/s2mapUI';

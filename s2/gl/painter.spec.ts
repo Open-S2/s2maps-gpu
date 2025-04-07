@@ -1,8 +1,8 @@
 import type { GlyphImages } from 'workers/source/glyphSource';
-import type { Point } from 'geometry';
 import type Projector from 'ui/camera/projector';
 import type { TileGL as Tile } from 'source/tile.spec';
 import type TimeCache from 'ui/camera/timeCache';
+import type { VectorPoint } from 'gis-tools';
 import type { PainterData, SpriteImageMessage } from 'workers/worker.spec';
 import type { WebGL2Context, WebGLContext } from './context';
 import type { WorkflowKey, WorkflowType, Workflows } from './workflows/workflow.spec';
@@ -23,7 +23,7 @@ export interface Painter {
   injectGlyphImages: (maxHeight: number, images: GlyphImages, tile: Tile[]) => void;
   setColorMode: (mode: 0 | 1 | 2 | 3 | 4) => void;
   delete: () => void;
-  injectFrameUniforms: (matrix: Float32Array, view: Float32Array, aspect: Point) => void;
+  injectFrameUniforms: (matrix: Float32Array, view: Float32Array, aspect: VectorPoint) => void;
   injectSpriteImage: (data: SpriteImageMessage, tiles: Tile[]) => void;
   injectTimeCache: (timeCache: TimeCache) => void;
   paint: (projector: Projector, tiles: Tile[]) => void;

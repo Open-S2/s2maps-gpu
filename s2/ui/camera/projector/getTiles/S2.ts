@@ -4,7 +4,8 @@ import { boxIntersects, lessThanZero, pointBoundaries } from 'geometry';
 import { fromFace, fromIJ, parent } from 'geometry/s2/s2CellID';
 import { fromLonLat, fromSTGL, mul, normalize, toIJ } from 'geometry/s2/s2Point';
 
-import type { BBox, Face, FaceIJ, XYZ } from 'geometry';
+import type { FaceIJ } from 'geometry';
+import type { BBox, Face, Point3D } from 'gis-tools';
 
 const ZERO_TILES = [fromFace(0), fromFace(1), fromFace(2), fromFace(3), fromFace(4), fromFace(5)];
 
@@ -27,7 +28,7 @@ export default function getTilesInView(
   const checkList: FaceIJ[] = [];
   const checkedTiles = new Set<string>();
   zoom = zoom << 0; // move to whole number
-  let stBbox: BBox, tLProj: XYZ, tRProj: XYZ, bLProj: XYZ, bRProj: XYZ;
+  let stBbox: BBox, tLProj: Point3D, tRProj: Point3D, bLProj: Point3D, bRProj: Point3D;
 
   // grab the first tile and prep neighbors for checks
   const [face, i, j] = toIJ(fromLonLat(lon, lat), zoom);

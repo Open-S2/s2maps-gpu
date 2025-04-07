@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 'style/style.spec'
+import type { StyleDefinition } from 'style/style.spec';
 
 const style: StyleDefinition = {
   version: 1,
@@ -6,12 +6,12 @@ const style: StyleDefinition = {
   view: {
     zoom: -0.4,
     lon: -90,
-    lat: 0
+    lat: 0,
   },
   minzoom: -1,
   maxzoom: 2.5,
   sources: {
-    hilbert: '/s2json/hilbert.s2json'
+    hilbert: '/s2json/hilbert.s2json',
   },
   fonts: {},
   layers: [
@@ -23,22 +23,22 @@ const style: StyleDefinition = {
           {
             key: 'class',
             value: 'hilbert',
-            comparator: '=='
+            comparator: '==',
           },
           {
             key: 'level',
             value: 4,
-            comparator: '=='
-          }
-        ]
+            comparator: '==',
+          },
+        ],
       },
       type: 'line',
       cap: 'butt',
       join: 'bevel',
       color: '#475569',
-      width: 3
-    }
-  ]
-}
+      width: 3,
+    },
+  ],
+};
 
-export default style
+export default style;

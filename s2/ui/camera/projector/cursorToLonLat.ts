@@ -1,6 +1,6 @@
 import { MAXLAT, llToPX, pxToLL } from 'geometry';
 
-import type { Point } from 'geometry';
+import type { VectorPoint } from 'gis-tools';
 
 // https://github.com/proj4js/proj4js/blob/master/lib/projections/ortho.js
 const EPSLN = 1.0e-10;
@@ -22,7 +22,7 @@ export function cursorToLonLatS2(
   xOffset: number,
   yOffset: number,
   radius: number,
-): undefined | Point {
+): undefined | VectorPoint {
   // pre adjust to radians
   centerLon *= D2R;
   centerLat *= D2R;
@@ -71,7 +71,7 @@ export function cursorToLonLatWM(
   yOffset: number,
   zoom: number,
   tileSize: number,
-): undefined | Point {
+): undefined | VectorPoint {
   // grab the px position of lon lat
   const px = llToPX({ x: lon, y: lat }, zoom, false, tileSize);
   // if px + offset is outside of min and max, return undefined

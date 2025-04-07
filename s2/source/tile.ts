@@ -7,7 +7,7 @@ import { level, toIJ } from 'geometry/s2/s2CellID';
 import type Projector from 'ui/camera/projector';
 import type { Context as WebGLContext } from 'gl/context';
 import type { WebGPUContext } from 'gpu/context';
-import type { BBox, Face, XYZ } from 'geometry';
+import type { BBox, Face, Point3D } from 'gis-tools';
 import type {
   Corners,
   FaceST,
@@ -401,10 +401,10 @@ export class S2Tile<
       // pull out the S2Points
       const { bottomLeft, bottomRight, topLeft, topRight } = this.corners;
       // project points and grab their x-y positions
-      const [blX, blY] = project(matrix, bottomLeft.map((n, i) => n - eyeKM[i]) as XYZ);
-      const [brX, brY] = project(matrix, bottomRight.map((n, i) => n - eyeKM[i]) as XYZ);
-      const [tlX, tlY] = project(matrix, topLeft.map((n, i) => n - eyeKM[i]) as XYZ);
-      const [trX, trY] = project(matrix, topRight.map((n, i) => n - eyeKM[i]) as XYZ);
+      const [blX, blY] = project(matrix, bottomLeft.map((n, i) => n - eyeKM[i]) as Point3D);
+      const [brX, brY] = project(matrix, bottomRight.map((n, i) => n - eyeKM[i]) as Point3D);
+      const [tlX, tlY] = project(matrix, topLeft.map((n, i) => n - eyeKM[i]) as Point3D);
+      const [trX, trY] = project(matrix, topRight.map((n, i) => n - eyeKM[i]) as Point3D);
       // store for eventual uniform "upload"
       this.bottomTop[0] = blX;
       this.bottomTop[1] = blY;

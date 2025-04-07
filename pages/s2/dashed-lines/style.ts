@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 'style/style.spec'
+import type { StyleDefinition } from 'style/style.spec';
 
 const style: StyleDefinition = {
   version: 1,
@@ -6,12 +6,12 @@ const style: StyleDefinition = {
   view: {
     zoom: 3,
     lon: -122.4585607773497,
-    lat: 37.778443127730476
+    lat: 37.778443127730476,
   },
   minzoom: -0.5,
   maxzoom: 5,
   sources: {
-    hilbert: '/s2json/hilbert.s2json'
+    hilbert: '/s2json/hilbert.s2json',
   },
   fonts: {},
   layers: [
@@ -24,10 +24,10 @@ const style: StyleDefinition = {
       width: 2.75,
       dasharray: [
         [30, '#bbd3de'],
-        [12, 'rgba(255, 255, 255, 0)']
-      ]
-    }
-  ]
-}
+        [12, 'rgba(255, 255, 255, 0)'],
+      ],
+    },
+  ],
+};
 
-export default style
+export default style;

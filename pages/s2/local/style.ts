@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 'style/style.spec'
+import type { StyleDefinition } from 'style/style.spec';
 
 const style: StyleDefinition = {
   version: 1,
@@ -6,13 +6,13 @@ const style: StyleDefinition = {
   view: {
     zoom: -0.5,
     lon: -122.4585607773497,
-    lat: 37.778443127730476
+    lat: 37.778443127730476,
   },
   minzoom: -0.5,
   maxzoom: 5,
   sources: {
     countries: '/s2json/countriesHD.s2json',
-    local: '_local'
+    local: '_local',
   },
   fonts: {},
   layers: [
@@ -22,7 +22,7 @@ const style: StyleDefinition = {
       type: 'fill',
       opaque: false,
       color: '#b4c1c6',
-      interactive: false
+      interactive: false,
     },
     {
       name: 'local-line',
@@ -30,9 +30,9 @@ const style: StyleDefinition = {
       layer: 'boundary',
       type: 'line',
       color: '#000000',
-      width: 2.5
-    }
-  ]
-}
+      width: 2.5,
+    },
+  ],
+};
 
-export default style
+export default style;

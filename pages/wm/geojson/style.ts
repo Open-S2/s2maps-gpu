@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 'style/style.spec'
+import type { StyleDefinition } from 'style/style.spec';
 
 const style: StyleDefinition = {
   version: 1,
@@ -7,13 +7,13 @@ const style: StyleDefinition = {
   view: {
     lon: 0,
     lat: 0,
-    zoom: 0.95
+    zoom: 0.95,
   },
   minzoom: 0,
   maxzoom: 6.9,
   sources: {
     land: '/geojson/land.geojson',
-    usa: '/geojson/usa.geojson'
+    usa: '/geojson/usa.geojson',
   },
   fonts: {},
   layers: [
@@ -21,15 +21,15 @@ const style: StyleDefinition = {
       name: 'water-fill',
       source: 'land',
       type: 'fill',
-      color: '#b4c1c6'
+      color: '#b4c1c6',
     },
     {
       name: 'usa-fill',
       source: 'usa',
       type: 'fill',
-      color: '#007bfe'
-    }
-  ]
-}
+      color: '#007bfe',
+    },
+  ],
+};
 
-export default style
+export default style;

@@ -1,245 +1,338 @@
-import type Session from './session'
+import type Session from './session';
 
-import type TexturePack from './texturePack'
-import type { Glyph } from 'workers/process/glyph/familySource'
-import type { GlyphImageData, GlyphResponseMessage } from 'workers/worker.spec'
+import type { Glyph } from 'workers/process/glyph/familySource';
+import type TexturePack from './texturePack';
+import type { GlyphImageData, GlyphResponseMessage } from 'workers/worker.spec';
 
-export interface GlyphMetadataUnparsed { name: string, metadata: undefined | ArrayBuffer }
-export interface GlyphMetadata { name: string, metadata: ArrayBuffer }
+/**
+ *
+ */
+export interface GlyphMetadataUnparsed {
+  name: string;
+  metadata: undefined | ArrayBuffer;
+}
+/**
+ *
+ */
+export interface GlyphMetadata {
+  name: string;
+  metadata: ArrayBuffer;
+}
 
-export type IconRequest = Set<string> // [iconName, iconName, iconName, ...]
+/**
+ *
+ */
+export type IconRequest = Set<string>; // [iconName, iconName, iconName, ...]
+/**
+ *
+ */
 interface GlyphPromise<U> extends Promise<U> {
-  id: string
+  id: string;
 }
 
+/**
+ *
+ */
 export interface GlyphImage {
-  posX: number
-  posY: number
-  width: number
-  height: number
-  data: ArrayBuffer
+  posX: number;
+  posY: number;
+  width: number;
+  height: number;
+  data: ArrayBuffer;
 }
 
-export type GlyphImages = GlyphImage[]
+/**
+ *
+ */
+export type GlyphImages = GlyphImage[];
 
+/**
+ * @param num
+ */
 const zagzig = (num: number): number => {
-  return (num >> 1) ^ (-(num & 1))
-}
+  return (num >> 1) ^ -(num & 1);
+};
 
+/**
+ * @param num
+ */
 const base36 = (num: number): string => {
-  return num.toString(36)
-}
+  return num.toString(36);
+};
 
-const genID = (): string => { return Math.random().toString(16).replace('0.', '') }
+/**
+ *
+ */
+const genID = (): string => {
+  return Math.random().toString(16).replace('0.', '');
+};
 
+/**
+ *
+ */
 export default class GlyphSource {
-  active = true
-  extent: number = 0
-  name: string
-  path: string
-  size: number = 0
-  defaultAdvance: number = 0
-  maxHeight: number = 0
-  range: number = 0
-  texturePack: TexturePack
-  session: Session
-  glyphWaitlist = new Map<string, Promise<void>>()
-  glyphCache = new Map<string, Glyph>() // glyphs we have built already
-  isIcon = false
-  constructor (
-    name: string,
-    path: string,
-    texturePack: TexturePack,
-    session: Session
-  ) {
-    this.name = name
-    this.path = path
-    this.texturePack = texturePack
-    this.session = session
+  active = true;
+  extent: number = 0;
+  name: string;
+  path: string;
+  size: number = 0;
+  defaultAdvance: number = 0;
+  maxHeight: number = 0;
+  range: number = 0;
+  texturePack: TexturePack;
+  session: Session;
+  glyphWaitlist = new Map<string, Promise<void>>();
+  glyphCache = new Map<string, Glyph>(); // glyphs we have built already
+  isIcon = false;
+  /**
+   * @param name
+   * @param path
+   * @param texturePack
+   * @param session
+   */
+  constructor(name: string, path: string, texturePack: TexturePack, session: Session) {
+    this.name = name;
+    this.path = path;
+    this.texturePack = texturePack;
+    this.session = session;
   }
 
-  async build (mapID: string): Promise<GlyphMetadataUnparsed> {
-    const metadata = await this._fetch(`${this.path}?type=metadata`, mapID)
+  /**
+   * @param mapID
+   */
+  async build(mapID: string): Promise<GlyphMetadataUnparsed> {
+    const metadata = await this._fetch(`${this.path}?type=metadata`, mapID);
 
     if (metadata === undefined) {
-      this.active = false
-      console.error(`FAILED TO extrapolate ${this.path} metadata`)
-      return { name: this.name, metadata: undefined }
-    } else { return await this._buildMetadata(metadata) }
+      this.active = false;
+      console.error(`FAILED TO extrapolate ${this.path} metadata`);
+      return { name: this.name, metadata: undefined };
+    } else {
+      return await this._buildMetadata(metadata);
+    }
   }
 
-  async _buildMetadata (metadata: ArrayBuffer): Promise<GlyphMetadataUnparsed> {
-    const meta = new DataView(metadata)
+  /**
+   * @param metadata
+   */
+  _buildMetadata(metadata: ArrayBuffer): GlyphMetadataUnparsed {
+    const meta = new DataView(metadata);
     // build the metadata
-    this.extent = meta.getUint16(0, true)
-    this.size = meta.getUint16(2, true)
-    this.maxHeight = meta.getUint16(4, true)
-    this.range = meta.getUint16(6, true)
-    this.defaultAdvance = meta.getUint16(8, true) / this.extent
-    this.isIcon = meta.getUint32(12, true) > 0
+    this.extent = meta.getUint16(0, true);
+    this.size = meta.getUint16(2, true);
+    this.maxHeight = meta.getUint16(4, true);
+    this.range = meta.getUint16(6, true);
+    this.defaultAdvance = meta.getUint16(8, true) / this.extent;
+    this.isIcon = meta.getUint32(12, true) > 0;
     // return the metadata so it can be shipped to the worker threads
-    return { name: this.name, metadata }
+    return { name: this.name, metadata };
   }
 
-  async glyphRequest (
+  /**
+   * @param request
+   * @param mapID
+   * @param reqID
+   * @param worker
+   */
+  async glyphRequest(
     request: string[], // array of codes
     mapID: string,
     reqID: string,
-    worker: MessageChannel['port2']
+    worker: MessageChannel['port2'],
   ): Promise<void> {
-    const { glyphCache, glyphWaitlist, name } = this
+    const { glyphCache, glyphWaitlist, name } = this;
 
-    const promiseList: Array<Promise<void>> = []
-    const requestList: string[] = []
-    const waitlistPromiseMap = new Map<string, Promise<void>>()
+    const promiseList: Array<Promise<void>> = [];
+    const requestList: string[] = [];
+    const waitlistPromiseMap = new Map<string, Promise<void>>();
     for (const code of request) {
       // 1) already cached in glyphCache; do nothing
-      if (glyphCache.has(code)) continue
+      if (glyphCache.has(code)) continue;
       // 2) already exists in the glyphWaitlist (downloading)
       if (glyphWaitlist.has(code)) {
-        const promise = glyphWaitlist.get(code) as GlyphPromise<void>
-        waitlistPromiseMap.set(promise.id, promise)
-      } else { // 5) no one has it
-        requestList.push(code)
+        const promise = glyphWaitlist.get(code) as GlyphPromise<void>;
+        waitlistPromiseMap.set(promise.id, promise);
+      } else {
+        // 5) no one has it
+        requestList.push(code);
       }
     }
     // create THIS glyphs missing glyphs request
     if (requestList.length > 0) {
-      const promise = this.#requestGlyphs(requestList, mapID) as GlyphPromise<void>
-      promise.id = genID()
-      promiseList.push(promise)
-      for (const unicode of requestList) glyphWaitlist.set(unicode, promise)
+      const promise = this.#requestGlyphs(requestList, mapID) as GlyphPromise<void>;
+      promise.id = genID();
+      promiseList.push(promise);
+      for (const unicode of requestList) glyphWaitlist.set(unicode, promise);
     }
     // add all waitlist promises
-    for (const [, promise] of waitlistPromiseMap) promiseList.push(promise)
+    for (const [, promise] of waitlistPromiseMap) promiseList.push(promise);
 
-    await Promise.all(promiseList)
+    await Promise.all(promiseList);
     // convert glyphList into a Float32Array of unicode data and ship it out
-    const glyphMetadata: Glyph[] = []
+    const glyphMetadata: Glyph[] = [];
     for (const unicode of request) {
-      const glyph = glyphCache.get(unicode)
-      if (glyph !== undefined) glyphMetadata.push(glyph)
+      const glyph = glyphCache.get(unicode);
+      if (glyph !== undefined) glyphMetadata.push(glyph);
     }
-    const glyphResponseMessage: GlyphResponseMessage = { mapID, type: 'glyphresponse', reqID, glyphMetadata, familyName: name }
-    worker.postMessage(glyphResponseMessage)
+    const glyphResponseMessage: GlyphResponseMessage = {
+      mapID,
+      type: 'glyphresponse',
+      reqID,
+      glyphMetadata,
+      familyName: name,
+    };
+    worker.postMessage(glyphResponseMessage);
   }
 
-  async #requestGlyphs (list: string[], mapID: string): Promise<void> {
-    const { isIcon, extent, glyphCache, glyphWaitlist, maxHeight, texturePack } = this
+  /**
+   * @param list
+   * @param mapID
+   */
+  async #requestGlyphs(list: string[], mapID: string): Promise<void> {
+    const { isIcon, extent, glyphCache, glyphWaitlist, maxHeight, texturePack } = this;
     // 1) build the ranges, max 35 glyphs per request
-    const requests = this.#buildRequests(list)
+    const requests = this.#buildRequests(list);
     // 2) return the request promise, THEN: store the glyphs in cache, build the images, and ship the images to the mapID
-    const promises: Array<Promise<void>> = []
+    const promises: Array<Promise<void>> = [];
     for (const { request, substitutes } of requests) {
-      promises.push(this._fetch(request, mapID).then(glyphsBuf => {
-        if (glyphsBuf === undefined) return
-        const images: GlyphImages = []
-        const dv = new DataView(glyphsBuf)
-        const size = dv.byteLength - 1
-        let pos = 0
-        while (pos < size) {
-          // build glyph metadata
-          let code = String(dv.getUint16(pos, true))
-          if (!isIcon && code === '0') code = substitutes.shift() ?? ''
-          const glyph: Glyph = {
-            code,
-            width: dv.getUint16(pos + 2, true) / extent,
-            height: dv.getUint16(pos + 4, true) / extent,
-            texW: dv.getUint8(pos + 6),
-            texH: dv.getUint8(pos + 7),
-            texX: 0,
-            texY: 0,
-            xOffset: zagzig(dv.getUint16(pos + 8, true)) / extent,
-            yOffset: zagzig(dv.getUint16(pos + 10, true)) / extent,
-            advanceWidth: zagzig(dv.getUint16(pos + 12, true)) / extent
+      promises.push(
+        this._fetch(request, mapID).then((glyphsBuf) => {
+          if (glyphsBuf === undefined) return;
+          const images: GlyphImages = [];
+          const dv = new DataView(glyphsBuf);
+          const size = dv.byteLength - 1;
+          let pos = 0;
+          while (pos < size) {
+            // build glyph metadata
+            let code = String(dv.getUint16(pos, true));
+            if (!isIcon && code === '0') code = substitutes.shift() ?? '';
+            const glyph: Glyph = {
+              code,
+              width: dv.getUint16(pos + 2, true) / extent,
+              height: dv.getUint16(pos + 4, true) / extent,
+              texW: dv.getUint8(pos + 6),
+              texH: dv.getUint8(pos + 7),
+              texX: 0,
+              texY: 0,
+              xOffset: zagzig(dv.getUint16(pos + 8, true)) / extent,
+              yOffset: zagzig(dv.getUint16(pos + 10, true)) / extent,
+              advanceWidth: zagzig(dv.getUint16(pos + 12, true)) / extent,
+            };
+            pos += 14;
+            // store in texturePack
+            const [posX, posY] = texturePack.addGlyph(glyph.texW, maxHeight);
+            glyph.texX = posX;
+            glyph.texY = posY;
+            // store glyph in cache
+            glyphCache.set(code, glyph);
+            // remove from waitlist cache
+            glyphWaitlist.delete(code);
+            // grab the image
+            const imageSize = glyph.texW * glyph.texH * 4;
+            const data = new Uint8ClampedArray(glyphsBuf.slice(pos, pos + imageSize))
+              .buffer as ArrayBuffer;
+            images.push({ posX, posY, width: glyph.texW, height: glyph.texH, data });
+            pos += imageSize;
           }
-          pos += 14
-          // store in texturePack
-          const [posX, posY] = texturePack.addGlyph(glyph.texW, maxHeight)
-          glyph.texX = posX
-          glyph.texY = posY
-          // store glyph in cache
-          glyphCache.set(code, glyph)
-          // remove from waitlist cache
-          glyphWaitlist.delete(code)
-          // grab the image
-          const imageSize = glyph.texW * glyph.texH * 4
-          const data = (new Uint8ClampedArray(glyphsBuf.slice(pos, pos + imageSize))).buffer as ArrayBuffer
-          images.push({ posX, posY, width: glyph.texW, height: glyph.texH, data })
-          pos += imageSize
-        }
-        // send off the images
-        const imagesMaxHeight = images.reduce((acc, cur) => Math.max(acc, cur.posY + cur.height), 0)
-        const glyphImageMessage: GlyphImageData = { mapID, type: 'glyphimages', images, maxHeight: imagesMaxHeight }
-        postMessage(glyphImageMessage, images.map(i => i.data))
-      }))
+          // send off the images
+          const imagesMaxHeight = images.reduce(
+            (acc, cur) => Math.max(acc, cur.posY + cur.height),
+            0,
+          );
+          const glyphImageMessage: GlyphImageData = {
+            mapID,
+            type: 'glyphimages',
+            images,
+            maxHeight: imagesMaxHeight,
+          };
+          postMessage(
+            glyphImageMessage,
+            images.map((i) => i.data),
+          );
+        }),
+      );
     }
-    await Promise.allSettled(promises)
+    await Promise.allSettled(promises);
   }
 
-  #buildRequests (list: string[]): Array<{ request: string, substitutes: string[] }> {
-    const { path } = this
-    const requests: Array<{ request: string, substitutes: string[] }> = []
-    const chunks: Array<Array<number | string>> = []
+  /**
+   * @param list
+   */
+  #buildRequests(list: string[]): Array<{ request: string; substitutes: string[] }> {
+    const { path } = this;
+    const requests: Array<{ request: string; substitutes: string[] }> = [];
+    const chunks: Array<Array<number | string>> = [];
     // sort the list by unicode order first substitions second
     const parsedList = list
-      .map(code => {
-        if (code.includes('.')) return code
-        else return Number(code)
+      .map((code) => {
+        if (code.includes('.')) return code;
+        else return Number(code);
       })
       .sort((a, b): number => {
-        if (typeof a === 'string') return 1
-        if (typeof b === 'string') return -1
-        return a - b
-      })
+        if (typeof a === 'string') return 1;
+        if (typeof b === 'string') return -1;
+        return a - b;
+      });
     // group into batches of 150
-    for (let i = 0; i < parsedList.length; i += 150) chunks.push(parsedList.slice(i, i + 150))
+    for (let i = 0; i < parsedList.length; i += 150) chunks.push(parsedList.slice(i, i + 150));
     // group unicode numbers adjacent into the same range
     for (const chunk of chunks) {
       // convert chunk to mergedRanges
-      const merged = mergeRanges(chunk)
+      const merged = mergeRanges(chunk);
       // shape the ranges into a base36 string
-      const mergedBase36 = merged.map(code => {
-        if (Array.isArray(code)) return `${base36(code[0])}-${base36(code[1])}`
-        else if (typeof code === 'number') return `${base36(code)}`
-        else return code
-      })
+      const mergedBase36 = merged.map((code) => {
+        if (Array.isArray(code)) return `${base36(code[0])}-${base36(code[1])}`;
+        else if (typeof code === 'number') return `${base36(code)}`;
+        else return code;
+      });
       // merge the ranges into a single request
-      const request = `${path}?type=glyph&codes=${mergedBase36.join(',')}`
-      const substitutes = mergedBase36.filter(code => typeof code === 'string' && code.includes('.'))
-      requests.push({ request, substitutes })
+      const request = `${path}?type=glyph&codes=${mergedBase36.join(',')}`;
+      const substitutes = mergedBase36.filter(
+        (code) => typeof code === 'string' && code.includes('.'),
+      );
+      requests.push({ request, substitutes });
     }
 
-    return requests
+    return requests;
   }
 
-  async _fetch (path: string, mapID: string): Promise<undefined | ArrayBuffer> {
-    const headers: { Authorization?: string } = {}
+  /**
+   * @param path
+   * @param mapID
+   */
+  async _fetch(path: string, mapID: string): Promise<undefined | ArrayBuffer> {
+    const headers: { Authorization?: string } = {};
     if (this.session.hasAPIKey(mapID)) {
-      const Authorization = await this.session.requestSessionToken(mapID)
-      if (Authorization === 'failed') return
-      if (Authorization !== undefined) headers.Authorization = Authorization
+      const Authorization = await this.session.requestSessionToken(mapID);
+      if (Authorization === 'failed') return;
+      if (Authorization !== undefined) headers.Authorization = Authorization;
     }
-    const res = await fetch(path, { headers })
-    if (res.status !== 200 && res.status !== 206) return
-    return await res.arrayBuffer()
+    const res = await fetch(path, { headers });
+    if (res.status !== 200 && res.status !== 206) return;
+    return await res.arrayBuffer();
   }
 }
 
-type MergeResult = Array<string | number | [from: number, to: number]>
-function mergeRanges (unicodes: Array<string | number>): MergeResult {
+/**
+ *
+ */
+type MergeResult = Array<string | number | [from: number, to: number]>;
+/**
+ * @param unicodes
+ */
+function mergeRanges(unicodes: Array<string | number>): MergeResult {
   return unicodes.reduce<MergeResult>((acc, cur): MergeResult => {
-    if (acc.length === 0) return [cur]
-    const last = acc[acc.length - 1]
+    if (acc.length === 0) return [cur];
+    const last = acc[acc.length - 1];
     // if last is an array, see if we merge
     if (Array.isArray(last) && cur === last[1] + 1) {
-      last[1] = cur
-      return acc
+      last[1] = cur;
+      return acc;
     } else if (typeof last === 'number' && cur === last + 1) {
-      acc[acc.length - 1] = [last, cur]
-      return acc
+      acc[acc.length - 1] = [last, cur];
+      return acc;
     }
-    acc.push(cur)
-    return acc
-  }, [])
+    acc.push(cur);
+    return acc;
+  }, []);
 }

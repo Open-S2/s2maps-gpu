@@ -1,5 +1,5 @@
 import type { NestedKey } from './style.spec';
-import type { Properties } from 'geometry';
+import type { Properties } from 'gis-tools';
 
 const language = navigator.language.split('-')[0] ?? 'en';
 

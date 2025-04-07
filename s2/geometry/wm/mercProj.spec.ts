@@ -1,5 +1,5 @@
 import type { Attributions } from 'style/style.spec';
-import type { FlatPoint, Properties } from '../proj.spec';
+import type { Point as FlatPoint, Properties } from 'gis-tools';
 
 /**
  *

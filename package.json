@@ -53,6 +53,7 @@
   "types": "./dist-types/index.d.ts",
   "dependencies": {
     "earclip": "^1.1.1",
+    "gis-tools": "file:../gis-tools",
     "open-vector-tile": "^1.8.0",
     "s2-pmtiles": "^1.1.1",
     "unicode-shaper": "0.6.2"

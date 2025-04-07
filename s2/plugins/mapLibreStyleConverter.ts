@@ -589,6 +589,7 @@ function convertPropertyValueSpecificationMatch<T extends NotNullOrObject>(
   const [, expression, ...rest] = input;
   const fallback = rest.pop();
   // TODO: Figure out why eslint and tsc don't see an error but vscode does:
+  // @ts-expect-error - fix later
   if (expression[0] !== 'get') return undefined;
   const key = expression[1];
   // we return a dataCondition

@@ -1,5 +1,8 @@
-import type { MapboxVectorFeature, OVectorFeature } from 'open-vector-tile'
-import type { TileRequest } from '../worker.spec'
+import type { GlyphObject } from './glyph/glyph.spec';
+import type { JSONVectorFeature } from '../source/jsonVT/tile';
+import type { Features as PointHeatFeatures } from './point';
+import type { Properties } from 'gis-tools';
+import type { TileRequest } from '../worker.spec';
 import type {
   Cap,
   ColorArray,
@@ -20,107 +23,188 @@ import type {
   RasterDefinition,
   RasterWorkerLayer,
   SensorDefinition,
-  SensorWorkerLayer
-} from 'style/style.spec'
-import type { Properties } from 'geometry'
-import type { JSONVectorFeature } from '../source/jsonVT/tile'
-import type { GlyphObject } from './glyph/glyph.spec'
-import type { Features as PointHeatFeatures } from './point'
+  SensorWorkerLayer,
+} from 'style/style.spec';
+import type { MapboxVectorFeature, OVectorFeature } from 'open-vector-tile';
 
+/**
+ *
+ */
 export interface IDGen {
-  workerID: number
-  num: number
-  incrSize: number
-  maxNum: number
-  startNum: number
-  getNum: () => number
+  workerID: number;
+  num: number;
+  incrSize: number;
+  maxNum: number;
+  startNum: number;
+  getNum: () => number;
 }
 
 /** FEATURES */
 
+/**
+ *
+ */
 export interface FeatureBase {
-  layerIndex: number
-  code: number[]
-  gl2Code: number[]
+  layerIndex: number;
+  code: number[];
+  gl2Code: number[];
 }
+/**
+ *
+ */
 export interface InteractiveFeatureBase extends FeatureBase {
-  idRGB: ColorArray
+  idRGB: ColorArray;
 }
 
-export type GlyphFeature = GlyphObject
+/**
+ *
+ */
+export type GlyphFeature = GlyphObject;
 
+/**
+ *
+ */
 export interface FillFeature extends InteractiveFeatureBase {
-  vertices: number[]
-  indices: number[]
-  pattern?: string
-  patternFamily: string
-  patternMovement: boolean
-  missing: boolean
+  vertices: number[];
+  indices: number[];
+  pattern?: string;
+  patternFamily: string;
+  patternMovement: boolean;
+  missing: boolean;
 }
 
+/**
+ *
+ */
 export interface LineFeature extends InteractiveFeatureBase {
-  vertices: number[]
-  lengthSoFar: number[]
-  cap: Cap
+  vertices: number[];
+  lengthSoFar: number[];
+  cap: Cap;
 }
 
+/**
+ *
+ */
 export interface PointFeature extends InteractiveFeatureBase {
-  type: 'point'
-  vertices: number[]
+  type: 'point';
+  vertices: number[];
 }
 
+/**
+ *
+ */
 export interface HeatmapFeature extends FeatureBase {
-  type: 'heatmap'
-  vertices: number[]
-  weights: number[]
+  type: 'heatmap';
+  vertices: number[];
+  weights: number[];
 }
 
-export type Feature = GlyphFeature | FillFeature | LineFeature | PointFeature | HeatmapFeature
+/**
+ *
+ */
+export type Feature = GlyphFeature | FillFeature | LineFeature | PointFeature | HeatmapFeature;
 
 /** WORKERS */
 
-export type VTFeature = OVectorFeature | MapboxVectorFeature | JSONVectorFeature
+/**
+ *
+ */
+export type VTFeature = OVectorFeature | MapboxVectorFeature | JSONVectorFeature;
 
+/**
+ *
+ */
 export interface VectorWorker {
-  idGen: IDGen
-  gpuType: GPUType
-  _addInteractiveFeature: (id: number, properties: Properties, workerLayer: InteractiveWorkerLayer) => void
-  flush: (mapID: string, tile: TileRequest, sourceName: string, wait: Promise<void>) => Promise<void>
-  postInteractive: (mapID: string, sourceName: string, tileID: bigint) => void
+  idGen: IDGen;
+  gpuType: GPUType;
+  _addInteractiveFeature: (
+    id: number,
+    properties: Properties,
+    workerLayer: InteractiveWorkerLayer,
+  ) => void;
+  flush: (
+    mapID: string,
+    tile: TileRequest,
+    sourceName: string,
+    wait: Promise<void>,
+  ) => Promise<void>;
+  postInteractive: (mapID: string, sourceName: string, tileID: bigint) => void;
 }
 
+/**
+ *
+ */
 export interface FillWorker extends VectorWorker {
-  featureStore: Map<string, FillFeature[]>
-  invertLayers: Map<number, FillWorkerLayer>
-  setupLayer: (layer: FillDefinition) => FillWorkerLayer
-  buildFeature: (tile: TileRequest, feature: VTFeature, sourceLayer: FillWorkerLayer, mapID: string, sourceName: string) => Promise<boolean>
+  featureStore: Map<string, FillFeature[]>;
+  invertLayers: Map<number, FillWorkerLayer>;
+  setupLayer: (layer: FillDefinition) => FillWorkerLayer;
+  buildFeature: (
+    tile: TileRequest,
+    feature: VTFeature,
+    sourceLayer: FillWorkerLayer,
+    mapID: string,
+    sourceName: string,
+  ) => Promise<boolean>;
 }
 
+/**
+ *
+ */
 export interface LineWorker extends VectorWorker {
-  featureStore: Map<string, LineFeature[]>
-  setupLayer: (layer: LineDefinition) => LineWorkerLayer
-  buildFeature: (tile: TileRequest, feature: VTFeature, sourceLayer: LineWorkerLayer, mapID: string, sourceName: string) => boolean
+  featureStore: Map<string, LineFeature[]>;
+  setupLayer: (layer: LineDefinition) => LineWorkerLayer;
+  buildFeature: (
+    tile: TileRequest,
+    feature: VTFeature,
+    sourceLayer: LineWorkerLayer,
+    mapID: string,
+    sourceName: string,
+  ) => boolean;
 }
 
+/**
+ *
+ */
 export interface PointWorker extends VectorWorker {
-  featureStore: Map<string, PointHeatFeatures>
-  setupLayer: (layer: PointDefinition | HeatmapDefinition) => PointWorkerLayer | HeatmapWorkerLayer
-  buildFeature: (tile: TileRequest, feature: VTFeature, sourceLayer: PointWorkerLayer | HeatmapWorkerLayer, mapID: string, sourceName: string) => boolean
+  featureStore: Map<string, PointHeatFeatures>;
+  setupLayer: (layer: PointDefinition | HeatmapDefinition) => PointWorkerLayer | HeatmapWorkerLayer;
+  buildFeature: (
+    tile: TileRequest,
+    feature: VTFeature,
+    sourceLayer: PointWorkerLayer | HeatmapWorkerLayer,
+    mapID: string,
+    sourceName: string,
+  ) => boolean;
 }
 
-export interface HeatmapWorker extends PointWorker {}
+/**
+ *
+ */
+export type HeatmapWorker = PointWorker;
 
+/**
+ *
+ */
 export interface GlyphWorker extends VectorWorker {
-  featureStore: Map<string, GlyphObject[]>
-  setupLayer: (layer: GlyphDefinition) => GlyphWorkerLayer
-  buildFeature: (tile: TileRequest, feature: VTFeature, sourceLayer: GlyphWorkerLayer, mapID: string, sourceName: string) => Promise<boolean>
+  featureStore: Map<string, GlyphObject[]>;
+  setupLayer: (layer: GlyphDefinition) => GlyphWorkerLayer;
+  buildFeature: (
+    tile: TileRequest,
+    feature: VTFeature,
+    sourceLayer: GlyphWorkerLayer,
+    mapID: string,
+    sourceName: string,
+  ) => Promise<boolean>;
 }
 
+/**
+ *
+ */
 export interface RasterWorker {
-  gpuType: GPUType
+  gpuType: GPUType;
   setupLayer: (
-    layerDefinition: SensorDefinition | RasterDefinition | HillshadeDefinition
-  ) => RasterWorkerLayer | SensorWorkerLayer | HillshadeWorkerLayer
+    layerDefinition: SensorDefinition | RasterDefinition | HillshadeDefinition,
+  ) => RasterWorkerLayer | SensorWorkerLayer | HillshadeWorkerLayer;
 
   buildTile: (
     mapID: string,
@@ -128,19 +212,25 @@ export interface RasterWorker {
     layers: Array<RasterWorkerLayer | SensorWorkerLayer | HillshadeWorkerLayer>,
     tile: TileRequest,
     data: ArrayBuffer,
-    size: number
-  ) => Promise<void>
+    size: number,
+  ) => Promise<void>;
 }
 
+/**
+ *
+ */
 export interface Workers {
-  fill?: FillWorker
-  line?: LineWorker
-  point?: PointWorker
-  heatmap?: HeatmapWorker
-  glyph?: GlyphWorker
-  raster?: RasterWorker
-  sensor?: RasterWorker
-  hillshade?: RasterWorker
+  fill?: FillWorker;
+  line?: LineWorker;
+  point?: PointWorker;
+  heatmap?: HeatmapWorker;
+  glyph?: GlyphWorker;
+  raster?: RasterWorker;
+  sensor?: RasterWorker;
+  hillshade?: RasterWorker;
 }
 
-export type WorkersKeys = keyof Workers
+/**
+ *
+ */
+export type WorkersKeys = keyof Workers;

@@ -1,12 +1,15 @@
-import GlyphWorker from './glyph'
-import FillWorker from './fill'
-import LineWorker from './line'
-import PointWorker from './point'
-import RasterWorker from './raster'
-import ImageStore from './imageStore'
+import FillWorker from './fill';
+import GlyphWorker from './glyph';
+import ImageStore from './imageStore';
+import LineWorker from './line';
+import PointWorker from './point';
+import RasterWorker from './raster';
 
-import type { VectorTile } from 'open-vector-tile'
-import type { TileFlushMessage, TileRequest } from '../worker.spec'
+import type { Glyph } from './glyph/familySource';
+import type { GlyphMetadata } from 'workers/source/glyphSource';
+import type { ImageMetadata } from 'workers/source/imageSource';
+import type { JSONVectorTile } from '../source/jsonVT/tile';
+import type { VectorTile } from 'open-vector-tile';
 import type {
   GPUType,
   HillshadeWorkerLayer,
@@ -15,190 +18,258 @@ import type {
   RasterWorkerLayer,
   SensorWorkerLayer,
   StylePackage,
-  WorkerLayer
-} from 'style/style.spec'
-import type { JSONVectorTile } from '../source/jsonVT/tile'
-import type { IDGen, VectorWorker, Workers } from './process.spec'
-import type { Glyph } from './glyph/familySource'
-import type { GlyphMetadata } from 'workers/source/glyphSource'
-import type { ImageMetadata } from 'workers/source/imageSource'
+  WorkerLayer,
+} from 'style/style.spec';
+import type { IDGen, VectorWorker, Workers } from './process.spec';
+import type { TileFlushMessage, TileRequest } from '../worker.spec';
 
 // 32bit: 4,294,967,295 --- 24bit: 16,777,216 --- 22bit: 4,194,304 --- 16bit: 65,535 --- 7bit: 128
-export const ID_MAX_SIZE = 1 << 22
+export const ID_MAX_SIZE = 1 << 22;
 
+/**
+ *
+ */
 export default class ProcessManager {
-  id!: number
-  gpuType!: GPUType
-  idGen!: IDGen
-  experimental = false
-  messagePort!: MessageChannel['port1']
-  sourceWorker!: MessageChannel['port2']
-  textDecoder: TextDecoder = new TextDecoder()
-  layers: Record<string, WorkerLayer[]> = {}
-  workers: Workers = {}
-  imageStore = new ImageStore()
-  mapStyles: Record<string, StylePackage> = {}
+  id!: number;
+  gpuType!: GPUType;
+  idGen!: IDGen;
+  experimental = false;
+  messagePort!: MessageChannel['port1'];
+  sourceWorker!: MessageChannel['port2'];
+  textDecoder: TextDecoder = new TextDecoder();
+  layers: Record<string, WorkerLayer[]> = {};
+  workers: Workers = {};
+  imageStore = new ImageStore();
+  mapStyles: Record<string, StylePackage> = {};
 
-  _buildIDGen (totalWorkers: number): void {
-    this.idGen = buildIDGen(this.id, totalWorkers)
+  /**
+   * @param totalWorkers
+   */
+  _buildIDGen(totalWorkers: number): void {
+    this.idGen = buildIDGen(this.id, totalWorkers);
   }
 
-  setupStyle (mapID: string, style: StylePackage): void {
-    this.mapStyles[mapID] = style
-    const { layers, gpuType, experimental } = style
-    this.gpuType = gpuType
-    this.experimental = experimental
-    const workerTypes = new Set<LayerType>()
+  /**
+   * @param mapID
+   * @param style
+   */
+  setupStyle(mapID: string, style: StylePackage): void {
+    this.mapStyles[mapID] = style;
+    const { layers, gpuType, experimental } = style;
+    this.gpuType = gpuType;
+    this.experimental = experimental;
+    const workerTypes = new Set<LayerType>();
 
     // first we need to build the workers
-    for (const layer of layers) workerTypes.add(layer.type)
-    this.#buildWorkers(workerTypes, style)
+    for (const layer of layers) workerTypes.add(layer.type);
+    this.#buildWorkers(workerTypes, style);
 
     // Convert LayerDefinition to WorkerLayer and store in layers
     const workerLayers = layers
       .map((layer): WorkerLayer | undefined => this.setupLayer(layer))
-      .filter(layer => layer !== undefined) as WorkerLayer[]
-    this.layers[mapID] = workerLayers
+      .filter((layer) => layer !== undefined) as WorkerLayer[];
+    this.layers[mapID] = workerLayers;
 
     // setup imageStore
-    this.imageStore.setupMap(mapID)
+    this.imageStore.setupMap(mapID);
   }
 
-  setupLayer (layer: LayerDefinition): undefined | WorkerLayer {
-    if (layer.type === 'shade') return
-    return this.workers[layer.type]?.setupLayer(layer as never)
+  /**
+   * @param layer
+   */
+  setupLayer(layer: LayerDefinition): undefined | WorkerLayer {
+    if (layer.type === 'shade') return;
+    return this.workers[layer.type]?.setupLayer(layer as never);
   }
 
-  #buildWorkers (names: Set<LayerType>, style: StylePackage): void {
-    const { idGen, gpuType, workers, sourceWorker, imageStore } = this
-    const { tileSize } = style
+  /**
+   * @param names
+   * @param style
+   */
+  #buildWorkers(names: Set<LayerType>, style: StylePackage): void {
+    const { idGen, gpuType, workers, sourceWorker, imageStore } = this;
+    const { tileSize } = style;
     // setup imageStore
-    imageStore.setup(idGen, sourceWorker)
+    imageStore.setup(idGen, sourceWorker);
     for (const name of names) {
       if (name === 'fill') {
-        workers.fill = new FillWorker(idGen, gpuType, imageStore)
+        workers.fill = new FillWorker(idGen, gpuType, imageStore);
       } else if (name === 'line') {
-        workers.line = new LineWorker(idGen, gpuType)
+        workers.line = new LineWorker(idGen, gpuType);
       } else if (name === 'point' || name === 'heatmap') {
-        workers.point = workers.heatmap = new PointWorker(idGen, gpuType)
+        workers.point = workers.heatmap = new PointWorker(idGen, gpuType);
       } else if (name === 'glyph') {
-        workers.glyph = new GlyphWorker(idGen, gpuType, sourceWorker, imageStore, tileSize)
+        workers.glyph = new GlyphWorker(idGen, gpuType, sourceWorker, imageStore, tileSize);
       } else if (
         (name === 'raster' || name === 'sensor' || name === 'hillshade') &&
         this.workers.raster === undefined
       ) {
-        workers.hillshade = workers.sensor = workers.raster = new RasterWorker(gpuType)
+        workers.hillshade = workers.sensor = workers.raster = new RasterWorker(gpuType);
       }
     }
   }
 
-  async processVector (
+  /**
+   * @param mapID
+   * @param tile
+   * @param sourceName
+   * @param vectorTile
+   */
+  async processVector(
     mapID: string,
     tile: TileRequest,
     sourceName: string,
-    vectorTile: VectorTile | JSONVectorTile
+    vectorTile: VectorTile | JSONVectorTile,
   ): Promise<void> {
-    const { workers } = this
-    const { zoom, parent } = tile
-    const { layerIndexes } = parent ?? tile
+    const { workers } = this;
+    const { zoom, parent } = tile;
+    const { layerIndexes } = parent ?? tile;
     // filter layers to those that source metadata explains exists in this tile
-    const sourceLayers = this.layers[mapID].filter(layer =>
-      layerIndexes === undefined ? true : layerIndexes.includes(layer.layerIndex)
-    )
+    const sourceLayers = this.layers[mapID].filter((layer) =>
+      layerIndexes === undefined ? true : layerIndexes.includes(layer.layerIndex),
+    );
     // prep a layerIndex tracker for an eventual generic flush.
     // Some layerIndexes will never be updated, so it's good to know
-    const layers: Record<number, number> = {}
-    sourceLayers.forEach(l => { layers[l.layerIndex] = 0 })
+    const layers: Record<number, number> = {};
+    sourceLayers.forEach((l) => {
+      layers[l.layerIndex] = 0;
+    });
 
     // TODO: features is repeated through too many times. Simplify this down.
     for (const sourceLayer of sourceLayers) {
-      if (!('filter' in sourceLayer)) continue
-      const { type, filter, minzoom, maxzoom, layerIndex, layer } = sourceLayer
-      if (minzoom > zoom || maxzoom < zoom) continue
+      if (!('filter' in sourceLayer)) continue;
+      const { type, filter, minzoom, maxzoom, layerIndex, layer } = sourceLayer;
+      if (minzoom > zoom || maxzoom < zoom) continue;
       // grab the layer of interest from the vectorTile and it's extent
-      const vectorLayer = vectorTile.layers[layer]
-      if (vectorLayer === undefined) continue
+      const vectorLayer = vectorTile.layers[layer];
+      if (vectorLayer === undefined) continue;
       // iterate over the vector features, filter as necessary
       for (let f = 0; f < vectorLayer.length; f++) {
-        const feature = vectorLayer.feature?.(f)
-        if (feature === undefined) continue
-        const { properties } = feature
+        const feature = vectorLayer.feature?.(f);
+        if (feature === undefined) continue;
+        const { properties } = feature;
         // filter out features that are not applicable, otherwise tell the vectorWorker to build
         if (filter(properties)) {
-          const wasBuilt = await workers[type]?.buildFeature(tile, feature, sourceLayer as never, mapID, sourceName)
-          if (wasBuilt === true && layers[layerIndex] !== undefined) layers[layerIndex]++
+          const wasBuilt = await workers[type]?.buildFeature(
+            tile,
+            feature,
+            sourceLayer as never,
+            mapID,
+            sourceName,
+          );
+          if (wasBuilt === true && layers[layerIndex] !== undefined) layers[layerIndex]++;
         }
       }
     }
     // now flush the workers
-    this.flush(mapID, tile, sourceName, layers)
+    this.flush(mapID, tile, sourceName, layers);
   }
 
-  flush (
+  /**
+   * @param mapID
+   * @param tile
+   * @param sourceName
+   * @param layers
+   */
+  flush(
     mapID: string,
     tile: TileRequest,
     sourceName: string,
-    layers: Record<number, number>
+    layers: Record<number, number>,
   ): void {
-    const { imageStore } = this
-    const tileID = tile.id
+    const { imageStore } = this;
+    const tileID = tile.id;
     // first see if any data was missing. If so, we may need to wait for it to be processed
-    const wait = imageStore.processMissingData(mapID, tileID, sourceName)
+    const wait = imageStore.processMissingData(mapID, tileID, sourceName);
     // flush each worker
     for (const worker of Object.values(this.workers)) {
-      void (worker as VectorWorker).flush(mapID, tile, sourceName, wait)
+      void (worker as VectorWorker).flush(mapID, tile, sourceName, wait);
     }
 
-    const deadLayers: number[] = []
-    for (const [id, count] of Object.entries(layers)) if (count === 0) deadLayers.push(+id)
-    const msg: TileFlushMessage = { type: 'flush', from: 'tile', tileID, mapID, sourceName, deadLayers }
-    postMessage(msg)
+    const deadLayers: number[] = [];
+    for (const [id, count] of Object.entries(layers)) if (count === 0) deadLayers.push(+id);
+    const msg: TileFlushMessage = {
+      type: 'flush',
+      from: 'tile',
+      tileID,
+      mapID,
+      sourceName,
+      deadLayers,
+    };
+    postMessage(msg);
   }
 
-  processRaster (
+  /**
+   * @param mapID
+   * @param tile
+   * @param sourceName
+   * @param data
+   * @param size
+   */
+  processRaster(
     mapID: string,
     tile: TileRequest,
     sourceName: string,
     data: ArrayBuffer,
-    size: number
+    size: number,
   ): void {
-    const subSourceName = sourceName.split(':')[0]
+    const subSourceName = sourceName.split(':')[0];
     // filter layers to source
-    const sourceLayers = this.layers[mapID].filter(layer => layer.source === subSourceName) as Array<RasterWorkerLayer | SensorWorkerLayer | HillshadeWorkerLayer>
+    const sourceLayers = this.layers[mapID].filter(
+      (layer) => layer.source === subSourceName,
+    ) as Array<RasterWorkerLayer | SensorWorkerLayer | HillshadeWorkerLayer>;
 
-    void this.workers.raster?.buildTile(mapID, sourceName, sourceLayers, tile, data, size)
+    void this.workers.raster?.buildTile(mapID, sourceName, sourceLayers, tile, data, size);
   }
 
-  processMetadata (
+  /**
+   * @param mapID
+   * @param glyphMetadata
+   * @param imageMetadata
+   */
+  processMetadata(
     mapID: string,
     glyphMetadata: GlyphMetadata[],
-    imageMetadata: ImageMetadata[]
+    imageMetadata: ImageMetadata[],
   ): void {
-    this.imageStore.processMetadata(mapID, glyphMetadata, imageMetadata)
+    this.imageStore.processMetadata(mapID, glyphMetadata, imageMetadata);
   }
 
-  processGlyphResponse (
+  /**
+   * @param mapID
+   * @param reqID
+   * @param glyphMetadata
+   * @param familyName
+   */
+  processGlyphResponse(
     mapID: string,
     reqID: string,
     glyphMetadata: Glyph[],
-    familyName: string
+    familyName: string,
   ): void {
-    this.imageStore.processGlyphResponse(mapID, reqID, glyphMetadata, familyName)
+    this.imageStore.processGlyphResponse(mapID, reqID, glyphMetadata, familyName);
   }
 }
 
-function buildIDGen (id: number, totalWorkers: number): IDGen {
+/**
+ * @param id
+ * @param totalWorkers
+ */
+function buildIDGen(id: number, totalWorkers: number): IDGen {
   return {
     workerID: id,
     num: id + 1,
     startNum: id + 1,
     incrSize: totalWorkers,
     maxNum: ID_MAX_SIZE,
+    /**
+     *
+     */
     getNum: function () {
-      const res = this.num
-      this.num += this.incrSize
-      if (this.num >= this.maxNum) this.num = this.startNum
-      return res
-    }
-  }
+      const res = this.num;
+      this.num += this.incrSize;
+      if (this.num >= this.maxNum) this.num = this.startNum;
+      return res;
+    },
+  };
 }

@@ -1,5 +1,5 @@
 import type { Attributions } from 'style/style.spec';
-import type { Properties } from '../proj.spec';
+import type { Properties } from 'gis-tools';
 
 /**
  *

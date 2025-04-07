@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 'style/style.spec'
+import type { StyleDefinition } from 'style/style.spec';
 
 const style: StyleDefinition = {
   version: 1,
@@ -6,7 +6,7 @@ const style: StyleDefinition = {
   view: {
     zoom: -0.5,
     lon: 0,
-    lat: 0
+    lat: 0,
   },
   minzoom: -1,
   maxzoom: 2.5,
@@ -21,72 +21,78 @@ const style: StyleDefinition = {
           {
             type: 'S2Feature',
             properties: {
-              name: 'A'
+              name: 'A',
             },
             face: 0,
             geometry: {
               type: 'Point',
-              coordinates: [0.5, 0.5]
-            }
+              is3D: false,
+              coordinates: { x: 0.5, y: 0.5 },
+            },
           },
           {
             type: 'S2Feature',
             properties: {
-              name: 'B'
+              name: 'B',
             },
             face: 0,
             geometry: {
               type: 'Point',
-              coordinates: [0.51, 0.51]
-            }
+              is3D: false,
+              coordinates: { x: 0.51, y: 0.51 },
+            },
           },
           {
             type: 'S2Feature',
             properties: {
-              name: 'C'
+              name: 'C',
             },
             face: 0,
             geometry: {
               type: 'Point',
-              coordinates: [0, 0]
-            }
+              is3D: false,
+              coordinates: { x: 0, y: 0 },
+            },
           },
           {
             type: 'S2Feature',
             properties: {
-              name: 'D'
+              name: 'D',
             },
             face: 0,
             geometry: {
               type: 'Point',
-              coordinates: [1, 1]
-            }
+              is3D: false,
+              coordinates: { x: 1, y: 1 },
+            },
           },
           {
             type: 'S2Feature',
             properties: {
-              name: 'E'
+              name: 'E',
             },
             face: 0,
             geometry: {
               type: 'Point',
-              coordinates: [0, 1]
-            }
+              is3D: false,
+              coordinates: { x: 0, y: 1 },
+            },
           },
           {
             type: 'S2Feature',
             properties: {
-              name: 'F'
+              name: 'F',
             },
             face: 0,
             geometry: {
               type: 'Point',
-              coordinates: [1, 0]
-            }
-          }
-        ]
-      }
-    }
+              is3D: false,
+              coordinates: { x: 1, y: 0 },
+            },
+          },
+        ],
+      },
+    },
   },
   fonts: {},
   layers: [
@@ -96,7 +102,7 @@ const style: StyleDefinition = {
       type: 'fill',
       opaque: false,
       color: '#b4c1c6',
-      interactive: false
+      interactive: false,
     },
     {
       name: 'hilbert_point',
@@ -107,9 +113,9 @@ const style: StyleDefinition = {
       strokeWidth: 5,
       radius: 15,
       interactive: true,
-      cursor: 'pointer'
-    }
-  ]
-}
+      cursor: 'pointer',
+    },
+  ],
+};
 
-export default style
+export default style;

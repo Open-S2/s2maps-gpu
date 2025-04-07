@@ -7,7 +7,7 @@ import { mercatorLatScale, pxToLL } from 'geometry/wm';
 
 import type Camera from '..';
 import type { MapOptions } from 'ui/s2mapUI';
-import type { Point, XYZ } from 'geometry';
+import type { Point3D, VectorPoint } from 'gis-tools';
 import type { Projection, StyleDefinition } from 'style/style.spec';
 
 /**
@@ -42,16 +42,16 @@ export default class Projector {
   // radius is the radius of the earth in kilometers
   radius = EARTH_RADIUS / 1_000;
   // radii is the radius of the earth in meters for each axis
-  radii: XYZ = [EARTH_RADIUS_EQUATORIAL, EARTH_RADIUS_POLAR, EARTH_RADIUS_EQUATORIAL];
+  radii: Point3D = [EARTH_RADIUS_EQUATORIAL, EARTH_RADIUS_POLAR, EARTH_RADIUS_EQUATORIAL];
   zTranslateStart = 5;
   zTranslateEnd = 1.001;
   zoomEnd = 5;
   positionalZoom = true;
   // [zoom, lon, lat, bearing, pitch, time, aspectX, aspectY, mouseX, mouseY, deltaMouseX, deltaMouseY, featureState, currFeature]
   view: Float32Array = new Float32Array(14);
-  aspect: Point = { x: 400, y: 300 }; // default canvas width x height
+  aspect: VectorPoint = { x: 400, y: 300 }; // default canvas width x height
   matrices: { [key in MatrixType]?: Float32Array } = {};
-  eye: XYZ = [0, 0, 0]; // [x, y, z] only z should change for visual effects
+  eye: Point3D = [0, 0, 0]; // [x, y, z] only z should change for visual effects
   constrainZoomToFill = true;
   duplicateHorizontally = true;
   minLatPosition = 70;
@@ -301,7 +301,7 @@ export default class Projector {
    * @param xOffset
    * @param yOffset
    */
-  cursorToLonLat(xOffset: number, yOffset: number): undefined | Point {
+  cursorToLonLat(xOffset: number, yOffset: number): undefined | VectorPoint {
     const { projection, lon, lat, zoom, tileSize, multiplier } = this;
     if (projection === 'S2')
       return cursorToLonLatS2(lon, lat, xOffset, yOffset, (tileSize * Math.pow(2, zoom)) / 2);
@@ -314,7 +314,7 @@ export default class Projector {
    * @param typeOrScale
    * @param offset
    */
-  getMatrix(typeOrScale: number | MatrixType, offset: Point = { x: 0, y: 0 }): Float32Array {
+  getMatrix(typeOrScale: number | MatrixType, offset: VectorPoint = { x: 0, y: 0 }): Float32Array {
     if (typeof typeOrScale === 'number') {
       // WM case
       const matrix = this.#getMatrixWM(typeOrScale, offset);
@@ -541,7 +541,7 @@ export default class Projector {
    * @param zoom
    * @param update
    */
-  #updateEyeS2(lon: number, lat: number, zoom: number, update = true): XYZ {
+  #updateEyeS2(lon: number, lat: number, zoom: number, update = true): Point3D {
     const { radius, zTranslateEnd, zTranslateStart, zoomEnd } = this;
     // find radial distance from core of ellipsoid
     const radialMultiplier =
@@ -586,7 +586,7 @@ export default class Projector {
    */
   #getMatrixWM(
     scale: number,
-    offset: Point,
+    offset: VectorPoint,
     bearing: number = this.bearing,
     _pitch: number = this.pitch,
   ): Float32Array {

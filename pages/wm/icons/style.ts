@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 'style/style.spec'
+import type { StyleDefinition } from 'style/style.spec';
 
 const style: StyleDefinition = {
   version: 1,
@@ -8,7 +8,7 @@ const style: StyleDefinition = {
   view: {
     lon: 0,
     lat: 0,
-    zoom: 0.9
+    zoom: 0.9,
   },
   minzoom: -0.5,
   maxzoom: 5,
@@ -24,38 +24,38 @@ const style: StyleDefinition = {
             type: 'S2Feature',
             properties: { icon: 'zoo' },
             face: 0,
-            geometry: { type: 'Point', coordinates: [0, 0] }
+            geometry: { type: 'Point', is3D: false, coordinates: { x: 0, y: 0 } },
           },
           {
             type: 'S2Feature',
             properties: { icon: 'police' },
             face: 0,
-            geometry: { type: 'Point', coordinates: [0.5, 0.5] }
+            geometry: { type: 'Point', is3D: false, coordinates: { x: 0.5, y: 0.5 } },
           },
           {
             type: 'S2Feature',
             properties: { icon: 'aerodrome' },
             face: 0,
-            geometry: { type: 'Point', coordinates: [1, 0] }
+            geometry: { type: 'Point', is3D: false, coordinates: { x: 1, y: 0 } },
           },
           {
             type: 'S2Feature',
             properties: { icon: 'pharmacy' },
             face: 0,
-            geometry: { type: 'Point', coordinates: [0, 1] }
+            geometry: { type: 'Point', is3D: false, coordinates: { x: 0, y: 1 } },
           },
           {
             type: 'S2Feature',
             properties: { icon: 'library' },
             face: 0,
-            geometry: { type: 'Point', coordinates: [1, 1] }
-          }
-        ]
-      }
-    }
+            geometry: { type: 'Point', is3D: false, coordinates: { x: 1, y: 1 } },
+          },
+        ],
+      },
+    },
   },
   icons: {
-    streets: '/api/glyphs/streets'
+    streets: '/api/glyphs/streets',
   },
   layers: [
     {
@@ -64,7 +64,7 @@ const style: StyleDefinition = {
       type: 'fill',
       invert: false,
       opaque: false,
-      color: '#b4c1c6'
+      color: '#b4c1c6',
     },
     {
       name: 'icon-examples',
@@ -78,9 +78,9 @@ const style: StyleDefinition = {
       iconPadding: [2, 2],
       iconSize: 32,
       overdraw: false,
-      viewCollisions: false
-    }
-  ]
-}
+      viewCollisions: false,
+    },
+  ],
+};
 
-export default style
+export default style;

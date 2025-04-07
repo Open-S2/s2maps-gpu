@@ -1,6 +1,6 @@
-import { defineConfig, devices } from '@playwright/test'
+import { defineConfig, devices } from '@playwright/test';
 
-const CI_BOOL = Boolean(process.env.CI)
+const CI_BOOL = Boolean(process.env.CI);
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -29,7 +29,7 @@ export default defineConfig({
     trace: 'on-first-retry',
 
     /* Base URL for all the tests. e.g. page.goto('/s2/fill') will route to 'http://127.0.0.1:3000/s2/fill' */
-    baseURL: 'http://127.0.0.1:3000'
+    baseURL: 'http://127.0.0.1:3000',
   },
 
   /* Configure projects for major browsers */
@@ -37,16 +37,16 @@ export default defineConfig({
     /* Test against desktop browsers */
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] }
+      use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'firefox',
-      use: { ...devices['Desktop Firefox'] }
+      use: { ...devices['Desktop Firefox'] },
     },
     {
       name: 'webkit',
-      use: { ...devices['Desktop Safari'] }
-    }
+      use: { ...devices['Desktop Safari'] },
+    },
     // /* Test against mobile viewports. */
     // {
     //   name: 'Mobile Chrome',
@@ -75,6 +75,6 @@ export default defineConfig({
     reuseExistingServer: !CI_BOOL,
     stdout: 'pipe',
     stderr: 'pipe',
-    cwd: '../'
-  }
-})
+    cwd: '../',
+  },
+});

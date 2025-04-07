@@ -2,7 +2,7 @@ import getEasingFunction from './easingFunctions';
 import parseFilter from './parseFilter';
 
 import type { FilterFunction } from './parseFilter';
-import type { Properties } from 'geometry/proj.spec';
+import type { Properties } from 'gis-tools';
 import type {
   DataCondition,
   DataRangeEase,
@@ -147,7 +147,7 @@ function dataRangeFunction<T extends NotNullOrObject, U>(
     }
     const dataInput =
       properties[endKey] !== undefined && !isNaN(properties[endKey] as number)
-        ? +(properties[endKey] as number)
+        ? Number(properties[endKey])
         : 0;
     if (dataInput <= parsedRanges[0].stop) {
       // less then or equal to first stop

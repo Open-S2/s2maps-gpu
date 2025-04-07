@@ -9,15 +9,16 @@ import Projector from './projector';
 import { tileIDWrapped as tileIDWrappedWM } from 'geometry/wm';
 import { isFace, parent as parentID } from 'geometry/id';
 /** SOURCES */
-import { createTile } from 'source';
-import Cache from './cache';
-import TimeCache from './timeCache';
-import DragPan from './dragPan';
 import Animator from './animator';
+import Cache from './cache';
+import DragPan from './dragPan';
+import TimeCache from './timeCache';
+import { createTile } from 'source';
 
-import type { StyleDefinition, TimeSeriesStyle } from 'style/style.spec';
-import type S2Map from 's2Map';
 import type { ClickEvent } from './dragPan';
+import type S2Map from 's2Map';
+import type { VectorPoint } from 'gis-tools';
+import type { Combine, TileShared as Tile } from 'source/tile.spec';
 import type {
   InteractiveObject,
   MouseClickMessage,
@@ -30,8 +31,7 @@ import type {
   TileWorkerMessage,
   ViewMessage,
 } from 'workers/worker.spec';
-import type { Combine, TileShared as Tile } from 'source/tile.spec';
-import type { Point } from 'geometry';
+import type { StyleDefinition, TimeSeriesStyle } from 'style/style.spec';
 
 /**
  *
@@ -71,7 +71,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   canZoom = true;
   dragPan: DragPan = new DragPan();
   mouseMoved = true;
-  mousePosition: Point = { x: 0, y: 0 };
+  mousePosition: VectorPoint = { x: 0, y: 0 };
   currAnimFunction?: (now: number) => void;
   resizeQueued?: ResizeDimensions;
   currFeatures = new Map<number, InteractiveObject>();

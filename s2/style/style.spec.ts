@@ -3,12 +3,13 @@ import type { ColorArray } from './color';
 import type { EaseType } from './easingFunctions';
 import type { JSONVTOptions } from 'workers/source/jsonVT';
 import type { View } from 'ui/camera/projector';
-import type { BBox, FlatPoint, JSONFeatures, Properties } from 'geometry';
 import type { Filter, FilterFunction } from 'style/parseFilter';
+
+import type { BBox, Point as FlatPoint, JSONCollection, Properties } from 'gis-tools';
 
 export type { JSONVTOptions } from 'workers/source/jsonVT';
 export type { ClusterOptions } from 'workers/source/pointCluster';
-export type { BBox, JSONFeatures, Point, Properties } from 'geometry';
+export type { BBox, JSONCollection, VectorPoint, Properties } from 'gis-tools';
 export type { Filter, FilterFunction } from './parseFilter';
 export type { EaseType } from './easingFunctions';
 export type { MapOptions } from 'ui/s2mapUI';
@@ -137,7 +138,7 @@ export interface SourceMetadata extends JSONVTOptions, ClusterOptions {
    */
   sourceName?: string;
   /** If you want to directly inject the geojson or s2json data */
-  data?: JSONFeatures;
+  data?: JSONCollection;
   /** If the data is filled with a huge collection of points, you can specify to cluster the data before displaying it. */
   cluster?: boolean;
   // TODO: No idea why I have to add this manually when extending JSONVTOptions and ClusterOptions

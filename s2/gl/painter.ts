@@ -19,10 +19,10 @@ import type { ColorMode } from 's2Map';
 import type { GlyphImages } from 'workers/source/glyphSource';
 import type { MapOptions } from 'ui/s2mapUI';
 import type { Painter as PainterSpec } from './painter.spec';
-import type { Point } from 'geometry';
 import type Projector from 'ui/camera/projector';
 import type { TileGL as Tile } from 'source/tile.spec';
 import type TimeCache from 'ui/camera/timeCache';
+import type { VectorPoint } from 'gis-tools';
 import type {
   Features,
   GlyphFeature,
@@ -93,52 +93,52 @@ export default class Painter implements PainterSpec {
     const promises: Array<Promise<void>> = [];
     const workflowImports: WorkflowImports = {
       /** @returns a fill rendering tool */
-      fill: async () => {
-        return await new FillWorkflow(context);
+      fill: () => {
+        return new FillWorkflow(context);
       },
       /** @returns a glyph rendering tool */
-      glyphFilter: async () => {
-        return await new GlyphFilterWorkflow(context);
+      glyphFilter: () => {
+        return new GlyphFilterWorkflow(context);
       },
       /** @returns a glyph rendering tool */
-      glyph: async () => {
-        return await new GlyphWorkflow(context);
+      glyph: () => {
+        return new GlyphWorkflow(context);
       },
       /** @returns a heatmap rendering tool */
-      heatmap: async () => {
-        return await new HeatmapWorkflow(context);
+      heatmap: () => {
+        return new HeatmapWorkflow(context);
       },
       /** @returns a hillshade rendering tool */
-      hillshade: async () => {
-        return await new HillshadeWorkflow(context);
+      hillshade: () => {
+        return new HillshadeWorkflow(context);
       },
       /** @returns a line rendering tool */
-      line: async () => {
-        return await new LineWorkflow(context);
+      line: () => {
+        return new LineWorkflow(context);
       },
       /** @returns a point rendering tool */
-      point: async () => {
-        return await new PointWorkflow(context);
+      point: () => {
+        return new PointWorkflow(context);
       },
       /** @returns a raster rendering tool */
-      raster: async () => {
-        return await new RasterWorkflow(context);
+      raster: () => {
+        return new RasterWorkflow(context);
       },
       /** @returns a sensor rendering tool */
       sensor: async () => {
         return await import('./workflows/sensorWorkflow');
       },
       /** @returns a shade rendering tool */
-      shade: async () => {
-        return await new ShadeWorkflow(context);
+      shade: () => {
+        return new ShadeWorkflow(context);
       },
       /** @returns a skybox rendering tool */
-      skybox: async () => {
-        return await new SkyboxWorkflow(context);
+      skybox: () => {
+        return new SkyboxWorkflow(context);
       },
       /** @returns a wallpaper rendering tool */
-      wallpaper: async () => {
-        return await new WallpaperWorkflow(context);
+      wallpaper: () => {
+        return new WallpaperWorkflow(context);
       },
     };
     const workflowKeys: Array<keyof Omit<Workflows, 'background'>> = [];
@@ -177,7 +177,7 @@ export default class Painter implements PainterSpec {
    * @param view
    * @param aspect
    */
-  injectFrameUniforms(matrix: Float32Array, view: Float32Array, aspect: Point): void {
+  injectFrameUniforms(matrix: Float32Array, view: Float32Array, aspect: VectorPoint): void {
     const { workflows } = this;
     for (const workflowName in workflows) {
       workflows[workflowName as keyof Workflows]?.injectFrameUniforms(matrix, view, aspect);

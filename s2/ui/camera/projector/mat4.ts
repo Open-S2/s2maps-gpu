@@ -1,4 +1,4 @@
-import type { XYZ } from 'geometry';
+import type { Point3D } from 'gis-tools';
 
 /**
  *
@@ -138,7 +138,7 @@ export function perspective(
  * @param eye
  * @param up
  */
-export function lookAt(eye: XYZ, up: XYZ): Float32Array {
+export function lookAt(eye: Point3D, up: Point3D): Float32Array {
   const m = new Float32Array(16);
   let x0: number, x1: number, x2: number, y0: number, y1: number;
   let y2: number, z0: number, z1: number, z2: number, len: number;
@@ -225,7 +225,7 @@ export function addCenter(m: Float32Array, v: Float32Array): Float32Array {
  * @param m
  * @param v
  */
-export function translate(m: Float32Array, v: Float32Array | XYZ): Float32Array {
+export function translate(m: Float32Array, v: Float32Array | Point3D): Float32Array {
   const x = v[0];
   const y = v[1];
   const z = v[2];
@@ -242,7 +242,7 @@ export function translate(m: Float32Array, v: Float32Array | XYZ): Float32Array 
  * @param m
  * @param v
  */
-export function scale(m: Float32Array, v: Float32Array | XYZ): Float32Array {
+export function scale(m: Float32Array, v: Float32Array | Point3D): Float32Array {
   const x = v[0];
   const y = v[1];
   const z = v[2];
@@ -267,7 +267,7 @@ export function scale(m: Float32Array, v: Float32Array | XYZ): Float32Array {
  * @param m
  * @param rad
  */
-export function rotate(m: Float32Array, rad: XYZ): Float32Array {
+export function rotate(m: Float32Array, rad: Point3D): Float32Array {
   rotateX(m, rad[0]);
   rotateY(m, rad[1]);
   rotateZ(m, rad[2]);
@@ -363,7 +363,7 @@ export function rotateZ(m: Float32Array, rad: number): Float32Array {
  * @param m
  * @param v
  */
-export function multiplyVector(m: Float32Array, v: XYZ): number[] {
+export function multiplyVector(m: Float32Array, v: Point3D): number[] {
   const out: number[] = [];
 
   out.push(m[0] * v[0] + m[4] * v[1] + m[8] * v[2] + m[12]);
@@ -494,7 +494,7 @@ export function invert(matrix: Float32Array): null | Float32Array {
  * @param matrix
  * @param vector
  */
-export function project(matrix: Float32Array, vector: XYZ): XYZ {
+export function project(matrix: Float32Array, vector: Point3D): Point3D {
   const mul = multiplyVector(matrix, vector);
 
   return [mul[0] / mul[3], mul[1] / mul[3], mul[2] / mul[3]];

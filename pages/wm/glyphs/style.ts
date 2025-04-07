@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 'style/style.spec'
+import type { StyleDefinition } from 'style/style.spec';
 
 const style: StyleDefinition = {
   version: 1,
@@ -7,23 +7,23 @@ const style: StyleDefinition = {
   view: {
     lon: -40,
     lat: 37.778443127730476,
-    zoom: 1.5
+    zoom: 1.5,
   },
   minzoom: -0.5,
   maxzoom: 5,
   sources: {
     land: '/geojson/land.geojson',
-    ports: '/geojson/ports.geojson'
+    ports: '/geojson/ports.geojson',
   },
   fonts: {
-    robotoMedium: '/api/glyphs-v2/RobotoMedium'
+    robotoMedium: '/api/glyphs-v2/RobotoMedium',
   },
   layers: [
     {
       name: 'water-fill',
       source: 'land',
       type: 'fill',
-      color: '#b4c1c6'
+      color: '#b4c1c6',
     },
     {
       name: 'poi-labels',
@@ -41,9 +41,9 @@ const style: StyleDefinition = {
       textStrokeWidth: 0.5,
       textWordWrap: 8,
       overdraw: false,
-      viewCollisions: true
-    }
-  ]
-}
+      viewCollisions: true,
+    },
+  ],
+};
 
-export default style
+export default style;

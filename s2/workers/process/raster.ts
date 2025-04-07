@@ -1,8 +1,9 @@
 // import { isSafari } util/polyfill'
-import { colorFunc } from './vectorWorker'
-import parseFeatureFunction from 'style/parseFeatureFunction'
+import { colorFunc } from './vectorWorker';
+import parseFeatureFunction from 'style/parseFeatureFunction';
 
-import type { HillshadeData, RasterData, RasterDataGuide, SensorData, TileRequest } from '../worker.spec'
+import type { CodeDesign } from './vectorWorker';
+import type { RasterWorker as RasterWorkerSpec } from './process.spec';
 import type {
   BuildCodeFunctionZoom,
   ColorArray,
@@ -13,47 +14,51 @@ import type {
   RasterDefinition,
   RasterWorkerLayer,
   SensorDefinition,
-  SensorWorkerLayer
-} from 'style/style.spec'
+  SensorWorkerLayer,
+} from 'style/style.spec';
 import type {
-  RasterWorker as RasterWorkerSpec
-} from './process.spec'
-import type { CodeDesign } from './vectorWorker'
+  HillshadeData,
+  RasterData,
+  RasterDataGuide,
+  SensorData,
+  TileRequest,
+} from '../worker.spec';
 
+/**
+ *
+ */
 export default class RasterWorker implements RasterWorkerSpec {
-  gpuType: GPUType
-  constructor (gpuType: GPUType) {
-    this.gpuType = gpuType
+  gpuType: GPUType;
+  /**
+   * @param gpuType
+   */
+  constructor(gpuType: GPUType) {
+    this.gpuType = gpuType;
   }
 
-  setupLayer (
-    layerDefinition: SensorDefinition | RasterDefinition | HillshadeDefinition
+  /**
+   * @param layerDefinition
+   */
+  setupLayer(
+    layerDefinition: SensorDefinition | RasterDefinition | HillshadeDefinition,
   ): RasterWorkerLayer | SensorWorkerLayer | HillshadeWorkerLayer {
-    const {
-      type, name, layerIndex, source,
-      layer, minzoom, maxzoom, opacity
-    } = layerDefinition
+    const { type, name, layerIndex, source, layer, minzoom, maxzoom, opacity } = layerDefinition;
 
     // build feature code design
     // opacity->saturation->contrast
-    const design: CodeDesign = [
-      [opacity]
-    ]
+    const design: CodeDesign = [[opacity]];
     if (type === 'raster') {
-      const { saturation, contrast } = layerDefinition
-      design.push(
-        [saturation],
-        [contrast]
-      )
+      const { saturation, contrast } = layerDefinition;
+      design.push([saturation], [contrast]);
     } else if (type === 'hillshade') {
-      const { shadowColor, accentColor, highlightColor, azimuth, altitude, lch } = layerDefinition
+      const { shadowColor, accentColor, highlightColor, azimuth, altitude, lch } = layerDefinition;
       design.push(
         [shadowColor, colorFunc(lch)],
         [accentColor, colorFunc(lch)],
         [highlightColor, colorFunc(lch)],
         [azimuth],
-        [altitude]
-      )
+        [altitude],
+      );
     }
 
     return {
@@ -64,56 +69,66 @@ export default class RasterWorker implements RasterWorkerSpec {
       layer,
       minzoom,
       maxzoom,
-      getCode: this.buildCode(design)
-    }
+      getCode: this.buildCode(design),
+    };
   }
 
-  buildCode (design: CodeDesign<number>): BuildCodeFunctionZoom {
-    const { gpuType } = this
+  /**
+   * @param design
+   */
+  buildCode(design: CodeDesign<number>): BuildCodeFunctionZoom {
+    const { gpuType } = this;
 
-    const featureFunctions: Array<LayerWorkerFunction<number | ColorArray>> = []
+    const featureFunctions: Array<LayerWorkerFunction<number | ColorArray>> = [];
     for (const [input, cb] of design) {
-      featureFunctions.push(parseFeatureFunction<number, ColorArray>(input, cb))
+      featureFunctions.push(parseFeatureFunction<number, ColorArray>(input, cb));
     }
 
     return (zoom: number) => {
       // prep codes
-      const code: number[] = []
-      const properties = {}
-      const webgl1Code: number[] = featureFunctions.map(func => func(code, properties, zoom)).flat()
+      const code: number[] = [];
+      const properties = {};
+      const webgl1Code: number[] = featureFunctions
+        .map((func) => func(code, properties, zoom))
+        .flat();
 
-      return gpuType === 1 ? webgl1Code : code
-    }
+      return gpuType === 1 ? webgl1Code : code;
+    };
   }
 
-  async buildTile (
+  /**
+   * @param mapID
+   * @param sourceName
+   * @param layers
+   * @param tile
+   * @param data
+   * @param size
+   */
+  async buildTile(
     mapID: string,
     sourceName: string,
     layers: Array<RasterWorkerLayer | SensorWorkerLayer | HillshadeWorkerLayer>,
     tile: TileRequest,
     data: ArrayBuffer,
-    size: number
+    size: number,
   ): Promise<void> {
     // prep variables
-    const { zoom, id, time } = tile
+    const { zoom, id, time } = tile;
     // prebuild feature code if webgl1
-    const rasterFeatures: RasterDataGuide[] = []
-    const sensorFeatures: RasterDataGuide[] = []
-    const HillshadeFeatures: RasterDataGuide[] = []
+    const rasterFeatures: RasterDataGuide[] = [];
+    const sensorFeatures: RasterDataGuide[] = [];
+    const HillshadeFeatures: RasterDataGuide[] = [];
     for (const { type, getCode, layerIndex } of layers) {
-      const guide = type === 'raster'
-        ? rasterFeatures
-        : (type === 'sensor')
-            ? sensorFeatures
-            : HillshadeFeatures
+      const guide =
+        type === 'raster' ? rasterFeatures : type === 'sensor' ? sensorFeatures : HillshadeFeatures;
       guide.push({
         code: getCode(zoom),
-        layerIndex
-      })
+        layerIndex,
+      });
     }
 
     // https://bugzilla.mozilla.org/show_bug.cgi?id=1335594 - saved for posterity
-    const image = await createImageBitmap(new Blob([data]), { premultiplyAlpha: 'none' })
+    const image = await createImageBitmap(new Blob([data]), { premultiplyAlpha: 'none' });
 
     // ship the raster data.
     if (rasterFeatures.length > 0) {
@@ -124,10 +139,10 @@ export default class RasterWorker implements RasterWorkerSpec {
         size,
         sourceName,
         featureGuides: rasterFeatures,
-        image
-      }
+        image,
+      };
 
-      postMessage(rasterData, [image])
+      postMessage(rasterData, [image]);
     }
     if (sensorFeatures.length > 0 && time !== undefined) {
       const sensorData: SensorData = {
@@ -138,10 +153,10 @@ export default class RasterWorker implements RasterWorkerSpec {
         sourceName,
         featureGuides: sensorFeatures,
         image,
-        time
-      }
+        time,
+      };
 
-      postMessage(sensorData, [image])
+      postMessage(sensorData, [image]);
     }
     if (HillshadeFeatures.length > 0) {
       const hillshadeData: HillshadeData = {
@@ -151,13 +166,18 @@ export default class RasterWorker implements RasterWorkerSpec {
         size: image.width,
         sourceName,
         featureGuides: HillshadeFeatures,
-        image
-      }
+        image,
+      };
 
-      postMessage(hillshadeData, [image])
+      postMessage(hillshadeData, [image]);
     }
   }
 
   // TODO: flush images
-  async flush (_mapID: string, _tile: TileRequest, _sourceName: string): Promise<void> {}
+  /**
+   * @param _mapID
+   * @param _tile
+   * @param _sourceName
+   */
+  async flush(_mapID: string, _tile: TileRequest, _sourceName: string): Promise<void> {}
 }

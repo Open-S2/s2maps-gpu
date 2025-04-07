@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 'style/style.spec'
+import type { StyleDefinition } from 'style/style.spec';
 
 const style: StyleDefinition = {
   version: 1,
@@ -7,7 +7,7 @@ const style: StyleDefinition = {
   view: {
     lon: 0,
     lat: 0,
-    zoom: -0.5
+    zoom: -0.5,
   },
   minzoom: 0,
   maxzoom: 6.9,
@@ -19,9 +19,9 @@ const style: StyleDefinition = {
       type: 'fill',
       source: 'mask',
       opaque: true,
-      color: '#b4c1c6'
-    }
-  ]
-}
+      color: '#b4c1c6',
+    },
+  ],
+};
 
-export default style
+export default style;

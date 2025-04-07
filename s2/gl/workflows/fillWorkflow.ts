@@ -1,25 +1,19 @@
-import encodeLayerAttribute from 'style/encodeLayerAttribute';
 import { colorFunc } from 'workers/process/vectorWorker';
+import encodeLayerAttribute from 'style/encodeLayerAttribute';
 import parseFeatureFunction from 'style/parseFeatureFunction';
 import Workflow, { Feature } from './workflow';
 
 // WEBGL1
-import vert1 from '../shaders/fill1.vertex.glsl';
 import frag1 from '../shaders/fill1.fragment.glsl';
+import vert1 from '../shaders/fill1.vertex.glsl';
 // WEBGL2
-import vert2 from '../shaders/fill2.vertex.glsl';
 import frag2 from '../shaders/fill2.fragment.glsl';
+import vert2 from '../shaders/fill2.vertex.glsl';
 
 import type Context from '../context/context';
-import type {
-  FillFeature as FillFeatureSpec,
-  FillSource,
-  FillWorkflow as FillWorkflowSpec,
-  FillWorkflowUniforms,
-  TileMaskSource,
-} from './workflow.spec';
 import type { FillData } from 'workers/worker.spec';
 import type { TileGL as Tile } from 'source/tile.spec';
+import type { VectorPoint } from 'gis-tools';
 import type {
   ColorArray,
   FillDefinition,
@@ -27,7 +21,13 @@ import type {
   FillWorkflowLayerGuide,
   LayerDefinitionBase,
 } from 'style/style.spec';
-import type { Point } from 'geometry';
+import type {
+  FillFeature as FillFeatureSpec,
+  FillSource,
+  FillWorkflow as FillWorkflowSpec,
+  FillWorkflowUniforms,
+  TileMaskSource,
+} from './workflow.spec';
 
 /**
  *
@@ -52,19 +52,19 @@ export class FillFeature extends Feature implements FillFeatureSpec {
    * @param parent
    */
   constructor(
-    public workflow: FillWorkflowSpec,
-    public layerGuide: FillWorkflowLayerGuide,
+    public override workflow: FillWorkflowSpec,
+    public override layerGuide: FillWorkflowLayerGuide,
     public maskLayer: boolean,
     public source: FillSource | TileMaskSource,
     public mode: number,
     public count: number,
     public offset: number,
-    public patternXY: Point,
+    public patternXY: VectorPoint,
     public patternWH: [w: number, h: number],
     public patternMovement: number,
-    public featureCode: number[],
-    public tile: Tile,
-    public parent?: Tile,
+    public override featureCode: number[],
+    public override tile: Tile,
+    public override parent?: Tile,
   ) {
     super(workflow, tile, layerGuide, featureCode, parent);
   }
@@ -72,7 +72,7 @@ export class FillFeature extends Feature implements FillFeatureSpec {
   /**
    * @param interactive
    */
-  draw(interactive = false): void {
+  override draw(interactive = false): void {
     super.draw(interactive);
     const { maskLayer, tile, parent, workflow } = this;
     const { mask } = parent ?? tile;
@@ -160,17 +160,9 @@ export default class FillWorkflow extends Workflow implements FillWorkflowSpec {
     const { type } = this;
     const { source, layerIndex, lch, visible } = layerBase;
     // PRE) get layer base
-    let {
-      color,
-      opacity,
-      invert,
-      opaque,
-      pattern,
-      patternFamily,
-      patternMovement,
-      interactive,
-      cursor,
-    } = layer;
+    const { pattern } = layer;
+    let { color, opacity, invert, opaque, patternFamily, patternMovement, interactive, cursor } =
+      layer;
     invert = invert ?? false;
     opaque = opaque ?? false;
     interactive = interactive ?? false;

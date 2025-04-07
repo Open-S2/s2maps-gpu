@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 'style/style.spec'
+import type { StyleDefinition } from 'style/style.spec';
 
 const style: StyleDefinition = {
   version: 1,
@@ -7,14 +7,14 @@ const style: StyleDefinition = {
   view: {
     lon: 0,
     lat: 0,
-    zoom: 0.5
+    zoom: 0.5,
   },
   minzoom: 0.5,
   maxzoom: 6.9,
   zoomOffset: 0.5,
   sources: {
     land: '/geojson/land.geojson',
-    terrain: '/tiles/wm/terrarium2x'
+    terrain: '/tiles/wm/terrarium2x',
   },
   layers: [
     {
@@ -22,7 +22,7 @@ const style: StyleDefinition = {
       type: 'fill',
       source: 'mask',
       opaque: true,
-      color: '#cbe5be'
+      color: '#cbe5be',
     },
     {
       name: 'water-fill',
@@ -30,7 +30,7 @@ const style: StyleDefinition = {
       type: 'fill',
       invert: true,
       opaque: false,
-      color: '#b4c1c6'
+      color: '#b4c1c6',
     },
     {
       name: 'terrain-hillshade',
@@ -48,10 +48,10 @@ const style: StyleDefinition = {
         rMultiplier: 256,
         gMultiplier: 1,
         bMultiplier: 1 / 256,
-        aMultiplier: 0
-      }
-    }
-  ]
-}
+        aMultiplier: 0,
+      },
+    },
+  ],
+};
 
-export default style
+export default style;
