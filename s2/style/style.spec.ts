@@ -1,62 +1,113 @@
-import type { BBox, FlatPoint, JSONFeatures, Properties } from 'geometry'
-import type { Filter, FilterFunction } from 'style/parseFilter'
-import type { EaseType } from './easingFunctions'
-import type { JSONVTOptions } from 'workers/source/jsonVT'
-import type { ClusterOptions } from 'workers/source/pointCluster'
-import type { ColorArray } from './color'
-import type { View } from 'ui/camera/projector'
+import type { ClusterOptions } from 'workers/source/pointCluster';
+import type { ColorArray } from './color';
+import type { EaseType } from './easingFunctions';
+import type { JSONVTOptions } from 'workers/source/jsonVT';
+import type { View } from 'ui/camera/projector';
+import type { BBox, FlatPoint, JSONFeatures, Properties } from 'geometry';
+import type { Filter, FilterFunction } from 'style/parseFilter';
 
-export type { JSONVTOptions } from 'workers/source/jsonVT'
-export type { ClusterOptions } from 'workers/source/pointCluster'
-export type { BBox, JSONFeatures, Point, Properties } from 'geometry'
-export type { Filter, FilterFunction } from './parseFilter'
-export type { EaseType } from './easingFunctions'
-export type { MapOptions } from 'ui/s2mapUI'
-export type { ColorArray } from './color'
-export type { View } from 'ui/camera/projector'
+export type { JSONVTOptions } from 'workers/source/jsonVT';
+export type { ClusterOptions } from 'workers/source/pointCluster';
+export type { BBox, JSONFeatures, Point, Properties } from 'geometry';
+export type { Filter, FilterFunction } from './parseFilter';
+export type { EaseType } from './easingFunctions';
+export type { MapOptions } from 'ui/s2mapUI';
+export type { ColorArray } from './color';
+export type { View } from 'ui/camera/projector';
 
-export type ImageFormats = 'raw' | 'png' | 'jpg' | 'jpeg' | 'jpe' | 'webp' | 'avif' | 'gif' | 'svg' | 'bmp' | 'tiff' | 'ico' | 'cur'
+/**
+ *
+ */
+export type ImageFormats =
+  | 'raw'
+  | 'png'
+  | 'jpg'
+  | 'jpeg'
+  | 'jpe'
+  | 'webp'
+  | 'avif'
+  | 'gif'
+  | 'svg'
+  | 'bmp'
+  | 'tiff'
+  | 'ico'
+  | 'cur';
 
-export type Format = 'zxy' | 'tzxy' | 'fzxy' | 'tfzxy'
+/**
+ *
+ */
+export type Format = 'zxy' | 'tzxy' | 'fzxy' | 'tfzxy';
 
 // WM => Web Mercator
 // S2 => Sphere
-export type Projection = 'WM' | 'S2'
+/**
+ *
+ */
+export type Projection = 'WM' | 'S2';
 
-export type LayerMetaData = Record<string, { // layer
-  minzoom: number
-  maxzoom: number
-  fields: Record<string, Array<string | number | boolean>> // max fields size of 50
-}>
+/**
+ *
+ */
+export type LayerMetaData = Record<
+  string,
+  {
+    // layer
+    minzoom: number;
+    maxzoom: number;
+    fields: Record<string, Array<string | number | boolean>>; // max fields size of 50
+  }
+>;
 
-export type Attributions = Record<string, string>
-export type FaceBounds = Record<number, Record<number, BBox>>
-export type SourceType = 'vector' | 'json' | 'raster' | 'raster-dem' | 'sensor' | 'overlay' | 'markers'
+/**
+ *
+ */
+export type Attributions = Record<string, string>;
+/**
+ *
+ */
+export type FaceBounds = Record<number, Record<number, BBox>>;
+/**
+ *
+ */
+export type SourceType =
+  | 'vector'
+  | 'json'
+  | 'raster'
+  | 'raster-dem'
+  | 'sensor'
+  | 'overlay'
+  | 'markers';
+/**
+ *
+ */
 export interface VectorLayer {
-  id: string
-  description: string
-  minzoom?: number
-  maxzoom?: number
+  id: string;
+  description: string;
+  minzoom?: number;
+  maxzoom?: number;
 }
+/**
+ *
+ */
 export interface SourceMetadata extends JSONVTOptions, ClusterOptions {
-  path?: string
-  type: SourceType
+  path?: string;
+  type: SourceType;
   /** The file extension of the source. e.g. `pbf`, `png`, etc. */
-  extension?: 'geojson' | 'json' | 's2json' | 'pbf' | ImageFormats
+  extension?: 'geojson' | 'json' | 's2json' | 'pbf' | ImageFormats;
   /** The file extension of the source. e.g. `pbf`, `png`, etc. */
-  fileType?: 'geojson' | 'json' | 's2json' | 'pbf' | ImageFormats
+  fileType?: 'geojson' | 'json' | 's2json' | 'pbf' | ImageFormats;
   /** The encoding of the source. Helpful to let the server know when the source is compressed if said data is a large blob */
-  encoding?: 'gz' | 'br' | 'none'
+  encoding?: 'gz' | 'br' | 'none';
   /** Tile fetching bounds. Helpful to not make unecessary requests for tiles we know don't exist */
-  bounds?: [minX: number, minY: number, maxX: number, maxY: number]
+  bounds?: [minX: number, minY: number, maxX: number, maxY: number];
   /** The bounds of the source. Used to determine the bounds of an S2 source */
-  faceBounds?: FaceBounds
+  faceBounds?: FaceBounds;
   /** Useful to determine if its `time-series`, `S2`, or `WM` */
-  format?: Format | 'pbf'
+  format?: Format | 'pbf';
   /** Used by older tiling engines. Helps specify where the tile's [0,0] starts on the y-axis */
-  scheme?: 'xyz' | 'tms'
+  scheme?: 'xyz' | 'tms';
   /** The size of the tile in pixels if some form of raster data */
-  size?: number // required by raster type sources
+  size?: number; // required by raster type sources
   /**
    * The names and URLs of the data source
    *
@@ -67,72 +118,82 @@ export interface SourceMetadata extends JSONVTOptions, ClusterOptions {
    * }
    * ```
    */
-  attributions?: Attributions
+  attributions?: Attributions;
   /**
    * The time interval in milliseconds each frame is.
    * Used by sensor sources.
    */
-  interval?: number
+  interval?: number;
   /** Specify the lower zoom limit at which the data exists in */
-  minzoom?: number
+  minzoom?: number;
   /** Specify the upper zoom limit at which the data exists in */
-  maxzoom?: number
+  maxzoom?: number;
   /** Assuming S2 data, specify which faces the data exists in */
-  faces?: number[]
-  layers?: LayerMetaData
+  faces?: number[];
+  layers?: LayerMetaData;
   /**
    * Specify the name of the source in order to access it.
    * This is useful if you want to make requests without first having to request the metadata
    */
-  sourceName?: string
+  sourceName?: string;
   /** If you want to directly inject the geojson or s2json data */
-  data?: JSONFeatures
+  data?: JSONFeatures;
   /** If the data is filled with a huge collection of points, you can specify to cluster the data before displaying it. */
-  cluster?: boolean
+  cluster?: boolean;
   // TODO: No idea why I have to add this manually when extending JSONVTOptions and ClusterOptions
   // missing cluster properties
   /** cluster radius in pixels */
-  radius?: number
+  radius?: number;
   /** tile extent (radius is calculated relative to it) */
-  extent?: number
+  extent?: number;
   /** size of the KD-tree leaf node, effects performance */
-  nodeSize?: number
+  nodeSize?: number;
   // missing json-vt properties
   /** manually set the projection, otherwise it defaults to whatever the data type is */
-  projection?: Projection
+  projection?: Projection;
   /** tile buffer on each side in pixels */
-  indexMaxzoom?: number
+  indexMaxzoom?: number;
   /** max number of points per tile in the tile index */
-  indexMaxPoints?: number
+  indexMaxPoints?: number;
   /** simplification tolerance (higher means simpler) */
-  tolerance?: number
+  tolerance?: number;
   /** tile buffer on each side so lines and polygons don't get clipped */
-  buffer?: number
+  buffer?: number;
   /** Other build engines place layer data inside a json string */
-  json?: string
+  json?: string;
   /** A prebuilt tiling engine will have created this already */
-  vector_layers?: VectorLayer[]
+  vector_layers?: VectorLayer[];
 }
-export type Source = string | SourceMetadata
-export type Sources = Record<string, Source> // address to source or source itself
+/**
+ *
+ */
+export type Source = string | SourceMetadata;
+/**
+ *
+ */
+export type Sources = Record<string, Source>; // address to source or source itself
 
 /** GLYPHS, FONTS, SPRITES, AND ICONS */
 
 /** { fontName: url, iconName: url } */
-export type Glyphs = Record<string, string>
+export type Glyphs = Record<string, string>;
 /** { fontName: url } */
-export interface Fonts extends Glyphs {}
+export type Fonts = Glyphs;
 /**  { iconName: url } */
-export interface Icons extends Glyphs {}
+export type Icons = Glyphs;
 /**
  * { spriteName: { path: url, fileType: 'png' | 'webp' | 'avif' | ... } }
-*/
-export type Sprites = Record<string, string | {
-  /** The URL path to the sprite */
-  path: string
-  /** The file type of the sprite. e.g. `png`, `jpg`, `webp`, etc. */
-  fileType?: ImageFormats
-}>
+ */
+export type Sprites = Record<
+  string,
+  | string
+  | {
+      /** The URL path to the sprite */
+      path: string;
+      /** The file type of the sprite. e.g. `png`, `jpg`, `webp`, etc. */
+      fileType?: ImageFormats;
+    }
+>;
 
 // LAYER MANAGMENT
 // User defined layers are stored in the style.layers array.
@@ -151,12 +212,21 @@ export type Sprites = Record<string, string | {
 // Definition[paint + layout] -> parseFeatureFunction (updates all paint + layout properties to LayerFunction)
 
 /** Matches the `CSSStyleDeclaration['cursor']` property */
-export type Cursor = CSSStyleDeclaration['cursor']
+export type Cursor = CSSStyleDeclaration['cursor'];
 
-export type LayerWorkerFunction<U> = (code: number[], properties: Properties, zoom: number) => U
+/**
+ *
+ */
+export type LayerWorkerFunction<U> = (code: number[], properties: Properties, zoom: number) => U;
 
-export type BuildCodeFunction = (zoom: number, properties: Properties) => [number[], number[]]
-export type BuildCodeFunctionZoom = (zoom: number) => number[]
+/**
+ *
+ */
+export type BuildCodeFunction = (zoom: number, properties: Properties) => [number[], number[]];
+/**
+ *
+ */
+export type BuildCodeFunctionZoom = (zoom: number) => number[];
 
 /**
  * One of `"==" | "!=" | ">" | ">=" | "<" | "<=" | "in" | "!in" | "has" | "!has"`
@@ -177,8 +247,11 @@ export type BuildCodeFunctionZoom = (zoom: number) => number[]
  * ```
  * this would be used to filter features where `feature.properties.type` is an array that has the key "ocean"
  */
-export type Comparator = '==' | '!=' | '>' | '>=' | '<' | '<=' | 'in' | '!in' | 'has' | '!has'
+export type Comparator = '==' | '!=' | '>' | '>=' | '<' | '<=' | 'in' | '!in' | 'has' | '!has';
 
+/**
+ *
+ */
 export interface NestedKey {
   /**
    * nested conditions are used to dive into nested properties
@@ -188,14 +261,17 @@ export interface NestedKey {
    * ```
    * this would be used to filter features where `feature.properties.class.type === 'ocean'`
    */
-  nestedKey?: string
+  nestedKey?: string;
   /** If the key is `class` for example, this would be used to filter feature's values where `feature.properties.class === 'ocean'` */
-  key: string | NestedKey
+  key: string | NestedKey;
 }
 
+/**
+ *
+ */
 export interface InputValue<T extends NotNullOrObject> {
   /** If the property search for a key turns up no value, the fallback is used. */
-  fallback: T
+  fallback: T;
   /**
    * Access value in feature properties by either its key or a nested key.
    *
@@ -208,24 +284,30 @@ export interface InputValue<T extends NotNullOrObject> {
    * ```
    * this would be used to filter features where `feature.properties.class.type === 'ocean'`
    */
-  key: string | NestedKey
+  key: string | NestedKey;
 }
 
+/**
+ *
+ */
 export interface DataCondition<T extends NotNullOrObject> {
   /**
    * conditions is an array of `{ filter: Filter, input: T | Property<T> }`
    * If the filter passes, the input is used.
-  */
+   */
   conditions: Array<{
-    filter: Filter
-    input: T | Property<T>
-  }>
+    filter: Filter;
+    input: T | Property<T>;
+  }>;
   /** If the conditional search fails, the fallback is used. */
-  fallback: T | Property<T>
+  fallback: T | Property<T>;
 }
 
 // export type DataRange<T extends NotNullOrObject> = DataRangeStep<T> | DataRangeEase<T>
 
+/**
+ *
+ */
 export interface DataRangeEase<T extends number | string> {
   /**
    * Access value in feature properties by either its key or a nested key.
@@ -239,11 +321,11 @@ export interface DataRangeEase<T extends number | string> {
    * ```
    * this would be used to filter features where `feature.properties.class.type === 'ocean'`
    */
-  key: string | NestedKey // the objects[key] -> value used as position on range
+  key: string | NestedKey; // the objects[key] -> value used as position on range
   /**
    * `lin` | `expo` | `quad` | `cubic` | `step` [default: `lin`]
    */
-  ease?: EaseType
+  ease?: EaseType;
   /**
    * Used by `expo`, `quad`, or `cubic` ease functions
    *
@@ -253,7 +335,7 @@ export interface DataRangeEase<T extends number | string> {
    * - `0` is the slowest ease early on
    * - `2` is the fastest ease
    */
-  base?: number // 0 -> 2
+  base?: number; // 0 -> 2
   /**
    * Set the range stops and the input values to apply at those stops.
    *
@@ -267,11 +349,14 @@ export interface DataRangeEase<T extends number | string> {
    * ```
    */
   ranges: Array<{
-    stop: number
-    input: T | Property<T>
-  }>
+    stop: number;
+    input: T | Property<T>;
+  }>;
 }
 
+/**
+ *
+ */
 export interface DataRangeStep<T extends NotNullOrObject> {
   /**
    * Access value in feature properties by either its key or a nested key.
@@ -285,10 +370,10 @@ export interface DataRangeStep<T extends NotNullOrObject> {
    * ```
    * this would be used to filter features where `feature.properties.class.type === 'ocean'`
    */
-  key: string | NestedKey // the objects[key] -> value used as position on range
-  ease?: 'step'
+  key: string | NestedKey; // the objects[key] -> value used as position on range
+  ease?: 'step';
   /** Unused by "step" ease functions. Kept to avoid errors in Typescript */
-  base?: number // 0 -> 2
+  base?: number; // 0 -> 2
   /**
    * Set the range stops and the input values to apply at those stops.
    *
@@ -302,18 +387,21 @@ export interface DataRangeStep<T extends NotNullOrObject> {
    * ```
    */
   ranges: Array<{
-    stop: number
-    input: T | Property<T>
-  }>
+    stop: number;
+    input: T | Property<T>;
+  }>;
 }
 
+/**
+ *
+ */
 export interface InputRangeEase<T extends number | string> {
   /** `zoom` | `lon` | `lat` | `angle` | `pitch` */
-  type: 'zoom' | 'lon' | 'lat' | 'angle' | 'pitch'
+  type: 'zoom' | 'lon' | 'lat' | 'angle' | 'pitch';
   /**
    * `lin` | `expo` | `quad` | `cubic` | `step` [default: `lin`]
    */
-  ease?: EaseType
+  ease?: EaseType;
   /**
    * Used by `expo`, `quad`, or `cubic` ease functions
    *
@@ -323,7 +411,7 @@ export interface InputRangeEase<T extends number | string> {
    * - `0` is the slowest ease early on
    * - `2` is the fastest ease
    */
-  base?: number // 0 -> 2
+  base?: number; // 0 -> 2
   /**
    * Set the range stops and the input values to apply at those stops.
    *
@@ -337,17 +425,20 @@ export interface InputRangeEase<T extends number | string> {
    * ```
    */
   ranges: Array<{
-    stop: number
-    input: T | Property<T>
-  }>
+    stop: number;
+    input: T | Property<T>;
+  }>;
 }
 
+/**
+ *
+ */
 export interface InputRangeStep<T extends NotNullOrObject> {
   /** "zoom" | "lon" | "lat" | "angle" | "pitch" */
-  type: 'zoom' | 'lon' | 'lat' | 'angle' | 'pitch'
-  ease: 'step'
+  type: 'zoom' | 'lon' | 'lat' | 'angle' | 'pitch';
+  ease: 'step';
   /** Unused by "step" ease functions. Kept to avoid errors in Typescript */
-  base?: number // 0 -> 2
+  base?: number; // 0 -> 2
   /**
    * Set the range stops and the input values to apply at those stops.
    *
@@ -361,22 +452,42 @@ export interface InputRangeStep<T extends NotNullOrObject> {
    * ```
    */
   ranges: Array<{
-    stop: number
-    input: T | Property<T>
-  }>
+    stop: number;
+    input: T | Property<T>;
+  }>;
 }
 
+/**
+ *
+ */
 export interface FeatureState<T extends NotNullOrObject> {
-  condition: 'default' /* (inactive) */ | 'active' | 'hover' | 'selected' | 'disabled'
-  key: string | NestedKey
-  value: T
-  input: T | Property<T>
+  condition: 'default' /* (inactive) */ | 'active' | 'hover' | 'selected' | 'disabled';
+  key: string | NestedKey;
+  value: T;
+  input: T | Property<T>;
 }
 
-export type NotNullOrObject = string | number | boolean | bigint | Array<string | number | boolean | bigint>
-export type ValueType<T> = T extends NotNullOrObject ? T : never
-export type NumberColor<T> = T extends (number | string) ? T : never
+/**
+ *
+ */
+export type NotNullOrObject =
+  | string
+  | number
+  | boolean
+  | bigint
+  | Array<string | number | boolean | bigint>;
+/**
+ *
+ */
+export type ValueType<T> = T extends NotNullOrObject ? T : never;
+/**
+ *
+ */
+export type NumberColor<T> = T extends number | string ? T : never;
 
+/**
+ *
+ */
 export interface Property<T extends NotNullOrObject> {
   /**
    * Input values directly access properties data from the feature.
@@ -441,7 +552,7 @@ export interface Property<T extends NotNullOrObject> {
    * }
    * ```
    */
-  inputValue?: InputValue<ValueType<T>>
+  inputValue?: InputValue<ValueType<T>>;
   /**
    * Data conditions are used to filter features based on what property values the feature has.
    * If the condition's filter passes, the input is used.
@@ -484,7 +595,7 @@ export interface Property<T extends NotNullOrObject> {
       }
    * ```
    */
-  dataCondition?: DataCondition<ValueType<T>>
+  dataCondition?: DataCondition<ValueType<T>>;
   /**
    * Data Range is used to group features based on a range of values and apply specific design attributes for those groups.
    * If the feature's value falls within the range, the fallback is used.
@@ -519,7 +630,7 @@ export interface Property<T extends NotNullOrObject> {
    * }
    * ```
    */
-  dataRange?: DataRangeEase<NumberColor<T>> | DataRangeStep<ValueType<T>>
+  dataRange?: DataRangeEase<NumberColor<T>> | DataRangeStep<ValueType<T>>;
   /**
    * Input Range is used to group features based on a range of values based upon a `type` provided and apply specific design attributes for those groups.
    * If the feature's value falls within the range, the fallback is used.
@@ -561,16 +672,19 @@ export interface Property<T extends NotNullOrObject> {
    * }
    * ```
    */
-  inputRange?: InputRangeEase<NumberColor<T>> | InputRangeStep<ValueType<T>>
+  inputRange?: InputRangeEase<NumberColor<T>> | InputRangeStep<ValueType<T>>;
   /** Feature State is still under construction and incomplete */
-  featureState?: FeatureState<ValueType<T>>
+  featureState?: FeatureState<ValueType<T>>;
   /**
    * Used in conjunction with one of the other types ("inputValue" | "dataCondition" | "dataRange" | "inputRange" | "featureState").
    * You will never directly call this at the top level but as an internal fallback for the other types.
    */
-  fallback?: T | Property<T>
+  fallback?: T | Property<T>;
 }
 
+/**
+ *
+ */
 export interface PropertyOnlyStep<T extends NotNullOrObject> {
   /**
    * Input values directly access properties data from the feature.
@@ -612,7 +726,7 @@ export interface PropertyOnlyStep<T extends NotNullOrObject> {
    * { "color": { "inputValue": { "nestedKey": "a", "key": { "nestedKey": "b", "key": "c" }, "fallback": "blue" } } }
    * ```
    */
-  inputValue?: InputValue<ValueType<T>>
+  inputValue?: InputValue<ValueType<T>>;
   /**
    * Data conditions are used to filter features based on what property values the feature has.
    * If the condition's filter passes, the input is used.
@@ -655,7 +769,7 @@ export interface PropertyOnlyStep<T extends NotNullOrObject> {
       }
    * ```
    */
-  dataCondition?: DataCondition<ValueType<T>>
+  dataCondition?: DataCondition<ValueType<T>>;
   /**
    * Data Range is used to group features based on a range of values and apply specific design attributes for those groups.
    * If the feature's value falls within the range, the fallback is used.
@@ -690,7 +804,7 @@ export interface PropertyOnlyStep<T extends NotNullOrObject> {
    * }
    * ```
    */
-  dataRange?: DataRangeStep<ValueType<T>>
+  dataRange?: DataRangeStep<ValueType<T>>;
   /**
    * Input Range is used to group features based on a range of values based upon a `type` provided and apply specific design attributes for those groups.
    * If the feature's value falls within the range, the fallback is used.
@@ -732,32 +846,58 @@ export interface PropertyOnlyStep<T extends NotNullOrObject> {
    * }
    * ```
    */
-  inputRange?: InputRangeStep<ValueType<T>>
+  inputRange?: InputRangeStep<ValueType<T>>;
   /** Feature State is still under construction and incomplete */
-  featureState?: FeatureState<ValueType<T>>
+  featureState?: FeatureState<ValueType<T>>;
   /**
    * Used in conjunction with one of the other types ("inputValue" | "dataCondition" | "dataRange" | "inputRange" | "featureState").
    * You will never directly call this at the top level but as an internal fallback for the other types.
    */
-  fallback?: T | Property<T>
+  fallback?: T | Property<T>;
 }
 
-export type LayerType = 'fill' | 'glyph' | 'heatmap' | 'line' | 'point' | 'raster' | 'hillshade' | 'sensor' | 'shade'
-export type LayerDataType = 'fill' | 'glyph' | 'heatmap' | 'line' | 'point' | 'raster' | 'hillshade' | 'sensor'
+/**
+ *
+ */
+export type LayerType =
+  | 'fill'
+  | 'glyph'
+  | 'heatmap'
+  | 'line'
+  | 'point'
+  | 'raster'
+  | 'hillshade'
+  | 'sensor'
+  | 'shade';
+/**
+ *
+ */
+export type LayerDataType =
+  | 'fill'
+  | 'glyph'
+  | 'heatmap'
+  | 'line'
+  | 'point'
+  | 'raster'
+  | 'hillshade'
+  | 'sensor';
 
 // Found in style.json
+/**
+ *
+ */
 export interface LayerStyleBase<M = unknown> {
-  type?: LayerType
+  type?: LayerType;
   /** The name of the layer - useful for sorting a layer on insert or for removal */
-  name?: string
+  name?: string;
   /** The source used to generate the layer */
-  source?: string
+  source?: string;
   /** The source's layer. Default for JSON data */
-  layer?: string
+  layer?: string;
   /** The minimum zoom level at which the layer will be visible */
-  minzoom?: number
+  minzoom?: number;
   /** The maximum zoom level at which the layer will be visible */
-  maxzoom?: number
+  maxzoom?: number;
   /**
    * A filter function to filter out features from the source layer.
    *
@@ -790,65 +930,83 @@ export interface LayerStyleBase<M = unknown> {
    * }
    * ```
    */
-  filter?: Filter
+  filter?: Filter;
   /** Use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one */
-  lch?: boolean
+  lch?: boolean;
   /** Whether the layer is visible or not */
-  visible?: boolean
+  visible?: boolean;
   /** Additional metadata. Used by style generators. */
-  metadata?: M
+  metadata?: M;
 }
 // refines the style.json to ensure all variables exist that need to
+/**
+ *
+ */
 export interface LayerDefinitionBase {
-  type: LayerType
-  name: string
-  layerIndex: number
-  source: string
-  layer: string
-  minzoom: number
-  maxzoom: number
-  lch: boolean
-  visible: boolean
-  filter?: Filter
-  interactive?: boolean
-  opaque?: boolean
+  type: LayerType;
+  name: string;
+  layerIndex: number;
+  source: string;
+  layer: string;
+  minzoom: number;
+  maxzoom: number;
+  lch: boolean;
+  visible: boolean;
+  filter?: Filter;
+  interactive?: boolean;
+  opaque?: boolean;
 }
 // uses definition to create a guide for the workflow (program/pipeline)
+/**
+ *
+ */
 export interface LayerWorkflowGuideBase {
-  sourceName: string
-  layerIndex: number
-  layerCode: number[]
-  lch: boolean
-  visible: boolean
-  interactive: boolean
-  opaque: boolean
+  sourceName: string;
+  layerIndex: number;
+  layerCode: number[];
+  lch: boolean;
+  visible: boolean;
+  interactive: boolean;
+  opaque: boolean;
 }
 // worker takes the definition and creates a layer to prep input data for workflow (program/pipeline)
+/**
+ *
+ */
 export interface LayerWorkerBase {
-  type: LayerType
-  name: string
-  layerIndex: number
-  source: string
-  layer: string
-  minzoom: number
-  maxzoom: number
-  filter: FilterFunction
+  type: LayerType;
+  name: string;
+  layerIndex: number;
+  source: string;
+  layer: string;
+  minzoom: number;
+  maxzoom: number;
+  filter: FilterFunction;
 }
 
+/**
+ *
+ */
 export interface LayerWorkerBaseRaster {
-  type: LayerType
-  name: string
-  layerIndex: number
-  source: string
-  layer: string
-  minzoom: number
-  maxzoom: number
+  type: LayerType;
+  name: string;
+  layerIndex: number;
+  source: string;
+  layer: string;
+  minzoom: number;
+  maxzoom: number;
 }
 
-export interface UnkownLayerStyle extends LayerStyleBase {}
+/**
+ *
+ */
+export type UnkownLayerStyle = LayerStyleBase;
 
 // FILL //
 
+/**
+ *
+ */
 export interface FillStyle extends LayerStyleBase {
   /**
    * Fill type
@@ -879,7 +1037,7 @@ export interface FillStyle extends LayerStyleBase {
    * - `cursor` - the cursor to use when hovering over the fill
    * - `opaque` - if true, the fill will be drawn opaque and not allow transparency. Used for performance gains.
    */
-  type: 'fill'
+  type: 'fill';
   // paint
   /**
    * A PAINT `Property`.
@@ -905,7 +1063,7 @@ export interface FillStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  color?: string | Property<string>
+  color?: string | Property<string>;
   /**
    * A PAINT `Property`. Default value of `1`
    *
@@ -929,7 +1087,7 @@ export interface FillStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  opacity?: number | Property<number>
+  opacity?: number | Property<number>;
   // layout
   /**
    * A LAYOUT `PropertyOnlyStep`.
@@ -959,7 +1117,7 @@ export interface FillStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  pattern?: string | PropertyOnlyStep<string>
+  pattern?: string | PropertyOnlyStep<string>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
    * @defaultValue `false`
@@ -978,7 +1136,7 @@ export interface FillStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  patternMovement?: boolean | PropertyOnlyStep<boolean>
+  patternMovement?: boolean | PropertyOnlyStep<boolean>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
    * @defaultValue `"__images"`
@@ -1010,62 +1168,93 @@ export interface FillStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  patternFamily?: string | PropertyOnlyStep<string>
+  patternFamily?: string | PropertyOnlyStep<string>;
   // properties
   /** If true, invert where the fill is drawn to on the map. Defaults to `false` */
-  invert?: boolean
+  invert?: boolean;
   /** If true, when hovering over the fill, the property data will be sent to the UI via an Event. Defaults to `false` */
-  interactive?: boolean
+  interactive?: boolean;
   /** The cursor to use when hovering over the fill. Defaults to `default` */
-  cursor?: Cursor
+  cursor?: Cursor;
   /** If true, the fill will be drawn opaque and not allow transparency. Used for performance gains. Defaults to `false` */
-  opaque?: boolean
+  opaque?: boolean;
 }
+/**
+ *
+ */
 export interface FillDefinition extends LayerDefinitionBase {
-  type: 'fill'
+  type: 'fill';
   // paint
-  color: string | Property<string>
-  opacity: number | Property<number>
+  color: string | Property<string>;
+  opacity: number | Property<number>;
   // layout
-  pattern?: string | PropertyOnlyStep<string>
-  patternMovement: boolean | PropertyOnlyStep<boolean>
-  patternFamily: string | PropertyOnlyStep<string>
+  pattern?: string | PropertyOnlyStep<string>;
+  patternMovement: boolean | PropertyOnlyStep<boolean>;
+  patternFamily: string | PropertyOnlyStep<string>;
   // properties
-  invert: boolean
-  interactive: boolean
-  cursor: Cursor
-  opaque: boolean
+  invert: boolean;
+  interactive: boolean;
+  cursor: Cursor;
+  opaque: boolean;
 }
+/**
+ *
+ */
 export interface FillWorkflowLayerGuide extends LayerWorkflowGuideBase {
-  color?: LayerWorkerFunction<ColorArray>
-  opacity?: LayerWorkerFunction<number[]>
-  invert: boolean
-  pattern: boolean
+  color?: LayerWorkerFunction<ColorArray>;
+  opacity?: LayerWorkerFunction<number[]>;
+  invert: boolean;
+  pattern: boolean;
 }
+/**
+ *
+ */
 export interface FillWorkflowLayerGuideGPU extends FillWorkflowLayerGuide {
-  layerBuffer: GPUBuffer
-  layerCodeBuffer: GPUBuffer
+  layerBuffer: GPUBuffer;
+  layerCodeBuffer: GPUBuffer;
 }
+/**
+ *
+ */
 export interface FillWorkerLayer extends LayerWorkerBase {
-  type: 'fill'
-  getCode: BuildCodeFunction
-  invert: boolean
-  interactive: boolean
-  cursor: Cursor
-  opaque: boolean
-  pattern?: LayerWorkerFunction<string>
-  patternFamily: LayerWorkerFunction<string>
-  patternMovement: LayerWorkerFunction<boolean>
+  type: 'fill';
+  getCode: BuildCodeFunction;
+  invert: boolean;
+  interactive: boolean;
+  cursor: Cursor;
+  opaque: boolean;
+  pattern?: LayerWorkerFunction<string>;
+  patternFamily: LayerWorkerFunction<string>;
+  patternMovement: LayerWorkerFunction<boolean>;
 }
 
 // GLYPH //
 
 // TODO: Add opacity
+/**
+ *
+ */
 export type Anchor =
-  'center' | 'left' | 'right' | 'top' | 'bottom' |
-  'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
-export type Alignment = 'auto' | 'center' | 'left' | 'right'
-export type Placement = 'point' | 'line' | 'line-center-point' | 'line-center-path'
+  | 'center'
+  | 'left'
+  | 'right'
+  | 'top'
+  | 'bottom'
+  | 'top-left'
+  | 'top-right'
+  | 'bottom-left'
+  | 'bottom-right';
+/**
+ *
+ */
+export type Alignment = 'auto' | 'center' | 'left' | 'right';
+/**
+ *
+ */
+export type Placement = 'point' | 'line' | 'line-center-point' | 'line-center-path';
+/**
+ *
+ */
 export interface GlyphStyle extends LayerStyleBase {
   /**
    * Glyph type
@@ -1115,7 +1304,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `viewCollisions` - if true, the layer glyphs will display the collision boxes and colorize them based on if they are colliding or not
    * - `cursor` - the cursor to use when hovering over the glyph
    */
-  type: 'glyph'
+  type: 'glyph';
   // paint
   /**
    * A PAINT `Property`.
@@ -1141,7 +1330,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  textSize?: number | Property<number>
+  textSize?: number | Property<number>;
   /**
    * A PAINT `Property`.
    * @defaultValue `"rgba(0, 0, 0, 1)"`
@@ -1166,7 +1355,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  textFill?: string | Property<string>
+  textFill?: string | Property<string>;
   /**
    * A PAINT `Property`.
    * @defaultValue `"rgba(0, 0, 0, 1)"`
@@ -1191,7 +1380,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  textStroke?: string | Property<string>
+  textStroke?: string | Property<string>;
   /**
    * A PAINT `Property`.
    * @defaultValue `0`
@@ -1216,7 +1405,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  textStrokeWidth?: number | Property<number>
+  textStrokeWidth?: number | Property<number>;
   /**
    * A PAINT `Property`.
    * @defaultValue `16`
@@ -1241,7 +1430,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  iconSize?: number | Property<number>
+  iconSize?: number | Property<number>;
   // layout
   /**
    * A LAYOUT `PropertyOnlyStep`.
@@ -1288,7 +1477,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  placement?: Placement | PropertyOnlyStep<Placement>
+  placement?: Placement | PropertyOnlyStep<Placement>;
   /**
    * A LAYOUT `Property`.
    * @defaultValue `325`
@@ -1315,7 +1504,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  spacing?: number | Property<number>
+  spacing?: number | Property<number>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
    * @defaultValue `""` (empty string)
@@ -1352,7 +1541,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  textFamily?: string | string[] | PropertyOnlyStep<string | string[]>
+  textFamily?: string | string[] | PropertyOnlyStep<string | string[]>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
    * @defaultValue `""` (empty string)
@@ -1406,7 +1595,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  textField?: string | string[] | PropertyOnlyStep<string | string[]>
+  textField?: string | string[] | PropertyOnlyStep<string | string[]>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
    * @defaultValue `"center"`
@@ -1433,7 +1622,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  textAnchor?: Anchor | PropertyOnlyStep<Anchor>
+  textAnchor?: Anchor | PropertyOnlyStep<Anchor>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
    * @defaultValue `[0, 0]`
@@ -1458,7 +1647,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  textOffset?: FlatPoint | PropertyOnlyStep<FlatPoint>
+  textOffset?: FlatPoint | PropertyOnlyStep<FlatPoint>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
    * @defaultValue `[0, 0]`
@@ -1483,7 +1672,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  textPadding?: FlatPoint | PropertyOnlyStep<FlatPoint>
+  textPadding?: FlatPoint | PropertyOnlyStep<FlatPoint>;
   /**
    * A LAYOUT `Property`.
    * @defaultValue `0`
@@ -1508,7 +1697,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  textWordWrap?: number | PropertyOnlyStep<number>
+  textWordWrap?: number | PropertyOnlyStep<number>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
    * @defaultValue `"center"`
@@ -1535,7 +1724,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  textAlign?: Alignment | PropertyOnlyStep<Alignment>
+  textAlign?: Alignment | PropertyOnlyStep<Alignment>;
   /**
    * A LAYOUT `Property`.
    * @defaultValue `0`
@@ -1560,7 +1749,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  textKerning?: number | PropertyOnlyStep<number>
+  textKerning?: number | PropertyOnlyStep<number>;
   /**
    * A LAYOUT `Property`.
    * @defaultValue `0`
@@ -1585,7 +1774,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  textLineHeight?: number | PropertyOnlyStep<number>
+  textLineHeight?: number | PropertyOnlyStep<number>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
    * @defaultValue `""` (empty string)
@@ -1622,7 +1811,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  iconFamily?: string | string[] | PropertyOnlyStep<string | string[]>
+  iconFamily?: string | string[] | PropertyOnlyStep<string | string[]>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
    * @defaultValue `""` (empty string)
@@ -1676,7 +1865,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  iconField?: string | string[] | PropertyOnlyStep<string | string[]>
+  iconField?: string | string[] | PropertyOnlyStep<string | string[]>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
    * @defaultValue `"center"`
@@ -1703,7 +1892,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  iconAnchor?: Anchor | PropertyOnlyStep<Anchor>
+  iconAnchor?: Anchor | PropertyOnlyStep<Anchor>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
    * @defaultValue `[0, 0]`
@@ -1728,7 +1917,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  iconOffset?: FlatPoint | PropertyOnlyStep<FlatPoint>
+  iconOffset?: FlatPoint | PropertyOnlyStep<FlatPoint>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
    * @defaultValue `[0, 0]`
@@ -1753,102 +1942,118 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  iconPadding?: FlatPoint | PropertyOnlyStep<FlatPoint>
+  iconPadding?: FlatPoint | PropertyOnlyStep<FlatPoint>;
   // properties
   /**
    * Filter the geometry types that will be drawn.
    * An empty array will support all geometry types.
    * Ex. `["line"]` - only draw lines
-   * Defaults to empty. */
-  geoFilter?: Array<'point' | 'line' | 'poly'>
+   * Defaults to empty.
+   */
+  geoFilter?: Array<'point' | 'line' | 'poly'>;
   /** if true, the layer will be drawn regardless of other glyph layers. Default false */
-  overdraw?: boolean
+  overdraw?: boolean;
   /** if true, when hovering over the glyph, the property data will be sent to the UI via an Event. Default false */
-  interactive?: boolean
+  interactive?: boolean;
   /** if true, the layer glyphs will display the collision boxes and colorize them based on if they are colliding or not. Default false */
-  viewCollisions?: boolean
+  viewCollisions?: boolean;
   /** if true, it's assumed RTL text has been preshaped so do not apply RTL inversion again. Defaults to false */
-  noShaping?: boolean
+  noShaping?: boolean;
   /** the cursor to use when hovering over the glyph. Default "default" */
-  cursor?: Cursor
+  cursor?: Cursor;
 }
+/**
+ *
+ */
 export interface GlyphDefinition extends LayerDefinitionBase {
-  type: 'glyph'
+  type: 'glyph';
   // paint
-  textSize: number | Property<number>
-  textFill: string | Property<string>
-  textStroke: string | Property<string>
-  textStrokeWidth: number | Property<number>
-  iconSize: number | Property<number>
+  textSize: number | Property<number>;
+  textFill: string | Property<string>;
+  textStroke: string | Property<string>;
+  textStrokeWidth: number | Property<number>;
+  iconSize: number | Property<number>;
   // layout
-  placement: Placement | PropertyOnlyStep<Placement>
-  spacing: number | Property<number>
-  textFamily: string | string[] | PropertyOnlyStep<string | string[]>
-  textField: string | string[] | PropertyOnlyStep<string | string[]>
-  textAnchor: Anchor | PropertyOnlyStep<Anchor>
-  textOffset: FlatPoint | PropertyOnlyStep<FlatPoint>
-  textPadding: FlatPoint | PropertyOnlyStep<FlatPoint>
-  textWordWrap: number | PropertyOnlyStep<number>
-  textAlign: Alignment | PropertyOnlyStep<Alignment>
-  textKerning: number | PropertyOnlyStep<number>
-  textLineHeight: number | PropertyOnlyStep<number>
-  iconFamily: string | string[] | PropertyOnlyStep<string | string[]>
-  iconField: string | string[] | PropertyOnlyStep<string | string[]>
-  iconAnchor: Anchor | PropertyOnlyStep<Anchor>
-  iconOffset: FlatPoint | PropertyOnlyStep<FlatPoint>
-  iconPadding: FlatPoint | PropertyOnlyStep<FlatPoint>
+  placement: Placement | PropertyOnlyStep<Placement>;
+  spacing: number | Property<number>;
+  textFamily: string | string[] | PropertyOnlyStep<string | string[]>;
+  textField: string | string[] | PropertyOnlyStep<string | string[]>;
+  textAnchor: Anchor | PropertyOnlyStep<Anchor>;
+  textOffset: FlatPoint | PropertyOnlyStep<FlatPoint>;
+  textPadding: FlatPoint | PropertyOnlyStep<FlatPoint>;
+  textWordWrap: number | PropertyOnlyStep<number>;
+  textAlign: Alignment | PropertyOnlyStep<Alignment>;
+  textKerning: number | PropertyOnlyStep<number>;
+  textLineHeight: number | PropertyOnlyStep<number>;
+  iconFamily: string | string[] | PropertyOnlyStep<string | string[]>;
+  iconField: string | string[] | PropertyOnlyStep<string | string[]>;
+  iconAnchor: Anchor | PropertyOnlyStep<Anchor>;
+  iconOffset: FlatPoint | PropertyOnlyStep<FlatPoint>;
+  iconPadding: FlatPoint | PropertyOnlyStep<FlatPoint>;
   // properties
-  geoFilter: Array<'point' | 'line' | 'poly'>
-  overdraw: boolean
-  interactive: boolean
-  noShaping: boolean
-  viewCollisions: boolean
-  cursor: Cursor
+  geoFilter: Array<'point' | 'line' | 'poly'>;
+  overdraw: boolean;
+  interactive: boolean;
+  noShaping: boolean;
+  viewCollisions: boolean;
+  cursor: Cursor;
 }
+/**
+ *
+ */
 export interface GlyphWorkflowLayerGuide extends LayerWorkflowGuideBase {
-  cursor: Cursor
-  overdraw: boolean
-  viewCollisions: boolean
+  cursor: Cursor;
+  overdraw: boolean;
+  viewCollisions: boolean;
 }
+/**
+ *
+ */
 export interface GlyphWorkflowLayerGuideGPU extends GlyphWorkflowLayerGuide {
-  layerBuffer: GPUBuffer
-  layerCodeBuffer: GPUBuffer
+  layerBuffer: GPUBuffer;
+  layerCodeBuffer: GPUBuffer;
 }
+/**
+ *
+ */
 export interface GlyphWorkerLayer extends LayerWorkerBase {
-  type: 'glyph'
-  textGetCode: BuildCodeFunction
-  iconGetCode: BuildCodeFunction
+  type: 'glyph';
+  textGetCode: BuildCodeFunction;
+  iconGetCode: BuildCodeFunction;
   // paint
-  iconPaint?: number[]
-  textSize: LayerWorkerFunction<number>
-  iconSize: LayerWorkerFunction<number>
+  iconPaint?: number[];
+  textSize: LayerWorkerFunction<number>;
+  iconSize: LayerWorkerFunction<number>;
   // layout
-  placement: LayerWorkerFunction<Placement>
-  spacing: LayerWorkerFunction<number>
-  textFamily: LayerWorkerFunction<string | string[]>
-  textField: LayerWorkerFunction<string | string[]>
-  textAnchor: LayerWorkerFunction<string>
-  textOffset: LayerWorkerFunction<FlatPoint>
-  textPadding: LayerWorkerFunction<FlatPoint>
-  textWordWrap: LayerWorkerFunction<number>
-  textAlign: LayerWorkerFunction<Alignment>
-  textKerning: LayerWorkerFunction<number>
-  textLineHeight: LayerWorkerFunction<number>
-  iconFamily: LayerWorkerFunction<string | string[]>
-  iconField: LayerWorkerFunction<string | string[]>
-  iconAnchor: LayerWorkerFunction<Anchor>
-  iconOffset: LayerWorkerFunction<FlatPoint>
-  iconPadding: LayerWorkerFunction<FlatPoint>
+  placement: LayerWorkerFunction<Placement>;
+  spacing: LayerWorkerFunction<number>;
+  textFamily: LayerWorkerFunction<string | string[]>;
+  textField: LayerWorkerFunction<string | string[]>;
+  textAnchor: LayerWorkerFunction<string>;
+  textOffset: LayerWorkerFunction<FlatPoint>;
+  textPadding: LayerWorkerFunction<FlatPoint>;
+  textWordWrap: LayerWorkerFunction<number>;
+  textAlign: LayerWorkerFunction<Alignment>;
+  textKerning: LayerWorkerFunction<number>;
+  textLineHeight: LayerWorkerFunction<number>;
+  iconFamily: LayerWorkerFunction<string | string[]>;
+  iconField: LayerWorkerFunction<string | string[]>;
+  iconAnchor: LayerWorkerFunction<Anchor>;
+  iconOffset: LayerWorkerFunction<FlatPoint>;
+  iconPadding: LayerWorkerFunction<FlatPoint>;
   // properties
-  geoFilter: Array<'point' | 'line' | 'poly'>
-  overdraw: boolean
-  interactive: boolean
-  noShaping: boolean
-  cursor: Cursor
+  geoFilter: Array<'point' | 'line' | 'poly'>;
+  overdraw: boolean;
+  interactive: boolean;
+  noShaping: boolean;
+  cursor: Cursor;
 }
 
 // HEATMAP //
 
+/**
+ *
+ */
 export interface HeatmapStyle extends LayerStyleBase {
   /**
    * Heatmap type
@@ -1876,7 +2081,7 @@ export interface HeatmapStyle extends LayerStyleBase {
    * - `geoFilter` - filter the geometry types that will be drawn.
    * - `colorRamp` - the color ramp to use for the heatmap. Defaults to `sinebow`
    */
-  type: 'heatmap'
+  type: 'heatmap';
   // paint
   /**
    * A PAINT `Property`. Default value of `1`
@@ -1901,7 +2106,7 @@ export interface HeatmapStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  radius?: number | Property<number>
+  radius?: number | Property<number>;
   /**
    * A PAINT `Property`. Default value of `1`
    *
@@ -1925,7 +2130,7 @@ export interface HeatmapStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  opacity?: number | Property<number>
+  opacity?: number | Property<number>;
   /**
    * A PAINT `Property`. Default value of `1`
    *
@@ -1949,7 +2154,7 @@ export interface HeatmapStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  intensity?: number | Property<number>
+  intensity?: number | Property<number>;
   /**
    * A PAINT `Property`. Default value of `1`
    *
@@ -1973,7 +2178,7 @@ export interface HeatmapStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  weight?: number | Property<number>
+  weight?: number | Property<number>;
   // properties
   /**
    * Defaults to `sinebow`.
@@ -1992,47 +2197,68 @@ export interface HeatmapStyle extends LayerStyleBase {
    * }
    * ```
    */
-  colorRamp?: 'sinebow' | 'sinebow-extended' | Array<{ stop: number, color: string }>
+  colorRamp?: 'sinebow' | 'sinebow-extended' | Array<{ stop: number; color: string }>;
   /**
    * Filter the geometry types that will be drawn.
    * An empty array will support all geometry types.
    * Ex. `["line"]` - only draw lines
    * Defaults to `['line', 'poly']` (only points will be drawn).
    */
-  geoFilter?: Array<'point' | 'line' | 'poly'>
+  geoFilter?: Array<'point' | 'line' | 'poly'>;
 }
+/**
+ *
+ */
 export interface HeatmapDefinition extends LayerDefinitionBase {
-  type: 'heatmap'
+  type: 'heatmap';
   // paint
-  radius: number | Property<number>
-  opacity: number | Property<number>
-  intensity: number | Property<number>
-  weight: number | Property<number>
+  radius: number | Property<number>;
+  opacity: number | Property<number>;
+  intensity: number | Property<number>;
+  weight: number | Property<number>;
   // properties
-  colorRamp: 'sinebow' | 'sinebow-extended' | Array<{ stop: number, color: string }>
-  geoFilter: Array<'point' | 'line' | 'poly'>
+  colorRamp: 'sinebow' | 'sinebow-extended' | Array<{ stop: number; color: string }>;
+  geoFilter: Array<'point' | 'line' | 'poly'>;
 }
+/**
+ *
+ */
 export interface HeatmapWorkflowLayerGuide extends LayerWorkflowGuideBase {
-  colorRamp: WebGLTexture
+  colorRamp: WebGLTexture;
 }
+/**
+ *
+ */
 export interface HeatmapWorkflowLayerGuideGPU extends LayerWorkflowGuideBase {
-  colorRamp: GPUTexture
-  layerBuffer: GPUBuffer
-  layerCodeBuffer: GPUBuffer
-  textureBindGroup: GPUBindGroup
-  renderTarget: GPUTexture
-  renderPassDescriptor: GPURenderPassDescriptor
+  colorRamp: GPUTexture;
+  layerBuffer: GPUBuffer;
+  layerCodeBuffer: GPUBuffer;
+  textureBindGroup: GPUBindGroup;
+  renderTarget: GPUTexture;
+  renderPassDescriptor: GPURenderPassDescriptor;
 }
+/**
+ *
+ */
 export interface HeatmapWorkerLayer extends LayerWorkerBase {
-  type: 'heatmap'
-  getCode: BuildCodeFunction
-  weight: LayerWorkerFunction<number>
-  geoFilter: Array<'point' | 'line' | 'poly'>
+  type: 'heatmap';
+  getCode: BuildCodeFunction;
+  weight: LayerWorkerFunction<number>;
+  geoFilter: Array<'point' | 'line' | 'poly'>;
 }
 
 // LINE //
-export type Cap = 'butt' | 'square' | 'round'
-export type Join = 'bevel' | 'miter' | 'round'
+/**
+ *
+ */
+export type Cap = 'butt' | 'square' | 'round';
+/**
+ *
+ */
+export type Join = 'bevel' | 'miter' | 'round';
+/**
+ *
+ */
 export interface LineStyle extends LayerStyleBase {
   /**
    * Line type
@@ -2064,7 +2290,7 @@ export interface LineStyle extends LayerStyleBase {
    * - `interactive` - if true, when hovering over the line, the property data will be sent to the UI via an Event
    * - `cursor` - the cursor to use when hovering over the line
    */
-  type: 'line'
+  type: 'line';
   // paint
   /**
    * A PAINT `Property`.
@@ -2090,7 +2316,7 @@ export interface LineStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  color?: string | Property<string>
+  color?: string | Property<string>;
   /**
    * A PAINT `Property`. Default value of `1`
    *
@@ -2114,7 +2340,7 @@ export interface LineStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  opacity?: number | Property<number>
+  opacity?: number | Property<number>;
   /**
    * A PAINT `Property`. Default value of `1`
    *
@@ -2138,7 +2364,7 @@ export interface LineStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  width?: number | Property<number>
+  width?: number | Property<number>;
   /**
    * A PAINT `Property`. Default value of `0`
    * To improve render performance, you can provide a gap width to not draw a portion inside the line.
@@ -2165,7 +2391,7 @@ export interface LineStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  gapwidth?: number | Property<number>
+  gapwidth?: number | Property<number>;
   // layout
   /**
    * A LAYOUT `PropertyOnlyStep`.
@@ -2194,7 +2420,7 @@ export interface LineStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  cap?: Cap | PropertyOnlyStep<Cap>
+  cap?: Cap | PropertyOnlyStep<Cap>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
    * @defaultValue `miter`
@@ -2221,7 +2447,7 @@ export interface LineStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  join?: Join | PropertyOnlyStep<Join>
+  join?: Join | PropertyOnlyStep<Join>;
   // properties
   /**
    * The line will be dashed between visible and invisible. Defaults to `[]` (empty array)
@@ -2232,62 +2458,78 @@ export interface LineStyle extends LayerStyleBase {
    * { "dasharray": [ [30, "#bbd3de"], [12, "rgba(255, 255, 255, 0)"] ] }
    * ```
    */
-  dasharray?: Array<[number, string]>
+  dasharray?: Array<[number, string]>;
   /**
    * Filter the geometry types that will be drawn.
    * An empty array will supports both `line` & `polygon` geometry types.
    * Ex. `["line"]` - only draw lines
-   * Defaults to empty. */
-  geoFilter?: Array<'line' | 'poly'>
+   * Defaults to empty.
+   */
+  geoFilter?: Array<'line' | 'poly'>;
   /** if true, when hovering over the line, the property data will be sent to the UI via an Event. Defaults to `false` */
-  interactive?: boolean
+  interactive?: boolean;
   /** the cursor to use when hovering over the line. Defaults to "default" */
-  cursor?: Cursor
+  cursor?: Cursor;
 }
+/**
+ *
+ */
 export interface LineDefinition extends LayerDefinitionBase {
-  type: 'line'
+  type: 'line';
   // paint
-  color: string | Property<string>
-  opacity: number | Property<number>
-  width: number | Property<number>
-  gapwidth: number | Property<number>
+  color: string | Property<string>;
+  opacity: number | Property<number>;
+  width: number | Property<number>;
+  gapwidth: number | Property<number>;
   // layout
-  cap: Cap | PropertyOnlyStep<Cap>
-  join: Join | PropertyOnlyStep<Join>
+  cap: Cap | PropertyOnlyStep<Cap>;
+  join: Join | PropertyOnlyStep<Join>;
   // properties
-  dasharray: Array<[number, string]>
-  dashed: boolean
-  geoFilter: Array<'line' | 'poly'>
-  interactive: boolean
-  cursor: Cursor
+  dasharray: Array<[number, string]>;
+  dashed: boolean;
+  geoFilter: Array<'line' | 'poly'>;
+  interactive: boolean;
+  cursor: Cursor;
 }
+/**
+ *
+ */
 export interface LineWorkflowLayerGuide extends LayerWorkflowGuideBase {
-  dashed: boolean
-  dashCount: number
-  dashLength: number
-  dashTexture: WebGLTexture
-  interactive: boolean
-  cursor: Cursor
+  dashed: boolean;
+  dashCount: number;
+  dashLength: number;
+  dashTexture: WebGLTexture;
+  interactive: boolean;
+  cursor: Cursor;
 }
+/**
+ *
+ */
 export interface LineWorkflowLayerGuideGPU extends Omit<LineWorkflowLayerGuide, 'dashTexture'> {
-  layerBuffer: GPUBuffer
-  layerCodeBuffer: GPUBuffer
-  dashTexture: GPUTexture
+  layerBuffer: GPUBuffer;
+  layerCodeBuffer: GPUBuffer;
+  dashTexture: GPUTexture;
 }
+/**
+ *
+ */
 export interface LineWorkerLayer extends LayerWorkerBase {
-  type: 'line'
-  cap: LayerWorkerFunction<Cap>
-  join: LayerWorkerFunction<Join>
+  type: 'line';
+  cap: LayerWorkerFunction<Cap>;
+  join: LayerWorkerFunction<Join>;
   // properties
-  getCode: BuildCodeFunction
-  dashed: boolean
-  geoFilter: Array<'line' | 'poly'>
-  interactive: boolean
-  cursor: Cursor
+  getCode: BuildCodeFunction;
+  dashed: boolean;
+  geoFilter: Array<'line' | 'poly'>;
+  interactive: boolean;
+  cursor: Cursor;
 }
 
 // POINT //
 
+/**
+ *
+ */
 export interface PointStyle extends LayerStyleBase {
   /**
    * Point type
@@ -2315,7 +2557,7 @@ export interface PointStyle extends LayerStyleBase {
    * - `interactive` - if true, when hovering over the line, the property data will be sent to the UI via an Event
    * - `cursor` - the cursor to use when hovering over the line
    */
-  type: 'point'
+  type: 'point';
   // paint
   /**
    * A PAINT `Property`.
@@ -2341,7 +2583,7 @@ export interface PointStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  color?: string | Property<string>
+  color?: string | Property<string>;
   /**
    * A PAINT `Property`.
    * @defaultValue `1`
@@ -2366,7 +2608,7 @@ export interface PointStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  radius?: number | Property<number>
+  radius?: number | Property<number>;
   /**
    * A PAINT `Property`.
    * @defaultValue `"rgba(0, 0, 0, 0)"`
@@ -2391,7 +2633,7 @@ export interface PointStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  stroke?: string | Property<string>
+  stroke?: string | Property<string>;
   /**
    * A PAINT `Property`.
    * @defaultValue `1`
@@ -2416,7 +2658,7 @@ export interface PointStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  strokeWidth?: number | Property<number>
+  strokeWidth?: number | Property<number>;
   /**
    * A PAINT `Property`. Default value of `1`
    *
@@ -2440,7 +2682,7 @@ export interface PointStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  opacity?: number | Property<number>
+  opacity?: number | Property<number>;
   // properties
   /**
    * Filter the geometry types that will be drawn.
@@ -2448,43 +2690,61 @@ export interface PointStyle extends LayerStyleBase {
    * Ex. `["line"]` - only draw lines
    * Defaults to `['line', 'poly']`.
    */
-  geoFilter?: Array<'point' | 'line' | 'poly'>
+  geoFilter?: Array<'point' | 'line' | 'poly'>;
   /** if true, when hovering over the line, the property data will be sent to the UI via an Event. Defaults to `false` */
-  interactive?: boolean
+  interactive?: boolean;
   /** the cursor to use when hovering over the line. Defaults to "default" */
-  cursor?: Cursor
+  cursor?: Cursor;
 }
+/**
+ *
+ */
 export interface PointDefinition extends LayerDefinitionBase {
-  type: 'point'
+  type: 'point';
   // paint
-  color: string | Property<string>
-  radius: number | Property<number>
-  stroke: string | Property<string>
-  strokeWidth: number | Property<number>
-  opacity: number | Property<number>
+  color: string | Property<string>;
+  radius: number | Property<number>;
+  stroke: string | Property<string>;
+  strokeWidth: number | Property<number>;
+  opacity: number | Property<number>;
   // properties
-  geoFilter: Array<'point' | 'line' | 'poly'>
-  interactive: boolean
-  cursor: Cursor
+  geoFilter: Array<'point' | 'line' | 'poly'>;
+  interactive: boolean;
+  cursor: Cursor;
 }
+/**
+ *
+ */
 export interface PointWorkflowLayerGuide extends LayerWorkflowGuideBase {
-  cursor: Cursor
+  cursor: Cursor;
 }
+/**
+ *
+ */
 export interface PointWorkflowLayerGuideGPU extends PointWorkflowLayerGuide {
-  layerBuffer: GPUBuffer
-  layerCodeBuffer: GPUBuffer
+  layerBuffer: GPUBuffer;
+  layerCodeBuffer: GPUBuffer;
 }
+/**
+ *
+ */
 export interface PointWorkerLayer extends LayerWorkerBase {
-  type: 'point'
-  getCode: BuildCodeFunction
-  geoFilter: Array<'point' | 'line' | 'poly'>
-  interactive: boolean
-  cursor: Cursor
+  type: 'point';
+  getCode: BuildCodeFunction;
+  geoFilter: Array<'point' | 'line' | 'poly'>;
+  interactive: boolean;
+  cursor: Cursor;
 }
 
 // RASTER //
 
-export type Resampling = GPUFilterMode
+/**
+ *
+ */
+export type Resampling = GPUFilterMode;
+/**
+ *
+ */
 export interface RasterStyle extends LayerStyleBase {
   /**
    * Raster type
@@ -2509,7 +2769,7 @@ export interface RasterStyle extends LayerStyleBase {
    * - `resampling`
    * - `fadeDuration`
    */
-  type: 'raster'
+  type: 'raster';
   // paint
   /**
    * A PAINT `Property`. Default value of `1`
@@ -2534,7 +2794,7 @@ export interface RasterStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  opacity?: number | Property<number>
+  opacity?: number | Property<number>;
   /**
    * A PAINT `Property`. Default value of `0`
    *
@@ -2558,7 +2818,7 @@ export interface RasterStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  saturation?: number | Property<number>
+  saturation?: number | Property<number>;
   /**
    * A PAINT `Property`. Default value of `0`
    *
@@ -2582,48 +2842,76 @@ export interface RasterStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  contrast?: number | Property<number>
+  contrast?: number | Property<number>;
   // properties
   /**
    * Decide how the GPU samples the texture. Either `nearest` or `linear`. Linear is smoother but nearest has better performance.
    *
    * Defaults to `linear`.
    */
-  resampling?: Resampling
+  resampling?: Resampling;
   /** The duration of the fade in milliseconds. Defaults to `300` */
-  fadeDuration?: number
+  fadeDuration?: number;
 }
+/**
+ *
+ */
 export interface RasterDefinition extends LayerDefinitionBase {
-  type: 'raster'
+  type: 'raster';
   // paint
-  opacity: number | Property<number>
-  saturation: number | Property<number>
-  contrast: number | Property<number>
+  opacity: number | Property<number>;
+  saturation: number | Property<number>;
+  contrast: number | Property<number>;
 }
+/**
+ *
+ */
 export interface RasterWorkflowLayerGuide extends LayerWorkflowGuideBase {
-  fadeDuration: number
-  resampling: Resampling
+  fadeDuration: number;
+  resampling: Resampling;
 }
+/**
+ *
+ */
 export interface RasterWorkflowLayerGuideGPU extends RasterWorkflowLayerGuide {
-  layerBuffer: GPUBuffer
-  layerCodeBuffer: GPUBuffer
+  layerBuffer: GPUBuffer;
+  layerCodeBuffer: GPUBuffer;
 }
+/**
+ *
+ */
 export interface RasterWorkerLayer extends LayerWorkerBaseRaster {
-  type: 'raster'
-  getCode: BuildCodeFunctionZoom
+  type: 'raster';
+  getCode: BuildCodeFunctionZoom;
 }
 
 // HILLSHADE //
 
+/**
+ *
+ */
 export interface UnpackDefinition {
-  offset: number
-  zFactor: number
-  rMultiplier: number
-  gMultiplier: number
-  bMultiplier: number
-  aMultiplier: number
+  offset: number;
+  zFactor: number;
+  rMultiplier: number;
+  gMultiplier: number;
+  bMultiplier: number;
+  aMultiplier: number;
 }
-export type UnpackData = [offset: number, zFactor: number, rMul: number, gMul: number, bMul: number, aMul: number]
+/**
+ *
+ */
+export type UnpackData = [
+  offset: number,
+  zFactor: number,
+  rMul: number,
+  gMul: number,
+  bMul: number,
+  aMul: number,
+];
+/**
+ *
+ */
 export interface HillshadeStyle extends LayerStyleBase {
   /**
    * Hillshade type
@@ -2651,7 +2939,7 @@ export interface HillshadeStyle extends LayerStyleBase {
    * - `fadeDuration`
    * - `unpack`
    */
-  type: 'hillshade'
+  type: 'hillshade';
   // layout
   /**
    * A LAYOUT `Property`. Default value of `1`
@@ -2676,7 +2964,7 @@ export interface HillshadeStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  opacity?: number | Property<number>
+  opacity?: number | Property<number>;
   /**
    * A LAYOUT `Property`. Default value of `315`
    *
@@ -2700,7 +2988,7 @@ export interface HillshadeStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  azimuth?: number | Property<number>
+  azimuth?: number | Property<number>;
   /**
    * A LAYOUT `Property`. Default value of `45`
    *
@@ -2724,7 +3012,7 @@ export interface HillshadeStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  altitude?: number | Property<number>
+  altitude?: number | Property<number>;
   /**
    * A LAYOUT `Property`.
    * @defaultValue `"#000"`
@@ -2749,7 +3037,7 @@ export interface HillshadeStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  shadowColor?: string | Property<string>
+  shadowColor?: string | Property<string>;
   /**
    * A LAYOUT `Property`.
    * @defaultValue `"#fff"`
@@ -2774,7 +3062,7 @@ export interface HillshadeStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  highlightColor?: string | Property<string>
+  highlightColor?: string | Property<string>;
   /**
    * A LAYOUT `Property`.
    * @defaultValue `"#000"`
@@ -2799,10 +3087,10 @@ export interface HillshadeStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  accentColor?: string | Property<string>
+  accentColor?: string | Property<string>;
   // properties
   /** The duration of the fade in milliseconds. Defaults to `300` */
-  fadeDuration?: number
+  fadeDuration?: number;
   /**
    * A property to unpack the hillshade data via the GPU.
    *
@@ -2823,7 +3111,7 @@ export interface HillshadeStyle extends LayerStyleBase {
    *        color.b * unpack.bMultiplier +
    *        color.a * unpack.aMultiplier
    *      )
-   *      * unpack.zFactor
+   *      unpack.zFactor
    *    ) + unpack.offset;
    *  }
    *  ```
@@ -2855,35 +3143,51 @@ export interface HillshadeStyle extends LayerStyleBase {
    * }
    * ```
    */
-  unpack?: UnpackDefinition
+  unpack?: UnpackDefinition;
 }
+/**
+ *
+ */
 export interface HillshadeDefinition extends LayerDefinitionBase {
-  type: 'hillshade'
+  type: 'hillshade';
   // layout
-  opacity: number | Property<number>
-  azimuth: number | Property<number>
-  altitude: number | Property<number>
-  shadowColor: string | Property<string>
-  highlightColor: string | Property<string>
-  accentColor: string | Property<string>
-  unpack: UnpackDefinition
+  opacity: number | Property<number>;
+  azimuth: number | Property<number>;
+  altitude: number | Property<number>;
+  shadowColor: string | Property<string>;
+  highlightColor: string | Property<string>;
+  accentColor: string | Property<string>;
+  unpack: UnpackDefinition;
 }
+/**
+ *
+ */
 export interface HillshadeWorkflowLayerGuide extends LayerWorkflowGuideBase {
-  fadeDuration: number
-  unpack: UnpackData
+  fadeDuration: number;
+  unpack: UnpackData;
 }
-export interface HillshadeWorkflowLayerGuideGPU extends Omit<HillshadeWorkflowLayerGuide, 'unpack'> {
-  layerBuffer: GPUBuffer
-  layerCodeBuffer: GPUBuffer
-  unpackBuffer: GPUBuffer
+/**
+ *
+ */
+export interface HillshadeWorkflowLayerGuideGPU
+  extends Omit<HillshadeWorkflowLayerGuide, 'unpack'> {
+  layerBuffer: GPUBuffer;
+  layerCodeBuffer: GPUBuffer;
+  unpackBuffer: GPUBuffer;
 }
+/**
+ *
+ */
 export interface HillshadeWorkerLayer extends LayerWorkerBaseRaster {
-  type: 'hillshade'
-  getCode: BuildCodeFunctionZoom
+  type: 'hillshade';
+  getCode: BuildCodeFunctionZoom;
 }
 
 // SENSOR */
 
+/**
+ *
+ */
 export interface SensorStyle extends LayerStyleBase {
   /**
    * Sensor type
@@ -2910,7 +3214,7 @@ export interface SensorStyle extends LayerStyleBase {
    * - `interactive` - if true, when hovering over the fill, the property data will be sent to the UI via an Event
    * - `cursor` - the cursor to use when hovering over the fill
    */
-  type: 'sensor'
+  type: 'sensor';
   // paint
   /**
    * A PAINT `Property`. Default value of `1`
@@ -2935,10 +3239,10 @@ export interface SensorStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  opacity?: number | Property<number>
+  opacity?: number | Property<number>;
   // properties
   /** The duration of the fade in milliseconds. Defaults to `300` */
-  fadeDuration?: number
+  fadeDuration?: number;
   /**
    * Defaults to `sinebow`.
    *
@@ -2956,35 +3260,50 @@ export interface SensorStyle extends LayerStyleBase {
    * }
    * ```
    */
-  colorRamp?: 'sinebow' | 'sinebow-extended' | Array<{ stop: number, color: string }>
+  colorRamp?: 'sinebow' | 'sinebow-extended' | Array<{ stop: number; color: string }>;
   /** if true, when hovering over the fill, the property data will be sent to the UI via an Event. Defaults to false */
-  interactive?: boolean
+  interactive?: boolean;
   /** the cursor to use when hovering over the fill. Defaults to "default" */
-  cursor?: Cursor
+  cursor?: Cursor;
 }
+/**
+ *
+ */
 export interface SensorDefinition extends LayerDefinitionBase {
-  type: 'sensor'
+  type: 'sensor';
   // paint
-  opacity: number | Property<number>
+  opacity: number | Property<number>;
   // properties
-  fadeDuration: number
-  colorRamp: 'sinebow' | 'sinebow-extended' | Array<{ stop: number, color: string }>
-  interactive: boolean
-  cursor: Cursor
+  fadeDuration: number;
+  colorRamp: 'sinebow' | 'sinebow-extended' | Array<{ stop: number; color: string }>;
+  interactive: boolean;
+  cursor: Cursor;
 }
+/**
+ *
+ */
 export interface SensorWorkflowLayerGuide extends LayerWorkflowGuideBase {
   // properties
-  fadeDuration: number
-  colorRamp: WebGLTexture
+  fadeDuration: number;
+  colorRamp: WebGLTexture;
 }
+/**
+ *
+ */
 export interface SensorWorkflowLayerGuideGPU extends SensorWorkflowLayerGuide {
-  colorRame: GPUTexture
+  colorRame: GPUTexture;
 }
+/**
+ *
+ */
 export interface SensorWorkerLayer extends LayerWorkerBaseRaster {
-  type: 'sensor'
-  getCode: BuildCodeFunctionZoom
+  type: 'sensor';
+  getCode: BuildCodeFunctionZoom;
 }
 
+/**
+ *
+ */
 export interface ShadeStyle extends LayerStyleBase {
   /**
    * Shade type
@@ -3003,7 +3322,7 @@ export interface ShadeStyle extends LayerStyleBase {
    * Optional paint properties:
    * - `color`
    */
-  type: 'shade'
+  type: 'shade';
   // layout
   /**
    * A LAYOUT `Property`.
@@ -3029,40 +3348,90 @@ export interface ShadeStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  color?: string | PropertyOnlyStep<string>
+  color?: string | PropertyOnlyStep<string>;
 }
+/**
+ *
+ */
 export interface ShadeDefinition extends LayerDefinitionBase {
-  type: 'shade'
+  type: 'shade';
   // layout
-  color: string | PropertyOnlyStep<string>
+  color: string | PropertyOnlyStep<string>;
 }
-export interface ShadeWorkflowLayerGuide extends LayerWorkflowGuideBase {}
+/**
+ *
+ */
+export type ShadeWorkflowLayerGuide = LayerWorkflowGuideBase;
+/**
+ *
+ */
 export interface ShadeWorkflowLayerGuideGPU extends ShadeWorkflowLayerGuide {
-  layerBuffer: GPUBuffer
-  layerCodeBuffer: GPUBuffer
+  layerBuffer: GPUBuffer;
+  layerCodeBuffer: GPUBuffer;
 }
+/**
+ *
+ */
 export interface ShadeWorkerLayer extends LayerWorkerBase {
-  type: 'shade'
+  type: 'shade';
 }
 
+/**
+ *
+ */
 export type LayerStyle =
-  UnkownLayerStyle | FillStyle | GlyphStyle | HeatmapStyle |
-  LineStyle | PointStyle | RasterStyle | SensorStyle |
-  ShadeStyle | HillshadeStyle
+  | UnkownLayerStyle
+  | FillStyle
+  | GlyphStyle
+  | HeatmapStyle
+  | LineStyle
+  | PointStyle
+  | RasterStyle
+  | SensorStyle
+  | ShadeStyle
+  | HillshadeStyle;
+/**
+ *
+ */
 export type LayerDefinition =
-  FillDefinition | GlyphDefinition | HeatmapDefinition |
-  LineDefinition | PointDefinition | RasterDefinition |
-  HillshadeDefinition | SensorDefinition | ShadeDefinition
+  | FillDefinition
+  | GlyphDefinition
+  | HeatmapDefinition
+  | LineDefinition
+  | PointDefinition
+  | RasterDefinition
+  | HillshadeDefinition
+  | SensorDefinition
+  | ShadeDefinition;
+/**
+ *
+ */
 export type WorkerLayer =
-  FillWorkerLayer | GlyphWorkerLayer | HeatmapWorkerLayer |
-  LineWorkerLayer | PointWorkerLayer | RasterWorkerLayer |
-  HillshadeWorkerLayer | SensorWorkerLayer
+  | FillWorkerLayer
+  | GlyphWorkerLayer
+  | HeatmapWorkerLayer
+  | LineWorkerLayer
+  | PointWorkerLayer
+  | RasterWorkerLayer
+  | HillshadeWorkerLayer
+  | SensorWorkerLayer;
+/**
+ *
+ */
 export type VectorWorkerLayer =
-  FillWorkerLayer | GlyphWorkerLayer | HeatmapWorkerLayer |
-  LineWorkerLayer | PointWorkerLayer
+  | FillWorkerLayer
+  | GlyphWorkerLayer
+  | HeatmapWorkerLayer
+  | LineWorkerLayer
+  | PointWorkerLayer;
+/**
+ *
+ */
 export type InteractiveWorkerLayer =
-  FillWorkerLayer | GlyphWorkerLayer | LineWorkerLayer |
-  PointWorkerLayer
+  | FillWorkerLayer
+  | GlyphWorkerLayer
+  | LineWorkerLayer
+  | PointWorkerLayer;
 
 /**
  * WORKER PACKAGE:
@@ -3070,86 +3439,101 @@ export type InteractiveWorkerLayer =
  * - `2` -> WebGL2
  * - `3` -> WebGPU
  */
-export type GPUType = 1 | 2 | 3
+export type GPUType = 1 | 2 | 3;
 
+/**
+ *
+ */
 export interface Analytics {
-  gpu: string
-  context: number
-  language: string
-  width: number
-  height: number
+  gpu: string;
+  context: number;
+  language: string;
+  width: number;
+  height: number;
 }
 
+/**
+ *
+ */
 export interface StylePackage {
-  projection: Projection
-  gpuType: GPUType
-  sources: Sources
-  fonts: Fonts
-  icons: Icons
-  glyphs: Glyphs
-  sprites: Sprites
-  images: Record<string, string>
-  layers: LayerDefinition[]
-  minzoom: number
-  maxzoom: number
-  tileSize: number
-  analytics: Analytics
-  experimental: boolean
-  apiKey?: string
-  urlMap?: Record<string, string>
+  projection: Projection;
+  gpuType: GPUType;
+  sources: Sources;
+  fonts: Fonts;
+  icons: Icons;
+  glyphs: Glyphs;
+  sprites: Sprites;
+  images: Record<string, string>;
+  layers: LayerDefinition[];
+  minzoom: number;
+  maxzoom: number;
+  tileSize: number;
+  analytics: Analytics;
+  experimental: boolean;
+  apiKey?: string;
+  urlMap?: Record<string, string>;
 }
 
 /** WALLPAPER */
 export interface SkyboxStyle {
   /** path to the skybox image folder */
-  path: string
+  path: string;
   /** size of the skybox image (the path's folder may support multiple) */
-  size: number
+  size: number;
   /** type of image (the path's folder may support multiple) */
-  type: ImageFormats
+  type: ImageFormats;
   /** background color of the skybox while waiting for it to load images */
-  loadingBackground?: string
+  loadingBackground?: string;
 }
 
+/**
+ *
+ */
 export interface WallpaperStyle {
   /** background color is the most seen color zoomed out */
-  background?: string
+  background?: string;
   /** color of the border around the sphere */
-  fade1?: string
+  fade1?: string;
   /** second color of the border around the sphere (further away then fade1) */
-  fade2?: string
+  fade2?: string;
   /** color of the border around the sphere (closest to the sphere and smallest fade factor) */
-  halo?: string
+  halo?: string;
 }
 
 // TIME SERIES //
 
+/**
+ *
+ */
 export interface TimeSeriesStyle {
   /** date formatted string or unix timestamp */
-  startDate?: number | string
+  startDate?: number | string;
   /** date formatted string or unix timestamp (e.g. 1631124000000) */
-  endDate?: number | string
+  endDate?: number | string;
   /** seconds in time series per second (e.g. 10800 seconds per second) */
-  speed?: number
+  speed?: number;
   /** in seconds (e.g. 3 seconds) */
-  pauseDuration?: number
+  pauseDuration?: number;
   /** if true, start playing automatically */
-  autoPlay?: boolean
+  autoPlay?: boolean;
   /** if true, loop the animation */
-  loop?: boolean
+  loop?: boolean;
 }
 
 // STYLE DEFINITION //
 
+/**
+ *
+ */
 export interface StyleDefinition {
   /** version of the style - not used for anything other than debugging */
-  version?: number
+  version?: number;
   /** name of the style - not used for anything other than debugging */
-  name?: string
+  name?: string;
   /** Use Either The Web Mercator "WM" or the "S2" Projection */
-  projection?: Projection
+  projection?: Projection;
   /** description of the style - not used for anything other than debugging */
-  description?: string
+  description?: string;
   /**
    * Set the camera view.
    * Properties include:
@@ -3159,33 +3543,33 @@ export interface StyleDefinition {
    * - `bearing`: the bearing/compass of the map camera
    * - `pitch`: the pitch/vertical-angle of the map camera
    */
-  view?: View
+  view?: View;
   /** zNear is a parameter for the camera. Recommend not touching */
-  zNear?: number
+  zNear?: number;
   /** zFar is a parameter for the camera. Recommend not touching */
-  zFar?: number
+  zFar?: number;
   /** The furthest away from the planet you allow */
-  minzoom?: number
+  minzoom?: number;
   /** The closest you allow the camera to get to the planet */
-  maxzoom?: number
+  maxzoom?: number;
   /**
    * Strictly a WM Projection property. Force the view to fill.
    * Defaults to `false`.
    */
-  constrainZoomToFill?: boolean
+  constrainZoomToFill?: boolean;
   /**
    * Strictly a WM Projection property. Render the world map as necessary to fill the screen horizontally.
    * Defaults to `true`.
    */
-  duplicateHorizontally?: boolean
+  duplicateHorizontally?: boolean;
   /** The minimum latitude position. Useful for the S2 Projection to avoid wonky movemeny at low zooms */
-  minLatPosition?: number
+  minLatPosition?: number;
   /** The maximum latitude position. Useful for the S2 Projection to avoid wonky movemeny at low zooms */
-  maxLatPosition?: number
+  maxLatPosition?: number;
   /** Often times to improve the quality of raster data, you can apply a zoomOffset for tiles to render. */
-  zoomOffset?: number
+  zoomOffset?: number;
   /** Allow the camera to go past the max-min latitudes. Useful for animations. */
-  noClamp?: boolean
+  noClamp?: boolean;
   /**
    * Where to fetch data and JSON guides on how to fetch them. If JSON data, it can be included directly in the source
    *
@@ -3197,9 +3581,9 @@ export interface StyleDefinition {
       }
    * ```
    */
-  sources?: Sources
+  sources?: Sources;
   /** Time series data is a WIP. Is a guide on how to render &/ animate data at various timestamps */
-  timeSeries?: TimeSeriesStyle
+  timeSeries?: TimeSeriesStyle;
   /**
    * Glyph Data (both fonts and icons) and how to fetch them
    *
@@ -3211,7 +3595,7 @@ export interface StyleDefinition {
    * }
    * ```
    */
-  glyphs?: Glyphs
+  glyphs?: Glyphs;
   /**
    * Fonts and how to fetch them
    *
@@ -3222,7 +3606,7 @@ export interface StyleDefinition {
    * }
    * ```
    */
-  fonts?: Fonts
+  fonts?: Fonts;
   /**
    * Icons and how to fetch them
    *
@@ -3233,7 +3617,7 @@ export interface StyleDefinition {
    * }
    * ```
    */
-  icons?: Icons
+  icons?: Icons;
   /**
    * Sprites names and where to fetch
    * Sprites have a default expectancy of a `png` image.
@@ -3256,7 +3640,7 @@ export interface StyleDefinition {
    * }
    * ```
    */
-  sprites?: Sprites
+  sprites?: Sprites;
   /**
    * Image names and where to fetch
    *
@@ -3266,7 +3650,7 @@ export interface StyleDefinition {
    *   "pattern": "/images/pattern.jpg"
    * }
    */
-  images?: Record<string, string>
+  images?: Record<string, string>;
   /**
    * Skybox is often used as a background feature for raster data. Uses a skybox image to render to the screen.
    *
@@ -3280,7 +3664,7 @@ export interface StyleDefinition {
    * }
    * ```
    */
-  skybox?: SkyboxStyle
+  skybox?: SkyboxStyle;
   /**
    * Wallpaper is often used with vector data. Control the coloring of the background.
    *
@@ -3295,14 +3679,14 @@ export interface StyleDefinition {
    * }
    * ```
    */
-  wallpaper?: WallpaperStyle
+  wallpaper?: WallpaperStyle;
   /**
    * background color for sections where the painter doesn't draw to
    * Default is `rgba(0, 0, 0, 0)` (transparent)
    */
-  clearColor?: ColorArray
+  clearColor?: ColorArray;
   /** Layers are the main way to render data on the map. */
-  layers?: LayerStyle[]
+  layers?: LayerStyle[];
   /** @beta Utilize WIP experimental components that still have bugs in them. */
-  experimental?: boolean
+  experimental?: boolean;
 }

@@ -1,63 +1,109 @@
-import Color, { interpolate } from './color'
+import Color, { interpolate } from './color';
 
-export type EaseType = 'lin' | 'expo' | 'quad' | 'cubic' | 'step'
-export type EaseFunction<T> = (zoom: number, start: number, end: number, startValue: T, endValue: T) => T
+/**
+ *
+ */
+export type EaseType = 'lin' | 'expo' | 'quad' | 'cubic' | 'step';
+/**
+ *
+ */
+export type EaseFunction<T> = (
+  zoom: number,
+  start: number,
+  end: number,
+  startValue: T,
+  endValue: T,
+) => T;
 
 /**
  * Convert a string to a function that will return an interpolation
  * between two values or colors.
+ * @param easeType
+ * @param base
  */
-export default function getEasingFunction<T> (easeType: EaseType = 'lin', base = 1): EaseFunction<T> {
-  const func = (easeType === 'lin')
-    ? linear
-    : (easeType === 'expo')
+export default function getEasingFunction<T>(
+  easeType: EaseType = 'lin',
+  base = 1,
+): EaseFunction<T> {
+  const func =
+    easeType === 'lin'
+      ? linear
+      : easeType === 'expo'
         ? exponential
-        : (easeType === 'quad')
-            ? quad
-            : (easeType === 'cubic')
-                ? cubic
-                : step
+        : easeType === 'quad'
+          ? quad
+          : easeType === 'cubic'
+            ? cubic
+            : step;
   return (zoom: number, start: number, end: number, startValue: T, endValue: T): T => {
-    const t = func(zoom, start, end, base)
+    const t = func(zoom, start, end, base);
 
-    if (typeof startValue === 'number' && typeof endValue === 'number') return startValue + t * (endValue - startValue) as T
-    else if (startValue instanceof Color && endValue instanceof Color) return interpolate(startValue, endValue, t) as T
-    else return startValue
-  }
+    if (typeof startValue === 'number' && typeof endValue === 'number')
+      return (startValue + t * (endValue - startValue)) as T;
+    else if (startValue instanceof Color && endValue instanceof Color)
+      return interpolate(startValue, endValue, t) as T;
+    else return startValue;
+  };
 }
 
-/** y = mx */
-function linear (input: number, start: number, end: number): number {
-  return (input - start) / (end - start)
+/**
+ * y = mx
+ * @param input
+ * @param start
+ * @param end
+ */
+function linear(input: number, start: number, end: number): number {
+  return (input - start) / (end - start);
 }
 
-/** y = e^x OR y = Math.pow(2, 10 * x) */
-function exponential (input: number, start: number, end: number, base: number): number {
+/**
+ * y = e^x OR y = Math.pow(2, 10 * x)
+ * @param input
+ * @param start
+ * @param end
+ * @param base
+ */
+function exponential(input: number, start: number, end: number, base: number): number {
   // grab change
-  const diff = end - start
-  if (diff === 0) return 0
+  const diff = end - start;
+  if (diff === 0) return 0;
   // refine base value
-  if (base <= 0) base = 0.1
-  else if (base > 2) base = 2
+  if (base <= 0) base = 0.1;
+  else if (base > 2) base = 2;
   // grab diff
-  const progress = input - start
+  const progress = input - start;
   // linear case
-  if (base === 1) return progress / diff
+  if (base === 1) return progress / diff;
   // solve
-  return (Math.pow(base, progress) - 1) / (Math.pow(base, diff) - 1)
+  return (Math.pow(base, progress) - 1) / (Math.pow(base, diff) - 1);
 }
 
-/** y = x^2 */
-function quad (input: number, start: number, end: number): number {
-  return Math.pow(input - start, 2) / Math.pow(end - start, 2)
+/**
+ * y = x^2
+ * @param input
+ * @param start
+ * @param end
+ */
+function quad(input: number, start: number, end: number): number {
+  return Math.pow(input - start, 2) / Math.pow(end - start, 2);
 }
 
-/** y = x^3 */
-function cubic (input: number, start: number, end: number): number {
-  return Math.pow(input - start, 3) / Math.pow(end - start, 3)
+/**
+ * y = x^3
+ * @param input
+ * @param start
+ * @param end
+ */
+function cubic(input: number, start: number, end: number): number {
+  return Math.pow(input - start, 3) / Math.pow(end - start, 3);
 }
 
-/** y = 1 or 0 */
-function step (input: number, _start: number, end: number): number {
-  return (input > end) ? 1 : 0
+/**
+ * y = 1 or 0
+ * @param input
+ * @param _start
+ * @param end
+ */
+function step(input: number, _start: number, end: number): number {
+  return input > end ? 1 : 0;
 }

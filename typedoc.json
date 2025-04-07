@@ -1,0 +1,28 @@
+{
+  "entryPoints": ["s2/index.ts"], // Adjust to your main TypeScript file(s)
+  "plugin": [
+    // https://github.com/Gerrit0/typedoc-plugin-coverage
+    "typedoc-plugin-coverage"
+  ],
+  "out": "docs",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeExternals": true,
+  "excludeNotDocumented": true,
+  "hideGenerator": true,
+  "disableSources": true,
+  "coverageOutputPath": "assets/doc-coverage.svg",
+  "highlightLanguages": [
+    "typescript",
+    "csv",
+    "rust",
+    "json",
+    "toml",
+    "bash",
+    "html",
+    "css",
+    "markdown",
+    "yaml"
+  ]
+}

@@ -1,11 +1,11 @@
-import './util/polyfill'
-import './workers/workerPoolFlat'
-export { default as S2Map } from './s2Map'
+import './util/polyfill';
+import './workers/workerPoolFlat';
+export { default as S2Map } from './s2Map';
 
-export * from './s2Map'
-export * from './style/style.spec'
-export * from './plugins'
-export * from './util'
+export * from './s2Map';
+export * from './style/style.spec';
+export * from './plugins';
+export * from './util';
 
 /**
  * Creator of the library:
@@ -13,4 +13,4 @@ export * from './util'
  * LinkedIn - https://www.linkedin.com/in/craig-oconnor/
  * Alias - Mr. Martian
  */
-export const creator = 'Mr. Martian' // I'm a martian, I come from Mars
+export const creator = 'Mr. Martian'; // I'm a martian, I come from Mars

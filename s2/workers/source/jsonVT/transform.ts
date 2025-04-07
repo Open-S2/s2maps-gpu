@@ -87,9 +87,8 @@ export function transformPoint (
   ti: number,
   tj: number
 ): Point {
-  const { round } = Math
   return {
-    x: round(extent * (i * zoom - ti)),
-    y: round(extent * (j * zoom - tj))
+    x: extent * (i * zoom - ti),
+    y: extent * (j * zoom - tj)
   }
 }

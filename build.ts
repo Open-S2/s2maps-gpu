@@ -1,4 +1,4 @@
-const { version } = await Bun.file('./package.json').json()
+const { version } = await Bun.file('./package.json').json();
 
 await Bun.build({
   entrypoints: [
@@ -6,7 +6,7 @@ await Bun.build({
     './s2/ui/s2mapUI.ts',
     './s2/workers/map.worker.ts',
     './s2/workers/source.worker.ts',
-    './s2/workers/tile.worker.ts'
+    './s2/workers/tile.worker.ts',
   ],
   outdir: './buildS2',
   minify: true,
@@ -14,5 +14,5 @@ await Bun.build({
   splitting: true,
   target: 'browser',
   publicPath: `https://opens2.com/s2maps-gpu/v${version}/`,
-  naming: '[name]-[hash].[ext]'
-})
+  naming: '[name]-[hash].[ext]',
+});

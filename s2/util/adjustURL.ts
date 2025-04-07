@@ -3,18 +3,22 @@ const URL_MAP: Record<string, string> = {
   opens2: 'https://api.opens2.com',
   mapbox: 'https://api.mapbox.com',
   apiURL: 'https://api.opens2.com',
-  baseURL: 'https://opens2.com'
-}
+  baseURL: 'https://opens2.com',
+};
 
-/** Adjust a URL either using:
+/**
+ * Adjust a URL either using:
  * the URL_MAP (replace "s2maps://", "opens2://", or "mapbox://")
  * the apiURL (replace "apiURL://") or baseURL (replace "baseURL://")
  * which is defined by the user in the MapOptions.
+ * @param input - the input URL
+ * @param userMap - the user defined guide on how to replace the URL_MAP
+ * @returns the adjusted URL
  */
-export default function adjustURL (input: string, userMap: Record<string, string> = {}): string {
+export default function adjustURL(input: string, userMap: Record<string, string> = {}): string {
   // replace all URL_MAP instances
   for (const [key, value] of Object.entries({ ...URL_MAP, ...userMap })) {
-    input = input.replace(`${key}://`, `${value}/`)
+    input = input.replace(`${key}://`, `${value}/`);
   }
-  return input
+  return input;
 }

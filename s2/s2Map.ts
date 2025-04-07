@@ -1,182 +1,250 @@
-import { isSafari, parseHash, setHash } from './util'
+import { isSafari, parseHash, setHash } from './util';
 
-import type S2MapUI from './ui/s2mapUI'
-import type { MapOptions } from './ui/s2mapUI'
-import type { Attributions, LayerStyle, Point, StyleDefinition } from './style/style.spec'
-import type { MarkerDefinition } from './workers/source/markerSource'
-import type { AnimationDirections } from './ui/camera/animator'
-import type { UserTouchEvent } from './ui/camera/dragPan'
+import type { AnimationDirections } from './ui/camera/animator';
+import type { MapOptions } from './ui/s2mapUI';
+import type { MarkerDefinition } from './workers/source/markerSource';
+import type S2MapUI from './ui/s2mapUI';
+import type { UserTouchEvent } from './ui/camera/dragPan';
+import type { Attributions, LayerStyle, Point, StyleDefinition } from './style/style.spec';
 import type {
   MapGLMessage,
   ResetSourceMessage,
   SourceWorkerMessage,
-  TileWorkerMessage
-} from './workers/worker.spec'
+  TileWorkerMessage,
+} from './workers/worker.spec';
 
 // export types from './ui/s2mapUI'
-export type { Attributions, LayerStyle, StyleDefinition } from './style/style.spec'
-export type { MarkerDefinition } from './workers/source/markerSource'
-export type { AnimationDirections } from './ui/camera/animator'
-export type { UserTouchEvent } from './ui/camera/dragPan'
+export type { Attributions, LayerStyle, StyleDefinition } from './style/style.spec';
+export type { MarkerDefinition } from './workers/source/markerSource';
+export type { AnimationDirections } from './ui/camera/animator';
+export type { UserTouchEvent } from './ui/camera/dragPan';
 
-export type ColorMode = 0 | 1 | 2 | 3 | 4
+/**
+ *
+ */
+export type ColorMode = 0 | 1 | 2 | 3 | 4;
 
 declare global {
-  interface Window { S2Map: typeof S2Map }
+  /**
+   *
+   */
+  interface Window {
+    S2Map: typeof S2Map;
+  }
 }
 
 // S2Map is called by the user and includes the API to interact with the mapping engine
+/**
+ *
+ */
 export default class S2Map extends EventTarget {
-  readonly #container?: HTMLElement
-  #canvasContainer!: HTMLElement
-  #navigationContainer!: HTMLElement
-  readonly #canvasMultiplier: number
-  readonly #canvas: HTMLCanvasElement
-  #attributionPopup?: HTMLDivElement
-  #watermark?: HTMLAnchorElement
-  #compass?: HTMLElement
-  #colorBlind?: HTMLElement
-  #attributions: Attributions = {}
-  bearing = 0 // degrees
-  pitch = 0 // degrees
-  colorMode: ColorMode = 0 // 0: none - 1: protanopia - 2: deuteranopia - 3: tritanopia - 4: greyscale
-  map?: S2MapUI
-  hash = false
-  offscreen?: Worker
-  id: string = Math.random().toString(36).replace('0.', '')
-  isNative = false
-  isReady = false
-  constructor (
+  readonly #container?: HTMLElement;
+  #canvasContainer!: HTMLElement;
+  #navigationContainer!: HTMLElement;
+  readonly #canvasMultiplier: number;
+  readonly #canvas: HTMLCanvasElement;
+  #attributionPopup?: HTMLDivElement;
+  #watermark?: HTMLAnchorElement;
+  #compass?: HTMLElement;
+  #colorBlind?: HTMLElement;
+  #attributions: Attributions = {};
+  bearing = 0; // degrees
+  pitch = 0; // degrees
+  colorMode: ColorMode = 0; // 0: none - 1: protanopia - 2: deuteranopia - 3: tritanopia - 4: greyscale
+  map?: S2MapUI;
+  hash = false;
+  offscreen?: Worker;
+  id: string = Math.random().toString(36).replace('0.', '');
+  isNative = false;
+  isReady = false;
+  /**
+   * @param options
+   */
+  constructor(
     options: MapOptions = {
       canvasMultiplier: window.devicePixelRatio ?? 2,
       interactive: true,
-      style: {}
-    }
+      style: {},
+    },
   ) {
-    super()
-    options.canvasMultiplier = this.#canvasMultiplier = Math.max(2, options.canvasMultiplier ?? 2)
+    super();
+    options.canvasMultiplier = this.#canvasMultiplier = Math.max(2, options.canvasMultiplier ?? 2);
     // set hash if necessary
     if (options.hash === true) {
-      this.hash = true
+      this.hash = true;
       // TODO: get this working even if style is a string
-      if (typeof options.style === 'object') options.style.view = { ...options.style.view, ...parseHash() }
+      if (typeof options.style === 'object')
+        options.style.view = { ...options.style.view, ...parseHash() };
     }
     // get the container if we don't already have a canvas instance
     if (options.canvas === undefined) {
       if (typeof options.container === 'string') {
-        const container = window.document.getElementById(options.container)
-        if (container === null) throw new Error('Container not found.')
-        this.#container = container
+        const container = window.document.getElementById(options.container);
+        if (container === null) throw new Error('Container not found.');
+        this.#container = container;
       } else if (options.container instanceof HTMLElement) {
-        this.#container = options.container
+        this.#container = options.container;
       } else if (options.canvas === undefined) {
-        throw new Error('Invalid type: "container" must be a String or HTMLElement.')
+        throw new Error('Invalid type: "container" must be a String or HTMLElement.');
       }
     }
     // we now remove container from options for potential webworker
-    delete options.container
+    delete options.container;
     // prep container, creating the canvas
-    this.#canvas = options.canvas ?? this.#setupContainer(options)
-    if ('node' in this.#canvas) this.isNative = true
+    this.#canvas = options.canvas ?? this.#setupContainer(options);
+    if ('node' in this.#canvas) this.isNative = true;
     // create map via a webworker if possible, otherwise just load it in directly
-    void this.#setupCanvas(this.#canvas, options)
+    void this.#setupCanvas(this.#canvas, options);
   }
 
-  addEventListener (type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void {
-    const { isReady } = this
+  /**
+   * @param type
+   * @param listener
+   * @param options
+   */
+  override addEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | AddEventListenerOptions,
+  ): void {
+    const { isReady } = this;
     // Call the original addEventListener method
-    super.addEventListener(type, listener, options)
+    super.addEventListener(type, listener, options);
     // there are cases where the map loads so quickly that the ready event is missed
     // before the listener is added, so we need to check if the map was already ready
     if (type === 'ready' && isReady) {
-      this.dispatchEvent(new CustomEvent('ready', { detail: this }))
+      this.dispatchEvent(new CustomEvent('ready', { detail: this }));
     }
   }
 
   /* BUILD/CONSTRUCTION FUNCTIONS */
 
-  #ready (): void {
-    this.isReady = true
-    this.#onCanvasReady()
-    this.dispatchEvent(new CustomEvent('ready', { detail: this }))
+  /**
+   *
+   */
+  #ready(): void {
+    this.isReady = true;
+    this.#onCanvasReady();
+    this.dispatchEvent(new CustomEvent('ready', { detail: this }));
   }
 
-  #setupContainer (options: MapOptions): HTMLCanvasElement {
-    if (this.#container === undefined) throw new Error('Container not found.')
+  /**
+   * @param options
+   */
+  #setupContainer(options: MapOptions): HTMLCanvasElement {
+    if (this.#container === undefined) throw new Error('Container not found.');
     // prep container
-    const container = this.#container
-    container.classList.add('s2-map')
-    this.setDarkMode(options.darkMode)
+    const container = this.#container;
+    container.classList.add('s2-map');
+    this.setDarkMode(options.darkMode);
     // build canvas-container
-    const canvasContainer = this.#canvasContainer = window.document.createElement('div')
-    canvasContainer.className = 's2-canvas-container'
-    container.prepend(canvasContainer)
+    const canvasContainer = (this.#canvasContainer = window.document.createElement('div'));
+    canvasContainer.className = 's2-canvas-container';
+    container.prepend(canvasContainer);
     // build canvas
-    const canvas = window.document.createElement('canvas')
-    canvas.className = 's2-canvas'
-    canvas.setAttribute('tabindex', '0')
-    canvas.setAttribute('aria-label', 'S2Map')
-    canvas.width = container.clientWidth * this.#canvasMultiplier
-    canvas.height = container.clientHeight * this.#canvasMultiplier
-    canvasContainer.appendChild(canvas)
+    const canvas = window.document.createElement('canvas');
+    canvas.className = 's2-canvas';
+    canvas.setAttribute('tabindex', '0');
+    canvas.setAttribute('aria-label', 'S2Map');
+    canvas.width = container.clientWidth * this.#canvasMultiplier;
+    canvas.height = container.clientHeight * this.#canvasMultiplier;
+    canvasContainer.appendChild(canvas);
 
-    return canvas
+    return canvas;
   }
 
-  async #setupCanvas (canvas: HTMLCanvasElement, options: MapOptions): Promise<void> {
-    const isBrowser = options.canvas === undefined
+  /**
+   * @param canvas
+   * @param options
+   */
+  async #setupCanvas(canvas: HTMLCanvasElement, options: MapOptions): Promise<void> {
+    const isBrowser = options.canvas === undefined;
     // prep the ready function should it exist
     // prep webgpu/webgl type
-    let tmpContext: RenderingContext | null = null
+    let tmpContext: RenderingContext | null = null;
     if (isBrowser && options.contextType === undefined) {
+      /**
+       * @param name
+       */
       const tryContext = (name: 'webgl' | 'experimental-webgl' | 'webgl2' | 'webgpu'): boolean => {
-        tmpContext = document.createElement('canvas').getContext(name)
-        return tmpContext !== null
-      }
-      options.contextType = (tryContext('webgpu'))
-        ? 3
-        : (tryContext('webgl2'))
-            ? 2
-            : 1
+        tmpContext = document.createElement('canvas').getContext(name);
+        return tmpContext !== null;
+      };
+      options.contextType = tryContext('webgpu') ? 3 : tryContext('webgl2') ? 2 : 1;
     }
     // @ts-expect-error - if webgl2 context was found, lose the context
-    if (isBrowser && options.contextType === 2) tmpContext?.getExtension('WEBGL_lose_context').loseContext()
+    if (isBrowser && options.contextType === 2)
+      tmpContext?.getExtension('WEBGL_lose_context').loseContext();
     // if browser supports it, create an instance of the mapWorker
     // TODO: Safari offscreenCanvas sucks currently. It's so janky. Leave this here for when it's fixed.
-    if (options.offscreen !== false && !isSafari && typeof canvas.transferControlToOffscreen === 'function') {
-      const offscreenCanvas = canvas.transferControlToOffscreen()
-      const mapWorker = this.offscreen = new Worker(new URL('./workers/map.worker', import.meta.url), { name: 'map-worker', type: 'module' })
-      mapWorker.onmessage = this.onMessage.bind(this)
-      mapWorker.postMessage({ type: 'canvas', options, canvas: offscreenCanvas, id: this.id }, [offscreenCanvas])
+    if (
+      options.offscreen !== false &&
+      !isSafari &&
+      typeof canvas.transferControlToOffscreen === 'function'
+    ) {
+      const offscreenCanvas = canvas.transferControlToOffscreen();
+      const mapWorker = (this.offscreen = new Worker(
+        new URL('./workers/map.worker', import.meta.url),
+        { name: 'map-worker', type: 'module' },
+      ));
+      mapWorker.onmessage = this.onMessage.bind(this);
+      mapWorker.postMessage({ type: 'canvas', options, canvas: offscreenCanvas, id: this.id }, [
+        offscreenCanvas,
+      ]);
     } else {
-      const Map = await import('./ui/s2mapUI').then(m => m.default)
-      this.map = new Map(options, canvas, this.id, this)
+      const Map = await import('./ui/s2mapUI').then((m) => m.default);
+      this.map = new Map(options, canvas, this.id, this);
     }
     // now that canvas is setup, add control containers as necessary
-    this.#setupControlContainer(options)
+    this.#setupControlContainer(options);
     // if we interact with the map, we need to both allow interaction with styling
     // and watch how the mouse moves on the canvas
-    const canvasContainer = this.#canvasContainer
+    const canvasContainer = this.#canvasContainer;
     if (options.interactive ?? true) {
-      canvasContainer.classList.add('s2-interactive')
-      canvasContainer.addEventListener('mousemove', this.#onCanvasMouseMove.bind(this) as (e: MouseEvent) => void)
-      canvasContainer.addEventListener('contextmenu', this.#onCompassMouseDown.bind(this) as (e: MouseEvent) => void)
-      canvasContainer.addEventListener('mouseleave', this.#onCanvasMouseLeave.bind(this) as () => void)
-      if (options.scrollZoom ?? true) canvasContainer.addEventListener('wheel', this.#onScroll.bind(this) as (e: WheelEvent) => void)
-      canvasContainer.addEventListener('mousedown', this.#onMouseDown.bind(this) as (e: MouseEvent) => void)
-      canvasContainer.addEventListener('touchstart', (e: TouchEvent) => { this.#onTouch(e, 'touchstart') })
-      canvasContainer.addEventListener('touchend', (e: TouchEvent) => { this.#onTouch(e, 'touchend') })
-      canvasContainer.addEventListener('touchmove', (e: TouchEvent) => { this.#onTouch(e, 'touchmove') })
+      canvasContainer.classList.add('s2-interactive');
+      canvasContainer.addEventListener(
+        'mousemove',
+        this.#onCanvasMouseMove.bind(this) as (e: MouseEvent) => void,
+      );
+      canvasContainer.addEventListener(
+        'contextmenu',
+        this.#onCompassMouseDown.bind(this) as (e: MouseEvent) => void,
+      );
+      canvasContainer.addEventListener(
+        'mouseleave',
+        this.#onCanvasMouseLeave.bind(this) as () => void,
+      );
+      if (options.scrollZoom ?? true)
+        canvasContainer.addEventListener(
+          'wheel',
+          this.#onScroll.bind(this) as (e: WheelEvent) => void,
+        );
+      canvasContainer.addEventListener(
+        'mousedown',
+        this.#onMouseDown.bind(this) as (e: MouseEvent) => void,
+      );
+      canvasContainer.addEventListener('touchstart', (e: TouchEvent) => {
+        this.#onTouch(e, 'touchstart');
+      });
+      canvasContainer.addEventListener('touchend', (e: TouchEvent) => {
+        this.#onTouch(e, 'touchend');
+      });
+      canvasContainer.addEventListener('touchmove', (e: TouchEvent) => {
+        this.#onTouch(e, 'touchmove');
+      });
     }
   }
 
-  // If mouse leaves the canvas, clear out any features considered "active"
-  #onCanvasMouseLeave (): void {
-    this.#canvas.style.cursor = 'default'
-    this.dispatchEvent(new CustomEvent('mouseleave', { detail: null }))
+  /** If mouse leaves the canvas, clear out any features considered "active" */
+  #onCanvasMouseLeave(): void {
+    this.#canvas.style.cursor = 'default';
+    this.dispatchEvent(new CustomEvent('mouseleave', { detail: null }));
   }
 
-  #setupControlContainer (options: MapOptions): void {
+  /**
+   * @param options
+   */
+  #setupControlContainer(options: MapOptions): void {
     const {
       attributions,
       controls,
@@ -184,108 +252,124 @@ export default class S2Map extends EventTarget {
       compassController,
       colorblindController,
       attributionOff,
-      watermarkOff
-    } = options
-    if (this.isNative) return
+      watermarkOff,
+    } = options;
+    if (this.isNative) return;
     // add info bar with our jollyRoger
     if (attributionOff !== true) {
-      const attribution = window.document.createElement('div')
-      attribution.id = 's2-attribution'
-      const info = window.document.createElement('div')
-      info.className = info.id = 's2-info'
-      info.onclick = function () { attribution.classList.toggle('show') }
-      const popup = this.#attributionPopup = window.document.createElement('div')
-      popup.className = 's2-popup-container'
-      popup.innerHTML = '<div>Rendered with ❤ by</div><a href="https://opens2.com" target="popup"><div class="s2-jolly-roger"></div></a>'
+      const attribution = window.document.createElement('div');
+      attribution.id = 's2-attribution';
+      const info = window.document.createElement('div');
+      info.className = info.id = 's2-info';
+      /**
+       *
+       */
+      info.onclick = function () {
+        attribution.classList.toggle('show');
+      };
+      const popup = (this.#attributionPopup = window.document.createElement('div'));
+      popup.className = 's2-popup-container';
+      popup.innerHTML =
+        '<div>Rendered with ❤ by</div><a href="https://opens2.com" target="popup"><div class="s2-jolly-roger"></div></a>';
       // add attributions
       if (attributions !== undefined) {
         for (const name in attributions) {
           if (this.#attributions[name] === undefined) {
-            this.#attributions[name] = attributions[name]
-            popup.innerHTML += `<div><a href="${attributions[name]}" target="_popup">${name}</a></div>`
+            this.#attributions[name] = attributions[name];
+            popup.innerHTML += `<div><a href="${attributions[name]}" target="_popup">${name}</a></div>`;
           }
         }
       }
-      attribution.appendChild(info)
-      attribution.appendChild(popup)
+      attribution.appendChild(info);
+      attribution.appendChild(popup);
       // add watermark
       if (watermarkOff !== true) {
-        const watermark = this.#watermark = window.document.createElement('a')
-        watermark.className = 's2-watermark'
-        watermark.href = 'https://opens2.com'
-        watermark.target = '_popup'
-        attribution.appendChild(watermark)
+        const watermark = (this.#watermark = window.document.createElement('a'));
+        watermark.className = 's2-watermark';
+        watermark.href = 'https://opens2.com';
+        watermark.target = '_popup';
+        attribution.appendChild(watermark);
       }
-      this.#container?.appendChild(attribution)
+      this.#container?.appendChild(attribution);
     }
     // if zoom or compass controllers, add
     if (controls !== false) {
-      let navSep
-      let firstNavCompSet = false
+      let navSep;
+      let firstNavCompSet = false;
       // first create the container
-      const navigationContainer = this.#navigationContainer = window.document.createElement('div')
-      navigationContainer.className = 's2-nav-container'
-      this.#container?.appendChild(navigationContainer)
+      const navigationContainer = (this.#navigationContainer =
+        window.document.createElement('div'));
+      navigationContainer.className = 's2-nav-container';
+      this.#container?.appendChild(navigationContainer);
       if (zoomController !== false) {
         // plus
-        const zoomPlus = window.document.createElement('button')
-        zoomPlus.className = 's2-control-button s2-zoom-plus'
-        zoomPlus.setAttribute('aria-hidden', '')
-        zoomPlus.tabIndex = -1
-        navigationContainer.appendChild(zoomPlus)
-        zoomPlus.addEventListener('click', () => { this.#navEvent('zoomIn') })
+        const zoomPlus = window.document.createElement('button');
+        zoomPlus.className = 's2-control-button s2-zoom-plus';
+        zoomPlus.setAttribute('aria-hidden', '');
+        zoomPlus.tabIndex = -1;
+        navigationContainer.appendChild(zoomPlus);
+        zoomPlus.addEventListener('click', () => {
+          this.#navEvent('zoomIn');
+        });
         // seperator
-        firstNavCompSet = true
-        navSep = window.document.createElement('div')
-        navSep.className = 's2-nav-sep'
-        navigationContainer.appendChild(navSep)
+        firstNavCompSet = true;
+        navSep = window.document.createElement('div');
+        navSep.className = 's2-nav-sep';
+        navigationContainer.appendChild(navSep);
         // minus
-        const zoomMinus = window.document.createElement('button')
-        zoomMinus.className = 's2-control-button s2-zoom-minus'
-        zoomMinus.setAttribute('aria-hidden', '')
-        zoomMinus.tabIndex = -1
-        navigationContainer.appendChild(zoomMinus)
-        zoomMinus.addEventListener('click', () => { this.#navEvent('zoomOut') })
+        const zoomMinus = window.document.createElement('button');
+        zoomMinus.className = 's2-control-button s2-zoom-minus';
+        zoomMinus.setAttribute('aria-hidden', '');
+        zoomMinus.tabIndex = -1;
+        navigationContainer.appendChild(zoomMinus);
+        zoomMinus.addEventListener('click', () => {
+          this.#navEvent('zoomOut');
+        });
       }
       if (compassController !== false) {
         if (!firstNavCompSet) {
-          firstNavCompSet = true
+          firstNavCompSet = true;
         } else {
           // seperator
-          navSep = window.document.createElement('div')
-          navSep.className = 's2-nav-sep'
-          navigationContainer.appendChild(navSep)
+          navSep = window.document.createElement('div');
+          navSep.className = 's2-nav-sep';
+          navigationContainer.appendChild(navSep);
         }
         // compass button
-        const compassContainer = window.document.createElement('button')
-        compassContainer.className = 's2-control-button'
-        compassContainer.setAttribute('aria-hidden', '')
-        compassContainer.tabIndex = -1
-        navigationContainer.appendChild(compassContainer)
-        const compass = this.#compass = window.document.createElement('div')
-        compass.className = 's2-compass'
-        compass.setAttribute('aria-hidden', '')
-        compass.tabIndex = -1
-        compassContainer.appendChild(compass)
-        compassContainer.addEventListener('mousedown', this.#onCompassMouseDown.bind(this) as (e: MouseEvent) => void)
+        const compassContainer = window.document.createElement('button');
+        compassContainer.className = 's2-control-button';
+        compassContainer.setAttribute('aria-hidden', '');
+        compassContainer.tabIndex = -1;
+        navigationContainer.appendChild(compassContainer);
+        const compass = (this.#compass = window.document.createElement('div'));
+        compass.className = 's2-compass';
+        compass.setAttribute('aria-hidden', '');
+        compass.tabIndex = -1;
+        compassContainer.appendChild(compass);
+        compassContainer.addEventListener(
+          'mousedown',
+          this.#onCompassMouseDown.bind(this) as (e: MouseEvent) => void,
+        );
       }
       if (colorblindController !== false) {
         if (!firstNavCompSet) {
-          firstNavCompSet = true
+          firstNavCompSet = true;
         } else {
           // seperator
-          navSep = window.document.createElement('div')
-          navSep.className = 's2-nav-sep'
-          navigationContainer.appendChild(navSep)
+          navSep = window.document.createElement('div');
+          navSep.className = 's2-nav-sep';
+          navigationContainer.appendChild(navSep);
         }
         // colorblind button
-        const colorBlind = this.#colorBlind = window.document.createElement('button')
-        colorBlind.className = 's2-control-button s2-colorblind-button'
-        colorBlind.id = 's2-colorblind-default'
-        colorBlind.setAttribute('aria-hidden', '')
-        colorBlind.tabIndex = -1
-        navigationContainer.appendChild(colorBlind)
-        colorBlind.addEventListener('click', () => { this.#setColorMode() })
+        const colorBlind = (this.#colorBlind = window.document.createElement('button'));
+        colorBlind.className = 's2-control-button s2-colorblind-button';
+        colorBlind.id = 's2-colorblind-default';
+        colorBlind.setAttribute('aria-hidden', '');
+        colorBlind.tabIndex = -1;
+        navigationContainer.appendChild(colorBlind);
+        colorBlind.addEventListener('click', () => {
+          this.#setColorMode();
+        });
       }
     }
   }
@@ -294,211 +378,284 @@ export default class S2Map extends EventTarget {
 
   /**
    * @internal
+   * @param data - The data to inject
    * Used by the WorkerPool.
    * Anytime a Source worker or Tile Worker has data to inject into the map,
    * it will call this function.
    */
-  injectData (data: SourceWorkerMessage | TileWorkerMessage): void {
-    const { type } = data
-    const { map, offscreen } = this
+  injectData(data: SourceWorkerMessage | TileWorkerMessage): void {
+    const { type } = data;
+    const { map, offscreen } = this;
     if (type === 'attributions') {
-      this.#addAttributions(data.attributions)
+      this.#addAttributions(data.attributions);
     } else if (type === 'setStyle') {
-      void this.setStyle(data.style, data.ignorePosition)
+      void this.setStyle(data.style, data.ignorePosition);
     } else if (offscreen !== undefined) {
-      if (type === 'fill') offscreen.postMessage(data, [data.vertexBuffer, data.indexBuffer, data.idBuffer, data.codeTypeBuffer, data.featureGuideBuffer])
-      else if (type === 'line') offscreen.postMessage(data, [data.vertexBuffer, data.featureGuideBuffer])
-      else if (type === 'glyph') offscreen.postMessage(data, [data.glyphFilterBuffer, data.glyphFilterIDBuffer, data.glyphQuadBuffer, data.glyphQuadIDBuffer, data.glyphColorBuffer, data.featureGuideBuffer])
-      else if (type === 'glyphimages') offscreen.postMessage(data, data.images.map(i => i.data) as Transferable[])
-      else if (type === 'spriteimage') offscreen.postMessage(data, [data.image as Transferable])
-      else if (type === 'raster') offscreen.postMessage(data, [data.image as Transferable])
-      else if (type === 'point') offscreen.postMessage(data, [data.vertexBuffer, data.idBuffer, data.featureGuideBuffer])
-      else if (type === 'heatmap') offscreen.postMessage(data, [data.vertexBuffer, data.weightBuffer, data.featureGuideBuffer])
-      else if (type === 'interactive') offscreen.postMessage(data, [data.interactiveGuideBuffer, data.interactiveDataBuffer])
-      else offscreen.postMessage(data)
+      if (type === 'fill')
+        offscreen.postMessage(data, [
+          data.vertexBuffer,
+          data.indexBuffer,
+          data.idBuffer,
+          data.codeTypeBuffer,
+          data.featureGuideBuffer,
+        ]);
+      else if (type === 'line')
+        offscreen.postMessage(data, [data.vertexBuffer, data.featureGuideBuffer]);
+      else if (type === 'glyph')
+        offscreen.postMessage(data, [
+          data.glyphFilterBuffer,
+          data.glyphFilterIDBuffer,
+          data.glyphQuadBuffer,
+          data.glyphQuadIDBuffer,
+          data.glyphColorBuffer,
+          data.featureGuideBuffer,
+        ]);
+      else if (type === 'glyphimages')
+        offscreen.postMessage(data, data.images.map((i) => i.data) as Transferable[]);
+      else if (type === 'spriteimage') offscreen.postMessage(data, [data.image as Transferable]);
+      else if (type === 'raster') offscreen.postMessage(data, [data.image as Transferable]);
+      else if (type === 'point')
+        offscreen.postMessage(data, [data.vertexBuffer, data.idBuffer, data.featureGuideBuffer]);
+      else if (type === 'heatmap')
+        offscreen.postMessage(data, [
+          data.vertexBuffer,
+          data.weightBuffer,
+          data.featureGuideBuffer,
+        ]);
+      else if (type === 'interactive')
+        offscreen.postMessage(data, [data.interactiveGuideBuffer, data.interactiveDataBuffer]);
+      else offscreen.postMessage(data);
     } else if (map !== undefined) {
-      map.injectData(data)
+      map.injectData(data);
     }
   }
 
   /**
+   * @param root0
+   * @param root0.data
    * @internal
    * Used by the MapUI either from a thread or directly. to either
    * send messages to Source/Tile Workers or to the user.
    */
-  onMessage ({ data }: { data: MapGLMessage }): void {
-    const { mapID, type } = data
+  onMessage({ data }: { data: MapGLMessage }): void {
+    const { mapID, type } = data;
     if (type === 'tilerequest') {
-      window.S2WorkerPool.tileRequest(mapID, data.tiles, data.sources)
+      window.S2WorkerPool.tileRequest(mapID, data.tiles, data.sources);
     } else if (type === 'timerequest') {
-      window.S2WorkerPool.timeRequest(mapID, data.tiles, data.sourceNames)
+      window.S2WorkerPool.timeRequest(mapID, data.tiles, data.sourceNames);
     } else if (type === 'mouseenter') {
-      // console.log('mouseenter', data)
-      const { features } = data
-      this.#canvas.style.cursor = features[0].__cursor
-      this.dispatchEvent(new CustomEvent('mouseenter', { detail: data }))
+      const { features } = data;
+      this.#canvas.style.cursor = features[0]?.__cursor ?? 'default';
+      this.dispatchEvent(new CustomEvent('mouseenter', { detail: data }));
     } else if (type === 'mouseleave') {
-      // console.log('mouseleave', data)
-      const { currentFeatures } = data
-      if (currentFeatures.length === 0) this.#canvas.style.cursor = 'default'
-      this.dispatchEvent(new CustomEvent('mouseleave', { detail: data }))
+      const { currentFeatures } = data;
+      if (currentFeatures.length === 0) this.#canvas.style.cursor = 'default';
+      this.dispatchEvent(new CustomEvent('mouseleave', { detail: data }));
     } else if (type === 'click') {
-      // console.log('click', data)
-      this.dispatchEvent(new CustomEvent('click', { detail: data }))
+      this.dispatchEvent(new CustomEvent('click', { detail: data }));
     } else if (type === 'view') {
-      if (this.hash) setHash(data.view)
-      this.dispatchEvent(new CustomEvent('view', { detail: data }))
+      if (this.hash) setHash(data.view);
+      this.dispatchEvent(new CustomEvent('view', { detail: data }));
     } else if (type === 'requestStyle') {
-      window.S2WorkerPool.requestStyle(mapID, data.style, data.analytics, data.apiKey)
+      window.S2WorkerPool.requestStyle(mapID, data.style, data.analytics, data.apiKey);
     } else if (type === 'style') {
-      window.S2WorkerPool.injectStyle(mapID, data.style)
+      window.S2WorkerPool.injectStyle(mapID, data.style);
     } else if (type === 'updateCompass') {
-      this._updateCompass(data.bearing, data.pitch)
+      this._updateCompass(data.bearing, data.pitch);
     } else if (type === 'addLayer') {
-      window.S2WorkerPool.addLayer(mapID, data.layer, data.index, data.tileRequest)
+      window.S2WorkerPool.addLayer(mapID, data.layer, data.index, data.tileRequest);
     } else if (type === 'deleteLayer') {
-      window.S2WorkerPool.deleteLayer(mapID, data.index)
+      window.S2WorkerPool.deleteLayer(mapID, data.index);
     } else if (type === 'reorderLayers') {
-      window.S2WorkerPool.reorderLayers(mapID, data.layerChanges)
+      window.S2WorkerPool.reorderLayers(mapID, data.layerChanges);
     } else if (type === 'screenshot') {
-      this.dispatchEvent(new CustomEvent('screenshot', { detail: new Uint8ClampedArray(data.screen) }))
+      this.dispatchEvent(
+        new CustomEvent('screenshot', { detail: new Uint8ClampedArray(data.screen) }),
+      );
     } else if (type === 'rendered') {
-      this.dispatchEvent(new Event('rendered'))
+      this.dispatchEvent(new Event('rendered'));
     } else if (type === 'ready') {
-      this.#ready()
+      this.#ready();
     }
   }
 
   /* INTERNAL FUNCTIONS */
 
-  #onCanvasReady (): void {
+  /** internal function to handle canvas ready */
+  #onCanvasReady(): void {
     // set color mode
-    const mode = parseInt(localStorage.getItem('s2maps:gpu:colorBlindMode') ?? '0') as ColorMode
-    this.#setColorMode(mode)
+    const mode = parseInt(localStorage.getItem('s2maps:gpu:colorBlindMode') ?? '0') as ColorMode;
+    this.#setColorMode(mode);
     // now that canvas is setup, support resizing
     if (this.#container !== undefined && 'ResizeObserver' in window) {
-      new ResizeObserver(this.#resize.bind(this) as () => void).observe(this.#container)
-    } else window.addEventListener('resize', this.#resize.bind(this) as () => void)
+      new ResizeObserver(this.#resize.bind(this) as () => void).observe(this.#container);
+    } else window.addEventListener('resize', this.#resize.bind(this) as () => void);
     // let the S2WorkerPool know of this maps existance
-    window.S2WorkerPool.addMap(this)
+    window.S2WorkerPool.addMap(this);
   }
 
-  #addAttributions (attributions: Attributions = {}): void {
+  /**
+   * Internal function to add missing attribution data.
+   * @param attributions - Attributions object to inject into grouped attributions container
+   */
+  #addAttributions(attributions: Attributions = {}): void {
     if (this.#attributionPopup !== undefined) {
       for (const name in attributions) {
         if (this.#attributions[name] === undefined) {
-          this.#attributions[name] = attributions[name]
-          this.#attributionPopup.innerHTML += `<div><a href="${attributions[name]}" target="popup">${name}</a></div>`
+          this.#attributions[name] = attributions[name];
+          this.#attributionPopup.innerHTML += `<div><a href="${attributions[name]}" target="popup">${name}</a></div>`;
         }
       }
     }
   }
 
-  #onTouch (e: TouchEvent, type: 'touchstart' | 'touchend' | 'touchmove'): void {
-    const { map, offscreen } = this
-    const canvasContainer = this.#canvasContainer
-    e.preventDefault()
-    const { touches } = e
-    const { length } = touches
-    const touchEvent: UserTouchEvent = { length }
+  /**
+   * @param e
+   * @param type
+   */
+  #onTouch(e: TouchEvent, type: 'touchstart' | 'touchend' | 'touchmove'): void {
+    const { map, offscreen } = this;
+    const canvasContainer = this.#canvasContainer;
+    e.preventDefault();
+    const { touches } = e;
+    const { length } = touches;
+    const touchEvent: UserTouchEvent = { length };
 
     for (let i = 0; i < length; i++) {
-      const { clientX, clientY, pageX, pageY } = touches[i]
-      const x = (pageX - canvasContainer.offsetLeft) * this.#canvasMultiplier
-      const y = (pageY - canvasContainer.offsetTop) * this.#canvasMultiplier
-      touchEvent[i] = { clientX, clientY, x, y }
+      const { clientX, clientY, pageX, pageY } = touches[i];
+      const x = (pageX - canvasContainer.offsetLeft) * this.#canvasMultiplier;
+      const y = (pageY - canvasContainer.offsetTop) * this.#canvasMultiplier;
+      touchEvent[i] = { clientX, clientY, x, y };
     }
-    offscreen?.postMessage({ type, touchEvent })
+    offscreen?.postMessage({ type, touchEvent });
     if (map !== undefined) {
-      if (type === 'touchstart') map.onTouchStart(touchEvent)
-      else if (type === 'touchend') map.dragPan.onTouchEnd(touchEvent)
-      else if (type === 'touchmove') map.dragPan.onTouchMove(touchEvent)
+      if (type === 'touchstart') map.onTouchStart(touchEvent);
+      else if (type === 'touchend') map.dragPan.onTouchEnd(touchEvent);
+      else if (type === 'touchmove') map.dragPan.onTouchMove(touchEvent);
     }
   }
 
-  #onScroll (e: WheelEvent): void {
-    e.preventDefault()
-    const { map, offscreen } = this
-    const { clientX, clientY, deltaY } = e
-    const rect = this.#canvas.getBoundingClientRect()
-    offscreen?.postMessage({ type: 'scroll', rect, clientX, clientY, deltaY })
-    map?.onZoom(deltaY, clientX - rect.left, clientY - rect.top)
+  /**
+   * @param e
+   */
+  #onScroll(e: WheelEvent): void {
+    e.preventDefault();
+    const { map, offscreen } = this;
+    const { clientX, clientY, deltaY } = e;
+    const rect = this.#canvas.getBoundingClientRect();
+    offscreen?.postMessage({ type: 'scroll', rect, clientX, clientY, deltaY });
+    map?.onZoom(deltaY, clientX - rect.left, clientY - rect.top);
   }
 
-  #onMouseDown (e: MouseEvent): void {
-    if (e.button !== 0) return
-    const { map, offscreen } = this
+  /**
+   * @param e
+   */
+  #onMouseDown(e: MouseEvent): void {
+    if (e.button !== 0) return;
+    const { map, offscreen } = this;
     // send off a mousedown
-    offscreen?.postMessage({ type: 'mousedown' })
-    map?.dragPan.onMouseDown()
+    offscreen?.postMessage({ type: 'mousedown' });
+    map?.dragPan.onMouseDown();
     // build a listener to mousemovement
-    const mouseMoveFunc: (e: MouseEvent) => void = this.#onMouseMove.bind(this)
-    window.addEventListener('mousemove', mouseMoveFunc)
+    const mouseMoveFunc: (e: MouseEvent) => void = this.#onMouseMove.bind(this);
+    window.addEventListener('mousemove', mouseMoveFunc);
     // upon eventual mouseup, let the map know
-    window.addEventListener('mouseup', (e) => {
-      const rect = this.#canvas.getBoundingClientRect()
-      const { clientX, clientY } = e
-      window.removeEventListener('mousemove', mouseMoveFunc)
-      offscreen?.postMessage({ type: 'mouseup', clientX, clientY, rect })
-      map?.dragPan.onMouseUp(
-        clientX - rect.left - (rect.width / 2),
-        (rect.height / 2) - clientY - rect.top
-      )
-    }, { once: true })
+    window.addEventListener(
+      'mouseup',
+      (e) => {
+        const rect = this.#canvas.getBoundingClientRect();
+        const { clientX, clientY } = e;
+        window.removeEventListener('mousemove', mouseMoveFunc);
+        offscreen?.postMessage({ type: 'mouseup', clientX, clientY, rect });
+        map?.dragPan.onMouseUp(
+          clientX - rect.left - rect.width / 2,
+          rect.height / 2 - clientY - rect.top,
+        );
+      },
+      { once: true },
+    );
   }
 
-  #onMouseMove (e: MouseEvent): void {
-    const { map, offscreen } = this
-    let { movementX, movementY } = e
-    movementX *= this.#canvasMultiplier
-    movementY *= this.#canvasMultiplier
-    offscreen?.postMessage({ type: 'mousemove', movementX, movementY })
-    map?.dragPan.onMouseMove(movementX, movementY)
+  /**
+   * @param e
+   */
+  #onMouseMove(e: MouseEvent): void {
+    const { map, offscreen } = this;
+    let { movementX, movementY } = e;
+    movementX *= this.#canvasMultiplier;
+    movementY *= this.#canvasMultiplier;
+    offscreen?.postMessage({ type: 'mousemove', movementX, movementY });
+    map?.dragPan.onMouseMove(movementX, movementY);
   }
 
-  #onCanvasMouseMove (e: MouseEvent): void {
-    const { map, offscreen } = this
-    const { layerX, layerY } = getLayerCoordinates(e)
-    const x = layerX * this.#canvasMultiplier
-    const y = layerY * this.#canvasMultiplier
+  /**
+   * @param e
+   */
+  #onCanvasMouseMove(e: MouseEvent): void {
+    const { map, offscreen } = this;
+    const { layerX, layerY } = getLayerCoordinates(e);
+    const x = layerX * this.#canvasMultiplier;
+    const y = layerY * this.#canvasMultiplier;
 
-    offscreen?.postMessage({ type: 'canvasmousemove', x, y })
-    map?.onCanvasMouseMove(x, y)
+    offscreen?.postMessage({ type: 'canvasmousemove', x, y });
+    map?.onCanvasMouseMove(x, y);
   }
 
-  _updateCompass (bearing: number, pitch: number): void {
-    this.bearing = -bearing
-    this.pitch = pitch
+  /**
+   * @param bearing
+   * @param pitch
+   */
+  _updateCompass(bearing: number, pitch: number): void {
+    this.bearing = -bearing;
+    this.pitch = pitch;
     if (this.#compass !== undefined) {
-      this.#compass.style.transform = `translate(-50%, -50%) rotate(${this.bearing}deg)`
+      this.#compass.style.transform = `translate(-50%, -50%) rotate(${this.bearing}deg)`;
     }
   }
 
-  #onCompassMouseDown (e: MouseEvent): void {
-    e.preventDefault()
-    const { map, offscreen } = this
-    const { abs } = Math
-    let totalMovementX = 0
-    let totalMovementY = 0
-    const mouseMoveFunc = ({ movementX, movementY }: { movementX: number, movementY: number }): void => {
+  /**
+   * @param e
+   */
+  #onCompassMouseDown(e: MouseEvent): void {
+    e.preventDefault();
+    const { map, offscreen } = this;
+    const { abs } = Math;
+    let totalMovementX = 0;
+    let totalMovementY = 0;
+    /**
+     * @param root0
+     * @param root0.movementX
+     * @param root0.movementY
+     */
+    const mouseMoveFunc = ({
+      movementX,
+      movementY,
+    }: {
+      movementX: number;
+      movementY: number;
+    }): void => {
       if (movementX !== 0) {
-        totalMovementX += abs(movementX)
-        totalMovementY += abs(movementY)
-        offscreen?.postMessage({ type: 'updateCompass', bearing: movementX, pitch: movementY })
-        map?.updateCompass(movementX, movementY)
+        totalMovementX += abs(movementX);
+        totalMovementY += abs(movementY);
+        offscreen?.postMessage({ type: 'updateCompass', bearing: movementX, pitch: movementY });
+        map?.updateCompass(movementX, movementY);
       }
-    }
-    window.addEventListener('mousemove', mouseMoveFunc)
-    window.addEventListener('mouseup', () => {
-      window.removeEventListener('mousemove', mouseMoveFunc)
-      if (totalMovementX === 0 && totalMovementY === 0) {
-        offscreen?.postMessage({ type: 'resetCompass' })
-        map?.resetCompass()
-      } else {
-        offscreen?.postMessage({ type: 'mouseupCompass' })
-        map?.mouseupCompass()
-      }
-    }, { once: true })
+    };
+    window.addEventListener('mousemove', mouseMoveFunc);
+    window.addEventListener(
+      'mouseup',
+      () => {
+        window.removeEventListener('mousemove', mouseMoveFunc);
+        if (totalMovementX === 0 && totalMovementY === 0) {
+          offscreen?.postMessage({ type: 'resetCompass' });
+          map?.resetCompass();
+        } else {
+          offscreen?.postMessage({ type: 'mouseupCompass' });
+          map?.mouseupCompass();
+        }
+      },
+      { once: true },
+    );
   }
 
   // #onCompassClick (): void {
@@ -507,252 +664,363 @@ export default class S2Map extends EventTarget {
   //   map?.resetCompass()
   // }
 
-  #resize (): void {
-    const { map, offscreen } = this
-    const container = this.#container
-    if (container === undefined) return
-    const canvasMultiplier = this.#canvasMultiplier
+  /**
+   *
+   */
+  #resize(): void {
+    const { map, offscreen } = this;
+    const container = this.#container;
+    if (container === undefined) return;
+    const canvasMultiplier = this.#canvasMultiplier;
     // rebuild the proper width and height using the container as a guide
     offscreen?.postMessage({
       type: 'resize',
       width: container.clientWidth * canvasMultiplier,
-      height: container.clientHeight * canvasMultiplier
-    })
-    map?.resize(container.clientWidth * canvasMultiplier, container.clientHeight * canvasMultiplier)
+      height: container.clientHeight * canvasMultiplier,
+    });
+    map?.resize(
+      container.clientWidth * canvasMultiplier,
+      container.clientHeight * canvasMultiplier,
+    );
   }
 
-  #navEvent (ctrl: 'zoomIn' | 'zoomOut'): void {
-    const { map, offscreen } = this
-    offscreen?.postMessage({ type: 'nav', ctrl })
-    map?.navEvent(ctrl)
+  /**
+   * @param ctrl
+   */
+  #navEvent(ctrl: 'zoomIn' | 'zoomOut'): void {
+    const { map, offscreen } = this;
+    offscreen?.postMessage({ type: 'nav', ctrl });
+    map?.navEvent(ctrl);
   }
 
-  #setColorMode (mode?: ColorMode): void {
-    const { map, offscreen } = this
-    if (mode !== undefined) this.colorMode = mode
-    else this.colorMode++
-    if (this.colorMode > 4) this.colorMode = 0
-    localStorage.setItem('s2maps:gpu:colorBlindMode', String(this.colorMode))
+  /**
+   * @param mode
+   */
+  #setColorMode(mode?: ColorMode): void {
+    const { map, offscreen } = this;
+    if (mode !== undefined) this.colorMode = mode;
+    else this.colorMode++;
+    if (this.colorMode > 4) this.colorMode = 0;
+    localStorage.setItem('s2maps:gpu:colorBlindMode', String(this.colorMode));
     // update the icon
-    const cM = this.colorMode
-    if (this.#colorBlind !== undefined) this.#colorBlind.id = `s2-colorblind${(cM === 0) ? '-default' : (cM === 1) ? '-proto' : (cM === 2) ? '-deut' : (cM === 3) ? '-trit' : '-grey'}`
+    const cM = this.colorMode;
+    if (this.#colorBlind !== undefined)
+      this.#colorBlind.id = `s2-colorblind${cM === 0 ? '-default' : cM === 1 ? '-proto' : cM === 2 ? '-deut' : cM === 3 ? '-trit' : '-grey'}`;
     // tell the map to update
-    offscreen?.postMessage({ type: 'colorMode', mode: cM })
-    map?.colorMode(cM)
+    offscreen?.postMessage({ type: 'colorMode', mode: cM });
+    map?.colorMode(cM);
   }
 
   /* API */
 
-  delete (): void {
-    const { offscreen, map } = this
-    this.dispatchEvent(new Event('delete'))
-    offscreen?.postMessage({ type: 'delete' })
-    offscreen?.terminate()
-    map?.delete()
+  /**
+   *
+   */
+  delete(): void {
+    const { offscreen, map } = this;
+    this.dispatchEvent(new Event('delete'));
+    offscreen?.postMessage({ type: 'delete' });
+    offscreen?.terminate();
+    map?.delete();
     // reset the worker pool
-    window.S2WorkerPool.delete()
+    window.S2WorkerPool.delete();
     // remove all canvas listeners via cloning
-    if (this.#canvas instanceof HTMLCanvasElement) this.#canvas.replaceWith(this.#canvas.cloneNode(true))
+    if (this.#canvas instanceof HTMLCanvasElement)
+      this.#canvas.replaceWith(this.#canvas.cloneNode(true));
     // cleanup the html
     if (this.#container !== undefined) {
-      while (this.#container.lastChild !== null) this.#container.removeChild(this.#container.lastChild)
+      while (this.#container.lastChild !== null)
+        this.#container.removeChild(this.#container.lastChild);
     }
   }
 
-  setDarkMode (state: boolean = false): void {
-    const classList = this.#container?.classList
-    if (state) classList?.add('dark-mode')
-    else classList?.remove('dark-mode')
+  /**
+   * @param state
+   */
+  setDarkMode(state: boolean = false): void {
+    const classList = this.#container?.classList;
+    if (state) classList?.add('dark-mode');
+    else classList?.remove('dark-mode');
   }
 
-  getContainer (): HTMLElement | undefined {
-    return this.#container
+  /**
+   *
+   */
+  getContainer(): HTMLElement | undefined {
+    return this.#container;
   }
 
-  getCanvasContainer (): HTMLElement {
-    return this.#canvasContainer
+  /**
+   *
+   */
+  getCanvasContainer(): HTMLElement {
+    return this.#canvasContainer;
   }
 
-  getContainerDimensions (): null | Point {
-    return { x: this.#container?.clientWidth ?? 0, y: this.#container?.clientHeight ?? 0 }
+  /**
+   *
+   */
+  getContainerDimensions(): null | Point {
+    return { x: this.#container?.clientWidth ?? 0, y: this.#container?.clientHeight ?? 0 };
   }
 
   // in this case, reset the style from scratch
-  async setStyle (style: StyleDefinition, ignorePosition = true): Promise<void> {
-    const { offscreen, map } = this
-    offscreen?.postMessage({ type: 'setStyle', style, ignorePosition })
-    await map?.setStyle(style, ignorePosition)
+  /**
+   * @param style
+   * @param ignorePosition
+   */
+  async setStyle(style: StyleDefinition, ignorePosition = true): Promise<void> {
+    const { offscreen, map } = this;
+    offscreen?.postMessage({ type: 'setStyle', style, ignorePosition });
+    await map?.setStyle(style, ignorePosition);
   }
 
   // in this case, check for changes and update accordingly
-  updateStyle (style: StyleDefinition): void {
-    const { offscreen, map } = this
-    offscreen?.postMessage({ type: 'updateStyle', style })
-    map?.updateStyle(style)
+  /**
+   * @param style
+   */
+  updateStyle(style: StyleDefinition): void {
+    const { offscreen, map } = this;
+    offscreen?.postMessage({ type: 'updateStyle', style });
+    map?.updateStyle(style);
   }
 
-  setMoveState (state: boolean): void {
-    const { offscreen, map } = this
-    offscreen?.postMessage({ type: 'moveState', state })
-    map?.setMoveState(state)
+  /**
+   * @param state
+   */
+  setMoveState(state: boolean): void {
+    const { offscreen, map } = this;
+    offscreen?.postMessage({ type: 'moveState', state });
+    map?.setMoveState(state);
   }
 
-  setZoomState (state: boolean): void {
-    const { offscreen, map } = this
-    offscreen?.postMessage({ type: 'zoomState', state })
-    map?.setZoomState(state)
+  /**
+   * @param state
+   */
+  setZoomState(state: boolean): void {
+    const { offscreen, map } = this;
+    offscreen?.postMessage({ type: 'zoomState', state });
+    map?.setZoomState(state);
   }
 
-  jumpTo (lon: number, lat: number, zoom?: number): void {
-    const { offscreen, map } = this
-    offscreen?.postMessage({ type: 'jumpTo', lon, lat, zoom })
-    map?.jumpTo(lon, lat, zoom)
+  /**
+   * @param lon
+   * @param lat
+   * @param zoom
+   */
+  jumpTo(lon: number, lat: number, zoom?: number): void {
+    const { offscreen, map } = this;
+    offscreen?.postMessage({ type: 'jumpTo', lon, lat, zoom });
+    map?.jumpTo(lon, lat, zoom);
   }
 
-  easeTo (directions?: AnimationDirections): void {
-    const { offscreen, map } = this
-    offscreen?.postMessage({ type: 'easeTo', directions })
-    map?.animateTo('easeTo', directions)
+  /**
+   * @param directions
+   */
+  easeTo(directions?: AnimationDirections): void {
+    const { offscreen, map } = this;
+    offscreen?.postMessage({ type: 'easeTo', directions });
+    map?.animateTo('easeTo', directions);
   }
 
-  flyTo (directions?: AnimationDirections): void {
-    const { offscreen, map } = this
-    offscreen?.postMessage({ type: 'flyTo', directions })
-    map?.animateTo('flyTo', directions)
+  /**
+   * @param directions
+   */
+  flyTo(directions?: AnimationDirections): void {
+    const { offscreen, map } = this;
+    offscreen?.postMessage({ type: 'flyTo', directions });
+    map?.animateTo('flyTo', directions);
   }
 
-  addSource (sourceName: string, href: string): void {
-    this.updateSource(sourceName, href, false, false)
+  /**
+   * @param sourceName
+   * @param href
+   */
+  addSource(sourceName: string, href: string): void {
+    this.updateSource(sourceName, href, false, false);
   }
 
-  updateSource (
-    sourceName: string,
-    href: string,
-    keepCache = true,
-    awaitReplace = true
-  ): void {
-    this.resetSource([[sourceName, href]], keepCache, awaitReplace)
+  /**
+   * @param sourceName
+   * @param href
+   * @param keepCache
+   * @param awaitReplace
+   */
+  updateSource(sourceName: string, href: string, keepCache = true, awaitReplace = true): void {
+    this.resetSource([[sourceName, href]], keepCache, awaitReplace);
   }
 
-  resetSource (
+  /**
+   * @param sourceNames
+   * @param keepCache
+   * @param awaitReplace
+   */
+  resetSource(
     sourceNames: Array<[string, string | undefined]>,
     keepCache = false,
-    awaitReplace = false
+    awaitReplace = false,
   ): void {
-    const { offscreen, map } = this
+    const { offscreen, map } = this;
     // clear old info s2json data should it exist
-    const msg: ResetSourceMessage = { type: 'resetSource', sourceNames, keepCache, awaitReplace }
-    offscreen?.postMessage(msg)
-    map?.resetSource(sourceNames, keepCache, awaitReplace)
+    const msg: ResetSourceMessage = { type: 'resetSource', sourceNames, keepCache, awaitReplace };
+    offscreen?.postMessage(msg);
+    map?.resetSource(sourceNames, keepCache, awaitReplace);
   }
 
-  deleteSource (sourceNames: string | string[]): void {
-    const { offscreen, map } = this
-    if (!Array.isArray(sourceNames)) sourceNames = [sourceNames]
+  /**
+   * @param sourceNames
+   */
+  deleteSource(sourceNames: string | string[]): void {
+    const { offscreen, map } = this;
+    if (!Array.isArray(sourceNames)) sourceNames = [sourceNames];
     // 1) tell worker pool we dont need info data anymore
-    window.S2WorkerPool.deleteSource(this.id, sourceNames)
+    window.S2WorkerPool.deleteSource(this.id, sourceNames);
     // 2) clear old info s2json data should it exist
-    offscreen?.postMessage({ type: 'clearSource', sourceNames })
-    map?.clearSource(sourceNames)
+    offscreen?.postMessage({ type: 'clearSource', sourceNames });
+    map?.clearSource(sourceNames);
   }
 
   // nameIndex -> if name it goes BEFORE the layer name specified. If layer name not found, it goes at the end
   // if no nameIndex, it goes at the end
-  addLayer (layer: LayerStyle, nameIndex: number | string): void {
-    const { offscreen, map } = this
-    offscreen?.postMessage({ type: 'addLayer', layer, nameIndex })
-    map?.addLayer(layer, nameIndex)
+  /**
+   * @param layer
+   * @param nameIndex
+   */
+  addLayer(layer: LayerStyle, nameIndex: number | string): void {
+    const { offscreen, map } = this;
+    offscreen?.postMessage({ type: 'addLayer', layer, nameIndex });
+    map?.addLayer(layer, nameIndex);
   }
 
   // fullUpdate -> if false, don't ask webworkers to reupdate
   // nameIndex -> if name it finds the layer name to update, otherwise gives up
-  updateLayer (layer: LayerStyle, nameIndex: number | string, fullUpdate = true): void {
-    const { offscreen, map } = this
-    offscreen?.postMessage({ type: 'updateLayer', layer, nameIndex, fullUpdate })
-    map?.updateLayer(layer, nameIndex, fullUpdate)
+  /**
+   * @param layer
+   * @param nameIndex
+   * @param fullUpdate
+   */
+  updateLayer(layer: LayerStyle, nameIndex: number | string, fullUpdate = true): void {
+    const { offscreen, map } = this;
+    offscreen?.postMessage({ type: 'updateLayer', layer, nameIndex, fullUpdate });
+    map?.updateLayer(layer, nameIndex, fullUpdate);
   }
 
   // nameIndex -> if name it finds the layer name to update, otherwise gives up
-  deleteLayer (nameIndex: number | string): void {
-    const { offscreen, map } = this
-    offscreen?.postMessage({ type: 'deleteLayer', nameIndex })
-    map?.deleteLayer(nameIndex)
+  /**
+   * @param nameIndex
+   */
+  deleteLayer(nameIndex: number | string): void {
+    const { offscreen, map } = this;
+    offscreen?.postMessage({ type: 'deleteLayer', nameIndex });
+    map?.deleteLayer(nameIndex);
   }
 
   // { [+from]: +to }
-  reorderLayers (layerChanges: Record<string | number, number>): void {
-    const { offscreen, map } = this
-    offscreen?.postMessage({ type: 'reorderLayers', layerChanges })
-    map?.reorderLayers(layerChanges)
+  /**
+   * @param layerChanges
+   */
+  reorderLayers(layerChanges: Record<string | number, number>): void {
+    const { offscreen, map } = this;
+    offscreen?.postMessage({ type: 'reorderLayers', layerChanges });
+    map?.reorderLayers(layerChanges);
   }
 
-  addMarker (
-    markers: MarkerDefinition | MarkerDefinition[],
-    sourceName = '_markers'
-  ): void {
-    if (!Array.isArray(markers)) markers = [markers]
+  /**
+   * @param markers
+   * @param sourceName
+   */
+  addMarker(markers: MarkerDefinition | MarkerDefinition[], sourceName = '_markers'): void {
+    if (!Array.isArray(markers)) markers = [markers];
     // 1) let the worker pool know we have new marker(s)
-    window.S2WorkerPool.addMarkers(this.id, markers, sourceName)
+    window.S2WorkerPool.addMarkers(this.id, markers, sourceName);
     // 2) tell the map that (a) new marker(s) has/have been added
-    this.resetSource([[sourceName, undefined]], true, true)
+    this.resetSource([[sourceName, undefined]], true, true);
   }
 
-  removeMarker (
-    ids: number | number[],
-    sourceName = '_markers'
-  ): void {
-    if (!Array.isArray(ids)) ids = [ids]
+  /**
+   * @param ids
+   * @param sourceName
+   */
+  removeMarker(ids: number | number[], sourceName = '_markers'): void {
+    if (!Array.isArray(ids)) ids = [ids];
     // 1) let the worker pool know we need to remove marker(s)
-    window.S2WorkerPool.deleteMarkers(this.id, ids, sourceName)
+    window.S2WorkerPool.deleteMarkers(this.id, ids, sourceName);
     // 2) tell the map that (a) marker(s) has/have to be removed
-    this.resetSource([[sourceName, undefined]], true, false)
+    this.resetSource([[sourceName, undefined]], true, false);
   }
 
-  async screenshot (): Promise<null | Uint8Array> {
-    const { offscreen, map } = this
-    return await new Promise<null | Uint8Array>(resolve => {
+  /**
+   *
+   */
+  async screenshot(): Promise<null | Uint8Array> {
+    const { offscreen, map } = this;
+    return await new Promise<null | Uint8Array>((resolve) => {
+      /**
+       * @param event
+       */
       const listener = (event: Event): void => {
-        const ce = event as CustomEvent<Uint8Array | null>
-        resolve(ce?.detail)
-      }
-      this.addEventListener('screenshot', listener, { once: true })
-      offscreen?.postMessage({ type: 'screenshot' })
-      map?.screenshot()
-    })
+        const ce = event as CustomEvent<Uint8Array | null>;
+        resolve(ce?.detail);
+      };
+      this.addEventListener('screenshot', listener, { once: true });
+      offscreen?.postMessage({ type: 'screenshot' });
+      map?.screenshot();
+    });
   }
 
-  async awaitFullyRendered (): Promise<void> {
-    const { offscreen, map } = this
-    await new Promise<void>(resolve => {
-      this.addEventListener('rendered', (): void => { resolve() }, { once: true })
-      offscreen?.postMessage({ type: 'awaitRendered' })
-      map?.awaitFullyRendered()
-    })
+  /**
+   *
+   */
+  async awaitFullyRendered(): Promise<void> {
+    const { offscreen, map } = this;
+    await new Promise<void>((resolve) => {
+      this.addEventListener(
+        'rendered',
+        (): void => {
+          resolve();
+        },
+        { once: true },
+      );
+      offscreen?.postMessage({ type: 'awaitRendered' });
+      map?.awaitFullyRendered();
+    });
   }
 }
 
-function getLayerCoordinates ({ target, offsetX, offsetY }: MouseEvent): { layerX: number, layerY: number } {
-  const targetElement = target as HTMLElement | null
-  let currentElement = targetElement
+/**
+ * @param root0
+ * @param root0.target
+ * @param root0.offsetX
+ * @param root0.offsetY
+ */
+function getLayerCoordinates({ target, offsetX, offsetY }: MouseEvent): {
+  layerX: number;
+  layerY: number;
+} {
+  const targetElement = target as HTMLElement | null;
+  let currentElement = targetElement;
 
-  let layerX = offsetX
-  let layerY = offsetY
+  let layerX = offsetX;
+  let layerY = offsetY;
 
   // Traverse up the DOM tree to find the nearest positioned ancestor
   while (currentElement !== null && currentElement !== document.body) {
-    const { offsetLeft, offsetTop, offsetParent } = currentElement
-    const offsetParentElement = offsetParent
+    const { offsetLeft, offsetTop, offsetParent } = currentElement;
+    const offsetParentElement = offsetParent;
 
-    if (offsetParentElement !== null && getComputedStyle(offsetParentElement).position !== 'static') {
-      layerX += offsetLeft
-      layerY += offsetTop
-      break
+    if (
+      offsetParentElement !== null &&
+      getComputedStyle(offsetParentElement).position !== 'static'
+    ) {
+      layerX += offsetLeft;
+      layerY += offsetTop;
+      break;
     }
 
-    currentElement = offsetParentElement as HTMLElement | null
+    currentElement = offsetParentElement as HTMLElement | null;
   }
 
-  return { layerX, layerY }
+  return { layerX, layerY };
 }
 
-window.S2Map = S2Map
+window.S2Map = S2Map;

@@ -7,8 +7,11 @@
     "ESNext",
     "WebWorker"
   ],
+  "target": "ESNext",
   "compilerOptions": {
     "esModuleInterop": true,
+    "noUncheckedIndexedAccess": false,
+    "module": "Preserve" /* Specify what module code is generated. */,
     "moduleResolution": "Bundler",
     "types": ["@webgpu/types"],
     "baseUrl": ".", // This must be specified if "paths" is.
@@ -26,17 +29,32 @@
       // "s2-pmtiles/browser": ["./node_modules/s2-pmtiles/dist/browser.d.ts"]
     }
   },
-  "exclude": [
-    "packages",
-    "node_modules",
-    "buildS2",
-    "buildS2-dev",
-    "buildS2-local",
-    "buildS2-flat",
-    "dist",
-    "dist-types",
-    "test",
-    "examples",
-    ".output"
+  // "exclude": [
+  //   "packages",
+  //   "node_modules",
+  //   "buildS2",
+  //   "buildS2-dev",
+  //   "buildS2-local",
+  //   "buildS2-flat",
+  //   "dist",
+  //   "dist-types",
+  //   "test",
+  //   "examples",
+  //   ".output"
+  // ]
+  "include": [
+    "eslint.config.mjs",
+    "build.ts",
+    "benchmarks/**/*.ts",
+    "s2/**/*.ts",
+    "config/**/*.ts",
+    "configS2/**/*.ts",
+    "tests/**/*.ts",
+    "server/**/*.ts",
+    "pages/**/*.ts",
+    "playwright/**/*.ts",
+    "types/*.d.ts",
+    "nuxt.config.ts",
+    "components/**/*.vue",
   ]
 }

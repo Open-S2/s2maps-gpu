@@ -19,7 +19,6 @@ const _dirname = dirname(_filename)
 const { blue, green, red, yellow } = picocolors
 
 process.env.BABEL_ENV = 'production'
-// @ts-expect-error - we are setting the env variable
 process.env.NODE_ENV = 'production'
 const { version } = JSON.parse(fs.readFileSync(path.join(_dirname, '../package.json'), 'utf-8')) as { version: string }
 const VERSION = `v${version}`

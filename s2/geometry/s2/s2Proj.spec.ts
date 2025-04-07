@@ -1,65 +1,124 @@
-import type { Properties } from '../proj.spec'
-import type { Attributions } from 'style/style.spec'
+import type { Attributions } from 'style/style.spec';
+import type { Properties } from '../proj.spec';
 
-export type Face = 0 | 1 | 2 | 3 | 4 | 5
+/**
+ *
+ */
+export type Face = 0 | 1 | 2 | 3 | 4 | 5;
 
+/**
+ *
+ */
 export interface S2FeatureCollection {
-  type: 'S2FeatureCollection'
-  features: S2Feature[]
-  faces: Face[]
-  attributions?: Attributions
+  type: 'S2FeatureCollection';
+  features: S2Feature[];
+  faces: Face[];
+  attributions?: Attributions;
 }
 
+/**
+ *
+ */
 export interface S2Feature {
-  type: 'S2Feature'
-  id?: number
-  face: Face
-  properties: Properties
-  geometry: S2Geometry
-  attributions?: Attributions
+  type: 'S2Feature';
+  id?: number;
+  face: Face;
+  properties: Properties;
+  geometry: S2Geometry;
+  attributions?: Attributions;
 }
 
+/**
+ *
+ */
 export type S2GeometryType =
-  'Point' | 'MultiPoint' | 'LineString' |
-  'MultiLineString' | 'Polygon' | 'MultiPolygon'
+  | 'Point'
+  | 'MultiPoint'
+  | 'LineString'
+  | 'MultiLineString'
+  | 'Polygon'
+  | 'MultiPolygon';
+/**
+ *
+ */
 export type S2Geometry =
-  S2PointGeometry | S2MultiPointGeometry | S2LineStringGeometry |
-  S2MultiLineStringGeometry | S2PolygonGeometry | S2MultiPolygonGeometry
+  | S2PointGeometry
+  | S2MultiPointGeometry
+  | S2LineStringGeometry
+  | S2MultiLineStringGeometry
+  | S2PolygonGeometry
+  | S2MultiPolygonGeometry;
 
 // [s, t]
-export type S2Point = [s: number, t: number]
-export type S2MultiPoint = S2Point[]
-export type S2LineString = S2Point[]
-export type S2MultiLineString = S2LineString[]
-export type S2Polygon = S2Point[][]
-export type S2MultiPolygon = S2Polygon[]
+/**
+ *
+ */
+export type S2Point = [s: number, t: number];
+/**
+ *
+ */
+export type S2MultiPoint = S2Point[];
+/**
+ *
+ */
+export type S2LineString = S2Point[];
+/**
+ *
+ */
+export type S2MultiLineString = S2LineString[];
+/**
+ *
+ */
+export type S2Polygon = S2Point[][];
+/**
+ *
+ */
+export type S2MultiPolygon = S2Polygon[];
 
+/**
+ *
+ */
 export interface S2PointGeometry {
-  type: 'Point'
-  coordinates: S2Point
+  type: 'Point';
+  coordinates: S2Point;
 }
 
+/**
+ *
+ */
 export interface S2MultiPointGeometry {
-  type: 'MultiPoint'
-  coordinates: S2MultiPoint
+  type: 'MultiPoint';
+  coordinates: S2MultiPoint;
 }
 
+/**
+ *
+ */
 export interface S2LineStringGeometry {
-  type: 'LineString'
-  coordinates: S2LineString
+  type: 'LineString';
+  coordinates: S2LineString;
 }
 
+/**
+ *
+ */
 export interface S2MultiLineStringGeometry {
-  type: 'MultiLineString'
-  coordinates: S2MultiLineString
+  type: 'MultiLineString';
+  coordinates: S2MultiLineString;
 }
 
+/**
+ *
+ */
 export interface S2PolygonGeometry {
-  type: 'Polygon'
-  coordinates: S2Polygon
+  type: 'Polygon';
+  coordinates: S2Polygon;
 }
 
+/**
+ *
+ */
 export interface S2MultiPolygonGeometry {
-  type: 'MultiPolygon'
-  coordinates: S2MultiPolygon
+  type: 'MultiPolygon';
+  coordinates: S2MultiPolygon;
 }

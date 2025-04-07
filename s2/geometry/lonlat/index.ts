@@ -1,1 +1,1 @@
-export { default as Orthodrome } from './orthodrome'
+export { default as Orthodrome } from './orthodrome';

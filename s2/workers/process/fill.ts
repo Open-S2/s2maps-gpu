@@ -84,7 +84,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     // pull data
     const { zoom, division } = tile
     const { extent, properties } = feature
-    let { type } = feature
+    const { type } = feature
     const { getCode, interactive, layerIndex } = fillLayer
     // only accept polygons and multipolygons
     if (type !== 3 && type !== 4) return false
@@ -104,7 +104,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     let vertices: number[] = []
 
     if (geometry === undefined) return false
-    if (type === 3) type = 4
+    // if (type === 3) type = 4
 
     // if not parent and indices, the polygon has already been "solved"
     if (hasParent || indices.length === 0) {

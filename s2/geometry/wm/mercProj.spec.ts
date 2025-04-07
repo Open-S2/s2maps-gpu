@@ -1,106 +1,180 @@
-import type { FlatPoint, Properties } from '../proj.spec'
-import type { Attributions } from 'style/style.spec'
+import type { Attributions } from 'style/style.spec';
+import type { FlatPoint, Properties } from '../proj.spec';
 
-export type Sources = '900913' | 'WGS84'
+/**
+ *
+ */
+export type Sources = '900913' | 'WGS84';
 
 /** GEOMETRY */
 
+/**
+ *
+ */
 export interface FeatureCollection {
-  type: 'FeatureCollection'
-  features: Feature[]
-  attributions?: Attributions
+  type: 'FeatureCollection';
+  features: Feature[];
+  attributions?: Attributions;
 }
 
+/**
+ *
+ */
 export interface Feature {
-  type: 'Feature'
-  id?: number
-  properties: Properties
-  geometry: Geometry
-  attributions?: Attributions
+  type: 'Feature';
+  id?: number;
+  properties: Properties;
+  geometry: Geometry;
+  attributions?: Attributions;
 }
 
+/**
+ *
+ */
 export interface PointFeature {
-  type: 'Feature'
-  id?: number
-  properties: Properties
-  geometry: PointGeometry
+  type: 'Feature';
+  id?: number;
+  properties: Properties;
+  geometry: PointGeometry;
 }
 
+/**
+ *
+ */
 export interface MultiPointFeature {
-  type: 'Feature'
-  id?: number
-  properties: Properties
-  geometry: MultiPointGeometry
+  type: 'Feature';
+  id?: number;
+  properties: Properties;
+  geometry: MultiPointGeometry;
 }
 
+/**
+ *
+ */
 export interface LineStringFeature {
-  type: 'Feature'
-  id?: number
-  properties: Properties
-  geometry: LineStringGeometry
+  type: 'Feature';
+  id?: number;
+  properties: Properties;
+  geometry: LineStringGeometry;
 }
 
+/**
+ *
+ */
 export interface MultiLineStringFeature {
-  type: 'Feature'
-  id?: number
-  properties: Properties
-  geometry: MultiLineStringGeometry
+  type: 'Feature';
+  id?: number;
+  properties: Properties;
+  geometry: MultiLineStringGeometry;
 }
 
+/**
+ *
+ */
 export interface PolygonFeature {
-  type: 'Feature'
-  id?: number
-  properties: Properties
-  geometry: PolygonGeometry
+  type: 'Feature';
+  id?: number;
+  properties: Properties;
+  geometry: PolygonGeometry;
 }
 
+/**
+ *
+ */
 export interface MultiPolygonFeature {
-  type: 'Feature'
-  id?: number
-  properties: Properties
-  geometry: MultiPolygonGeometry
+  type: 'Feature';
+  id?: number;
+  properties: Properties;
+  geometry: MultiPolygonGeometry;
 }
 
+/**
+ *
+ */
 export type GeometryType =
-  'Point' | 'MultiPoint' | 'LineString' |
-  'MultiLineString' | 'Polygon' | 'MultiPolygon'
+  | 'Point'
+  | 'MultiPoint'
+  | 'LineString'
+  | 'MultiLineString'
+  | 'Polygon'
+  | 'MultiPolygon';
+/**
+ *
+ */
 export type Geometry =
-  PointGeometry | MultiPointGeometry | LineStringGeometry |
-  MultiLineStringGeometry | PolygonGeometry | MultiPolygonGeometry
+  | PointGeometry
+  | MultiPointGeometry
+  | LineStringGeometry
+  | MultiLineStringGeometry
+  | PolygonGeometry
+  | MultiPolygonGeometry;
 
 // [x, y]
-export type MultiPoint = FlatPoint[]
-export type LineString = FlatPoint[]
-export type MultiLineString = LineString[]
-export type Polygon = FlatPoint[][]
-export type MultiPolygon = Polygon[]
+/**
+ *
+ */
+export type MultiPoint = FlatPoint[];
+/**
+ *
+ */
+export type LineString = FlatPoint[];
+/**
+ *
+ */
+export type MultiLineString = LineString[];
+/**
+ *
+ */
+export type Polygon = FlatPoint[][];
+/**
+ *
+ */
+export type MultiPolygon = Polygon[];
 
+/**
+ *
+ */
 export interface PointGeometry {
-  type: 'Point'
-  coordinates: FlatPoint
+  type: 'Point';
+  coordinates: FlatPoint;
 }
 
+/**
+ *
+ */
 export interface MultiPointGeometry {
-  type: 'MultiPoint'
-  coordinates: MultiPoint
+  type: 'MultiPoint';
+  coordinates: MultiPoint;
 }
 
+/**
+ *
+ */
 export interface LineStringGeometry {
-  type: 'LineString'
-  coordinates: LineString
+  type: 'LineString';
+  coordinates: LineString;
 }
 
+/**
+ *
+ */
 export interface MultiLineStringGeometry {
-  type: 'MultiLineString'
-  coordinates: MultiLineString
+  type: 'MultiLineString';
+  coordinates: MultiLineString;
 }
 
+/**
+ *
+ */
 export interface PolygonGeometry {
-  type: 'Polygon'
-  coordinates: Polygon
+  type: 'Polygon';
+  coordinates: Polygon;
 }
 
+/**
+ *
+ */
 export interface MultiPolygonGeometry {
-  type: 'MultiPolygon'
-  coordinates: MultiPolygon
+  type: 'MultiPolygon';
+  coordinates: MultiPolygon;
 }

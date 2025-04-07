@@ -1,40 +1,48 @@
-import { fileURLToPath } from 'url'
-import wgsl from './config/wgsl-loader/vite'
-import glsl from './config/glsl-loader/vite'
+import { fileURLToPath } from 'url';
+import glsl from './config/glsl-loader/vite';
+import wgsl from './config/wgsl-loader/vite';
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   devtools: { enabled: false },
+
+  future: {
+    compatibilityVersion: 4,
+  },
+
+  experimental: {
+    watcher: 'parcel', // 'chokidar' or 'parcel' are also options
+  },
 
   runtimeConfig: {
     public: {
       state: process.env.STATE ?? 'prod',
       apiURL: process.env.API_URL ?? 'https://api.opens2.com',
       dataURL: process.env.DATA_URL ?? 'https://api.opens2.com',
-      baseURL: process.env.BASE_URL ?? 'https://opens2.com'
-    }
+      baseURL: process.env.BASE_URL ?? 'https://opens2.com',
+    },
   },
 
   watch: [
     './s2/**/*',
     './components/**/*',
     './pages/**/*',
-    './plugins/**/*',
-    './public/**/*'
+    // './plugins/**/*',
+    // './public/**/*'
   ],
 
-  modules: process.env.DEV === 'true'
-    ? [
-        // 'nuxtjs-eslint-module'
-      ]
-    : [],
+  ignore: ['node_modules', 'dist', 'build', 'buildS2', 'buildS2-dev', 'buildS2-local'],
 
-  css: [
-    fileURLToPath(new URL('./assets/styles/globals.css', import.meta.url))
-  ],
+  modules: ['@nuxt/eslint'],
+  eslint: {
+    // TODO: add this in when ready
+    // checker: true // <---
+  },
+
+  css: [fileURLToPath(new URL('./assets/styles/globals.css', import.meta.url))],
 
   vite: {
-    plugins: [wgsl(), glsl()]
+    plugins: [wgsl(), glsl()],
   },
 
   alias: {
@@ -48,8 +56,8 @@ export default defineNuxtConfig({
     svg: fileURLToPath(new URL('./s2/svg', import.meta.url)),
     ui: fileURLToPath(new URL('./s2/ui', import.meta.url)),
     util: fileURLToPath(new URL('./s2/util', import.meta.url)),
-    workers: fileURLToPath(new URL('./s2/workers', import.meta.url))
+    workers: fileURLToPath(new URL('./s2/workers', import.meta.url)),
   },
 
-  compatibilityDate: '2024-10-04'
-})
+  compatibilityDate: '2025-04-07',
+});
