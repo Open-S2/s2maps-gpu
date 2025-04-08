@@ -118,9 +118,9 @@ export default defineConfig({
 
   webServer: {
     command: 'bun run ./server.ts',
-    url: 'http://localhost:8080/ping',
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    reuseExistingServer: !process.env.CI,
+    url: 'http://localhost:8080',
+    timeout: 5 * 1_000,
+    reuseExistingServer: true,
     stdout: 'pipe',
     stderr: 'pipe',
   },

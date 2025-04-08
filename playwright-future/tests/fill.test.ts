@@ -10,7 +10,8 @@ test.describe('Fill', () => {
       props: { mapOptions: { style: S2Style } },
     });
     await page.waitForFunction(() => window.testMap !== undefined, { timeout: 5_000 });
-    await page.evaluate(waitMap);
+    const success = await page.evaluate(waitMap);
+    if (!success) throw new Error('waitMap failed');
     await expect(component).toHaveScreenshot('s2-fill.png', { timeout: 2_000 });
   });
 
@@ -19,7 +20,8 @@ test.describe('Fill', () => {
       props: { mapOptions: { style: WMStyle } },
     });
     await page.waitForFunction(() => window.testMap !== undefined, { timeout: 5_000 });
-    await page.evaluate(waitMap);
+    const success = await page.evaluate(waitMap);
+    if (!success) throw new Error('waitMap failed');
     await expect(component).toHaveScreenshot('wm-fill.png', { timeout: 2_000 });
   });
 });

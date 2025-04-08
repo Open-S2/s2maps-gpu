@@ -1,7 +1,15 @@
 import type { S2Map } from 's2';
 
+declare global {
+  /** Global expose the testMap */
+  interface Window {
+    testMap: S2Map;
+  }
+}
+
 /**
- *
+ * Wait for the map to be fully rendered
+ * @returns true if the map is fully rendered. false if it failed somehow
  */
 export async function waitMap(): Promise<boolean> {
   const s2Map: S2Map = window.testMap;

@@ -80,7 +80,7 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
     const { gpuType } = this;
     const { zoom, division } = tile;
     const { extent, properties } = feature;
-    let { type } = feature;
+    const { type } = feature;
     const { getCode, layerIndex, geoFilter } = lineLayer;
     if (type === 1) return false;
     if (geoFilter.includes('line') && type === 2) return false;
@@ -88,7 +88,7 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
     // load geometry
     const geometry = feature.loadGeometry?.();
     if (geometry === undefined) return false;
-    if (type === 3) type = 4;
+    // if (type === 3) type = 4;
     const cap = lineLayer.cap([], properties, zoom);
     const vertices: number[] = [];
     const lengthSoFar: number[] = [];
