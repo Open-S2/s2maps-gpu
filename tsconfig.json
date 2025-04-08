@@ -52,8 +52,6 @@
     "tests/**/*.ts",
     "server/**/*.ts",
     "pages/**/*.ts",
-    "tests-playwright/**/*.ts",
-    "tests-playwright/**/*.vue",
     "types/*.d.ts",
     "nuxt.config.ts",
     "components/**/*.vue",

@@ -27,6 +27,7 @@ export default {
     onMounted(async () => {
       const options: MapOptions = {
         urlMap: {
+          baseURL: 'http://localhost:8080',
           dataURL: 'http://localhost:8080'
         },
         attributionOff: true,

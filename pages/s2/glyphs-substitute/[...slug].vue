@@ -4,6 +4,8 @@
 
 <script setup lang="ts">
 import style from './style'
+import { useRoute } from 'vue-router'
+
 import type { MapOptions, S2Map } from 's2'
 
 let contextType: undefined | 1 | 2 | 3

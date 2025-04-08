@@ -1,4 +1,5 @@
 {
+  "extends": "./.nuxt/tsconfig.json",
   "compilerOptions": {
     /* Visit https://aka.ms/tsconfig.json to read more about this file */
 
@@ -127,8 +128,8 @@
     "config/**/*.ts",
     "configS2/**/*.ts",
     "tests/**/*.ts",
-    "tests-playwright/**/*.ts",
-    "tests-playwright/**/*.vue",
+    "playwright-tests/**/*.ts",
+    "playwright-tests/**/*.vue",
     "server/**/*.ts",
     "pages/**/*.ts",
     "pages/**/*.vue",
