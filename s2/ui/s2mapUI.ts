@@ -499,7 +499,7 @@ export default class S2MapUI extends Camera {
   /**
    *
    */
-  render(): void {
+  override render(): void {
     if (!this._canDraw) return;
     if (this.renderNextFrame) return;
     this.renderNextFrame = true;

@@ -36,6 +36,8 @@
     "baseUrl": "." /* Specify the base directory to resolve non-relative module names. */,
     "paths": {    
       "*" : ["./*", "./s2/*"],
+      "s2": ["./s2"],
+      "s2/*": ["./s2/*"],
       "geometry/*": ["./s2/geometry/*"],
       "gl/*": ["./s2/gl/*"],
       "gpu/*": ["./s2/gpu/*"],
@@ -125,9 +127,11 @@
     "config/**/*.ts",
     "configS2/**/*.ts",
     "tests/**/*.ts",
+    "tests-playwright/**/*.ts",
+    "tests-playwright/**/*.vue",
     "server/**/*.ts",
     "pages/**/*.ts",
-    "playwright/**/*.ts",
+    "pages/**/*.vue",
     "types/*.d.ts",
     "nuxt.config.ts",
     "components/**/*.vue"

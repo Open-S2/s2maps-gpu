@@ -37,12 +37,12 @@
     "build:types": "tsc --project tsconfig.build.json --emitDeclarationOnly --declaration --declarationDir dist-types",
     "dev": "DEV=true nuxt dev --host --disable-telemetry",
     "dev:playwright": "nuxt dev --host --no-watch --no-lint --no-progress --disable-telemetry --no-source-map --quiet",
-    "server:playwright": "bun run ./playwright/server.ts",
+    "server:playwright": "bun run ./tests-playwright/server.ts",
     "lint:S2": "eslint s2 --ext .ts",
     "test:S2": "bun test",
     "test:S2:watch": "bun test --watch",
-    "test:playwright": "bun run build:S2:flat && playwright test -c ./playwright/playwright.config.ts",
-    "test:playwright:ui": "bun run build:S2:flat && playwright test --ui -c ./playwright/playwright.config.ts",
+    "test:playwright": "bun run build:S2:flat && playwright test -c ./tests-playwright/playwright.config.ts",
+    "test:playwright:ui": "bun run build:S2:flat && playwright test --ui -c ./tests-playwright/playwright.config.ts",
     "prepare:toAdd": "bun run lint:S2 && bun run build:ESM && bun run build:types"
   },
   "exports": {

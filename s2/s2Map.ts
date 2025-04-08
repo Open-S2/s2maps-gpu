@@ -5,7 +5,8 @@ import type { MapOptions } from './ui/s2mapUI';
 import type { MarkerDefinition } from './workers/source/markerSource';
 import type S2MapUI from './ui/s2mapUI';
 import type { UserTouchEvent } from './ui/camera/dragPan';
-import type { Attributions, LayerStyle, Point, StyleDefinition } from './style/style.spec';
+import type { VectorPoint } from 'gis-tools';
+import type { Attributions, LayerStyle, StyleDefinition } from './style/style.spec';
 import type {
   MapGLMessage,
   ResetSourceMessage,
@@ -40,11 +41,11 @@ declare global {
 export default class S2Map extends EventTarget {
   readonly #container?: HTMLElement;
   #canvasContainer!: HTMLElement;
-  #navigationContainer!: HTMLElement;
+  // #navigationContainer!: HTMLElement;
   readonly #canvasMultiplier: number;
   readonly #canvas: HTMLCanvasElement;
   #attributionPopup?: HTMLDivElement;
-  #watermark?: HTMLAnchorElement;
+  // #watermark?: HTMLAnchorElement;
   #compass?: HTMLElement;
   #colorBlind?: HTMLElement;
   #attributions: Attributions = {};
@@ -161,20 +162,7 @@ export default class S2Map extends EventTarget {
     const isBrowser = options.canvas === undefined;
     // prep the ready function should it exist
     // prep webgpu/webgl type
-    let tmpContext: RenderingContext | null = null;
-    if (isBrowser && options.contextType === undefined) {
-      /**
-       * @param name
-       */
-      const tryContext = (name: 'webgl' | 'experimental-webgl' | 'webgl2' | 'webgpu'): boolean => {
-        tmpContext = document.createElement('canvas').getContext(name);
-        return tmpContext !== null;
-      };
-      options.contextType = tryContext('webgpu') ? 3 : tryContext('webgl2') ? 2 : 1;
-    }
-    // @ts-expect-error - if webgl2 context was found, lose the context
-    if (isBrowser && options.contextType === 2)
-      tmpContext?.getExtension('WEBGL_lose_context').loseContext();
+    if (isBrowser && options.contextType === undefined) options.contextType = getContext();
     // if browser supports it, create an instance of the mapWorker
     // TODO: Safari offscreenCanvas sucks currently. It's so janky. Leave this here for when it's fixed.
     if (
@@ -284,7 +272,7 @@ export default class S2Map extends EventTarget {
       attribution.appendChild(popup);
       // add watermark
       if (watermarkOff !== true) {
-        const watermark = (this.#watermark = window.document.createElement('a'));
+        const watermark = window.document.createElement('a');
         watermark.className = 's2-watermark';
         watermark.href = 'https://opens2.com';
         watermark.target = '_popup';
@@ -297,8 +285,7 @@ export default class S2Map extends EventTarget {
       let navSep;
       let firstNavCompSet = false;
       // first create the container
-      const navigationContainer = (this.#navigationContainer =
-        window.document.createElement('div'));
+      const navigationContainer = window.document.createElement('div');
       navigationContainer.className = 's2-nav-container';
       this.#container?.appendChild(navigationContainer);
       if (zoomController !== false) {
@@ -760,7 +747,7 @@ export default class S2Map extends EventTarget {
   /**
    *
    */
-  getContainerDimensions(): null | Point {
+  getContainerDimensions(): null | VectorPoint {
     return { x: this.#container?.clientWidth ?? 0, y: this.#container?.clientHeight ?? 0 };
   }
 
@@ -985,6 +972,24 @@ export default class S2Map extends EventTarget {
       map?.awaitFullyRendered();
     });
   }
+}
+
+/**
+ * Figure out the best canvas we have access to
+ * @returns 1 for WebGL, 2 for WebGL2, 3 for WebGPU
+ */
+function getContext(): 1 | 2 | 3 {
+  let tmpContext = document.createElement('canvas').getContext('webgpu');
+  if (tmpContext !== null) {
+    return 3;
+  } else {
+    tmpContext = document.createElement('canvas').getContext('webgl2');
+    if (tmpContext !== null) {
+      tmpContext.getExtension('WEBGL_lose_context')?.loseContext();
+      return 2;
+    }
+  }
+  return 1;
 }
 
 /**

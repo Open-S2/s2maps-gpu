@@ -1,12 +1,9 @@
-import { defineConfig, devices } from '@playwright/experimental-ct-vue'
-
-// import { resolve } from 'path'
-import tsconfigPaths from 'vite-tsconfig-paths'
-import vue from '@vitejs/plugin-vue'
-import AutoImport from 'unplugin-auto-import/vite'
-import Components from 'unplugin-vue-components/vite'
-
-// const CI_BOOL = Boolean(process.env.CI)
+import AutoImport from 'unplugin-auto-import/vite';
+import Components from 'unplugin-vue-components/vite';
+import { resolve } from 'path';
+import tsconfigPaths from 'vite-tsconfig-paths';
+import vue from '@vitejs/plugin-vue';
+import { defineConfig, devices } from '@playwright/experimental-ct-vue';
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -23,7 +20,7 @@ export default defineConfig({
   // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
-  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+
   retries: 4,
   /* Opt out of parallel tests on CI. */
   // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
@@ -37,13 +34,13 @@ export default defineConfig({
       plugins: [
         vue(),
         tsconfigPaths({
-          configNames: ['tsconfig.json']
+          configNames: ['tsconfig.eslint.json'],
         }),
         AutoImport({
           imports: [
             'vue',
             'vue-router',
-            '@vueuse/head'
+            '@vueuse/head',
             // 'pinia',
             // {
             //   '@/store': ['useStore']
@@ -51,28 +48,29 @@ export default defineConfig({
           ],
           dts: 'src/auto-imports.d.ts',
           eslintrc: {
-            enabled: true
-          }
+            enabled: true,
+          },
         }),
         Components({
           dirs: ['./components'],
-          extensions: ['vue']
-        })
-      ]
-      // resolve: {
-      //   alias: {
-      //     geometry: resolve(__dirname, '../s2/geometry'),
-      //     gl: resolve(__dirname, '../s2/gl'),
-      //     gpu: resolve(__dirname, '../s2/gpu'),
-      //     plugins: resolve(__dirname, '../s2/plugins'),
-      //     source: resolve(__dirname, '../s2/source'),
-      //     style: resolve(__dirname, '../s2/style'),
-      //     ui: resolve(__dirname, '../s2/ui'),
-      //     util: resolve(__dirname, '../s2/util'),
-      //     workers: resolve(__dirname, '../s2/workers')
-      //   }
-      // }
-    }
+          extensions: ['vue'],
+        }),
+      ],
+      resolve: {
+        alias: {
+          s2: resolve(__dirname, '../s2'),
+          //     geometry: resolve(__dirname, '../s2/geometry'),
+          //     gl: resolve(__dirname, '../s2/gl'),
+          //     gpu: resolve(__dirname, '../s2/gpu'),
+          //     plugins: resolve(__dirname, '../s2/plugins'),
+          //     source: resolve(__dirname, '../s2/source'),
+          //     style: resolve(__dirname, '../s2/style'),
+          //     ui: resolve(__dirname, '../s2/ui'),
+          //     util: resolve(__dirname, '../s2/util'),
+          //     workers: resolve(__dirname, '../s2/workers')
+        },
+      },
+    },
   },
 
   /* Configure projects for major browsers */
@@ -80,42 +78,42 @@ export default defineConfig({
     /* Test against desktop browsers */
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] }
+      use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'firefox',
-      use: { ...devices['Desktop Firefox'] }
+      use: { ...devices['Desktop Firefox'] },
     },
     {
       name: 'webkit',
-      use: { ...devices['Desktop Safari'] }
+      use: { ...devices['Desktop Safari'] },
     },
     /* Test against mobile viewports. */
     {
       name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] }
+      use: { ...devices['Pixel 5'] },
     },
     {
       name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] }
+      use: { ...devices['iPhone 12'] },
     },
     /* Test against branded browsers. */
     {
       name: 'Google Chrome',
-      use: { ...devices['Desktop Chrome'], channel: 'chrome' }
+      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     },
     {
       name: 'Google Chrome Beta',
-      use: { ...devices['Desktop Chrome'], channel: 'chrome-beta' }
+      use: { ...devices['Desktop Chrome'], channel: 'chrome-beta' },
     },
     {
       name: 'Microsoft Edge',
-      use: { ...devices['Desktop Edge'], channel: 'msedge' }
+      use: { ...devices['Desktop Edge'], channel: 'msedge' },
     },
     {
       name: 'Microsoft Edge Developer Edition',
-      use: { ...devices['Desktop Edge'], channel: 'msedge-dev' }
-    }
+      use: { ...devices['Desktop Edge'], channel: 'msedge-dev' },
+    },
   ],
 
   webServer: {
@@ -124,6 +122,6 @@ export default defineConfig({
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     reuseExistingServer: !process.env.CI,
     stdout: 'pipe',
-    stderr: 'pipe'
-  }
-})
+    stderr: 'pipe',
+  },
+});
