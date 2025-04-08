@@ -165,6 +165,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
 
   /**
    * @param tile
+   * @param extent
    * @param feature
    * @param glyphLayer
    * @param mapID
@@ -172,6 +173,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
    */
   async buildFeature(
     tile: TileRequest,
+    extent: number,
     feature: VTFeature,
     glyphLayer: GlyphWorkerLayer,
     mapID: string,
@@ -181,7 +183,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     const { zoom } = tile;
     const { layerIndex, overdraw, interactive, geoFilter, noShaping } = glyphLayer;
     const { gpuType, imageStore, featureStore } = this;
-    const { extent, properties } = feature;
+    const { properties } = feature;
     let featureType = feature.type;
     const storeID: string = `${mapID}:${String(tile.id)}:${sourceName}`;
     if (!featureStore.has(storeID)) featureStore.set(storeID, []);

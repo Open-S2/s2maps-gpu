@@ -9,7 +9,8 @@ import type ImageStore from './imageStore';
 import type { FillData, TileRequest } from '../worker.spec';
 import type { FillDefinition, FillWorkerLayer, GPUType } from 'style/style.spec';
 import type { FillFeature, FillWorker as FillWorkerSpec, IDGen, VTFeature } from './process.spec';
-import type { Point, VectorGeometry, VectorMultiPoly, VectorPoly } from 'open-vector-tile';
+
+import type { VectorMultiPolygon } from 'gis-tools';
 
 const MAX_FEATURE_BATCH_SIZE = 1 << 6; // 64
 
@@ -84,6 +85,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
 
   /**
    * @param tile
+   * @param extent
    * @param feature
    * @param fillLayer
    * @param mapID
@@ -91,6 +93,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
    */
   async buildFeature(
     tile: TileRequest,
+    extent: number,
     feature: VTFeature,
     fillLayer: FillWorkerLayer,
     mapID: string,
@@ -99,11 +102,11 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     const { gpuType, imageStore } = this;
     // pull data
     const { zoom, division } = tile;
-    const { extent, properties } = feature;
-    const { type } = feature;
+    const { properties } = feature;
     const { getCode, interactive, layerIndex } = fillLayer;
+    const type = feature.geoType();
     // only accept polygons and multipolygons
-    if (type !== 3 && type !== 4) return false;
+    if (type !== 'Polygon' && type !== 'MultiPolygon') return false;
     // get pattern
     const pattern = fillLayer.pattern?.([], properties, zoom);
     const patternFamily = fillLayer.patternFamily([], properties, zoom);
@@ -115,32 +118,26 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     }
     const hasParent = tile.parent !== undefined;
     const [geometry, indices] =
-      !hasParent && feature.loadGeometryFlat !== undefined
-        ? feature.loadGeometryFlat()
-        : [feature.loadGeometry?.(), [] as number[]];
+      !hasParent && 'loadGeometryFlat' in feature
+        ? feature.loadGeometryFlat!()
+        : [feature.loadPolys(), [] as number[]];
     let vertices: number[] = [];
 
     if (geometry === undefined) return false;
-    // if (type === 3) type = 4
 
     // if not parent and indices, the polygon has already been "solved"
     if (hasParent || indices.length === 0) {
-      // prep polys
-      const polys: Point[][][] = [];
       // preprocess geometry
-      const clip = scaleShiftClip(geometry as VectorGeometry, type, extent, tile) as
-        | VectorPoly
-        | VectorMultiPoly;
-      // prep for processing
-      if (type === 4) {
-        for (const poly of clip as VectorMultiPoly) polys.push(poly);
-      } else {
-        polys.push(clip as VectorPoly);
-      }
+      const clip = scaleShiftClip(
+        geometry as VectorMultiPolygon,
+        4,
+        extent,
+        tile,
+      ) as VectorMultiPolygon;
       // create multiplier
       const multiplier = 1 / extent;
       // process
-      for (const poly of polys) {
+      for (const poly of clip) {
         // create triangle mesh
         const data = earclip(poly, extent / division, vertices.length / 2);
         // store vertices
@@ -190,7 +187,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
    * @param sourceName
    * @param wait
    */
-  async flush(
+  override async flush(
     mapID: string,
     tile: TileRequest,
     sourceName: string,

@@ -4,10 +4,10 @@ import VectorWorker, { colorFunc, idToRGB } from './vectorWorker';
 import { drawLine, featureSort, scaleShiftClip } from './util';
 
 import type { CodeDesign } from './vectorWorker';
+import type { VectorMultiLineString } from 'gis-tools';
 import type { Cap, Join, LineDefinition, LineWorkerLayer } from 'style/style.spec';
 import type { LineData, TileRequest } from '../worker.spec';
 import type { LineFeature, LineWorker as LineWorkerSpec, VTFeature } from './process.spec';
-import type { VectorLines, VectorMultiPoly, VectorPoly } from 'open-vector-tile';
 
 /**
  *
@@ -65,6 +65,7 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
 
   /**
    * @param tile
+   * @param extent
    * @param feature
    * @param lineLayer
    * @param mapID
@@ -72,6 +73,7 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
    */
   buildFeature(
     tile: TileRequest,
+    extent: number,
     feature: VTFeature,
     lineLayer: LineWorkerLayer,
     mapID: string,
@@ -79,16 +81,16 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
   ): boolean {
     const { gpuType } = this;
     const { zoom, division } = tile;
-    const { extent, properties } = feature;
-    const { type } = feature;
+    const { properties } = feature;
     const { getCode, layerIndex, geoFilter } = lineLayer;
-    if (type === 1) return false;
-    if (geoFilter.includes('line') && type === 2) return false;
-    if (geoFilter.includes('poly') && (type === 3 || type === 4)) return false;
+    const type = feature.geoType();
+    if (type === 'Point' || type === 'MultiPoint') return false;
+    if (geoFilter.includes('line') && (type === 'LineString' || type === 'MultiLineString'))
+      return false;
+    if (geoFilter.includes('poly') && (type === 'Polygon' || type === 'MultiPolygon')) return false;
     // load geometry
-    const geometry = feature.loadGeometry?.();
+    const geometry = feature.loadLines?.();
     if (geometry === undefined) return false;
-    // if (type === 3) type = 4;
     const cap = lineLayer.cap([], properties, zoom);
     const vertices: number[] = [];
     const lengthSoFar: number[] = [];
@@ -98,14 +100,7 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
     // find a max distance to modify lines too large (round off according to the sphere)
     const maxDistance = division === 1 ? 0 : extent / division;
     // preprocess geometry
-    const clip = scaleShiftClip(geometry, type, extent, tile) as
-      | VectorLines
-      | VectorPoly
-      | VectorMultiPoly;
-    // if multi-polygon, join all outer rings and holes together
-    let geo: VectorLines = [];
-    if (type === 4) for (const poly of clip) geo.push(...(poly as VectorPoly));
-    else geo = clip as VectorLines;
+    const geo = scaleShiftClip(geometry, 2, extent, tile) as VectorMultiLineString;
     // draw
     for (const lineString of geo) {
       // build the vertex, normal, and index data
@@ -150,8 +145,8 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
    * @param tile
    * @param sourceName
    */
-  async flush(mapID: string, tile: TileRequest, sourceName: string): Promise<void> {
-    const storeID: string = `${mapID}:${tile.id}:${sourceName}`;
+  override async flush(mapID: string, tile: TileRequest, sourceName: string): Promise<void> {
+    const storeID: string = await `${mapID}:${tile.id}:${sourceName}`;
     const features = this.featureStore.get(storeID) ?? [];
     if (features.length === 0) return;
     this.#flush(mapID, sourceName, tile.id, features);

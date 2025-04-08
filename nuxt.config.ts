@@ -27,6 +27,8 @@ export default defineNuxtConfig({
     './s2/**/*',
     './components/**/*',
     './pages/**/*',
+    // TODO: Comment this out when done
+    '../gis-tools/src/**/*',
     // './plugins/**/*',
     // './public/**/*'
   ],

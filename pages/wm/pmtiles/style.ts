@@ -3,7 +3,7 @@ import type { StyleDefinition } from 'style/style.spec';
 const style: StyleDefinition = {
   version: 1,
   name: 'WM PMTiles',
-  projection: 'WM',
+  projection: 'WG',
   view: {
     zoom: -0.5,
     lon: -122.4585607773497,

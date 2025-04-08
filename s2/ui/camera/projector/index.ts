@@ -1,9 +1,9 @@
 import * as mat4 from './mat4';
-import { EARTH_RADIUS, EARTH_RADIUS_EQUATORIAL, EARTH_RADIUS_POLAR, degToRad } from 'geometry';
+import { EARTH_RADIUS, EARTH_RADIUS_EQUATORIAL, EARTH_RADIUS_POLAR, degToRad } from 'gis-tools';
 import { cursorToLonLatS2, cursorToLonLatWM } from './cursorToLonLat';
-import { fromLonLatGL, mul, normalize } from 'geometry/s2/s2Point';
 import { getTilesS2, getTilesWM } from './getTiles';
 import { mercatorLatScale, pxToLL } from 'geometry/wm';
+import { pointFromLonLatGL, pointMulScalar, pointNormalize } from 'gis-tools';
 
 import type Camera from '..';
 import type { MapOptions } from 'ui/s2mapUI';
@@ -51,7 +51,7 @@ export default class Projector {
   view: Float32Array = new Float32Array(14);
   aspect: VectorPoint = { x: 400, y: 300 }; // default canvas width x height
   matrices: { [key in MatrixType]?: Float32Array } = {};
-  eye: Point3D = [0, 0, 0]; // [x, y, z] only z should change for visual effects
+  eye: VectorPoint = { x: 0, y: 0, z: 0 }; // [x, y, z] only z should change for visual effects
   constrainZoomToFill = true;
   duplicateHorizontally = true;
   minLatPosition = 70;
@@ -76,7 +76,7 @@ export default class Projector {
    */
   constructor(config: MapOptions, camera: Camera) {
     const { canvasMultiplier, positionalZoom, noClamp, style } = config;
-    if (typeof style === 'object' && style.projection === 'WM') this.projection = 'WM';
+    if (typeof style === 'object' && style.projection === 'WG') this.projection = 'WG';
     if (canvasMultiplier !== undefined) this.multiplier = canvasMultiplier;
     if (positionalZoom === false) this.positionalZoom = false;
     this.webworker = camera.webworker;
@@ -439,7 +439,7 @@ export default class Projector {
     // adjust bearing
     view.bearing = this.#clampDeg(view.bearing);
     // adjust view if constrained to fill
-    if (projection === 'WM' && constrainZoomToFill) this.#clampConstraint(view);
+    if (projection === 'WG' && constrainZoomToFill) this.#clampConstraint(view);
   }
 
   /**
@@ -520,7 +520,7 @@ export default class Projector {
     // get projection matrix
     let matrix = this.#getProjectionMatrixS2(type, zoom);
     // create view matrix
-    const view = mat4.lookAt(eye, [0, lat > 90 || lat < -90 ? -1 : 1, 0]);
+    const view = mat4.lookAt(eye, { x: 0, y: lat > 90 || lat < -90 ? -1 : 1, z: 0 });
     // adjust by bearing
     if (bearing !== 0) mat4.rotateZ(matrix, degToRad(bearing));
     // if km we "remove" the eye
@@ -541,7 +541,7 @@ export default class Projector {
    * @param zoom
    * @param update
    */
-  #updateEyeS2(lon: number, lat: number, zoom: number, update = true): Point3D {
+  #updateEyeS2(lon: number, lat: number, zoom: number, update = true): VectorPoint {
     const { radius, zTranslateEnd, zTranslateStart, zoomEnd } = this;
     // find radial distance from core of ellipsoid
     const radialMultiplier =
@@ -550,7 +550,10 @@ export default class Projector {
         zTranslateEnd,
       ) * radius;
     // create xyz point for eye
-    const eye = mul(normalize(fromLonLatGL(lon, lat)), radialMultiplier);
+    const eye = pointMulScalar(
+      pointNormalize(pointFromLonLatGL({ x: lon, y: lat })),
+      radialMultiplier,
+    );
     if (update) this.eye = eye;
 
     return eye;
@@ -594,7 +597,7 @@ export default class Projector {
     // get projection matrix
     let matrix = this.#getProjectionMatrixWM(scale);
     // create view matrix
-    const view = mat4.lookAt([0, 0, -1], [0, -1, 0]);
+    const view = mat4.lookAt({ x: 0, y: 0, z: -1 }, { x: 0, y: -1, z: 0 });
     // adjust by bearing
     if (bearing !== 0) mat4.rotateZ(matrix, degToRad(bearing));
     // multiply projection matrix by view matrix

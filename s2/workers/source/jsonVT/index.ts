@@ -15,7 +15,7 @@ import {
 /** TYPES */
 import type { FeatureVector } from './feature';
 import type { Projection } from 'style/style.spec';
-import type { Face, JSONFeatures } from 'geometry';
+import type { Face, JSONCollection } from 'gis-tools';
 import type { JSONTile, JSONVectorTile } from './tile';
 
 /**
@@ -77,7 +77,7 @@ export default class JsonVT {
    * @param data
    * @param options
    */
-  constructor(data: JSONFeatures, options?: JSONVTOptions) {
+  constructor(data: JSONCollection, options?: JSONVTOptions) {
     // set options should they exist
     this.minzoom = options?.minzoom ?? 0;
     this.maxzoom = options?.maxzoom ?? 20;
@@ -88,7 +88,7 @@ export default class JsonVT {
     this.buffer = options?.buffer ?? 64;
     // update projection
     if (options?.projection !== undefined) this.projection = options.projection;
-    else if (data.type === 'Feature' || data.type === 'FeatureCollection') this.projection = 'WM';
+    else if (data.type === 'Feature' || data.type === 'FeatureCollection') this.projection = 'WG';
     // sanity check
     if (this.maxzoom < 0 || this.maxzoom > 20)
       throw new Error('maxzoom should be in the 0-20 range');

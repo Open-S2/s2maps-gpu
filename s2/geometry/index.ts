@@ -4,7 +4,8 @@ import { toWM } from './s2/convert';
 import type { FeatureCollection } from './wm';
 import type { Projection } from 'style/style.spec';
 import type { S2FeatureCollection } from './s2';
-import type { JSONFeatures, XYZ } from './proj.spec';
+
+import type { JSONCollection, VectorPoint } from 'gis-tools';
 
 export * from './s2';
 export * from './wm';
@@ -16,10 +17,10 @@ export * from './util';
  * @param data
  * @param projection
  */
-export function toProjection(data: JSONFeatures, projection: 'WM'): FeatureCollection;
-export function toProjection(data: JSONFeatures, projection: 'S2'): S2FeatureCollection;
+export function toProjection(data: JSONCollection, projection: 'WG'): FeatureCollection;
+export function toProjection(data: JSONCollection, projection: 'S2'): S2FeatureCollection;
 export function toProjection(
-  data: JSONFeatures,
+  data: JSONCollection,
   projection: Projection,
 ): FeatureCollection | S2FeatureCollection;
 /**
@@ -27,7 +28,7 @@ export function toProjection(
  * @param projection
  */
 export function toProjection(
-  data: JSONFeatures,
+  data: JSONCollection,
   projection: Projection,
 ): FeatureCollection | S2FeatureCollection {
   if (projection === 'S2') {
@@ -96,12 +97,17 @@ export function lessThanZero(
  * @param tl
  * @param tr
  */
-export function pointBoundaries(bl: XYZ, br: XYZ, tl: XYZ, tr: XYZ): boolean {
+export function pointBoundaries(
+  bl: VectorPoint,
+  br: VectorPoint,
+  tl: VectorPoint,
+  tr: VectorPoint,
+): boolean {
   return (
-    (tl[0] <= 1 && tl[0] >= -1 && tl[1] <= 1 && tl[1] >= -1) ||
-    (tr[0] <= 1 && tr[0] >= -1 && tr[1] <= 1 && tr[1] >= -1) ||
-    (bl[0] <= 1 && bl[0] >= -1 && bl[1] <= 1 && bl[1] >= -1) ||
-    (br[0] <= 1 && br[0] >= -1 && br[1] <= 1 && br[1] >= -1)
+    (tl.x <= 1 && tl.x >= -1 && tl.y <= 1 && tl.y >= -1) ||
+    (tr.x <= 1 && tr.x >= -1 && tr.y <= 1 && tr.y >= -1) ||
+    (bl.x <= 1 && bl.x >= -1 && bl.y <= 1 && bl.y >= -1) ||
+    (br.x <= 1 && br.x >= -1 && br.y <= 1 && br.y >= -1)
   );
 }
 
@@ -112,7 +118,12 @@ export function pointBoundaries(bl: XYZ, br: XYZ, tl: XYZ, tr: XYZ): boolean {
  * @param tl
  * @param tr
  */
-export function boxIntersects(bl: XYZ, br: XYZ, tl: XYZ, tr: XYZ): boolean {
+export function boxIntersects(
+  bl: VectorPoint,
+  br: VectorPoint,
+  tl: VectorPoint,
+  tr: VectorPoint,
+): boolean {
   return (
     boxIntersect(tl, bl) || // leftLine
     boxIntersect(br, tr) || // rightLine
@@ -126,12 +137,12 @@ export function boxIntersects(bl: XYZ, br: XYZ, tl: XYZ, tr: XYZ): boolean {
  * @param p1
  * @param p2
  */
-export function boxIntersect(p1: XYZ, p2: XYZ): boolean {
+export function boxIntersect(p1: VectorPoint, p2: VectorPoint): boolean {
   if (
-    lineIntersect(p1[0], p1[1], p2[0], p2[1], -1, -1, -1, 1) || // leftLineBox
-    lineIntersect(p1[0], p1[1], p2[0], p2[1], 1, -1, 1, 1) || // rightLineBox
-    lineIntersect(p1[0], p1[1], p2[0], p2[1], -1, -1, 1, -1) || // bottomLineBox
-    lineIntersect(p1[0], p1[1], p2[0], p2[1], -1, 1, 1, 1) // topLineBox
+    lineIntersect(p1.x, p1.y, p2.x, p2.y, -1, -1, -1, 1) || // leftLineBox
+    lineIntersect(p1.x, p1.y, p2.x, p2.y, 1, -1, 1, 1) || // rightLineBox
+    lineIntersect(p1.x, p1.y, p2.x, p2.y, -1, -1, 1, -1) || // bottomLineBox
+    lineIntersect(p1.x, p1.y, p2.x, p2.y, -1, 1, 1, 1) // topLineBox
   )
     return true;
   return false;

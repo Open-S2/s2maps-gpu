@@ -2,7 +2,8 @@ import { VectorTile } from 'open-vector-tile';
 // import { parseLayers } style/conditionals'
 import ProcessManager from './process';
 
-import type { JSONVectorTile } from './source/jsonVT/tile';
+import type { VTTile } from './process/process.spec';
+import type { VectorGeometry } from 'gis-tools';
 import type { LayerDefinition, StylePackage } from 'style/style.spec';
 import type { TileRequest, TileWorkerMessages } from './worker.spec';
 
@@ -78,11 +79,11 @@ export default class TileWorker extends ProcessManager {
   }
 
   /**
-   * @param mapID
-   * @param layer
-   * @param index
+   * @param _mapID
+   * @param _layer
+   * @param _index
    */
-  #addLayer(mapID: string, layer: LayerDefinition, index: number): void {
+  #addLayer(_mapID: string, _layer: LayerDefinition, _index: number): void {
     // const layers = this.maps[mapID]
     // layers.splice(index, 0, layer)
     // for (let i = index + 1, ll = layers.length; i < ll; i++) {
@@ -92,10 +93,10 @@ export default class TileWorker extends ProcessManager {
   }
 
   /**
-   * @param mapID
-   * @param index
+   * @param _mapID
+   * @param _index
    */
-  #deleteLayer(mapID: string, index: number): void {
+  #deleteLayer(_mapID: string, _index: number): void {
     // const layers = this.maps[mapID]
     // layers.splice(index, 1)
     // for (let i = index, ll = layers.length; i < ll; i++) {
@@ -105,10 +106,10 @@ export default class TileWorker extends ProcessManager {
   }
 
   /**
-   * @param mapID
-   * @param layerChanges
+   * @param _mapID
+   * @param _layerChanges
    */
-  #reorderLayers(mapID: string, layerChanges: Record<number, number>): void {
+  #reorderLayers(_mapID: string, _layerChanges: Record<number, number>): void {
     // const layers = this.maps[mapID]
     // const newLayers: LayerDefinition[] = []
     // // move the layer to its new position
@@ -129,9 +130,11 @@ export default class TileWorker extends ProcessManager {
    */
   #processJSONData(mapID: string, tile: TileRequest, sourceName: string, data: ArrayBuffer): void {
     // step 1: convert data to a JSON object
-    const vectorTile: JSONVectorTile = JSON.parse(this.textDecoder.decode(new Uint8Array(data)));
+    const vectorTile: VTTile = JSON.parse(this.textDecoder.decode(new Uint8Array(data)));
     // step 2: parse functions
     for (const layer of Object.values(vectorTile.layers)) {
+      // re-inject length
+      layer.length = layer.features.length;
       /**
        * @param i
        */
@@ -140,9 +143,52 @@ export default class TileWorker extends ProcessManager {
       };
       /** loop over features */
       for (const feature of layer.features) {
+        /** @returns the feature geometry type */
+        feature.geoType = function () {
+          return this.geometry.type;
+        };
         /** @returns a load geometry function */
         feature.loadGeometry = function () {
           return this.geometry;
+        };
+        /** @returns a loader for point geometry */
+        feature.loadPoints = function () {
+          const { type, coordinates } = this.geometry as VectorGeometry;
+          if (type === 'Point') {
+            return [coordinates];
+          } else if (type === 'MultiPoint') {
+            return coordinates;
+          } else if (type === 'LineString') {
+            return coordinates;
+          } else if (type === 'MultiLineString') {
+            return coordinates.flat();
+          } else if (type === 'Polygon') {
+            return coordinates.flat();
+          } else if (type === 'MultiPolygon') {
+            return coordinates.flat(2);
+          }
+        };
+        /** @returns a loader for line geometry */
+        feature.loadLines = function () {
+          const { type, coordinates } = this.geometry as VectorGeometry;
+          if (type === 'LineString') {
+            return [coordinates];
+          } else if (type === 'MultiLineString') {
+            return coordinates;
+          } else if (type === 'Polygon') {
+            return coordinates;
+          } else if (type === 'MultiPolygon') {
+            return coordinates.flat();
+          }
+        };
+        /** @returns a loader for polygon geometry */
+        feature.loadPolys = function () {
+          const { type, coordinates } = this.geometry as VectorGeometry;
+          if (type === 'Polygon') {
+            return [coordinates];
+          } else if (type === 'MultiPolygon') {
+            return coordinates;
+          }
         };
       }
     }

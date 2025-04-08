@@ -1,5 +1,5 @@
-import JsonVT from './jsonVT';
 import Source from './source';
+import { TileStore } from 'gis-tools';
 import { WMPointCluster } from './pointCluster';
 
 import type { JSONCollection } from 'gis-tools';
@@ -10,7 +10,7 @@ import type { TileRequest } from '../worker.spec';
  *
  */
 export default class JSONSource extends Source {
-  json!: JsonVT | WMPointCluster;
+  json!: TileStore | WMPointCluster;
   /**
    * @param mapID
    * @param metadata
@@ -30,7 +30,7 @@ export default class JSONSource extends Source {
       this.json.cluster();
     } else {
       // use the projection from the style
-      this.json = new JsonVT(json, { ...metadata, projection: this.projection });
+      this.json = new TileStore(json, { ...metadata, projection: this.projection });
     }
     const { projection, minzoom, maxzoom, faces } = this.json;
     this._buildMetadata(
@@ -41,7 +41,7 @@ export default class JSONSource extends Source {
         faces: [...faces],
         layers: { default: { minzoom: 0, maxzoom: 30, fields: {} } },
         extension: projection === 'S2' ? 's2json' : 'geojson',
-        attributions: json.attributions,
+        attributions: 'attributions' in json ? json.attributions : {},
       },
       mapID,
     );

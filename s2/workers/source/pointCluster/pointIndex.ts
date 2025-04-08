@@ -31,8 +31,8 @@ export default class PointIndex<T> {
    */
   add(x: number, y: number, data: T): void {
     if (isNaN(x) || isNaN(y)) return;
-    x = projectX(x, 'WM');
-    y = projectY(y, 'WM');
+    x = projectX(x, 'WG');
+    y = projectY(y, 'WG');
     this.points.push({ x, y, data });
     this.#sorted = false;
   }

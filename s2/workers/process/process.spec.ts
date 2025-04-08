@@ -1,7 +1,5 @@
 import type { GlyphObject } from './glyph/glyph.spec';
-import type { JSONVectorFeature } from '../source/jsonVT/tile';
 import type { Features as PointHeatFeatures } from './point';
-import type { Properties } from 'gis-tools';
 import type { TileRequest } from '../worker.spec';
 import type {
   Cap,
@@ -25,7 +23,13 @@ import type {
   SensorDefinition,
   SensorWorkerLayer,
 } from 'style/style.spec';
-import type { MapboxVectorFeature, OVectorFeature } from 'open-vector-tile';
+import type {
+  Properties,
+  VectorGeometryType,
+  VectorMultiLineString,
+  VectorMultiPoint,
+  VectorMultiPolygon,
+} from 'gis-tools';
 
 /**
  *
@@ -109,7 +113,31 @@ export type Feature = GlyphFeature | FillFeature | LineFeature | PointFeature | 
 /**
  *
  */
-export type VTFeature = OVectorFeature | MapboxVectorFeature | JSONVectorFeature;
+export interface VTTile {
+  layers: Record<string, VTLayer>;
+}
+
+/**
+ *
+ */
+export interface VTLayer {
+  length: number;
+  extent: number;
+  feature: (i: number) => VTFeature;
+}
+
+/**
+ *
+ */
+export interface VTFeature {
+  id?: number;
+  geoType: () => VectorGeometryType;
+  properties: Properties;
+  loadPoints: () => VectorMultiPoint | undefined;
+  loadLines: () => VectorMultiLineString | undefined;
+  loadPolys: () => VectorMultiPolygon | undefined;
+  loadGeometryFlat?: () => [verts: number[], indices: number[]];
+}
 
 /**
  *
@@ -140,6 +168,7 @@ export interface FillWorker extends VectorWorker {
   setupLayer: (layer: FillDefinition) => FillWorkerLayer;
   buildFeature: (
     tile: TileRequest,
+    extent: number,
     feature: VTFeature,
     sourceLayer: FillWorkerLayer,
     mapID: string,
@@ -155,6 +184,7 @@ export interface LineWorker extends VectorWorker {
   setupLayer: (layer: LineDefinition) => LineWorkerLayer;
   buildFeature: (
     tile: TileRequest,
+    extent: number,
     feature: VTFeature,
     sourceLayer: LineWorkerLayer,
     mapID: string,
@@ -170,6 +200,7 @@ export interface PointWorker extends VectorWorker {
   setupLayer: (layer: PointDefinition | HeatmapDefinition) => PointWorkerLayer | HeatmapWorkerLayer;
   buildFeature: (
     tile: TileRequest,
+    extent: number,
     feature: VTFeature,
     sourceLayer: PointWorkerLayer | HeatmapWorkerLayer,
     mapID: string,
@@ -190,6 +221,7 @@ export interface GlyphWorker extends VectorWorker {
   setupLayer: (layer: GlyphDefinition) => GlyphWorkerLayer;
   buildFeature: (
     tile: TileRequest,
+    extent: number,
     feature: VTFeature,
     sourceLayer: GlyphWorkerLayer,
     mapID: string,

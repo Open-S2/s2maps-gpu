@@ -131,6 +131,7 @@ export function getPathPos(
   // note: st is 0->1 ratio relative to tile size
   // note: offset is in pixels
   // note: xPos and yPos are 0->1 ratio relative to glyph size
+  // eslint-disable-next-line prefer-const
   let [s, t, offsetX, offsetY, xPos, yPos] = quadPos;
   yPos *= size;
   offsetY += yPos;

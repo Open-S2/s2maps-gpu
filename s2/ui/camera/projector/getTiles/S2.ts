@@ -1,13 +1,32 @@
 import { project } from '../mat4';
-import { bboxST, neighborsIJ } from 'geometry/s2/s2Coords';
 import { boxIntersects, lessThanZero, pointBoundaries } from 'geometry';
-import { fromFace, fromIJ, parent } from 'geometry/s2/s2CellID';
-import { fromLonLat, fromSTGL, mul, normalize, toIJ } from 'geometry/s2/s2Point';
 
-import type { FaceIJ } from 'geometry';
-import type { BBox, Face, Point3D } from 'gis-tools';
+import {
+  bboxST,
+  getNeighborsIJ,
+  idFromFace,
+  idFromIJ,
+  idParent,
+  pointFromLonLat,
+  pointFromSTGL,
+  pointMulScalar,
+  pointNormalize,
+  pointToIJ,
+} from 'gis-tools';
 
-const ZERO_TILES = [fromFace(0), fromFace(1), fromFace(2), fromFace(3), fromFace(4), fromFace(5)];
+import type { BBox, Face, S2CellId, VectorPoint } from 'gis-tools';
+
+/** Track the face-i-j positions */
+type FaceIJ = [face: number, i: number, j: number];
+
+const ZERO_TILES = [
+  idFromFace(0),
+  idFromFace(1),
+  idFromFace(2),
+  idFromFace(3),
+  idFromFace(4),
+  idFromFace(5),
+];
 
 /**
  * @param zoom
@@ -22,20 +41,24 @@ export default function getTilesInView(
   lat: number,
   matrix: Float32Array,
   radius = 1,
-): bigint[] {
+): S2CellId[] {
   if (zoom < 1) return ZERO_TILES;
-  const tiles: bigint[] = [];
+  const tiles: S2CellId[] = [];
   const checkList: FaceIJ[] = [];
   const checkedTiles = new Set<string>();
   zoom = zoom << 0; // move to whole number
-  let stBbox: BBox, tLProj: Point3D, tRProj: Point3D, bLProj: Point3D, bRProj: Point3D;
+  let stBbox: BBox,
+    tLProj: VectorPoint,
+    tRProj: VectorPoint,
+    bLProj: VectorPoint,
+    bRProj: VectorPoint;
 
   // grab the first tile and prep neighbors for checks
-  const [face, i, j] = toIJ(fromLonLat(lon, lat), zoom);
-  tiles.push(parent(fromIJ(face, i, j, zoom), zoom));
+  const [face, i, j] = pointToIJ(pointFromLonLat({ x: lon, y: lat }), zoom);
+  tiles.push(idParent(idFromIJ(face, i, j, zoom), zoom));
   checkedTiles.add(`${String(face)}-${String(i)}-${String(j)}`);
   addNeighbors(face, zoom, i, j, checkedTiles, checkList);
-  const zero = project(matrix, [0, 0, 0])[2];
+  const zero = project(matrix, { x: 0, y: 0, z: 0 }).z!;
 
   while (checkList.length > 0) {
     // grab a tile to check and get its face and bounds
@@ -44,18 +67,30 @@ export default function getTilesInView(
     const [face, i, j] = check;
     stBbox = bboxST(i, j, zoom);
     // grab the four points from the bbox and project them
-    tLProj = project(matrix, mul(normalize(fromSTGL(face as Face, stBbox[0], stBbox[3])), radius));
-    tRProj = project(matrix, mul(normalize(fromSTGL(face as Face, stBbox[2], stBbox[3])), radius));
-    bLProj = project(matrix, mul(normalize(fromSTGL(face as Face, stBbox[0], stBbox[1])), radius));
-    bRProj = project(matrix, mul(normalize(fromSTGL(face as Face, stBbox[2], stBbox[1])), radius));
+    tLProj = project(
+      matrix,
+      pointMulScalar(pointNormalize(pointFromSTGL(face as Face, stBbox[0], stBbox[3])), radius),
+    );
+    tRProj = project(
+      matrix,
+      pointMulScalar(pointNormalize(pointFromSTGL(face as Face, stBbox[2], stBbox[3])), radius),
+    );
+    bLProj = project(
+      matrix,
+      pointMulScalar(pointNormalize(pointFromSTGL(face as Face, stBbox[0], stBbox[1])), radius),
+    );
+    bRProj = project(
+      matrix,
+      pointMulScalar(pointNormalize(pointFromSTGL(face as Face, stBbox[2], stBbox[1])), radius),
+    );
     // check if any of the 4 edge points or lines interact with a -1 to 1 x and y projection plane
     // if tile is part of the view, we add to tiles and tileSet and add all surounding tiles
     if (
-      lessThanZero(zero, bLProj[2], bRProj[2], tLProj[2], tRProj[2]) &&
+      lessThanZero(zero, bLProj.z!, bRProj.z!, tLProj.z!, tRProj.z!) &&
       (pointBoundaries(bLProj, bRProj, tLProj, tRProj) ||
         boxIntersects(bLProj, bRProj, tLProj, tRProj))
     ) {
-      tiles.push(parent(fromIJ(face as Face, i, j, zoom), zoom));
+      tiles.push(idParent(idFromIJ(face as Face, i, j, zoom), zoom));
       addNeighbors(face as Face, zoom, i, j, checkedTiles, checkList);
     }
   }
@@ -85,7 +120,7 @@ function addNeighbors(
   checkList: FaceIJ[],
 ): void {
   // add the surounding tiles we have not checked
-  for (const [nFace, nI, nJ] of neighborsIJ(face, i, j, zoom)) {
+  for (const [nFace, nI, nJ] of getNeighborsIJ(face, i, j, zoom)) {
     const fij = `${String(nFace)}-${String(nI)}-${String(nJ)}`;
     if (!checkedTiles.has(fij)) {
       checkedTiles.add(fij);

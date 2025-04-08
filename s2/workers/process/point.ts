@@ -1,10 +1,11 @@
-import VectorWorker, { colorFunc, idToRGB } from './vectorWorker';
-import { featureSort, flattenGeometryToPoints, scaleShiftClip } from './util';
-import parseFilter from 'style/parseFilter';
 import parseFeatureFunction from 'style/parseFeatureFunction';
+import parseFilter from 'style/parseFilter';
+import VectorWorker, { colorFunc, idToRGB } from './vectorWorker';
+import { featureSort, scaleShiftClip } from './util';
 
-import type { HeatmapData, PointData, TileRequest } from '../worker.spec';
+import type { CodeDesign } from './vectorWorker';
 import type { VectorPoints } from 'open-vector-tile';
+import type { HeatmapData, PointData, TileRequest } from '../worker.spec';
 import type {
   HeatmapDefinition,
   HeatmapWorkerLayer,
@@ -17,7 +18,8 @@ import type {
   PointWorker as PointWorkerSpec,
   VTFeature,
 } from './process.spec';
-import type { CodeDesign } from './vectorWorker';
+
+import type { VectorGeometryType } from 'gis-tools';
 
 /**
  *
@@ -88,6 +90,7 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
 
   /**
    * @param tile
+   * @param extent
    * @param feature
    * @param layer
    * @param mapID
@@ -95,6 +98,7 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
    */
   buildFeature(
     tile: TileRequest,
+    extent: number,
     feature: VTFeature,
     layer: PointWorkerLayer | HeatmapWorkerLayer,
     mapID: string,
@@ -102,17 +106,23 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
   ): boolean {
     const { gpuType } = this;
     const { zoom } = tile;
-    const { extent, properties, type: featureType } = feature;
+    const { properties } = feature;
     const { type, getCode, layerIndex, geoFilter } = layer;
-    if (geoFilter.includes('poly') && (featureType === 3 || featureType === 4)) return false;
-    if (geoFilter.includes('line') && featureType === 2) return false;
-    if (geoFilter.includes('point') && featureType === 1) return false;
+    const featureType: VectorGeometryType = feature.geoType();
+    if (geoFilter.includes('poly') && (featureType === 'Polygon' || featureType === 'MultiPolygon'))
+      return false;
+    if (
+      geoFilter.includes('line') &&
+      (featureType === 'LineString' || featureType === 'MultiLineString')
+    )
+      return false;
+    if (geoFilter.includes('point') && (featureType === 'Point' || featureType === 'MultiPoint'))
+      return false;
     // load geometry
-    const geometry = feature.loadGeometry?.() as VectorPoints;
-    if (geometry === undefined) return false;
+    const points = feature.loadPoints?.();
+    if (points === undefined) return false;
     // preprocess geometry
-    const points = flattenGeometryToPoints(geometry, featureType);
-    const clip = scaleShiftClip(points, 1, extent, tile) as VectorPoints;
+    const clip = scaleShiftClip(points, 1, extent ?? 1, tile) as VectorPoints;
     if (clip === undefined) return false;
     const vertices: number[] = [];
     const weights: number[] = [];
@@ -169,7 +179,7 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
    * @param sourceName
    * @param wait
    */
-  async flush(
+  override async flush(
     mapID: string,
     tile: TileRequest,
     sourceName: string,

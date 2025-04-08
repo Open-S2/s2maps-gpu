@@ -61,7 +61,7 @@ export default function maplibreStyleConverter(input: StyleSpecification): Style
       bearing,
       pitch,
     },
-    projection: 'WM',
+    projection: 'WG',
     glyphs,
     sources: convertSources(sources),
     sprites: sprite !== undefined ? convertSprite(sprite) : undefined,

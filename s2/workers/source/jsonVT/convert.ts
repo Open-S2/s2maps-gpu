@@ -1,10 +1,9 @@
-/** MODULES */
-import type JsonVT from '.';
 import createFeature from './feature';
 import simplify from './simplify';
 import { toProjection } from 'geometry';
-/** TYPES */
+
 import type { FeatureVector } from './feature';
+import type JsonVT from '.';
 import type { Projection } from 'style/style.spec';
 import type { Feature, Point as FlatPoint, JSONCollection, S2Feature } from 'gis-tools';
 
@@ -24,7 +23,7 @@ export default function convert(data: JSONCollection, jsonVT: JsonVT): FeatureVe
     }
   } else if (data.type === 'FeatureCollection') {
     for (const feature of data.features) {
-      convertFeature(features, feature, jsonVT, 'WM');
+      convertFeature(features, feature, jsonVT, 'WG');
     }
   }
 

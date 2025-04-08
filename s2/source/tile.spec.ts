@@ -2,7 +2,7 @@ import type { LayerDefinition } from 'style/style.spec';
 import type Projector from 'ui/camera/projector';
 import type WebGLContext from 'gl/context/context';
 import type WebGPUContext from 'gpu/context/context';
-import type { BBox, Face, Point3D } from 'gis-tools';
+import type { BBox, Face, VectorPoint } from 'gis-tools';
 import type {
   Features as FeaturesGL,
   TileMaskSource as MaskSourceGL,
@@ -17,10 +17,10 @@ import type { InteractiveObject, SourceFlushMessage, TileFlushMessage } from 'wo
  *
  */
 export interface Corners {
-  topLeft: Point3D;
-  topRight: Point3D;
-  bottomLeft: Point3D;
-  bottomRight: Point3D;
+  topLeft: VectorPoint;
+  topRight: VectorPoint;
+  bottomLeft: VectorPoint;
+  bottomRight: VectorPoint;
 }
 
 /** gets all viable keys from all interfaces in a union. */
@@ -81,7 +81,7 @@ export interface TileBase<C, F, M> {
   uniforms: Float32Array;
   bottomTop: Float32Array;
   state: 'loading' | 'loaded' | 'deleted';
-  type: 'S2' | 'WM';
+  type: 'S2' | 'WG';
   // S2 specific features
   faceST: FaceST;
   corners?: Corners;

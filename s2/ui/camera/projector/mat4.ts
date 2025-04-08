@@ -1,4 +1,4 @@
-import type { Point3D } from 'gis-tools';
+import type { Point3D, VectorPoint } from 'gis-tools';
 
 /**
  *
@@ -138,16 +138,16 @@ export function perspective(
  * @param eye
  * @param up
  */
-export function lookAt(eye: Point3D, up: Point3D): Float32Array {
+export function lookAt(eye: VectorPoint, up: VectorPoint): Float32Array {
   const m = new Float32Array(16);
   let x0: number, x1: number, x2: number, y0: number, y1: number;
   let y2: number, z0: number, z1: number, z2: number, len: number;
-  const eyex = eye[0];
-  const eyey = eye[1];
-  const eyez = eye[2];
-  const upx = up[0];
-  const upy = up[1];
-  const upz = up[2];
+  const eyex = eye.x;
+  const eyey = eye.y;
+  const eyez = eye.z!;
+  const upx = up.x;
+  const upy = up.y;
+  const upz = up.z!;
 
   z0 = eyex;
   z1 = eyey;
@@ -363,15 +363,16 @@ export function rotateZ(m: Float32Array, rad: number): Float32Array {
  * @param m
  * @param v
  */
-export function multiplyVector(m: Float32Array, v: Point3D): number[] {
-  const out: number[] = [];
-
-  out.push(m[0] * v[0] + m[4] * v[1] + m[8] * v[2] + m[12]);
-  out.push(m[1] * v[0] + m[5] * v[1] + m[9] * v[2] + m[13]);
-  out.push(m[2] * v[0] + m[6] * v[1] + m[10] * v[2] + m[14]);
-  out.push(m[3] * v[0] + m[7] * v[1] + m[11] * v[2] + m[15]);
-
-  return out;
+export function multiplyVector(
+  m: Float32Array,
+  v: VectorPoint,
+): [x: number, y: number, z: number, t: number] {
+  return [
+    m[0] * v.x + m[4] * v.y + m[8] * (v.z ?? 0) + m[12],
+    m[1] * v.x + m[5] * v.y + m[9] * (v.z ?? 0) + m[13],
+    m[2] * v.x + m[6] * v.y + m[10] * (v.z ?? 0) + m[14],
+    m[3] * v.x + m[7] * v.y + m[11] * (v.z ?? 0) + m[15],
+  ];
 }
 
 /**
@@ -494,8 +495,8 @@ export function invert(matrix: Float32Array): null | Float32Array {
  * @param matrix
  * @param vector
  */
-export function project(matrix: Float32Array, vector: Point3D): Point3D {
-  const mul = multiplyVector(matrix, vector);
+export function project(matrix: Float32Array, vector: VectorPoint): VectorPoint {
+  const [mulX, mulY, mulZ, mulT] = multiplyVector(matrix, vector);
 
-  return [mul[0] / mul[3], mul[1] / mul[3], mul[2] / mul[3]];
+  return { x: mulX / mulT, y: mulY / mulT, z: mulZ / mulT };
 }

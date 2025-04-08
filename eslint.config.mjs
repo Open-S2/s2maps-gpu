@@ -9,6 +9,8 @@ import prettierConfig from 'eslint-config-prettier';
 // import tsdocs from 'eslint-plugin-tsdoc';
 import tseslint from 'typescript-eslint';
 
+// TODO: Disable `prefer-const`
+
 export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,

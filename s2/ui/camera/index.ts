@@ -7,7 +7,7 @@ import type { MapOptions } from '../s2mapUI';
 /** GEOMETRY / PROJECTIONS */
 import Projector from './projector';
 import { tileIDWrapped as tileIDWrappedWM } from 'geometry/wm';
-import { isFace, parent as parentID } from 'geometry/id';
+import { idIsFace, idParent } from 'gis-tools';
 /** SOURCES */
 import Animator from './animator';
 import Cache from './cache';
@@ -666,17 +666,16 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   #createTiles(id: bigint): Tile[] {
     const res: Tile[] = [];
     const { style, painter, tileCache, projector } = this;
-    const { projection } = projector;
     // create tile
     const tile = createTile(projector.projection, painter.context, id);
     res.push(tile);
     // should our style have mask layers, let's add them
     style.injectMaskLayers(tile);
     // inject parent should one exist
-    if (!isFace(projection, id)) {
+    if (!idIsFace(id)) {
       // get closest parent S2CellID. If actively zooming, the parent tile will pass along
       // it's parent tile (and so forth) if its own data has not been processed yet.
-      const pID = parentID(projection, id);
+      const pID = idParent(id);
       // check if parent tile exists, if so inject
       const parent = tileCache.get(pID);
       if (parent !== undefined) tile.injectParentTile(parent, style.layers);

@@ -1,4 +1,4 @@
-import { MAXLAT, llToPX, pxToLL } from 'geometry';
+import { MAXLAT, llToPX, pxToLL } from 'gis-tools';
 
 import type { VectorPoint } from 'gis-tools';
 

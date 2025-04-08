@@ -1,4 +1,4 @@
-import { parent as parentID, toIJ } from 'geometry/id';
+import { idParent, idToIJ } from 'gis-tools';
 
 import type { Session } from '.';
 import type {
@@ -226,8 +226,7 @@ export default class Source {
    * @param layersToLoad
    */
   #getParentData(mapID: string, tile: TileRequest, layersToLoad: Set<number>): void {
-    const { format, layers, styleLayers, name } = this;
-    const projection: Projection = format === 'zxy' ? 'WM' : 'S2';
+    const { layers, styleLayers, name } = this;
     if (layers === undefined) return;
     // pull out data
     const { time, face, zoom, id } = tile;
@@ -244,11 +243,11 @@ export default class Source {
         let newID = id;
         while (pZoom > sourceLayerMaxZoom) {
           pZoom--;
-          newID = parentID(projection, newID);
+          newID = idParent(newID);
         }
         const newIDString = newID.toString();
         // pull out i & j
-        const [, i, j] = toIJ(projection, newID, pZoom);
+        const [, i, j] = idToIJ(newID, pZoom);
         // store parent reference
         if (parentLayers[newIDString] === undefined) {
           parentLayers[newIDString] = {

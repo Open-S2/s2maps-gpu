@@ -73,7 +73,8 @@ export function neighborsXY(zoom: number, x: number, y: number, includeOutOfBoun
  * Check if the tile is not a real world tile that fits inside the quad tree
  * Out of bounds tiles exist if the map has `duplicateHorizontally` set to true.
  * This is useful for filling in the canvas on the x axis instead of leaving it blank.
- * @param id
+ * @param id - a tile ID
+ * @returns - true if the x and y of the ID is "out of bounds"
  */
 export function isOutOfBounds(id: bigint): boolean {
   const [zoom, x, y] = fromID(id);

@@ -3,7 +3,7 @@ import type { StyleDefinition } from 'style/style.spec';
 const style: StyleDefinition = {
   version: 1,
   name: 'WM Cluster',
-  projection: 'WM',
+  projection: 'WG',
   view: {
     lon: -122.4585607773497,
     lat: 37.778443127730476,

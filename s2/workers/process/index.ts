@@ -8,8 +8,6 @@ import RasterWorker from './raster';
 import type { Glyph } from './glyph/familySource';
 import type { GlyphMetadata } from 'workers/source/glyphSource';
 import type { ImageMetadata } from 'workers/source/imageSource';
-import type { JSONVectorTile } from '../source/jsonVT/tile';
-import type { VectorTile } from 'open-vector-tile';
 import type {
   GPUType,
   HillshadeWorkerLayer,
@@ -20,7 +18,7 @@ import type {
   StylePackage,
   WorkerLayer,
 } from 'style/style.spec';
-import type { IDGen, VectorWorker, Workers } from './process.spec';
+import type { IDGen, VTTile, VectorWorker, Workers } from './process.spec';
 import type { TileFlushMessage, TileRequest } from '../worker.spec';
 
 // 32bit: 4,294,967,295 --- 24bit: 16,777,216 --- 22bit: 4,194,304 --- 16bit: 65,535 --- 7bit: 128
@@ -119,7 +117,7 @@ export default class ProcessManager {
     mapID: string,
     tile: TileRequest,
     sourceName: string,
-    vectorTile: VectorTile | JSONVectorTile,
+    vectorTile: VTTile,
   ): Promise<void> {
     const { workers } = this;
     const { zoom, parent } = tile;
@@ -152,6 +150,7 @@ export default class ProcessManager {
         if (filter(properties)) {
           const wasBuilt = await workers[type]?.buildFeature(
             tile,
+            vectorLayer.extent,
             feature,
             sourceLayer as never,
             mapID,
@@ -187,7 +186,7 @@ export default class ProcessManager {
     }
 
     const deadLayers: number[] = [];
-    for (const [id, count] of Object.entries(layers)) if (count === 0) deadLayers.push(+id);
+    for (const [id, count] of Object.entries(layers)) if (count === 0) deadLayers.push(Number(id));
     const msg: TileFlushMessage = {
       type: 'flush',
       from: 'tile',

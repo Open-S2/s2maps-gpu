@@ -3,7 +3,7 @@ import type { StyleDefinition } from 'style/style.spec';
 const style: StyleDefinition = {
   version: 1,
   name: 'WM Points',
-  projection: 'WM',
+  projection: 'WG',
   view: {
     lon: 0,
     lat: 0,

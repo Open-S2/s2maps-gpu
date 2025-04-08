@@ -227,10 +227,10 @@ export default class S2MapUI extends Camera {
   }
 
   /**
-   * @param layer
-   * @param nameIndex
+   * @param _layer
+   * @param _nameIndex
    */
-  addLayer(layer: LayerStyle, nameIndex: number | string): void {
+  addLayer(_layer: LayerStyle, _nameIndex: number | string): void {
     // TODO
     // // remove all tiles outside of view
     // const tileRequests = this._resetTileCache([], false, true)
@@ -241,9 +241,9 @@ export default class S2MapUI extends Camera {
   }
 
   /**
-   * @param nameIndex
+   * @param _nameIndex
    */
-  deleteLayer(nameIndex: number | string): void {
+  deleteLayer(_nameIndex: number | string): void {
     // TODO
     // // style needs to be updated on the change
     // const index = Style.deleteLayer(nameIndex)
@@ -254,9 +254,9 @@ export default class S2MapUI extends Camera {
   }
 
   /**
-   * @param layerChanges
+   * @param _layerChanges
    */
-  reorderLayers(layerChanges: Record<number, number>): void {
+  reorderLayers(_layerChanges: Record<number, number>): void {
     // TODO
     // // style needs to updated on the change
     // this.style.reorderLayers(layerChanges)
@@ -267,11 +267,11 @@ export default class S2MapUI extends Camera {
   }
 
   /**
-   * @param layer
-   * @param nameIndex
-   * @param fullUpdate
+   * @param _layer
+   * @param _nameIndex
+   * @param _fullUpdate
    */
-  updateLayer(layer: LayerStyle, nameIndex: number | string, fullUpdate = false): void {
+  updateLayer(_layer: LayerStyle, _nameIndex: number | string, _fullUpdate = false): void {
     // TODO
   }
 
@@ -294,7 +294,7 @@ export default class S2MapUI extends Camera {
    * @param deltaX
    * @param deltaY
    */
-  onZoom(deltaZ: number, deltaX = 0, deltaY = 0): void {
+  override onZoom(deltaZ: number, deltaX = 0, deltaY = 0): void {
     this.dragPan.clear();
     if (!this.canZoom) return;
     // remove any prexisting animations

@@ -3,13 +3,12 @@ import type { ColorArray } from './color';
 import type { EaseType } from './easingFunctions';
 import type { JSONVTOptions } from 'workers/source/jsonVT';
 import type { View } from 'ui/camera/projector';
+import type { BBox, Point as FlatPoint, JSONCollection, Projection, Properties } from 'gis-tools';
 import type { Filter, FilterFunction } from 'style/parseFilter';
-
-import type { BBox, Point as FlatPoint, JSONCollection, Properties } from 'gis-tools';
 
 export type { JSONVTOptions } from 'workers/source/jsonVT';
 export type { ClusterOptions } from 'workers/source/pointCluster';
-export type { BBox, JSONCollection, VectorPoint, Properties } from 'gis-tools';
+export type { BBox, JSONCollection, VectorPoint, Properties, Projection } from 'gis-tools';
 export type { Filter, FilterFunction } from './parseFilter';
 export type { EaseType } from './easingFunctions';
 export type { MapOptions } from 'ui/s2mapUI';
@@ -38,13 +37,6 @@ export type ImageFormats =
  *
  */
 export type Format = 'zxy' | 'tzxy' | 'fzxy' | 'tfzxy';
-
-// WM => Web Mercator
-// S2 => Sphere
-/**
- *
- */
-export type Projection = 'WM' | 'S2';
 
 /**
  *

@@ -1,38 +1,23 @@
 import PointIndex from './pointIndex';
+import { convert } from 'gis-tools';
 import { fromID } from 'geometry/wm';
-import { toProjection } from 'geometry';
 import { transformPoint } from '../jsonVT/transform';
 
 import type { ClusterOptions } from './';
 import type { Point } from './pointIndex';
-import type { Face, JSONCollection, PointFeature } from 'gis-tools';
-import type {
-  JSONLayers,
-  JSONVectorPointsFeature,
-  JSONVectorTile,
-} from 'workers/source/jsonVT/tile';
+import type { Face, JSONCollection, VectorPointGeometry } from 'gis-tools';
 
 /**
  *
  */
-export interface Tile {
-  features: PointFeature[];
-  z: number;
-  x: number;
-  y: number;
-}
-
-/**
- *
- */
-export type Comparator = (a: PointFeature, b: PointFeature) => boolean;
+export type Comparator = (a: VectorPointGeometry, b: VectorPointGeometry) => boolean;
 
 /**
  *
  */
 export interface Cluster {
   // base means it's just a point feature, level means it's potentially a cluster, but just have a sum of 1 (still a point)
-  ref: PointFeature;
+  ref: VectorPointGeometry;
   visited: boolean;
   sum: number;
 }
@@ -70,9 +55,9 @@ export default class PointCluser {
   options: OptionsComputed = DEFAULT_OPTIONS;
   base: PointIndex<Cluster>;
   indexes: Array<PointIndex<Cluster>> = [];
-  points: PointFeature[] = [];
+  points: VectorPointGeometry[] = [];
   faces = new Set<Face>([0]);
-  projection = 'WM';
+  projection = 'WG';
   /**
    * @param options
    */
@@ -92,18 +77,26 @@ export default class PointCluser {
    * @param data
    */
   addManyPoints(data: JSONCollection): void {
-    const points = toProjection(data, 'WM');
-    for (const point of points.features) {
-      if (point.geometry.type === 'Point') this.addPoint(point as PointFeature);
+    const features = convert('WG', data, undefined, true);
+    for (const { geometry, properties } of features) {
+      const { type, coordinates } = geometry;
+      if (type === 'Point') {
+        this.addPoint(geometry);
+      } else if (type === 'MultiPoint') {
+        for (const point of coordinates) {
+          const { x: s, y: t, m } = point;
+          this.addPoint();
+        }
+      }
     }
   }
 
   /**
    * @param point
    */
-  addPoint(point: PointFeature): void {
+  addPoint(point: VectorPointGeometry): void {
     const cluster: Cluster = { ref: point, visited: false, sum: 1 };
-    this.base.add(point.geometry.coordinates[0], point.geometry.coordinates[1], cluster);
+    this.base.add(point.coordinates[0], point.geometry.coordinates[1], cluster);
   }
 
   /**

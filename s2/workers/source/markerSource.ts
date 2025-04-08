@@ -76,7 +76,7 @@ export default class MarkerSource {
     const json: JSONCollection | undefined = metadata?.data;
     const markers: MarkerDefinition[] = [];
     if (json !== undefined) {
-      const geojson = toProjection(json, 'WM');
+      const geojson = toProjection(json, 'WG');
       for (const feature of geojson.features) {
         if (feature.type === 'Feature' && feature.geometry.type === 'Point') {
           const marker: MarkerDefinition = {
@@ -105,7 +105,7 @@ export default class MarkerSource {
       const [face, x, y] =
         projection === 'S2'
           ? toST(fromLonLat(lon, lat))
-          : [0 as Face, projectX(lon, 'WM'), projectY(lat, 'WM')];
+          : [0 as Face, projectX(lon, 'WG'), projectY(lat, 'WG')];
       // if no id, let's create one
       if (id === undefined) {
         id = this.idGen++;

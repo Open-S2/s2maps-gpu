@@ -1,13 +1,21 @@
-import { bboxST } from 'geometry/s2/s2Coords';
+import { isOutOfBounds } from 'geometry/wm';
 import { project } from 'ui/camera/projector/mat4';
-import { fromID, isOutOfBounds, llToTilePx } from 'geometry/wm';
-import { fromSTGL, mul, normalize } from 'geometry/s2/s2Point';
-import { level, toIJ } from 'geometry/s2/s2CellID';
+import {
+  bboxST,
+  idLevel,
+  idToIJ,
+  llToTilePx,
+  pointFromS2CellID,
+  pointFromSTGL,
+  pointMulScalar,
+  pointNormalize,
+  pointSub,
+} from 'gis-tools';
 
 import type Projector from 'ui/camera/projector';
 import type { Context as WebGLContext } from 'gl/context';
 import type { WebGPUContext } from 'gpu/context';
-import type { BBox, Face, Point3D } from 'gis-tools';
+import type { BBox, Face } from 'gis-tools';
 import type {
   Corners,
   FaceST,
@@ -56,12 +64,12 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
   uniforms = new Float32Array(7); // [isS2, face, zoom, sLow, tLow, deltaS, deltaT]
   bottomTop = new Float32Array(8);
   state: 'loading' | 'loaded' | 'deleted' = 'loading';
-  type: 'S2' | 'WM' = 'S2';
+  type: 'S2' | 'WG' = 'S2';
   faceST!: FaceST;
   matrix!: Float32Array;
   layersLoaded = new Set<number>();
   layersToBeLoaded?: Set<number>;
-  // WM only feature: if the tile is "out of bounds", it references a real world tile
+  // WG only feature: if the tile is "out of bounds", it references a real world tile
   // by copying the parents featureGuides.
   outofBounds = false;
   dependents: Array<Tile<C, F, M>> = [];
@@ -325,6 +333,8 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
         parent !== undefined &&
         // corner-case: empty data/missing tile -> flushes ALL layers,
         // but that layer MAY BE inverted so we don't kill it.
+        // TODO: Find out why this is happening
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         !(('invert' in layerGuide && layerGuide.invert) ?? false)
       )
         featureGuides.splice(i, 1);
@@ -351,8 +361,8 @@ export class S2Tile<
   constructor(context: C, id: bigint) {
     super(context, id);
     const { max, min, floor } = Math;
-    const zoom = (this.zoom = level(id));
-    const [face, i, j] = toIJ(id, zoom);
+    const zoom = (this.zoom = idLevel(id));
+    const [face, i, j] = idToIJ(id, zoom);
     this.face = face;
     this.i = i;
     this.j = j;
@@ -382,10 +392,10 @@ export class S2Tile<
     const { face, bbox } = this;
 
     this.corners = {
-      topLeft: mul(normalize(fromSTGL(face, bbox[0], bbox[3])), 6371008.8),
-      topRight: mul(normalize(fromSTGL(face, bbox[2], bbox[3])), 6371008.8),
-      bottomLeft: mul(normalize(fromSTGL(face, bbox[0], bbox[1])), 6371008.8),
-      bottomRight: mul(normalize(fromSTGL(face, bbox[2], bbox[1])), 6371008.8),
+      topLeft: pointMulScalar(pointNormalize(pointFromSTGL(face, bbox[0], bbox[3])), 6371008.8),
+      topRight: pointMulScalar(pointNormalize(pointFromSTGL(face, bbox[2], bbox[3])), 6371008.8),
+      bottomLeft: pointMulScalar(pointNormalize(pointFromSTGL(face, bbox[0], bbox[1])), 6371008.8),
+      bottomRight: pointMulScalar(pointNormalize(pointFromSTGL(face, bbox[2], bbox[1])), 6371008.8),
     };
   }
 
@@ -396,15 +406,16 @@ export class S2Tile<
   override setScreenPositions(projector: Projector): void {
     if (this.corners !== undefined) {
       const { eye } = projector;
-      const eyeKM = eye.map((e) => e * 1000);
+      // const eyeKM = eye.map((e) => e * 1000);
+      const eyeKM = pointMulScalar(eye, 1000);
       const matrix = projector.getMatrix('km');
       // pull out the S2Points
       const { bottomLeft, bottomRight, topLeft, topRight } = this.corners;
       // project points and grab their x-y positions
-      const [blX, blY] = project(matrix, bottomLeft.map((n, i) => n - eyeKM[i]) as Point3D);
-      const [brX, brY] = project(matrix, bottomRight.map((n, i) => n - eyeKM[i]) as Point3D);
-      const [tlX, tlY] = project(matrix, topLeft.map((n, i) => n - eyeKM[i]) as Point3D);
-      const [trX, trY] = project(matrix, topRight.map((n, i) => n - eyeKM[i]) as Point3D);
+      const { x: blX, y: blY } = project(matrix, pointSub(bottomLeft, eyeKM));
+      const { x: brX, y: brY } = project(matrix, pointSub(bottomRight, eyeKM));
+      const { x: tlX, y: tlY } = project(matrix, pointSub(topLeft, eyeKM));
+      const { x: trX, y: trY } = project(matrix, pointSub(topRight, eyeKM));
       // store for eventual uniform "upload"
       this.bottomTop[0] = blX;
       this.bottomTop[1] = blY;
@@ -428,7 +439,7 @@ export class WMTile<
   F extends SharedFeatures,
   M extends SharedMaskSource,
 > extends Tile<C, F, M> {
-  override type = 'WM' as const;
+  override type = 'WG' as const;
   override matrix: Float32Array = new Float32Array(16);
   /**
    * @param context
@@ -436,7 +447,7 @@ export class WMTile<
    */
   constructor(context: C, id: bigint) {
     super(context, id);
-    const [zoom, i, j] = fromID(id);
+    const { z: zoom = 0, x: i, y: j } = pointFromS2CellID(id);
     this.i = i;
     this.j = j;
     this.zoom = zoom;
@@ -473,19 +484,19 @@ export class WMTile<
 
     // build bottomTop
     const { matrix } = this;
-    const bl = project(matrix, [0, 0, 0]);
-    const br = project(matrix, [1, 0, 0]);
-    const tl = project(matrix, [0, 1, 0]);
-    const tr = project(matrix, [1, 1, 0]);
+    const bl = project(matrix, { x: 0, y: 0, z: 0 });
+    const br = project(matrix, { x: 1, y: 0, z: 0 });
+    const tl = project(matrix, { x: 0, y: 1, z: 0 });
+    const tr = project(matrix, { x: 1, y: 1, z: 0 });
     // store for eventual uniform "upload"
-    this.bottomTop[0] = bl[0];
-    this.bottomTop[1] = bl[1];
-    this.bottomTop[2] = br[0];
-    this.bottomTop[3] = br[1];
-    this.bottomTop[4] = tl[0];
-    this.bottomTop[5] = tl[1];
-    this.bottomTop[6] = tr[0];
-    this.bottomTop[7] = tr[1];
+    this.bottomTop[0] = bl.x;
+    this.bottomTop[1] = bl.y;
+    this.bottomTop[2] = br.x;
+    this.bottomTop[3] = br.y;
+    this.bottomTop[4] = tl.x;
+    this.bottomTop[5] = tl.y;
+    this.bottomTop[6] = tr.x;
+    this.bottomTop[7] = tr.y;
 
     super.setScreenPositions(projector);
   }

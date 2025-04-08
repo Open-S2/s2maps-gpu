@@ -44,10 +44,10 @@ export default function getTilesInView(
     // get the tiles matrix
     const matrix = tileMatrix(projector, zCheck, xCheck, yCheck);
     // project the four corners of the tile
-    const bl = project(matrix, [0, 0, 0]);
-    const br = project(matrix, [1, 0, 0]);
-    const tl = project(matrix, [0, 1, 0]);
-    const tr = project(matrix, [1, 1, 0]);
+    const bl = project(matrix, { x: 0, y: 0, z: 0 });
+    const br = project(matrix, { x: 1, y: 0, z: 0 });
+    const tl = project(matrix, { x: 0, y: 1, z: 0 });
+    const tr = project(matrix, { x: 1, y: 1, z: 0 });
     // check if the tile is in view
     if (pointBoundaries(bl, br, tl, tr) || boxIntersects(bl, br, tl, tr)) {
       // if the tile is in view, add it to the list

@@ -2,7 +2,7 @@ import type { StyleDefinition } from 'style/style.spec';
 
 const style: StyleDefinition = {
   version: 1,
-  projection: 'WM',
+  projection: 'WG',
   name: 'WM Hillshade',
   view: {
     lon: 0,
