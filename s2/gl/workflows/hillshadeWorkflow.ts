@@ -26,9 +26,7 @@ import type {
   RasterSource,
 } from './workflow.spec';
 
-/**
- *
- */
+/** Hillshade Feature is a standalone hillshade render storage unit that can be drawn to the GPU */
 export class HilllshadeFeature extends Feature implements HillshadeFeatureSpec {
   type = 'hillshade' as const;
   opacity?: number; // webgl1
@@ -38,12 +36,12 @@ export class HilllshadeFeature extends Feature implements HillshadeFeatureSpec {
   azimuth?: number; // webgl1
   altitude?: number; // webgl1
   /**
-   * @param workflow
-   * @param layerGuide
-   * @param tile
-   * @param source
-   * @param fadeStartTime
-   * @param parent
+   * @param workflow - the hillshade workflow
+   * @param layerGuide - layer guide for this feature
+   * @param tile - the tile that the feature is drawn on
+   * @param source - the raster source
+   * @param fadeStartTime - the start time of the fade
+   * @param parent - the parent tile
    */
   constructor(
     public override workflow: HillshadeWorkflowSpec,
@@ -57,7 +55,8 @@ export class HilllshadeFeature extends Feature implements HillshadeFeatureSpec {
   }
 
   /**
-   * @param interactive
+   * Draw the feature to the GPU
+   * @param interactive - whether or not the feature is interactive
    */
   override draw(interactive = false): void {
     super.draw(interactive);
@@ -65,8 +64,10 @@ export class HilllshadeFeature extends Feature implements HillshadeFeatureSpec {
   }
 
   /**
-   * @param tile
-   * @param parent
+   * Duplicate this feature
+   * @param tile - the tile that the feature is drawn on
+   * @param parent - the parent tile if applicable
+   * @returns the duplicated feature
    */
   duplicate(tile: Tile, parent?: Tile): HilllshadeFeature {
     const {
@@ -101,12 +102,13 @@ export class HilllshadeFeature extends Feature implements HillshadeFeatureSpec {
   }
 
   /**
-   * @param opacity
-   * @param shadowColor
-   * @param accentColor
-   * @param highlightColor
-   * @param azimuth
-   * @param altitude
+   * Set the attributes of the feature if the context is webgl1
+   * @param opacity - the opacity
+   * @param shadowColor - the shadow color
+   * @param accentColor - the accent color
+   * @param highlightColor - the highlight color
+   * @param azimuth - the azimuth
+   * @param altitude - the altitude
    */
   setWebGL1Attributes(
     opacity?: number,
@@ -125,7 +127,8 @@ export class HilllshadeFeature extends Feature implements HillshadeFeatureSpec {
   }
 
   /**
-   * @param code
+   * Set the attributes of the feature if the context is webgl1
+   * @param code - the code
    */
   setWebGL1AttributesCode(code: number[]): void {
     this.setWebGL1Attributes(
@@ -139,16 +142,12 @@ export class HilllshadeFeature extends Feature implements HillshadeFeatureSpec {
   }
 }
 
-/**
- *
- */
+/** Hillshade Workflow */
 export default class HillshadeWorkflow extends Workflow implements HillshadeWorkflowSpec {
   label = 'hillshade' as const;
   layerGuides = new Map<number, HillshadeWorkflowLayerGuide>();
   declare uniforms: { [key in HillshadeWorkflowUniforms]: WebGLUniformLocation };
-  /**
-   * @param context
-   */
+  /** @param context - the WebGL(1|2) context */
   constructor(context: Context) {
     // get gl from context
     const { gl, type } = context;
@@ -165,8 +164,9 @@ export default class HillshadeWorkflow extends Workflow implements HillshadeWork
   }
 
   /**
-   * @param hillshadeData
-   * @param tile
+   * Build the hillshade source
+   * @param hillshadeData - the hillshade data sent from the Tile Worker
+   * @param tile - the tile that the feature is drawn on
    */
   buildSource(hillshadeData: HillshadeData, tile: Tile): void {
     const { gl, context } = this;
@@ -182,9 +182,10 @@ export default class HillshadeWorkflow extends Workflow implements HillshadeWork
   }
 
   /**
-   * @param source
-   * @param hillshadeData
-   * @param tile
+   * Build the hillshade features
+   * @param source - the source
+   * @param hillshadeData - the hillshade data
+   * @param tile - the tile that the features are drawn on
    */
   #buildFeatures(source: RasterSource, hillshadeData: HillshadeData, tile: Tile): void {
     const { featureGuides } = hillshadeData;
@@ -204,8 +205,10 @@ export default class HillshadeWorkflow extends Workflow implements HillshadeWork
   }
 
   /**
-   * @param layerBase
-   * @param layer
+   * Build the layer definition
+   * @param layerBase - the common layer attributes
+   * @param layer - the user defined layer attributes
+   * @returns a built layer definition that's ready to describe how to render a feature
    */
   buildLayerDefinition(layerBase: LayerDefinitionBase, layer: HillshadeStyle): HillshadeDefinition {
     const { type } = this;
@@ -280,9 +283,7 @@ export default class HillshadeWorkflow extends Workflow implements HillshadeWork
     return layerDefinition;
   }
 
-  /**
-   *
-   */
+  /** Use this workflow as the current shaders for the GPU */
   override use(): void {
     super.use();
     const { context } = this;
@@ -295,10 +296,11 @@ export default class HillshadeWorkflow extends Workflow implements HillshadeWork
   }
 
   /**
-   * @param featureGuide
-   * @param _interactive
+   * Draw the hillshade feature
+   * @param feature - the feature guide
+   * @param _interactive - whether or not the feature is interactive
    */
-  draw(featureGuide: HillshadeFeatureSpec, _interactive = false): void {
+  draw(feature: HillshadeFeatureSpec, _interactive = false): void {
     // grab gl from the context
     const { type, gl, context, uniforms } = this;
     const {
@@ -327,7 +329,7 @@ export default class HillshadeWorkflow extends Workflow implements HillshadeWork
       highlightColor,
       azimuth,
       altitude,
-    } = featureGuide;
+    } = feature;
     if (!visible) return;
     const { texture, size } = source;
     const { vao, count, offset } = (parent ?? tile).mask;

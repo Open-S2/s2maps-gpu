@@ -1,4 +1,5 @@
 // import { isSafari } util/polyfill'
+import { GPUType } from 'style/style.spec';
 import { colorFunc } from './vectorWorker';
 import parseFeatureFunction from 'style/parseFeatureFunction';
 
@@ -7,7 +8,6 @@ import type { RasterWorker as RasterWorkerSpec } from './process.spec';
 import type {
   BuildCodeFunctionZoom,
   ColorArray,
-  GPUType,
   HillshadeDefinition,
   HillshadeWorkerLayer,
   LayerWorkerFunction,
@@ -24,20 +24,18 @@ import type {
   TileRequest,
 } from '../worker.spec';
 
-/**
- *
- */
+/** Worker for processing raster data */
 export default class RasterWorker implements RasterWorkerSpec {
   gpuType: GPUType;
-  /**
-   * @param gpuType
-   */
+  /** @param gpuType - the GPU context of the map renderer (WebGL(1|2) | WebGPU) */
   constructor(gpuType: GPUType) {
     this.gpuType = gpuType;
   }
 
   /**
-   * @param layerDefinition
+   * Setup an RGBA style layer for the appropriate layer type
+   * @param layerDefinition - input sensor/raster/hillshade layer
+   * @returns the pre-processed worker layer
    */
   setupLayer(
     layerDefinition: SensorDefinition | RasterDefinition | HillshadeDefinition,
@@ -74,7 +72,9 @@ export default class RasterWorker implements RasterWorkerSpec {
   }
 
   /**
-   * @param design
+   * Build code in relation to the design of the raster layer
+   * @param design - the design to modify
+   * @returns the build function
    */
   buildCode(design: CodeDesign<number>): BuildCodeFunctionZoom {
     const { gpuType } = this;
@@ -92,17 +92,18 @@ export default class RasterWorker implements RasterWorkerSpec {
         .map((func) => func(code, properties, zoom))
         .flat();
 
-      return gpuType === 1 ? webgl1Code : code;
+      return gpuType === GPUType.WebGL1 ? webgl1Code : code;
     };
   }
 
   /**
-   * @param mapID
-   * @param sourceName
-   * @param layers
-   * @param tile
-   * @param data
-   * @param size
+   * Build the raster tile
+   * @param mapID - the map id to ship the data back to
+   * @param sourceName - the source name the data to belongs to
+   * @param layers - the layers to process
+   * @param tile - the tile request
+   * @param data - the tile raster data
+   * @param size - the tile size
    */
   async buildTile(
     mapID: string,
@@ -173,11 +174,11 @@ export default class RasterWorker implements RasterWorkerSpec {
     }
   }
 
-  // TODO: flush images
   /**
-   * @param _mapID
-   * @param _tile
-   * @param _sourceName
+   * TODO: flush images
+   * @param _mapID - the map id to ship the data back to
+   * @param _tile - the tile request
+   * @param _sourceName - the source name the data to belongs to
    */
   async flush(_mapID: string, _tile: TileRequest, _sourceName: string): Promise<void> {}
 }

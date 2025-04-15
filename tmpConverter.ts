@@ -14,6 +14,7 @@ for (const feature of data.features) {
 
   if (type === 'Point') {
     geometry.is3D = false;
+    // @ts-expect-error - we are modifying it
     geometry.coordinates = { x: coordinates[0], y: coordinates[1] };
   } else if (type === 'MultiPoint' || type === 'LineString') {
     geometry.is3D = false;

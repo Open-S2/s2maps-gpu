@@ -23,46 +23,32 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
     // pos
     arrayStride: 4 * 2,
     stepMode: 'instance',
-    attributes: [
-      {
-        shaderLocation: 0,
-        offset: 0,
-        format: 'float32x2',
-      },
-    ],
+    attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }],
   },
   {
     // weight
     arrayStride: 4,
     stepMode: 'instance',
-    attributes: [
-      {
-        shaderLocation: 1,
-        offset: 0,
-        format: 'float32',
-      },
-    ],
+    attributes: [{ shaderLocation: 1, offset: 0, format: 'float32' }],
   },
 ];
 
-/**
- *
- */
+/** Heatmap Feature is a standalone heatmap render storage unit that can be drawn to the GPU */
 export class HeatmapFeature implements HeatmapFeatureSpec {
   type = 'heatmap' as const;
   bindGroup: GPUBindGroup;
   heatmapBindGroup: GPUBindGroup;
   /**
-   * @param workflow
-   * @param source
-   * @param layerGuide
-   * @param tile
-   * @param count
-   * @param offset
-   * @param featureCode
-   * @param heatmapBoundsBuffer
-   * @param featureCodeBuffer
-   * @param parent
+   * @param workflow - the heatmap workflow
+   * @param source - the heatmap source
+   * @param layerGuide - layer guide for this feature
+   * @param tile - the tile this feature is drawn on
+   * @param count - the number of points
+   * @param offset - the offset of the points
+   * @param featureCode - the encoded feature code
+   * @param heatmapBoundsBuffer - the bounds of the heatmap
+   * @param featureCodeBuffer - the encoded feature code that tells the GPU how to compute it's properties
+   * @param parent - the parent tile if applicable
    */
   constructor(
     public workflow: HeatmapWorkflow,
@@ -80,18 +66,14 @@ export class HeatmapFeature implements HeatmapFeatureSpec {
     this.heatmapBindGroup = this.#buildHeatmapBindGroup();
   }
 
-  /**
-   *
-   */
+  /** Draw the feature to the GPU */
   draw(): void {
     const { tile, workflow } = this;
     workflow.context.setStencilReference(tile.tmpMaskID);
     workflow.draw(this);
   }
 
-  /**
-   *
-   */
+  /** Destroy and cleanup the feature */
   destroy(): void {
     const { heatmapBoundsBuffer, featureCodeBuffer } = this;
     heatmapBoundsBuffer.destroy();
@@ -99,9 +81,11 @@ export class HeatmapFeature implements HeatmapFeatureSpec {
   }
 
   /**
-   * @param tile
-   * @param parent
-   * @param bounds
+   * Duplicate this feature
+   * @param tile - the tile this feature is drawn on
+   * @param parent - the parent tile if applicable
+   * @param bounds - the bounds of the tile if applicable
+   * @returns the duplicated feature
    */
   duplicate(tile: Tile, parent?: Tile, bounds?: BBox): HeatmapFeature {
     const {
@@ -141,7 +125,8 @@ export class HeatmapFeature implements HeatmapFeatureSpec {
   }
 
   /**
-   *
+   * Build the bind group for the heatmap feature
+   * @returns the GPU Bind Group for the heatmap feature
    */
   #buildBindGroup(): GPUBindGroup {
     const { workflow, tile, parent, layerGuide, featureCodeBuffer } = this;
@@ -158,7 +143,8 @@ export class HeatmapFeature implements HeatmapFeatureSpec {
   }
 
   /**
-   *
+   * Build the bind group for the heatmap feature
+   * @returns the GPU Bind Group for the heatmap feature
    */
   #buildHeatmapBindGroup(): GPUBindGroup {
     const { workflow, heatmapBoundsBuffer } = this;
@@ -171,9 +157,7 @@ export class HeatmapFeature implements HeatmapFeatureSpec {
 
 // TODO: The texture target should just have a single float channel?
 
-/**
- *
- */
+/** Heatmap Workflow */
 export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
   context: WebGPUContext;
   layerGuides = new Map<number, HeatmapWorkflowLayerGuideGPU>();
@@ -182,16 +166,12 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
   texturePipeline!: GPURenderPipeline;
   heatmapBindGroupLayout!: GPUBindGroupLayout;
   heatmapTextureBindGroupLayout!: GPUBindGroupLayout;
-  /**
-   * @param context
-   */
+  /** @param context - The WebGPU context */
   constructor(context: WebGPUContext) {
     this.context = context;
   }
 
-  /**
-   *
-   */
+  /** Setup the workflow */
   async setup(): Promise<void> {
     const { context } = this;
     const { device } = context;
@@ -217,9 +197,7 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
     this.texturePipeline = await this.#getPipeline('texture');
   }
 
-  /**
-   *
-   */
+  /** Resize the workflow's associated render targets and textures */
   resize(): void {
     for (const layerGuide of this.layerGuides.values()) {
       if (layerGuide.renderTarget !== undefined) layerGuide.renderTarget.destroy();
@@ -234,9 +212,7 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
     }
   }
 
-  /**
-   *
-   */
+  /** Destroy and cleanup the workflow */
   destroy(): void {
     for (const {
       colorRamp,
@@ -251,10 +227,11 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
     }
   }
 
-  // workflow helps design the appropriate layer parameters
   /**
-   * @param layerBase
-   * @param layer
+   * Build the layer definition for this workflow
+   * @param layerBase - the common layer attributes
+   * @param layer - the user defined layer attributes
+   * @returns a built layer definition that's ready to describe how to render a feature
    */
   buildLayerDefinition(layerBase: LayerDefinitionBase, layer: HeatmapStyle): HeatmapDefinition {
     const { context } = this;
@@ -329,7 +306,8 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
   }
 
   /**
-   *
+   * Build a render target for the heatmap render group
+   * @returns the render target
    */
   #buildLayerRenderTarget(): GPUTexture {
     const { device, presentation, format } = this.context;
@@ -342,7 +320,9 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
   }
 
   /**
-   * @param renderTarget
+   * Build a layer pass descriptor for the heatmap render group
+   * @param renderTarget - the render target
+   * @returns the pass descriptor
    */
   #buildLayerPassDescriptor(renderTarget: GPUTexture): GPURenderPassDescriptor {
     return {
@@ -358,8 +338,10 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
   }
 
   /**
-   * @param renderTarget
-   * @param colorRamp
+   * Build the color ramp layer bind group for the heatmap render group
+   * @param renderTarget - the render target
+   * @param colorRamp - the color ramp
+   * @returns the bind group
    */
   #buildLayerBindGroup(renderTarget: GPUTexture, colorRamp: GPUTexture): GPUBindGroup {
     return this.context.device.createBindGroup({
@@ -373,8 +355,9 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
   }
 
   /**
-   * @param heatmapData
-   * @param tile
+   * Build the source heatmap data into heatmap features
+   * @param heatmapData - the input heatmap data
+   * @param tile - the tile we are building the features for
    */
   buildSource(heatmapData: HeatmapData, tile: Tile): void {
     const { context } = this;
@@ -392,10 +375,8 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
         new Float32Array(weightBuffer),
         GPUBufferUsage.VERTEX,
       ),
-      /**
-       *
-       */
-      destroy: () => {
+      /** destroy the heatmap source */
+      destroy: (): void => {
         const { vertexBuffer, weightBuffer } = source;
         vertexBuffer.destroy();
         weightBuffer.destroy();
@@ -406,9 +387,10 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
   }
 
   /**
-   * @param source
-   * @param tile
-   * @param featureGuideArray
+   * Build heatmap features from input heatmap source
+   * @param source - the input heatmap source
+   * @param tile - the tile we are building the features for
+   * @param featureGuideArray - the feature guide to help build the features properties
    */
   #buildFeatures(source: HeatmapSource, tile: Tile, featureGuideArray: Float32Array): void {
     const { context } = this;
@@ -456,11 +438,13 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
     tile.addFeatures(features);
   }
 
-  // https://programmer.ink/think/several-best-practices-of-webgpu.html
-  // BEST PRACTICE 6: it is recommended to create pipeline asynchronously
-  // BEST PRACTICE 7: explicitly define pipeline layouts
   /**
-   * @param type
+   * Build the render pipeline for the heatmap's texture and screen workflows
+   * https://programmer.ink/think/several-best-practices-of-webgpu.html
+   * BEST PRACTICE 6: it is recommended to create pipeline asynchronously
+   * BEST PRACTICE 7: explicitly define pipeline layouts
+   * @param type - build for the "texture" or "screen"
+   * @returns the render pipelines
    */
   async #getPipeline(type: 'texture' | 'screen'): Promise<GPURenderPipeline> {
     const { context, module } = this;
@@ -537,7 +521,9 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
   }
 
   /**
-   * @param features
+   * Draw the features to an early render target that will be an input texture for the screen workflow
+   * @param features - the heatmap features to draw
+   * @returns the resulting combination of associated features
    */
   textureDraw(features: HeatmapFeatureSpec[]): HeatmapFeatureSpec[] | undefined {
     if (features.length === 0) return undefined;
@@ -585,13 +571,14 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
   }
 
   /**
-   * @param root0
-   * @param root0.layerGuide
-   * @param root0.layerGuide.textureBindGroup
-   * @param root0.layerGuide.visible
-   * @param root0.bindGroup
+   * Draw a screen quad with the heatmap feature's properties describing the heatmap's texture inputs
+   * @param feature - heatmap feature
    */
-  draw({ layerGuide: { textureBindGroup, visible }, bindGroup }: HeatmapFeatureSpec): void {
+  draw(feature: HeatmapFeatureSpec): void {
+    const {
+      layerGuide: { textureBindGroup, visible },
+      bindGroup,
+    } = feature;
     // get current source data
     const { passEncoder } = this.context;
     if (!visible) return;

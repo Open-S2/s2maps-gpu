@@ -1,6 +1,4 @@
-/**
- *
- */
+/** The Value of the Cache assumes the object has a delete method */
 interface CachedObject {
   delete?: () => void;
 }
@@ -9,9 +7,7 @@ interface CachedObject {
 export default class Cache<U, T extends CachedObject> extends Map<U, T> {
   maxCacheSize: number;
   #order: U[] = [];
-  /**
-   * @param maxCacheSize
-   */
+  /** @param maxCacheSize - the maximum size of the cache */
   constructor(maxCacheSize = 100) {
     super();
     this.maxCacheSize = maxCacheSize;
@@ -19,8 +15,9 @@ export default class Cache<U, T extends CachedObject> extends Map<U, T> {
 
   /**
    * Set a value in the cache. If the cache is full, the least recently used item will be deleted
-   * @param key
-   * @param value
+   * @param key - the key
+   * @param value - the value
+   * @returns sets the key-value and returns the cache
    */
   override set(key: U, value: T): this {
     // place in front the new
@@ -31,7 +28,8 @@ export default class Cache<U, T extends CachedObject> extends Map<U, T> {
 
   /**
    * Get a value from the cache. If the value exists, it will be placed in the front of the cache
-   * @param key
+   * @param key - the key
+   * @returns the value or undefined if the value does not exist
    */
   override get(key: U): T | undefined {
     // update the place in the array and than get
@@ -42,7 +40,8 @@ export default class Cache<U, T extends CachedObject> extends Map<U, T> {
 
   /**
    * Get a batch of values from the cache. If the value exists, it will be placed in the front of the cache
-   * @param keys
+   * @param keys - the keys to get
+   * @returns the values
    */
   getBatch(keys: U[]): T[] {
     const values: T[] = [];
@@ -53,14 +52,15 @@ export default class Cache<U, T extends CachedObject> extends Map<U, T> {
     return values;
   }
 
-  /** Get all values from the cache */
+  /** @returns all values from the cache */
   getAll(): T[] {
     return this.getBatch(this.#order);
   }
 
   /**
    * Delete a value from the cache
-   * @param key
+   * @param key - the key to delete
+   * @returns true if the value was deleted
    */
   override delete(key: U): boolean {
     this.#order.splice(this.#order.indexOf(key), 1);

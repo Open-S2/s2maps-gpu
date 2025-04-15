@@ -1,12 +1,8 @@
 /** STYLE */
 import Style from 'style';
-/** PAINT */
-import type { Painter as GLPainter } from 'gl/painter.spec';
-import type { Painter as GPUPainter } from 'gpu/painter.spec';
-import type { MapOptions } from '../s2mapUI';
 /** GEOMETRY / PROJECTIONS */
 import Projector from './projector';
-import { tileIDWrapped as tileIDWrappedWM } from 'geometry/wm';
+import { tileIDWrappedWM } from './projector/getTiles';
 import { idIsFace, idParent } from 'gis-tools';
 /** SOURCES */
 import Animator from './animator';
@@ -14,6 +10,10 @@ import Cache from './cache';
 import DragPan from './dragPan';
 import TimeCache from './timeCache';
 import { createTile } from 'source';
+/** PAINT */
+import type { Painter as GLPainter } from 'gl/painter.spec';
+import type { Painter as GPUPainter } from 'gpu/painter.spec';
+import type { MapOptions } from '../s2mapUI';
 
 import type { ClickEvent } from './dragPan';
 import type S2Map from 's2Map';
@@ -21,6 +21,7 @@ import type { VectorPoint } from 'gis-tools';
 import type { Combine, TileShared as Tile } from 'source/tile.spec';
 import type {
   InteractiveObject,
+  MapGLMessage,
   MouseClickMessage,
   MouseEnterMessage,
   MouseLeaveMessage,
@@ -33,21 +34,25 @@ import type {
 } from 'workers/worker.spec';
 import type { StyleDefinition, TimeSeriesStyle } from 'style/style.spec';
 
-/**
- *
- */
+/** Resize dimensions */
 export interface ResizeDimensions {
   width: number;
   height: number;
 }
-
-/**
- *
- */
+/** A Shared painter helps with type inference. We essentially don't care which painter we are using for most calls in Camera */
 export type SharedPainter = Combine<GLPainter | GPUPainter>;
 
 /**
+ * # Camera
  *
+ * The camera of the map. Maintains local cache, manages the painter, projector, and handles
+ * the rendering of the map.
+ *
+ * The Camera also handles user interactions, map states, each frame,
+ * along with any animations that might be in progress.
+ *
+ * Any updates that are required are sent to the Style container and any data that shipped here is
+ * forwarded to the Painter.
  */
 export default class Camera<P extends SharedPainter = SharedPainter> {
   readonly parent?: S2Map;
@@ -76,10 +81,11 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   resizeQueued?: ResizeDimensions;
   currFeatures = new Map<number, InteractiveObject>();
   /**
-   * @param options
-   * @param canvas
-   * @param id
-   * @param parent
+   * Initialize the mapUI
+   * @param options - Map options
+   * @param canvas - Canvas element we are rendering to
+   * @param id - Unique identifier for the mapUI
+   * @param parent - Parent mapUI means this is running on the main thread so we can make direct calls to the parent
    */
   constructor(options: MapOptions, canvas: HTMLCanvasElement, id: string, parent?: S2Map) {
     this.#canvas = canvas;
@@ -102,24 +108,23 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     void this.#buildPaint(options, style);
   }
 
-  // CREATED BY S2MAP_UI
   /**
-   * @param _deltaZ
-   * @param _deltaX
-   * @param _deltaY
+   * Locally called but managed by parent class S2MapsUI
+   * @param _deltaZ - change in zoom
+   * @param _deltaX - change in x
+   * @param _deltaY - change in y
    */
   onZoom(_deltaZ: number, _deltaX?: number, _deltaY?: number): void {
     /* NOOP */
   }
-  /**
-   *
-   */
+  /** Locally called but managed by parent class S2MapsUI */
   render(): void {
     /* NOOP */
   }
 
   /**
-   * @param timeSeries
+   * Given an user defined time series, build the time cache
+   * @param timeSeries - the time series to build the cache for
    */
   buildTimeCache(timeSeries: TimeSeriesStyle): void {
     const { webworker, painter } = this;
@@ -128,8 +133,9 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   }
 
   /**
-   * @param options
-   * @param style
+   * Setup funciton to prepare the painter for rendering. Notify the main thread that the painter is ready.
+   * @param options - the map options to use for the painter
+   * @param style - the style to use for the painter
    */
   async #buildPaint(options: MapOptions, style: string | StyleDefinition): Promise<void> {
     const isBuilt = await this.#createPainter(options);
@@ -142,12 +148,13 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     // explain we are ready to paint
     const msg: ReadyMessageGL = { type: 'ready', mapID: this.id };
     if (this.webworker) postMessage(msg);
-    else this.parent?.onMessage({ data: msg });
+    else this.parent?.onMessage({ data: msg } as MessageEvent<MapGLMessage>);
   }
 
   /**
-   * @param style
-   * @param ignorePosition
+   * Set the style for the map
+   * @param style - the style to use for the painter
+   * @param ignorePosition - whether to ignore the position set in the style (keep the map where it is)
    */
   async _setStyle(style: string | StyleDefinition, ignorePosition: boolean): Promise<void> {
     // ensure we don't draw for a sec
@@ -160,9 +167,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     this.render();
   }
 
-  /**
-   *
-   */
+  /** Setup the canvas for the map adding listeners and the size of the canvas */
   #setupCanvas(): void {
     const { _interactive, dragPan } = this;
     // setup listeners
@@ -196,23 +201,24 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   }
 
   /**
-   * @param _evt
+   * Notification that the context was lost
+   * @param _event - Event information about the context loss
    */
-  #contextLost(_evt: Event): void {
+  #contextLost(_event: Event): void {
     console.warn('context lost');
   }
 
-  /**
-   *
-   */
+  /** Notification that the context was restored */
   #contextRestored(): void {
     console.info('context restored');
   }
 
-  // we figure out which context we can use before pulling in GL or GPU
-  // After we have the appropriate context, we build the painter and then the
   /**
-   * @param options
+   * Create the painter is the first step in building the map.
+   * We figure out which context we can use before pulling in GL or GPU.
+   * After we have the appropriate context, we build the painter and then the
+   * @param options - map options
+   * @returns whether or not the painter was built
    */
   async #createPainter(options: MapOptions): Promise<boolean> {
     const { contextType } = options;
@@ -253,8 +259,9 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   }
 
   /**
-   * @param bearing
-   * @param pitch
+   * Update the compass position if camera changes were made internally, like an animation or functional update
+   * @param bearing - The bearing angle in degrees.
+   * @param pitch - The pitch angle in degrees.
    */
   _updateCompass(bearing: number, pitch: number): void {
     if (this.webworker) postMessage({ type: 'updateCompass', bearing, pitch });
@@ -262,8 +269,9 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   }
 
   /**
-   * @param width
-   * @param height
+   * Resize the camera and update the projector and painter to the change
+   * @param width - The new width of the camera.
+   * @param height - The new height of the camera.
    */
   #resizeCamera(width: number, height: number): void {
     // ensure minimum is 1px for both
@@ -274,12 +282,12 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     this.painter.resize(width, height);
   }
 
-  // keepCache => don't delete any tiles, request replacements for all (for s2json since it's locally cached and fast)
-  // awaitReplace => to avoid flickering (i.e. adding/removing markers), we can wait for an update (from source+tile workers) on how the tile should look
   /**
-   * @param sourceNames
-   * @param keepCache
-   * @param awaitReplace
+   * Reset the tile cache for the given sources.
+   * @param sourceNames - The names of the sources to reset the tile cache for.
+   * @param keepCache - Whether to keep the cache or not. don't delete any tiles, request replacements for all (for s2json since it's locally cached and fast)
+   * @param awaitReplace - Whether to await the replacement of tiles or not. to avoid flickering (i.e. adding/removing markers), we can wait for an update (from source+tile workers) on how the tile should look
+   * @returns An array of tile requests that need to be processed to complete the reset for the tile cache for the given sources.
    */
   _resetTileCache(sourceNames: string[], keepCache: boolean, awaitReplace: boolean): TileRequest[] {
     // TODO:
@@ -304,9 +312,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     return tileRequests;
   }
 
-  /**
-   *
-   */
+  /** Resize the camera and canvas, cleaning up animations */
   _resize(): void {
     const { resizeQueued } = this;
     if (resizeQueued !== undefined) {
@@ -322,8 +328,9 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   }
 
   /**
-   * @param posX
-   * @param posY
+   * Set the new mouse position
+   * @param posX - The x-coordinate of the mouse position
+   * @param posY - The y-coordinate of the mouse position
    */
   _setMousePosition(posX: number, posY: number): void {
     this.mousePosition = { x: posX, y: posY };
@@ -333,13 +340,13 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   }
 
   /**
-   * @param root0
-   * @param root0.detail
+   * Process a click event
+   * @param event - The click event
    */
-  #onClick({ detail }: ClickEvent): void {
+  #onClick(event: ClickEvent): void {
     const { id: mapID, projector, currFeatures, parent, webworker } = this;
     // get lon lat of cursor
-    const { posX, posY } = detail;
+    const { posX, posY } = event.detail;
     const lonLat = projector.cursorToLonLat(posX, posY);
     if (lonLat === undefined) return;
     const { x: lon, y: lat } = lonLat;
@@ -352,15 +359,15 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
       lat,
     };
     if (webworker) postMessage(msg);
-    else parent?.onMessage({ data: msg });
+    else parent?.onMessage({ data: msg } as MessageEvent<MapGLMessage>);
   }
 
   /**
-   * @param root0
-   * @param root0.detail
+   * Process a double click event
+   * @param event - The double click event
    */
-  #onDoubleClick({ detail }: ClickEvent): void {
-    const { posX, posY } = detail;
+  #onDoubleClick(event: ClickEvent): void {
+    const { posX, posY } = event.detail;
     const lonLat = this.projector.cursorToLonLat(posX, posY);
     if (lonLat === undefined) return;
     const { x: lon, y: lat } = lonLat;
@@ -368,9 +375,10 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   }
 
   /**
-   * @param ctrl
-   * @param lon
-   * @param lat
+   * Handle a navigation event
+   * @param ctrl - The navigation control
+   * @param lon - The longitude change if provided
+   * @param lat - The latitude change if provided
    */
   _navEvent(ctrl: 'zoomIn' | 'zoomOut', lon?: number, lat?: number): void {
     const { projector } = this;
@@ -380,7 +388,8 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     const animator = new Animator(projector, { duration: 1.5, zoom: endZoom, lon, lat });
     animator.zoomTo();
     /**
-     * @param now
+     * Set a new animation function
+     * @param now - The current time in milliseconds since the animation started
      */
     this.currAnimFunction = (now: number) => {
       this._animate(animator, now * 0.001);
@@ -389,20 +398,16 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     this.render();
   }
 
-  /**
-   *
-   */
+  /** Handle a view change */
   _onViewUpdate(): void {
     const { id: mapID, projector, webworker, parent } = this;
     const { zoom, lon, lat, bearing, pitch } = projector;
     const msg: ViewMessage = { type: 'view', mapID, view: { zoom, lon, lat, bearing, pitch } };
     if (webworker) postMessage(msg);
-    else parent?.onMessage({ data: msg });
+    else parent?.onMessage({ data: msg } as MessageEvent<MapGLMessage>);
   }
 
-  /**
-   *
-   */
+  /** Handle a mouse move event that occurs on the canvas */
   async _onCanvasMouseMove(): Promise<void> {
     const {
       style,
@@ -435,7 +440,8 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   }
 
   /**
-   * @param foundFeatures
+   * Handle a change in interactive features.
+   * @param foundFeatures - the features that are under the cursor
    */
   #handleFeatureChange(foundFeatures: Map<number, InteractiveObject>): void {
     const previousFrameFeatures = this.currFeatures;
@@ -461,9 +467,10 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   }
 
   /**
-   * @param type
-   * @param features
-   * @param currentFeatures
+   * Submit to the main thread a mouse enter/leave event for a set of features
+   * @param type - The event type
+   * @param features - The "new" feature states that need updating
+   * @param currentFeatures - The "current" features states whose state has changed
    */
   #submitFeatureChanges(
     type: 'mouseenter' | 'mouseleave',
@@ -474,12 +481,10 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     const { id: mapID, webworker, parent } = this;
     const msg: MouseEnterMessage | MouseLeaveMessage = { type, mapID, features, currentFeatures };
     if (webworker) postMessage(msg);
-    else parent?.onMessage({ data: msg });
+    else parent?.onMessage({ data: msg } as MessageEvent<MapGLMessage>);
   }
 
-  /**
-   *
-   */
+  /** When the map has moved, this handles the current frames updates pre-render */
   #onMovement(): void {
     const { projector, dragPan, canMove } = this;
     if (!canMove) return;
@@ -489,9 +494,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     this.render();
   }
 
-  /**
-   *
-   */
+  /** Handle a swipe event's impact on the map frame */
   #onSwipe(): void {
     const { projector, dragPan, canMove } = this;
     const { movementX, movementY } = dragPan;
@@ -500,7 +503,8 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     const animator = new Animator(projector, { duration: 1.75 });
     animator.swipeTo(movementX, movementY);
     /**
-     * @param now
+     * Set the current animation function
+     * @param now - The current time in milliseconds since the animation started
      */
     this.currAnimFunction = (now: number) => {
       this._animate(animator, now * 0.001);
@@ -510,8 +514,9 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   }
 
   /**
-   * @param animator
-   * @param curTime
+   * Animation function for a frame
+   * @param animator - The animator we pull the current position from
+   * @param curTime - The current time
    */
   _animate(animator: Animator, curTime: number): void {
     // ensure new render is queued
@@ -522,9 +527,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     if (done || this.dragPan.mouseActive) this.currAnimFunction = undefined;
   }
 
-  /**
-   *
-   */
+  /** Signal to the painter that it needs to be updated */
   _updatePainter(): void {
     const { painter } = this;
     painter.dirty = true;
@@ -532,7 +535,8 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   }
 
   /**
-   * @param data
+   * Inject data into the painter
+   * @param data - The data to inject
    */
   _injectData(data: TileWorkerMessage | SourceFlushMessage): void {
     const { painter, tileCache } = this;
@@ -563,7 +567,8 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   }
 
   /**
-   * @param data
+   * Inject a flush command into a tile
+   * @param data - the flush command (either a tile flush or source flush)
    */
   #injectFlush(data: TileFlushMessage | SourceFlushMessage): void {
     const { tileID } = data;
@@ -572,17 +577,19 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   }
 
   /**
-   * @param sourceName
-   * @param interval
+   * Add a time series source
+   * @param sourceName - the name of the temporal source
+   * @param interval - the interval position in the source
    */
   _addTimeSource(sourceName: string, interval: number): void {
     this.timeCache?.addSource(sourceName, interval);
   }
 
   /**
-   * @param tileID
-   * @param interactiveGuideBuffer
-   * @param interactiveDataBuffer
+   * Inject interactive data to their respective tiles
+   * @param tileID - the id of the tile to inject features properties into
+   * @param interactiveGuideBuffer - the guide buffer for decoding the feature's properties
+   * @param interactiveDataBuffer - the raw data to pull the properties from
    */
   #injectInteractiveData(
     tileID: bigint,
@@ -601,15 +608,15 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   }
 
   /**
-   * @param tileID
+   * Get a tile from the cache given an S2CellId
+   * @param tileID - the id of the tile
+   * @returns the tile if the cache has it
    */
   getTile(tileID: bigint): undefined | Tile {
     return this.tileCache.get(tileID);
   }
 
-  /**
-   *
-   */
+  /** @returns the tiles in the current view */
   getTiles(): Tile[] {
     const { tileCache, projector, painter, style } = this;
     if (projector.dirty) {
@@ -640,7 +647,8 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   }
 
   /**
-   * @param tileIDs
+   * Given a list of S2CellIDs, create the tiles necessary to render those IDs for future requests
+   * @param tileIDs - the list of S2CellIDs
    */
   createFutureTiles(tileIDs: bigint[]): void {
     const { tileCache, painter, style } = this;
@@ -657,11 +665,13 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     style.requestTiles(newTiles);
   }
 
-  // although steriotypical, we only create a single tile from the S2CellID or WMID,
-  // if the tile is out of bounds, we may need to create a second tile that
-  // it references (the "wrapped" tile). Often times the tile already exists
   /**
-   * @param id
+   * Given an S2CellID, create the tiles necessary to render that ID.
+   * Although steriotypical, we only create a single tile from the S2CellID or WMID,
+   * if the tile is out of bounds, we may need to create a second tile that
+   * it references (the "wrapped" tile). Often times the tile already exists
+   * @param id - the S2CellID
+   * @returns an array of tiles for the given S2CellID
    */
   #createTiles(id: bigint): Tile[] {
     const res: Tile[] = [];
@@ -694,7 +704,12 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   }
 
   /**
-   *
+   * Internal Draw handler.
+   * - Get the tiles needed for the current frame
+   * - If any state changes happened since last frame, update the style, painter, and projector as needed
+   * - Paint the scene
+   * - If there was movement/zoom change, compute the interactive elements
+   * - cleanup for the next frame
    */
   _draw(): void {
     const { style, painter, projector } = this;

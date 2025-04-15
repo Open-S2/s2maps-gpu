@@ -55,7 +55,7 @@
       const map = new window.S2Map(options)
       mapInstance = map
       // @ts-expect-error - creating a new variable
-      if (testing === true) window.testMap = map
+      if (testing) window.testMap = map
       if (typeof mapReady === 'function') map.addEventListener('ready', () => { mapReady(map) }, { once: true })
     }
   }

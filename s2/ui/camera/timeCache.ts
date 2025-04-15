@@ -6,22 +6,19 @@ import type { TileShared as Tile } from 'source/tile.spec';
 import type { TileRequest } from 'workers/worker.spec';
 import type { TimeSeriesStyle } from 'style/style.spec';
 
-/**
- *
- */
+/** Tracker for time sources */
 export interface TimeSource {
   step: number;
   interval: number;
 }
-
 /**
- *
+ * Animation states
+ * play -> animation based upon startTime -> endTime using cursor
+ * pause -> running through pause duration
+ * stop -> do nothing
  */
 export type TimeLayerState = 'play' | 'pause' | 'stop';
-
-/**
- *
- */
+/** Time Series object */
 export interface TimeSeries {
   startTime: number;
   endTime: number;
@@ -32,13 +29,7 @@ export interface TimeSeries {
   cursor: number;
   state: TimeLayerState;
 }
-// play -> animation based upon startTime -> endTime using cursor
-// pause -> running through pause duration
-// stop -> do nothing
-
-/**
- *
- */
+/** An input texture to a specific time stamp that also points to the next texture if it exists */
 export interface SensorTextureDefinition {
   time?: number;
   texture?: WebGLTexture;
@@ -46,7 +37,9 @@ export interface SensorTextureDefinition {
 }
 
 /**
+ * # Time Cache
  *
+ * Stores and manages time source raster data.
  */
 export default class TimeCache extends Cache<string, SensorSource> {
   camera: Camera;
@@ -55,9 +48,9 @@ export default class TimeCache extends Cache<string, SensorSource> {
   webworker: boolean;
   timeSeries!: TimeSeries;
   /**
-   * @param camera
-   * @param webworker
-   * @param timeSeries
+   * @param camera - parent camera
+   * @param webworker - true if running in a webworker
+   * @param timeSeries - user defined time series style object
    */
   constructor(camera: Camera, webworker: boolean, timeSeries: TimeSeriesStyle) {
     super();
@@ -67,8 +60,9 @@ export default class TimeCache extends Cache<string, SensorSource> {
   }
 
   /**
-   * @param sourceName
-   * @param interval
+   * Add a time source
+   * @param sourceName - the name of the source
+   * @param interval - the interval of the source relative to the starting point of the source
    */
   addSource(sourceName: string, interval: number): void {
     const step = interval / 4;
@@ -83,18 +77,21 @@ export default class TimeCache extends Cache<string, SensorSource> {
   }
 
   /**
-   * @param id
-   * @param time
-   * @param sourceName
-   * @param source
+   * Add source data to the cache and update the time series
+   * @param id - the id of the tile
+   * @param time - the time of the source
+   * @param sourceName - the name of the source
+   * @param source - the source to add the data to
    */
   addSourceData(id: bigint, time: number, sourceName: string, source: SensorSource): void {
     this.set(`${id}#${time}#${sourceName}`, source);
   }
 
   /**
-   * @param id
-   * @param sourceName
+   * Get source data
+   * @param id - the id of the tile
+   * @param sourceName - the name of the source
+   * @returns the source texture information and data
    */
   getTextures(id: bigint, sourceName: string): SensorTextureDefinition {
     const shortName = sourceName.split(':')[0];
@@ -124,12 +121,12 @@ export default class TimeCache extends Cache<string, SensorSource> {
     return { time, texture, textureNext };
   }
 
-  // update layer positions.
-  // play state: increment cursor by speed * deltaTime. If cursor >= endTime, set cursor to pause state or startTime.
-  // pause state: increment cursor by deltaTime. If cursor > pauseDuration, set state to play
   /**
-   * @param now
-   * @param render
+   * update layer positions.
+   * play state: increment cursor by speed * deltaTime. If cursor >= endTime, set cursor to pause state or startTime.
+   * pause state: increment cursor by deltaTime. If cursor > pauseDuration, set state to play
+   * @param now - current time
+   * @param render - render function to call after animation state is updated
    */
   animate(now: number, render: () => void): void {
     const { timeSeries } = this;
@@ -155,9 +152,9 @@ export default class TimeCache extends Cache<string, SensorSource> {
     render();
   }
 
-  // rather than animate, the user can specify a time, and this will update to current time
   /**
-   * @param time
+   * rather than animate, the user can specify a time, and this will update to current time
+   * @param time - the time to set
    */
   setTime(time: number): void {
     const { timeSeries } = this;
@@ -165,10 +162,11 @@ export default class TimeCache extends Cache<string, SensorSource> {
   }
 
   /**
-   * @param time
-   * @param shortName
-   * @param sourceName
-   * @param id
+   * Request source data
+   * @param time - the time of the source
+   * @param shortName - the short name of the source
+   * @param sourceName - the name of the source
+   * @param id - the id of the tile
    */
   #requestTiles(time: number, shortName: string, sourceName: string, id?: bigint): void {
     const { webworker, camera } = this;
@@ -209,7 +207,8 @@ export default class TimeCache extends Cache<string, SensorSource> {
   }
 
   /**
-   * @param timeSeries
+   * build the time series given user defined time series style guide
+   * @param timeSeries - user defined time series style
    */
   #buildTimeSeries(timeSeries: TimeSeriesStyle): void {
     const { startDate, endDate, speed, pauseDuration, loop, autoPlay } = timeSeries;
@@ -238,7 +237,8 @@ export default class TimeCache extends Cache<string, SensorSource> {
 
 /**
  * convert a date to a unix timestamp
- * @param d
+ * @param d - date string or number
+ * @returns unix timestamp
  */
 function parseDate(d: string | number): number {
   const date = new Date(d);

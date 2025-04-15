@@ -2,14 +2,9 @@ import { Orthodrome } from 'gis-tools';
 
 import type Projector from './projector';
 
-/**
- *
- */
+/** Easing function */
 export type Easing = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
-
-/**
- *
- */
+/** Animation directions object */
 export interface AnimationDirections {
   lon?: number;
   lat?: number;
@@ -20,16 +15,11 @@ export interface AnimationDirections {
   duration?: number;
   easing?: Easing;
 }
-
-/**
- *
- */
+/** Animation type */
 export type AnimationType = 'easeTo' | 'flyTo';
-/**
- *
- */
+/** Increment State Response */
 export type IncrementResponse = [
-  boolean,
+  finished: boolean,
   [lon: number, lat: number, zoom: number, bearing: number, pitch: number],
 ];
 
@@ -63,8 +53,8 @@ export default class Animator {
   #increment?: (time: number) => IncrementResponse;
   projector: Projector;
   /**
-   * @param projector
-   * @param directions
+   * @param projector - projection state
+   * @param directions - Animation directions guide
    */
   constructor(projector: Projector, directions: AnimationDirections = {}) {
     this.projector = projector;
@@ -101,7 +91,8 @@ export default class Animator {
 
   /**
    * Updates the position based upon time. returns whether complete or not.
-   * @param time
+   * @param time - current time
+   * @returns - true if the animation was built successfully
    */
   increment(time: number): boolean {
     const { projector, futureOffset, futureKeys, duration } = this;
@@ -139,7 +130,8 @@ export default class Animator {
       duration,
     } = this;
     /**
-     * @param time
+     * @param time - current time
+     * @returns [finished, [lon, lat, zoom, bearing, pitch]]
      */
     this.#increment = (time: number): IncrementResponse => {
       if (time >= duration) return [true, [endLon, endLat, endZoom, endBearing, endPitch]];
@@ -173,7 +165,8 @@ export default class Animator {
       duration,
     } = this;
     /**
-     * @param time
+     * @param time - current time
+     * @returns [finished, [lon, lat, zoom, bearing, pitch]]
      */
     this.#increment = (time: number): IncrementResponse => {
       if (time >= duration) return [true, [endLon, endLat, endZoom, endBearing, endPitch]];
@@ -194,14 +187,15 @@ export default class Animator {
 
   /**
    * Handles swiping animations.
-   * @param movementX
-   * @param movementY
+   * @param movementX - swipe change in the x direction
+   * @param movementY - swipe change in the y direction
    */
   swipeTo(movementX: number, movementY: number): void {
     const { projector, duration } = this;
     const { abs } = Math;
     /**
-     * @param time
+     * @param time - current time
+     * @returns [finished, [lon, lat, zoom, bearing, pitch]]
      */
     this.#increment = (time: number): IncrementResponse => {
       const newMovementX = easeInExpo(duration - time, 0, movementX, duration);
@@ -219,7 +213,10 @@ export default class Animator {
     };
   }
 
-  /** Handles easing mechanic */
+  /**
+   * Handles easing mechanic
+   * @returns - true if the animation was built successfully
+   */
   easeTo(): boolean {
     const {
       startLon,
@@ -254,9 +251,10 @@ export default class Animator {
     const lonLatEase = ease ?? (deltaZoom > 0 ? easeOutExpo : easeInExpo);
     // bearing and pitch benefits the most from ease-in-out
     const bearingPitchEase = ease ?? easeInOutExpo;
-    // given a time input in seconds, update the cameras positions
     /**
-     * @param time
+     * given a time input in seconds, update the cameras positions
+     * @param time - current time
+     * @returns [finished, [lon, lat, zoom, bearing, pitch]]
      */
     this.#increment = (time: number): IncrementResponse => {
       if (time >= duration) return [true, [endLon, endLat, endZoom, endBearing, endPitch]];
@@ -277,10 +275,13 @@ export default class Animator {
     return true;
   }
 
-  /** Handles flying animation with both panning and zooming combined. */
+  /**
+   * Handles flying animation with both panning and zooming combined.
+   * Van Wijk, Jarke J.; Nuij, Wim A. A. “Smooth and efficient zooming and panning.” INFOVIS
+   * ’03. pp. 15–22. <https://www.win.tue.nl/~vanwijk/zoompan.pdf#page=5>.
+   * @returns true if a flyTo animation is built successfully
+   */
   flyTo(): boolean {
-    // Van Wijk, Jarke J.; Nuij, Wim A. A. “Smooth and efficient zooming and panning.” INFOVIS
-    // ’03. pp. 15–22. <https://www.win.tue.nl/~vanwijk/zoompan.pdf#page=5>.
     const {
       startLon,
       startLat,
@@ -328,10 +329,11 @@ export default class Animator {
     const u1 = (distanceMeters / 19_546.010197300708) * projector.zoomScale(startZoom);
     // ρ²
     const rho2 = rho * rho;
-    // rᵢ: Returns the zoom-out factor at one end of the animation.
-    // i 0 for the ascent or 1 for the descent.
     /**
-     * @param i
+     * rᵢ: Returns the zoom-out factor at one end of the animation.
+     * i 0 for the ascent or 1 for the descent.
+     * @param i - input ascent
+     * @returns r(i)
      */
     const r = (i: number): number => {
       const b =
@@ -339,39 +341,22 @@ export default class Animator {
         (2 * (i !== 0 ? w1 : w0) * rho2 * u1);
       return log(sqrt(b * b + 1) - b);
     };
-    // setup trig
-    /**
-     * @param n
-     */
-    const sinh = (n: number): number => {
-      return (exp(n) - exp(-n)) / 2;
-    };
-    /**
-     * @param n
-     */
-    const cosh = (n: number): number => {
-      return (exp(n) + exp(-n)) / 2;
-    };
-    /**
-     * @param n
-     */
-    const tanh = (n: number): number => {
-      return sinh(n) / cosh(n);
-    };
     // r₀: Zoom-out factor during ascent.
     const r0 = r(0);
-    // w(s): Returns the visible span on the ground, measured in pixels with respect to the
-    // initial scale. Assumes an angular field of view of 2 arctan ½ ≈ 53°.
     /**
-     * @param s
+     * w(s): Returns the visible span on the ground, measured in pixels with respect to the
+     * initial scale. Assumes an angular field of view of 2 arctan ½ ≈ 53°.
+     * @param s - input scale
+     * @returns w(s)
      */
     let w = (s: number): number => {
       return cosh(r0) / cosh(r0 + rho * s);
     };
-    // u(s): Returns the distance along the flight path as projected onto the ground plane,
-    // measured in pixels from the world image origin at the initial scale.
     /**
-     * @param s
+     * u(s): Returns the distance along the flight path as projected onto the ground plane,
+     * measured in pixels from the world image origin at the initial scale.
+     * @param s - input scale
+     * @returns u(s)
      */
     let u = (s: number): number => {
       return (w0 * ((cosh(r0) * tanh(r0 + rho * s) - sinh(r0)) / rho2)) / u1;
@@ -386,13 +371,17 @@ export default class Animator {
       const k = w1 < w0 ? -1 : 1;
       S = abs(log(w1 / w0)) / rho;
       /**
-       * @param _
+       * Update state of u for shorter paths
+       * @param _ - unused s
+       * @returns 0
        */
       u = (_: number): number => {
         return 0;
       };
       /**
-       * @param s
+       * Adjusted state for w(s)
+       * @param s - input scale
+       * @returns w(s)
        */
       w = (s: number): number => {
         return exp(k * rho * s);
@@ -401,9 +390,10 @@ export default class Animator {
     // adjust duration if speed is provided
     if (this.speed !== 0) this.duration = S / this.speed;
 
-    // setup animation function
     /**
-     * @param time
+     * setup animation function
+     * @param time - time in ms
+     * @returns [finished, [lon, lat, zoom, bearing, pitch]]
      */
     this.#increment = (time: number): IncrementResponse => {
       if (time >= duration) return [true, [endLon, endLat, endZoom, endBearing, endPitch]];
@@ -429,9 +419,7 @@ export default class Animator {
     return true;
   }
 
-  /**
-   *
-   */
+  /** Internal function to early request tiles we know we will need */
   #buildFutureTileList(): void {
     if (this.#increment === undefined) return;
     const { endLon, endLat, endZoom, endBearing, endPitch, projector, duration } = this;
@@ -496,9 +484,7 @@ export default class Animator {
     this.#requestFutureTiles();
   }
 
-  /**
-   *
-   */
+  /** Request future tiles */
   #requestFutureTiles(): void {
     if (this.futureKeys.length === 0) return;
     const { futureKeys, futureTiles, projector } = this;
@@ -516,43 +502,78 @@ export default class Animator {
   }
 }
 
+// setup trig
+
+/**
+ * Sin of n
+ * @param n - input
+ * @returns sinh(n)
+ */
+function sinh(n: number): number {
+  return (Math.exp(n) - Math.exp(-n)) / 2;
+}
+/**
+ * Cosine of n
+ * @param n - input
+ * @returns cosh(n)
+ */
+function cosh(n: number): number {
+  return (Math.exp(n) + Math.exp(-n)) / 2;
+}
+/**
+ * Tan of n
+ * @param n - input
+ * @returns tanh(n)
+ */
+function tanh(n: number): number {
+  return sinh(n) / cosh(n);
+}
+
 // https://spicyyoghurt.com/tools/easing-functions
 
 /**
- * @param time
- * @param start
- * @param delta
- * @param duration
+ * Linear Ease function
+ * @param time - current time
+ * @param start - start time
+ * @param delta - change in time
+ * @param duration - duration
+ * @returns interpolated position
  */
 function easeLinear(time: number, start: number, delta: number, duration: number): number {
   return (delta * time) / duration + start;
 }
 
 /**
- * @param time
- * @param start
- * @param delta
- * @param duration
+ * Exponential Ease function
+ * @param time - current time
+ * @param start - start time
+ * @param delta - change in time
+ * @param duration - duration
+ * @returns interpolated position
  */
 function easeInExpo(time: number, start: number, delta: number, duration: number): number {
   return time === 0 ? start : delta * Math.pow(2, 10 * (time / duration - 1)) + start;
 }
 
 /**
- * @param time
- * @param start
- * @param delta
- * @param duration
+ * Ease Out function
+ * @param time - current time
+ * @param start - start time
+ * @param delta - change in time
+ * @param duration - duration
+ * @returns interpolated position
  */
 function easeOutExpo(time: number, start: number, delta: number, duration: number): number {
   return delta * (-Math.pow(2, (-10 * time) / duration) + 1) + start;
 }
 
 /**
- * @param time
- * @param start
- * @param delta
- * @param duration
+ * Ease In Out function
+ * @param time - current time
+ * @param start - start time
+ * @param delta - change in time
+ * @param duration - duration
+ * @returns interpolated position
  */
 function easeInOutExpo(time: number, start: number, delta: number, duration: number): number {
   if (time === 0) return start;

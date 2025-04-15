@@ -1,17 +1,11 @@
-import { toProjection } from 'geometry'; // GeoJSON conversion and preprocessing
-import { transformPoint } from './jsonVT/transform';
-import { fromLonLat, toST } from 'geometry/s2/s2Point';
-import { projectX, projectY } from './jsonVT/convert';
+import { convert, pointFromLonLat, pointToST, projectX, projectY, transformPoint } from 'gis-tools';
 
-import type { JSONVectorPointsFeature } from './jsonVT/tile';
 import type { Session } from '.';
-import type { Face, JSONCollection, Properties, VectorPoint } from 'gis-tools';
+import type { Face, JSONCollection, Properties, VectorPoint, VectorPointFeature } from 'gis-tools';
 import type { LayerDefinition, Projection, SourceMetadata } from 'style/style.spec';
 import type { SourceFlushMessage, TileRequest } from '../worker.spec';
 
-/**
- *
- */
+/** Marker definition tracking lon/lat, html, and properties associated with it */
 export interface MarkerDefinition {
   id?: number;
   lon: number;
@@ -21,16 +15,12 @@ export interface MarkerDefinition {
   geometry?: VectorPoint;
 }
 
-/**
- *
- */
+/** Properties associated with markers */
 interface MarkerProperties extends Properties {
   __markerID: number;
 }
 
-/**
- *
- */
+/** A storage container for Marker */
 export interface Marker {
   id?: number;
   html?: string; // HTMLElement
@@ -39,7 +29,9 @@ export interface Marker {
 }
 
 /**
+ * # Marker Source
  *
+ * Store, process, and render markers. Handles both WM and S2 projections
  */
 export default class MarkerSource {
   name: string;
@@ -56,10 +48,10 @@ export default class MarkerSource {
   session: Session;
   textEncoder: TextEncoder = new TextEncoder();
   /**
-   * @param name
-   * @param session
-   * @param projection
-   * @param layers
+   * @param name - name of the source
+   * @param session - the session associated with the source data
+   * @param projection - the projection to use (WM or S2)
+   * @param layers - the style layers associated with this source
    */
   constructor(name: string, session: Session, projection: Projection, layers: LayerDefinition[]) {
     this.name = name;
@@ -69,20 +61,21 @@ export default class MarkerSource {
   }
 
   /**
-   * @param _mapID
-   * @param metadata
+   * Build the source
+   * @param _mapID - the id of the map (unused)
+   * @param metadata - the metadata associated with the source
    */
   build(_mapID: string, metadata?: SourceMetadata): void {
     const json: JSONCollection | undefined = metadata?.data;
     const markers: MarkerDefinition[] = [];
     if (json !== undefined) {
-      const geojson = toProjection(json, 'WG');
-      for (const feature of geojson.features) {
-        if (feature.type === 'Feature' && feature.geometry.type === 'Point') {
+      const features = convert('WG', json, undefined, true);
+      for (const feature of features) {
+        if (feature.geometry.type === 'Point') {
           const marker: MarkerDefinition = {
             id: feature.id,
-            lon: feature.geometry.coordinates[0],
-            lat: feature.geometry.coordinates[1],
+            lon: feature.geometry.coordinates.x,
+            lat: feature.geometry.coordinates.y,
             properties: feature.properties,
           };
           markers.push(marker);
@@ -93,7 +86,8 @@ export default class MarkerSource {
   }
 
   /**
-   * @param markers
+   * Add marker(s) to the source
+   * @param markers - the marker(s) to add
    */
   addMarkers(markers: MarkerDefinition[]): void {
     const { projection } = this;
@@ -104,8 +98,8 @@ export default class MarkerSource {
       // build face, s, t
       const [face, x, y] =
         projection === 'S2'
-          ? toST(fromLonLat(lon, lat))
-          : [0 as Face, projectX(lon, 'WG'), projectY(lat, 'WG')];
+          ? pointToST(pointFromLonLat({ x: lon, y: lat }))
+          : [0 as Face, projectX(lon), projectY(lat)];
       // if no id, let's create one
       if (id === undefined) {
         id = this.idGen++;
@@ -118,7 +112,8 @@ export default class MarkerSource {
   }
 
   /**
-   * @param ids
+   * Delete marker(s)
+   * @param ids - the id(s) of the marker(s) to delete
    */
   deleteMarkers(ids: number[]): void {
     for (const id of ids) {
@@ -132,15 +127,16 @@ export default class MarkerSource {
   }
 
   /**
-   * @param mapID
-   * @param tile
-   * @param flushMessage
+   * Process a tile request
+   * @param mapID - the id of the map that is requesting data
+   * @param tile - the tile request
+   * @param flushMessage - the flush message function to call on completion
    */
   tileRequest(mapID: string, tile: TileRequest, flushMessage: SourceFlushMessage): void {
     const { name } = this;
     const { face, zoom, bbox, i, j } = tile;
     const tileZoom = 1 << zoom;
-    const features: JSONVectorPointsFeature[] = [];
+    const features: VectorPointFeature[] = [];
     // get bounds of tile
     const [minS, minT, maxS, maxT] = bbox;
     // find all markers in st bounds
@@ -148,11 +144,12 @@ export default class MarkerSource {
       const { properties, geometry } = marker;
       const { x, y } = geometry;
       if (x >= minS && x < maxS && y >= minT && y < maxT) {
+        const geometry: VectorPoint = { x, y };
+        transformPoint(geometry, tileZoom, i, j);
         features.push({
-          type: 1,
+          type: 'VectorFeature',
           properties,
-          extent: 8_192,
-          geometry: [transformPoint(x, y, 8_192, tileZoom, i, j)],
+          geometry: { type: 'Point', is3D: false, coordinates: geometry },
         });
       }
     }
@@ -165,12 +162,12 @@ export default class MarkerSource {
     }
     // build data object
     const data = {
-      extent: 8_192,
+      extent: 1,
       face,
       zoom,
       i,
       j,
-      layers: { default: { extent: 8_192, features, length: features.length } },
+      layers: { default: { extent: 1, features, length: features.length } },
     };
     // encode for transfer
     const uint8data = this.textEncoder.encode(JSON.stringify(data)).buffer as ArrayBuffer;
@@ -183,11 +180,11 @@ export default class MarkerSource {
     this.#sourceFlush(flushMessage);
   }
 
-  // If no data, we still have to let the tile worker know so it can prepare a proper flush
-  // as well as manage cases like "invert" type data.
   /**
-   * @param mapID
-   * @param tile
+   * If no data, we still have to let the tile worker know so it can prepare a proper flush
+   * as well as manage cases like "invert" type data.
+   * @param mapID - the id of the map that is requesting data
+   * @param tile - the tile request
    */
   _flush(mapID: string, tile: TileRequest): void {
     const { textEncoder, session, name } = this;
@@ -199,7 +196,8 @@ export default class MarkerSource {
   }
 
   /**
-   * @param flushMessage
+   * Flush protocol for the source
+   * @param flushMessage - the flush message function
    */
   #sourceFlush(flushMessage: SourceFlushMessage): void {
     const { name } = this;

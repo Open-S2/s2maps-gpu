@@ -21,18 +21,16 @@ import type {
   ShadeWorkflowUniforms,
 } from './workflow.spec';
 
-/**
- *
- */
+/** Shape Feature is a standalone shade render storage unit that can be drawn to the GPU */
 export class ShadeFeature extends Feature implements ShadeFeatureSpec {
   type = 'shade' as const;
   maskLayer = true;
   /**
-   * @param layerGuide
-   * @param workflow
-   * @param source
-   * @param featureCode
-   * @param tile
+   * @param layerGuide - layer guide for this feature
+   * @param workflow - the shade workflow
+   * @param source - the input mask source
+   * @param featureCode - the encoded feature code that tells the GPU how to compute it's properties
+   * @param tile - the tile that the feature is drawn on
    */
   constructor(
     public override layerGuide: ShadeWorkflowLayerGuide,
@@ -44,16 +42,16 @@ export class ShadeFeature extends Feature implements ShadeFeatureSpec {
     super(workflow, tile, layerGuide, featureCode);
   }
 
-  /**
-   *
-   */
+  /** Draw this feature to the GPU */
   override draw(): void {
     super.draw();
     this.workflow.draw(this);
   }
 
   /**
-   * @param tile
+   * Duplicate this feature
+   * @param tile - the tile that the feature is drawn on
+   * @returns the duplicated feature
    */
   duplicate(tile: Tile): ShadeFeature {
     const { layerGuide, workflow, source, featureCode } = this;
@@ -61,15 +59,11 @@ export class ShadeFeature extends Feature implements ShadeFeatureSpec {
   }
 }
 
-/**
- *
- */
+/** Shade Workflow */
 export default class ShadeWorkflow extends Workflow implements ShadeWorkflowSpec {
   label = 'shade' as const;
   declare uniforms: { [key in ShadeWorkflowUniforms]: WebGLUniformLocation };
-  /**
-   * @param context
-   */
+  /** @param context - The WebGL(1|2) context */
   constructor(context: Context) {
     // get gl from context
     const { type, devicePixelRatio } = context;
@@ -85,8 +79,10 @@ export default class ShadeWorkflow extends Workflow implements ShadeWorkflowSpec
   }
 
   /**
-   * @param layerBase
-   * @param layer
+   * Build a layer definition for this workflow given the user input layer
+   * @param layerBase - the common layer attributes
+   * @param layer - the user defined layer attributes
+   * @returns a built layer definition that's ready to describe how to render a feature
    */
   buildLayerDefinition(layerBase: LayerDefinitionBase, layer: ShadeStyle): ShadeDefinition {
     let { color } = layer;
@@ -98,10 +94,10 @@ export default class ShadeWorkflow extends Workflow implements ShadeWorkflowSpec
     };
   }
 
-  // given a set of layerIndexes that use Masks and the tile of interest
   /**
-   * @param layerDefinition
-   * @param tile
+   * given a set of layerIndexes that use Masks and the tile of interest, build a mask feature
+   * @param layerDefinition - layer definition
+   * @param tile - the tile that needs a mask
    */
   buildMaskFeature(layerDefinition: ShadeDefinition, tile: Tile): void {
     const { mask, zoom } = tile;
@@ -121,9 +117,7 @@ export default class ShadeWorkflow extends Workflow implements ShadeWorkflowSpec
     tile.addFeatures([new ShadeFeature(layerGuide, this, mask, [0], tile)]);
   }
 
-  /**
-   *
-   */
+  /** Use this workflow as the current shaders for the GPU */
   override use(): void {
     super.use();
     // grab context & prep
@@ -135,15 +129,14 @@ export default class ShadeWorkflow extends Workflow implements ShadeWorkflowSpec
     context.lessDepth();
   }
 
-  /**
-   *
-   */
+  /** Set the layer code uniforms for this workflow */
   override setLayerCode(): void {
     // noop
   }
 
   /**
-   * @param feature
+   * Draw a shade feature
+   * @param feature - the feature
    */
   draw(feature: ShadeFeatureSpec): void {
     const { gl, context } = this;

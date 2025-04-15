@@ -4,8 +4,10 @@ import type { ColorArray } from './';
 import type { ColorBlindAdjust } from './colorBlindAdjust';
 
 /**
- * @param ramp
- * @param lch
+ * Build a color ramp given a string defined ramp style or ramp guide
+ * @param ramp - string defined ramp style or ramp guide
+ * @param lch - whether or not to use lch
+ * @returns Uint8ClampedArray
  */
 export function buildColorRamp(
   ramp: 'sinebow' | 'sinebow-extended' | Array<{ stop: number; color: string }>,
@@ -20,15 +22,19 @@ export function buildColorRamp(
   if (typeof ramp === 'string') {
     if (ramp === 'sinebow')
       /**
-       * @param i
-       * @param cbAdjust
+       * Bbuild a sinebow Color array from an input ramp position
+       * @param i - ramp position
+       * @param cbAdjust - colorblind adjustment
+       * @returns Color as [r, g, b, a]
        */
       getColor = (i: number, cbAdjust?: ColorBlindAdjust): ColorArray =>
         Color.sinebow(i).getRGB(false, cbAdjust);
     else
       /**
-       * @param i
-       * @param cbAdjust
+       * Build a sinebow extended Color array from an input ramp position
+       * @param i - ramp position
+       * @param cbAdjust - colorblind adjustment
+       * @returns Color as [r, g, b, a]
        */
       getColor = (i: number, cbAdjust?: ColorBlindAdjust): ColorArray =>
         Color.sinebowExtended(i).getRGB(false, cbAdjust);
@@ -40,10 +46,11 @@ export function buildColorRamp(
       const color = new Color(c);
       colorRamp.push(lch ? color.toLCH() : color.toRGB());
     }
-    // setup color output function
     /**
-     * @param t
-     * @param cbAdjust
+     * setup color output function
+     * @param t - ramp position
+     * @param cbAdjust - colorblind adjustment
+     * @returns Color as [r, g, b, a]
      */
     getColor = (t: number, cbAdjust?: ColorBlindAdjust): ColorArray => {
       let i = 0;
@@ -81,14 +88,23 @@ export function buildColorRamp(
   return rampImage;
 }
 
+/** An output for a dash image */
+export interface DashImage {
+  length: number;
+  dashCount: number;
+  image: Uint8ClampedArray;
+}
+
 /**
- * @param dasharray
- * @param devicePixelRatio
+ * Build a dash image
+ * @param dasharray - dash array
+ * @param devicePixelRatio - device pixel ratio
+ * @returns the dash image
  */
 export function buildDashImage(
   dasharray: Array<[length: number, color: string]>,
   devicePixelRatio: number,
-): { length: number; dashCount: number; image: Uint8ClampedArray } {
+): DashImage {
   const { round } = Math;
   // RGBA * 5 height (base color, protanopia, deuteranopia, tritanopia, grayscale) * found width
   const dashCount = dasharray.reduce((total, current) => total + current[0] * devicePixelRatio, 0);

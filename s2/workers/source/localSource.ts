@@ -1,58 +1,55 @@
-import type { JSONVectorTile } from './jsonVT/tile';
-import type { LayerDefinition } from 'style/style.spec';
 import type Session from './session';
+import type { Face, LayerDefinition } from 'style/style.spec';
 import type { SourceFlushMessage, TileRequest } from '../worker.spec';
+import type { VectorPoint, VectorPolygon } from 'gis-tools';
 
-/**
- *
- */
+/** Local Tile Properties */
 export interface LocalTileProperties {
-  id: bigint;
+  id: string;
   face: number;
   zoom: number;
   i: number;
   j: number;
 }
 
-/**
- *
- */
-export type GetFeatureBoundary = () => {
+/** Boundary describing the tile shape */
+export interface FeatureBoundary {
+  extent: number;
   properties: LocalTileProperties;
-  type: number;
-  loadGeometry: () => number[][][];
-};
+  type: 'Polygon';
+  geometry: VectorPolygon;
+}
 
-/**
- *
- */
-export type GetFeatureName = () => {
+/** Point describing the tile */
+export interface GetFeatureName {
+  extent: number;
   properties: LocalTileProperties;
-  type: number;
-  loadGeometry: () => number[][];
-};
+  type: 'Point';
+  geometry: VectorPoint;
+}
 
-/**
- *
- */
+/** Local Tile */
 export interface LocalTile {
+  face: Face;
+  zoom: number;
+  i: number;
+  j: number;
+  extent: number;
   layers: {
     boundary: {
-      extent: 8_192;
+      extent: 1;
       length: 1;
-      feature: GetFeatureBoundary;
+      features: FeatureBoundary[];
     };
     name: {
-      extent: 8_192;
+      extent: 1;
       length: 1;
-      feature: GetFeatureName;
+      features: GetFeatureName[];
     };
   };
 }
 
-/**
- *
- */
+/** Local Source */
 export default class LocalSource {
   name: string;
   isTimeFormat = false;
@@ -60,9 +57,9 @@ export default class LocalSource {
   session: Session;
   textEncoder: TextEncoder = new TextEncoder();
   /**
-   * @param name
-   * @param session
-   * @param layers
+   * @param name - the name of the source
+   * @param session - the session
+   * @param layers - the layers
    */
   constructor(name: string, session: Session, layers: LayerDefinition[]) {
     this.name = name;
@@ -70,24 +67,23 @@ export default class LocalSource {
     this.styleLayers = layers;
   }
 
-  /**
-   *
-   */
+  /** a no-op for local sources; nothing to build */
   build(): void {
     /* no-op */
   }
 
   /**
-   * @param mapID
-   * @param tile
-   * @param flushMessage
+   * Get a tile
+   * @param mapID - the map requesting the tile
+   * @param tile - the tile request
+   * @param flushMessage - the flush message to send a report to
    */
   tileRequest(mapID: string, tile: TileRequest, flushMessage: SourceFlushMessage): void {
     const { id, face, zoom, i, j } = tile;
 
     this.#flush(flushMessage);
 
-    const data: JSONVectorTile = {
+    const data: LocalTile = {
       face,
       zoom,
       i,
@@ -101,7 +97,7 @@ export default class LocalSource {
             {
               extent: 1,
               properties: { id: String(id), face, zoom, i, j },
-              type: 3, // Polygon
+              type: 'Polygon' as const,
               geometry: [
                 [
                   { x: 0, y: 0 },
@@ -121,8 +117,8 @@ export default class LocalSource {
             {
               extent: 1,
               properties: { id: String(id), face, zoom, i, j },
-              type: 1, // Point
-              geometry: [{ x: 0.5, y: 0.5 }],
+              type: 'Point', // Point
+              geometry: { x: 0.5, y: 0.5 },
             },
           ],
         },
@@ -137,9 +133,7 @@ export default class LocalSource {
     ]);
   }
 
-  /**
-   * @param flushMessage
-   */
+  /** @param flushMessage - flushMessage */
   #flush(flushMessage: SourceFlushMessage): void {
     const layers = this.styleLayers.filter((layer) => layer.source === this.name);
     for (const { layerIndex } of layers) flushMessage.layersToBeLoaded.add(layerIndex);

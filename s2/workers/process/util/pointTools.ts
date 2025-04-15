@@ -1,18 +1,27 @@
 import { flattenGeometryToLines, lineLength } from './lineTools';
 
+import type {
+  MValue,
+  VectorCoordinates,
+  VectorGeometryType,
+  VectorMultiPoint,
+  VectorPoint,
+} from 'gis-tools';
 import type { Path, PathData } from './lineTools';
-import type { Point, VectorFeatureType, VectorGeometry, VectorPoints } from 'open-vector-tile';
 
 /**
- * @param geometry
- * @param type
+ * Flatten all geometry types to points
+ * @param geometry - vector geometry
+ * @param type - geometry type
+ * @returns vector points
  */
-export function flattenGeometryToPoints(
-  geometry: VectorGeometry,
-  type: VectorFeatureType,
-): VectorPoints {
-  if (type === 1) return geometry as VectorPoints;
-  const res: VectorPoints = [];
+export function flattenGeometryToPoints<M extends MValue>(
+  geometry: VectorCoordinates<M>,
+  type: VectorGeometryType,
+): VectorMultiPoint<M> {
+  if (type === 'Point') return [geometry as VectorPoint<M>];
+  if (type === 'MultiPoint') return geometry as VectorMultiPoint<M>;
+  const res: VectorMultiPoint<M> = [];
 
   const lines = flattenGeometryToLines(geometry, type);
   for (const line of lines) {
@@ -23,54 +32,63 @@ export function flattenGeometryToPoints(
 }
 
 /**
- * @param geometry
- * @param type
+ * Get the center points of the geometry
+ * @param geometry - vector geometry
+ * @param type - geometry type
+ * @returns vector points at the center of the geometry
  */
-export function getCenterPoints(geometry: VectorGeometry, type: VectorFeatureType): VectorPoints {
-  if (type === 1) return geometry as VectorPoints;
+export function getCenterPoints<M extends MValue>(
+  geometry: VectorCoordinates<M>,
+  type: VectorGeometryType,
+): VectorMultiPoint {
+  if (type === 'Point') return [geometry as VectorPoint<M>];
+  if (type === 'MultiPoint') return geometry as VectorMultiPoint<M>;
   return findCenterPoints(geometry, type, 0).map((sp) => sp.point);
 }
 
 /**
- * @param geometry
- * @param type
- * @param spacing
- * @param extent
+ * Get the spaced points of the geometry
+ * @param geometry - vector geometry
+ * @param type - geometry type
+ * @param spacing - distance between points
+ * @param extent - extent is the tile "pixel" size
+ * @returns vector points spaced along the line
  */
-export function getSpacedPoints(
-  geometry: VectorGeometry,
-  type: VectorFeatureType,
+export function getSpacedPoints<M extends MValue>(
+  geometry: VectorCoordinates,
+  type: VectorGeometryType,
   spacing: number,
   extent: number,
-): VectorPoints {
-  if (type === 1) return geometry as VectorPoints;
+): VectorMultiPoint {
+  if (type === 'Point') return [geometry as VectorPoint<M>];
+  if (type === 'MultiPoint') return geometry as VectorMultiPoint<M>;
   return findSpacedPoints(geometry, type, spacing, extent).map((sp) => sp.point);
 }
 
-/**
- *
- */
+/** Collection of Points that are spaced given guidlines. Used for glyph rendering */
 export interface SpacedPoints {
-  point: Point;
+  point: VectorPoint;
   distance: number;
   pathLeft: Path;
   pathRight: Path;
 }
 
 /**
- * @param geometry
- * @param type
- * @param extent
+ * Find center points of the geometry
+ * @param geometry - vector geometry
+ * @param type - geometry type
+ * @param extent - extent is the tile "pixel" size
+ * @returns vector points at the centers of the geometry(s)
  */
-export function findCenterPoints(
-  geometry: VectorGeometry,
-  type: VectorFeatureType,
+export function findCenterPoints<M extends MValue>(
+  geometry: VectorCoordinates<M>,
+  type: VectorGeometryType,
   extent: number,
 ): SpacedPoints[] {
   const res: SpacedPoints[] = [];
-  if (type === 1) return res;
+  if (type === 'Point' || type === 'MultiPoint') return res;
 
-  const lines = flattenGeometryToLines(geometry, type);
+  const lines = flattenGeometryToLines<M>(geometry, type);
   for (const line of lines) {
     const { length, distIndex } = lineLength(line);
     const center = Math.floor(length / 2);
@@ -87,19 +105,21 @@ export function findCenterPoints(
 }
 
 /**
- * @param geometry
- * @param type
- * @param spacing
- * @param extent
+ * Find points along the line at a given distance
+ * @param geometry - vector geometry
+ * @param type - geometry type
+ * @param spacing - distance between points
+ * @param extent - extent is the tile "pixel" size
+ * @returns vector points spaced along the line
  */
 export function findSpacedPoints(
-  geometry: VectorGeometry,
-  type: VectorFeatureType,
+  geometry: VectorCoordinates,
+  type: VectorGeometryType,
   spacing: number,
   extent: number,
 ): SpacedPoints[] {
   const res: SpacedPoints[] = [];
-  if (type === 1) return res;
+  if (type === 'Point' || type === 'MultiPoint') return res;
   // safety check
   if (spacing <= 50) return res;
 
@@ -127,15 +147,16 @@ export function findSpacedPoints(
   return res;
 }
 
-// NOTE: Assumes the line is longer then the distance
 /**
- * @param line
- * @param index
- * @param distance
- * @param extent
+ * NOTE: Currently assumes the line is longer then the distance
+ * @param line - the line
+ * @param index - index of the line
+ * @param distance - distance along the line
+ * @param extent - extent is the tile "pixel" size
+ * @returns path structure
  */
 function buildPointAtDistance(
-  line: VectorPoints,
+  line: VectorMultiPoint,
   index: number[],
   distance: number,
   extent: number,
@@ -148,13 +169,13 @@ function buildPointAtDistance(
   const d1 = index[i];
   const d2 = index[i + 1];
   const t = (distance - d1) / (d2 - d1);
-  const point: Point = {
+  const point: VectorPoint = {
     x: p1.x + (p2.x - p1.x) * t,
     y: p1.y + (p2.y - p1.y) * t,
   };
   // store either 7 points or as many as possible
-  const pathLeft: Point[] = [];
-  const pathRight: Point[] = [];
+  const pathLeft: VectorPoint[] = [];
+  const pathRight: VectorPoint[] = [];
   let l = i;
   let r = i + 1;
   let curAngle: number = pointAngle(point, line[l]) ?? 0;
@@ -193,17 +214,21 @@ function buildPointAtDistance(
 }
 
 /**
- * @param point
+ * Duplicate a point
+ * @param point - the point to duplicate
+ * @returns the duplicated point
  */
-export function duplicatePoint(point: Point): Point {
-  return { x: point.x, y: point.y, m: point.m };
+export function duplicatePoint(point: VectorPoint): VectorPoint {
+  return { x: point.x, y: point.y, m: point.m, t: point.t };
 }
 
 /**
- * @param a
- * @param b
+ * Get the angle between 2 points
+ * @param a - first point
+ * @param b - second point
+ * @returns the angle
  */
-export function pointAngle(a: Point, b?: Point): number | undefined {
+export function pointAngle(a: VectorPoint, b?: VectorPoint): number | undefined {
   if (b === undefined || (a.x === b.x && a.y === b.y)) return undefined;
   return Math.atan2(b.y - a.y, b.x - a.x);
 }

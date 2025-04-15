@@ -4,22 +4,23 @@ import eslint from '@eslint/js';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 import jsdoc from 'eslint-plugin-jsdoc';
 import prettierConfig from 'eslint-config-prettier';
+import withNuxt from './.nuxt/eslint.config.mjs';
 // TODO: Eventually support tsdoc instead of jsdoc [https://github.com/microsoft/tsdoc/issues/374]
 // albiet it seems like jsdoc gets way more love and has a ton of ts support
 // import tsdocs from 'eslint-plugin-tsdoc';
 import tseslint from 'typescript-eslint';
 
-// TODO: Disable `prefer-const`
-
-export default tseslint.config(
+export default withNuxt(
   eslint.configs.recommended,
-  ...tseslint.configs.recommended,
+  // @ts-expect-error - its mad that the types were not written correctly
+  tseslint.configs.recommended,
   eslintPluginPrettierRecommended,
+  // ...(await withNuxt()),
   prettierConfig,
   {
     languageOptions: {
       parserOptions: {
-        project: ['./tsconfig eslint.json'],
+        project: ['./tsconfig.json'],
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -42,6 +43,8 @@ export default tseslint.config(
           allowAny: false,
         },
       ],
+      '@typescript-eslint/no-unnecessary-boolean-literal-compare': 'error',
+      'prefer-const': ['error', { destructuring: 'all' }],
       'no-extra-boolean-cast': 'error',
       'no-constant-condition': ['error', { checkLoops: false }],
       'no-unused-expressions': ['error', { allowTernary: true, allowShortCircuit: true }],
@@ -68,6 +71,7 @@ export default tseslint.config(
           contexts: ['TSInterfaceDeclaration', 'TSTypeAliasDeclaration', 'TSEnumDeclaration'],
         },
       ],
+      'jsdoc/check-tag-names': ['warn', { definedTags: ['experimental'] }],
       'jsdoc/no-blank-block-descriptions': 'warn',
       // 'jsdoc/no-missing-syntax': 'warn',
       'jsdoc/no-blank-blocks': 'warn',

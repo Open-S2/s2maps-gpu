@@ -19,10 +19,10 @@ export default {
       required: true
     }
   },
-  setup ({ mapOptions }) {
+  setup ({ mapOptions }): { container: Ref<HTMLElement | undefined>, mapInstance: Ref<S2MapType | null> } {
     mapOptions = toRaw(mapOptions)
     const container = ref<HTMLElement>()
-    const mapInstance = ref<S2MapType | null>(null)
+    const mapInstance = ref<S2MapType | null>(null) as Ref<S2MapType | null>
 
     onMounted(async () => {
       const options: MapOptions = {

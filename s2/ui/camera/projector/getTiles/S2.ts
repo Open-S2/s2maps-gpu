@@ -1,5 +1,5 @@
 import { project } from '../mat4';
-import { boxIntersects, lessThanZero, pointBoundaries } from 'geometry';
+import { boxIntersects, pointBoundaries } from '.';
 
 import {
   bboxST,
@@ -29,11 +29,13 @@ const ZERO_TILES = [
 ];
 
 /**
- * @param zoom
- * @param lon
- * @param lat
- * @param matrix
- * @param radius
+ * Given a camera position, get the tiles in current view
+ * @param zoom - the zoom level
+ * @param lon - the longitude
+ * @param lat - the latitude
+ * @param matrix - the projection matrix
+ * @param radius - the radius of the sphere
+ * @returns list of Tile IDs
  */
 export default function getTilesInView(
   zoom: number,
@@ -104,12 +106,13 @@ export default function getTilesInView(
 }
 
 /**
- * @param face
- * @param zoom
- * @param i
- * @param j
- * @param checkedTiles
- * @param checkList
+ * Add neighbors to the checkList
+ * @param face - the face of the S2 sphere
+ * @param zoom - the zoom level
+ * @param i - the i tile-coordinate
+ * @param j - the j tile-coordinate
+ * @param checkedTiles - the set of tiles we have already checked
+ * @param checkList - the list of tiles to check
  */
 function addNeighbors(
   face: Face,
@@ -127,4 +130,24 @@ function addNeighbors(
       checkList.push([nFace, nI, nJ]);
     }
   }
+}
+
+/**
+ * check if any 4 points in a rectangle is less than zero
+ * @param zero - the zero reference point to compare against
+ * @param bl - bottom left point
+ * @param br - bottom right point
+ * @param tl - top left point
+ * @param tr - top right point
+ * @returns true if any point is less than zero
+ */
+export function lessThanZero(
+  zero: number,
+  bl: number,
+  br: number,
+  tl: number,
+  tr: number,
+): boolean {
+  if (bl < zero || br < zero || tl < zero || tr < zero) return true;
+  return false;
 }

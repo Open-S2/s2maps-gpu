@@ -3,10 +3,10 @@ import type { ColorMode } from 's2Map';
 import type Context from '../context/context';
 import type Projector from 'ui/camera/projector';
 import type S2MapUI from 'ui/s2mapUI';
-import type { Scheme } from './wallpaperWorkflow';
 import type { SensorTextureDefinition } from 'ui/camera/timeCache';
 import type { TileGL as Tile } from 'source/tile.spec';
 import type TimeCache from 'ui/camera/timeCache';
+import type { WallpaperScheme } from './wallpaperWorkflow';
 import type { BBox, VectorPoint } from 'gis-tools';
 import type {
   FillData,
@@ -50,35 +50,24 @@ import type {
   StyleDefinition,
 } from 'style/style.spec';
 
-/**
- *
- */
+/** A collection of uniforms and their names in the shaders */
 export type Uniforms = Record<string, string>;
 
-/**
- *
- */
+/** A collection of attributes and their names in the shaders */
 export type Attributes = Record<string, string>;
-
-/**
- *
- */
+/** A collection of attribute locations { name: location } */
 export type AttributeLocations = Record<string, number>;
 
 /* SOURCES */
 
-/**
- *
- */
+/** Shader Source */
 export interface ShaderSource {
   source: string;
   uniforms: Uniforms;
   attributes: Attributes;
 }
 
-/**
- *
- */
+/** Mask Source */
 export interface MaskSource {
   type: 'mask';
   vertexBuffer: WebGLBuffer;
@@ -88,18 +77,14 @@ export interface MaskSource {
   vao: WebGLVertexArrayObject;
 }
 
-/**
- *
- */
+/** Tile Mask Source */
 export interface TileMaskSource extends MaskSource {
   tile: Tile;
   draw: () => void;
   destroy: () => void;
 }
 
-/**
- *
- */
+/** Fill Source */
 export interface FillSource {
   type: 'fill';
   vertexBuffer: WebGLBuffer;
@@ -109,9 +94,7 @@ export interface FillSource {
   vao: WebGLVertexArrayObject;
 }
 
-/**
- *
- */
+/** Glyph Source */
 export interface GlyphSource {
   type: 'glyph';
   filterVAO: WebGLVertexArrayObject;
@@ -123,9 +106,7 @@ export interface GlyphSource {
   glyphColorBuffer: WebGLBuffer;
 }
 
-/**
- *
- */
+/** Heatmap Source */
 export interface HeatmapSource {
   type: 'heatmap';
   vertexBuffer: WebGLBuffer;
@@ -133,9 +114,7 @@ export interface HeatmapSource {
   vao: WebGLVertexArrayObject;
 }
 
-/**
- *
- */
+/** Line Source */
 export interface LineSource {
   type: 'line';
   // idBuffer: WebGLBuffer
@@ -144,9 +123,7 @@ export interface LineSource {
   vao: WebGLVertexArrayObject;
 }
 
-/**
- *
- */
+/** Point Source */
 export interface PointSource {
   type: 'point';
   vertexBuffer: WebGLBuffer;
@@ -154,27 +131,20 @@ export interface PointSource {
   vao: WebGLVertexArrayObject;
 }
 
-// Uses MaskSource vao, count, and offset
-/**
- *
- */
+/** Raster Source */
 export interface RasterSource {
   type: 'raster';
   texture: WebGLTexture;
   size: number;
 }
 
-/**
- *
- */
+/** Sensor Source */
 export interface SensorSource {
   texture?: WebGLTexture;
   delete?: undefined;
 }
 
-/**
- *
- */
+/** List of all feature sources */
 export type FeatureSource =
   | MaskSource
   | FillSource
@@ -183,9 +153,7 @@ export type FeatureSource =
   | HeatmapSource
   | RasterSource
   | GlyphSource;
-/**
- *
- */
+/** List of all layer guides */
 export type LayerGuides =
   | FillWorkflowLayerGuide
   | GlyphWorkflowLayerGuide
@@ -199,9 +167,7 @@ export type LayerGuides =
 
 /* FEATURE GUIDES */
 
-/**
- *
- */
+/** Base Feature. Used by all features */
 export interface FeatureBase {
   workflow: Workflow;
   tile: Tile;
@@ -215,9 +181,7 @@ export interface FeatureBase {
 }
 
 // ** FILL **
-/**
- *
- */
+/** Fill Feature */
 export interface FillFeature extends FeatureBase {
   type: 'fill';
   maskLayer: boolean;
@@ -236,13 +200,9 @@ export interface FillFeature extends FeatureBase {
 }
 
 // ** GLYPH + GLYPH FILTER **
-/**
- *
- */
+/** Glyph Type */
 export type GlyphType = 'text' | 'icon';
-/**
- *
- */
+/** Glyph Feature */
 export interface GlyphFeature extends FeatureBase {
   type: 'glyph';
   source: GlyphSource;
@@ -260,9 +220,7 @@ export interface GlyphFeature extends FeatureBase {
 }
 
 // ** HEATMAP **
-/**
- *
- */
+/** Heatmap Feature */
 export interface HeatmapFeature extends FeatureBase {
   type: 'heatmap';
   source: HeatmapSource;
@@ -279,9 +237,7 @@ export interface HeatmapFeature extends FeatureBase {
 }
 
 // ** LINE **
-/**
- *
- */
+/** Line Feature */
 export interface LineFeature extends FeatureBase {
   type: 'line';
   source: LineSource;
@@ -296,9 +252,7 @@ export interface LineFeature extends FeatureBase {
 }
 
 // ** POINT **
-/**
- *
- */
+/** Point Feature */
 export interface PointFeature extends FeatureBase {
   type: 'point';
   source: PointSource;
@@ -313,9 +267,7 @@ export interface PointFeature extends FeatureBase {
 }
 
 // ** RASTER **
-/**
- *
- */
+/** Raster Feature */
 export interface RasterFeature extends FeatureBase {
   type: 'raster';
   source: RasterSource;
@@ -327,9 +279,7 @@ export interface RasterFeature extends FeatureBase {
 }
 
 // ** HILLSHADE **
-/**
- *
- */
+/** Hillshade Feature */
 export interface HillshadeFeature extends FeatureBase {
   type: 'hillshade';
   source: RasterSource;
@@ -344,9 +294,7 @@ export interface HillshadeFeature extends FeatureBase {
 }
 
 // ** SENSOR **
-/**
- *
- */
+/** Sensor Feature */
 export interface SensorFeature extends FeatureBase {
   type: 'sensor';
   fadeStartTime: number;
@@ -355,9 +303,7 @@ export interface SensorFeature extends FeatureBase {
   opacity?: number; // webgl1
 }
 
-/**
- *
- */
+/** Shade Feature */
 export interface ShadeFeature extends FeatureBase {
   type: 'shade';
   maskLayer: boolean;
@@ -365,9 +311,7 @@ export interface ShadeFeature extends FeatureBase {
   layerGuide: ShadeWorkflowLayerGuide;
 }
 
-/**
- *
- */
+/** List of all features that can be rendered */
 export type Features =
   | FillFeature
   | GlyphFeature
@@ -379,9 +323,7 @@ export type Features =
   | ShadeFeature
   | HillshadeFeature;
 
-/**
- *
- */
+/** List of all workflows that can draw features or internal states */
 export interface Workflows {
   fill?: FillWorkflow;
   glyphFilter?: GlyphFilterWorkflow;
@@ -398,31 +340,24 @@ export interface Workflows {
   background?: WallpaperWorkflow | SkyboxWorkflow;
 }
 
-/**
- *
- */
+/** List of all workflows that can draw features */
 export interface WorkflowImports {
-  fill: () => FillWorkflow;
-  glyphFilter: () => GlyphFilterWorkflow;
-  glyph: () => GlyphWorkflow;
-  heatmap: () => HeatmapWorkflow;
-  hillshade: () => HillshadeWorkflow;
-  line: () => LineWorkflow;
-  point: () => PointWorkflow;
-  raster: () => RasterWorkflow;
+  fill: () => Promise<FillWorkflow>;
+  glyphFilter: () => Promise<GlyphFilterWorkflow>;
+  glyph: () => Promise<GlyphWorkflow>;
+  heatmap: () => Promise<HeatmapWorkflow>;
+  hillshade: () => Promise<HillshadeWorkflow>;
+  line: () => Promise<LineWorkflow>;
+  point: () => Promise<PointWorkflow>;
+  raster: () => Promise<RasterWorkflow>;
   sensor: () => Promise<{ default: (context: Context) => Promise<SensorWorkflow> }>;
-  shade: () => ShadeWorkflow;
-  skybox: () => SkyboxWorkflow;
-  wallpaper: () => WallpaperWorkflow;
+  shade: () => Promise<ShadeWorkflow>;
+  skybox: () => Promise<SkyboxWorkflow>;
+  wallpaper: () => Promise<WallpaperWorkflow>;
 }
-
-/**
- *
- */
+/** Workflow keys */
 export type WorkflowKey = keyof Workflows;
-/**
- *
- */
+/** Workflow types */
 export type WorkflowType =
   | 'fill'
   | 'glyph'
@@ -436,9 +371,7 @@ export type WorkflowType =
   | 'skybox'
   | 'wallpaper';
 
-/**
- *
- */
+/** Generic Workflow specification used by most workflows */
 export interface WorkflowSpec {
   vertexShader: WebGLShader;
   fragmentShader: WebGLShader;
@@ -481,7 +414,9 @@ export interface WorkflowSpec {
 }
 
 /**
+ * Fill Workflow
  *
+ * Draws fills and masks for WebGL(1|2)
  */
 export interface FillWorkflow extends WorkflowSpec {
   label: 'fill';
@@ -496,7 +431,9 @@ export interface FillWorkflow extends WorkflowSpec {
 }
 
 /**
+ * Glyph Filter Workflow
  *
+ * Compute glyph filter data to know which glyphs to render or skip
  */
 export interface GlyphFilterWorkflow extends WorkflowSpec {
   label: 'glyphFilter';
@@ -517,7 +454,9 @@ export interface GlyphFilterWorkflow extends WorkflowSpec {
 }
 
 /**
+ * Glyph Workflow
  *
+ * Draws glyphs for WebGL(1|2)
  */
 export interface GlyphWorkflow extends WorkflowSpec {
   label: 'glyph';
@@ -535,7 +474,9 @@ export interface GlyphWorkflow extends WorkflowSpec {
 }
 
 /**
+ * Heatmap Workflow
  *
+ * Draws heatmaps for WebGL(1|2)
  */
 export interface HeatmapWorkflow extends WorkflowSpec {
   label: 'heatmap';
@@ -557,7 +498,9 @@ export interface HeatmapWorkflow extends WorkflowSpec {
 }
 
 /**
+ * Line Workflow
  *
+ * Draws lines for WebGL(1|2)
  */
 export interface LineWorkflow extends WorkflowSpec {
   label: 'line';
@@ -572,7 +515,9 @@ export interface LineWorkflow extends WorkflowSpec {
 }
 
 /**
+ * Point Workflow
  *
+ * Draws points for WebGL(1|2)
  */
 export interface PointWorkflow extends WorkflowSpec {
   label: 'point';
@@ -586,7 +531,9 @@ export interface PointWorkflow extends WorkflowSpec {
 }
 
 /**
+ * Raster Workflow
  *
+ * Draws rasters for WebGL(1|2)
  */
 export interface RasterWorkflow extends WorkflowSpec {
   label: 'raster';
@@ -600,7 +547,9 @@ export interface RasterWorkflow extends WorkflowSpec {
 }
 
 /**
+ * Hillshade Workflow
  *
+ * Draws hillshades for WebGL(1|2)
  */
 export interface HillshadeWorkflow extends WorkflowSpec {
   label: 'hillshade';
@@ -616,7 +565,9 @@ export interface HillshadeWorkflow extends WorkflowSpec {
 }
 
 /**
+ * Sensor Workflow
  *
+ * Draws sensors for WebGL(1|2)
  */
 export interface SensorWorkflow extends WorkflowSpec {
   label: 'sensor';
@@ -632,7 +583,9 @@ export interface SensorWorkflow extends WorkflowSpec {
 }
 
 /**
+ * Shade Workflow
  *
+ * Draws shadings for WebGL(1|2)
  */
 export interface ShadeWorkflow extends WorkflowSpec {
   label: 'shade';
@@ -644,7 +597,9 @@ export interface ShadeWorkflow extends WorkflowSpec {
 }
 
 /**
+ * Skybox Workflow
  *
+ * Draws a skybox for WebGL(1|2)
  */
 export interface SkyboxWorkflow extends Omit<WorkflowSpec, 'draw'> {
   label: 'skybox';
@@ -661,11 +616,13 @@ export interface SkyboxWorkflow extends Omit<WorkflowSpec, 'draw'> {
 }
 
 /**
+ * Wallpaper Workflow
  *
+ * Draws a wallpaper for WebGL(1|2)
  */
 export interface WallpaperWorkflow extends Omit<WorkflowSpec, 'draw'> {
   label: 'wallpaper';
-  scheme: Scheme;
+  scheme: WallpaperScheme;
   tileSize: number;
   scale: VectorPoint;
   uniforms: { [key in WallpaperWorkflowUniforms]: WebGLUniformLocation };
@@ -674,9 +631,7 @@ export interface WallpaperWorkflow extends Omit<WorkflowSpec, 'draw'> {
   draw: (projector: Projector) => void;
 }
 
-/**
- *
- */
+/** List of all workflows that can draw features for WebGL(1|2) */
 export type Workflow =
   | FillWorkflow
   | GlyphFilterWorkflow
@@ -691,9 +646,7 @@ export type Workflow =
   | SkyboxWorkflow
   | WallpaperWorkflow;
 
-/**
- *
- */
+/** List of common uniforms for all workflows in WebGL(1|2) */
 export enum WorkflowUniforms {
   uMatrix = 'uMatrix',
   uAspect = 'uAspect',
@@ -710,9 +663,7 @@ export enum WorkflowUniforms {
   uCBlind = 'uCBlind',
 }
 
-/**
- *
- */
+/** List of Fill uniforms for WebGL(1|2) */
 export enum FillWorkflowUniforms {
   uMatrix = 'uMatrix',
   uLCH = 'uLCH',
@@ -732,9 +683,7 @@ export enum FillWorkflowUniforms {
   uOpacity = 'uOpacity', // WEBGL1
 }
 
-/**
- *
- */
+/** List of GlyphFilter uniforms for WebGL(1|2) */
 export enum GlyphFilterUniforms {
   uMatrix = 'uMatrix',
   uAspect = 'uAspect',
@@ -752,9 +701,7 @@ export enum GlyphFilterUniforms {
   uSize = 'uSize', // WEBGL1
 }
 
-/**
- *
- */
+/** List of Glyph uniforms for WebGL(1|2) */
 export enum GlyphWorkflowUniforms {
   uMatrix = 'uMatrix',
   uAspect = 'uAspect',
@@ -781,9 +728,7 @@ export enum GlyphWorkflowUniforms {
   uSWidth = 'uSWidth', // WEBGL1
 }
 
-/**
- *
- */
+/** List of Heatmap uniforms for WebGL(1|2) */
 export enum HeatmapWorkflowUniforms {
   uMatrix = 'uMatrix',
   uAspect = 'uAspect',
@@ -808,9 +753,7 @@ export enum HeatmapWorkflowUniforms {
   uOpacityHi = 'uOpacityHi', // WEBGL1
 }
 
-/**
- *
- */
+/** List of Line uniforms for WebGL(1|2) */
 export enum LineWorkflowUniforms {
   uMatrix = 'uMatrix',
   uAspect = 'uAspect',
@@ -834,9 +777,7 @@ export enum LineWorkflowUniforms {
   uTexLength = 'uTexLength', // WEBGL1
 }
 
-/**
- *
- */
+/** List of Point uniforms for WebGL(1|2) */
 export enum PointWorkflowUniforms {
   uMatrix = 'uMatrix',
   uAspect = 'uAspect',
@@ -859,9 +800,7 @@ export enum PointWorkflowUniforms {
   uBounds = 'uBounds',
 }
 
-/**
- *
- */
+/** List of Raster uniforms for WebGL(1|2) */
 export enum RasterWorkflowUniforms {
   uMatrix = 'uMatrix',
   uInputs = 'uInputs',
@@ -879,9 +818,7 @@ export enum RasterWorkflowUniforms {
   uContrast = 'uContrast', // WEBGL1
 }
 
-/**
- *
- */
+/** List of Hillshade uniforms for WebGL(1|2) */
 export enum HillshadeWorkflowUniforms {
   uMatrix = 'uMatrix',
   uInputs = 'uInputs',
@@ -904,9 +841,7 @@ export enum HillshadeWorkflowUniforms {
   uTexLength = 'uTexLength', // WEBGL1
 }
 
-/**
- *
- */
+/** List of Sensor uniforms for WebGL(1|2) */
 export enum SensorWorkflowUniforms {
   uBottom = 'uBottom',
   uCBlind = 'uCBlind',
@@ -924,9 +859,7 @@ export enum SensorWorkflowUniforms {
   uOpacity = 'uOpacity', // WEBGL1
 }
 
-/**
- *
- */
+/** List of Shade uniforms for WebGL(1|2) */
 export enum ShadeWorkflowUniforms {
   uAspect = 'uAspect',
   uMatrix = 'uMatrix',
@@ -937,17 +870,13 @@ export enum ShadeWorkflowUniforms {
   uTop = 'uTop',
 }
 
-/**
- *
- */
+/** List of Skybox uniforms for WebGL(1|2) */
 export enum SkyboxWorkflowUniforms {
   uMatrix = 'uMatrix',
   uSkybox = 'uSkybox',
 }
 
-/**
- *
- */
+/** List of Wallpaper uniforms for WebGL(1|2) */
 export enum WallpaperWorkflowUniforms {
   uScale = 'uScale',
   uBackground = 'uBackground',

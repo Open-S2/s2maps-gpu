@@ -4,17 +4,19 @@ import type { VectorPoint } from 'gis-tools';
 
 // https://github.com/proj4js/proj4js/blob/master/lib/projections/ortho.js
 const EPSLN = 1.0e-10;
-const D2R = 0.01745329251994329577 // eslint-disable-line
-const R2D = 57.29577951308232088 // eslint-disable-line
+const D2R = 0.017453292519943295;
+const R2D = 57.29577951308232;
 
-// centerLon and centerlat is where the center of the sphere is currently located
-// x is the distance from center
 /**
- * @param centerLon
- * @param centerLat
- * @param xOffset
- * @param yOffset
- * @param radius
+ * Get the longitude and latitude of the cursor position in the S2 Geometry Projection.
+ * centerLon and centerlat is where the center of the sphere is currently located
+ * x is the distance from center
+ * @param centerLon - center longitude
+ * @param centerLat - center latitude
+ * @param xOffset - distance from center
+ * @param yOffset - distance from center
+ * @param radius - the radius of the sphere
+ * @returns longitude and latitude
  */
 export function cursorToLonLatS2(
   centerLon: number,
@@ -57,12 +59,14 @@ export function cursorToLonLatS2(
 }
 
 /**
- * @param lon
- * @param lat
- * @param xOffset
- * @param yOffset
- * @param zoom
- * @param tileSize
+ * Get the longitude and latitude of the cursor position in the web mercator projection.
+ * @param lon - center longitude
+ * @param lat - center latitude
+ * @param xOffset - x offset
+ * @param yOffset - y offset
+ * @param zoom - zoom
+ * @param tileSize - tile size
+ * @returns longitude and latitude
  */
 export function cursorToLonLatWM(
   lon: number,
@@ -85,7 +89,9 @@ export function cursorToLonLatWM(
 }
 
 /**
- * @param x
+ * Arcsine
+ * @param x - input
+ * @returns the arcsine(x)
  */
 function asinz(x: number): number {
   const { abs, asin } = Math;
@@ -94,7 +100,9 @@ function asinz(x: number): number {
 }
 
 /**
- * @param x
+ * Adjust longitude to be between -180 and 180
+ * @param x - longitude
+ * @returns adjusted longitude
  */
 function adjustLon(x: number): number {
   const { PI, abs } = Math;
@@ -102,7 +110,9 @@ function adjustLon(x: number): number {
 }
 
 /**
- * @param x
+ * Get the sign of a number
+ * @param x - input
+ * @returns the sign(x)
  */
 function sign(x: number): number {
   return x < 0 ? -1 : 1;

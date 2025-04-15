@@ -1,8 +1,6 @@
-import { projectX, projectY } from '../jsonVT/convert';
+import { projectX, projectY } from 'gis-tools';
 
-/**
- *
- */
+/** A basic vector point that allows for arbitrary data */
 export interface Point<T> {
   x: number;
   y: number;
@@ -10,35 +8,34 @@ export interface Point<T> {
 }
 
 /**
+ * # Point Index
  *
+ * A kd-tree based point index
  */
 export default class PointIndex<T> {
   nodeSize: number;
   points: Array<Point<T>> = [];
   #sorted = false;
-  /**
-   * @param nodeSize
-   */
+  /** @param nodeSize - size of the kd-tree leaf node */
   constructor(nodeSize = 64) {
     this.nodeSize = nodeSize;
   }
 
   /**
    * Add a point to the index.
-   * @param x
-   * @param y
-   * @param data
+   * @param x - x coordinate
+   * @param y - y coordinate
+   * @param data - data related to point to add
    */
   add(x: number, y: number, data: T): void {
     if (isNaN(x) || isNaN(y)) return;
-    x = projectX(x, 'WG');
-    y = projectY(y, 'WG');
-    this.points.push({ x, y, data });
+    this.points.push({ x: projectX(x), y: projectY(y), data });
     this.#sorted = false;
   }
 
   /**
-   * @param point
+   * Add a new point to the index
+   * @param point - a point to add
    */
   addPoint(point: Point<T>): void {
     this.points.push(point);
@@ -55,10 +52,11 @@ export default class PointIndex<T> {
 
   /**
    * Search the index for items within a given bounding box.
-   * @param minX
-   * @param minY
-   * @param maxX
-   * @param maxY
+   * @param minX - minimum x value
+   * @param minY - minimum y value
+   * @param maxX - maximum x value
+   * @param maxY - maximum y value
+   * @returns All points found within the bounding box
    */
   range(minX: number, minY: number, maxX: number, maxY: number): Array<Point<T>> {
     this.sort();
@@ -100,9 +98,10 @@ export default class PointIndex<T> {
 
   /**
    * Search the index for items within a given radius.
-   * @param qx
-   * @param qy
-   * @param r
+   * @param qx - query point X-coordinate
+   * @param qy - query point Y-coordinate
+   * @param r - radius
+   * @returns All points found within the radius of the query point
    */
   radius(qx: number, qy: number, r: number): Array<Point<T>> {
     this.sort();
@@ -142,10 +141,11 @@ export default class PointIndex<T> {
   }
 
   /**
-   * @param nodeSize
-   * @param left
-   * @param right
-   * @param axis
+   * Perform indexing/sorting of the added points.
+   * @param nodeSize - tree node size
+   * @param left - left index
+   * @param right - right index
+   * @param axis - axis (0 for x or 1 for y)
    */
   #sort(nodeSize: number, left: number, right: number, axis: number): void {
     if (right - left <= nodeSize) return;
@@ -164,10 +164,10 @@ export default class PointIndex<T> {
   /**
    * Custom Floyd-Rivest selection algorithm: sort ids and coords so that
    * [left..k-1] items are smaller than k-th item (on either x or y axis)
-   * @param k
-   * @param left
-   * @param right
-   * @param axis
+   * @param k - index
+   * @param left - left index
+   * @param right - right index
+   * @param axis - axis (0 for x or 1 for y)
    */
   select(k: number, left: number, right: number, axis: number): void {
     const { points } = this;
@@ -214,21 +214,22 @@ export default class PointIndex<T> {
   }
 
   /**
-   * @param i
-   * @param j
+   * Swap two points positions in the array
+   * @param i - first index
+   * @param j - second index
    */
   #swap(i: number, j: number): void {
     const { points } = this;
-    const tmp = points[i];
-    points[i] = points[j];
-    points[j] = tmp;
+    [points[i], points[j]] = [points[j], points[i]];
   }
 
   /**
-   * @param ax
-   * @param ay
-   * @param bx
-   * @param by
+   * Squared distance between two points
+   * @param ax - point A x coordinate
+   * @param ay - point A y coordinate
+   * @param bx - point B x coordinate
+   * @param by - point B y coordinate
+   * @returns the squared distance
    */
   #sqDist(ax: number, ay: number, bx: number, by: number): number {
     const dx = ax - bx;

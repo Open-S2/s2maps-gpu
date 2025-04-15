@@ -1,9 +1,10 @@
-const webpack = require('webpack')
-const path = require('path')
+/* eslint-disable @typescript-eslint/no-require-imports */
+const webpack = require('webpack');
+const path = require('path');
 
-const CompressionPlugin = require('compression-webpack-plugin')
-const MiniCssExtractPlugin = require('mini-css-extract-plugin')
-const CssMinimizerPlugin = require('css-minimizer-webpack-plugin')
+const CompressionPlugin = require('compression-webpack-plugin');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 
 // This is the production and development configuration.
 // It is focused on developer experience, fast rebuilds, and a minimal bundle.
@@ -14,29 +15,26 @@ module.exports = {
   entry: path.join(__dirname, '/../assets/styles/s2maps.css'),
   output: {
     path: path.join(__dirname, '/../buildS2-flat'),
-    filename: 'css.tmp'
+    filename: 'css.tmp',
   },
   context: path.join(__dirname, '/../public'),
   module: {
     rules: [
       {
         test: /\.css$/i,
-        use: [
-          MiniCssExtractPlugin.loader,
-          'css-loader'
-        ],
-        exclude: /node_modules/
+        use: [MiniCssExtractPlugin.loader, 'css-loader'],
+        exclude: /node_modules/,
       },
       {
         test: /\.(png|jpe?g|gif|svg|eot|ttf|woff|woff2)$/i,
         // More information here https://webpack.js.org/guides/asset-modules/
-        type: 'asset/inline'
-      }
-    ]
+        type: 'asset/inline',
+      },
+    ],
   },
   plugins: [
     new MiniCssExtractPlugin({
-      filename: 's2maps-gpu.min.css'
+      filename: 's2maps-gpu.min.css',
     }),
     new webpack.ProgressPlugin(),
     new CompressionPlugin({
@@ -44,25 +42,25 @@ module.exports = {
       algorithm: 'gzip',
       test: /\.css/,
       threshold: 0,
-      minRatio: 1
+      minRatio: 1,
     }),
     new CompressionPlugin({
       filename: '[path]s2maps-gpu.min.css.br',
       algorithm: 'brotliCompress',
       test: /\.css/,
       compressionOptions: {
-        level: 11
+        level: 11,
       },
       threshold: 0,
-      minRatio: 1
-    })
+      minRatio: 1,
+    }),
   ],
   optimization: {
     minimize: true,
     minimizer: [
       // For webpack@5 you can use the `...` syntax to extend existing minimizers (i.e. `terser-webpack-plugin`), uncomment the next line
       '...',
-      new CssMinimizerPlugin()
-    ]
-  }
-}
+      new CssMinimizerPlugin(),
+    ],
+  },
+};

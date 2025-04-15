@@ -1,9 +1,7 @@
 import type { ColorArray } from 'style/color';
-import type { ImageMetadata, Metadata } from 'workers/source/imageSource';
+import type { ImageMetadata, ImageSourceMetadata } from 'workers/source/imageSource';
 
-/**
- *
- */
+/** A Glyph Container. Tracks all the glyph's properties, shape, size, etc. */
 export interface Glyph {
   /** code represents either the unicode value or substitution value */
   code: string;
@@ -27,59 +25,44 @@ export interface Glyph {
   advanceWidth: number;
 }
 
-/**
- *
- */
+/** An Icon's id/name and it's associative color */
 export interface IconPiece {
   /** glyphID is the glyphID of the icon */
   glyphID: string;
   /** colorID is the colorID of the icon */
   color: ColorArray;
 }
-/**
- *
- */
+/** List of IconPieces */
 export type Icon = IconPiece[];
 
-/**
- *
- */
+/** Ligature Substitution Tree Node */
 export interface LigatureSubstitute {
   type: 4;
   substitute: string;
   components: string[];
 }
-
-/**
- *
- */
+/** Ligature Substitution Tree */
 export interface LigatureTree extends Record<number, LigatureTree> {
   /** unicode substitute if it ends here */
   substitute?: string;
 }
-
-/**
- *
- */
+/** Icon's name id and color id, whereas an `IconPiece`, the color is mapped */
 export interface IconDefinition {
   glyphID: string;
   colorID: number;
 }
-/**
- *
- */
+/** Map of icons to their collection of images that make them up */
 export type IconMap = Record<string, IconDefinition[]>; // ex: ['airport']: [0, 1, 2, 5, 7] (name maps reference a list of unicodes)
-/**
- *
- */
+/** Set of unicodes that are part of the family */
 export type GlyphSet = Set<string>;
-/**
- *
- */
+/** Map of IDs to RGBA colors */
 export type ColorMap = Record<number, ColorArray>;
 
 /**
+ * # Family Source
  *
+ * Maintain a store of the Font/Icon family, it's glyphs, ligatures, icons, and colors associated
+ * with it. Make requests to the source worker for missing glyphs.
  */
 export default class FamilySource {
   name: string;
@@ -94,8 +77,8 @@ export default class FamilySource {
   glyphRequestList = new Map<bigint, Set<string>>();
   isIcon = false;
   /**
-   * @param name
-   * @param metadata
+   * @param name - the name of the family
+   * @param metadata - the raw metadata to unpack
    */
   constructor(name: string, metadata?: ArrayBuffer) {
     this.name = name;
@@ -152,25 +135,30 @@ export default class FamilySource {
   }
 
   /**
-   * @param root0
-   * @param root0.name
-   * @param root0.metadata
+   * Given an image metadata input, build a FamilySource
+   * @param imageSource - the image metadata
+   * @returns a new FamilySource
    */
-  static FromImageMetadata({ name, metadata }: ImageMetadata): FamilySource {
+  static FromImageMetadata(imageSource: ImageSourceMetadata): FamilySource {
+    const { name, metadata } = imageSource;
     const fs = new FamilySource(name);
     fs.addMetadata(metadata);
     return fs;
   }
 
   /**
-   * @param code
+   * Check if the Family Source has an existing glyph/icon
+   * @param code - glyph code
+   * @returns true if the glyph/icon exists
    */
   has(code: string): boolean {
     return this.glyphSet.has(code);
   }
 
   /**
-   * @param code
+   * Check if this source is missing a glyph/icon
+   * @param code - the code of the glyph/icon
+   * @returns true if the glyph/icon is missing
    */
   missingGlyph(code: string): boolean {
     const { isIcon, glyphSet, glyphCache } = this;
@@ -179,9 +167,10 @@ export default class FamilySource {
   }
 
   /**
-   * @param metadata
+   * Add image metadata to the source
+   * @param metadata - the image metadata
    */
-  addMetadata(metadata: Metadata): void {
+  addMetadata(metadata: ImageMetadata): void {
     for (const [code, glyph] of Object.entries(metadata)) {
       this.glyphSet.add(code);
       this.glyphCache.set(code, glyph);
@@ -191,8 +180,9 @@ export default class FamilySource {
   }
 
   /**
-   * @param tileID
-   * @param code
+   * Add a glyph request to be processed
+   * @param tileID - the id of the tile that requested the glyph
+   * @param code - the code of the glyph/icon
    */
   addGlyphRequest(tileID: bigint, code: string): void {
     if (!this.glyphRequestList.has(tileID)) this.glyphRequestList.set(tileID, new Set());
@@ -201,7 +191,9 @@ export default class FamilySource {
   }
 
   /**
-   * @param tileID
+   * Get the glyph requests for a tile
+   * @param tileID - the id of the tile that requested the glyph/icon
+   * @returns the list of glyph/icon requests
    */
   getRequests(tileID: bigint): string[] {
     const glyphList = this.glyphRequestList.get(tileID) ?? new Set<string>();
@@ -212,8 +204,10 @@ export default class FamilySource {
   }
 
   /**
-   * @param iconMapSize
-   * @param dv
+   * Build a collection of icons and their associated glyphs & colors
+   * @param iconMapSize - the size of the icon map
+   * @param dv - the data view to read from
+   * @returns the icon map
    */
   #buildIconMap(iconMapSize: number, dv: DataView): IconMap {
     const iconMap: IconMap = {};
@@ -241,8 +235,10 @@ export default class FamilySource {
   }
 
   /**
-   * @param colorSize
-   * @param dv
+   * Build a collection of colors
+   * @param colorSize - the size of the color map
+   * @param dv - the data view to read from
+   * @returns the color map
    */
   #buildColorMap(colorSize: number, dv: DataView): ColorArray[] {
     const colors: ColorArray[] = [];
@@ -254,8 +250,9 @@ export default class FamilySource {
   }
 
   /**
-   * @param substituteSize
-   * @param dv
+   * Build a collection of ligature substitutions
+   * @param substituteSize - the size of the ligature map
+   * @param dv - the data view to read from
    */
   #buildSubstituteMap(substituteSize: number, dv: DataView): void {
     let pos = 0;
@@ -286,8 +283,8 @@ export default class FamilySource {
 
   /**
    * Zero Width Joiner pass goes first
-   * @param strCodes
-   * @param zwjPass
+   * @param strCodes - array of codes to parse
+   * @param zwjPass - true if we are in the zero width joiner pass
    */
   parseLigatures(strCodes: string[], zwjPass = false): void {
     // iterate through the unicodes and follow the tree, if we find a substitute,

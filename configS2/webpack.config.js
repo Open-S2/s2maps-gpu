@@ -1,12 +1,15 @@
-const webpack = require('webpack')
-const path = require('path')
-const { version } = require('../package.json')
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+/* eslint-disable @typescript-eslint/no-require-imports */
+// @ts-nocheck
+const webpack = require('webpack');
+const path = require('path');
+const { version } = require('../package.json');
 
-const { WebpackStatsViewerPlugin } = require('webpack-stats-viewer-plugin')
-const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin')
-const CompressionPlugin = require('compression-webpack-plugin')
-const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin
-const TerserPlugin = require('terser-webpack-plugin')
+const { WebpackStatsViewerPlugin } = require('webpack-stats-viewer-plugin');
+const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
+const CompressionPlugin = require('compression-webpack-plugin');
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+const TerserPlugin = require('terser-webpack-plugin');
 
 // This is the production and development configuration.
 // It is focused on developer experience, fast rebuilds, and a minimal bundle.
@@ -24,19 +27,19 @@ module.exports = {
     filename: '[name].min.js',
     // this defaults to 'window', but by setting it to 'this' then
     // module chunks which are built will work in web workers as well.
-    globalObject: 'this'
+    globalObject: 'this',
   },
   context: path.join(__dirname, '/../public'),
   module: {
     rules: [
       {
         test: /\.glsl$/,
-        loader: require.resolve('../config/glsl-loader')
+        loader: require.resolve('../config/glsl-loader'),
         // use: 'webpack-glsl-minify'
       },
       {
         test: /\.wgsl$/i,
-        loader: require.resolve('../config/wgsl-loader')
+        loader: require.resolve('../config/wgsl-loader'),
       },
       {
         test: /\.ts?$/,
@@ -45,37 +48,36 @@ module.exports = {
             loader: 'ts-loader',
             options: {
               transpileOnly: true,
-              configFile: path.join(__dirname, '/../tsconfig.build.json')
-            }
-          }
+              configFile: path.join(__dirname, '/../tsconfig.build.json'),
+            },
+          },
         ],
-        exclude: /node_modules/
-      }
-    ]
+        exclude: /node_modules/,
+      },
+    ],
   },
 
   resolve: {
     extensions: ['*', '.js', '.ts'],
     modules: ['node_modules'],
-    plugins: [
-      new TsconfigPathsPlugin({ configFile: path.join(__dirname, '../tsconfig.json') })
-    ]
+    plugins: [new TsconfigPathsPlugin({ configFile: path.join(__dirname, '../tsconfig.json') })],
   },
   optimization: {
     minimize: true,
-    minimizer: [new TerserPlugin({
-      extractComments: false
-    })]
+    // @ts-nocheck
+    minimizer: [new TerserPlugin({ extractComments: false })],
   },
   plugins: [
-    new webpack.BannerPlugin(`s2maps-gpu is Copyright © ${(new Date()).getFullYear()} Open S2 and subject to the Open S2 Terms of Service (https://www.opens2.com/legal/tos).`),
+    new webpack.BannerPlugin(
+      `s2maps-gpu is Copyright © ${new Date().getFullYear()} Open S2 and subject to the Open S2 Terms of Service (https://www.opens2.com/legal/tos).`,
+    ),
     new webpack.ProgressPlugin(),
     new CompressionPlugin({
       filename: '[path][name].js.gz',
       algorithm: 'gzip',
       test: /\.js$/,
       threshold: 0,
-      minRatio: 1
+      minRatio: 1,
     }),
     new CompressionPlugin({
       filename: '[path][name].js.br',
@@ -83,9 +85,13 @@ module.exports = {
       test: /\.js$/,
       compressionOptions: { level: 11 },
       threshold: 0,
-      minRatio: 1
+      minRatio: 1,
     }),
     new WebpackStatsViewerPlugin(),
-    new BundleAnalyzerPlugin({ analyzerMode: 'static', generateStatsFile: true, statsFilename: 'bundle-stat.json' })
-  ]
-}
+    new BundleAnalyzerPlugin({
+      analyzerMode: 'static',
+      generateStatsFile: true,
+      statsFilename: 'bundle-stat.json',
+    }),
+  ],
+};

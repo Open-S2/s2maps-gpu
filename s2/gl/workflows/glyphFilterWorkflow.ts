@@ -14,9 +14,7 @@ import type {
   GlyphFilterWorkflow as GlyphFilterWorkflowSpec,
 } from './workflow.spec';
 
-/**
- *
- */
+/** Glyph Filter Feature is a standalone glyph filter compute storage unit that can be processed by the GPU */
 export default class GlyphFilterWorkflow extends Workflow implements GlyphFilterWorkflowSpec {
   label = 'glyphFilter' as const;
   quadTexture!: WebGLTexture;
@@ -26,9 +24,7 @@ export default class GlyphFilterWorkflow extends Workflow implements GlyphFilter
   indexOffset = 0;
   mode: 1 | 2 = 1;
   declare uniforms: { [key in GlyphFilterUniforms]: WebGLUniformLocation };
-  /**
-   * @param context
-   */
+  /** @param context - The WebGL(1|2) context */
   constructor(context: Context) {
     // get gl from context
     const { type } = context;
@@ -51,9 +47,7 @@ export default class GlyphFilterWorkflow extends Workflow implements GlyphFilter
     this.#buildTextures();
   }
 
-  /**
-   *
-   */
+  /** Build a texture that holds the glyph data */
   #buildTextures(): void {
     const { gl, devicePixelRatio } = this.context;
     this.use();
@@ -117,9 +111,7 @@ export default class GlyphFilterWorkflow extends Workflow implements GlyphFilter
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
 
-  /**
-   *
-   */
+  /** Delete the glyph filter workflow */
   override delete(): void {
     const { gl, quadTexture, resultTexture, quadFramebuffer, resultFramebuffer } = this;
     // delete textures
@@ -132,9 +124,7 @@ export default class GlyphFilterWorkflow extends Workflow implements GlyphFilter
     super.delete();
   }
 
-  /**
-   *
-   */
+  /** Resize the glyph filter workflow */
   resize(): void {
     const { gl, resultTexture } = this;
     // bind the resultTexture
@@ -154,24 +144,21 @@ export default class GlyphFilterWorkflow extends Workflow implements GlyphFilter
   }
 
   /**
-   * @param mode
+   * Set the draw mode
+   * @param mode - the draw mode
    */
   override setMode(mode: number): void {
     this.mode = mode as 1 | 2;
     super.setMode(mode);
   }
 
-  /**
-   *
-   */
+  /** Bind the resultant computed texture to a uniform texture that can be accessed by the glyph shaders */
   bindResultTexture(): void {
     const { gl } = this;
     gl.bindTexture(gl.TEXTURE_2D, this.resultTexture);
   }
 
-  /**
-   *
-   */
+  /** Bind the quad framebuffer */
   bindQuadFrameBuffer(): void {
     const { context, gl } = this;
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.quadFramebuffer);
@@ -183,9 +170,7 @@ export default class GlyphFilterWorkflow extends Workflow implements GlyphFilter
     this.indexOffset = 0;
   }
 
-  /**
-   *
-   */
+  /** Bind the result framebuffer */
   bindResultFramebuffer(): void {
     const { context, gl } = this;
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.resultFramebuffer);
@@ -198,16 +183,17 @@ export default class GlyphFilterWorkflow extends Workflow implements GlyphFilter
   }
 
   /**
-   * @param featureGuide
-   * @param _interactive
+   * Draw the glyph filter features to the compute texture
+   * @param feature - feature to draw
+   * @param _interactive - whether or not the feature is interactive
    */
-  draw(featureGuide: GlyphFeature, _interactive = false): void {
+  draw(feature: GlyphFeature, _interactive = false): void {
     const { gl, context, mode, uniforms, indexOffset } = this;
     const { type } = context;
     // set current indexOffset
     gl.uniform1f(uniforms.uIndexOffset, indexOffset);
     // grab variables
-    const { featureCode, filterCount, filterOffset, source, size } = featureGuide;
+    const { featureCode, filterCount, filterOffset, source, size } = feature;
     const { glyphFilterBuffer, glyphFilterIDBuffer, filterVAO } = source;
     // set feature code
     if (type === 1) {

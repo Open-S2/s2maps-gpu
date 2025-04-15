@@ -20,10 +20,10 @@ export default {
     },
     mapReady: Function as PropType<(s2map: S2Map) => void>
   },
-  setup ({ mapOptions, mapReady }) {
+  setup ({ mapOptions, mapReady }): { container: Ref<HTMLElement | undefined>, mapInstance: Ref<S2Map | null> } {
     mapOptions = toRaw(mapOptions)
     const container = ref<HTMLElement>()
-    const mapInstance = ref<S2Map | null>(null)
+    const mapInstance = ref<S2Map | null>(null) as Ref<S2Map | null>
 
     onMounted(async () => {
       const { S2Map } = await import('s2')

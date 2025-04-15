@@ -1,9 +1,17 @@
 import * as mat4 from './mat4';
-import { EARTH_RADIUS, EARTH_RADIUS_EQUATORIAL, EARTH_RADIUS_POLAR, degToRad } from 'gis-tools';
+import {
+  EARTH_RADIUS,
+  EARTH_RADIUS_EQUATORIAL,
+  EARTH_RADIUS_POLAR,
+  degToRad,
+  mercatorLatScale,
+  pointFromLonLatGL,
+  pointMulScalar,
+  pointNormalize,
+  pxToLL,
+} from 'gis-tools';
 import { cursorToLonLatS2, cursorToLonLatWM } from './cursorToLonLat';
 import { getTilesS2, getTilesWM } from './getTiles';
-import { mercatorLatScale, pxToLL } from 'geometry/wm';
-import { pointFromLonLatGL, pointMulScalar, pointNormalize } from 'gis-tools';
 
 import type Camera from '..';
 import type { MapOptions } from 'ui/s2mapUI';
@@ -11,7 +19,15 @@ import type { Point3D, VectorPoint } from 'gis-tools';
 import type { Projection, StyleDefinition } from 'style/style.spec';
 
 /**
+ * # View
  *
+ * The view of the map
+ * Inputs are:
+ * - `lon`: the longitude of the map
+ * - `lat`: the latitude of the map
+ * - `zoom`: the zoom level of the map
+ * - `bearing`: the bearing/compass of the map camera
+ * - `pitch`: the pitch/vertical-angle of the map camera
  */
 export interface View {
   /** the longitude of the map */
@@ -25,14 +41,15 @@ export interface View {
   /** pitch/vertical-angle of the map camera */
   pitch?: number;
 }
-
-/**
- *
- */
+/** The type of matrix. Either `m` (meters) or `km` (kilometers) */
 export type MatrixType = 'm' | 'km'; // meters or kilometers
 
 /**
+ * # Projector
  *
+ * Maintain state of the camera, view, zoom, and other parameters that control how we see the map.
+ * Also used as a tool to find the tiles that are currently visible.
+ * @see {@link Camera}
  */
 export default class Projector {
   camera: Camera;
@@ -71,8 +88,8 @@ export default class Projector {
   multiplier = 1;
   dirty = true;
   /**
-   * @param config
-   * @param camera
+   * @param config - Map Options
+   * @param camera - Camera
    */
   constructor(config: MapOptions, camera: Camera) {
     const { canvasMultiplier, positionalZoom, noClamp, style } = config;
@@ -89,9 +106,7 @@ export default class Projector {
 
   /* API */
 
-  /**
-   *
-   */
+  /** Reset the projector. This forces a re-calculation of it's internal data like matrices before rendering */
   reset(): void {
     if (!this.dirty) {
       this.dirty = true;
@@ -99,10 +114,11 @@ export default class Projector {
     }
   }
 
-  /// Input is the pixel position (0->width, 0->height). Convert to -1->1 for the GPU
   /**
-   * @param x
-   * @param y
+   * Set the mouse position on the canvas for potential interactions
+   * Input is the pixel position (0->width, 0->height). Convert to -1->1 for the GPU
+   * @param x - x mouse position
+   * @param y - y mouse position
    */
   setMousePosition(x: number, y: number): void {
     const { x: width, y: height } = this.aspect;
@@ -111,7 +127,8 @@ export default class Projector {
   }
 
   /**
-   * @param state
+   * Set the state of the current feature
+   * @param state - 0: none, 1: hover, 2: click
    */
   setFeatureState(state: 0 | 1 | 2): void {
     this.view[12] = state;
@@ -119,7 +136,8 @@ export default class Projector {
   }
 
   /**
-   * @param id
+   * Set the current feature that's under the mouse
+   * @param id - the id of the feature
    */
   setCurrentFeature(id: number): void {
     this.view[13] = id;
@@ -127,8 +145,9 @@ export default class Projector {
   }
 
   /**
-   * @param style
-   * @param ignorePosition
+   * Set the style parameters
+   * @param style - user defined style params
+   * @param ignorePosition - if set, do not update the view
    */
   setStyleParameters(style: StyleDefinition, ignorePosition: boolean): void {
     const { min, max } = Math;
@@ -172,14 +191,11 @@ export default class Projector {
   }
 
   /**
-   * @param root0
-   * @param root0.zoom
-   * @param root0.lon
-   * @param root0.lat
-   * @param root0.bearing
-   * @param root0.pitch
+   * Update the view
+   * @param view - the new view
    */
-  setView({ zoom, lon, lat, bearing, pitch }: View): void {
+  setView(view: View): void {
+    const { zoom, lon, lat, bearing, pitch } = view;
     this.#setView({
       zoom: zoom ?? this.zoom,
       lon: lon ?? this.lon,
@@ -189,9 +205,7 @@ export default class Projector {
     });
   }
 
-  /**
-   *
-   */
+  /** @returns the amount the zoom has changed since the last update */
   zoomChange(): number {
     const { zoom, prevZoom } = this;
     const { floor } = Math;
@@ -199,15 +213,18 @@ export default class Projector {
   }
 
   /**
-   * @param zoom
+   * Get a zoom scale, if no zoom is provided, use the current zoom
+   * @param zoom - the zoom level
+   * @returns the zoom scale
    */
   zoomScale(zoom: number = this.zoom): number {
     return Math.pow(2, zoom);
   }
 
   /**
-   * @param width
-   * @param height
+   * Resize the canvas. So we need to update our view's aspect
+   * @param width - new width
+   * @param height - new height
    */
   resize(width: number, height: number): void {
     this.view[6] = this.aspect.x = width;
@@ -218,11 +235,11 @@ export default class Projector {
     this.reset();
   }
 
-  // user scrolled
   /**
-   * @param zoomInput
-   * @param canvasX
-   * @param canvasY
+   * The user has scrolled or two finger pinched
+   * @param zoomInput - the amount the user scrolled
+   * @param canvasX - the x position on the canvas
+   * @param canvasY - the y position on the canvas
    */
   onZoom(zoomInput: number, canvasX: number, canvasY: number): void {
     const { positionalZoom, multiplier, aspect } = this;
@@ -250,12 +267,12 @@ export default class Projector {
     }
   }
 
-  // user mouse/touch input (or swipe animation)
   /**
-   * @param movementX
-   * @param movementY
-   * @param multiplierX
-   * @param multiplierY
+   * User mouse/touch input (or swipe animation)
+   * @param movementX - the change in x position
+   * @param movementY - the change in y position
+   * @param multiplierX - the multiplier for the x axis
+   * @param multiplierY - the multiplier for the y axis
    */
   onMove(movementX = 0, movementY = 0, multiplierX?: number, multiplierY?: number): void {
     this.#setMove(movementX, movementY);
@@ -296,10 +313,12 @@ export default class Projector {
     }
   }
 
-  // x and y are the distances from the center of the screen
   /**
-   * @param xOffset
-   * @param yOffset
+   * Get the lon-lat based on the mouse position
+   * x and y are the distances from the center of the screen
+   * @param xOffset - x offset
+   * @param yOffset - y offset
+   * @returns longitude and latitude at the mouse position
    */
   cursorToLonLat(xOffset: number, yOffset: number): undefined | VectorPoint {
     const { projection, lon, lat, zoom, tileSize, multiplier } = this;
@@ -308,11 +327,13 @@ export default class Projector {
     return cursorToLonLatWM(lon, lat, xOffset, yOffset, zoom, tileSize / multiplier);
   }
 
-  // S2 -> type of meters or kilometers
-  // WM -> scale and offset
   /**
-   * @param typeOrScale
-   * @param offset
+   * Get the matrix for either a global state (S2) or a specific tile (WM)
+   * - S2 -> type of meters or kilometers
+   * - WM -> scale and offset
+   * @param typeOrScale - type or scale
+   * @param offset - offset in pixels
+   * @returns the matrix
    */
   getMatrix(typeOrScale: number | MatrixType, offset: VectorPoint = { x: 0, y: 0 }): Float32Array {
     if (typeof typeOrScale === 'number') {
@@ -329,9 +350,7 @@ export default class Projector {
     return mat4.clone(matrix);
   }
 
-  /**
-   *
-   */
+  /** @returns the tiles in this projector's current view */
   getTilesInView(): bigint[] {
     // (Tile IDs)
     const { projection, radius, zoom, zoomOffset, lon, lat } = this;
@@ -343,11 +362,13 @@ export default class Projector {
   }
 
   /**
-   * @param lon
-   * @param lat
-   * @param zoom
-   * @param bearing
-   * @param pitch
+   * Get the tiles at a specific position
+   * @param lon - longitude
+   * @param lat - latitude
+   * @param zoom - zoom
+   * @param bearing - bearing
+   * @param pitch - pitch
+   * @returns the tiles in view
    */
   getTilesAtPosition(
     lon: number,
@@ -369,8 +390,9 @@ export default class Projector {
   /* INTERNAL FUNCTIONS */
 
   /**
-   * @param movementX
-   * @param movementY
+   * Handles moving the camera. Update state for the GPU
+   * @param movementX - the change in x position
+   * @param movementY - the change in y position
    */
   #setMove(movementX: number, movementY: number): void {
     const { view, aspect } = this;
@@ -384,7 +406,8 @@ export default class Projector {
   }
 
   /**
-   * @param view
+   * Update the view
+   * @param view - the new view
    */
   #setView(view: Required<View>): void {
     // clamp the view based upon the current settings
@@ -425,7 +448,8 @@ export default class Projector {
   }
 
   /**
-   * @param view
+   * Clamp the view
+   * @param view - the new view
    */
   #clampView(view: Required<View>): void {
     const { noClamp, constrainZoomToFill, projection } = this;
@@ -443,7 +467,8 @@ export default class Projector {
   }
 
   /**
-   * @param view
+   * Clamp the zoom
+   * @param view - the new view
    */
   #clampZoom(view: Required<View>): void {
     const { minzoom, maxzoom } = this;
@@ -451,7 +476,8 @@ export default class Projector {
   }
 
   /**
-   * @param view
+   * Clamp the latitude
+   * @param view - the new view
    */
   #clampLat(view: Required<View>): void {
     const { maxLatPosition, minLatPosition, zoom } = this;
@@ -467,7 +493,8 @@ export default class Projector {
   }
 
   /**
-   * @param view
+   * Clamp the view by the constraints provided by the projection and/or user style settings
+   * @param view - the new view
    */
   #clampConstraint(view: Required<View>): void {
     const { aspect, tileSize } = this;
@@ -483,7 +510,9 @@ export default class Projector {
   }
 
   /**
-   * @param input
+   * Clamp longitude and bearing between [-180,180]
+   * @param input - the longitude
+   * @returns clamped longitude
    */
   #clampDeg(input: number): number {
     while (input >= 180) {
@@ -495,16 +524,18 @@ export default class Projector {
     return input;
   }
 
-  // * S2
+  /* S2 */
 
   /**
-   * @param type
-   * @param updateEye
-   * @param lon
-   * @param lat
-   * @param zoom
-   * @param bearing
-   * @param _pitch
+   * Get the matrix for the S2 projection
+   * @param type - the matrix type (meters or kilometers)
+   * @param updateEye - whether to update the eye
+   * @param lon - longitude
+   * @param lat - latitude
+   * @param zoom - zoom
+   * @param bearing - bearing
+   * @param _pitch - pitch
+   * @returns S2 matrix
    */
   #getMatrixS2(
     type: MatrixType,
@@ -536,10 +567,12 @@ export default class Projector {
   }
 
   /**
-   * @param lon
-   * @param lat
-   * @param zoom
-   * @param update
+   * Update the eye position given a longitude, latitude and zoom
+   * @param lon - longitude
+   * @param lat - latitude
+   * @param zoom - zoom
+   * @param update - whether to update the eye. If false, we only needed the resultant eye for other computations
+   * @returns new eye
    */
   #updateEyeS2(lon: number, lat: number, zoom: number, update = true): VectorPoint {
     const { radius, zTranslateEnd, zTranslateStart, zoomEnd } = this;
@@ -560,8 +593,10 @@ export default class Projector {
   }
 
   /**
-   * @param type
-   * @param zoom
+   * Get the S2 projection matrix
+   * @param type - the matrix type (meters or kilometers)
+   * @param zoom - zoom
+   * @returns S2 projection matrix
    */
   #getProjectionMatrixS2(type: MatrixType, zoom: number = this.zoom): Float32Array {
     const { aspect, tileSize, multiplier } = this;
@@ -579,13 +614,15 @@ export default class Projector {
     return matrix;
   }
 
-  // * WM
+  /* WM */
 
   /**
-   * @param scale
-   * @param offset
-   * @param bearing
-   * @param _pitch
+   * Get the matrix for the WM projection
+   * @param scale - scale shift
+   * @param offset - offset
+   * @param bearing - bearing
+   * @param _pitch - pitch
+   * @returns WM matrix
    */
   #getMatrixWM(
     scale: number,
@@ -610,7 +647,9 @@ export default class Projector {
   }
 
   /**
-   * @param scale
+   * Get the WM projection matrix
+   * @param scale - scale shift
+   * @returns WM projection matrix
    */
   #getProjectionMatrixWM(scale: number): Float32Array {
     const { aspect, tileSize, multiplier } = this;

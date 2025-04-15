@@ -1,181 +1,211 @@
 import type { ClusterOptions } from 'workers/source/pointCluster';
 import type { ColorArray } from './color';
 import type { EaseType } from './easingFunctions';
-import type { JSONVTOptions } from 'workers/source/jsonVT';
 import type { View } from 'ui/camera/projector';
-import type { BBox, Point as FlatPoint, JSONCollection, Projection, Properties } from 'gis-tools';
+import type {
+  Attributions,
+  JSONCollection,
+  Point,
+  Projection,
+  Properties,
+  TileStoreOptions,
+} from 'gis-tools';
+import type {
+  Center,
+  Encoding,
+  Extensions,
+  Face,
+  FaceBounds,
+  ImageExtensions,
+  LayersMetaData,
+  Scheme,
+  SourceType,
+  TileStatsMetadata,
+  VectorLayer,
+  WMBounds,
+} from 's2-tilejson';
 import type { Filter, FilterFunction } from 'style/parseFilter';
 
-export type { JSONVTOptions } from 'workers/source/jsonVT';
 export type { ClusterOptions } from 'workers/source/pointCluster';
-export type { BBox, JSONCollection, VectorPoint, Properties, Projection } from 'gis-tools';
+export type {
+  BBox,
+  JSONCollection,
+  VectorPoint,
+  Properties,
+  Projection,
+  TileStoreOptions,
+} from 'gis-tools';
 export type { Filter, FilterFunction } from './parseFilter';
 export type { EaseType } from './easingFunctions';
 export type { MapOptions } from 'ui/s2mapUI';
 export type { ColorArray } from './color';
 export type { View } from 'ui/camera/projector';
+export type * from 's2-tilejson';
 
 /**
  *
  */
-export type ImageFormats =
-  | 'raw'
-  | 'png'
-  | 'jpg'
-  | 'jpeg'
-  | 'jpe'
-  | 'webp'
-  | 'avif'
-  | 'gif'
-  | 'svg'
-  | 'bmp'
-  | 'tiff'
-  | 'ico'
-  | 'cur';
-
-/**
- *
- */
-export type Format = 'zxy' | 'tzxy' | 'fzxy' | 'tfzxy';
-
-/**
- *
- */
-export type LayerMetaData = Record<
-  string,
-  {
-    // layer
-    minzoom: number;
-    maxzoom: number;
-    fields: Record<string, Array<string | number | boolean>>; // max fields size of 50
-  }
->;
-
-/**
- *
- */
-export type Attributions = Record<string, string>;
-/**
- *
- */
-export type FaceBounds = Record<number, Record<number, BBox>>;
-/**
- *
- */
-export type SourceType =
-  | 'vector'
-  | 'json'
-  | 'raster'
-  | 'raster-dem'
-  | 'sensor'
-  | 'overlay'
-  | 'markers';
-/**
- *
- */
-export interface VectorLayer {
-  id: string;
-  description: string;
-  minzoom?: number;
-  maxzoom?: number;
-}
-/**
- *
- */
-export interface SourceMetadata extends JSONVTOptions, ClusterOptions {
-  path?: string;
+export interface OptionalizedTileMetadata {
+  /** The version of the s2-tilejson spec */
+  s2tilejson?: string;
+  /** The version of the data */
+  version?: string;
+  /** The name of the data */
+  name?: string;
+  /** The extension when requesting a tile */
+  extension?: Extensions;
+  /** The scheme of the data */
+  scheme?: Scheme;
+  /** The description of the data */
+  description?: string;
+  /** The type of the data */
   type: SourceType;
-  /** The file extension of the source. e.g. `pbf`, `png`, etc. */
-  extension?: 'geojson' | 'json' | 's2json' | 'pbf' | ImageFormats;
-  /** The file extension of the source. e.g. `pbf`, `png`, etc. */
-  fileType?: 'geojson' | 'json' | 's2json' | 'pbf' | ImageFormats;
-  /** The encoding of the source. Helpful to let the server know when the source is compressed if said data is a large blob */
-  encoding?: 'gz' | 'br' | 'none';
-  /** Tile fetching bounds. Helpful to not make unecessary requests for tiles we know don't exist */
-  bounds?: [minX: number, minY: number, maxX: number, maxY: number];
-  /** The bounds of the source. Used to determine the bounds of an S2 source */
-  faceBounds?: FaceBounds;
-  /** Useful to determine if its `time-series`, `S2`, or `WM` */
-  format?: Format | 'pbf';
-  /** Used by older tiling engines. Helps specify where the tile's [0,0] starts on the y-axis */
-  scheme?: 'xyz' | 'tms';
-  /** The size of the tile in pixels if some form of raster data */
-  size?: number; // required by raster type sources
-  /**
-   * The names and URLs of the data source
-   *
-   * ex.
-   * ```json
-   * "attributions": {
-   *    "NASA": "https://www.nasa.gov/"
-   * }
-   * ```
-   */
-  attributions?: Attributions;
-  /**
-   * The time interval in milliseconds each frame is.
-   * Used by sensor sources.
-   */
-  interval?: number;
-  /** Specify the lower zoom limit at which the data exists in */
+  /** The encoding of the data */
+  encoding?: Encoding;
+  /** List of faces that have data */
+  faces?: Face[];
+  /** WM Tile fetching bounds. Helpful to not make unecessary requests for tiles we know don't exist */
+  bounds?: WMBounds;
+  /** S2 Tile fetching bounds. Helpful to not make unecessary requests for tiles we know don't exist */
+  facesbounds?: FaceBounds;
+  /** minzoom at which to request tiles. [default=0] */
   minzoom?: number;
-  /** Specify the upper zoom limit at which the data exists in */
+  /** maxzoom at which to request tiles. [default=27] */
   maxzoom?: number;
-  /** Assuming S2 data, specify which faces the data exists in */
-  faces?: number[];
-  layers?: LayerMetaData;
-  /**
-   * Specify the name of the source in order to access it.
-   * This is useful if you want to make requests without first having to request the metadata
-   */
-  sourceName?: string;
-  /** If you want to directly inject the geojson or s2json data */
-  data?: JSONCollection;
-  /** If the data is filled with a huge collection of points, you can specify to cluster the data before displaying it. */
-  cluster?: boolean;
-  // TODO: No idea why I have to add this manually when extending JSONVTOptions and ClusterOptions
-  // missing cluster properties
-  /** cluster radius in pixels */
-  radius?: number;
-  /** tile extent (radius is calculated relative to it) */
-  extent?: number;
-  /** size of the KD-tree leaf node, effects performance */
-  nodeSize?: number;
-  // missing json-vt properties
-  /** manually set the projection, otherwise it defaults to whatever the data type is */
-  projection?: Projection;
-  /** tile buffer on each side in pixels */
-  indexMaxzoom?: number;
-  /** max number of points per tile in the tile index */
-  indexMaxPoints?: number;
-  /** simplification tolerance (higher means simpler) */
-  tolerance?: number;
-  /** tile buffer on each side so lines and polygons don't get clipped */
-  buffer?: number;
-  /** Other build engines place layer data inside a json string */
-  json?: string;
-  /** A prebuilt tiling engine will have created this already */
+  /** The center of the data */
+  center?: Center;
+  /** { ['human readable string']: 'href' } */
+  attributions?: Attributions;
+  /** Track layer metadata */
+  layers?: LayersMetaData;
+  /** Track tile stats for each face and total overall */
+  tilestats?: TileStatsMetadata;
+  /** Old spec, track basic layer metadata */
   vector_layers?: VectorLayer[];
+  /** Allow additional properties */
+  [key: string]: unknown;
+}
+
+/**
+ *
+ */
+export type SourceMetadata = OptionalizedTileMetadata &
+  ClusterOptions &
+  TileStoreOptions & {
+    path?: string;
+
+    // Mapbox TileJSON fields
+    /** Array of tile URL templates. */
+    tiles?: string[];
+
+    /** The size of the tile in pixels if some form of raster data */
+    size?: number; // required by raster type sources
+    /**
+     * The time interval in milliseconds each frame is.
+     * Used by sensor sources.
+     */
+    interval?: number;
+    /**
+     * Specify the name of the source in order to access it.
+     * This is useful if you want to make requests without first having to request the metadata
+     */
+    sourceName?: string;
+    /** If you want to directly inject the geojson or s2json data */
+    data?: JSONCollection;
+    /** If the data is filled with a huge collection of points, you can specify to cluster the data before displaying it. */
+    cluster?: boolean;
+    /** Other build engines place layer data inside a json string */
+    json?: string;
+  };
+/** JSON Source allows inlined geometry in your style */
+export interface JSONSource {
+  type: 'json';
+  data: JSONCollection;
+}
+/** Local Source has predefined geometry you can use */
+export type LocalSource = '_local';
+/** A Marker source is a local cache that specifically tracks and maintains markers */
+export interface MarkerSource {
+  type: 'markers';
+  path: '_markers';
+  data: JSONCollection;
 }
 /**
  *
  */
-export type Source = string | SourceMetadata;
+export type Source = string | SourceMetadata | JSONSource | LocalSource | MarkerSource;
 /**
+ * Where to fetch data and JSON guides on how to fetch them. If JSON data, it can be included directly in the source
  *
+ * ex.
+ * ```json
+ * "sources": {
+        "countries": "/s2json/countriesHD.s2json",
+        "earthquakes": "/s2json/earthquakes.s2json"
+      }
+ * ```
  */
 export type Sources = Record<string, Source>; // address to source or source itself
 
 /** GLYPHS, FONTS, SPRITES, AND ICONS */
 
-/** { fontName: url, iconName: url } */
+/**
+ * Glyph Data (both fonts and icons) and how to fetch them
+ *
+ * ex.
+ * ```json
+ * "glyphs": {
+ *  "robotoMedium": "/api/glyphs-v2/RobotoMedium",
+ *  "streets": "/api/glyphs-v2/streets"
+ * }
+ * ```
+ */
 export type Glyphs = Record<string, string>;
-/** { fontName: url } */
+/**
+ * Fonts and how to fetch them
+ *
+ * ex.
+ * ```json
+ * "fonts": {
+ *  "robotoMedium": "/api/glyphs-v2/RobotoMedium"
+ * }
+ * ```
+ */
 export type Fonts = Glyphs;
-/**  { iconName: url } */
+/**
+ * Icons and how to fetch them
+ *
+ * ex.
+ * ```json
+ * "icons": {
+ *  "streets": "/api/glyphs-v2/streets"
+ * }
+ * ```
+ */
 export type Icons = Glyphs;
 /**
- * { spriteName: { path: url, fileType: 'png' | 'webp' | 'avif' | ... } }
+ * Sprites names and where to fetch
+ *
+ * Sprites have a default expectancy of a `png` image.
+ *
+ * If you want to use a different format, you can use an object instead of a string.
+ *
+ * ex.
+ * ```json
+ * "sprites": {
+ *    "streets": "/sprites/streets/sprite@2x"
+ * }
+ * ```
+ *
+ * ex.
+ * ```json
+ * "sprites": {
+ *    "streets": {
+ *      "path": "/sprites/streets/sprite@2x",
+ *      "fileType": "jpg"
+ *    }
+ * }
+ * ```
  */
 export type Sprites = Record<
   string,
@@ -184,7 +214,7 @@ export type Sprites = Record<
       /** The URL path to the sprite */
       path: string;
       /** The file type of the sprite. e.g. `png`, `jpg`, `webp`, etc. */
-      fileType?: ImageFormats;
+      fileType?: ImageExtensions;
     }
 >;
 
@@ -207,18 +237,11 @@ export type Sprites = Record<
 /** Matches the `CSSStyleDeclaration['cursor']` property */
 export type Cursor = CSSStyleDeclaration['cursor'];
 
-/**
- *
- */
+/** The workflow takes a layer and builds a function that modifies a feature into renderable data */
 export type LayerWorkerFunction<U> = (code: number[], properties: Properties, zoom: number) => U;
-
-/**
- *
- */
+/** An workflow interpretor to create code for the GPU to translate into renderable data */
 export type BuildCodeFunction = (zoom: number, properties: Properties) => [number[], number[]];
-/**
- *
- */
+/** An workflow interpretor to create code for the GPU to translate into renderable data */
 export type BuildCodeFunctionZoom = (zoom: number) => number[];
 
 /**
@@ -460,22 +483,16 @@ export interface FeatureState<T extends NotNullOrObject> {
   input: T | Property<T>;
 }
 
-/**
- *
- */
+/** A value that is not null or an object */
 export type NotNullOrObject =
   | string
   | number
   | boolean
   | bigint
   | Array<string | number | boolean | bigint>;
-/**
- *
- */
+/** An object that is not null. Helper to define what a value actually is */
 export type ValueType<T> = T extends NotNullOrObject ? T : never;
-/**
- *
- */
+/** The input must be either a number or a color */
 export type NumberColor<T> = T extends number | string ? T : never;
 
 /**
@@ -849,9 +866,7 @@ export interface PropertyOnlyStep<T extends NotNullOrObject> {
   fallback?: T | Property<T>;
 }
 
-/**
- *
- */
+/** The layer type's that can be used. */
 export type LayerType =
   | 'fill'
   | 'glyph'
@@ -862,9 +877,7 @@ export type LayerType =
   | 'hillshade'
   | 'sensor'
   | 'shade';
-/**
- *
- */
+/** Layer types that require data to render */
 export type LayerDataType =
   | 'fill'
   | 'glyph'
@@ -875,10 +888,7 @@ export type LayerDataType =
   | 'hillshade'
   | 'sensor';
 
-// Found in style.json
-/**
- *
- */
+/** The base layer style. Used by almost all layers to define how a layer should be rendered */
 export interface LayerStyleBase<M = unknown> {
   type?: LayerType;
   /** The name of the layer - useful for sorting a layer on insert or for removal */
@@ -931,10 +941,7 @@ export interface LayerStyleBase<M = unknown> {
   /** Additional metadata. Used by style generators. */
   metadata?: M;
 }
-// refines the style.json to ensure all variables exist that need to
-/**
- *
- */
+/** refines the style.json to ensure all variables exist that need to */
 export interface LayerDefinitionBase {
   type: LayerType;
   name: string;
@@ -949,10 +956,7 @@ export interface LayerDefinitionBase {
   interactive?: boolean;
   opaque?: boolean;
 }
-// uses definition to create a guide for the workflow (program/pipeline)
-/**
- *
- */
+/** uses definition to create a guide for the workflow (program/pipeline) */
 export interface LayerWorkflowGuideBase {
   sourceName: string;
   layerIndex: number;
@@ -962,10 +966,7 @@ export interface LayerWorkflowGuideBase {
   interactive: boolean;
   opaque: boolean;
 }
-// worker takes the definition and creates a layer to prep input data for workflow (program/pipeline)
-/**
- *
- */
+/** worker takes the definition and creates a layer to prep input data for workflow (program/pipeline) */
 export interface LayerWorkerBase {
   type: LayerType;
   name: string;
@@ -976,10 +977,7 @@ export interface LayerWorkerBase {
   maxzoom: number;
   filter: FilterFunction;
 }
-
-/**
- *
- */
+/** worker takes the definition and creates a layer to prep input data for workflow (program/pipeline) */
 export interface LayerWorkerBaseRaster {
   type: LayerType;
   name: string;
@@ -989,16 +987,39 @@ export interface LayerWorkerBaseRaster {
   minzoom: number;
   maxzoom: number;
 }
-
-/**
- *
- */
+/** Default case for unknown layer types, should never be used */
 export type UnkownLayerStyle = LayerStyleBase;
 
 // FILL //
 
 /**
+ * Fill type
  *
+ * Base Properties:
+ * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
+ * - `source` - the source of the data use
+ * - `layer` - the source's layer. Defaults to "default" for JSON data
+ * - `minzoom` - the minimum zoom level at which the layer will be visible
+ * - `maxzoom` - the maximum zoom level at which the layer will be visible
+ * - `filter` - a filter function to filter out features from the source layer
+ * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+ * - `visible` - whether the layer is visible or not
+ * - `metadata` - additional metadata. Used by style generators
+ *
+ * Optional paint properties:
+ * - `color`
+ * - `opacity`
+ *
+ * Optional layout properties:
+ * - `pattern`
+ * - `patternMovement`
+ * - `patternFamily`
+ *
+ * Optional properties:
+ * - `invert` - if true, invert where the fill is drawn to on the map
+ * - `interactive` - if true, when hovering over the fill, the property data will be sent to the UI via an Event
+ * - `cursor` - the cursor to use when hovering over the fill
+ * - `opaque` - if true, the fill will be drawn opaque and not allow transparency. Used for performance gains.
  */
 export interface FillStyle extends LayerStyleBase {
   /**
@@ -1034,7 +1055,7 @@ export interface FillStyle extends LayerStyleBase {
   // paint
   /**
    * A PAINT `Property`.
-   * @defaultValue `"rgba(0, 0, 0, 1)"`
+   * @default `"rgba(0, 0, 0, 1)"`
    *
    * ex.
    *
@@ -1084,7 +1105,7 @@ export interface FillStyle extends LayerStyleBase {
   // layout
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @defaultValue `undefined`
+   * @default `undefined`
    *
    * ex.
    *
@@ -1113,7 +1134,7 @@ export interface FillStyle extends LayerStyleBase {
   pattern?: string | PropertyOnlyStep<string>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @defaultValue `false`
+   * @default `false`
    *
    * ex.
    *
@@ -1132,7 +1153,7 @@ export interface FillStyle extends LayerStyleBase {
   patternMovement?: boolean | PropertyOnlyStep<boolean>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @defaultValue `"__images"`
+   * @default `"__images"`
    *
    * If left as the default, the pattern will be searched within any images added to the style. Otherwise,
    * you're most likely using a sprite sheet and you'll need to specify the "family" of the pattern which is the name of the sprite sheet.
@@ -1172,9 +1193,7 @@ export interface FillStyle extends LayerStyleBase {
   /** If true, the fill will be drawn opaque and not allow transparency. Used for performance gains. Defaults to `false` */
   opaque?: boolean;
 }
-/**
- *
- */
+/** Parsed Fill Layer used by a Fill workflow */
 export interface FillDefinition extends LayerDefinitionBase {
   type: 'fill';
   // paint
@@ -1190,25 +1209,19 @@ export interface FillDefinition extends LayerDefinitionBase {
   cursor: Cursor;
   opaque: boolean;
 }
-/**
- *
- */
+/** Parsed Fill Layer used by a Fill Tile Worker */
 export interface FillWorkflowLayerGuide extends LayerWorkflowGuideBase {
   color?: LayerWorkerFunction<ColorArray>;
   opacity?: LayerWorkerFunction<number[]>;
   invert: boolean;
   pattern: boolean;
 }
-/**
- *
- */
+/** Expanded Fill Workflow for WebGPU */
 export interface FillWorkflowLayerGuideGPU extends FillWorkflowLayerGuide {
   layerBuffer: GPUBuffer;
   layerCodeBuffer: GPUBuffer;
 }
-/**
- *
- */
+/** Parsed Fill Layer used by a Fill Tile Worker */
 export interface FillWorkerLayer extends LayerWorkerBase {
   type: 'fill';
   getCode: BuildCodeFunction;
@@ -1224,9 +1237,7 @@ export interface FillWorkerLayer extends LayerWorkerBase {
 // GLYPH //
 
 // TODO: Add opacity
-/**
- *
- */
+/** Anchor position for a glyph layer */
 export type Anchor =
   | 'center'
   | 'left'
@@ -1237,13 +1248,9 @@ export type Anchor =
   | 'top-right'
   | 'bottom-left'
   | 'bottom-right';
-/**
- *
- */
+/** Alignment for a glyph layer */
 export type Alignment = 'auto' | 'center' | 'left' | 'right';
-/**
- *
- */
+/** Placement for a glyph layer */
 export type Placement = 'point' | 'line' | 'line-center-point' | 'line-center-path';
 /**
  *
@@ -1301,7 +1308,7 @@ export interface GlyphStyle extends LayerStyleBase {
   // paint
   /**
    * A PAINT `Property`.
-   * @defaultValue `16`
+   * @default `16`
    *
    * ex.
    *
@@ -1326,7 +1333,7 @@ export interface GlyphStyle extends LayerStyleBase {
   textSize?: number | Property<number>;
   /**
    * A PAINT `Property`.
-   * @defaultValue `"rgba(0, 0, 0, 1)"`
+   * @default `"rgba(0, 0, 0, 1)"`
    *
    * ex.
    *
@@ -1351,7 +1358,7 @@ export interface GlyphStyle extends LayerStyleBase {
   textFill?: string | Property<string>;
   /**
    * A PAINT `Property`.
-   * @defaultValue `"rgba(0, 0, 0, 1)"`
+   * @default `"rgba(0, 0, 0, 1)"`
    *
    * ex.
    *
@@ -1376,7 +1383,7 @@ export interface GlyphStyle extends LayerStyleBase {
   textStroke?: string | Property<string>;
   /**
    * A PAINT `Property`.
-   * @defaultValue `0`
+   * @default `0`
    *
    * ex.
    *
@@ -1401,7 +1408,7 @@ export interface GlyphStyle extends LayerStyleBase {
   textStrokeWidth?: number | Property<number>;
   /**
    * A PAINT `Property`.
-   * @defaultValue `16`
+   * @default `16`
    *
    * ex.
    *
@@ -1427,7 +1434,7 @@ export interface GlyphStyle extends LayerStyleBase {
   // layout
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @defaultValue `"line"`
+   * @default `"line"`
    *
    * Can be `point`, `line`, `line-center-path` or `line-center-point`.
    * Only relavent if geometry is not a point.
@@ -1473,7 +1480,7 @@ export interface GlyphStyle extends LayerStyleBase {
   placement?: Placement | PropertyOnlyStep<Placement>;
   /**
    * A LAYOUT `Property`.
-   * @defaultValue `325`
+   * @default `325`
    *
    * The distance between glyphs. Only relavent if geometry is not a point.
    *
@@ -1500,7 +1507,7 @@ export interface GlyphStyle extends LayerStyleBase {
   spacing?: number | Property<number>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @defaultValue `""` (empty string)
+   * @default `""` (empty string)
    *
    * If applying an array, the first value will be used. If the first value is not found, the second value will be used, and so on.
    *
@@ -1537,7 +1544,7 @@ export interface GlyphStyle extends LayerStyleBase {
   textFamily?: string | string[] | PropertyOnlyStep<string | string[]>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @defaultValue `""` (empty string)
+   * @default `""` (empty string)
    *
    * ex.
    *
@@ -1591,7 +1598,7 @@ export interface GlyphStyle extends LayerStyleBase {
   textField?: string | string[] | PropertyOnlyStep<string | string[]>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @defaultValue `"center"`
+   * @default `"center"`
    *
    * Options are `"center"`, `"left"`, `"right"`, `"top"`, `"bottom"`, `"top-left"`, `"top-right"`, `"bottom-left"`, `"bottom-right"`
    *
@@ -1618,7 +1625,7 @@ export interface GlyphStyle extends LayerStyleBase {
   textAnchor?: Anchor | PropertyOnlyStep<Anchor>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @defaultValue `[0, 0]`
+   * @default `[0, 0]`
    *
    * ex.
    *
@@ -1640,10 +1647,10 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  textOffset?: FlatPoint | PropertyOnlyStep<FlatPoint>;
+  textOffset?: Point | PropertyOnlyStep<Point>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @defaultValue `[0, 0]`
+   * @default `[0, 0]`
    *
    * ex.
    *
@@ -1665,10 +1672,10 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  textPadding?: FlatPoint | PropertyOnlyStep<FlatPoint>;
+  textPadding?: Point | PropertyOnlyStep<Point>;
   /**
    * A LAYOUT `Property`.
-   * @defaultValue `0`
+   * @default `0`
    *
    * ex.
    *
@@ -1693,7 +1700,7 @@ export interface GlyphStyle extends LayerStyleBase {
   textWordWrap?: number | PropertyOnlyStep<number>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @defaultValue `"center"`
+   * @default `"center"`
    *
    * Options are `"center"`, `"left"`, `"right"`, `"auto"`
    *
@@ -1720,7 +1727,7 @@ export interface GlyphStyle extends LayerStyleBase {
   textAlign?: Alignment | PropertyOnlyStep<Alignment>;
   /**
    * A LAYOUT `Property`.
-   * @defaultValue `0`
+   * @default `0`
    *
    * ex.
    *
@@ -1745,7 +1752,7 @@ export interface GlyphStyle extends LayerStyleBase {
   textKerning?: number | PropertyOnlyStep<number>;
   /**
    * A LAYOUT `Property`.
-   * @defaultValue `0`
+   * @default `0`
    *
    * ex.
    *
@@ -1770,7 +1777,7 @@ export interface GlyphStyle extends LayerStyleBase {
   textLineHeight?: number | PropertyOnlyStep<number>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @defaultValue `""` (empty string)
+   * @default `""` (empty string)
    *
    * If applying an array, the first value will be used. If the first value is not found, the second value will be used, and so on.
    *
@@ -1807,7 +1814,7 @@ export interface GlyphStyle extends LayerStyleBase {
   iconFamily?: string | string[] | PropertyOnlyStep<string | string[]>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @defaultValue `""` (empty string)
+   * @default `""` (empty string)
    *
    * ex.
    *
@@ -1861,7 +1868,7 @@ export interface GlyphStyle extends LayerStyleBase {
   iconField?: string | string[] | PropertyOnlyStep<string | string[]>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @defaultValue `"center"`
+   * @default `"center"`
    *
    * Options are `"center"`, `"left"`, `"right"`, `"top"`, `"bottom"`, `"top-left"`, `"top-right"`, `"bottom-left"`, `"bottom-right"`
    *
@@ -1888,7 +1895,7 @@ export interface GlyphStyle extends LayerStyleBase {
   iconAnchor?: Anchor | PropertyOnlyStep<Anchor>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @defaultValue `[0, 0]`
+   * @default `[0, 0]`
    *
    * ex.
    *
@@ -1910,10 +1917,10 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  iconOffset?: FlatPoint | PropertyOnlyStep<FlatPoint>;
+  iconOffset?: Point | PropertyOnlyStep<Point>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @defaultValue `[0, 0]`
+   * @default `[0, 0]`
    *
    * ex.
    *
@@ -1935,7 +1942,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `featureState` - filter based on feature state
    * - `fallback` - if all else fails, use this value
    */
-  iconPadding?: FlatPoint | PropertyOnlyStep<FlatPoint>;
+  iconPadding?: Point | PropertyOnlyStep<Point>;
   // properties
   /**
    * Filter the geometry types that will be drawn.
@@ -1955,9 +1962,7 @@ export interface GlyphStyle extends LayerStyleBase {
   /** the cursor to use when hovering over the glyph. Default "default" */
   cursor?: Cursor;
 }
-/**
- *
- */
+/** Parsed Glyph Layer used by a Glyph workflow */
 export interface GlyphDefinition extends LayerDefinitionBase {
   type: 'glyph';
   // paint
@@ -1972,8 +1977,8 @@ export interface GlyphDefinition extends LayerDefinitionBase {
   textFamily: string | string[] | PropertyOnlyStep<string | string[]>;
   textField: string | string[] | PropertyOnlyStep<string | string[]>;
   textAnchor: Anchor | PropertyOnlyStep<Anchor>;
-  textOffset: FlatPoint | PropertyOnlyStep<FlatPoint>;
-  textPadding: FlatPoint | PropertyOnlyStep<FlatPoint>;
+  textOffset: Point | PropertyOnlyStep<Point>;
+  textPadding: Point | PropertyOnlyStep<Point>;
   textWordWrap: number | PropertyOnlyStep<number>;
   textAlign: Alignment | PropertyOnlyStep<Alignment>;
   textKerning: number | PropertyOnlyStep<number>;
@@ -1981,8 +1986,8 @@ export interface GlyphDefinition extends LayerDefinitionBase {
   iconFamily: string | string[] | PropertyOnlyStep<string | string[]>;
   iconField: string | string[] | PropertyOnlyStep<string | string[]>;
   iconAnchor: Anchor | PropertyOnlyStep<Anchor>;
-  iconOffset: FlatPoint | PropertyOnlyStep<FlatPoint>;
-  iconPadding: FlatPoint | PropertyOnlyStep<FlatPoint>;
+  iconOffset: Point | PropertyOnlyStep<Point>;
+  iconPadding: Point | PropertyOnlyStep<Point>;
   // properties
   geoFilter: Array<'point' | 'line' | 'poly'>;
   overdraw: boolean;
@@ -1991,24 +1996,18 @@ export interface GlyphDefinition extends LayerDefinitionBase {
   viewCollisions: boolean;
   cursor: Cursor;
 }
-/**
- *
- */
+/** Glyph Layer used by a Glyph Tile Worker */
 export interface GlyphWorkflowLayerGuide extends LayerWorkflowGuideBase {
   cursor: Cursor;
   overdraw: boolean;
   viewCollisions: boolean;
 }
-/**
- *
- */
+/** Extended Glyph Layer used by WebGPU */
 export interface GlyphWorkflowLayerGuideGPU extends GlyphWorkflowLayerGuide {
   layerBuffer: GPUBuffer;
   layerCodeBuffer: GPUBuffer;
 }
-/**
- *
- */
+/** Glyph Layer used by a Glyph Tile Worker */
 export interface GlyphWorkerLayer extends LayerWorkerBase {
   type: 'glyph';
   textGetCode: BuildCodeFunction;
@@ -2023,8 +2022,8 @@ export interface GlyphWorkerLayer extends LayerWorkerBase {
   textFamily: LayerWorkerFunction<string | string[]>;
   textField: LayerWorkerFunction<string | string[]>;
   textAnchor: LayerWorkerFunction<string>;
-  textOffset: LayerWorkerFunction<FlatPoint>;
-  textPadding: LayerWorkerFunction<FlatPoint>;
+  textOffset: LayerWorkerFunction<Point>;
+  textPadding: LayerWorkerFunction<Point>;
   textWordWrap: LayerWorkerFunction<number>;
   textAlign: LayerWorkerFunction<Alignment>;
   textKerning: LayerWorkerFunction<number>;
@@ -2032,8 +2031,8 @@ export interface GlyphWorkerLayer extends LayerWorkerBase {
   iconFamily: LayerWorkerFunction<string | string[]>;
   iconField: LayerWorkerFunction<string | string[]>;
   iconAnchor: LayerWorkerFunction<Anchor>;
-  iconOffset: LayerWorkerFunction<FlatPoint>;
-  iconPadding: LayerWorkerFunction<FlatPoint>;
+  iconOffset: LayerWorkerFunction<Point>;
+  iconPadding: LayerWorkerFunction<Point>;
   // properties
   geoFilter: Array<'point' | 'line' | 'poly'>;
   overdraw: boolean;
@@ -2199,9 +2198,7 @@ export interface HeatmapStyle extends LayerStyleBase {
    */
   geoFilter?: Array<'point' | 'line' | 'poly'>;
 }
-/**
- *
- */
+/** A parsed heatmap guide that injects defaults for missing properties */
 export interface HeatmapDefinition extends LayerDefinitionBase {
   type: 'heatmap';
   // paint
@@ -2213,15 +2210,11 @@ export interface HeatmapDefinition extends LayerDefinitionBase {
   colorRamp: 'sinebow' | 'sinebow-extended' | Array<{ stop: number; color: string }>;
   geoFilter: Array<'point' | 'line' | 'poly'>;
 }
-/**
- *
- */
+/** A built heatmap guide used by the heatmap workflow. */
 export interface HeatmapWorkflowLayerGuide extends LayerWorkflowGuideBase {
   colorRamp: WebGLTexture;
 }
-/**
- *
- */
+/** An extended heatmap guide used by the heatmap workflow for WebGPU */
 export interface HeatmapWorkflowLayerGuideGPU extends LayerWorkflowGuideBase {
   colorRamp: GPUTexture;
   layerBuffer: GPUBuffer;
@@ -2230,9 +2223,7 @@ export interface HeatmapWorkflowLayerGuideGPU extends LayerWorkflowGuideBase {
   renderTarget: GPUTexture;
   renderPassDescriptor: GPURenderPassDescriptor;
 }
-/**
- *
- */
+/** A heatmap Tile Worker layer */
 export interface HeatmapWorkerLayer extends LayerWorkerBase {
   type: 'heatmap';
   getCode: BuildCodeFunction;
@@ -2241,13 +2232,10 @@ export interface HeatmapWorkerLayer extends LayerWorkerBase {
 }
 
 // LINE //
-/**
- *
- */
+
+/** Line cap options */
 export type Cap = 'butt' | 'square' | 'round';
-/**
- *
- */
+/** Line join options */
 export type Join = 'bevel' | 'miter' | 'round';
 /**
  *
@@ -2287,7 +2275,7 @@ export interface LineStyle extends LayerStyleBase {
   // paint
   /**
    * A PAINT `Property`.
-   * @defaultValue `"rgba(0, 0, 0, 1)"`
+   * @default `"rgba(0, 0, 0, 1)"`
    *
    * ex.
    *
@@ -2388,7 +2376,7 @@ export interface LineStyle extends LayerStyleBase {
   // layout
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @defaultValue `butt`
+   * @default `butt`
    *
    * can use `butt`, `square`, or `round`
    *
@@ -2416,7 +2404,7 @@ export interface LineStyle extends LayerStyleBase {
   cap?: Cap | PropertyOnlyStep<Cap>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @defaultValue `miter`
+   * @default `miter`
    *
    * can use `bevel`, `miter`, or `round`
    *
@@ -2521,7 +2509,30 @@ export interface LineWorkerLayer extends LayerWorkerBase {
 // POINT //
 
 /**
+ * Point type
  *
+ * Base Properties:
+ * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
+ * - `source` - the source of the data use
+ * - `layer` - the source's layer. Defaults to "default" for JSON data
+ * - `minzoom` - the minimum zoom level at which the layer will be visible
+ * - `maxzoom` - the maximum zoom level at which the layer will be visible
+ * - `filter` - a filter function to filter out features from the source layer
+ * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+ * - `visible` - whether the layer is visible or not
+ * - `metadata` - additional metadata. Used by style generators
+ *
+ * Optional paint properties:
+ * - `color`
+ * - `radius`
+ * - `stroke`
+ * - `strokeWidth`
+ * - `opacity`
+ *
+ * Optional properties:
+ * - `geoFilter` - filter the geometry types that will be drawn.
+ * - `interactive` - if true, when hovering over the line, the property data will be sent to the UI via an Event
+ * - `cursor` - the cursor to use when hovering over the line
  */
 export interface PointStyle extends LayerStyleBase {
   /**
@@ -2554,7 +2565,7 @@ export interface PointStyle extends LayerStyleBase {
   // paint
   /**
    * A PAINT `Property`.
-   * @defaultValue `"rgba(0, 0, 0, 0)"`
+   * @default `"rgba(0, 0, 0, 0)"`
    *
    * ex.
    *
@@ -2579,7 +2590,7 @@ export interface PointStyle extends LayerStyleBase {
   color?: string | Property<string>;
   /**
    * A PAINT `Property`.
-   * @defaultValue `1`
+   * @default `1`
    *
    * ex.
    *
@@ -2604,7 +2615,7 @@ export interface PointStyle extends LayerStyleBase {
   radius?: number | Property<number>;
   /**
    * A PAINT `Property`.
-   * @defaultValue `"rgba(0, 0, 0, 0)"`
+   * @default `"rgba(0, 0, 0, 0)"`
    *
    * ex.
    *
@@ -2629,7 +2640,7 @@ export interface PointStyle extends LayerStyleBase {
   stroke?: string | Property<string>;
   /**
    * A PAINT `Property`.
-   * @defaultValue `1`
+   * @default `1`
    *
    * ex.
    *
@@ -2689,9 +2700,7 @@ export interface PointStyle extends LayerStyleBase {
   /** the cursor to use when hovering over the line. Defaults to "default" */
   cursor?: Cursor;
 }
-/**
- *
- */
+/** Internal interface that builds a point layer with defaults for properties that were not defined by the user */
 export interface PointDefinition extends LayerDefinitionBase {
   type: 'point';
   // paint
@@ -2705,15 +2714,11 @@ export interface PointDefinition extends LayerDefinitionBase {
   interactive: boolean;
   cursor: Cursor;
 }
-/**
- *
- */
+/** Internal interface acting as a WebGL(1|2) draw guide for Points */
 export interface PointWorkflowLayerGuide extends LayerWorkflowGuideBase {
   cursor: Cursor;
 }
-/**
- *
- */
+/** Internal interface acting as a WebGPU draw guide for Points */
 export interface PointWorkflowLayerGuideGPU extends PointWorkflowLayerGuide {
   layerBuffer: GPUBuffer;
   layerCodeBuffer: GPUBuffer;
@@ -2731,9 +2736,7 @@ export interface PointWorkerLayer extends LayerWorkerBase {
 
 // RASTER //
 
-/**
- *
- */
+/** Raster resampling method */
 export type Resampling = GPUFilterMode;
 /**
  *
@@ -3008,7 +3011,7 @@ export interface HillshadeStyle extends LayerStyleBase {
   altitude?: number | Property<number>;
   /**
    * A LAYOUT `Property`.
-   * @defaultValue `"#000"`
+   * @default `"#000"`
    *
    * ex.
    *
@@ -3033,7 +3036,7 @@ export interface HillshadeStyle extends LayerStyleBase {
   shadowColor?: string | Property<string>;
   /**
    * A LAYOUT `Property`.
-   * @defaultValue `"#fff"`
+   * @default `"#fff"`
    *
    * ex.
    *
@@ -3058,7 +3061,7 @@ export interface HillshadeStyle extends LayerStyleBase {
   highlightColor?: string | Property<string>;
   /**
    * A LAYOUT `Property`.
-   * @defaultValue `"#000"`
+   * @default `"#000"`
    *
    * ex.
    *
@@ -3319,7 +3322,7 @@ export interface ShadeStyle extends LayerStyleBase {
   // layout
   /**
    * A LAYOUT `Property`.
-   * @defaultValue `"rgba(0, 0, 0, 1)"`
+   * @default `"rgba(0, 0, 0, 1)"`
    *
    * ex.
    *
@@ -3369,9 +3372,7 @@ export interface ShadeWorkerLayer extends LayerWorkerBase {
   type: 'shade';
 }
 
-/**
- *
- */
+/** All possible layer styles to use */
 export type LayerStyle =
   | UnkownLayerStyle
   | FillStyle
@@ -3383,9 +3384,7 @@ export type LayerStyle =
   | SensorStyle
   | ShadeStyle
   | HillshadeStyle;
-/**
- *
- */
+/** All layer definitions that are used by the painter workflows */
 export type LayerDefinition =
   | FillDefinition
   | GlyphDefinition
@@ -3396,9 +3395,7 @@ export type LayerDefinition =
   | HillshadeDefinition
   | SensorDefinition
   | ShadeDefinition;
-/**
- *
- */
+/** Tile Worker layer processors */
 export type WorkerLayer =
   | FillWorkerLayer
   | GlyphWorkerLayer
@@ -3408,18 +3405,14 @@ export type WorkerLayer =
   | RasterWorkerLayer
   | HillshadeWorkerLayer
   | SensorWorkerLayer;
-/**
- *
- */
+/** Tile Worker layer processors that are Vector Geometry specific */
 export type VectorWorkerLayer =
   | FillWorkerLayer
   | GlyphWorkerLayer
   | HeatmapWorkerLayer
   | LineWorkerLayer
   | PointWorkerLayer;
-/**
- *
- */
+/** Layer types that can be interactive */
 export type InteractiveWorkerLayer =
   | FillWorkerLayer
   | GlyphWorkerLayer
@@ -3427,16 +3420,20 @@ export type InteractiveWorkerLayer =
   | PointWorkerLayer;
 
 /**
- * WORKER PACKAGE:
+ * GPU Context Type
  * - `1` -> WebGL1
  * - `2` -> WebGL2
  * - `3` -> WebGPU
  */
-export type GPUType = 1 | 2 | 3;
+export const GPUType = {
+  WebGL1: 1,
+  WebGL2: 2,
+  WebGPU: 3,
+} as const;
+/** colorblind mode */
+export type GPUType = (typeof GPUType)[keyof typeof GPUType];
 
-/**
- *
- */
+/** Basic analytics information sent to servers */
 export interface Analytics {
   gpu: string;
   context: number;
@@ -3445,9 +3442,7 @@ export interface Analytics {
   height: number;
 }
 
-/**
- *
- */
+/** Style package is an internal tool to ship information about the map to the workers */
 export interface StylePackage {
   projection: Projection;
   gpuType: GPUType;
@@ -3474,13 +3469,24 @@ export interface SkyboxStyle {
   /** size of the skybox image (the path's folder may support multiple) */
   size: number;
   /** type of image (the path's folder may support multiple) */
-  type: ImageFormats;
+  type: ImageExtensions;
   /** background color of the skybox while waiting for it to load images */
   loadingBackground?: string;
 }
 
 /**
+ * Wallpaper is often used with vector data. Control the coloring of the background.
  *
+ * ex.
+ *
+ * ```json
+ * "wallpaper": {
+ *   "background": "#030a2d",
+ *   "fade1": "rgb(138, 204, 255)",
+ *   "fade2": "rgb(217, 255, 255)",
+ *   "halo": "rgb(230, 255, 255)"
+ * }
+ * ```
  */
 export interface WallpaperStyle {
   /** background color is the most seen color zoomed out */
@@ -3516,14 +3522,53 @@ export interface TimeSeriesStyle {
 // STYLE DEFINITION //
 
 /**
+ * # STYLE DEFINITION
  *
+ * ## Description
+ * This is the user defined guide for how to render the map. This definition includes directions of what data
+ * to render, where to get said data, and how to style each data as layers.
+ *
+ * ## Rendering Properties
+ * - `projection`: `"S2"` (Spherical Geometry) or `"WG"` (Web Mercator). Defaults to S2
+ * - `sources`: Most critical, a list of source data, how to fetch for rendering
+ * - `timeSeries`: Time series data is a WIP. Is a guide on how to render &/ animate data at various timestamps
+ * - `layers`: array of layer definitions, describing how to render the scene
+ * - `glyphs`: Glyph Data (both fonts and icons) and how to fetch them
+ * - `icons`: Icon sources and how to fetch them
+ * - `fonts`: Font sources and how to fetch them
+ * - `sprites`: Sprites sources, where to fetch, can be a string or an object
+ * - `images`: Image names and where to fetch them
+ * - `skybox`: Skybox is often used as a background feature for raster data. Uses a skybox image to render to the screen.
+ * - `wallpaper`: Wallpaper is often used with vector data. Control the coloring of the background.
+ * - `clearColor`: Background color for sections where the painter doesn't draw to. Defaults to `rgba(0, 0, 0, 0)`
+ *
+ * ## Camera Properties
+ * - `view`: `zoom`, `lon`, `lat`, `bearing`, `pitch`. Defaults to 0 for all.
+ * - `zNear`: zNear is a parameter for the camera. Recommend not touching.
+ * - `zFar`: zFar is a parameter for the camera. Recommend not touching.
+ * - `minzoom`: The furthest away from the planet you allow
+ * - `maxzoom`: The closest to the planet you allow
+ * - `minLatPosition`: The minimum latitude position. Useful for the S2 Projection to avoid wonky movemeny at low zooms
+ * - `maxLatPosition`: The maximum latitude position. Useful for the S2 Projection to avoid wonky movemeny at low zooms
+ * - `zoomOffset`: Often times to improve the quality of raster data, you can apply a zoomOffset for tiles to render.
+ *
+ * ## Base Properties
+ * - `version`: version of the style - not used for anything other than debugging
+ * - `name`: name of the style - not used for anything other than debugging
+ * - `description`: description of the style - not used for anything other than debugging
+ *
+ * ## Flags
+ * - `constrainZoomToFill`: Strictly a WG Projection property. Force the view to fill. Defaults to `false`
+ * - `duplicateHorizontally`: Strictly a WG Projection property. Render the world map as necessary to fill the screen horizontally. Defaults to `true`
+ * - `noClamp`: Allow the camera to go past the max-min latitudes. Useful for animations. Defaults to `false`
+ * - `experimental`: Enable experimental features
  */
 export interface StyleDefinition {
   /** version of the style - not used for anything other than debugging */
   version?: number;
   /** name of the style - not used for anything other than debugging */
   name?: string;
-  /** Use Either The Web Mercator "WM" or the "S2" Projection */
+  /** Use Either The Web Mercator "WG" or the "S2" Projection */
   projection?: Projection;
   /** description of the style - not used for anything other than debugging */
   description?: string;
@@ -3546,12 +3591,12 @@ export interface StyleDefinition {
   /** The closest you allow the camera to get to the planet */
   maxzoom?: number;
   /**
-   * Strictly a WM Projection property. Force the view to fill.
+   * Strictly a WG Projection property. Force the view to fill.
    * Defaults to `false`.
    */
   constrainZoomToFill?: boolean;
   /**
-   * Strictly a WM Projection property. Render the world map as necessary to fill the screen horizontally.
+   * Strictly a WG Projection property. Render the world map as necessary to fill the screen horizontally.
    * Defaults to `true`.
    */
   duplicateHorizontally?: boolean;
@@ -3613,7 +3658,9 @@ export interface StyleDefinition {
   icons?: Icons;
   /**
    * Sprites names and where to fetch
+   *
    * Sprites have a default expectancy of a `png` image.
+   *
    * If you want to use a different format, you can use an object instead of a string.
    *
    * ex.
@@ -3680,6 +3727,6 @@ export interface StyleDefinition {
   clearColor?: ColorArray;
   /** Layers are the main way to render data on the map. */
   layers?: LayerStyle[];
-  /** @beta Utilize WIP experimental components that still have bugs in them. */
+  /** @experimental Utilize WIP experimental components that still have bugs in them. */
   experimental?: boolean;
 }

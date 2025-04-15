@@ -1,18 +1,17 @@
 import { findCenterPoints, findSpacedPoints, pointAngle } from './pointTools';
 
 import type { Cap } from 'style/style.spec';
-import type { VectorPoint } from 'gis-tools';
 import type {
-  VectorFeatureType,
-  VectorGeometry,
-  VectorLine,
-  VectorLines,
-  VectorMultiPoly,
-} from 'open-vector-tile';
+  MValue,
+  VectorCoordinates,
+  VectorGeometryType,
+  VectorLineString,
+  VectorMultiLineString,
+  VectorMultiPolygon,
+  VectorPoint,
+} from 'gis-tools';
 
-/**
- *
- */
+/** An output of drawLine */
 export interface Line {
   prev: number[];
   curr: number[];
@@ -20,34 +19,36 @@ export interface Line {
   lengthSoFar: number[];
 }
 
-// if line, return, if poly or multipoly, flatten to lines
 /**
- * @param geometry
- * @param type
+ * if line, return, if poly or multipoly, flatten to lines
+ * @param geometry - input vector geometry
+ * @param type - geometry type
+ * @returns vector lines
  */
-export function flattenGeometryToLines(
-  geometry: VectorGeometry,
-  type: VectorFeatureType,
-): VectorLines {
-  if (type === 2 || type === 3) return geometry as VectorLines;
-  else if (type === 4) {
+export function flattenGeometryToLines<M extends MValue>(
+  geometry: VectorCoordinates<M>,
+  type: VectorGeometryType,
+): VectorMultiLineString<M> {
+  if (type === 'MultiLineString' || type === 'Polygon') return geometry as VectorMultiLineString<M>;
+  else if (type === 'MultiPolygon') {
     // manage poly
-    const res = [] as VectorLines;
-    for (const poly of geometry as VectorMultiPoly) {
+    const res = [] as VectorMultiLineString<M>;
+    for (const poly of geometry as VectorMultiPolygon<M>) {
       for (const line of poly) res.push(line);
     }
     return res;
   } else return [];
 }
 
-/**
- *
- */
-export type Path = [VectorPoint, VectorPoint, VectorPoint, VectorPoint];
+/** A path is a 4 point line */
+export type Path = [
+  first: VectorPoint,
+  second: VectorPoint,
+  third: VectorPoint,
+  fourth: VectorPoint,
+];
 
-/**
- *
- */
+/** An output of getPointsAndPaths */
 export interface PathData {
   point: VectorPoint;
   pathLeft: Path;
@@ -57,14 +58,16 @@ export interface PathData {
 // TODO: given the geometry, check if the line is long enough to fit the glyph otherwise return empty array
 // TODO: If the path has sharp corners, simplify the path to be smoother without losing the original shape
 /**
- * @param geometry
- * @param type
- * @param spacing
- * @param extent
+ * Get a collection of points and paths along the lines
+ * @param geometry - input vector geometry
+ * @param type - geometry type
+ * @param spacing - distance between points
+ * @param extent - extent is the tile "pixel" size
+ * @returns the points and paths that are along the lines
  */
-export function getPointsAndPathsAlongLines(
-  geometry: VectorGeometry,
-  type: VectorFeatureType,
+export function getPointsAndPathsAlongLines<M extends MValue>(
+  geometry: VectorCoordinates<M>,
+  type: VectorGeometryType,
   spacing: number,
   extent: number,
 ): PathData[] {
@@ -81,13 +84,15 @@ export function getPointsAndPathsAlongLines(
 }
 
 /**
- * @param geometry
- * @param type
- * @param extent
+ * Get a collection of points and paths at the center of each line
+ * @param geometry - input vector geometry
+ * @param type - geometry type
+ * @param extent - extent is the tile "pixel" size
+ * @returns the points and paths that are at the center of each line
  */
 export function getPointsAndPathsAtCenterOfLines(
-  geometry: VectorGeometry,
-  type: VectorFeatureType,
+  geometry: VectorCoordinates,
+  type: VectorGeometryType,
   extent: number,
 ): PathData[] {
   const res: PathData[] = [];
@@ -102,9 +107,7 @@ export function getPointsAndPathsAtCenterOfLines(
   return res;
 }
 
-/**
- *
- */
+/** An output of getPathPos describing the path's via raw data */
 export type QuadPos = [
   s: number,
   t: number,
@@ -115,11 +118,13 @@ export type QuadPos = [
 ];
 
 /**
- * @param quadPos
- * @param pathLeft
- * @param pathRight
- * @param tileSize
- * @param size
+ * Get the path position
+ * @param quadPos - quad position
+ * @param pathLeft - left path
+ * @param pathRight - right path
+ * @param tileSize - tile size
+ * @param size - glyph size
+ * @returns a vector point describing the path position
  */
 export function getPathPos(
   quadPos: QuadPos,
@@ -131,7 +136,6 @@ export function getPathPos(
   // note: st is 0->1 ratio relative to tile size
   // note: offset is in pixels
   // note: xPos and yPos are 0->1 ratio relative to glyph size
-  // eslint-disable-next-line prefer-const
   let [s, t, offsetX, offsetY, xPos, yPos] = quadPos;
   yPos *= size;
   offsetY += yPos;
@@ -169,18 +173,18 @@ export function getPathPos(
   return { x: s, y: t };
 }
 
-/**
- *
- */
+/** The resultant length and distance index given an input linestring */
 export interface LineLengthRes {
   length: number;
   distIndex: number[];
 }
 
 /**
- * @param line
+ * Get the length of a linestring
+ * @param line - input linestring
+ * @returns the length of the linestring
  */
-export function lineLength(line: VectorLine): LineLengthRes {
+export function lineLength(line: VectorLineString): LineLengthRes {
   let length = 0;
   let prev = line[0];
   const distIndex: number[] = [0];
@@ -194,11 +198,14 @@ export function lineLength(line: VectorLine): LineLengthRes {
 }
 
 /**
- * @param points
- * @param cap
- * @param maxDistance
+ * Draw a line given a linestring, cap type, and max distance
+ * @param points - input linestring
+ * @param cap - cap type
+ * @param maxDistance - max distance between two points. Will reduce distance as needed to ensure
+ * no two points are too far away making rendering look ugly (useful for spherical data)
+ * @returns the resultant line verts and their lengths so far
  */
-export function drawLine(points: VectorLine, cap: Cap = 'butt', maxDistance = 0): Line {
+export function drawLine(points: VectorLineString, cap: Cap = 'butt', maxDistance = 0): Line {
   let ll = points.length;
   // corner case: Theres less than 2 points in the array
   if (ll < 2) return { prev: [], curr: [], next: [], lengthSoFar: [] };
@@ -278,8 +285,10 @@ export function drawLine(points: VectorLine, cap: Cap = 'butt', maxDistance = 0)
 }
 
 /**
- * @param a
- * @param b
+ * Get the distance between two points
+ * @param a - first point
+ * @param b - second point
+ * @returns the distance
  */
 function distance(a: VectorPoint, b: VectorPoint): number {
   return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));

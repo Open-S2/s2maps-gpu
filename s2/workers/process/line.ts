@@ -1,3 +1,4 @@
+import { GPUType } from 'style/style.spec';
 import parseFeatureFunction from 'style/parseFeatureFunction';
 import parseFilter from 'style/parseFilter';
 import VectorWorker, { colorFunc, idToRGB } from './vectorWorker';
@@ -9,14 +10,14 @@ import type { Cap, Join, LineDefinition, LineWorkerLayer } from 'style/style.spe
 import type { LineData, TileRequest } from '../worker.spec';
 import type { LineFeature, LineWorker as LineWorkerSpec, VTFeature } from './process.spec';
 
-/**
- *
- */
+/** Worker for processing line data */
 export default class LineWorker extends VectorWorker implements LineWorkerSpec {
   featureStore = new Map<string, LineFeature[]>(); // tileID -> features
 
   /**
-   * @param lineLayer
+   * Setup the worker layer to process future line data
+   * @param lineLayer - input style layer guide
+   * @returns the worker layer to process future line vector data
    */
   setupLayer(lineLayer: LineDefinition): LineWorkerLayer {
     const {
@@ -64,12 +65,14 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
   }
 
   /**
-   * @param tile
-   * @param extent
-   * @param feature
-   * @param lineLayer
-   * @param mapID
-   * @param sourceName
+   * Build a line feature
+   * @param tile - the tile request
+   * @param extent - the tile extent
+   * @param feature - the vector tile feature
+   * @param lineLayer - the line worker layer
+   * @param mapID - the map id to ship the data back to
+   * @param sourceName - the name of the source the data belongs to
+   * @returns true if the feature was built
    */
   buildFeature(
     tile: TileRequest,
@@ -89,7 +92,7 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
       return false;
     if (geoFilter.includes('poly') && (type === 'Polygon' || type === 'MultiPolygon')) return false;
     // load geometry
-    const geometry = feature.loadLines?.();
+    const [geometry] = feature.loadLines() ?? [];
     if (geometry === undefined) return false;
     const cap = lineLayer.cap([], properties, zoom);
     const vertices: number[] = [];
@@ -128,7 +131,7 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
       vertices,
       lengthSoFar,
       layerIndex,
-      code: gpuType === 1 ? gl1Code : gl2Code,
+      code: gpuType === GPUType.WebGL1 ? gl1Code : gl2Code,
       gl2Code,
       idRGB: idToRGB(id),
     };
@@ -141,9 +144,10 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
   }
 
   /**
-   * @param mapID
-   * @param tile
-   * @param sourceName
+   * Flush a tile-request's result line data to the render thread
+   * @param mapID - id of the map to ship the data back to
+   * @param tile - tile request
+   * @param sourceName - name of the source the data belongs to
    */
   override async flush(mapID: string, tile: TileRequest, sourceName: string): Promise<void> {
     const storeID: string = await `${mapID}:${tile.id}:${sourceName}`;
@@ -154,10 +158,11 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
   }
 
   /**
-   * @param mapID
-   * @param sourceName
-   * @param tileID
-   * @param features
+   * Flush a tile-request's result line data to the render thread
+   * @param mapID - id of the map to ship the data back to
+   * @param sourceName - name of the source the data belongs to
+   * @param tileID - the id of the tile that requested the lines
+   * @param features - the features to flush to the render thread
    */
   #flush(mapID: string, sourceName: string, tileID: bigint, features: LineFeature[]): void {
     // Step 1: Sort by layerIndex, than sort by feature code.
@@ -240,7 +245,9 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
 }
 
 /**
- * @param cap
+ * Encode the cap type
+ * @param cap - the cap type
+ * @returns the encoded cap
  */
 function encodeCap(cap: Cap): number {
   if (cap === 'butt') return 0;

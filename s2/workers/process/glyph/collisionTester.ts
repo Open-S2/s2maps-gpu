@@ -1,18 +1,18 @@
 import type { Node, RoundNodes, SquareNode } from './glyph.spec';
 
-/**
- *
- */
+/** Generic compare function */
 export type CompareFunction = (a: Node, b: Node) => number;
 
 /**
+ * # Collision Tester
  *
+ * Due to the nature of tile sizes keeping the quantity of nodes lower,
+ * collisions storage is a non-issue. Thus, we can do very basic collision detection tests
+ * and not worry about complexity.
  */
 export default class CollisionTester {
   nodes: Node[] = [];
-  /**
-   *
-   */
+  /** Clear all nodes for the next tile */
   clear(): void {
     this.nodes = [];
   }
@@ -20,7 +20,8 @@ export default class CollisionTester {
   /**
    * Insert if and only if there are no collisions with prior nodes
    * If there is a collision, return true
-   * @param node
+   * @param node - the node to insert
+   * @returns true if there is a collision with pre-existing nodes
    */
   collides(node: Node): boolean {
     let collision = false;
@@ -35,8 +36,10 @@ export default class CollisionTester {
   }
 
   /**
-   * @param a
-   * @param b
+   * Check if two nodes collide using both square and round node checks
+   * @param a - the first node
+   * @param b - the second node
+   * @returns true if the nodes collide
    */
   #collides(a: Node, b: Node): boolean {
     if (a.id === b.id) return false;
@@ -47,8 +50,10 @@ export default class CollisionTester {
   }
 
   /**
-   * @param a
-   * @param b
+   * Check if two round nodes collide
+   * @param a - the first round node
+   * @param b - the second round node
+   * @returns true if the nodes collide
    */
   #collidesRoundRound(a: RoundNodes, b: RoundNodes): boolean {
     for (const aNode of a.nodes) {
@@ -63,8 +68,10 @@ export default class CollisionTester {
   }
 
   /**
-   * @param a
-   * @param b
+   * Check if a round node collides with a square node
+   * @param a - the round node
+   * @param b - the square node
+   * @returns true if the nodes collide
    */
   #collidesRoundSquare(a: RoundNodes, b: SquareNode): boolean {
     // https://stackoverflow.com/questions/401847/circle-rectangle-collision-detection-intersection
@@ -77,8 +84,10 @@ export default class CollisionTester {
   }
 
   /**
-   * @param a
-   * @param b
+   * Check if two square nodes collide
+   * @param a - the first square node
+   * @param b - the second square node
+   * @returns true if the nodes collide
    */
   #collidesSquareSquare(a: SquareNode, b: SquareNode): boolean {
     return (

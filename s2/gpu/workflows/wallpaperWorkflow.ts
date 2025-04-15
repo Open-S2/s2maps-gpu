@@ -6,31 +6,25 @@ import type { StyleDefinition } from 'style/style.spec';
 import type { WallpaperWorkflow as WallpaperWorkflowSpec } from './workflow.spec';
 import type { WebGPUContext } from '../context';
 
-/**
- *
- */
-export interface Scheme {
+/** Wallpaper color guide */
+export interface WallpaperScheme {
   background: Color;
   fade1: Color;
   fade2: Color;
   halo: Color;
 }
 
-/**
- *
- */
+/** Wallpaper Workflow renders a user styled wallpaper to the GPU */
 export default class WallpaperWorkflow implements WallpaperWorkflowSpec {
   context: WebGPUContext;
-  scheme: Scheme;
+  scheme: WallpaperScheme;
   tileSize = 512;
   scale = new Float32Array([0, 0]);
   pipeline!: GPURenderPipeline;
   #uniformBuffer!: GPUBuffer;
   #wallpaperBindGroupLayout!: GPUBindGroupLayout;
   #bindGroup!: GPUBindGroup;
-  /**
-   * @param context
-   */
+  /** @param context - The WebGPU context */
   constructor(context: WebGPUContext) {
     this.context = context;
     // setup scheme
@@ -42,9 +36,7 @@ export default class WallpaperWorkflow implements WallpaperWorkflowSpec {
     };
   }
 
-  /**
-   *
-   */
+  /** Setup the wallpaper workflow */
   async setup(): Promise<void> {
     const { context } = this;
     // prep the matrix buffer
@@ -56,15 +48,14 @@ export default class WallpaperWorkflow implements WallpaperWorkflowSpec {
     this.pipeline = await this.#getPipeline();
   }
 
-  /**
-   *
-   */
+  /** Cleanup the wallpaper workflow */
   destroy(): void {
     this.#uniformBuffer.destroy();
   }
 
   /**
-   * @param style
+   * Update the wallpaper style
+   * @param style - input user defined style
    */
   updateStyle(style: StyleDefinition): void {
     const { scheme, context } = this;
@@ -83,7 +74,8 @@ export default class WallpaperWorkflow implements WallpaperWorkflowSpec {
   }
 
   /**
-   * @param projector
+   * Update the scale
+   * @param projector - Projector
    */
   #updateScale(projector: Projector): void {
     const { min, pow } = Math;
@@ -96,10 +88,7 @@ export default class WallpaperWorkflow implements WallpaperWorkflowSpec {
     this.context.device.queue.writeBuffer(this.#uniformBuffer, 16 * 4, this.scale);
   }
 
-  // only updates on style change
-  /**
-   *
-   */
+  /** Update uniforms. Only updates on style change */
   #updateUniforms(): void {
     const { context, scheme } = this;
     context.device.queue.writeBuffer(
@@ -114,11 +103,12 @@ export default class WallpaperWorkflow implements WallpaperWorkflowSpec {
     );
   }
 
-  // https://programmer.ink/think/several-best-practices-of-webgpu.html
-  // BEST PRACTICE 6: it is recommended to create pipeline asynchronously
-  // BEST PRACTICE 7: explicitly define pipeline layouts
   /**
-   *
+   * Setup the GPU Pipeline for drawing.
+   * https://programmer.ink/think/several-best-practices-of-webgpu.html
+   * BEST PRACTICE 6: it is recommended to create pipeline asynchronously
+   * BEST PRACTICE 7: explicitly define pipeline layouts
+   * @returns the GPU Pipeline
    */
   async #getPipeline(): Promise<GPURenderPipeline> {
     const { device, format, sampleCount, frameBindGroupLayout } = this.context;
@@ -138,19 +128,9 @@ export default class WallpaperWorkflow implements WallpaperWorkflowSpec {
     return await device.createRenderPipelineAsync({
       label: 'Wallpaper Pipeline',
       layout,
-      vertex: {
-        module,
-        entryPoint: 'vMain',
-      },
-      fragment: {
-        module,
-        entryPoint: 'fMain',
-        targets: [{ format }],
-      },
-      primitive: {
-        topology: 'triangle-list',
-        cullMode: 'none',
-      },
+      vertex: { module, entryPoint: 'vMain' },
+      fragment: { module, entryPoint: 'fMain', targets: [{ format }] },
+      primitive: { topology: 'triangle-list', cullMode: 'none' },
       multisample: { count: sampleCount },
       depthStencil: {
         depthWriteEnabled: false,
@@ -161,7 +141,8 @@ export default class WallpaperWorkflow implements WallpaperWorkflowSpec {
   }
 
   /**
-   * @param projector
+   * Draw the wallpaper to the GPU
+   * @param projector - Projector
    */
   draw(projector: Projector): void {
     const { context } = this;

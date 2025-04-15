@@ -1,35 +1,54 @@
 import type { MarkerDefinition } from './source/markerSource';
 import type S2Map from '../s2Map';
-import type { Analytics, LayerDefinition, Source, StylePackage } from 'style/style.spec';
 import type {
+  AddLayerMessageGL,
+  AddMarkersMessage,
+  AddSourceMessage,
+  DeleteLayerMessageGL,
+  DeleteMarkersMessage,
+  DeleteSourceMessage,
+  ReorderLayersMessageGL,
+  RequestStyleMessage,
   SourceWorkerMessage,
+  StyleMessage,
   TileRequest,
+  TileRequestMessage,
   TileWorkerMessage,
+  TimeRequestMessage,
   WorkerPoolPortMessage,
 } from './worker.spec';
+import type { Analytics, LayerDefinition, Source, StylePackage } from 'style/style.spec';
 
 declare global {
-  /**
-   *
-   */
+  /** expose the worker pool to the global scope so all maps can share it */
   interface Window {
     S2WorkerPool: WorkerPool;
   }
 }
 
-// workerPool is designed to manage the workers and when a worker is free, send... work
 const AVAILABLE_WORKERS: number = Math.floor((window.navigator.hardwareConcurrency ?? 4) / 2);
 /**
+ * # Worker Pool
  *
+ * Manages the tile workers and the source worker
+ *
+ * The Source worker manages sources, builds/fetches requests, and sends them to the tile workers to be processed
+ *
+ * The Tile Workers process the raw data into renderable / interactive data for the GPU or end user.
+ *
+ * Communications channels are created for:
+ * - SourceWorker<->TileWorker
+ * - TileWorker->Map Object
+ * - SourceWorker->Map Object
+ *
+ * There is a two way channel for SourceWorker<->TileWorker mostly because of glyphs,images, etc.
  */
 export class WorkerPool {
   workerCount: number = Math.max(Math.min(AVAILABLE_WORKERS, 6), 2);
   workers: Worker[] = [];
   sourceWorker: Worker;
   maps: Record<string, S2Map> = {}; // MapID: S2Map
-  /**
-   *
-   */
+  /** setup workers and channels between all */
   constructor() {
     // create source worker
     const sourceWorker = (this.sourceWorker = new Worker(
@@ -59,26 +78,28 @@ export class WorkerPool {
   }
 
   /**
-   * @param root0
-   * @param root0.data
+   * Given a message from either a TileWorker or the SourceWorker, ship it off to the right map
+   * @param message - the message to forward
    */
-  #onMessage({ data }: { data: TileWorkerMessage | SourceWorkerMessage }): void {
-    this.maps[data.mapID].injectData(data);
+  #onMessage(message: MessageEvent<TileWorkerMessage | SourceWorkerMessage>): void {
+    this.maps[message.data.mapID].injectData(message.data);
   }
 
   /**
-   * @param map
+   * Add a map to the worker pool for communication
+   * @param map - the s2map
    */
   addMap(map: S2Map): void {
     this.maps[map.id] = map;
   }
 
   /**
-   * @param mapID
-   * @param style
-   * @param analytics
-   * @param apiKey
-   * @param urlMap
+   * Request the source worker load a style
+   * @param mapID - the id of the map
+   * @param style - the style url to fetch
+   * @param analytics - basic analytics
+   * @param apiKey - the api key if needed
+   * @param urlMap - the url map
    */
   requestStyle(
     mapID: string,
@@ -87,30 +108,30 @@ export class WorkerPool {
     apiKey?: string,
     urlMap?: Record<string, string>,
   ): void {
-    this.sourceWorker.postMessage({
+    const msg: RequestStyleMessage = {
       mapID,
       type: 'requestStyle',
       style,
       apiKey,
       urlMap,
       analytics,
-    });
+    };
+    this.sourceWorker.postMessage(msg);
   }
 
   /**
-   * @param mapID
-   * @param style
+   * Inject a style. The style is already built, so just send it to the workers
+   * @param mapID - the id of the map
+   * @param style - the style data
    */
   injectStyle(mapID: string, style: StylePackage): void {
-    const msg = { mapID, type: 'style', style };
+    const msg: StyleMessage = { mapID, type: 'style', style };
     this.sourceWorker.postMessage(msg);
     for (const worker of this.workers) worker.postMessage(msg);
   }
 
   // NOTE: TEMPORARY SOLUTION :(
-  /**
-   *
-   */
+  /** delete the worker pool. This is a temporary solution as the worker pool should be a singleton. */
   delete(): void {
     this.sourceWorker.terminate();
     for (const worker of this.workers) worker.terminate();
@@ -121,95 +142,108 @@ export class WorkerPool {
   // }
 
   /**
-   * @param mapID
-   * @param tiles
-   * @param sources
+   * Request tiles
+   * @param mapID - the id of the map
+   * @param tiles - the tiles to fetch data for
+   * @param sources - the sources to fetch data for. If empty request data for all sources
    */
   tileRequest(
     mapID: string,
     tiles: TileRequest[],
-    sources?: Array<[string, string | undefined]>,
+    sources: Array<[string, string | undefined]> = [],
   ): void {
-    this.sourceWorker.postMessage({ mapID, type: 'tilerequest', tiles, sources });
+    const msg: TileRequestMessage = { mapID, type: 'tilerequest', tiles, sources };
+    this.sourceWorker.postMessage(msg);
   }
 
   /**
-   * @param mapID
-   * @param tiles
-   * @param sourceNames
+   * Request temporal tile data
+   * @param mapID - the id of the map
+   * @param tiles - the tiles to fetch data for
+   * @param sourceNames - the sources to fetch data for. If empty request data for all sources
    */
-  timeRequest(mapID: string, tiles: TileRequest[], sourceNames?: string[]): void {
-    this.sourceWorker.postMessage({ mapID, type: 'timerequest', tiles, sourceNames });
+  timeRequest(mapID: string, tiles: TileRequest[], sourceNames: string[] = []): void {
+    const msg: TimeRequestMessage = { mapID, type: 'timerequest', tiles, sourceNames };
+    this.sourceWorker.postMessage(msg);
   }
 
   /**
-   * @param mapID
-   * @param markers
-   * @param sourceName
+   * Add marker(s) to the map
+   * @param mapID - the id of the map to add marker(s) to
+   * @param markers - the marker(s) to add
+   * @param sourceName - the name of the source to add the marker(s) to
    */
   addMarkers(mapID: string, markers: MarkerDefinition[], sourceName: string): void {
-    this.sourceWorker.postMessage({ mapID, type: 'addMarkers', markers, sourceName });
+    const msg: AddMarkersMessage = { mapID, type: 'addMarkers', markers, sourceName };
+    this.sourceWorker.postMessage(msg);
   }
 
   /**
-   * @param mapID
-   * @param ids
-   * @param sourceName
+   * Delete marker(s) from the map
+   * @param mapID - the id of the map to delete marker(s) from
+   * @param ids - the id(s) of the marker(s) to delete
+   * @param sourceName - the name of the source to delete the marker(s) from
    */
   deleteMarkers(mapID: string, ids: number[], sourceName: string): void {
-    this.sourceWorker.postMessage({ mapID, type: 'deleteMarkers', ids, sourceName });
+    const msg: DeleteMarkersMessage = { mapID, type: 'deleteMarkers', ids, sourceName };
+    this.sourceWorker.postMessage(msg);
   }
 
   /**
-   * @param mapID
-   * @param sourceName
-   * @param source
-   * @param tileRequest
+   * Add a source to the map
+   * @param mapID - the id of the map to add the source to
+   * @param sourceName - the name of the source to add the source to
+   * @param source - the source
+   * @param tileRequest - the list of tiles of all existing tiles in the map already to build this source data for
    */
   addSource(mapID: string, sourceName: string, source: Source, tileRequest: TileRequest[]): void {
-    const msg = { mapID, type: 'addSource', sourceName, source, tileRequest };
+    const msg: AddSourceMessage = { mapID, type: 'addSource', sourceName, source, tileRequest };
     this.sourceWorker.postMessage(msg);
     for (const worker of this.workers) worker.postMessage(msg);
   }
 
   /**
-   * @param mapID
-   * @param sourceNames
+   * Delete a source from the map
+   * @param mapID - the id of the map to delete the source from
+   * @param sourceNames - the name(s) of the source(s) to delete
    */
   deleteSource(mapID: string, sourceNames: string[]): void {
-    const msg = { mapID, type: 'deleteSource', sourceNames };
+    const msg: DeleteSourceMessage = { mapID, type: 'deleteSource', sourceNames };
     this.sourceWorker.postMessage(msg);
     for (const worker of this.workers) worker.postMessage(msg);
   }
 
   /**
-   * @param mapID
-   * @param layer
-   * @param index
-   * @param tileRequest
+   * Add a style layer to the map
+   * @param mapID - the id of the map to add the layer to
+   * @param layer - the style layer
+   * @param index - the index to add the layer at
+   * @param tileRequest - the list of tiles of all existing tiles in the map already to adjust
    */
   addLayer(mapID: string, layer: LayerDefinition, index: number, tileRequest: TileRequest[]): void {
-    const msg = { mapID, type: 'addLayer', layer, index, tileRequest };
+    const msg: AddLayerMessageGL = { mapID, type: 'addLayer', layer, index, tileRequest };
     this.sourceWorker.postMessage(msg);
     for (const worker of this.workers) worker.postMessage(msg);
   }
 
   /**
-   * @param mapID
-   * @param index
+   * Delete a style layer from the map
+   * @param mapID - the id of the map to delete the layer from
+   * @param index - the index of the style layer to delete
    */
   deleteLayer(mapID: string, index: number): void {
-    const msg = { mapID, type: 'deleteLayer', index };
+    const msg: DeleteLayerMessageGL = { mapID, type: 'deleteLayer', index };
     this.sourceWorker.postMessage(msg);
     for (const worker of this.workers) worker.postMessage(msg);
   }
 
   /**
-   * @param mapID
-   * @param layerChanges
+   * Reorder style layers
+   * @param mapID - the id of the map
+   * @param layerChanges - the layer changes to make
    */
   reorderLayers(mapID: string, layerChanges: Record<string | number, number>): void {
-    const msg = { mapID, type: 'reorderLayers', layerChanges };
+    const msg: ReorderLayersMessageGL = { mapID, type: 'reorderLayers', layerChanges };
     this.sourceWorker.postMessage(msg);
     for (const worker of this.workers) worker.postMessage(msg);
   }

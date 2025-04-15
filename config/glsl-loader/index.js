@@ -1,14 +1,20 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 // @refresh reset
 // TODO: https://github.com/leosingleton/webpack-glsl-minify migrate to this
 // TODO: also migrate this: https://github.com/vanruesc/esbuild-plugin-glsl/blob/main/src/index.ts
 // maybe pick and choose what's useful from both
-const parse = require('./parse')
+const parse = require('./parse');
 
+/**
+ * Given a source string, returns a parsed object
+ * @param source {string} - The source string
+ * @returns A parsed object
+ */
 module.exports = function (source) {
   // @refresh reset
-  return parse(this.resource, source)
+  return parse(this.resource, source);
   // this.callback(null, `export default ${JSON.stringify(parse(this.resource, source))}`)
-}
+};
 
 // 'use strict'
 

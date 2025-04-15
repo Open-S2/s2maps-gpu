@@ -13,12 +13,12 @@ import {
   TexturePack,
 } from './source';
 
-import type { ImageMetadata } from './source/imageSource';
+import type { ImageSourceMetadata } from './source/imageSource';
 import type { MarkerDefinition } from './source/markerSource';
 import type {
   Analytics,
   GPUType,
-  ImageFormats,
+  ImageExtensions,
   LayerDefinition,
   Projection,
   SourceMetadata,
@@ -33,49 +33,13 @@ import type {
   TileRequest,
 } from './worker.spec';
 
-/**
-  SOURCE WORKER
- 
-  The source worker builds the appropriate module defined
-  by the style "sources" object. All tile requests are forwarded to the source
-  worker, where the worker properly builds the requests. Upon creation of a request,
-  the request string is passed to a tile worker to run the fetch and then consequently
-  process.
- 
-  GEOJSON / S2JSON is a unique case where the source worker just builds the json
-  locally to avoid processing the same json multiple times per tile worker.
- 
-  The glyph map is processed by the source worker. All data is localized to
-  the source worker. When a tile worker requests glyph data, the source will
-  scale up the map and send off the x-y position along with the width-height of
-  each glyph requested.
- 
-  SOURCE TYPES
- * S2Tile - a compact s2tiles file where we request tiles of many file types and compression types
- * GeoJSON - a json file containing geo-spatial data
- * S2JSON - a json file modeled much like geojson
- * Glyph - either a font or icon file stored in a pbf structure
- * LocalSource -> local build tile information
- * default -> assumed the location has a metadata. json at root with a "s2cellid.ext" file structure
- 
-  SESSION TOKEN
-  This is a pre-approved JWT token for any calls made to api.opens2.com or api.s2maps.io
-  when building requests, we take the current time, run a black box digest to hash, and return:
-  { h: 'first-five-chars', t: '1620276149967' } // h -> hash ; t -> timestamp ('' + Date.now())
-  (now - timestamp) / 1000 = seconds passed
- */
-
-/**
- *
- */
+/** Store map of all source types */
 type SourceMap = Record<
   string,
   Source | S2PMTilesSource | S2TilesSource | JSONSource | LocalSource | MarkerSource
 >;
 
-/**
- *
- */
+/** Each map has it's own store of these properties */
 interface Map {
   projection: Projection;
   gpuType: GPUType;
@@ -94,7 +58,35 @@ interface Map {
 }
 
 /**
+ * # SOURCE WORKER
  *
+ * The source worker builds the appropriate module defined
+ * by the style "sources" object. All tile requests are forwarded to the source
+ * worker, where the worker properly builds the requests. Upon creation of a request,
+ * the request string is passed to a tile worker to run the fetch and then consequently
+ * process.
+ *
+ * GEOJSON / S2JSON is a unique case where the source worker just builds the json
+ * locally to avoid processing the same json multiple times per tile worker.
+ *
+ * The glyph map is processed by the source worker. All data is localized to
+ * the source worker. When a tile worker requests glyph data, the source will
+ * scale up the map and send off the x-y position along with the width-height of
+ * each glyph requested.
+ *
+ * SOURCE TYPES
+ * S2Tile - a compact s2tiles file where we request tiles of many file types and compression types
+ * GeoJSON - a json file containing geo-spatial data
+ * S2JSON - a json file modeled much like geojson
+ * Glyph - either a font or icon file stored in a pbf structure
+ * LocalSource -> local build tile information
+ * default -> assumed the location has a metadata. json at root with a "s2cellid.ext" file structure
+ *
+ * SESSION TOKEN
+ * This is a pre-approved JWT token for any calls made to api.opens2.com or api.s2maps.io
+ * when building requests, we take the current time, run a black box digest to hash, and return:
+ * { h: 'first-five-chars', t: '1620276149967' } // h -> hash ; t -> timestamp ('' + Date.now())
+ * (now - timestamp) / 1000 = seconds passed
  */
 export default class SourceWorker {
   workers: Array<MessageChannel['port2']> = [];
@@ -103,11 +95,11 @@ export default class SourceWorker {
   maps: Record<string, Map> = {};
 
   /**
-   * @param root0
-   * @param root0.data
-   * @param root0.ports
+   * Handle source worker's messages
+   * @param msg - incoming message
    */
-  onMessage({ data, ports }: MessageEvent<SourceWorkerMessages>): void {
+  onMessage(msg: MessageEvent<SourceWorkerMessages>): void {
+    const { data, ports } = msg;
     const { type } = data;
     if (type === 'port') this.#loadWorkerPort(ports[0], ports[1], data.id);
     else {
@@ -129,9 +121,10 @@ export default class SourceWorker {
   }
 
   /**
-   * @param messagePort
-   * @param postPort
-   * @param id
+   * Load worker. First message that comes in upon creation of this worker
+   * @param messagePort - the communication port to talk listen to a tile worker's messages
+   * @param postPort - the communication port to send messages to the tile worker
+   * @param id - the id of the tile worker
    */
   #loadWorkerPort(
     messagePort: MessageChannel['port1'],
@@ -144,11 +137,12 @@ export default class SourceWorker {
   }
 
   /**
-   * @param mapID
-   * @param style
-   * @param analytics
-   * @param apiKey
-   * @param urlMap
+   * Request map style given an href
+   * @param mapID - the id of the map asking for the style
+   * @param style - the href of the style
+   * @param analytics - basic analytics to know what this browser can handle
+   * @param apiKey - the api key
+   * @param urlMap - the url map
    */
   #requestStyle(
     mapID: string,
@@ -164,8 +158,9 @@ export default class SourceWorker {
   }
 
   /**
-   * @param mapID
-   * @param style
+   * Load a style object for a map
+   * @param mapID - the id of the map to load the style for
+   * @param style - the style
    */
   #loadStyle(mapID: string, style: StylePackage): void {
     // pull style data
@@ -203,10 +198,11 @@ export default class SourceWorker {
   }
 
   /**
-   * @param mapID
-   * @param layer
-   * @param index
-   * @param _tileRequest
+   * Add a style layer to a map
+   * @param mapID - the id of the map to add the layer to
+   * @param layer - the style layer
+   * @param index - the index to add the layer at
+   * @param _tileRequest - the list of tiles of all existing tiles in the map already to adjust
    */
   #addLayer(
     mapID: string,
@@ -227,8 +223,9 @@ export default class SourceWorker {
   }
 
   /**
-   * @param mapID
-   * @param index
+   * Delete a style layer
+   * @param mapID - the id of the map to delete the layer from
+   * @param index - the index to delete the layer from
    */
   #deleteLayer(mapID: string, index: number): void {
     const { layers } = this.maps[mapID];
@@ -240,8 +237,9 @@ export default class SourceWorker {
   }
 
   /**
-   * @param mapID
-   * @param layerChanges
+   * Reorder style layers
+   * @param mapID - the id of the map to reorder the layers
+   * @param layerChanges - the layer changes to make
    */
   #reorderLayers(mapID: string, layerChanges: Record<string | number, number>): void {
     const { layers } = this.maps[mapID];
@@ -257,8 +255,9 @@ export default class SourceWorker {
   }
 
   /**
-   * @param mapID
-   * @param style
+   * Build sources for a map given an style object
+   * @param mapID - the id of the map
+   * @param style - the style object to pull source from
    */
   async #buildSources(mapID: string, style: StylePackage): Promise<void> {
     const { urls, images: mapImages } = this.maps[mapID];
@@ -278,7 +277,7 @@ export default class SourceWorker {
       glyphAwaits.push(this.#createGlyphSource(mapID, name, source));
     }
     // sprites
-    const imageAwaits: Array<Promise<undefined | ImageMetadata>> = [];
+    const imageAwaits: Array<Promise<undefined | ImageSourceMetadata>> = [];
     for (const [name, source] of Object.entries(sprites)) {
       if (typeof source === 'object') {
         const path = adjustURL(source.path, urls);
@@ -299,7 +298,9 @@ export default class SourceWorker {
       (m) => m?.metadata !== undefined,
     ) as GlyphMetadata[];
     const imageMetadata = await Promise.all(imageAwaits);
-    const filteredImageMetadata = imageMetadata.filter((m) => m !== undefined) as ImageMetadata[];
+    const filteredImageMetadata = imageMetadata.filter(
+      (m) => m !== undefined,
+    ) as ImageSourceMetadata[];
     for (const worker of this.workers) {
       const message: GlyphMetadataMessage = {
         mapID,
@@ -312,32 +313,33 @@ export default class SourceWorker {
   }
 
   /**
-   * @param mapID
-   * @param name
-   * @param input
-   * @param layers
+   * Create a source
+   * @param mapID - the id of the map
+   * @param name - the name of the source
+   * @param input - the path to the source
+   * @param layers - the layers that use this source
    */
   #createSource(mapID: string, name: string, input: StyleSource, layers: LayerDefinition[]): void {
     const { maps, session } = this;
     const { urls, projection, sources } = maps[mapID];
     // prepare variables to build appropriate source type
     let metadata: SourceMetadata | undefined;
-    let fileType: string | undefined;
+    let ext: string | undefined;
     if (typeof input === 'object') {
-      metadata = input;
-      fileType = input.fileType ?? input.type;
-      input = input.path ?? '';
+      metadata = input as SourceMetadata;
+      ext = 'extension' in input ? input.extension : input.type;
+      input = 'path' in input ? (input.path ?? '') : '';
     }
-    if (fileType === undefined) fileType = (input.split('.').pop() ?? '').toLowerCase();
+    if (ext === undefined) ext = (input.split('.').pop() ?? '').toLowerCase();
     const needsToken = session.hasAPIKey(mapID);
     const path = adjustURL(input, urls);
     // create the proper source type
     let source;
-    if (fileType === 's2pm' || fileType === 'pmtiles') {
+    if (ext === 's2pmtiles' || ext === 'pmtiles') {
       source = new S2PMTilesSource(name, projection, layers, path, needsToken, session);
-    } else if (fileType === 's2tiles') {
+    } else if (ext === 's2tiles') {
       source = new S2TilesSource(name, projection, layers, path, needsToken, session);
-    } else if (fileType === 'json' || fileType === 's2json' || fileType === 'geojson') {
+    } else if (ext === 'json' || ext === 's2json' || ext === 'geojson') {
       source = new JSONSource(name, projection, layers, path, needsToken, session);
     } else if (input === '_local') {
       source = new LocalSource(name, session, layers);
@@ -350,9 +352,11 @@ export default class SourceWorker {
   }
 
   /**
-   * @param mapID
-   * @param name
-   * @param input
+   * Create a glyph source and build
+   * @param mapID - the id of the map
+   * @param name - the name of the source
+   * @param input - the path to the source
+   * @returns a list of glyph metadata that's yet to be parsed
    */
   async #createGlyphSource(
     mapID: string,
@@ -369,17 +373,19 @@ export default class SourceWorker {
   }
 
   /**
-   * @param mapID
-   * @param name
-   * @param input
-   * @param fileType
+   * Create a sprite sheet given an input source
+   * @param mapID - the id of the map to build the source for
+   * @param name - the name of the source sprite
+   * @param input - the path to the source
+   * @param fileType - the file type (extension)
+   * @returns the image metadata if successful
    */
   async #createSpriteSheet(
     mapID: string,
     name: string,
     input: string,
-    fileType?: ImageFormats,
-  ): Promise<undefined | ImageMetadata> {
+    fileType?: ImageExtensions,
+  ): Promise<undefined | ImageSourceMetadata> {
     const { maps, session } = this;
     const { urls, texturePack, sprites } = maps[mapID];
     // check if already exists
@@ -391,9 +397,10 @@ export default class SourceWorker {
   }
 
   /**
-   * @param mapID
-   * @param tiles
-   * @param sources
+   * Given a tile request, ship out requests for data from all sources
+   * @param mapID - the id of the map
+   * @param tiles - the tile requests
+   * @param sources - the sources to modify if needed.
    */
   async #requestTile(
     mapID: string,
@@ -430,11 +437,16 @@ export default class SourceWorker {
   }
 
   /**
-   * @param mapID
-   * @param tiles
-   * @param sourceNames
+   * Request temporal source data
+   * @param mapID - the id of the map
+   * @param tiles - the tile requests with time stamps
+   * @param sourceNames - the sources to fetch data for
    */
-  async #requestTime(mapID: string, tiles: TileRequest[], sourceNames: string[]): Promise<void> {
+  async #requestTime(
+    mapID: string,
+    tiles: TileRequest[],
+    sourceNames: string[] = [],
+  ): Promise<void> {
     const { sources: mapSources } = this.maps[mapID];
     // build requests
     for (const tile of tiles) {
@@ -454,10 +466,11 @@ export default class SourceWorker {
   }
 
   /**
-   * @param mapID
-   * @param workerID
-   * @param reqID
-   * @param sourceGlyphs
+   * Request glyph data
+   * @param mapID - the id of the map that needs the glyphs
+   * @param workerID - the Tile ID making the request
+   * @param reqID - the request id, an encoded string tracking metadata about the request
+   * @param sourceGlyphs - the glyphs to request, their sources, etc.
    */
   #glyphRequest(
     mapID: string,
@@ -475,44 +488,49 @@ export default class SourceWorker {
   }
 
   /**
-   * @param mapID
-   * @param markers
-   * @param sourceName
+   * Add marker(s) to the map
+   * @param mapID - the id of the map to add marker(s) to
+   * @param markers - the marker(s) to add
+   * @param sourceName - the name of the source to add the marker(s) to
    */
   #addMarkers(mapID: string, markers: MarkerDefinition[], sourceName: string): void {
     const markerSource = this.#getMarkerSource(mapID, sourceName);
-    markerSource.addMarkers(markers);
+    markerSource?.addMarkers(markers);
   }
 
   /**
-   * @param mapID
-   * @param ids
-   * @param sourceName
+   * Delete marker(s) from the map
+   * @param mapID - the id of the map to delete marker(s) from
+   * @param ids - the id(s) of the marker(s) to delete
+   * @param sourceName - the name of the source to delete the marker(s) from
    */
   #deleteMarkers(mapID: string, ids: number[], sourceName: string): void {
     const markerSource = this.#getMarkerSource(mapID, sourceName);
-    markerSource.deleteMarkers(ids);
+    markerSource?.deleteMarkers(ids);
   }
 
   /**
-   * @param mapID
-   * @param sourceName
+   * Get the marker source
+   * @param mapID - the id of the map
+   * @param sourceName - the name of the source
+   * @returns the marker source if found
    */
-  #getMarkerSource(mapID: string, sourceName: string): MarkerSource {
+  #getMarkerSource(mapID: string, sourceName: string): MarkerSource | undefined {
     const { sources, layers, projection } = this.maps[mapID];
     if (sources === undefined) throw new Error(`Map ${mapID} does not exist`);
     if (sources[sourceName] === undefined)
       sources[sourceName] = new MarkerSource(sourceName, this.session, projection, layers);
-    return sources[sourceName] as MarkerSource;
+    return sources[sourceName] as MarkerSource | undefined;
   }
 
   /**
-   * @param mapID
-   * @param sourceNames
+   * Delete source(s) from the map
+   * @param mapID - the id of the map to delete the source from
+   * @param sourceNames - the name(s) of the source(s) to delete
    */
   #deleteSource(mapID: string, sourceNames: string[]): void {
     for (const sourceName of sourceNames) {
-      // @ts-expect-error - we are deleting the source
+      // @ts-expect-error - we are deleting the source, this is ok
       this.sources[mapID][sourceName] = undefined;
     }
   }

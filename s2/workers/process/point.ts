@@ -1,10 +1,10 @@
+import { GPUType } from 'style/style.spec';
 import parseFeatureFunction from 'style/parseFeatureFunction';
 import parseFilter from 'style/parseFilter';
 import VectorWorker, { colorFunc, idToRGB } from './vectorWorker';
 import { featureSort, scaleShiftClip } from './util';
 
 import type { CodeDesign } from './vectorWorker';
-import type { VectorPoints } from 'open-vector-tile';
 import type { HeatmapData, PointData, TileRequest } from '../worker.spec';
 import type {
   HeatmapDefinition,
@@ -19,24 +19,22 @@ import type {
   VTFeature,
 } from './process.spec';
 
-import type { VectorGeometryType } from 'gis-tools';
+import type { VectorGeometryType, VectorMultiPoint } from 'gis-tools';
 
-/**
- *
- */
+/** Internal organization to hold specific point features */
 export interface Features {
   point: PointFeature[];
   heatmap: HeatmapFeature[];
 }
 
-/**
- *
- */
+/** Worker for processing point data */
 export default class PointWorker extends VectorWorker implements PointWorkerSpec {
   featureStore = new Map<string, Features>(); // tileID -> features
 
   /**
-   * @param layerDefinition
+   * Setup a layer for future data processing
+   * @param layerDefinition - layer definition
+   * @returns the pre-processed layer
    */
   setupLayer(
     layerDefinition: PointDefinition | HeatmapDefinition,
@@ -89,12 +87,14 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
   }
 
   /**
-   * @param tile
-   * @param extent
-   * @param feature
-   * @param layer
-   * @param mapID
-   * @param sourceName
+   * Build a point feature
+   * @param tile - the tile request
+   * @param extent - the tile extent
+   * @param feature - the vector tile feature
+   * @param layer - the layer definition
+   * @param mapID - the map id to ship the data back to
+   * @param sourceName - the source name for the data to belong to
+   * @returns true if the feature was built
    */
   buildFeature(
     tile: TileRequest,
@@ -119,10 +119,10 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
     if (geoFilter.includes('point') && (featureType === 'Point' || featureType === 'MultiPoint'))
       return false;
     // load geometry
-    const points = feature.loadPoints?.();
+    const points = feature.loadPoints();
     if (points === undefined) return false;
     // preprocess geometry
-    const clip = scaleShiftClip(points, 1, extent ?? 1, tile) as VectorPoints;
+    const clip = scaleShiftClip(points, 1, extent ?? 1, tile) as VectorMultiPoint;
     if (clip === undefined) return false;
     const vertices: number[] = [];
     const weights: number[] = [];
@@ -141,9 +141,9 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
     if (vertices.length === 0) return false;
 
     const codeLoBoth = getCode(zoom, properties);
-    const codeLo = codeLoBoth[gpuType === 1 ? 0 : 1];
+    const codeLo = codeLoBoth[gpuType === GPUType.WebGL1 ? 0 : 1];
     const gl2Code = codeLoBoth[1];
-    const codeHi = getCode(zoom + 1, properties)[gpuType === 1 ? 0 : 1];
+    const codeHi = getCode(zoom + 1, properties)[gpuType === GPUType.WebGL1 ? 0 : 1];
     const typeFeature = {
       vertices,
       layerIndex,
@@ -174,10 +174,11 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
   }
 
   /**
-   * @param mapID
-   * @param tile
-   * @param sourceName
-   * @param wait
+   * Flush the feature store (all processed data is sent back to the main thread)
+   * @param mapID - the map id to ship the data back to
+   * @param tile - the tile request
+   * @param sourceName - the source name the data to belongs to
+   * @param wait - this promise must be resloved before flushing.
    */
   override async flush(
     mapID: string,
@@ -192,10 +193,11 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
   }
 
   /**
-   * @param mapID
-   * @param sourceName
-   * @param tileID
-   * @param type
+   * Internal flush function
+   * @param mapID - the map id to ship the data back to
+   * @param sourceName - the source name the data to belongs to
+   * @param tileID - the tile id
+   * @param type - the feature type (point or heatmap)
    */
   #flush(mapID: string, sourceName: string, tileID: bigint, type: 'point' | 'heatmap'): void {
     const features = (this.featureStore.get(`${mapID}:${tileID}:${sourceName}`) ?? {

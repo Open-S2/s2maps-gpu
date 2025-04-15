@@ -1,20 +1,24 @@
-import parse from './parse'
+import parse from './parse.js';
 
-import type { BunPlugin } from 'bun'
+import type { BunPlugin } from 'bun';
 
 const GlslPlugin: BunPlugin = {
   name: 'GLSL loader',
-  setup (build) {
+  /**
+   * Setup plugin
+   * @param build - plugin build
+   */
+  setup(build): void {
     build.onLoad({ filter: /\.glsl$/ }, async (args) => {
-      const { path } = args
+      const { path } = args;
       // get the contents of the file
-      const shader = await Bun.file(path).text()
+      const shader = await Bun.file(path).text();
       return {
         contents: parse(path, shader),
-        loader: 'js'
-      }
-    })
-  }
-}
+        loader: 'js',
+      };
+    });
+  },
+};
 
-export default GlslPlugin
+export default GlslPlugin;

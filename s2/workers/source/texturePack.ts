@@ -6,13 +6,12 @@ interface Space {
   heightOffset: number;
 }
 
-// Texture pack stores fonts and builds out SDF characters onto a texture sheet
-// each time we encounter a new character, we need to build the fills and strokes
-// and let the main painting thread know about the update
-// each font will have its own vertical row, and if a row is filled, we start a new one
-// the horizontal space is 2048 and we start a new row
 /**
- *
+ * Texture pack stores fonts and builds out SDF characters onto a texture sheet
+ * each time we encounter a new character, we need to build the fills and strokes
+ * and let the main painting thread know about the update
+ * each font will have its own vertical row, and if a row is filled, we start a new one
+ * the horizontal space is 2048 and we start a new row
  */
 export default class TexturePack {
   height = 0;
@@ -20,8 +19,10 @@ export default class TexturePack {
   spaces: Record<number, Space> = {};
 
   /**
-   * @param width
-   * @param height
+   * Add a glyph
+   * @param width - width of glyph
+   * @param height - height of glyph
+   * @returns the position of the glyph in the texture
    */
   addGlyph(width: number, height: number): [offsetX: number, offsetY: number] {
     // create a box object

@@ -29,27 +29,25 @@ import type {
   TileMaskSource,
 } from './workflow.spec';
 
-/**
- *
- */
+/** Fill Feature is a standalone fill render storage unit that can be drawn to the GPU */
 export class FillFeature extends Feature implements FillFeatureSpec {
   type = 'fill' as const;
   color?: number[]; // webgl1
   opacity?: number[]; // webgl1
   /**
-   * @param workflow
-   * @param layerGuide
-   * @param maskLayer
-   * @param source
-   * @param mode
-   * @param count
-   * @param offset
-   * @param patternXY
-   * @param patternWH
-   * @param patternMovement
-   * @param featureCode
-   * @param tile
-   * @param parent
+   * @param workflow - the fill workflow
+   * @param layerGuide - layer guide for this feature
+   * @param maskLayer - whether or not the layer is a mask or a fill
+   * @param source - the fill or mask source
+   * @param mode - the draw mode
+   * @param count - the number of points
+   * @param offset - the offset of the points
+   * @param patternXY - the pattern offset
+   * @param patternWH - the pattern size
+   * @param patternMovement - the pattern movement position
+   * @param featureCode - the feature code that tells the GPU how to compute it's properties
+   * @param tile - the tile that the feature is drawn on
+   * @param parent - the parent tile if applicable
    */
   constructor(
     public override workflow: FillWorkflowSpec,
@@ -70,7 +68,8 @@ export class FillFeature extends Feature implements FillFeatureSpec {
   }
 
   /**
-   * @param interactive
+   * Draw the feature to the GPU
+   * @param interactive - whether or not the feature is interactive
    */
   override draw(interactive = false): void {
     super.draw(interactive);
@@ -82,8 +81,10 @@ export class FillFeature extends Feature implements FillFeatureSpec {
   }
 
   /**
-   * @param tile
-   * @param parent
+   * Duplicate this feature
+   * @param tile - the tile that the feature is drawn on
+   * @param parent - the parent tile if applicable
+   * @returns the duplicated feature
    */
   duplicate(tile: Tile, parent?: Tile): FillFeature {
     const {
@@ -121,8 +122,9 @@ export class FillFeature extends Feature implements FillFeatureSpec {
   }
 
   /**
-   * @param color
-   * @param opacity
+   * Set the attributes of the feature if the context is webgl1
+   * @param color - the color
+   * @param opacity - the opacity
    */
   setWebGL1Attributes(color?: number[], opacity?: number[]): void {
     this.color = color;
@@ -130,16 +132,12 @@ export class FillFeature extends Feature implements FillFeatureSpec {
   }
 }
 
-/**
- *
- */
+/** Fill Workflow */
 export default class FillWorkflow extends Workflow implements FillWorkflowSpec {
   label = 'fill' as const;
   declare uniforms: { [key in FillWorkflowUniforms]: WebGLUniformLocation };
   layerGuides = new Map<number, FillWorkflowLayerGuide>();
-  /**
-   * @param context
-   */
+  /** @param context - The WebGL(1|2) context */
   constructor(context: Context) {
     // inject Program
     super(context);
@@ -151,10 +149,11 @@ export default class FillWorkflow extends Workflow implements FillWorkflowSpec {
     else this.buildShaders(vert2, frag2);
   }
 
-  // workflow helps design the appropriate layer parameters
   /**
-   * @param layerBase
-   * @param layer
+   * Build layer definition for the fill feature
+   * @param layerBase - the common layer attributes
+   * @param layer - the user defined layer attributes
+   * @returns a built layer definition that's ready to describe how to render a feature
    */
   buildLayerDefinition(layerBase: LayerDefinitionBase, layer: FillStyle): FillDefinition {
     const { type } = this;
@@ -218,15 +217,13 @@ export default class FillWorkflow extends Workflow implements FillWorkflowSpec {
     return layerDefinition;
   }
 
-  // given a set of layerIndexes that use Masks and the tile of interest
   /**
-   * @param root0
-   * @param root0.layerIndex
-   * @param root0.minzoom
-   * @param root0.maxzoom
-   * @param tile
+   * Build a mask feature
+   * @param maskFeature - the mask feature guide
+   * @param tile - the tile that needs a mask
    */
-  buildMaskFeature({ layerIndex, minzoom, maxzoom }: FillDefinition, tile: Tile): void {
+  buildMaskFeature(maskFeature: FillDefinition, tile: Tile): void {
+    const { layerIndex, minzoom, maxzoom } = maskFeature;
     const { type, gl, layerGuides } = this;
     const { zoom, mask } = tile;
     // not in the zoom range, ignore
@@ -257,8 +254,9 @@ export default class FillWorkflow extends Workflow implements FillWorkflowSpec {
   }
 
   /**
-   * @param fillData
-   * @param tile
+   * Build a fill features from source data sent from the Tile Worker
+   * @param fillData - the fill data from the Tile Worker
+   * @param tile - the tile that the features belong to
    */
   buildSource(fillData: FillData, tile: Tile): void {
     const { gl, context } = this;
@@ -301,9 +299,10 @@ export default class FillWorkflow extends Workflow implements FillWorkflowSpec {
   }
 
   /**
-   * @param source
-   * @param tile
-   * @param featureGuideArray
+   * Build fill features
+   * @param source - the fill source
+   * @param tile - the tile that the features belong to
+   * @param featureGuideArray - the array of feature guides
    */
   #buildFeatures(source: FillSource, tile: Tile, featureGuideArray: Float32Array): void {
     const { gl } = this;
@@ -370,10 +369,11 @@ export default class FillWorkflow extends Workflow implements FillWorkflowSpec {
   }
 
   /**
-   * @param featureGuide
-   * @param interactive
+   * Draw the fill feature
+   * @param feature - the fill feature
+   * @param interactive - whether or not the feature is interactive
    */
-  draw(featureGuide: FillFeatureSpec, interactive = false): void {
+  draw(feature: FillFeatureSpec, interactive = false): void {
     // grab context
     const { gl, context, type, uniforms } = this;
     const { uTexSize, uPatternXY, uPatternWH, uPatternMovement, uColors, uOpacity } = uniforms;
@@ -393,7 +393,7 @@ export default class FillWorkflow extends Workflow implements FillWorkflowSpec {
       patternXY,
       patternWH,
       patternMovement,
-    } = featureGuide;
+    } = feature;
     if (!visible) return;
     const { vao } = source;
     const { mask } = parent ?? tile;
@@ -431,7 +431,8 @@ export default class FillWorkflow extends Workflow implements FillWorkflowSpec {
   }
 
   /**
-   * @param mask
+   * Draw a mask to the GPU
+   * @param mask - the tile mask
    */
   drawMask(mask: TileMaskSource): void {
     const { gl, context } = this;

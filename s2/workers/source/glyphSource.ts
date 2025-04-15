@@ -1,38 +1,29 @@
+import { zagzig } from 'open-vector-tile';
+
 import type Session from './session';
 
 import type { Glyph } from 'workers/process/glyph/familySource';
 import type TexturePack from './texturePack';
 import type { GlyphImageData, GlyphResponseMessage } from 'workers/worker.spec';
 
-/**
- *
- */
+/** Unparsed state of glyph metadata, letting Tile Workers know of what glyphs are available */
 export interface GlyphMetadataUnparsed {
   name: string;
   metadata: undefined | ArrayBuffer;
 }
-/**
- *
- */
+/** Actual glyph metadata for the Tile Worker to know how to shape and prepare glyphs for rendering */
 export interface GlyphMetadata {
   name: string;
   metadata: ArrayBuffer;
 }
 
-/**
- *
- */
+/** An incoming lost of icon requests. Each string is the name of an icon */
 export type IconRequest = Set<string>; // [iconName, iconName, iconName, ...]
-/**
- *
- */
+/** Glyph request promise */
 interface GlyphPromise<U> extends Promise<U> {
   id: string;
 }
-
-/**
- *
- */
+/** Glyph Image shape stored for future requests from Tile Workers */
 export interface GlyphImage {
   posX: number;
   posY: number;
@@ -40,35 +31,13 @@ export interface GlyphImage {
   height: number;
   data: ArrayBuffer;
 }
-
-/**
- *
- */
+/** Collection of Glyph Images */
 export type GlyphImages = GlyphImage[];
 
 /**
- * @param num
- */
-const zagzig = (num: number): number => {
-  return (num >> 1) ^ -(num & 1);
-};
-
-/**
- * @param num
- */
-const base36 = (num: number): string => {
-  return num.toString(36);
-};
-
-/**
+ * # Glyph Source
  *
- */
-const genID = (): string => {
-  return Math.random().toString(16).replace('0.', '');
-};
-
-/**
- *
+ * A glyph source manager to request metadata, glyphs, and images
  */
 export default class GlyphSource {
   active = true;
@@ -85,10 +54,10 @@ export default class GlyphSource {
   glyphCache = new Map<string, Glyph>(); // glyphs we have built already
   isIcon = false;
   /**
-   * @param name
-   * @param path
-   * @param texturePack
-   * @param session
+   * @param name - the name of the source
+   * @param path - the path to the source
+   * @param texturePack - the texture pack to help define where the glyphs/images are stored
+   * @param session - the session
    */
   constructor(name: string, path: string, texturePack: TexturePack, session: Session) {
     this.name = name;
@@ -98,7 +67,9 @@ export default class GlyphSource {
   }
 
   /**
-   * @param mapID
+   * Build the source data
+   * @param mapID - the id of the map
+   * @returns the metadata, yet to be parsed
    */
   async build(mapID: string): Promise<GlyphMetadataUnparsed> {
     const metadata = await this._fetch(`${this.path}?type=metadata`, mapID);
@@ -113,7 +84,9 @@ export default class GlyphSource {
   }
 
   /**
-   * @param metadata
+   * Build metadata from a buffer
+   * @param metadata - the metadata buffer
+   * @returns the metadata
    */
   _buildMetadata(metadata: ArrayBuffer): GlyphMetadataUnparsed {
     const meta = new DataView(metadata);
@@ -129,10 +102,11 @@ export default class GlyphSource {
   }
 
   /**
-   * @param request
-   * @param mapID
-   * @param reqID
-   * @param worker
+   * Given a collection of unicodes, request the glyphs from the server
+   * @param request - array of unicodes
+   * @param mapID - the id of the map we are fetching data for
+   * @param reqID - the id of the request
+   * @param worker - the worker port
    */
   async glyphRequest(
     request: string[], // array of codes
@@ -185,8 +159,9 @@ export default class GlyphSource {
   }
 
   /**
-   * @param list
-   * @param mapID
+   * Request glyphs
+   * @param list - array of unicodes to request their data for
+   * @param mapID - the id of the map
    */
   async #requestGlyphs(list: string[], mapID: string): Promise<void> {
     const { isIcon, extent, glyphCache, glyphWaitlist, maxHeight, texturePack } = this;
@@ -256,7 +231,9 @@ export default class GlyphSource {
   }
 
   /**
-   * @param list
+   * Build requests from the list of requested glyphs
+   * @param list - list of requested glyphs
+   * @returns an array of requests
    */
   #buildRequests(list: string[]): Array<{ request: string; substitutes: string[] }> {
     const { path } = this;
@@ -297,8 +274,10 @@ export default class GlyphSource {
   }
 
   /**
-   * @param path
-   * @param mapID
+   * Fetch glyph data and or metadata
+   * @param path - the url to fetch the data
+   * @param mapID - the id of the map
+   * @returns the raw data if found
    */
   async _fetch(path: string, mapID: string): Promise<undefined | ArrayBuffer> {
     const headers: { Authorization?: string } = {};
@@ -313,12 +292,12 @@ export default class GlyphSource {
   }
 }
 
-/**
- *
- */
+/** Result of merging ranges */
 type MergeResult = Array<string | number | [from: number, to: number]>;
 /**
- * @param unicodes
+ * Merge ranges of unicodes into as few ranges as possible.
+ * @param unicodes - unicodes to merge
+ * @returns merged ranges
  */
 function mergeRanges(unicodes: Array<string | number>): MergeResult {
   return unicodes.reduce<MergeResult>((acc, cur): MergeResult => {
@@ -335,4 +314,21 @@ function mergeRanges(unicodes: Array<string | number>): MergeResult {
     acc.push(cur);
     return acc;
   }, []);
+}
+
+/**
+ * Convert a number to a base36 string
+ * @param num - number
+ * @returns base36 string
+ */
+function base36(num: number): string {
+  return num.toString(36);
+}
+
+/**
+ * ID generator. Used to ensure features don't overlap
+ * @returns a random string
+ */
+function genID(): string {
+  return Math.random().toString(16).replace('0.', '');
 }

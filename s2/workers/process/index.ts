@@ -1,5 +1,6 @@
 import FillWorker from './fill';
 import GlyphWorker from './glyph';
+import { IDGen } from './process.spec';
 import ImageStore from './imageStore';
 import LineWorker from './line';
 import PointWorker from './point';
@@ -7,7 +8,7 @@ import RasterWorker from './raster';
 
 import type { Glyph } from './glyph/familySource';
 import type { GlyphMetadata } from 'workers/source/glyphSource';
-import type { ImageMetadata } from 'workers/source/imageSource';
+import type { ImageSourceMetadata } from 'workers/source/imageSource';
 import type {
   GPUType,
   HillshadeWorkerLayer,
@@ -18,14 +19,14 @@ import type {
   StylePackage,
   WorkerLayer,
 } from 'style/style.spec';
-import type { IDGen, VTTile, VectorWorker, Workers } from './process.spec';
 import type { TileFlushMessage, TileRequest } from '../worker.spec';
-
-// 32bit: 4,294,967,295 --- 24bit: 16,777,216 --- 22bit: 4,194,304 --- 16bit: 65,535 --- 7bit: 128
-export const ID_MAX_SIZE = 1 << 22;
+import type { VTTile, VectorWorker, Workers } from './process.spec';
 
 /**
+ * # Process Manager
  *
+ * A managment class for all input vector/raster work for the Tile Worker thread.
+ * Handles all input data cases and handles shipping the resultant render data back to the main thread
  */
 export default class ProcessManager {
   id!: number;
@@ -41,15 +42,17 @@ export default class ProcessManager {
   mapStyles: Record<string, StylePackage> = {};
 
   /**
-   * @param totalWorkers
+   * Internal function to build the id generator
+   * @param totalWorkers - the total number of tile workers
    */
   _buildIDGen(totalWorkers: number): void {
-    this.idGen = buildIDGen(this.id, totalWorkers);
+    this.idGen = new IDGen(this.id, totalWorkers);
   }
 
   /**
-   * @param mapID
-   * @param style
+   * Setup a map style
+   * @param mapID - the id of the map to setup the style for
+   * @param style - the style to setup
    */
   setupStyle(mapID: string, style: StylePackage): void {
     this.mapStyles[mapID] = style;
@@ -73,7 +76,9 @@ export default class ProcessManager {
   }
 
   /**
-   * @param layer
+   * Setup a style layer into a "worker layer" that can process input data into renderable data
+   * @param layer - the layer to setup
+   * @returns the worker layer
    */
   setupLayer(layer: LayerDefinition): undefined | WorkerLayer {
     if (layer.type === 'shade') return;
@@ -81,8 +86,9 @@ export default class ProcessManager {
   }
 
   /**
-   * @param names
-   * @param style
+   * Build the workers needed for the style
+   * @param names - the names of the workers
+   * @param style - the style that has layers describing the workers it needs
    */
   #buildWorkers(names: Set<LayerType>, style: StylePackage): void {
     const { idGen, gpuType, workers, sourceWorker, imageStore } = this;
@@ -108,10 +114,11 @@ export default class ProcessManager {
   }
 
   /**
-   * @param mapID
-   * @param tile
-   * @param sourceName
-   * @param vectorTile
+   * Process the input vector data
+   * @param mapID - the map that made the request
+   * @param tile - the tile request
+   * @param sourceName - the name of the source the data belongs to
+   * @param vectorTile - the input vector tile to parse
    */
   async processVector(
     mapID: string,
@@ -165,10 +172,11 @@ export default class ProcessManager {
   }
 
   /**
-   * @param mapID
-   * @param tile
-   * @param sourceName
-   * @param layers
+   * Flush all data produced from a tile input.
+   * @param mapID - the map that made the request
+   * @param tile - the tile request
+   * @param sourceName - the name of the source the data belongs to
+   * @param layers - the layers that were built
    */
   flush(
     mapID: string,
@@ -199,11 +207,12 @@ export default class ProcessManager {
   }
 
   /**
-   * @param mapID
-   * @param tile
-   * @param sourceName
-   * @param data
-   * @param size
+   * Process RGBA based data
+   * @param mapID - the map that made the request
+   * @param tile - the tile request
+   * @param sourceName - the name of the source the data belongs to
+   * @param data - the input data
+   * @param size - the size of the input data
    */
   processRaster(
     mapID: string,
@@ -222,23 +231,25 @@ export default class ProcessManager {
   }
 
   /**
-   * @param mapID
-   * @param glyphMetadata
-   * @param imageMetadata
+   * Process glyph/icon/sprite/image metadata
+   * @param mapID - the map that made the request
+   * @param glyphMetadata - the glyph/icon metadatas
+   * @param imageMetadata - the sprite/image metadatas
    */
   processMetadata(
     mapID: string,
     glyphMetadata: GlyphMetadata[],
-    imageMetadata: ImageMetadata[],
+    imageMetadata: ImageSourceMetadata[],
   ): void {
     this.imageStore.processMetadata(mapID, glyphMetadata, imageMetadata);
   }
 
   /**
-   * @param mapID
-   * @param reqID
-   * @param glyphMetadata
-   * @param familyName
+   * Process glyph/icon response from the source worker
+   * @param mapID - the map that made the request
+   * @param reqID - the id of the request
+   * @param glyphMetadata - the glyph metadata
+   * @param familyName - the name of the family
    */
   processGlyphResponse(
     mapID: string,
@@ -248,27 +259,4 @@ export default class ProcessManager {
   ): void {
     this.imageStore.processGlyphResponse(mapID, reqID, glyphMetadata, familyName);
   }
-}
-
-/**
- * @param id
- * @param totalWorkers
- */
-function buildIDGen(id: number, totalWorkers: number): IDGen {
-  return {
-    workerID: id,
-    num: id + 1,
-    startNum: id + 1,
-    incrSize: totalWorkers,
-    maxNum: ID_MAX_SIZE,
-    /**
-     *
-     */
-    getNum: function () {
-      const res = this.num;
-      this.num += this.incrSize;
-      if (this.num >= this.maxNum) this.num = this.startNum;
-      return res;
-    },
-  };
 }

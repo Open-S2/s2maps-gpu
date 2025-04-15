@@ -11,6 +11,7 @@ import type {
   HeatmapData,
   HillshadeData,
   LineData,
+  PainterData,
   PointData,
   RasterData,
   SensorData,
@@ -49,9 +50,7 @@ import type {
 
 // SOURCES
 
-/**
- *
- */
+/** Mask Source */
 export interface MaskSource {
   type: 'mask';
   vertexBuffer: GPUBuffer;
@@ -60,9 +59,8 @@ export interface MaskSource {
   count: number;
   offset: number;
 }
-/**
- *
- */
+
+/** Tile Mask Source */
 export interface TileMaskSource extends MaskSource {
   bindGroup: GPUBindGroup;
   fillPatternBindGroup: GPUBindGroup;
@@ -72,9 +70,7 @@ export interface TileMaskSource extends MaskSource {
   destroy: () => void;
 }
 
-/**
- *
- */
+/** Fill Source */
 export interface FillSource {
   type: 'fill';
   vertexBuffer: GPUBuffer;
@@ -84,9 +80,7 @@ export interface FillSource {
   destroy: () => void;
 }
 
-/**
- *
- */
+/** Glyph Source */
 export interface GlyphSource {
   type: 'glyph';
   glyphFilterBuffer: GPUBuffer;
@@ -98,9 +92,7 @@ export interface GlyphSource {
   destroy: () => void;
 }
 
-/**
- *
- */
+/** Heatmap Source */
 export interface HeatmapSource {
   type: 'heatmap';
   vertexBuffer: GPUBuffer;
@@ -108,9 +100,7 @@ export interface HeatmapSource {
   destroy: () => void;
 }
 
-/**
- *
- */
+/** Line Source */
 export interface LineSource {
   type: 'line';
   vertexBuffer: GPUBuffer;
@@ -118,9 +108,7 @@ export interface LineSource {
   destroy: () => void;
 }
 
-/**
- *
- */
+/** Point Source */
 export interface PointSource {
   type: 'point';
   vertexBuffer: GPUBuffer;
@@ -128,10 +116,7 @@ export interface PointSource {
   destroy: () => void;
 }
 
-// Uses MaskSource vao, count, and offset
-/**
- *
- */
+/** Raster Source */
 export interface RasterSource {
   type: 'raster';
   texture: GPUTexture;
@@ -143,18 +128,14 @@ export interface RasterSource {
   destroy: () => void;
 }
 
-/**
- *
- */
+/** Sensor Source */
 export interface SensorSource {
   texture?: GPUTexture;
   delete?: undefined;
   destroy: () => void;
 }
 
-/**
- *
- */
+/** All possible feature Sources */
 export type FeatureSource =
   | MaskSource
   | FillSource
@@ -163,9 +144,7 @@ export type FeatureSource =
   | HeatmapSource
   | RasterSource
   | GlyphSource;
-/**
- *
- */
+/** All possible Layer Guides */
 export type LayerGuides =
   | FillWorkflowLayerGuideGPU
   | GlyphWorkflowLayerGuideGPU
@@ -179,9 +158,7 @@ export type LayerGuides =
 
 // Features
 
-/**
- *
- */
+/** Base Feature used by all features */
 export interface FeatureBase {
   tile: Tile;
   parent?: Tile;
@@ -197,9 +174,7 @@ export interface FeatureBase {
 }
 
 // ** FILL **
-/**
- *
- */
+/** Fill Feature */
 export interface FillFeature extends FeatureBase {
   workflow: FillWorkflow;
   type: 'fill';
@@ -216,13 +191,9 @@ export interface FillFeature extends FeatureBase {
 }
 
 // ** GLYPH + GLYPH FILTER **
-/**
- *
- */
+/** Glyph Type */
 export type GlyphType = 'text' | 'icon';
-/**
- *
- */
+/** Glyph Feature */
 export interface GlyphFeature extends FeatureBase {
   type: 'glyph';
   source: GlyphSource;
@@ -242,9 +213,7 @@ export interface GlyphFeature extends FeatureBase {
 }
 
 // ** HEATMAP **
-/**
- *
- */
+/** Heatmap Feature */
 export interface HeatmapFeature extends FeatureBase {
   type: 'heatmap';
   source: HeatmapSource;
@@ -256,9 +225,7 @@ export interface HeatmapFeature extends FeatureBase {
 }
 
 // ** LINE **
-/**
- *
- */
+/** Line Feature */
 export interface LineFeature extends FeatureBase {
   type: 'line';
   source: LineSource;
@@ -271,9 +238,7 @@ export interface LineFeature extends FeatureBase {
 }
 
 // ** POINT **
-/**
- *
- */
+/** Point Feature */
 export interface PointFeature extends FeatureBase {
   type: 'point';
   source: PointSource;
@@ -286,9 +251,7 @@ export interface PointFeature extends FeatureBase {
 }
 
 // ** RASTER **
-/**
- *
- */
+/** Raster Feature */
 export interface RasterFeature extends FeatureBase {
   type: 'raster';
   source: RasterSource;
@@ -299,9 +262,7 @@ export interface RasterFeature extends FeatureBase {
 }
 
 // ** SENSOR **
-/**
- *
- */
+/** Sensor Feature */
 export interface SensorFeature extends FeatureBase {
   type: 'sensor';
   layerGuide: SensorWorkflowLayerGuideGPU;
@@ -312,9 +273,7 @@ export interface SensorFeature extends FeatureBase {
 }
 
 // ** HILLSHADE **
-/**
- *
- */
+/** Hillshade Feature */
 export interface HillshadeFeature extends FeatureBase {
   type: 'hillshade';
   source: RasterSource;
@@ -324,9 +283,7 @@ export interface HillshadeFeature extends FeatureBase {
   duplicate: (tile: Tile, parent?: Tile) => HillshadeFeature;
 }
 
-/**
- *
- */
+/** Shade Feature */
 export interface ShadeFeature extends FeatureBase {
   tile: Tile;
   type: 'shade';
@@ -337,9 +294,7 @@ export interface ShadeFeature extends FeatureBase {
   offset: number;
 }
 
-/**
- *
- */
+/** List of all features that can be rendered */
 export type Features =
   | FillFeature
   | GlyphFeature
@@ -353,9 +308,7 @@ export type Features =
 
 // WORKFLOWS
 
-/**
- *
- */
+/** List of all workflows that can draw features */
 export interface Workflows {
   fill?: FillWorkflow;
   glyph?: GlyphWorkflow;
@@ -371,9 +324,7 @@ export interface Workflows {
   background?: WallpaperWorkflow | SkyboxWorkflow;
 }
 
-/**
- *
- */
+/** Import tool for workflows that can be loaded dynamically */
 export interface WorkflowImports {
   fill: () => FillWorkflow;
   glyph: () => GlyphWorkflow;
@@ -382,20 +333,16 @@ export interface WorkflowImports {
   point: () => PointWorkflow;
   raster: () => RasterWorkflow;
   hillshade: () => HillshadeWorkflow;
+  // TODO: Set actual sensor
+  sensor: () => RasterWorkflow;
   // sensor: () => Promise<{ default: (context: WebGPUContext) => Promise<SensorWorkflow> }>
   shade: () => ShadeWorkflow;
   wallpaper: () => WallpaperWorkflow;
   skybox: () => SkyboxWorkflow;
 }
-
-/**
- *
- */
-export type WorkflowKey = keyof Workflow;
-
-/**
- *
- */
+/** Workflow keys */
+export type WorkflowKey = keyof Workflow<PainterData>;
+/** Workflow types */
 export type WorkflowType =
   | 'fill'
   | 'glyph'
@@ -409,21 +356,23 @@ export type WorkflowType =
   | 'skybox'
   | 'wallpaper';
 
-/**
- *
- */
-export interface Workflow {
+/** Global workflow wrapper. All workflows share this interface. */
+export interface Workflow<T = PainterData> {
   context: WebGPUContext;
 
   setup: () => Promise<void>;
+  buildSource?: (data: T, tile: Tile) => void;
   destroy: () => void;
   resize?: (width: number, height: number) => void;
 }
 
 /**
+ * Fill Workflow
  *
+ * Draws fills, masks for WebGPU
+ * Computes interactive features
  */
-export interface FillWorkflow extends Workflow {
+export interface FillWorkflow extends Workflow<FillData> {
   layerGuides: Map<number, FillWorkflowLayerGuideGPU>;
   interactivePipeline: GPUComputePipeline;
   maskPipeline: GPURenderPipeline;
@@ -441,9 +390,12 @@ export interface FillWorkflow extends Workflow {
 }
 
 /**
+ * Glyph Workflow
  *
+ * Draws glyphs for WebGPU
+ * Computes interactive features
  */
-export interface GlyphWorkflow extends Workflow {
+export interface GlyphWorkflow extends Workflow<GlyphData> {
   module: GPUShaderModule;
   layerGuides: Map<number, GlyphWorkflowLayerGuideGPU>;
   pipeline: GPURenderPipeline;
@@ -468,9 +420,11 @@ export interface GlyphWorkflow extends Workflow {
 }
 
 /**
+ * Heatmap Workflow
  *
+ * Draws heatmaps for WebGPU
  */
-export interface HeatmapWorkflow extends Workflow {
+export interface HeatmapWorkflow extends Workflow<HeatmapData> {
   layerGuides: Map<number, HeatmapWorkflowLayerGuideGPU>;
   pipeline: GPURenderPipeline;
   module: GPUShaderModule;
@@ -485,9 +439,11 @@ export interface HeatmapWorkflow extends Workflow {
 }
 
 /**
+ * Line Workflow
  *
+ * Draws lines for WebGPU
  */
-export interface LineWorkflow extends Workflow {
+export interface LineWorkflow extends Workflow<LineData> {
   layerGuides: Map<number, LineWorkflowLayerGuideGPU>;
   pipeline: GPURenderPipeline;
   lineBindGroupLayout: GPUBindGroupLayout;
@@ -498,9 +454,11 @@ export interface LineWorkflow extends Workflow {
 }
 
 /**
+ * Point Workflow
  *
+ * Draws points for WebGPU
  */
-export interface PointWorkflow extends Workflow {
+export interface PointWorkflow extends Workflow<PointData> {
   layerGuides: Map<number, PointWorkflowLayerGuideGPU>;
   pipeline: GPURenderPipeline;
   interactivePipeline: GPUComputePipeline;
@@ -515,9 +473,11 @@ export interface PointWorkflow extends Workflow {
 }
 
 /**
+ * Raster Workflow
  *
+ * Draws rasters for WebGPU
  */
-export interface RasterWorkflow extends Workflow {
+export interface RasterWorkflow extends Workflow<RasterData> {
   layerGuides: Map<number, RasterWorkflowLayerGuideGPU>;
   pipeline: GPURenderPipeline;
   rasterBindGroupLayout: GPUBindGroupLayout;
@@ -528,9 +488,11 @@ export interface RasterWorkflow extends Workflow {
 }
 
 /**
+ * Hillshade Workflow
  *
+ * Draws hillshades for WebGPU
  */
-export interface HillshadeWorkflow extends Workflow {
+export interface HillshadeWorkflow extends Workflow<HillshadeData> {
   layerGuides: Map<number, HillshadeWorkflowLayerGuideGPU>;
   pipeline: GPURenderPipeline;
   hillshadeBindGroupLayout: GPUBindGroupLayout;
@@ -544,9 +506,11 @@ export interface HillshadeWorkflow extends Workflow {
 }
 
 /**
+ * Sensor Workflow
  *
+ * Draws sensors for WebGPU
  */
-export interface SensorWorkflow extends Workflow {
+export interface SensorWorkflow extends Workflow<SensorData> {
   buildSource: (sensorData: SensorData, tile: Tile) => void;
   injectTimeCache: (timeCache: TimeCache) => void;
   buildLayerDefinition: (layerBase: LayerDefinitionBase, layer: SensorStyle) => SensorDefinition;
@@ -554,9 +518,11 @@ export interface SensorWorkflow extends Workflow {
 }
 
 /**
+ * Shade Workflow
  *
+ * Draws shadings for WebGPU
  */
-export interface ShadeWorkflow extends Workflow {
+export interface ShadeWorkflow extends Workflow<unknown> {
   layerGuide?: ShadeWorkflowLayerGuideGPU;
   pipeline: GPURenderPipeline;
 
@@ -566,16 +532,20 @@ export interface ShadeWorkflow extends Workflow {
 }
 
 /**
+ * Wallpaper Workflow
  *
+ * Draws wallpapers for WebGPU
  */
-export interface WallpaperWorkflow extends Workflow {
+export interface WallpaperWorkflow extends Workflow<unknown> {
   draw: (feature: Projector) => void;
 }
 
 /**
+ * Skybox Workflow
  *
+ * Draws skyboxes for WebGPU
  */
-export interface SkyboxWorkflow extends Workflow {
+export interface SkyboxWorkflow extends Workflow<unknown> {
   facesReady: number;
   ready: boolean;
 

@@ -17,32 +17,28 @@ import type {
   GlyphWorkflow as GlyphWorkflowSpec,
 } from './workflow.spec';
 
-// st (0), adjustXY (1), xy (2), wh (3), texXY (4), texWH (5)
+/** st (0), adjustXY (1), xy (2), wh (3), texXY (4), texWH (5) */
 const SUB_SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [0, 1, 2, 3, 4, 5].map((i) => ({
   arrayStride: 6 * 4 * 2, // 6 attributes * 4 bytes * 2 floats
   stepMode: 'instance',
   attributes: [
-    {
-      shaderLocation: i,
-      offset: i * 4 * 2, // attribute position * 4 bytes * 2 floats
-      format: 'float32x2',
-    },
+    // offset: attribute position * 4 bytes * 2 floats
+    { shaderLocation: i, offset: i * 4 * 2, format: 'float32x2' },
   ],
 }));
-// st - offsetXY (0), xy - wh (1), texXY - textWH (2), paths12 (3), paths34 (4)
+/** st - offsetXY (0), xy - wh (1), texXY - textWH (2), paths12 (3), paths34 (4) */
 const SUB_SHADER_BUFFER_LAYOUT_PATH: Iterable<GPUVertexBufferLayout> = [0, 1, 2, 3, 4].map((i) => ({
   arrayStride: 5 * 4 * 4, // 5 attributes * 4 floats * 4 bytes
   stepMode: 'instance',
   attributes: [
-    {
-      shaderLocation: i,
-      offset: i * 4 * 4, // attribute position * 4 floats * 4 bytes
-      format: 'float32x4',
-    },
+    // offset: attribute position * 4 floats * 4 bytes
+    { shaderLocation: i, offset: i * 4 * 4, format: 'float32x4' },
   ],
 }));
 /**
- * @param location
+ * Compute the shader buffer collision layout given the location
+ * @param location - the location of the collision result index (box or path)
+ * @returns the layout
  */
 const SHADER_BUFFER_COLLISION_COLOR_LAYOUT: (l: number) => Iterable<GPUVertexBufferLayout> = (
   location: number,
@@ -51,25 +47,13 @@ const SHADER_BUFFER_COLLISION_COLOR_LAYOUT: (l: number) => Iterable<GPUVertexBuf
     // collision result index (without the proper offset)
     arrayStride: 4, // 4 bytes * 1 float
     stepMode: 'instance',
-    attributes: [
-      {
-        shaderLocation: location,
-        offset: 0,
-        format: 'uint32',
-      },
-    ],
+    attributes: [{ shaderLocation: location, offset: 0, format: 'uint32' }],
   },
   {
     // color
     arrayStride: 4 * 4, // 4 floats * 4 bytes
     stepMode: 'instance',
-    attributes: [
-      {
-        shaderLocation: location + 1,
-        offset: 0,
-        format: 'float32x4',
-      },
-    ],
+    attributes: [{ shaderLocation: location + 1, offset: 0, format: 'float32x4' }],
   },
 ];
 const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
@@ -127,9 +111,7 @@ const TEST_SHADER_BUFFER_LAYOUT_PATH: Iterable<GPUVertexBufferLayout> = [
   },
 ];
 
-/**
- *
- */
+/** Glyph Feature is a standalone glyph render storage unit that can be drawn to the GPU */
 export class GlyphFeature implements GlyphFeatureSpec {
   type = 'glyph' as const;
   bindGroup: GPUBindGroup;
@@ -138,23 +120,23 @@ export class GlyphFeature implements GlyphFeatureSpec {
   glyphFilterBindGroup: GPUBindGroup;
   glyphInteractiveBindGroup: GPUBindGroup;
   /**
-   * @param workflow
-   * @param source
-   * @param tile
-   * @param layerGuide
-   * @param count
-   * @param offset
-   * @param filterCount
-   * @param filterOffset
-   * @param isPath
-   * @param isIcon
-   * @param featureCode
-   * @param glyphUniformBuffer
-   * @param glyphBoundsBuffer
-   * @param glyphAttributeBuffer
-   * @param glyphAttributeNoStrokeBuffer
-   * @param featureCodeBuffer
-   * @param parent
+   * @param workflow - the glyph workflow
+   * @param source - the glyph source
+   * @param tile - the tile this feature is drawn on
+   * @param layerGuide - the layer guide for this feature
+   * @param count - the number of glyphs
+   * @param offset - the offset of the glyphs
+   * @param filterCount - the number of filter glyphs
+   * @param filterOffset - the offset of the filter glyphs
+   * @param isPath - whether the feature is a path or a point
+   * @param isIcon - whether the feature is an icon or a standard glyph
+   * @param featureCode - the encoded feature code
+   * @param glyphUniformBuffer - the glyph uniform buffer
+   * @param glyphBoundsBuffer - the glyph bounds buffer
+   * @param glyphAttributeBuffer - the glyph attribute buffer
+   * @param glyphAttributeNoStrokeBuffer - the glyph attribute buffer
+   * @param featureCodeBuffer - the encoded feature code that tells the GPU how to compute it's properties
+   * @param parent - the parent tile if applicable
    */
   constructor(
     public workflow: GlyphWorkflowSpec,
@@ -182,31 +164,23 @@ export class GlyphFeature implements GlyphFeatureSpec {
     this.glyphInteractiveBindGroup = this.#buildInteractiveBindGroup();
   }
 
-  /**
-   *
-   */
+  /** Draw this feature  */
   draw(): void {
     this.workflow.draw(this);
   }
 
-  /**
-   *
-   */
+  /** Compute the feature's interactivity with the mouse */
   compute(): void {
     this.workflow.computeInteractive(this);
   }
 
-  /**
-   *
-   */
+  /** Update the shared texture's bind groups */
   updateSharedTexture(): void {
     this.glyphBindGroup = this.#buildGlyphBindGroup();
     this.glyphStrokeBindGroup = this.#buildStrokeBindGroup();
   }
 
-  /**
-   *
-   */
+  /** Destroy and cleanup the feature */
   destroy(): void {
     this.glyphBoundsBuffer.destroy();
     this.glyphUniformBuffer.destroy();
@@ -216,9 +190,11 @@ export class GlyphFeature implements GlyphFeatureSpec {
   }
 
   /**
-   * @param tile
-   * @param parent
-   * @param bounds
+   * Duplicate the feature
+   * @param tile - the tile this feature is drawn on
+   * @param parent - the parent tile if applicable
+   * @param bounds - the bounds of the tile if applicable
+   * @returns the duplicated feature
    */
   duplicate(tile: Tile, parent?: Tile, bounds?: BBox): GlyphFeature {
     const {
@@ -278,7 +254,8 @@ export class GlyphFeature implements GlyphFeatureSpec {
   }
 
   /**
-   *
+   * Build the bind group for the glyph feature
+   * @returns the GPU Bind Group for the glyph feature
    */
   #buildBindGroup(): GPUBindGroup {
     const { workflow, tile, parent, layerGuide, featureCodeBuffer } = this;
@@ -295,7 +272,8 @@ export class GlyphFeature implements GlyphFeatureSpec {
   }
 
   /**
-   *
+   * Build a glyph fill bind group
+   * @returns the GPU Bind Group
    */
   #buildGlyphBindGroup(): GPUBindGroup {
     const { glyphUniformBuffer, glyphAttributeNoStrokeBuffer } = this;
@@ -303,7 +281,8 @@ export class GlyphFeature implements GlyphFeatureSpec {
   }
 
   /**
-   *
+   * Build a stroke bind group
+   * @returns the GPU Bind Group
    */
   #buildStrokeBindGroup(): GPUBindGroup {
     const { glyphUniformBuffer, glyphAttributeBuffer } = this;
@@ -311,9 +290,11 @@ export class GlyphFeature implements GlyphFeatureSpec {
   }
 
   /**
-   * @param glyphUniformBuffer
-   * @param glyphAttributeBuffer
-   * @param isStroke
+   * Build a glyph bind group context for the glyph draw type "stroke" or "fill"
+   * @param glyphUniformBuffer - the glyph uniform buffer
+   * @param glyphAttributeBuffer - the glyph attribute buffer
+   * @param isStroke - whether the glyph draw type is stroke or fill
+   * @returns the GPU Bind Group
    */
   #buildGlyphBindGroupContext(
     glyphUniformBuffer: GPUBuffer,
@@ -336,7 +317,8 @@ export class GlyphFeature implements GlyphFeatureSpec {
   }
 
   /**
-   *
+   * Build the bind group for the glyph filters
+   * @returns the GPU Bind Group for the glyph filters
    */
   #buildFilterBindGroup(): GPUBindGroup {
     const { workflow, source, glyphBoundsBuffer, glyphUniformBuffer, glyphAttributeBuffer } = this;
@@ -359,7 +341,8 @@ export class GlyphFeature implements GlyphFeatureSpec {
   }
 
   /**
-   *
+   * Build an interactive bind group
+   * @returns a new interactive bind group
    */
   #buildInteractiveBindGroup(): GPUBindGroup {
     const { workflow, source, glyphUniformBuffer, glyphAttributeBuffer } = this;
@@ -380,9 +363,7 @@ export class GlyphFeature implements GlyphFeatureSpec {
   }
 }
 
-/**
- *
- */
+/** Glyph Workflow */
 export default class GlyphWorkflow implements GlyphWorkflowSpec {
   context: WebGPUContext;
   module!: GPUShaderModule;
@@ -404,16 +385,12 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
   glyphInteractivePiplineLayout!: GPUPipelineLayout;
   glyphBBoxesBuffer!: GPUBuffer;
   glyphFilterResultBuffer!: GPUBuffer;
-  /**
-   * @param context
-   */
+  /** @param context - The WebGPU context */
   constructor(context: WebGPUContext) {
     this.context = context;
   }
 
-  /**
-   *
-   */
+  /** Setup the workflow */
   async setup(): Promise<void> {
     const { context } = this;
     const { device, frameBindGroupLayout, featureBindGroupLayout, interactiveBindGroupLayout } =
@@ -508,9 +485,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     this.interactivePipeline = this.#getComputePipeline('interactive');
   }
 
-  /**
-   *
-   */
+  /** Destroy and cleanup the workflow */
   destroy(): void {
     for (const { layerBuffer, layerCodeBuffer } of this.layerGuides.values()) {
       layerBuffer.destroy();
@@ -520,10 +495,11 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     this.glyphFilterResultBuffer.destroy();
   }
 
-  // workflow helps design the appropriate layer parameters
   /**
-   * @param layerBase
-   * @param layer
+   * Build the layer definition for this workflow
+   * @param layerBase - the common layer attributes
+   * @param layer - the user defined layer attributes
+   * @returns a built layer definition that's ready to describe how to render a feature
    */
   buildLayerDefinition(layerBase: LayerDefinitionBase, layer: GlyphStyle): GlyphDefinition {
     const { context } = this;
@@ -645,8 +621,9 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
   }
 
   /**
-   * @param glyphData
-   * @param tile
+   * Build the source glyph data into glyph features
+   * @param glyphData - the input glyph data
+   * @param tile - the tile we are building the features for
    */
   buildSource(glyphData: GlyphData, tile: Tile): void {
     const { context } = this;
@@ -683,10 +660,8 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
       ),
       indexOffset: -1,
       filterLength,
-      /**
-       *
-       */
-      destroy: () => {
+      /** destroy the glyph source */
+      destroy: (): void => {
         const { glyphFilterBuffer, glyphQuadBuffer, glyphQuadIndexBuffer, glyphColorBuffer } =
           source;
         glyphFilterBuffer.destroy();
@@ -700,9 +675,10 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
   }
 
   /**
-   * @param source
-   * @param tile
-   * @param featureGuideArray
+   * Build glyph features from input glyph source
+   * @param source - the input glyph source
+   * @param tile - the tile we are building the features for
+   * @param featureGuideArray - the feature guide to help build the features properties
    */
   #buildFeatures(source: GlyphSource, tile: Tile, featureGuideArray: Float32Array): void {
     const { context } = this;
@@ -775,12 +751,14 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
     tile.addFeatures(features);
   }
 
-  // https://programmer.ink/think/several-best-practices-of-webgpu.html
-  // BEST PRACTICE 6: it is recommended to create pipeline asynchronously (we don't want to because we WANT to block the main thread)
-  // BEST PRACTICE 7: explicitly define pipeline layouts
   /**
-   * @param isTest
-   * @param isPath
+   * Build the render pipeline for the glyph workflows
+   * https://programmer.ink/think/several-best-practices-of-webgpu.html
+   * BEST PRACTICE 6: it is recommended to create pipeline asynchronously
+   * BEST PRACTICE 7: explicitly define pipeline layouts
+   * @param isTest - whether it is a test pipeline
+   * @param isPath - whether it is a path
+   * @returns the render pipeline
    */
   #getPipeline(isTest = false, isPath = false): GPURenderPipeline {
     const { context, module } = this;
@@ -834,7 +812,13 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
   }
 
   /**
-   * @param entryPoint
+   * Build a compute pipeline to check for interactive glyph data that interects with the mouse
+   * Or to check for which glyph's to filter in the next frame
+   * https://programmer.ink/think/several-best-practices-of-webgpu.html
+   * BEST PRACTICE 6: it is recommended to create pipeline asynchronously
+   * BEST PRACTICE 7: explicitly define pipeline layouts
+   * @param entryPoint - the kind of pipeline to build. "boxes", "circles", "test", or "interactive"
+   * @returns the GPU compute pipeline
    */
   #getComputePipeline(
     entryPoint: 'boxes' | 'circles' | 'test' | 'interactive',
@@ -852,7 +836,8 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
   }
 
   /**
-   * @param features
+   * Compute the glyph filters to see which glyphs to render
+   * @param features - the glyphs filter data to compute
    */
   computeFilters(features: GlyphFeatureSpec[]): void {
     if (features.length === 0) return;
@@ -895,7 +880,8 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
   }
 
   /**
-   * @param feature
+   * Compute the interactive glyph features to see which ones interact with the mouse
+   * @param feature - glyph feature guide
    */
   computeInteractive(feature: GlyphFeatureSpec): void {
     const { context, interactivePipeline } = this;
@@ -912,34 +898,23 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
   }
 
   /**
-   * @param root0
-   * @param root0.layerGuide
-   * @param root0.layerGuide.viewCollisions
-   * @param root0.layerGuide.visible
-   * @param root0.isPath
-   * @param root0.isIcon
-   * @param root0.bindGroup
-   * @param root0.glyphBindGroup
-   * @param root0.glyphStrokeBindGroup
-   * @param root0.source
-   * @param root0.count
-   * @param root0.offset
-   * @param root0.filterCount
-   * @param root0.filterOffset
+   * Draw the glyph feature
+   * @param feature - glyph feature guide
    */
-  draw({
-    layerGuide: { viewCollisions, visible },
-    isPath,
-    isIcon,
-    bindGroup,
-    glyphBindGroup,
-    glyphStrokeBindGroup,
-    source,
-    count,
-    offset,
-    filterCount,
-    filterOffset,
-  }: GlyphFeatureSpec): void {
+  draw(feature: GlyphFeatureSpec): void {
+    const {
+      layerGuide: { viewCollisions, visible },
+      isPath,
+      isIcon,
+      bindGroup,
+      glyphBindGroup,
+      glyphStrokeBindGroup,
+      source,
+      count,
+      offset,
+      filterCount,
+      filterOffset,
+    } = feature;
     if (!visible) return;
     // get current source data
     const { context, pipeline, pipelineC, testRenderPipeline, testCircleRenderPipeline } = this;

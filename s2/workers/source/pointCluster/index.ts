@@ -2,9 +2,7 @@ export { default as PointIndex } from './pointIndex';
 // export { default as S2PointCluster } from './s2'
 export { default as WMPointCluster } from './wm';
 
-/**
- *
- */
+/** Options for point clustering */
 export interface ClusterOptions {
   /** min zoom to generate clusters on */
   minzoom?: number;

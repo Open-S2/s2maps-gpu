@@ -59,8 +59,8 @@ export default function colorBlindAdjust(
   B = b - B;
   // Shift colors towards visible spectrum (apply error modifications)
   const RR: number = 0.0 * R + 0.0 * G + 0.0 * B;
-  const GG: number = 0.7 * R + 1.0 * G + 0.0 * B;
-  const BB = 0.7 * R + 0.0 * G + 1.0 * B;
+  const GG: number = 0.7 * R + G + 0.0 * B;
+  const BB = 0.7 * R + 0.0 * G + B;
   // Add compensation to original values
   R = RR + r;
   G = GG + g;

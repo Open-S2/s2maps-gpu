@@ -1,28 +1,44 @@
+import { ColorMode } from 's2Map';
+import { GPUType } from 'style/style.spec';
 import buildMask from './buildMask';
 
 import type { ColorArray } from 'style/color';
-import type { ColorMode } from 's2Map';
 import type { GlyphImages } from 'workers/source/glyphSource';
 import type { MapOptions } from 'ui/s2mapUI';
 import type { Painter } from 'gpu/painter.spec';
+import type { Projection } from 'style/style.spec';
 import type { SpriteImageMessage } from 'workers/worker.spec';
 import type { Tile } from 'source/tile.spec';
-import type { GPUType, Projection } from 'style/style.spec';
 import type { MaskSource, TileMaskSource } from 'gpu/workflows/workflow.spec';
 
 const DEPTH_ESPILON = 1 / Math.pow(2, 20);
 
+/** A Presentation guideline */
+export interface Presentation {
+  width: number;
+  height: number;
+  depthOrArrayLayers: number;
+}
+/** A padded buffer guide */
+export interface PaddedBuffer {
+  data: Uint8Array;
+  width: number;
+  height: number;
+}
+
 /**
+ * # WebGPU Context
  *
+ * Wrapper to manage state and GPU calls for a WebGPU context
  */
 export default class WebGPUContext {
   ready = false;
   // constants/semi-constants
-  type: GPUType = 3; // specifying that we are using a WebGPUContext
+  type: GPUType = GPUType.WebGPU; // specifying that we are using a WebGPUContext
   renderer = ''; // ex: AMD Radeon Pro 560 OpenGL Engine (https://github.com/pmndrs/detect-gpu)
   gpu: GPUCanvasContext;
   device!: GPUDevice;
-  presentation!: { width: number; height: number; depthOrArrayLayers: number };
+  presentation!: Presentation;
   painter: Painter;
   #adapter!: GPUAdapter;
   devicePixelRatio: number;
@@ -58,7 +74,7 @@ export default class WebGPUContext {
   #resizeNextFrame = false;
   #resizeCB?: () => void;
   // track current states
-  colorMode: ColorMode = 0;
+  colorMode: ColorMode = ColorMode.None;
   stencilRef = -1;
   currPipeline: undefined | GPURenderPipeline | GPUComputePipeline;
   findingFeature = false;
@@ -69,9 +85,9 @@ export default class WebGPUContext {
   };
 
   /**
-   * @param context
-   * @param options
-   * @param painter
+   * @param context - The WebGPU context
+   * @param options - map options
+   * @param painter - The painter that will use this context to manage rendering state
    */
   constructor(context: GPUCanvasContext, options: MapOptions, painter: Painter) {
     const { canvasMultiplier } = options;
@@ -80,9 +96,7 @@ export default class WebGPUContext {
     this.painter = painter;
   }
 
-  /**
-   *
-   */
+  /** A setup method to connect to the GPU and prepare the context */
   async connectGPU(): Promise<void> {
     // grab physical device adapter and device
     const adapter = await navigator.gpu.requestAdapter();
@@ -101,8 +115,8 @@ export default class WebGPUContext {
   }
 
   /**
-   * @param view
-   * @param matrix
+   * @param view - the view matrix
+   * @param matrix - the projection matrix
    */
   newScene(view: Float32Array, matrix: Float32Array): void {
     // reset current pipeline
@@ -125,23 +139,20 @@ export default class WebGPUContext {
     this.passEncoder.setBindGroup(0, this.frameBufferBindGroup);
   }
 
-  /**
-   *
-   */
+  /** Clear the interaction buffer */
   clearInteractBuffer(): void {
     this.device.queue.writeBuffer(this.#interactiveIndexBuffer, 0, new Uint32Array([0]));
   }
 
-  /**
-   *
-   */
+  /** Finish the scene by letting the device know all commands are ready to be run */
   finish(): void {
     this.passEncoder.end();
     this.device.queue.submit([this.commandEncoder.finish()]);
   }
 
   /**
-   * @param pipeline
+   * Setup a render pipeline
+   * @param pipeline - the render pipeline
    */
   setRenderPipeline(pipeline: GPURenderPipeline): void {
     if (this.currPipeline?.label === pipeline.label) return;
@@ -150,7 +161,8 @@ export default class WebGPUContext {
   }
 
   /**
-   * @param pipeline
+   * Setup a compute pipeline
+   * @param pipeline - the compute pipeline
    */
   setComputePipeline(pipeline: GPUComputePipeline): void {
     if (this.currPipeline?.label === pipeline.label) return;
@@ -159,14 +171,16 @@ export default class WebGPUContext {
   }
 
   /**
-   * @param clearColor
+   * Set a clear color
+   * @param clearColor - the clear color
    */
   setClearColor(clearColor: ColorArray): void {
     this.clearColorRGBA = clearColor;
   }
 
   /**
-   * @param mode
+   * Set the colorblind mode
+   * @param mode - the colorblind mode
    */
   setColorBlindMode(mode: ColorMode): void {
     if (this.colorMode === mode) return;
@@ -175,7 +189,8 @@ export default class WebGPUContext {
   }
 
   /**
-   * @param devicePixelRatio
+   * Set the device pixel ratio
+   * @param devicePixelRatio - the device pixel ratio
    */
   setDevicePixelRatio(devicePixelRatio?: number): void {
     if (devicePixelRatio !== undefined) this.devicePixelRatio = devicePixelRatio;
@@ -186,15 +201,17 @@ export default class WebGPUContext {
     );
   }
 
-  // https://programmer.ink/think/several-best-practices-of-webgpu.html
-  // BEST PRACTICE 1: Use the label attribute where it can be used
-  // BEST PRACTICE 5: Buffer data upload (give priority to writeBuffer() API,
-  //                  which avoids extra buffer replication operation.)
   /**
-   * @param label
-   * @param inputArray
-   * @param inUsage
-   * @param size
+   * Build a GPU Buffer
+   * https://programmer.ink/think/several-best-practices-of-webgpu.html
+   * BEST PRACTICE 1: Use the label attribute where it can be used
+   * BEST PRACTICE 5: Buffer data upload (give priority to writeBuffer() API,
+   *                  which avoids extra buffer replication operation.)
+   * @param label - buffer label
+   * @param inputArray - buffer data
+   * @param inUsage - how the buffer is used
+   * @param size - buffer size
+   * @returns the WebGPU buffer
    */
   buildGPUBuffer(
     label: string,
@@ -213,8 +230,10 @@ export default class WebGPUContext {
   }
 
   /**
-   * @param inputBuffer
-   * @param commandEncoder
+   * Duplicate a GPU Buffer
+   * @param inputBuffer - the input buffer
+   * @param commandEncoder - the command encoder
+   * @returns the duplicated buffer
    */
   duplicateGPUBuffer(inputBuffer: GPUBuffer, commandEncoder: GPUCommandEncoder): GPUBuffer {
     const { label, usage, size } = inputBuffer;
@@ -227,15 +246,13 @@ export default class WebGPUContext {
   }
 
   /**
-   * @param input
-   * @param width
-   * @param height
+   * Build a padded buffer
+   * @param input - the input buffer
+   * @param width - the width of the buffer
+   * @param height - the height of the buffer
+   * @returns the padded buffer
    */
-  buildPaddedBuffer(
-    input: ArrayBuffer,
-    width: number,
-    height: number,
-  ): { data: Uint8Array; width: number; height: number } {
+  buildPaddedBuffer(input: ArrayBuffer, width: number, height: number): PaddedBuffer {
     const alignment = this.device.limits.minUniformBufferOffsetAlignment;
     const bytesPerRow = Math.ceil((width * 4) / alignment) * alignment;
     const paddedBufferSize = bytesPerRow * height;
@@ -252,8 +269,10 @@ export default class WebGPUContext {
   }
 
   /**
-   * @param _x
-   * @param _y
+   * Get a collection of IDs pointing to the features found at the mouse position
+   * @param _x - x mouse position
+   * @param _y - y mouse position
+   * @returns the collection of features found
    */
   async getFeatureAtMousePosition(_x: number, _y: number): Promise<number[]> {
     const { device } = this;
@@ -298,16 +317,15 @@ export default class WebGPUContext {
   }
 
   /**
-   * @param cb
+   * Resize the canvas and context
+   * @param cb - callback function to be executed when resize is eventually called
    */
   resize(cb: () => void): void {
     this.#resizeNextFrame = true;
     this.#resizeCB = cb;
   }
 
-  /**
-   *
-   */
+  /** Resize the canvas, context, and associated buffers */
   #resize(): void {
     this.#resizeNextFrame = false;
     const { gpu, sampleCount } = this;
@@ -341,27 +359,31 @@ export default class WebGPUContext {
   }
 
   /**
-   * @param interactive
+   * Set the interactive state
+   * @param interactive - the interactive state (true means it is interactive)
    */
   setInteractive(interactive: boolean): void {
     this.interactive = interactive;
   }
 
   /**
-   * @param projection
+   * Set the projection (S2 or WM)
+   * @param projection - the projection
    */
   setProjection(projection: Projection): void {
     this.projection = projection;
   }
 
-  // the zoom determines the number of divisions necessary to maintain a visually
-  // asthetic spherical shape. As we zoom in, the tiles are practically flat,
-  // so division is less useful.
-  // 0, 1 => 16  ;  2, 3 => 8  ;  4, 5 => 4  ;  6, 7 => 2  ;  8+ => 1
-  // context stores masks so we don't keep recreating them and put excess stress and memory on the GPU
   /**
-   * @param division
-   * @param tile
+   * Get the mask for a tile
+   * the zoom determines the number of divisions necessary to maintain a visually
+   * asthetic spherical shape. As we zoom in, the tiles are practically flat,
+   * so division is less useful.
+   * 0, 1 => 16  ;  2, 3 => 8  ;  4, 5 => 4  ;  6, 7 => 2  ;  8+ => 1
+   * context stores masks so we don't keep recreating them and put excess stress and memory on the GPU
+   * @param division - number of division to slice the geometry by
+   * @param tile - the tile to create the mask for
+   * @returns the mask
    */
   getMask(division: number, tile: Tile): TileMaskSource {
     const { masks, nullTexture } = this;
@@ -414,23 +436,19 @@ export default class WebGPUContext {
       new Float32Array([0, 0, 0, 0, 0]),
       GPUBufferUsage.UNIFORM,
     );
-
+    // create the mask, copying the shape of other draw/workflow structures
     const tileMaskSource: TileMaskSource = {
       ...mask,
       bindGroup,
       uniformBuffer,
       positionBuffer,
       fillPatternBindGroup: this.createPatternBindGroup(fillTexturePositions, nullTexture),
-      /**
-       *
-       */
-      draw: () => {
+      /** Draw the mask */
+      draw: (): void => {
         this.setStencilReference(tile.tmpMaskID);
         this.painter.workflows.fill?.drawMask(tileMaskSource);
       },
-      /**
-       *
-       */
+      /** Destroy the mask */
       destroy: () => {
         uniformBuffer.destroy();
         positionBuffer.destroy();
@@ -445,14 +463,17 @@ export default class WebGPUContext {
   }
 
   /**
-   * @param layerIndex
+   * Get the depth position of a layer
+   * @param layerIndex - the layer index
+   * @returns the depth position
    */
   getDepthPosition(layerIndex: number): number {
     return 1 - (layerIndex + 1) * DEPTH_ESPILON;
   }
 
   /**
-   * @param stencilRef
+   * Set the stencil reference
+   * @param stencilRef - the stencil reference
    */
   setStencilReference(stencilRef: number): void {
     if (this.stencilRef === stencilRef) return;
@@ -460,9 +481,7 @@ export default class WebGPUContext {
     this.passEncoder.setStencilReference(stencilRef);
   }
 
-  /**
-   *
-   */
+  /** Prepare the render pass descriptor for the next frame */
   #prepareRenderpassDescriptor(): void {
     const [r, g, b, a] = this.clearColorRGBA;
     const currentTexture = this.gpu.getCurrentTexture();
@@ -489,9 +508,7 @@ export default class WebGPUContext {
     };
   }
 
-  /**
-   *
-   */
+  /** Build context storage groups and layouts */
   #buildContextStorageGroupsAndLayouts(): void {
     // setup a null texture
     this.nullTexture = this.buildTexture(null, 1, 1);
@@ -570,9 +587,11 @@ export default class WebGPUContext {
   }
 
   /**
-   * @param filter
-   * @param repeatU
-   * @param repeatV
+   * Build a new sampler
+   * @param filter - filter type: "linear" | "nearest"
+   * @param repeatU - repeat the sampler in the U direction
+   * @param repeatV - repeat the sampler in the V direction
+   * @returns the new sampler
    */
   buildSampler(
     filter: 'linear' | 'nearest' = 'linear',
@@ -588,14 +607,16 @@ export default class WebGPUContext {
   }
 
   /**
-   * @param imageData
-   * @param width
-   * @param height
-   * @param depthOrArrayLayers
-   * @param srcOrigin
-   * @param dstOrigin
-   * @param format
-   * @param commandEncoder
+   * Build a new texture
+   * @param imageData - the raw image data to inject to the texture
+   * @param width - width of the texture
+   * @param height - height of the texture
+   * @param depthOrArrayLayers - depth of the texture
+   * @param srcOrigin - origin starting position of the source texture
+   * @param dstOrigin - destination starting position of the GPU texture
+   * @param format - format of the texture
+   * @param commandEncoder - command encoder to use
+   * @returns the new texture
    */
   buildTexture(
     imageData: null | GPUTexture | BufferSource | SharedArrayBuffer | ImageBitmap,
@@ -635,14 +656,15 @@ export default class WebGPUContext {
   }
 
   /**
-   * @param texture
-   * @param imageData
-   * @param width
-   * @param height
-   * @param srcOrigin
-   * @param dstOrigin
-   * @param depthOrArrayLayers
-   * @param commandEncoder
+   * Upload texture data to the GPU
+   * @param texture - input Texture buffer
+   * @param imageData - input image data
+   * @param width - width of the texture
+   * @param height - height of the texture
+   * @param srcOrigin - origin starting position of the source data
+   * @param dstOrigin - destination starting position of the GPU texture
+   * @param depthOrArrayLayers - depth of the texture
+   * @param commandEncoder - command encoder to use
    */
   uploadTextureData(
     texture: GPUTexture,
@@ -687,9 +709,7 @@ export default class WebGPUContext {
     }
   }
 
-  /**
-   *
-   */
+  /** @returns a Uint8ClampedArray of the current screen */
   async getRenderData(): Promise<Uint8ClampedArray> {
     const { gpu, presentation } = this;
     const target = this.#renderTarget ?? gpu.getCurrentTexture();
@@ -697,9 +717,11 @@ export default class WebGPUContext {
   }
 
   /**
-   * @param texture
-   * @param width
-   * @param height
+   * Download texture data
+   * @param texture - input texture
+   * @param width - width of the texture to download
+   * @param height - height of the texture to download
+   * @returns a Uint8ClampedArray of the texture
    */
   async downloadTextureData(
     texture: GPUTexture,
@@ -742,12 +764,14 @@ export default class WebGPUContext {
     return result;
   }
 
-  // https://programmer.ink/think/several-best-practices-of-webgpu.html
-  // BEST PRACTICE 7: shared resource binding group and binding group layout object
   /**
-   * @param name
-   * @param bindings
-   * @param visibility
+   * Build a new layout
+   * https://programmer.ink/think/several-best-practices-of-webgpu.html
+   * BEST PRACTICE 7: shared resource binding group and binding group layout object
+   * @param name - layout name
+   * @param bindings - layout bindings
+   * @param visibility - layout visibility
+   * @returns a new bind group layout
    */
   buildLayout(
     name: string,
@@ -765,9 +789,11 @@ export default class WebGPUContext {
   }
 
   /**
-   * @param name
-   * @param layout
-   * @param bindings
+   * Build a new bind group
+   * @param name - bind group name
+   * @param layout - bind group layout
+   * @param bindings - bind group bindings
+   * @returns a new bind group
    */
   buildGroup(name: string, layout: GPUBindGroupLayout, bindings: GPUBuffer[]): GPUBindGroup {
     return this.device.createBindGroup({
@@ -781,8 +807,10 @@ export default class WebGPUContext {
   }
 
   /**
-   * @param maxHeight
-   * @param images
+   * Inject a glyph/icon image to the GPU
+   * @param maxHeight - the maximum height of the texture
+   * @param images - the glyph/icon images
+   * @returns true if the texture that stores the data was resized
    */
   injectImages(maxHeight: number, images: GlyphImages): boolean {
     const { device } = this;
@@ -810,7 +838,9 @@ export default class WebGPUContext {
   }
 
   /**
-   * @param message
+   * Inject a sprite image
+   * @param message - the sprite image message containing the raw image data and it's shape
+   * @returns true if the texture that stores the data was resized
    */
   injectSpriteImage(message: SpriteImageMessage): boolean {
     const { image, offsetX, offsetY, width, height, maxHeight } = message;
@@ -829,7 +859,9 @@ export default class WebGPUContext {
   }
 
   /**
-   * @param newHeight
+   * Increase a texture's size
+   * @param newHeight - the new height for the texture
+   * @returns true if the texture was resized
    */
   #increaseTextureSize(newHeight: number): boolean {
     const { width, height } = this.sharedTexture;
@@ -841,8 +873,10 @@ export default class WebGPUContext {
   }
 
   /**
-   * @param fillTexturePositions
-   * @param texture
+   * Build a new pattern bind group
+   * @param fillTexturePositions - the fill texture positions
+   * @param texture - the texture to bind
+   * @returns a new pattern bind group
    */
   createPatternBindGroup(
     fillTexturePositions: GPUBuffer,
@@ -860,9 +894,7 @@ export default class WebGPUContext {
     });
   }
 
-  /**
-   *
-   */
+  /** Destroy/cleanup the context */
   destroy(): void {
     this.sharedTexture.destroy();
     this.#viewUniformBuffer.destroy();

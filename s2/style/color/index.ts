@@ -22,11 +22,11 @@ export default class Color {
   val: ColorArray;
   type = 'rgb';
   /**
-   * @param x
-   * @param y
-   * @param z
-   * @param a
-   * @param type
+   * @param x - either an input color, string defining a color, or first color value
+   * @param y - second color value
+   * @param z - third color value
+   * @param a - alpha value
+   * @param type - color type
    */
   constructor(x: number | string | Color = 0, y = 0, z = 0, a = 1, type = 'rgb') {
     if (x instanceof Color) {
@@ -43,16 +43,16 @@ export default class Color {
     }
   }
 
-  /**
-   *
-   */
+  /** @returns a clone the color */
   copy(): Color {
     return new Color(...this.val, this.type);
   }
 
   /**
-   * @param normalize
-   * @param cbAdjust
+   * Get the rgb values of the color
+   * @param normalize - whether to normalize the values
+   * @param cbAdjust - colorblind adjustment
+   * @returns Color as [r, g, b, a]
    */
   getRGB(normalize = true, cbAdjust?: ColorBlindAdjust): ColorArray {
     this.toRGB();
@@ -61,9 +61,7 @@ export default class Color {
     return (normalize ? color.map((n, i) => (i < 3 ? n / 255 : n)) : color) as ColorArray;
   }
 
-  /**
-   *
-   */
+  /** @returns the lch values of the color */
   getLCH(): ColorArray {
     // now convert to lch
     this.toLCH();
@@ -71,9 +69,7 @@ export default class Color {
     return this.val;
   }
 
-  /**
-   *
-   */
+  /** @returns the rgb values of the color */
   toRGB(): this {
     if (this.type === 'rgb') return this;
     // potentially swing back
@@ -88,9 +84,7 @@ export default class Color {
     return this;
   }
 
-  /**
-   *
-   */
+  /** @returns the hsv values of the color */
   toHSV(): this {
     if (this.type === 'hsv') return this;
     // potentially swing back
@@ -102,9 +96,7 @@ export default class Color {
     return this;
   }
 
-  /**
-   *
-   */
+  /** @returns the lch values of the color */
   toLCH(): this {
     if (this.type === 'lch') return this;
     // if outside variables, bring them back to a starting point
@@ -117,9 +109,7 @@ export default class Color {
     return this;
   }
 
-  /**
-   *
-   */
+  /** Convert rgb to lab */
   RGB2LAB(): void {
     this.type = 'lab';
     const [r, g, b, a] = this.val;
@@ -128,9 +118,7 @@ export default class Color {
     this.val = [l < 0 ? 0 : l, 500 * (x - y), 200 * (y - z), a];
   }
 
-  /**
-   *
-   */
+  /** Convert lab to lch */
   LAB2LCH(): void {
     this.type = 'lch';
     const [l, a, b, alpha] = this.val;
@@ -140,9 +128,7 @@ export default class Color {
     this.val = [l, c, h, alpha];
   }
 
-  /**
-   *
-   */
+  /** Convert lch to lab */
   LCH2LAB(): void {
     this.type = 'lab';
     const [l, c, h_o, alpha] = this.val;
@@ -150,9 +136,7 @@ export default class Color {
     this.val = [l, Math.cos(h) * c, Math.sin(h) * c, alpha];
   }
 
-  /**
-   *
-   */
+  /** Convert lab to rgb */
   LAB2RGB(): void {
     this.type = 'rgb';
     const [l, a, b, alpha] = this.val;
@@ -162,7 +146,7 @@ export default class Color {
     x = isNaN(a) ? y : y + a / 500;
     z = isNaN(b) ? y : y - b / 200;
     // solve x, y, z
-    y = 1 * labXyz(y);
+    y = labXyz(y);
     x = 0.95047 * labXyz(x);
     z = 1.08883 * labXyz(z);
     // xyz to rgb
@@ -180,9 +164,7 @@ export default class Color {
     this.val = [r, g, b_, alpha];
   }
 
-  /**
-   *
-   */
+  /** Convert rgb to hsv */
   RGB2HSV(): void {
     this.type = 'hsv';
     const [r, g, b, a] = this.val;
@@ -210,9 +192,7 @@ export default class Color {
     this.val = [h, s, v, a];
   }
 
-  /**
-   *
-   */
+  /** Convert hsv to rgb */
   HSV2RGB(): void {
     this.type = 'rgb';
     let [h, s, v, a] = this.val;
@@ -257,9 +237,7 @@ export default class Color {
     }
   }
 
-  /**
-   *
-   */
+  /** Convert hsl to rgb */
   HSL2RGB(): void {
     const { round } = Math;
     this.type = 'rgb';
@@ -292,7 +270,9 @@ export default class Color {
   }
 
   /**
-   * @param t
+   * Get a sinebow color via interpolation input value
+   * @param t - input value
+   * @returns sinebow color at t
    */
   static sinebow(t: number): Color {
     const { sin, cos, floor, max, PI } = Math;
@@ -308,14 +288,18 @@ export default class Color {
   }
 
   /**
-   * @param t
+   * Get a white color via interpolation
+   * @param t - input value
+   * @returns white color at t
    */
   static fadeToWhite(t: number): Color {
     return interpolate(this.sinebow(1), new Color(255, 255, 255, 1, 'rgb'), t);
   }
 
   /**
-   * @param t
+   * Get a sinebow extended color via interpolation
+   * @param t - input value
+   * @returns sinebow extended color at t
    */
   static sinebowExtended(t: number): Color {
     return t <= 0.45 ? this.sinebow(t / 0.45) : this.fadeToWhite((t - 0.45) / (1 - 0.45));
@@ -323,8 +307,11 @@ export default class Color {
 }
 
 // everything below this was taken from chroma.js
+
 /**
- * @param r
+ * Convert rgb to xyz
+ * @param r - red/green/blue value
+ * @returns xyz value
  */
 function rgbXyz(r: number): number {
   if ((r /= 255) <= 0.04045) return r / 12.92;
@@ -332,7 +319,9 @@ function rgbXyz(r: number): number {
 }
 
 /**
- * @param t
+ * Convert xyz to lab
+ * @param t - xyz value
+ * @returns lab value
  */
 function xyzLab(t: number): number {
   if (t > 0.008856452) return Math.pow(t, 1 / 3);
@@ -340,25 +329,31 @@ function xyzLab(t: number): number {
 }
 
 /**
- * @param r
+ * Convert rgb to xyz
+ * @param r - red/green/blue value
+ * @returns xyz value
  */
 function xyzRgb(r: number): number {
   return 255 * (r <= 0.00304 ? 12.92 * r : 1.055 * Math.pow(r, 1 / 2.4) - 0.055);
 }
 
 /**
- * @param t
+ * Convert lab to xyz
+ * @param t - lab value
+ * @returns xyz value
  */
 function labXyz(t: number): number {
   return t > 0.206896552 ? t * t * t : 0.12841855 * (t - 0.137931034);
 }
 
 /**
- * @param r
- * @param g
- * @param b
+ * Convert rgb to xyz
+ * @param r - red value
+ * @param g - green value
+ * @param b - blue value
+ * @returns xyz value
  */
-function rgb2xyz(r: number, g: number, b: number): [r: number, g: number, b: number] {
+function rgb2xyz(r: number, g: number, b: number): [x: number, y: number, z: number] {
   r = rgbXyz(r);
   g = rgbXyz(g);
   b = rgbXyz(b);
@@ -371,9 +366,10 @@ function rgb2xyz(r: number, g: number, b: number): [r: number, g: number, b: num
 /**
  * Given two colors, interpolate between them using a t value between 0 and 1.
  * 0 returns color1, 1 returns color2, and anything in between returns a mixture.
- * @param color1
- * @param color2
- * @param t
+ * @param color1 - first color
+ * @param color2 - second color
+ * @param t - t value between 0 and 1
+ * @returns interpolated color
  */
 export function interpolate(color1: Color, color2: Color, t: number): Color {
   if (color1.type !== color2.type)

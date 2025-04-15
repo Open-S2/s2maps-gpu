@@ -1,30 +1,31 @@
 import PointIndex from './pointIndex';
-import { convert } from 'gis-tools';
-import { fromID } from 'geometry/wm';
-import { transformPoint } from '../jsonVT/transform';
+import { Tile, convert, idLevel, idToIJ } from 'gis-tools';
 
 import type { ClusterOptions } from './';
 import type { Point } from './pointIndex';
-import type { Face, JSONCollection, VectorPointGeometry } from 'gis-tools';
+import type { Face, JSONCollection, VectorPointFeature } from 'gis-tools';
 
+/** Comparison function - if true the features can be grouped */
+export type Comparator = (a: VectorPointFeature, b: VectorPointFeature) => boolean;
 /**
- *
+ * Default comparator
+ * @param a - first feature
+ * @param b - comparison feature
+ * @returns true if the `metadata.layer`s are the same
  */
-export type Comparator = (a: VectorPointGeometry, b: VectorPointGeometry) => boolean;
+function defaultCmp(a: VectorPointFeature, b: VectorPointFeature): boolean {
+  return a.metadata?.layer === b.metadata?.layer;
+}
 
-/**
- *
- */
+/** A clustered point */
 export interface Cluster {
   // base means it's just a point feature, level means it's potentially a cluster, but just have a sum of 1 (still a point)
-  ref: VectorPointGeometry;
+  ref: VectorPointFeature;
   visited: boolean;
   sum: number;
 }
 
-/**
- *
- */
+/** Options for point clustering that are filled with values */
 export interface OptionsComputed {
   /** min zoom to generate clusters on */
   minzoom: number;
@@ -47,7 +48,9 @@ const DEFAULT_OPTIONS: OptionsComputed = {
 };
 
 /**
+ * # Point Cluster
  *
+ * A point cluster for Web Mercator tiles
  */
 export default class PointCluser {
   minzoom: number;
@@ -55,12 +58,10 @@ export default class PointCluser {
   options: OptionsComputed = DEFAULT_OPTIONS;
   base: PointIndex<Cluster>;
   indexes: Array<PointIndex<Cluster>> = [];
-  points: VectorPointGeometry[] = [];
+  points: VectorPointFeature[] = [];
   faces = new Set<Face>([0]);
   projection = 'WG';
-  /**
-   * @param options
-   */
+  /** @param options - cluster options */
   constructor(options: ClusterOptions = {}) {
     this.options = { ...this.options, ...options };
     this.minzoom = this.options.minzoom;
@@ -74,40 +75,42 @@ export default class PointCluser {
   }
 
   /**
-   * @param data
+   * Add a collection of points
+   * @param data - a collection of points to add
    */
   addManyPoints(data: JSONCollection): void {
     const features = convert('WG', data, undefined, true);
-    for (const { geometry, properties } of features) {
-      const { type, coordinates } = geometry;
+    for (const feature of features) {
+      const { type, coordinates } = feature.geometry;
       if (type === 'Point') {
-        this.addPoint(geometry);
+        this.addPoint(feature as unknown as VectorPointFeature);
       } else if (type === 'MultiPoint') {
         for (const point of coordinates) {
           const { x: s, y: t, m } = point;
-          this.addPoint();
+          this.addPoint({
+            type: 'VectorFeature',
+            geometry: { type: 'Point', is3D: false, coordinates: { x: s, y: t, m } },
+          } as VectorPointFeature);
         }
       }
     }
   }
 
   /**
-   * @param point
+   * Add a single point
+   * @param point - a point to add
    */
-  addPoint(point: VectorPointGeometry): void {
+  addPoint(point: VectorPointFeature): void {
     const cluster: Cluster = { ref: point, visited: false, sum: 1 };
-    this.base.add(point.coordinates[0], point.geometry.coordinates[1], cluster);
+    this.base.add(point.geometry.coordinates.x, point.geometry.coordinates.y, cluster);
   }
 
   /**
-   * @param cmp
+   * Cluster the points
+   * @param cmp - optional comparator function
    */
   cluster(cmp?: Comparator): void {
-    if (cmp === undefined)
-      /**
-       *
-       */
-      cmp = () => true;
+    if (cmp === undefined) cmp = defaultCmp;
     let zoom = this.options.maxzoom;
 
     while (zoom >= this.options.minzoom) {
@@ -122,11 +125,15 @@ export default class PointCluser {
   }
 
   /**
-   * @param id
+   * Get a tile from the point cluster
+   * @param id - the tile id
+   * @returns a tile filled with cluster points that are in the tile
    */
-  getTile(id: bigint): JSONVectorTile {
+  getTile(id: bigint): Tile {
     const { radius, extent, maxzoom } = this.options;
-    const [zoom, i, j] = fromID(id);
+    const level = idLevel(id);
+    const [zoom, i, j] = idToIJ(id, level);
+    const tile = new Tile(id);
 
     const index = zoom < maxzoom ? this.indexes[zoom] : this.base;
     const z2 = Math.pow(2, zoom);
@@ -139,43 +146,36 @@ export default class PointCluser {
     if (i === 0) results.push(...index.range((z2 - p) / z2, top, 1, bottom));
     else if (i === z2 - 1.0) results.push(...index.range(0, top, (p + 1.0) / z2, bottom));
 
-    // lastly, build a JSONVectorTile
-    const layers: JSONLayers = {};
+    // lastly, build features
     for (const cluster of results) {
       const { ref, sum } = cluster.data;
       // prep layer
-      const layerName = (ref.properties.__layer as string) ?? 'default';
-      if (layers[layerName] === undefined)
-        layers[layerName] = { extent: 8_192, features: [], length: 0 };
-      const layer = layers[layerName];
+      const layerName = (ref.metadata?.layer as string) ?? 'default';
       // prep feature
-      const pointFeature: JSONVectorPointsFeature = {
-        type: 1,
-        extent: 8_192,
-        geometry: [transformPoint(cluster.x, cluster.y, 8_192, 1 << zoom, i, j)],
-        properties: { ...ref.properties, __cluster: sum > 1, __sum: sum },
-        loadGeometryFlat: undefined,
-      };
-      // store
-      layer.features.push(pointFeature);
-      layer.length++;
+      tile.addFeature(
+        {
+          type: 'VectorFeature',
+          geometry: {
+            type: 'Point',
+            is3D: false,
+            coordinates: { x: cluster.x, y: cluster.y },
+          },
+          properties: { ...ref.properties, __cluster: sum > 1, __sum: sum },
+        },
+        layerName,
+      );
     }
+    tile.transform(0, this.maxzoom);
 
-    return {
-      face: 0,
-      zoom,
-      i,
-      j,
-      extent,
-      layers,
-    };
+    return tile;
   }
 
   /**
-   * @param level
-   * @param queryIndex
-   * @param currIndex
-   * @param cmp
+   * Cluster the points
+   * @param level - the zoom level
+   * @param queryIndex - the query index
+   * @param currIndex - the current index to store the resulting clusters to
+   * @param cmp - the comparator
    */
   #cluster(
     level: number,

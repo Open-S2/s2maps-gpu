@@ -20,33 +20,25 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
   {
     // position
     arrayStride: 4 * 2,
-    attributes: [
-      {
-        shaderLocation: 0,
-        offset: 0,
-        format: 'float32x2',
-      },
-    ],
+    attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }],
   },
 ];
 
-/**
- *
- */
+/** Raster Feature is a standalone raster render storage unit that can be drawn to the GPU */
 export class RasterFeature implements RasterFeatureSpec {
   type = 'raster' as const;
   bindGroup: GPUBindGroup;
   rasterBindGroup: GPUBindGroup;
   /**
-   * @param layerGuide
-   * @param workflow
-   * @param tile
-   * @param source
-   * @param featureCode
-   * @param rasterFadeBuffer
-   * @param featureCodeBuffer
-   * @param fadeStartTime
-   * @param parent
+   * @param layerGuide - the layer guide for this feature
+   * @param workflow - the raster workflow
+   * @param tile - the tile this feature is drawn on
+   * @param source - the raster source
+   * @param featureCode - the encoded feature code that tells the GPU how to compute it's properties
+   * @param rasterFadeBuffer - the fade buffer
+   * @param featureCodeBuffer - the feature code buffer
+   * @param fadeStartTime - the start time of the fade for smooth transitions
+   * @param parent - the parent tile if applicable
    */
   constructor(
     public layerGuide: RasterWorkflowLayerGuideGPU,
@@ -63,18 +55,14 @@ export class RasterFeature implements RasterFeatureSpec {
     this.rasterBindGroup = this.#buildRasterBindGroup();
   }
 
-  /**
-   *
-   */
+  /** Draw the feature to the GPU */
   draw(): void {
     const { tile, workflow } = this;
     workflow.context.setStencilReference(tile.tmpMaskID);
     workflow.draw(this);
   }
 
-  /**
-   *
-   */
+  /** Destroy and cleanup the feature */
   destroy(): void {
     const { rasterFadeBuffer, featureCodeBuffer } = this;
     rasterFadeBuffer.destroy();
@@ -82,8 +70,10 @@ export class RasterFeature implements RasterFeatureSpec {
   }
 
   /**
-   * @param tile
-   * @param parent
+   * Duplicate the raster feature
+   * @param tile - the tile this feature is drawn on
+   * @param parent - the parent tile if applicable
+   * @returns the duplicated feature
    */
   duplicate(tile: Tile, parent?: Tile): RasterFeature {
     const {
@@ -114,7 +104,8 @@ export class RasterFeature implements RasterFeatureSpec {
   }
 
   /**
-   *
+   * Build the feature into a bind group
+   * @returns a new bind group
    */
   #buildBindGroup(): GPUBindGroup {
     const { workflow, tile, parent, layerGuide, featureCodeBuffer } = this;
@@ -131,7 +122,8 @@ export class RasterFeature implements RasterFeatureSpec {
   }
 
   /**
-   *
+   * Build the raster specific properties into a bind group
+   * @returns a new raster bind group
    */
   #buildRasterBindGroup(): GPUBindGroup {
     const { source, workflow, rasterFadeBuffer, layerGuide } = this;
@@ -150,31 +142,23 @@ export class RasterFeature implements RasterFeatureSpec {
   }
 }
 
-/**
- *
- */
+/** Raster Workflow */
 export default class RasterWorkflow implements RasterWorkflowSpec {
   context: WebGPUContext;
   layerGuides = new Map<number, RasterWorkflowLayerGuideGPU>();
   pipeline!: GPURenderPipeline;
   rasterBindGroupLayout!: GPUBindGroupLayout;
-  /**
-   * @param context
-   */
+  /** @param context - The WebGPU context */
   constructor(context: WebGPUContext) {
     this.context = context;
   }
 
-  /**
-   *
-   */
+  /** Setup the workflow */
   async setup(): Promise<void> {
     this.pipeline = await this.#getPipeline();
   }
 
-  /**
-   *
-   */
+  /** Destroy and cleanup the workflow */
   destroy(): void {
     for (const { layerBuffer, layerCodeBuffer } of this.layerGuides.values()) {
       layerBuffer.destroy();
@@ -182,10 +166,11 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
     }
   }
 
-  // workflow helps design the appropriate layer parameters
   /**
-   * @param layerBase
-   * @param layer
+   * Build the layer definition for this workflow
+   * @param layerBase - the common layer attributes
+   * @param layer - the user defined layer attributes
+   * @returns a built layer definition that's ready to describe how to render a feature
    */
   buildLayerDefinition(layerBase: LayerDefinitionBase, layer: RasterStyle): RasterDefinition {
     const { context } = this;
@@ -239,8 +224,9 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
   }
 
   /**
-   * @param rasterData
-   * @param tile
+   * Build the source raster data into raster features
+   * @param rasterData - the input raster data
+   * @param tile - the tile we are building the features for
    */
   buildSource(rasterData: RasterData, tile: Tile): void {
     const { context } = this;
@@ -256,9 +242,7 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
       indexBuffer: mask.indexBuffer,
       count: mask.count,
       offset: mask.offset,
-      /**
-       *
-       */
+      /** Destroy the raster source */
       destroy: () => {
         texture.destroy();
       },
@@ -268,9 +252,10 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
   }
 
   /**
-   * @param source
-   * @param rasterData
-   * @param tile
+   * Build raster features from input raster source
+   * @param source - the source to build features from
+   * @param rasterData - the input raster data
+   * @param tile - the tile we are building the features for
    */
   #buildFeatures(source: RasterSource, rasterData: RasterData, tile: Tile): void {
     const { context } = this;
@@ -307,11 +292,12 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
     tile.addFeatures(features);
   }
 
-  // https://programmer.ink/think/several-best-practices-of-webgpu.html
-  // BEST PRACTICE 6: it is recommended to create pipeline asynchronously
-  // BEST PRACTICE 7: explicitly define pipeline layouts
   /**
-   *
+   * Build the render pipeline for the raster workflow
+   * https://programmer.ink/think/several-best-practices-of-webgpu.html
+   * BEST PRACTICE 6: it is recommended to create pipeline asynchronously
+   * BEST PRACTICE 7: explicitly define pipeline layouts
+   * @returns the render pipeline
    */
   async #getPipeline(): Promise<GPURenderPipeline> {
     const { context } = this;
@@ -352,20 +338,11 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
     return await device.createRenderPipelineAsync({
       label: 'Raster Pipeline',
       layout,
-      vertex: {
-        module,
-        entryPoint: 'vMain',
-        buffers: SHADER_BUFFER_LAYOUT,
-      },
+      vertex: { module, entryPoint: 'vMain', buffers: SHADER_BUFFER_LAYOUT },
       fragment: {
         module,
         entryPoint: 'fMain',
-        targets: [
-          {
-            format,
-            blend: defaultBlend,
-          },
-        ],
+        targets: [{ format, blend: defaultBlend }],
       },
       primitive: {
         topology: 'triangle-strip',
@@ -386,14 +363,16 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
   }
 
   /**
-   * @param root0
-   * @param root0.layerGuide
-   * @param root0.layerGuide.visible
-   * @param root0.bindGroup
-   * @param root0.rasterBindGroup
-   * @param root0.source
+   * Draw a raster feature to the GPU
+   * @param feature - raster feature guide
    */
-  draw({ layerGuide: { visible }, bindGroup, rasterBindGroup, source }: RasterFeatureSpec): void {
+  draw(feature: RasterFeatureSpec): void {
+    const {
+      layerGuide: { visible },
+      bindGroup,
+      rasterBindGroup,
+      source,
+    } = feature;
     if (!visible) return;
     // get current source data
     const { passEncoder } = this.context;

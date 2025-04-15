@@ -18,28 +18,22 @@ import type {
   WallpaperWorkflowUniforms,
 } from './workflow.spec';
 
-/**
- *
- */
-export interface Scheme {
+/** Storage for a wallpaper scheme */
+export interface WallpaperScheme {
   background: Color;
   fade1: Color;
   fade2: Color;
   halo: Color;
 }
 
-/**
- *
- */
+/** Wallpaper Workflow renders a user styled wallpaper to the GPU */
 export default class WallpaperWorkflow extends Workflow implements WallpaperWorkflowSpec {
   label = 'wallpaper' as const;
-  scheme: Scheme;
+  scheme: WallpaperScheme;
   tileSize = 512;
   scale: VectorPoint = { x: 0, y: 0 };
   declare uniforms: { [key in WallpaperWorkflowUniforms]: WebGLUniformLocation };
-  /**
-   * @param context
-   */
+  /** @param context - WebGL(1|2) context */
   constructor(context: Context) {
     // get gl from context
     const { type } = context;
@@ -58,7 +52,8 @@ export default class WallpaperWorkflow extends Workflow implements WallpaperWork
   }
 
   /**
-   * @param projector
+   * Update the scale relative to the projector's position (zoom, aspect, multiplier)
+   * @param projector - Projector
    */
   #updateScale(projector: Projector): void {
     const { gl, uniforms } = this;
@@ -74,7 +69,8 @@ export default class WallpaperWorkflow extends Workflow implements WallpaperWork
   }
 
   /**
-   * @param style
+   * Update the wallpaper style
+   * @param style - input user defined style
    */
   updateStyle(style: StyleDefinition): void {
     const { scheme } = this;
@@ -90,7 +86,8 @@ export default class WallpaperWorkflow extends Workflow implements WallpaperWork
   }
 
   /**
-   * @param cbAdjust
+   * Update uniforms for the current colorblind mode
+   * @param cbAdjust - colorblind mode
    */
   #updateUniforms(cbAdjust?: ColorBlindAdjust): void {
     const { gl, uniforms, scheme } = this;
@@ -102,9 +99,7 @@ export default class WallpaperWorkflow extends Workflow implements WallpaperWork
     gl.uniform4fv(uHalo, scheme.halo.getRGB(true, cbAdjust));
   }
 
-  /**
-   *
-   */
+  /** Flush the uniforms to the GPU */
   override flush(): void {
     if (this.updateColorBlindMode !== null) {
       if (this.updateColorBlindMode === 0) this.#updateUniforms();
@@ -115,9 +110,7 @@ export default class WallpaperWorkflow extends Workflow implements WallpaperWork
     }
   }
 
-  /**
-   *
-   */
+  /** Use this workflow as the current shaders for the GPU */
   override use(): void {
     super.use();
     const { context } = this;
@@ -130,7 +123,8 @@ export default class WallpaperWorkflow extends Workflow implements WallpaperWork
   }
 
   /**
-   * @param projector
+   * Draw the wallpaper
+   * @param projector - Projector
    */
   draw(projector: Projector): void {
     // setup variables

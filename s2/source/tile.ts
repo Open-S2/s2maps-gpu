@@ -1,9 +1,9 @@
-import { isOutOfBounds } from 'geometry/wm';
 import { project } from 'ui/camera/projector/mat4';
 import {
   bboxST,
   idLevel,
   idToIJ,
+  isOutOfBoundsWM,
   llToTilePx,
   pointFromS2CellID,
   pointFromSTGL,
@@ -30,9 +30,11 @@ import type { InteractiveObject, SourceFlushMessage, TileFlushMessage } from 'wo
 import type { LayerDefinition, Projection } from 'style/style.spec';
 
 /**
- * @param projection
- * @param context
- * @param id
+ * Create a new Tile given the approprate projection, context and ID.
+ * @param projection - the projection type (WM or S2)
+ * @param context - the GPU or WebGL context
+ * @param id - the tile ID
+ * @returns the new Tile object
  */
 export function createTile(
   projection: Projection,
@@ -43,9 +45,7 @@ export function createTile(
   return new Tile(context as unknown as SharedContext, id) as unknown as TileGL & TileGPU;
 }
 
-/**
- *
- */
+/** Base Tile Class that all Tiles inherit from. */
 class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMaskSource>
   implements TileSpec<C, F, M>
 {
@@ -74,19 +74,19 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
   outofBounds = false;
   dependents: Array<Tile<C, F, M>> = [];
   /**
-   * @param context
-   * @param id
+   * @param context - the GPU or WebGL context
+   * @param id - the tile ID
    */
   constructor(context: C, id: bigint) {
     this.context = context;
     this.id = id;
   }
 
-  // inject references to featureGuide from each parentTile. Sometimes if we zoom really fast, we inject
-  // a parents' parent or deeper, so we need to reflect that in the tile property.
   /**
-   * @param parent
-   * @param layers
+   * inject references to featureGuide from each parentTile. Sometimes if we zoom really fast, we inject
+   * a parents' parent or deeper, so we need to reflect that in the tile property.
+   * @param parent - parent tile to inject
+   * @param layers - the effected layers to modify
    */
   injectParentTile(parent: TileSpec<C, F, M>, layers: LayerDefinition[]): void {
     // feature guides
@@ -106,7 +106,8 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
   }
 
   /**
-   * @param wrapped
+   * inject references to featureGuide from a wrapped tile
+   * @param wrapped - the wrapped tile
    */
   injectWrappedTile(wrapped: TileSpec<C, F, M>): void {
     // add existing features to the wrapped tile
@@ -116,7 +117,8 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
   }
 
   /**
-   * @param _
+   * set the screen positions of the mask
+   * @param _ - the projector (not needed here)
    */
   setScreenPositions(_: Projector): void {
     const { context, mask, bottomTop } = this;
@@ -127,14 +129,17 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
   }
 
   /**
-   * @param id
+   * get an interactive feature's properties if it exists
+   * @param id - the id of the feature
+   * @returns the interactive object
    */
   getInteractiveFeature(id: number): undefined | InteractiveObject {
     return this.interactiveGuide.get(id);
   }
 
   /**
-   * @param features
+   * add features to the tile
+   * @param features - the features to add
    */
   addFeatures(features: F[]): void {
     const { featureGuides, layersLoaded } = this;
@@ -159,7 +164,8 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
   }
 
   /**
-   * @param msg
+   * Flush message that was sent from the Source or Tile Workers letting this tile know the source and layer's state
+   * @param msg - input flush messge
    */
   flush(msg: SourceFlushMessage | TileFlushMessage): void {
     if (msg.from === 'source') this.#sourceFlush({ ...msg });
@@ -184,7 +190,8 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
   /* STYLE CHANGES */
 
   /**
-   * @param index
+   * Delete a layer
+   * @param index - the index of the layer
    */
   deleteLayer(index: number): void {
     const { featureGuides } = this;
@@ -201,7 +208,8 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
   }
 
   /**
-   * @param layerChanges
+   * Reorder layers
+   * @param layerChanges - a map of layerIndex to new layerIndex
    */
   reorderLayers(layerChanges: Record<number, number>): void {
     for (const { layerGuide } of this.featureGuides) {
@@ -213,7 +221,7 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
 
   /**
    * remove all sources that match the input sourceNames
-   * @param sourceNames
+   * @param sourceNames - the names of the sources
    */
   deleteSources(sourceNames: string[]): void {
     const { featureGuides } = this;
@@ -231,10 +239,10 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
 
   /* DATA */
 
-  // we don't parse the interactiveData immediately to save time
   /**
-   * @param interactiveGuide
-   * @param interactiveData
+   * Inject interactive data. we don't parse the interactiveData immediately to save time
+   * @param interactiveGuide - the interactive guide
+   * @param interactiveData - the interactive data
    */
   injectInteractiveData(interactiveGuide: Uint32Array, interactiveData: Uint8Array): void {
     // setup variables
@@ -259,7 +267,8 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
    * currently this is for glyphs, points, and heatmaps. By sharing glyph data with children,
    * the glyphs will be rendered 4 or even more times. To alleviate this, we can set boundaries
    * of what points will be considered
-   * @param parent
+   * @param parent - the parent tile
+   * @returns the bounds
    */
   #buildBounds(parent: TileSpec<C, F, M>): BBox {
     let { i, j, zoom } = this;
@@ -283,9 +292,7 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
     return [0 + iShift, 0 + jShift, 1 / scale + iShift, 1 / scale + jShift];
   }
 
-  /**
-   *
-   */
+  /** Checks the state of the layers. Updates the tiles state if all layers are loaded */
   #checkState(): void {
     const { layersLoaded, layersToBeLoaded } = this;
     if (this.state === 'deleted' || layersToBeLoaded === undefined) return;
@@ -294,8 +301,9 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
   }
 
   /**
-   * @param dependent
-   * @param features
+   * Add features to list of dependents we need to update
+   * @param dependent - the dependent
+   * @param features - the features to add
    */
   #addFeaturesToDependents(dependent: Tile<C, F, M>, features: F[]): void {
     // @ts-expect-error - no reason this should be failing buit it is
@@ -307,9 +315,9 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
     dependent.addFeatures(dFeatures);
   }
 
-  // the source let's us know what data to expect
   /**
-   * @param msg
+   * Flush the source data
+   * @param msg - the message
    */
   #sourceFlush(msg: SourceFlushMessage): void {
     this.layersToBeLoaded = msg.layersToBeLoaded;
@@ -318,7 +326,8 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
   }
 
   /**
-   * @param msg
+   * Flush the tile data
+   * @param msg - the message
    */
   #tileFlush(msg: TileFlushMessage): void {
     const { featureGuides, layersLoaded } = this;
@@ -333,8 +342,6 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
         parent !== undefined &&
         // corner-case: empty data/missing tile -> flushes ALL layers,
         // but that layer MAY BE inverted so we don't kill it.
-        // TODO: Find out why this is happening
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         !(('invert' in layerGuide && layerGuide.invert) ?? false)
       )
         featureGuides.splice(i, 1);
@@ -344,9 +351,7 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
   }
 }
 
-/**
- *
- */
+/** S2 Geometry Projection Tile */
 export class S2Tile<
   C extends SharedContext,
   F extends SharedFeatures,
@@ -355,8 +360,8 @@ export class S2Tile<
   override type = 'S2' as const;
   corners?: Corners;
   /**
-   * @param context
-   * @param id
+   * @param context - the context to use (GPU or WebGL)
+   * @param id - the tile ID
    */
   constructor(context: C, id: bigint) {
     super(context, id);
@@ -385,9 +390,7 @@ export class S2Tile<
     this.mask = context.getMask(this.division, this as never) as M;
   }
 
-  /**
-   *
-   */
+  /** Build the corners for the tile. Luckily only needs to be built once */
   #buildCorners(): void {
     const { face, bbox } = this;
 
@@ -399,9 +402,9 @@ export class S2Tile<
     };
   }
 
-  // given a matrix, compute the corners screen positions
   /**
-   * @param projector
+   * given a matrix, compute the corners screen positions
+   * @param projector - the camera's current view
    */
   override setScreenPositions(projector: Projector): void {
     if (this.corners !== undefined) {
@@ -431,9 +434,7 @@ export class S2Tile<
   }
 }
 
-/**
- *
- */
+/** Web Mercator Projection Tile */
 export class WMTile<
   C extends SharedContext,
   F extends SharedFeatures,
@@ -442,8 +443,8 @@ export class WMTile<
   override type = 'WG' as const;
   override matrix: Float32Array = new Float32Array(16);
   /**
-   * @param context
-   * @param id
+   * @param context - a GPU context or WebGL context
+   * @param id - the tile ID
    */
   constructor(context: C, id: bigint) {
     super(context, id);
@@ -452,7 +453,7 @@ export class WMTile<
     this.j = j;
     this.zoom = zoom;
     // if i or j are out of bounds, we need to reference the parent tile's featureGuides
-    this.outofBounds = isOutOfBounds(id);
+    this.outofBounds = isOutOfBoundsWM(id);
     // TODO: bboxWM? And do I apply it to the uniforms?
     // const bbox = this.bbox = bboxST(i, j, zoom)
     this.bbox = bboxST(i, j, zoom);
@@ -471,9 +472,9 @@ export class WMTile<
     this.mask = context.getMask(1, this as never) as M;
   }
 
-  // given a basic ortho matrix, adjust by the tile's offset and scale
   /**
-   * @param projector
+   * given a basic ortho matrix, adjust by the tile's offset and scale
+   * @param projector - the camera's current view
    */
   override setScreenPositions(projector: Projector): void {
     const { zoom, lon, lat } = projector;
@@ -503,10 +504,13 @@ export class WMTile<
 }
 
 /**
- * @param setA
- * @param set2
+ * Check if setA is a subset of set2
+ * @param setA - set to check
+ * @param set2 - set to check against
+ * @returns true if setA is a subset of set2
  */
 function setBContainsA(setA: Set<number>, set2: Set<number>): boolean {
+  // TODO: Remove this function to favor: setA.isSupersetOf(set2); (check it works live first)
   for (const item of setA) if (!set2.has(item)) return false;
   return true;
 }

@@ -22,36 +22,28 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
     // pos
     arrayStride: 4 * 2,
     stepMode: 'instance',
-    attributes: [
-      {
-        shaderLocation: 0,
-        offset: 0,
-        format: 'float32x2',
-      },
-    ],
+    attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }],
   },
 ];
 
-/**
- *
- */
+/** Point Feature is a standalone point render storage unit that can be drawn to the GPU */
 export class PointFeature implements PointFeatureSpec {
   type = 'point' as const;
   bindGroup: GPUBindGroup;
   pointBindGroup: GPUBindGroup;
   pointInteractiveBindGroup: GPUBindGroup;
   /**
-   * @param workflow
-   * @param source
-   * @param layerGuide
-   * @param tile
-   * @param count
-   * @param offset
-   * @param featureCode
-   * @param pointBoundsBuffer
-   * @param pointInteractiveBuffer
-   * @param featureCodeBuffer
-   * @param parent
+   * @param workflow - the point workflow
+   * @param source - the point source
+   * @param layerGuide - layer guide for this feature
+   * @param tile - the tile this feature is drawn on
+   * @param count - the number of points
+   * @param offset - the offset of the points
+   * @param featureCode - the encoded feature code
+   * @param pointBoundsBuffer - the bounds of the points
+   * @param pointInteractiveBuffer - the interactive buffer
+   * @param featureCodeBuffer - the encoded feature code that tells the GPU how to compute it's properties
+   * @param parent - the parent tile if applicable
    */
   constructor(
     public workflow: PointWorkflow,
@@ -71,25 +63,19 @@ export class PointFeature implements PointFeatureSpec {
     this.pointInteractiveBindGroup = this.#buildPointInteractiveBindGroup();
   }
 
-  /**
-   *
-   */
+  /** Draw the feature to the GPU */
   draw(): void {
     const { tile, workflow } = this;
     workflow.context.setStencilReference(tile.tmpMaskID);
     workflow.draw(this);
   }
 
-  /**
-   *
-   */
+  /** Compute the feature's interactivity with the mouse */
   compute(): void {
     this.workflow.computeInteractive(this);
   }
 
-  /**
-   *
-   */
+  /** Destroy and cleanup the feature */
   destroy(): void {
     const { pointBoundsBuffer, pointInteractiveBuffer, featureCodeBuffer } = this;
     pointBoundsBuffer.destroy();
@@ -98,9 +84,11 @@ export class PointFeature implements PointFeatureSpec {
   }
 
   /**
-   * @param tile
-   * @param parent
-   * @param bounds
+   * Duplicate this feature
+   * @param tile - the tile this feature is drawn on
+   * @param parent - the parent tile if applicable
+   * @param bounds - the bounds of the tile if applicable
+   * @returns the duplicated feature
    */
   duplicate(tile: Tile, parent?: Tile, bounds?: BBox): PointFeature {
     const {
@@ -143,7 +131,8 @@ export class PointFeature implements PointFeatureSpec {
   }
 
   /**
-   *
+   * Build the bind group for the point feature
+   * @returns the GPU Bind Group for the point feature
    */
   #buildBindGroup(): GPUBindGroup {
     const { workflow, tile, parent, layerGuide, featureCodeBuffer } = this;
@@ -160,7 +149,8 @@ export class PointFeature implements PointFeatureSpec {
   }
 
   /**
-   *
+   * Build a bind group with point specific properties
+   * @returns the GPU Bind Group for the point
    */
   #buildPointBindGroup(): GPUBindGroup {
     const { workflow, pointBoundsBuffer } = this;
@@ -169,7 +159,8 @@ export class PointFeature implements PointFeatureSpec {
   }
 
   /**
-   *
+   * Build a bind group with point interactive specific properties
+   * @returns the GPU Bind Group for the point
    */
   #buildPointInteractiveBindGroup(): GPUBindGroup {
     const { workflow, pointBoundsBuffer, pointInteractiveBuffer, source } = this;
@@ -183,9 +174,7 @@ export class PointFeature implements PointFeatureSpec {
   }
 }
 
-/**
- *
- */
+/** Point Workflow */
 export default class PointWorkflow implements PointWorkflowSpec {
   context: WebGPUContext;
   layerGuides = new Map<number, PointWorkflowLayerGuideGPU>();
@@ -194,25 +183,19 @@ export default class PointWorkflow implements PointWorkflowSpec {
   pointInteractiveBindGroupLayout!: GPUBindGroupLayout;
   pointBindGroupLayout!: GPUBindGroupLayout;
   module!: GPUShaderModule;
-  /**
-   * @param context
-   */
+  /** @param context - The WebGPU context */
   constructor(context: WebGPUContext) {
     this.context = context;
   }
 
-  /**
-   *
-   */
+  /** Setup the workflow */
   async setup(): Promise<void> {
     this.module = this.context.device.createShaderModule({ code: shaderCode });
     this.pipeline = await this.#getPipeline();
     this.interactivePipeline = await this.#getComputePipeline();
   }
 
-  /**
-   *
-   */
+  /** Destroy and cleanup the workflow */
   destroy(): void {
     for (const { layerBuffer, layerCodeBuffer } of this.layerGuides.values()) {
       layerBuffer.destroy();
@@ -220,10 +203,11 @@ export default class PointWorkflow implements PointWorkflowSpec {
     }
   }
 
-  // workflow helps design the appropriate layer parameters
   /**
-   * @param layerBase
-   * @param layer
+   * Build the layer definition for this workflow
+   * @param layerBase - the common layer attributes
+   * @param layer - the user defined layer attributes
+   * @returns a built layer definition that's ready to describe how to render a feature
    */
   buildLayerDefinition(layerBase: LayerDefinitionBase, layer: PointStyle): PointDefinition {
     const { context } = this;
@@ -287,8 +271,9 @@ export default class PointWorkflow implements PointWorkflowSpec {
   }
 
   /**
-   * @param pointData
-   * @param tile
+   * Build the source point data into point features
+   * @param pointData - the input point data
+   * @param tile - the tile we are building the features for
    */
   buildSource(pointData: PointData, tile: Tile): void {
     const { context } = this;
@@ -306,10 +291,8 @@ export default class PointWorkflow implements PointWorkflowSpec {
         new Uint32Array(idBuffer),
         GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE,
       ),
-      /**
-       *
-       */
-      destroy: () => {
+      /** destroy the point source */
+      destroy: (): void => {
         const { vertexBuffer, idBuffer } = source;
         vertexBuffer.destroy();
         idBuffer.destroy();
@@ -320,9 +303,10 @@ export default class PointWorkflow implements PointWorkflowSpec {
   }
 
   /**
-   * @param source
-   * @param tile
-   * @param featureGuideArray
+   * Build point features from input point source
+   * @param source - the input point source
+   * @param tile - the tile we are building the features for
+   * @param featureGuideArray - the feature guide to help build the features properties
    */
   #buildFeatures(source: PointSource, tile: Tile, featureGuideArray: Float32Array): void {
     const { context } = this;
@@ -377,11 +361,12 @@ export default class PointWorkflow implements PointWorkflowSpec {
     tile.addFeatures(features);
   }
 
-  // https://programmer.ink/think/several-best-practices-of-webgpu.html
-  // BEST PRACTICE 6: it is recommended to create pipeline asynchronously
-  // BEST PRACTICE 7: explicitly define pipeline layouts
   /**
-   *
+   * Build the render pipeline for the point workflow
+   * https://programmer.ink/think/several-best-practices-of-webgpu.html
+   * BEST PRACTICE 6: it is recommended to create pipeline asynchronously
+   * BEST PRACTICE 7: explicitly define pipeline layouts
+   * @returns the render pipeline
    */
   async #getPipeline(): Promise<GPURenderPipeline> {
     const { module, context } = this;
@@ -409,25 +394,13 @@ export default class PointWorkflow implements PointWorkflowSpec {
     return await device.createRenderPipelineAsync({
       label: 'Point Pipeline',
       layout,
-      vertex: {
-        module,
-        entryPoint: 'vMain',
-        buffers: SHADER_BUFFER_LAYOUT,
-      },
+      vertex: { module, entryPoint: 'vMain', buffers: SHADER_BUFFER_LAYOUT },
       fragment: {
         module,
         entryPoint: 'fMain',
-        targets: [
-          {
-            format,
-            blend: defaultBlend,
-          },
-        ],
+        targets: [{ format, blend: defaultBlend }],
       },
-      primitive: {
-        topology: 'triangle-list',
-        cullMode: 'none',
-      },
+      primitive: { topology: 'triangle-list', cullMode: 'none' },
       multisample: { count: sampleCount },
       depthStencil: {
         depthWriteEnabled: true,
@@ -442,7 +415,11 @@ export default class PointWorkflow implements PointWorkflowSpec {
   }
 
   /**
-   *
+   * Build a compute pipeline to check for interactive point data that interects with the mouse
+   * https://programmer.ink/think/several-best-practices-of-webgpu.html
+   * BEST PRACTICE 6: it is recommended to create pipeline asynchronously
+   * BEST PRACTICE 7: explicitly define pipeline layouts
+   * @returns the GPU compute pipeline
    */
   async #getComputePipeline(): Promise<GPUComputePipeline> {
     const { context, module } = this;
@@ -476,23 +453,18 @@ export default class PointWorkflow implements PointWorkflowSpec {
   }
 
   /**
-   * @param root0
-   * @param root0.layerGuide
-   * @param root0.layerGuide.visible
-   * @param root0.bindGroup
-   * @param root0.pointBindGroup
-   * @param root0.source
-   * @param root0.count
-   * @param root0.offset
+   * Draw a point feature to the GPU
+   * @param feature - point feature guide
    */
-  draw({
-    layerGuide: { visible },
-    bindGroup,
-    pointBindGroup,
-    source,
-    count,
-    offset,
-  }: PointFeatureSpec): void {
+  draw(feature: PointFeatureSpec): void {
+    const {
+      layerGuide: { visible },
+      bindGroup,
+      pointBindGroup,
+      source,
+      count,
+      offset,
+    } = feature;
     if (!visible) return;
     // get current source data
     const { passEncoder } = this.context;
@@ -508,19 +480,16 @@ export default class PointWorkflow implements PointWorkflowSpec {
   }
 
   /**
-   * @param root0
-   * @param root0.layerGuide
-   * @param root0.layerGuide.visible
-   * @param root0.bindGroup
-   * @param root0.pointInteractiveBindGroup
-   * @param root0.count
+   * Compute the interactive features that interact with the mouse
+   * @param feature - point feature guide
    */
-  computeInteractive({
-    layerGuide: { visible },
-    bindGroup,
-    pointInteractiveBindGroup,
-    count,
-  }: PointFeatureSpec): void {
+  computeInteractive(feature: PointFeatureSpec): void {
+    const {
+      layerGuide: { visible },
+      bindGroup,
+      pointInteractiveBindGroup,
+      count,
+    } = feature;
     if (!visible) return;
     const { interactiveBindGroup, computePass } = this.context;
     this.context.setComputePipeline(this.interactivePipeline);

@@ -26,9 +26,7 @@ import type {
   LineWorkflowUniforms,
 } from './workflow.spec';
 
-/**
- *
- */
+/** Line Feature is a standalone line render storage unit that can be drawn to the GPU */
 export class LineFeature extends Feature implements LineFeatureSpec {
   type = 'line' as const;
   color?: ColorArray; // webgl1
@@ -36,15 +34,15 @@ export class LineFeature extends Feature implements LineFeatureSpec {
   width?: number; // webgl1
   gapwidth?: number; // webgl1
   /**
-   * @param workflow
-   * @param layerGuide
-   * @param source
-   * @param tile
-   * @param count
-   * @param offset
-   * @param featureCode
-   * @param cap
-   * @param parent
+   * @param workflow - the line workflow
+   * @param layerGuide - layer guide for this feature
+   * @param source - the line source
+   * @param tile - the tile that the feature is drawn on
+   * @param count - the number of lines
+   * @param offset - the offset of the lines
+   * @param featureCode - the encoded feature that tells the GPU how to compute it's properties
+   * @param cap - the line cap
+   * @param parent - the parent tile
    */
   constructor(
     public override workflow: LineWorkflowSpec,
@@ -61,7 +59,8 @@ export class LineFeature extends Feature implements LineFeatureSpec {
   }
 
   /**
-   * @param interactive
+   * Draw the feature to the GPU
+   * @param interactive - whether or not the feature is interactive
    */
   override draw(interactive = false): void {
     super.draw(interactive);
@@ -69,8 +68,10 @@ export class LineFeature extends Feature implements LineFeatureSpec {
   }
 
   /**
-   * @param tile
-   * @param parent
+   * Duplicate this feature
+   * @param tile - the tile that the feature is drawn on
+   * @param parent - the parent tile if applicable
+   * @returns the duplicated feature
    */
   duplicate(tile: Tile, parent?: Tile): LineFeature {
     const {
@@ -102,10 +103,11 @@ export class LineFeature extends Feature implements LineFeatureSpec {
   }
 
   /**
-   * @param color
-   * @param opacity
-   * @param width
-   * @param gapwidth
+   * Set the attributes of the feature if the context is webgl1
+   * @param color - the color
+   * @param opacity - the opacity
+   * @param width - the width
+   * @param gapwidth - the gapwidth
    */
   setWebGL1Attributes(
     color?: ColorArray,
@@ -120,18 +122,14 @@ export class LineFeature extends Feature implements LineFeatureSpec {
   }
 }
 
-/**
- *
- */
+/** Line Workflow */
 export default class LineWorkflow extends Workflow implements LineWorkflowSpec {
   label = 'line' as const;
   curTexture = -1;
   typeBuffer?: WebGLBuffer;
   layerGuides = new Map<number, LineWorkflowLayerGuide>();
   declare uniforms: { [key in LineWorkflowUniforms]: WebGLUniformLocation };
-  /**
-   * @param context
-   */
+  /** @param context - the WebGL(1|2) context */
   constructor(context: Context) {
     // get gl from context
     const { gl, type, devicePixelRatio } = context;
@@ -150,9 +148,7 @@ export default class LineWorkflow extends Workflow implements LineWorkflowSpec {
     this.setDevicePixelRatio(devicePixelRatio);
   }
 
-  /**
-   *
-   */
+  /** Bind the quad type buffer. Describes how to draw a quad based upon the prev->curr->next */
   #bindTypeBuffer(): void {
     const { gl, context, typeBuffer } = this;
 
@@ -172,17 +168,17 @@ export default class LineWorkflow extends Workflow implements LineWorkflowSpec {
     }
   }
 
-  // workflows helps design the appropriate layer parameters
   /**
-   * @param layerBase
-   * @param layer
+   * Build the layer definition
+   * @param layerBase - the common layer attributes
+   * @param layer - the user defined layer attributes
+   * @returns a built layer definition that's ready to describe how to render a feature
    */
   buildLayerDefinition(layerBase: LayerDefinitionBase, layer: LineStyle): LineDefinition {
     const { context } = this;
     const { type } = this;
     const { source, layerIndex, lch, visible } = layerBase;
     // PRE) get layer base
-    const { cap, join } = layer;
     let {
       interactive,
       cursor,
@@ -193,6 +189,8 @@ export default class LineWorkflow extends Workflow implements LineWorkflowSpec {
       width,
       gapwidth,
       // layout
+      cap,
+      join,
       dasharray,
     } = layer;
     color = color ?? 'rgba(0, 0, 0, 0)';
@@ -249,8 +247,9 @@ export default class LineWorkflow extends Workflow implements LineWorkflowSpec {
   }
 
   /**
-   * @param lineData
-   * @param tile
+   * Build the line source
+   * @param lineData - raw input data from the Tile Worker
+   * @param tile - the tile that the feature is drawn on
    */
   buildSource(lineData: LineData, tile: Tile): void {
     const { gl, context } = this;
@@ -304,9 +303,10 @@ export default class LineWorkflow extends Workflow implements LineWorkflowSpec {
   }
 
   /**
-   * @param source
-   * @param tile
-   * @param featureGuideArray
+   * Build the line features
+   * @param source - the line source code
+   * @param tile - the tile that the feature is drawn on
+   * @param featureGuideArray - the feature guide
    */
   #buildFeatures(source: LineSource, tile: Tile, featureGuideArray: Float32Array): void {
     const features: LineFeatureSpec[] = [];
@@ -337,9 +337,7 @@ export default class LineWorkflow extends Workflow implements LineWorkflowSpec {
     tile.addFeatures(features);
   }
 
-  /**
-   *
-   */
+  /** Use this workflow as the current shaders for the GPU */
   override use(): void {
     super.use();
     const { context } = this;
@@ -354,10 +352,11 @@ export default class LineWorkflow extends Workflow implements LineWorkflowSpec {
   }
 
   /**
-   * @param featureGuide
-   * @param _interactive
+   * Draw a line feature
+   * @param feature - the line feature
+   * @param _interactive - whether or not the feature is interactive
    */
-  draw(featureGuide: LineFeatureSpec, _interactive = false): void {
+  draw(feature: LineFeatureSpec, _interactive = false): void {
     // grab context
     const { gl, context, type, uniforms } = this;
     const { uCap, uDashed, uDashCount, uTexLength, uColor, uOpacity, uWidth } = uniforms;
@@ -372,7 +371,7 @@ export default class LineWorkflow extends Workflow implements LineWorkflowSpec {
       opacity,
       width,
       layerGuide: { dashed, dashCount, dashLength, dashTexture, layerIndex, visible },
-    } = featureGuide;
+    } = feature;
     if (!visible) return;
     const { vao, vertexBuffer, lengthSoFarBuffer } = source;
     context.setDepthRange(layerIndex);

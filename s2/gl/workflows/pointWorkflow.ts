@@ -26,9 +26,7 @@ import type {
   PointWorkflowUniforms,
 } from './workflow.spec';
 
-/**
- *
- */
+/** Point Feature is a standalone point render storage unit that can be drawn to the GPU */
 export class PointFeature extends Feature implements PointFeatureSpec {
   type = 'point' as const;
   color?: ColorArray; // webgl1
@@ -37,15 +35,15 @@ export class PointFeature extends Feature implements PointFeatureSpec {
   strokeWidth?: number; // webgl1
   opacity?: number; // webgl1
   /**
-   * @param workflow
-   * @param source
-   * @param layerGuide
-   * @param tile
-   * @param count
-   * @param offset
-   * @param featureCode
-   * @param parent
-   * @param bounds
+   * @param workflow - the point workflow
+   * @param source - the point source
+   * @param layerGuide - layer guide for this feature
+   * @param tile - the tile that the feature is drawn on
+   * @param count - the number of points
+   * @param offset - the offset of the points
+   * @param featureCode - the encoded feature code that tells the GPU how to compute it's properties
+   * @param parent - the parent tile if applicable
+   * @param bounds - the bounds of the tile if applicable
    */
   constructor(
     public override workflow: PointWorkflow,
@@ -62,7 +60,8 @@ export class PointFeature extends Feature implements PointFeatureSpec {
   }
 
   /**
-   * @param interactive
+   * Draw the feature to the GPU
+   * @param interactive - whether or not the feature is interactive
    */
   override draw(interactive = false): void {
     super.draw(interactive);
@@ -70,9 +69,11 @@ export class PointFeature extends Feature implements PointFeatureSpec {
   }
 
   /**
-   * @param tile
-   * @param parent
-   * @param bounds
+   * Duplicate this feature
+   * @param tile - the tile that the feature is drawn on
+   * @param parent - the parent tile if applicable
+   * @param bounds - the bounds of the tile if applicable
+   * @returns the duplicated feature
    */
   duplicate(tile: Tile, parent?: Tile, bounds?: BBox): PointFeature {
     const {
@@ -104,11 +105,12 @@ export class PointFeature extends Feature implements PointFeatureSpec {
   }
 
   /**
-   * @param color
-   * @param radius
-   * @param stroke
-   * @param strokeWidth
-   * @param opacity
+   * Set the attributes of the feature if the context is webgl1
+   * @param color - the color
+   * @param radius - the radius
+   * @param stroke - the stroke
+   * @param strokeWidth - the stroke width
+   * @param opacity - the opacity
    */
   setWebGL1Attributes(
     color?: ColorArray,
@@ -125,17 +127,13 @@ export class PointFeature extends Feature implements PointFeatureSpec {
   }
 }
 
-/**
- *
- */
+/** Point Workflow */
 export default class PointWorkflow extends Workflow implements PointWorkflowSpec {
   label = 'point' as const;
   extentBuffer?: WebGLBuffer;
   layerGuides = new Map<number, PointWorkflowLayerGuide>();
   declare uniforms: { [key in PointWorkflowUniforms]: WebGLUniformLocation };
-  /**
-   * @param context
-   */
+  /** @param context - the WebGL(1|2) context */
   constructor(context: Context) {
     // get gl from context
     const { type, devicePixelRatio } = context;
@@ -150,9 +148,7 @@ export default class PointWorkflow extends Workflow implements PointWorkflowSpec
     this.setDevicePixelRatio(devicePixelRatio);
   }
 
-  /**
-   *
-   */
+  /** Setup and bind the extent/quad buffer */
   #bindExtentBuffer(): void {
     const { gl, context, extentBuffer } = this;
 
@@ -168,8 +164,9 @@ export default class PointWorkflow extends Workflow implements PointWorkflowSpec
   }
 
   /**
-   * @param pointData
-   * @param tile
+   * Build the source raster data into raster features
+   * @param pointData - the point data
+   * @param tile - the tile we are building the features for
    */
   buildSource(pointData: PointData, tile: Tile): void {
     const { gl, context } = this;
@@ -201,9 +198,10 @@ export default class PointWorkflow extends Workflow implements PointWorkflowSpec
   }
 
   /**
-   * @param source
-   * @param tile
-   * @param featureGuideArray
+   * Build the point features
+   * @param source - the point source
+   * @param tile - the tile we are building the features for
+   * @param featureGuideArray - the feature guide describing how to decode the raw source data into features
    */
   #buildFeatures(source: PointSource, tile: Tile, featureGuideArray: Float32Array): void {
     const features: PointFeatureSpec[] = [];
@@ -234,8 +232,10 @@ export default class PointWorkflow extends Workflow implements PointWorkflowSpec
   }
 
   /**
-   * @param layerBase
-   * @param layer
+   * Build the layer definition for this workflow
+   * @param layerBase - the common layer attributes
+   * @param layer - the user defined layer attributes
+   * @returns a built layer definition that's ready to describe how to render a point feature
    */
   buildLayerDefinition(layerBase: LayerDefinitionBase, layer: PointStyle): PointDefinition {
     const { type } = this;
@@ -286,9 +286,7 @@ export default class PointWorkflow extends Workflow implements PointWorkflowSpec
     return layerDefinition;
   }
 
-  /**
-   *
-   */
+  /** Use this workflow as the current shaders for the GPU */
   override use(): void {
     super.use();
     const { context } = this;
@@ -301,10 +299,11 @@ export default class PointWorkflow extends Workflow implements PointWorkflowSpec
   }
 
   /**
-   * @param featureGuide
-   * @param _interactive
+   * Draw the point feature
+   * @param feature - the point feature
+   * @param _interactive - whether or not the feature is interactive
    */
-  draw(featureGuide: PointFeatureSpec, _interactive = false): void {
+  draw(feature: PointFeatureSpec, _interactive = false): void {
     // grab context
     const { gl, type, context, uniforms } = this;
     const { uColor, uRadius, uStroke, uSWidth, uOpacity, uBounds } = uniforms;
@@ -322,7 +321,7 @@ export default class PointWorkflow extends Workflow implements PointWorkflowSpec
       strokeWidth,
       opacity,
       bounds,
-    } = featureGuide;
+    } = feature;
     if (!visible) return;
     const { vao, vertexBuffer } = source;
     context.stencilFuncAlways(0);

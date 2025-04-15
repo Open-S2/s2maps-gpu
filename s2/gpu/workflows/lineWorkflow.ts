@@ -22,24 +22,15 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
     // prev
     arrayStride: 6 * 4, // 6 elements of 4 bytes
     stepMode: 'instance',
-    attributes: [
-      {
-        shaderLocation: 0,
-        offset: 0,
-        format: 'float32x2',
-      },
-    ],
+    attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }],
   },
   {
     // curr
     arrayStride: 6 * 4, // 6 elements of 4 bytes
     stepMode: 'instance',
     attributes: [
-      {
-        shaderLocation: 1,
-        offset: 2 * 4, // 2 elements of 4 bytes
-        format: 'float32x2',
-      },
+      // offset: 2 elements of 4 bytes
+      { shaderLocation: 1, offset: 2 * 4, format: 'float32x2' },
     ],
   },
   {
@@ -47,47 +38,36 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
     arrayStride: 6 * 4, // 6 elements of 4 bytes
     stepMode: 'instance',
     attributes: [
-      {
-        shaderLocation: 2,
-        offset: 4 * 4, // 4 elements of 4 bytes
-        format: 'float32x2',
-      },
+      // offset: 4 elements of 4 bytes
+      { shaderLocation: 2, offset: 4 * 4, format: 'float32x2' },
     ],
   },
   {
     // lengthSoFar
     arrayStride: 4,
     stepMode: 'instance',
-    attributes: [
-      {
-        shaderLocation: 3,
-        offset: 0,
-        format: 'float32',
-      },
-    ],
+    attributes: [{ shaderLocation: 3, offset: 0, format: 'float32' }],
   },
 ];
 
-/**
- *
- */
+/** Line Feature is a standalone line render storage unit that can be drawn to the GPU */
 export class LineFeature implements LineFeatureSpec {
   type = 'line' as const;
   bindGroup: GPUBindGroup;
   lineBindGroup: GPUBindGroup;
   /**
-   * @param workflow
-   * @param layerGuide
-   * @param source
-   * @param tile
-   * @param count
-   * @param offset
-   * @param featureCode
-   * @param dashTexture
-   * @param featureCodeBuffer
-   * @param lineUniformBuffer
-   * @param cap
-   * @param parent
+   * @param workflow - the line workflow
+   * @param layerGuide - the layer guide for this feature
+   * @param source - the line source
+   * @param tile - the tile this feature is drawn on
+   * @param count - the number of points
+   * @param offset - the offset of the points
+   * @param featureCode - the encoded feature code that tells the GPU how to compute it's properties
+   * @param dashTexture - the dash texture
+   * @param featureCodeBuffer - the encoded feature code that tells the GPU how to compute it's properties
+   * @param lineUniformBuffer - the line uniform buffer
+   * @param cap - the line cap
+   * @param parent - the parent tile if applicable
    */
   constructor(
     public workflow: LineWorkflowSpec,
@@ -107,18 +87,14 @@ export class LineFeature implements LineFeatureSpec {
     this.lineBindGroup = this.#buildLineBindGroup();
   }
 
-  /**
-   *
-   */
+  /** Draw the feature to the GPU */
   draw(): void {
     const { tile, workflow } = this;
     workflow.context.setStencilReference(tile.tmpMaskID);
     workflow.draw(this);
   }
 
-  /**
-   *
-   */
+  /** Destroy the feature */
   destroy(): void {
     const { featureCodeBuffer, lineUniformBuffer } = this;
     featureCodeBuffer.destroy();
@@ -126,8 +102,10 @@ export class LineFeature implements LineFeatureSpec {
   }
 
   /**
-   * @param tile
-   * @param parent
+   * Duplicate the line feature
+   * @param tile - the tile this feature is drawn on
+   * @param parent - the parent tile if applicable
+   * @returns the duplicated feature
    */
   duplicate(tile: Tile, parent?: Tile): LineFeature {
     const {
@@ -164,7 +142,8 @@ export class LineFeature implements LineFeatureSpec {
   }
 
   /**
-   *
+   * Build the bind group for the line feature
+   * @returns the GPU Bind Group for the line feature
    */
   #buildBindGroup(): GPUBindGroup {
     const { workflow, tile, parent, layerGuide, featureCodeBuffer } = this;
@@ -181,7 +160,8 @@ export class LineFeature implements LineFeatureSpec {
   }
 
   /**
-   *
+   * Build line specific properties into a bind group
+   * @returns the GPU Bind Group for the line feature
    */
   #buildLineBindGroup(): GPUBindGroup {
     const { workflow, lineUniformBuffer, layerGuide } = this;
@@ -199,31 +179,23 @@ export class LineFeature implements LineFeatureSpec {
   }
 }
 
-/**
- *
- */
+/** Line Workflow */
 export default class LineWorkflow implements LineWorkflowSpec {
   context: WebGPUContext;
   layerGuides = new Map<number, LineWorkflowLayerGuideGPU>();
   pipeline!: GPURenderPipeline;
   lineBindGroupLayout!: GPUBindGroupLayout;
-  /**
-   * @param context
-   */
+  /** @param context - The WebGPU context */
   constructor(context: WebGPUContext) {
     this.context = context;
   }
 
-  /**
-   *
-   */
+  /** Setup the workflow */
   async setup(): Promise<void> {
     this.pipeline = await this.#getPipeline();
   }
 
-  /**
-   *
-   */
+  /** Destroy and cleanup the workflow */
   destroy(): void {
     for (const { layerBuffer, layerCodeBuffer } of this.layerGuides.values()) {
       layerBuffer.destroy();
@@ -231,10 +203,11 @@ export default class LineWorkflow implements LineWorkflowSpec {
     }
   }
 
-  // workflow helps design the appropriate layer parameters
   /**
-   * @param layerBase
-   * @param layer
+   * Build the layer definition for this workflow
+   * @param layerBase - the common layer attributes
+   * @param layer - the user defined layer attributes
+   * @returns a built layer definition that's ready to describe how to render a feature
    */
   buildLayerDefinition(layerBase: LayerDefinitionBase, layer: LineStyle): LineDefinition {
     const { context } = this;
@@ -323,12 +296,13 @@ export default class LineWorkflow implements LineWorkflowSpec {
   }
 
   /**
-   * @param fillData
-   * @param tile
+   * Build the source line data into line features
+   * @param lineData - the input line data
+   * @param tile - the tile we are building the features for
    */
-  buildSource(fillData: LineData, tile: Tile): void {
+  buildSource(lineData: LineData, tile: Tile): void {
     const { context } = this;
-    const { vertexBuffer, lengthSoFarBuffer, featureGuideBuffer } = fillData;
+    const { vertexBuffer, lengthSoFarBuffer, featureGuideBuffer } = lineData;
     // prep buffers
     const source: LineSource = {
       type: 'line' as const,
@@ -342,10 +316,8 @@ export default class LineWorkflow implements LineWorkflowSpec {
         new Float32Array(lengthSoFarBuffer),
         GPUBufferUsage.VERTEX,
       ),
-      /**
-       *
-       */
-      destroy: () => {
+      /** destroy the line source */
+      destroy: (): void => {
         const { vertexBuffer, lengthSoFarBuffer } = source;
         vertexBuffer.destroy();
         lengthSoFarBuffer.destroy();
@@ -356,9 +328,10 @@ export default class LineWorkflow implements LineWorkflowSpec {
   }
 
   /**
-   * @param source
-   * @param tile
-   * @param featureGuideArray
+   * Build line features from input line source
+   * @param source - the input line source
+   * @param tile - the tile we are building the features for
+   * @param featureGuideArray - the feature guide to help build the features properties
    */
   #buildFeatures(source: LineSource, tile: Tile, featureGuideArray: Float32Array): void {
     const { context } = this;
@@ -409,11 +382,12 @@ export default class LineWorkflow implements LineWorkflowSpec {
     tile.addFeatures(features);
   }
 
-  // https://programmer.ink/think/several-best-practices-of-webgpu.html
-  // BEST PRACTICE 6: it is recommended to create pipeline asynchronously
-  // BEST PRACTICE 7: explicitly define pipeline layouts
   /**
-   *
+   * Build the render pipeline for the line workflow
+   * https://programmer.ink/think/several-best-practices-of-webgpu.html
+   * BEST PRACTICE 6: it is recommended to create pipeline asynchronously
+   * BEST PRACTICE 7: explicitly define pipeline layouts
+   * @returns the render pipeline
    */
   async #getPipeline(): Promise<GPURenderPipeline> {
     const { context } = this;
@@ -457,20 +431,9 @@ export default class LineWorkflow implements LineWorkflowSpec {
     return await device.createRenderPipelineAsync({
       label: 'Line Pipeline',
       layout,
-      vertex: {
-        module,
-        entryPoint: 'vMain',
-        buffers: SHADER_BUFFER_LAYOUT,
-      },
-      fragment: {
-        module,
-        entryPoint: 'fMain',
-        targets: [{ format, blend: defaultBlend }],
-      },
-      primitive: {
-        topology: 'triangle-list',
-        cullMode: 'none',
-      },
+      vertex: { module, entryPoint: 'vMain', buffers: SHADER_BUFFER_LAYOUT },
+      fragment: { module, entryPoint: 'fMain', targets: [{ format, blend: defaultBlend }] },
+      primitive: { topology: 'triangle-list', cullMode: 'none' },
       multisample: { count: sampleCount },
       depthStencil: {
         depthWriteEnabled: true,
@@ -485,23 +448,18 @@ export default class LineWorkflow implements LineWorkflowSpec {
   }
 
   /**
-   * @param root0
-   * @param root0.layerGuide
-   * @param root0.layerGuide.visible
-   * @param root0.bindGroup
-   * @param root0.lineBindGroup
-   * @param root0.source
-   * @param root0.count
-   * @param root0.offset
+   * Draw a line feature to the GPU
+   * @param feature - line feature guide
    */
-  draw({
-    layerGuide: { visible },
-    bindGroup,
-    lineBindGroup,
-    source,
-    count,
-    offset,
-  }: LineFeatureSpec): void {
+  draw(feature: LineFeatureSpec): void {
+    const {
+      layerGuide: { visible },
+      bindGroup,
+      lineBindGroup,
+      source,
+      count,
+      offset,
+    } = feature;
     if (!visible) return;
     // get current source data
     const { passEncoder } = this.context;

@@ -27,9 +27,7 @@ import type {
   GlyphWorkflowUniforms,
 } from './workflow.spec';
 
-/**
- *
- */
+/** Glyph Feature is a standalone glyph render storage unit that can be drawn to the GPU */
 export class GlyphFeature extends Feature implements GlyphFeatureSpec {
   type = 'glyph' as const;
   size?: number; // webgl1
@@ -37,19 +35,19 @@ export class GlyphFeature extends Feature implements GlyphFeatureSpec {
   stroke?: ColorArray; // webgl1
   strokeWidth?: number; // webgl1
   /**
-   * @param workflow
-   * @param source
-   * @param tile
-   * @param layerGuide
-   * @param count
-   * @param offset
-   * @param filterCount
-   * @param filterOffset
-   * @param isPath
-   * @param isIcon
-   * @param featureCode
-   * @param parent
-   * @param bounds
+   * @param workflow - the glyph workflow
+   * @param source - the glyph source
+   * @param tile - the tile that the feature is drawn on
+   * @param layerGuide - layer guide for this feature
+   * @param count - the number of glyphs
+   * @param offset - the offset of the glyphs
+   * @param filterCount - the number of filter glyphs
+   * @param filterOffset - the offset of the filter glyphs
+   * @param isPath - whether or not the glyph is a path or a point
+   * @param isIcon - whether or not the glyph is an icon or a standard glyph
+   * @param featureCode - the encoded feature code that tells the GPU how to compute it's properties
+   * @param parent - the parent tile if applicable
+   * @param bounds - the bounds of the tile if applicable
    */
   constructor(
     public override workflow: GlyphWorkflowSpec,
@@ -70,7 +68,8 @@ export class GlyphFeature extends Feature implements GlyphFeatureSpec {
   }
 
   /**
-   * @param interactive
+   * Draw the feature to the GPU
+   * @param interactive - whether or not the feature is interactive
    */
   override draw(interactive = false): void {
     super.draw(interactive);
@@ -78,9 +77,11 @@ export class GlyphFeature extends Feature implements GlyphFeatureSpec {
   }
 
   /**
-   * @param tile
-   * @param parent
-   * @param bounds
+   * Duplicate this feature
+   * @param tile - the tile that the feature is drawn on
+   * @param parent - the parent tile if applicable
+   * @param bounds - the bounds of the tile if applicable
+   * @returns the duplicated feature
    */
   duplicate(tile: Tile, parent?: Tile, bounds?: BBox): GlyphFeature {
     const {
@@ -119,10 +120,11 @@ export class GlyphFeature extends Feature implements GlyphFeatureSpec {
   }
 
   /**
-   * @param size
-   * @param fill
-   * @param stroke
-   * @param strokeWidth
+   * Set the attributes of the feature if the context is webgl1
+   * @param size - size
+   * @param fill - fill
+   * @param stroke - stroke
+   * @param strokeWidth - stroke width
    */
   setWebGL1Attributes(
     size?: number,
@@ -137,9 +139,7 @@ export class GlyphFeature extends Feature implements GlyphFeatureSpec {
   }
 }
 
-/**
- *
- */
+/** Glyph Workflow */
 export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec {
   label = 'glyph' as const;
   stepBuffer?: WebGLBuffer;
@@ -147,9 +147,7 @@ export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec
   glyphFilterWorkflow!: GlyphFilterWorkflow;
   layerGuides = new Map<number, GlyphWorkflowLayerGuide>();
   declare uniforms: { [key in GlyphWorkflowUniforms]: WebGLUniformLocation };
-  /**
-   * @param context
-   */
+  /** @param context - The WebGL(1|2) context */
   constructor(context: Context) {
     // get gl from context
     const { gl, type, devicePixelRatio } = context;
@@ -181,9 +179,7 @@ export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec
     gl.uniform2fv(uTexSize, context.sharedFBO.texSize);
   }
 
-  /**
-   *
-   */
+  /** Bind the step uniform buffer */
   #bindStepBuffer(): void {
     const { gl, context, stepBuffer } = this;
 
@@ -196,9 +192,7 @@ export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec
     }
   }
 
-  /**
-   *
-   */
+  /** Bind the uv buffer */
   #bindUVBuffer(): void {
     const { gl, context, uvBuffer } = this;
 
@@ -212,15 +206,17 @@ export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec
   }
 
   /**
-   * @param glyphFilterWorkflow
+   * Inject the glyph filter workflow to share the glyph filter texture
+   * @param glyphFilterWorkflow - The glyph filter workflow
    */
   injectFilter(glyphFilterWorkflow: GlyphFilterWorkflow): void {
     this.glyphFilterWorkflow = glyphFilterWorkflow;
   }
 
   /**
-   * @param glyphData
-   * @param tile
+   * Build features from the glyph source sent from the Tile Worker
+   * @param glyphData - The glyph data from the Tile Worker
+   * @param tile - The tile that the feature is drawn on
    */
   buildSource(glyphData: GlyphData, tile: Tile): void {
     const { gl, context } = this;
@@ -318,9 +314,10 @@ export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec
   }
 
   /**
-   * @param source
-   * @param tile
-   * @param featureGuideArray
+   * Build the features
+   * @param source - the glyph source
+   * @param tile - the tile that the feature is drawn on
+   * @param featureGuideArray - the array of feature guides
    */
   #buildFeatures(source: GlyphSource, tile: Tile, featureGuideArray: Float32Array): void {
     const features: GlyphFeature[] = [];
@@ -374,47 +371,23 @@ export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec
   }
 
   /**
-   * @param layerBase
-   * @param layer
+   * Build the layer definition for this workflow given the user input layer
+   * @param layerBase - the common layer attributes
+   * @param layer - the user defined layer attributes
+   * @returns a built layer definition that's ready to describe how to render a feature
    */
   buildLayerDefinition(layerBase: LayerDefinitionBase, layer: GlyphStyle): GlyphDefinition {
     const { type } = this;
     const { source, layerIndex, lch, visible } = layerBase;
     // PRE) get layer base
-    const {
-      // layout
-      placement,
-      spacing,
-      textFamily,
-      textField,
-      textAnchor,
-      textOffset,
-      textPadding,
-      textWordWrap,
-      textAlign,
-      textKerning,
-      textLineHeight,
-      iconFamily,
-      iconField,
-      iconAnchor,
-      iconOffset,
-      iconPadding,
-    } = layer;
-    let {
-      // paint
-      textSize,
-      iconSize,
-      textFill,
-      textStrokeWidth,
-      textStroke,
-      // properties
-      interactive,
-      cursor,
-      overdraw,
-      viewCollisions,
-      noShaping,
-      geoFilter,
-    } = layer;
+    // layout
+    const { placement, spacing, textFamily, textField, textAnchor } = layer;
+    const { textOffset, textPadding, textWordWrap, textAlign, textKerning, textLineHeight } = layer;
+    const { iconFamily, iconField, iconAnchor, iconOffset, iconPadding } = layer;
+    // paint
+    let { textSize, iconSize, textFill, textStrokeWidth, textStroke } = layer;
+    // properties
+    let { interactive, cursor, overdraw, viewCollisions, noShaping, geoFilter } = layer;
     textSize = textSize ?? 16;
     iconSize = iconSize ?? 16;
     textFill = textFill ?? 'rgb(0, 0, 0)';
@@ -485,7 +458,8 @@ export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec
   }
 
   /**
-   * @param glyphFeatures
+   * Compute the glyph filters so that we know which glyphs to render
+   * @param glyphFeatures - the glyph features that need to be computed
    */
   computeFilters(glyphFeatures: GlyphFeatureSpec[]): void {
     const { glyphFilterWorkflow } = this;
@@ -499,8 +473,9 @@ export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec
   }
 
   /**
-   * @param glyphFeatures
-   * @param mode
+   * Compute the glyph filters via step functions, First step is to render positions, second step is to describe what's been filtered
+   * @param glyphFeatures - the glyph features
+   * @param mode - the draw mode (1 or 2)
    */
   #computeFilters(glyphFeatures: GlyphFeatureSpec[], mode: 1 | 2): void {
     const { context, glyphFilterWorkflow } = this;
@@ -528,9 +503,7 @@ export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec
     }
   }
 
-  /**
-   *
-   */
+  /** Use this workflow as the current shaders for the GPU */
   override use(): void {
     super.use();
     const { context, uniforms } = this;
@@ -545,10 +518,11 @@ export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec
   }
 
   /**
-   * @param featureGuide
-   * @param interactive
+   * Draw the glyph feature
+   * @param feature - the glyph feature guide
+   * @param interactive - whether or not the feature is interactive
    */
-  draw(featureGuide: GlyphFeatureSpec, interactive = false): void {
+  draw(feature: GlyphFeatureSpec, interactive = false): void {
     const { gl, context, glyphFilterWorkflow, uniforms } = this;
     const { type, defaultBounds, sharedFBO } = context;
     const { uSize, uFill, uStroke, uSWidth, uBounds, uIsStroke } = uniforms;
@@ -565,7 +539,7 @@ export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec
       stroke,
       strokeWidth,
       bounds,
-    } = featureGuide;
+    } = feature;
     if (!visible) return;
     const { glyphQuadBuffer, glyphQuadIDBuffer, glyphColorBuffer, vao } = source;
     // grab glyph texture
@@ -620,9 +594,7 @@ export default class GlyphWorkflow extends Workflow implements GlyphWorkflowSpec
     gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, count);
   }
 
-  /**
-   *
-   */
+  /** Delete the glyph workflow */
   override delete(): void {
     // continue forward
     super.delete();

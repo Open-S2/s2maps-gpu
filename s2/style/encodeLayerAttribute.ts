@@ -129,15 +129,16 @@ export default function encodeLayerAttribute<T extends NotNullOrObject>(
 }
 
 /**
- * @param root0
- * @param root0.conditions
- * @param root0.fallback
- * @param lch
+ * Encode a data condition
+ * @param dataCondition - the data condition to encode
+ * @param lch - whether or not to use lch
+ * @returns the encoded data condition
  */
 function encodeDataCondition<T extends NotNullOrObject>(
-  { conditions, fallback }: DataCondition<ValueType<T>>,
+  dataCondition: DataCondition<ValueType<T>>,
   lch: boolean,
 ): number[] {
+  const { conditions, fallback } = dataCondition;
   const encoding: number[] = [];
   let i = 1;
 
@@ -151,20 +152,20 @@ function encodeDataCondition<T extends NotNullOrObject>(
 }
 
 /**
- * @param root0
- * @param root0.ranges
- * @param lch
+ * Encode a data range
+ * @param dataRange - the data range to encode
+ * @param lch - whether or not to use lch
+ * @returns the encoded data range
  */
 function encodeRange<T>(
-  {
-    ranges,
-  }:
+  dataRange:
     | DataRangeEase<NumberColor<T>>
     | DataRangeStep<ValueType<T>>
     | InputRangeEase<NumberColor<T>>
     | InputRangeStep<ValueType<T>>,
   lch: boolean,
 ): number[] {
+  const { ranges } = dataRange;
   const encoding: number[] = [];
 
   for (const { stop, input } of ranges) {
@@ -175,15 +176,16 @@ function encodeRange<T>(
 }
 
 /**
- * @param root0
- * @param root0.condition
- * @param root0.input
- * @param lch
+ * Encode a feature state
+ * @param featureState - the feature state to encode
+ * @param lch - whether or not to use lch
+ * @returns the encoded feature state
  */
 function encodeFeatureStates<T extends NotNullOrObject>(
-  { condition, input }: FeatureState<ValueType<T>>,
+  featureState: FeatureState<ValueType<T>>,
   lch: boolean,
 ): number[] {
+  const { condition, input } = featureState;
   const encoding: number[] = [];
 
   const conditionCode =

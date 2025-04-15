@@ -27,19 +27,17 @@ import type {
   SensorWorkflowUniforms,
 } from './workflow.spec';
 
-/**
- *
- */
+/** Sensor Feature is a standalone sensor render storage unit that can be drawn to the GPU */
 export class SensorFeature extends Feature implements SensorFeatureSpec {
   type = 'sensor' as const;
   opacity?: number; // webgl1
   /**
-   * @param layerGuide
-   * @param workflow
-   * @param featureCode
-   * @param tile
-   * @param fadeStartTime
-   * @param parent
+   * @param layerGuide - sensor layer guide for this feature
+   * @param workflow - the sensor workflow
+   * @param featureCode - the encoded feature code that tells the GPU how to compute it's properties
+   * @param tile - the tile that the feature is drawn on
+   * @param fadeStartTime - the start time of the "fade" to be applied
+   * @param parent - the parent tile
    */
   constructor(
     public override layerGuide: SensorWorkflowLayerGuide,
@@ -53,7 +51,8 @@ export class SensorFeature extends Feature implements SensorFeatureSpec {
   }
 
   /**
-   * @param interactive
+   * Draw this feature to the GPU
+   * @param interactive - whether or not the feature is interactive for compute or render
    */
   override draw(interactive = false): void {
     super.draw(interactive);
@@ -61,8 +60,10 @@ export class SensorFeature extends Feature implements SensorFeatureSpec {
   }
 
   /**
-   * @param tile
-   * @param parent
+   * Duplicate this feature
+   * @param tile - the tile that the feature is drawn on
+   * @param parent - the parent tile if applicable
+   * @returns the duplicated feature
    */
   duplicate(tile: Tile, parent?: Tile): SensorFeature {
     const { layerGuide, workflow, featureCode, fadeStartTime, opacity } = this;
@@ -79,7 +80,8 @@ export class SensorFeature extends Feature implements SensorFeatureSpec {
   }
 
   /**
-   *
+   * Get the sensor textures
+   * @returns the sensor textures
    */
   getTextures(): SensorTextureDefinition {
     const {
@@ -91,7 +93,8 @@ export class SensorFeature extends Feature implements SensorFeatureSpec {
   }
 
   /**
-   * @param opacity
+   * Set the webgl1 attributes if the context is webgl1
+   * @param opacity - the opacity
    */
   setWebGL1Attributes(opacity?: number): void {
     this.opacity = opacity;
@@ -99,23 +102,21 @@ export class SensorFeature extends Feature implements SensorFeatureSpec {
 }
 
 /**
- * @param context
+ * Build the sensor workflow. This workflow is added to the painter modularly
+ * @param context - The WebGL(1|2) context
+ * @returns the sensor workflow
  */
 export default async function sensorWorkflow(context: Context): Promise<SensorWorkflowSpec> {
   const Workflow = await import('./workflow').then((m) => m.default);
 
-  /**
-   *
-   */
+  /** Sensor Workflow that draws sensor features for WebGL(1|2) */
   class SensorWorkflow extends Workflow implements SensorWorkflowSpec {
     label = 'sensor' as const;
     nullTexture!: WebGLTexture;
     timeCache?: TimeCache;
     layerGuides = new Map<number, SensorWorkflowLayerGuide>();
     declare uniforms: { [key in SensorWorkflowUniforms]: WebGLUniformLocation };
-    /**
-     * @param context
-     */
+    /** @param context - the WebGL(1|2) context */
     constructor(context: Context) {
       // get gl from context
       const { gl, type } = context;
@@ -135,9 +136,7 @@ export default async function sensorWorkflow(context: Context): Promise<SensorWo
       this.#createNullTexture();
     }
 
-    /**
-     *
-     */
+    /** Create a null texture for cases where a texture doesn't exist or is null */
     #createNullTexture(): void {
       const { gl } = this;
       const texture = gl.createTexture();
@@ -148,15 +147,17 @@ export default async function sensorWorkflow(context: Context): Promise<SensorWo
     }
 
     /**
-     * @param timeCache
+     * Inject a time cache as the current cache for the sensor workflow
+     * @param timeCache - the time cache
      */
     injectTimeCache(timeCache: TimeCache): void {
       this.timeCache = timeCache;
     }
 
     /**
-     * @param sensorData
-     * @param tile
+     * Build sensor source data
+     * @param sensorData - the input sensor data
+     * @param tile - the tile we are building the features for
      */
     buildSource(sensorData: SensorData, tile: Tile): void {
       const { gl, context } = this;
@@ -177,8 +178,9 @@ export default async function sensorWorkflow(context: Context): Promise<SensorWo
     }
 
     /**
-     * @param rasterData
-     * @param tile
+     * Build sensor features
+     * @param rasterData - the input sensor data
+     * @param tile - the tile we are building the features for
      */
     #buildFeatures(rasterData: SensorData, tile: Tile): void {
       const { featureGuides } = rasterData;
@@ -196,8 +198,10 @@ export default async function sensorWorkflow(context: Context): Promise<SensorWo
     }
 
     /**
-     * @param layerBase
-     * @param layer
+     * Build the layer definition
+     * @param layerBase - the common layer attributes
+     * @param layer - the user defined layer attributes
+     * @returns a built layer definition that's ready to describe how to render a sensor feature
      */
     buildLayerDefinition(layerBase: LayerDefinitionBase, layer: SensorStyle): SensorDefinition {
       const { source, layerIndex, lch, visible, interactive } = layerBase;
@@ -235,9 +239,7 @@ export default async function sensorWorkflow(context: Context): Promise<SensorWo
       return layerDefinition;
     }
 
-    /**
-     *
-     */
+    /** Use this workflow as the current shaders for the GPU */
     override use(): void {
       super.use();
       context.oneBlend();
@@ -248,10 +250,11 @@ export default async function sensorWorkflow(context: Context): Promise<SensorWo
     }
 
     /**
-     * @param featureGuide
-     * @param _interactive
+     * Draw a sensor feature
+     * @param feature - the feature to draw
+     * @param _interactive - whether or not the feature is interactive
      */
-    draw(featureGuide: SensorFeatureSpec, _interactive = false): void {
+    draw(feature: SensorFeatureSpec, _interactive = false): void {
       // grab gl from the context
       const { gl, type, context, nullTexture, uniforms } = this;
       const { uTime, uOpacity } = uniforms;
@@ -263,9 +266,9 @@ export default async function sensorWorkflow(context: Context): Promise<SensorWo
         featureCode,
         opacity,
         layerGuide: { layerIndex, visible, colorRamp },
-      } = featureGuide;
+      } = feature;
       if (!visible) return;
-      const { time, texture, textureNext } = featureGuide.getTextures();
+      const { time, texture, textureNext } = feature.getTextures();
       const { mask } = parent ?? tile;
       const { vao, count, offset } = mask;
       if (time === undefined || texture === undefined) return;

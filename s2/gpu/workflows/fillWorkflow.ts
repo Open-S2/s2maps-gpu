@@ -22,48 +22,34 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
   {
     // position
     arrayStride: 4 * 2,
-    attributes: [
-      {
-        shaderLocation: 0,
-        offset: 0,
-        format: 'float32x2',
-      },
-    ],
+    attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }],
   },
   {
     // code
     arrayStride: 4,
-    attributes: [
-      {
-        shaderLocation: 1,
-        offset: 0,
-        format: 'uint32',
-      },
-    ],
+    attributes: [{ shaderLocation: 1, offset: 0, format: 'uint32' }],
   },
 ];
 
-/**
- *
- */
+/** Fill Feature is a standalone fill render storage unit that can be drawn to the GPU */
 export class FillFeature implements FillFeatureSpec {
   type = 'fill' as const;
   bindGroup: GPUBindGroup;
   fillPatternBindGroup: GPUBindGroup;
   fillInteractiveBindGroup?: GPUBindGroup | undefined;
   /**
-   * @param workflow
-   * @param layerGuide
-   * @param maskLayer
-   * @param source
-   * @param count
-   * @param offset
-   * @param tile
-   * @param featureCodeBuffer
-   * @param fillTexturePositions
-   * @param fillInteractiveBuffer
-   * @param featureCode
-   * @param parent
+   * @param workflow - the fill workflow
+   * @param layerGuide - the layer guide for this feature
+   * @param maskLayer - whether or not the layer is a mask type or not
+   * @param source - the fill or mask source
+   * @param count - the number of points
+   * @param offset - the offset of the points
+   * @param tile - the tile that the feature is drawn on
+   * @param featureCodeBuffer - the encoded feature code that tells the GPU how to compute it's properties
+   * @param fillTexturePositions - the fill texture positions
+   * @param fillInteractiveBuffer - if interactive, this buffer helps the GPU compute interactivity
+   * @param featureCode - the encoded feature code that tells the GPU how to compute it's properties
+   * @param parent - the parent tile if applicable
    */
   constructor(
     public workflow: FillWorkflowSpec,
@@ -85,9 +71,7 @@ export class FillFeature implements FillFeatureSpec {
       this.fillInteractiveBindGroup = this.#buildInteractiveBindGroup();
   }
 
-  /**
-   *
-   */
+  /** Draw the feature */
   draw(): void {
     const { maskLayer, tile, parent, workflow } = this;
     const { mask } = parent ?? tile;
@@ -96,24 +80,18 @@ export class FillFeature implements FillFeatureSpec {
     else workflow.draw(this);
   }
 
-  /**
-   *
-   */
+  /** Compute the feature's interactivity with the mouse */
   compute(): void {
     this.workflow.computeInteractive(this);
   }
 
-  /**
-   *
-   */
+  /** Update the shared texture's bind groups */
   updateSharedTexture(): void {
     const { context } = this.workflow;
     this.fillPatternBindGroup = context.createPatternBindGroup(this.fillTexturePositions);
   }
 
-  /**
-   *
-   */
+  /** Destroy and cleanup the feature */
   destroy(): void {
     this.featureCodeBuffer.destroy();
     this.fillTexturePositions.destroy();
@@ -121,8 +99,10 @@ export class FillFeature implements FillFeatureSpec {
   }
 
   /**
-   * @param tile
-   * @param parent
+   * Duplicate this point
+   * @param tile - the tile that is being duplicated
+   * @param parent - the parent tile if applicable
+   * @returns the duplicated feature
    */
   duplicate(tile: Tile, parent?: Tile): FillFeature {
     const {
@@ -163,7 +143,8 @@ export class FillFeature implements FillFeatureSpec {
   }
 
   /**
-   *
+   * Build the bind group for the fill feature
+   * @returns the GPU Bind Group for the fill feature
    */
   #buildBindGroup(): GPUBindGroup {
     const { workflow, tile, parent, layerGuide, featureCodeBuffer } = this;
@@ -180,7 +161,8 @@ export class FillFeature implements FillFeatureSpec {
   }
 
   /**
-   *
+   * Build an interactive bind group for this feature
+   * @returns the GPU Bind Group
    */
   #buildInteractiveBindGroup(): GPUBindGroup {
     const { workflow, tile, source, fillInteractiveBuffer } = this;
@@ -195,9 +177,7 @@ export class FillFeature implements FillFeatureSpec {
   }
 }
 
-/**
- *
- */
+/** Fill Workflow */
 export default class FillWorkflow implements FillWorkflowSpec {
   layerGuides = new Map<number, FillWorkflowLayerGuideGPU>();
   interactivePipeline!: GPUComputePipeline;
@@ -208,14 +188,10 @@ export default class FillWorkflow implements FillWorkflowSpec {
   #shaderModule!: GPUShaderModule;
   #pipelineLayout!: GPUPipelineLayout;
   fillInteractiveBindGroupLayout!: GPUBindGroupLayout;
-  /**
-   * @param context
-   */
+  /** @param context - The WebGPU context */
   constructor(public context: WebGPUContext) {}
 
-  /**
-   *
-   */
+  /** Setup the workflow */
   async setup(): Promise<void> {
     const { device, frameBindGroupLayout, featureBindGroupLayout, maskPatternBindGroupLayout } =
       this.context;
@@ -234,9 +210,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
     this.interactivePipeline = await this.#getComputePipeline();
   }
 
-  /**
-   *
-   */
+  /** Destroy and cleanup the workflow */
   destroy(): void {
     for (const { layerBuffer, layerCodeBuffer } of this.layerGuides.values()) {
       layerBuffer.destroy();
@@ -244,10 +218,11 @@ export default class FillWorkflow implements FillWorkflowSpec {
     }
   }
 
-  // workflows helps design the appropriate layer parameters
   /**
-   * @param layerBase
-   * @param layer
+   * Build the layer definition for this workflow
+   * @param layerBase - the common layer attributes
+   * @param layer - the user defined layer attributes
+   * @returns a built layer definition that's ready to describe how to render a feature
    */
   buildLayerDefinition(layerBase: LayerDefinitionBase, layer: FillStyle): FillDefinition {
     const { context } = this;
@@ -317,8 +292,8 @@ export default class FillWorkflow implements FillWorkflowSpec {
 
   /**
    * given a set of layerIndexes that use Masks and the tile of interest
-   * @param definition
-   * @param tile
+   * @param definition - layer definition that uses masks
+   * @param tile - the tile that needs a mask
    */
   buildMaskFeature(definition: FillDefinition, tile: Tile): void {
     const { context } = this;
@@ -354,8 +329,9 @@ export default class FillWorkflow implements FillWorkflowSpec {
   }
 
   /**
-   * @param fillData
-   * @param tile
+   * Build the source fill data into fill features
+   * @param fillData - the input fill data
+   * @param tile - the tile we are building the features for
    */
   buildSource(fillData: FillData, tile: Tile): void {
     const { context } = this;
@@ -383,10 +359,8 @@ export default class FillWorkflow implements FillWorkflowSpec {
         new Uint32Array(codeTypeBuffer),
         GPUBufferUsage.VERTEX,
       ),
-      /**
-       *
-       */
-      destroy: () => {
+      /** destroy the fill source */
+      destroy: (): void => {
         const { vertexBuffer, indexBuffer, idBuffer, codeTypeBuffer } = source;
         vertexBuffer.destroy();
         indexBuffer.destroy();
@@ -399,9 +373,10 @@ export default class FillWorkflow implements FillWorkflowSpec {
   }
 
   /**
-   * @param source
-   * @param tile
-   * @param featureGuideArray
+   * Build fill features from input fill source
+   * @param source - the input fill source
+   * @param tile - the tile we are building the features for
+   * @param featureGuideArray - the feature guide to help build the features properties
    */
   #buildFeatures(source: FillSource, tile: Tile, featureGuideArray: Float32Array): void {
     const { context } = this;
@@ -459,11 +434,13 @@ export default class FillWorkflow implements FillWorkflowSpec {
     tile.addFeatures(features);
   }
 
-  // https://programmer.ink/think/several-best-practices-of-webgpu.html
-  // BEST PRACTICE 6: it is recommended to create pipeline asynchronously
-  // BEST PRACTICE 7: explicitly define pipeline layouts
   /**
-   * @param type
+   * Get the associating pipeline with the input type
+   * https://programmer.ink/think/several-best-practices-of-webgpu.html
+   * BEST PRACTICE 6: it is recommended to create pipeline asynchronously
+   * BEST PRACTICE 7: explicitly define pipeline layouts
+   * @param type - pipeline type (fill, mask, invert, mask-fill)
+   * @returns the pipeline
    */
   async #getPipeline(type: 'fill' | 'mask' | 'invert' | 'mask-fill'): Promise<GPURenderPipeline> {
     const { context } = this;
@@ -517,7 +494,11 @@ export default class FillWorkflow implements FillWorkflowSpec {
   }
 
   /**
-   *
+   * Build a compute pipeline to check for interactive fill data that interects with the mouse
+   * https://programmer.ink/think/several-best-practices-of-webgpu.html
+   * BEST PRACTICE 6: it is recommended to create pipeline asynchronously
+   * BEST PRACTICE 7: explicitly define pipeline layouts
+   * @returns the GPU compute pipeline
    */
   async #getComputePipeline(): Promise<GPUComputePipeline> {
     const { context } = this;
@@ -552,9 +533,10 @@ export default class FillWorkflow implements FillWorkflowSpec {
   }
 
   /**
-   * @param featureGuide
+   * Draw a fill feature to the GPU
+   * @param feature - fill feature guide
    */
-  draw(featureGuide: FillFeatureSpec): void {
+  draw(feature: FillFeatureSpec): void {
     const { context, invertPipeline, fillPipeline } = this;
     // get current source data
     const { passEncoder } = context;
@@ -567,7 +549,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
       count,
       offset,
       layerGuide: { visible, invert },
-    } = featureGuide;
+    } = feature;
     const { vertexBuffer, indexBuffer, codeTypeBuffer } = source;
     const pipeline = invert ? invertPipeline : fillPipeline;
     const { mask } = parent ?? tile;
@@ -584,22 +566,16 @@ export default class FillWorkflow implements FillWorkflowSpec {
     // draw
     passEncoder.drawIndexed(count, 1, offset);
 
-    if (invert) this.drawMask(mask, featureGuide);
+    if (invert) this.drawMask(mask, feature);
   }
 
   /**
-   * @param root0
-   * @param root0.vertexBuffer
-   * @param root0.indexBuffer
-   * @param root0.codeTypeBuffer
-   * @param root0.bindGroup
-   * @param root0.fillPatternBindGroup
-   * @param root0.count
-   * @param root0.offset
-   * @param featureGuide
+   * Draw a mask to the GPU
+   * @param mask - mask source
+   * @param feature - fill feature guide
    */
-  drawMask(
-    {
+  drawMask(mask: TileMaskSource, feature?: FillFeatureSpec): void {
+    const {
       vertexBuffer,
       indexBuffer,
       codeTypeBuffer,
@@ -607,18 +583,16 @@ export default class FillWorkflow implements FillWorkflowSpec {
       fillPatternBindGroup,
       count,
       offset,
-    }: TileMaskSource,
-    featureGuide?: FillFeatureSpec,
-  ): void {
+    } = mask;
     const { context, maskPipeline, maskFillPipeline } = this;
     // if the layer is not visible, move on
-    if (featureGuide?.layerGuide?.visible === false) return;
+    if (feature?.layerGuide?.visible === false) return;
     // get current source data
     const { passEncoder } = context;
     // setup pipeline, bind groups, & buffers
-    this.context.setRenderPipeline(featureGuide === undefined ? maskPipeline : maskFillPipeline);
-    passEncoder.setBindGroup(1, featureGuide?.bindGroup ?? bindGroup);
-    passEncoder.setBindGroup(2, featureGuide?.fillPatternBindGroup ?? fillPatternBindGroup);
+    this.context.setRenderPipeline(feature === undefined ? maskPipeline : maskFillPipeline);
+    passEncoder.setBindGroup(1, feature?.bindGroup ?? bindGroup);
+    passEncoder.setBindGroup(2, feature?.fillPatternBindGroup ?? fillPatternBindGroup);
     passEncoder.setVertexBuffer(0, vertexBuffer);
     passEncoder.setIndexBuffer(indexBuffer, 'uint32');
     passEncoder.setVertexBuffer(1, codeTypeBuffer);
@@ -627,19 +601,16 @@ export default class FillWorkflow implements FillWorkflowSpec {
   }
 
   /**
-   * @param root0
-   * @param root0.layerGuide
-   * @param root0.layerGuide.visible
-   * @param root0.bindGroup
-   * @param root0.fillInteractiveBindGroup
-   * @param root0.count
+   * Compute the interactive fill features in current view
+   * @param feature - fill feature guide
    */
-  computeInteractive({
-    layerGuide: { visible },
-    bindGroup,
-    fillInteractiveBindGroup,
-    count,
-  }: FillFeatureSpec): void {
+  computeInteractive(feature: FillFeatureSpec): void {
+    const {
+      layerGuide: { visible },
+      bindGroup,
+      fillInteractiveBindGroup,
+      count,
+    } = feature;
     if (!visible || fillInteractiveBindGroup === undefined) return;
     const { computePass, interactiveBindGroup } = this.context;
     this.context.setComputePipeline(this.interactivePipeline);

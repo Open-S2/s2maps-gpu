@@ -7,6 +7,7 @@
 //   // setup adapter
 // }
 
+/** Check if the browser is Safari or not */
 export const isSafari = /^((?!chrome|android).)*safari/i.test(window.navigator.userAgent);
 /* Safari and Edge polyfill for createImageBitmap
  * https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/createImageBitmap

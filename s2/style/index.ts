@@ -15,14 +15,15 @@ import type {
 } from './style.spec';
 import type { RequestStyleMessage, TileRequest } from 'workers/worker.spec';
 
-// PRE) If style is a string (url), ship it off to Source Worker to fetch the style
-// 1) Build workflows necessary to render the style
-// 2) Build out the layers
-// 3) Ship off appropriate style params to Tile Workers so they know how to build the tiles
-// 4) Build the layers for the painter
-
 /**
  * # Style Engine
+ *
+ * The Style Engine is responsible for:
+ * - PRE) If style is a string (url), ship it off to Source Worker to fetch the style
+ * - 1) Build workflows necessary to render the style
+ * - 2) Build out the layers
+ * - 3) Ship off appropriate style params to Tile Workers so they know how to build the tiles
+ * - 4) Build the layers for the painter
  */
 export default class Style {
   camera: Camera;
@@ -33,8 +34,8 @@ export default class Style {
   interactive = false;
   dirty = true;
   /**
-   * @param camera
-   * @param options
+   * @param camera - render camera
+   * @param options - map options
    */
   constructor(camera: Camera, options: MapOptions) {
     const { apiKey, urlMap } = options;
@@ -44,8 +45,10 @@ export default class Style {
   }
 
   /**
-   * @param style
-   * @param ignorePosition
+   * Build the style, preparing it for rendering and tile/source processing
+   * @param style - style definition
+   * @param ignorePosition - if true, we want to leave the position of the camera unchanged.
+   * @returns true if we can start rendering
    */
   async buildStyle(style: string | StyleDefinition, ignorePosition = false): Promise<boolean> {
     const { camera } = this;
@@ -79,7 +82,8 @@ export default class Style {
   }
 
   /**
-   * @param tile
+   * Inject mask layers
+   * @param tile - tile to inject the mask layers for
    */
   injectMaskLayers(tile: Tile): void {
     const { maskLayers, camera } = this;
@@ -90,7 +94,8 @@ export default class Style {
   }
 
   /**
-   * @param style
+   * Request the style if the input style was an href pointing to the style object
+   * @param style - style href
    */
   #requestStyle(style: string): void {
     const { apiKey, urlMap, camera } = this;
@@ -113,7 +118,8 @@ export default class Style {
   }
 
   /**
-   * @param style
+   * Build workflows
+   * @param style - input style object
    */
   async #buildWorkflows(style: StyleDefinition): Promise<void> {
     const { camera, urlMap } = this;
@@ -138,10 +144,11 @@ export default class Style {
     }
   }
 
-  // 1) ensure "bad" layers are removed (missing important keys or subkeys)
-  // 2) ensure the order is correct for when WebGL eventually parses the encodings
   /**
-   * @param layers
+   * Build layer definitions
+   * - 1) ensure "bad" layers are removed (missing important keys or subkeys)
+   * - 2) ensure the order is correct for when WebGL eventually parses the encodings
+   * @param layers - layers to build
    */
   #buildLayers(layers: LayerStyle[] = []): void {
     const layerDefinitions: LayerDefinition[] = [];
@@ -163,8 +170,10 @@ export default class Style {
   }
 
   /**
-   * @param layerStyle
-   * @param layerIndex
+   * Build layer definition
+   * @param layerStyle - layer style to build
+   * @param layerIndex - position of the layer in the style layers array
+   * @returns a layer definition if successful
    */
   #buildLayer(layerStyle: LayerStyle, layerIndex: number): undefined | LayerDefinition {
     const { workflows } = this.camera.painter;
@@ -197,7 +206,9 @@ export default class Style {
   }
 
   /**
-   * @param tiles
+   * Request tiles. The projector will forward requests throug this class so it can build the
+   * tile requests with style specific data before forwarding it to the worker pool
+   * @param tiles - tiles to request data for
    */
   requestTiles(tiles: Tile[]): void {
     if (tiles.length === 0) return;
@@ -218,7 +229,8 @@ export default class Style {
   }
 
   /**
-   * @param style
+   * Send style data to workers
+   * @param style - style definition to forward
    */
   #sendStyleDataToWorkers(style: StyleDefinition): void {
     const { apiKey, urlMap, layers } = this;
@@ -267,7 +279,9 @@ export default class Style {
   }
 
   /**
-   *
+   * This is a helper function to build the analytics object. Useful for servers to know what kind
+   * of GPU or limitations this browser has
+   * @returns the analytics object
    */
   #buildAnalytics(): Analytics {
     const { context } = this.camera.painter;

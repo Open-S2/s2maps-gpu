@@ -19,19 +19,11 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
   {
     // position
     arrayStride: 4 * 2,
-    attributes: [
-      {
-        shaderLocation: 0,
-        offset: 0,
-        format: 'float32x2',
-      },
-    ],
+    attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }],
   },
 ];
 
-/**
- *
- */
+/** Shade Feature is a standalone shade render storage unit that can be drawn to the GPU */
 export class ShadeFeature implements ShadeFeatureSpec {
   type = 'shade' as const;
   maskLayer = true;
@@ -41,11 +33,11 @@ export class ShadeFeature implements ShadeFeatureSpec {
   featureCode = [0];
   bindGroup: GPUBindGroup;
   /**
-   * @param workflow
-   * @param tile
-   * @param layerIndex
-   * @param layerGuide
-   * @param featureCodeBuffer
+   * @param workflow - the shade workflow
+   * @param tile - the tile that the feature is drawn on
+   * @param layerIndex - the layer's index
+   * @param layerGuide - the layer guide for this feature
+   * @param featureCodeBuffer - the encoded feature code that tells the GPU how to compute it's properties
    */
   constructor(
     public workflow: ShadeWorkflowSpec,
@@ -61,24 +53,21 @@ export class ShadeFeature implements ShadeFeatureSpec {
     this.bindGroup = this.#buildBindGroup();
   }
 
-  /**
-   *
-   */
+  /** Draw the feature to the GPU */
   draw(): void {
     const { workflow } = this;
     workflow.context.setStencilReference(this.tile.tmpMaskID);
     workflow.draw(this);
   }
 
-  /**
-   *
-   */
+  /** Delete and cleanup the feature */
   destroy(): void {
     this.featureCodeBuffer.destroy();
   }
 
   /**
-   *
+   * Build the bind group for the feature
+   * @returns the feature's GPU bind group
    */
   #buildBindGroup(): GPUBindGroup {
     const { workflow, tile, layerGuide, featureCodeBuffer } = this;
@@ -95,30 +84,22 @@ export class ShadeFeature implements ShadeFeatureSpec {
   }
 }
 
-/**
- *
- */
+/** Shade Workflow */
 export default class ShadeWorkflow implements ShadeWorkflowSpec {
   context: WebGPUContext;
   layerGuide?: ShadeWorkflowLayerGuideGPU;
   pipeline!: GPURenderPipeline;
-  /**
-   * @param context
-   */
+  /** @param context - The WebGPU context */
   constructor(context: WebGPUContext) {
     this.context = context;
   }
 
-  /**
-   *
-   */
+  /** Setup the shade workflow */
   async setup(): Promise<void> {
     this.pipeline = await this.#getPipeline();
   }
 
-  /**
-   *
-   */
+  /** Cleanup the shade workflow */
   destroy(): void {
     const { layerGuide } = this;
     if (layerGuide === undefined) return;
@@ -128,8 +109,10 @@ export default class ShadeWorkflow implements ShadeWorkflowSpec {
   }
 
   /**
-   * @param layerBase
-   * @param layer
+   * Build the layer definition for this workflow
+   * @param layerBase - the common layer attributes
+   * @param layer - the user defined layer attributes
+   * @returns a built layer definition that's ready to describe how to render a feature
    */
   buildLayerDefinition(layerBase: LayerDefinitionBase, layer: ShadeStyle): ShadeDefinition {
     const { context } = this;
@@ -171,15 +154,13 @@ export default class ShadeWorkflow implements ShadeWorkflowSpec {
     return definition;
   }
 
-  // given a set of layerIndexes that use Masks and the tile of interest
   /**
-   * @param root0
-   * @param root0.layerIndex
-   * @param root0.minzoom
-   * @param root0.maxzoom
-   * @param tile
+   * Build a mask feature for the tile that helps the shade guide work
+   * @param shadeGuide - the shade guide
+   * @param tile - the tile that needs a mask
    */
-  buildMaskFeature({ layerIndex, minzoom, maxzoom }: ShadeDefinition, tile: Tile): void {
+  buildMaskFeature(shadeGuide: ShadeDefinition, tile: Tile): void {
+    const { layerIndex, minzoom, maxzoom } = shadeGuide;
     const { context, layerGuide } = this;
     const { zoom } = tile;
     // not in the zoom range, ignore
@@ -194,11 +175,12 @@ export default class ShadeWorkflow implements ShadeWorkflowSpec {
     tile.addFeatures([feature]);
   }
 
-  // https://programmer.ink/think/several-best-practices-of-webgpu.html
-  // BEST PRACTICE 6: it is recommended to create pipeline asynchronously
-  // BEST PRACTICE 7: explicitly define pipeline layouts
   /**
-   *
+   * Build the render pipeline for the shade workflow
+   * https://programmer.ink/think/several-best-practices-of-webgpu.html
+   * BEST PRACTICE 6: it is recommended to create pipeline asynchronously
+   * BEST PRACTICE 7: explicitly define pipeline layouts
+   * @returns the render pipeline
    */
   async #getPipeline(): Promise<GPURenderPipeline> {
     const { device, format, sampleCount, frameBindGroupLayout, featureBindGroupLayout } =
@@ -219,11 +201,7 @@ export default class ShadeWorkflow implements ShadeWorkflowSpec {
     return await device.createRenderPipelineAsync({
       label: 'Shade Pipeline',
       layout,
-      vertex: {
-        module,
-        entryPoint: 'vMain',
-        buffers: SHADER_BUFFER_LAYOUT,
-      },
+      vertex: { module, entryPoint: 'vMain', buffers: SHADER_BUFFER_LAYOUT },
       fragment: {
         module,
         entryPoint: 'fMain',
@@ -231,25 +209,15 @@ export default class ShadeWorkflow implements ShadeWorkflowSpec {
           {
             format,
             blend: {
-              color: {
-                srcFactor: 'dst',
-                dstFactor: 'zero',
-                operation: 'add', // common operation
-              },
-              alpha: {
-                srcFactor: 'dst',
-                dstFactor: 'zero',
-                operation: 'add', // assuming you want the same for alpha
-              },
+              // operation: common operation
+              color: { srcFactor: 'dst', dstFactor: 'zero', operation: 'add' },
+              // operation: assuming you want the same for alpha
+              alpha: { srcFactor: 'dst', dstFactor: 'zero', operation: 'add' },
             },
           },
         ],
       },
-      primitive: {
-        topology: 'triangle-strip',
-        cullMode: 'back',
-        stripIndexFormat: 'uint32',
-      },
+      primitive: { topology: 'triangle-strip', cullMode: 'back', stripIndexFormat: 'uint32' },
       multisample: { count: sampleCount },
       depthStencil: {
         depthWriteEnabled: true,
@@ -264,13 +232,15 @@ export default class ShadeWorkflow implements ShadeWorkflowSpec {
   }
 
   /**
-   * @param root0
-   * @param root0.layerGuide
-   * @param root0.layerGuide.visible
-   * @param root0.source
-   * @param root0.bindGroup
+   * Draw a shade feature to the GPU
+   * @param feature - shade feature guide
    */
-  draw({ layerGuide: { visible }, source, bindGroup }: ShadeFeatureSpec): void {
+  draw(feature: ShadeFeatureSpec): void {
+    const {
+      layerGuide: { visible },
+      source,
+      bindGroup,
+    } = feature;
     if (!visible) return;
     const { context, pipeline } = this;
     const { passEncoder } = context;

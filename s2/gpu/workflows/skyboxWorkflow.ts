@@ -10,9 +10,7 @@ import type { SkyboxWorkflow as SkyboxWorkflowSpec } from './workflow.spec';
 import type { StyleDefinition } from 'style/style.spec';
 import type { WebGPUContext } from '../context';
 
-/**
- *
- */
+/** Skybox Workflow renders a user styled skybox to the GPU */
 export default class SkyboxWorkflow implements SkyboxWorkflowSpec {
   context: WebGPUContext;
   facesReady = 0;
@@ -26,16 +24,12 @@ export default class SkyboxWorkflow implements SkyboxWorkflowSpec {
   #sampler!: GPUSampler;
   #skyboxBindGroupLayout!: GPUBindGroupLayout;
   #bindGroup!: GPUBindGroup;
-  /**
-   * @param context
-   */
+  /** @param context - The WebGPU context */
   constructor(context: WebGPUContext) {
     this.context = context;
   }
 
-  /**
-   *
-   */
+  /** Setup the skybox workflow */
   async setup(): Promise<void> {
     const { context } = this;
     const { device } = context;
@@ -57,18 +51,17 @@ export default class SkyboxWorkflow implements SkyboxWorkflowSpec {
     this.pipeline = await this.#getPipeline();
   }
 
-  /**
-   *
-   */
+  /** Destroy the skybox workflow */
   destroy(): void {
     this.#matrixBuffer.destroy();
     this.#cubeMap.destroy();
   }
 
   /**
-   * @param style
-   * @param camera
-   * @param urlMap
+   * Update the skybox style
+   * @param style - user defined style
+   * @param camera - The camera
+   * @param urlMap - The url map to properly resolve urls
    */
   updateStyle(style: StyleDefinition, camera: Camera, urlMap?: Record<string, string>): void {
     const { context } = this;
@@ -104,11 +97,12 @@ export default class SkyboxWorkflow implements SkyboxWorkflowSpec {
     for (let i = 0; i < 6; i++) void this.#getImage(i, `${path}/${size}/${i}.${type}`, camera);
   }
 
-  // https://programmer.ink/think/several-best-practices-of-webgpu.html
-  // BEST PRACTICE 6: it is recommended to create pipeline asynchronously
-  // BEST PRACTICE 7: explicitly define pipeline layouts
   /**
-   *
+   * Setup the skybox pipeline
+   * https://programmer.ink/think/several-best-practices-of-webgpu.html
+   * BEST PRACTICE 6: it is recommended to create pipeline asynchronously
+   * BEST PRACTICE 7: explicitly define pipeline layouts
+   * @returns the WebGPU pipeline
    */
   async #getPipeline(): Promise<GPURenderPipeline> {
     const { device, format, sampleCount, frameBindGroupLayout } = this.context;
@@ -139,19 +133,9 @@ export default class SkyboxWorkflow implements SkyboxWorkflowSpec {
     return await device.createRenderPipelineAsync({
       label: 'Skybox Pipeline',
       layout,
-      vertex: {
-        module,
-        entryPoint: 'vMain',
-      },
-      fragment: {
-        module,
-        entryPoint: 'fMain',
-        targets: [{ format }],
-      },
-      primitive: {
-        topology: 'triangle-list',
-        cullMode: 'none',
-      },
+      vertex: { module, entryPoint: 'vMain' },
+      fragment: { module, entryPoint: 'fMain', targets: [{ format }] },
+      primitive: { topology: 'triangle-list', cullMode: 'none' },
       multisample: { count: sampleCount },
       depthStencil: {
         depthWriteEnabled: false,
@@ -162,9 +146,10 @@ export default class SkyboxWorkflow implements SkyboxWorkflowSpec {
   }
 
   /**
-   * @param index
-   * @param path
-   * @param camera
+   * Get the appropriate cube map image and upload the data to the GPU
+   * @param index - the index
+   * @param path - the path to the image
+   * @param camera - the camera
    */
   async #getImage(index: number, path: string, camera: Camera): Promise<void> {
     const { context } = this;
@@ -195,7 +180,8 @@ export default class SkyboxWorkflow implements SkyboxWorkflowSpec {
   }
 
   /**
-   * @param projector
+   * Update to the projector's current matrix
+   * @param projector - The projector
    */
   #updateMatrix(projector: Projector): void {
     const { context, fov, angle, matrix } = this;
@@ -213,7 +199,8 @@ export default class SkyboxWorkflow implements SkyboxWorkflowSpec {
   }
 
   /**
-   * @param projector
+   * Draw the skybox
+   * @param projector - The projector
    */
   draw(projector: Projector): void {
     // get current source data

@@ -1,46 +1,45 @@
 import type { Glyph } from 'workers/process/glyph/familySource';
-import type { ImageFormats } from 'style/style.spec';
+import type { ImageExtensions } from 'style/style.spec';
 import type Session from './session';
 import type { SpriteImageMessage } from 'workers/worker.spec';
 import type TexturePack from './texturePack';
 
-/**
- *
- */
-export type Metadata = Record<string, Glyph>;
-/**
- *
- */
-export interface ImageMetadata {
+/** Metadata for an image source */
+export type ImageMetadata = Record<string, Glyph>;
+/** Full metadata for an image source including name */
+export interface ImageSourceMetadata {
   name: string;
-  metadata: Metadata;
+  metadata: ImageMetadata;
 }
 
 /**
+ * # ImageSource
  *
+ * ## Description
+ * A collection of images relating to a single source
  */
 export default class ImageSource {
   active = true;
   name: string;
   path: string;
-  fileType: ImageFormats = 'png';
-  metadata: Metadata = {};
+  fileType: ImageExtensions = 'png';
+  metadata: ImageMetadata = {};
   session: Session;
   texturePack: TexturePack;
 
   /**
-   * @param name
-   * @param path
-   * @param texturePack
-   * @param session
-   * @param fileType
+   * @param name - the name of the source
+   * @param path - the path to the source
+   * @param texturePack - the texture pack to store the glyphs/images into
+   * @param session - the session
+   * @param fileType - the file type
    */
   constructor(
     name: string,
     path: string,
     texturePack: TexturePack,
     session: Session,
-    fileType?: ImageFormats,
+    fileType?: ImageExtensions,
   ) {
     this.name = name;
     this.path = path;
@@ -50,18 +49,26 @@ export default class ImageSource {
   }
 
   /**
-   * @param _mapID
+   * Build the source
+   * @param _mapID - the id of the map to build for
+   * @returns the image metadata (we don't need to early ship this)
    */
-  build(_mapID: string): undefined | ImageMetadata {
-    return undefined;
+  async build(_mapID: string): Promise<undefined | ImageSourceMetadata> {
+    return await undefined;
   }
 
   /**
-   * @param mapID
-   * @param name
-   * @param path
+   * Add an image to the source collection
+   * @param mapID - the id of the map to build for
+   * @param name - the name of the image
+   * @param path - the path to the image
+   * @returns the image metadata if successful
    */
-  async addImage(mapID: string, name: string, path: string): Promise<undefined | ImageMetadata> {
+  async addImage(
+    mapID: string,
+    name: string,
+    path: string,
+  ): Promise<undefined | ImageSourceMetadata> {
     const { metadata, texturePack } = this;
     // grab the metadata and sprites
     const data = (await this._fetch(path, mapID).catch((err) => {
@@ -121,10 +128,12 @@ export default class ImageSource {
   }
 
   /**
-   * @param path
-   * @param mapID
+   * Fetch an image
+   * @param path - the path to the image or metadata
+   * @param mapID - the id of the map
+   * @returns the image or metadata
    */
-  async _fetch(path: string, mapID: string): Promise<undefined | Metadata | ArrayBuffer> {
+  async _fetch(path: string, mapID: string): Promise<undefined | ImageMetadata | ArrayBuffer> {
     const { session } = this;
     const headers: { Authorization?: string } = {};
     if (session.hasAPIKey(mapID)) {
@@ -135,7 +144,7 @@ export default class ImageSource {
     const res = await fetch(path, { headers });
     if (res.status !== 200 && res.status !== 206) return;
     if (path.endsWith('json') || res.headers.get('content-type') === 'application/json') {
-      return (await res.json()) as Metadata;
+      return (await res.json()) as ImageMetadata;
     }
     return await res.arrayBuffer();
   }

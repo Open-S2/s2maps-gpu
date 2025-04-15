@@ -26,9 +26,7 @@ import type {
   HeatmapWorkflowUniforms,
 } from './workflow.spec';
 
-/**
- *
- */
+/** Heatmap Feature is a standalone heatmap render storage unit that can be drawn to the GPU */
 export class HeatmapFeature extends Feature implements HeatmapFeatureSpec {
   type = 'heatmap' as const;
   radiusLo?: number; // webgl1
@@ -38,15 +36,15 @@ export class HeatmapFeature extends Feature implements HeatmapFeatureSpec {
   opacityHi?: number; // webgl1
   intensityHi?: number; // webgl1
   /**
-   * @param workflow
-   * @param source
-   * @param layerGuide
-   * @param tile
-   * @param count
-   * @param offset
-   * @param featureCode
-   * @param parent
-   * @param bounds
+   * @param workflow - the heatmap workflow
+   * @param source - the heatmap source
+   * @param layerGuide - layer guide for this feature
+   * @param tile - the tile that the feature is drawn on
+   * @param count - the number of points
+   * @param offset - the offset of the points
+   * @param featureCode - the encoded feature code that tells the GPU how to compute it's properties
+   * @param parent - the parent tile if applicable
+   * @param bounds - the bounds of the tile if applicable
    */
   constructor(
     public override workflow: HeatmapWorkflow,
@@ -63,16 +61,15 @@ export class HeatmapFeature extends Feature implements HeatmapFeatureSpec {
   }
 
   /**
-   * @param interactive
+   * Draw the feature to the GPU
+   * @param interactive - whether or not the feature is interactive
    */
   override draw(interactive?: boolean): void {
     super.draw(interactive);
     this.workflow.draw(this, interactive);
   }
 
-  /**
-   *
-   */
+  /** Draw the feature's texture to the GPU */
   drawTexture(): void {
     const { tile, parent, workflow, layerGuide } = this;
     const { context } = workflow;
@@ -88,9 +85,11 @@ export class HeatmapFeature extends Feature implements HeatmapFeatureSpec {
   }
 
   /**
-   * @param tile
-   * @param parent
-   * @param bounds
+   * Duplicate this feature
+   * @param tile - the tile that the feature is drawn on
+   * @param parent - the parent tile if applicable
+   * @param bounds - the bounds of the tile if applicable
+   * @returns the duplicated feature
    */
   duplicate(tile: Tile, parent?: Tile, bounds?: BBox): HeatmapFeature {
     const {
@@ -130,12 +129,14 @@ export class HeatmapFeature extends Feature implements HeatmapFeatureSpec {
   }
 
   /**
-   * @param radiusLo
-   * @param opacityLo
-   * @param intensityLo
-   * @param radiusHi
-   * @param opacityHi
-   * @param intensityHi
+   * Set the webgl1 attributes if the context is webgl1
+   * Low-High is a system to help WebGL blend between two values on zoom change
+   * @param radiusLo - the low radius
+   * @param opacityLo - the low opacity
+   * @param intensityLo - the low intensity
+   * @param radiusHi - the high radius
+   * @param opacityHi - the high opacity
+   * @param intensityHi - the high intensity
    */
   setWebGL1Attributes(
     radiusLo?: number,
@@ -154,9 +155,7 @@ export class HeatmapFeature extends Feature implements HeatmapFeatureSpec {
   }
 }
 
-/**
- *
- */
+/** Heatmap Workflow */
 export default class HeatmapWorkflow extends Workflow implements HeatmapWorkflowSpec {
   label = 'heatmap' as const;
   texture!: WebGLTexture;
@@ -166,9 +165,7 @@ export default class HeatmapWorkflow extends Workflow implements HeatmapWorkflow
   extentBuffer?: WebGLBuffer;
   layerGuides = new Map<number, HeatmapWorkflowLayerGuide>();
   declare uniforms: { [key in HeatmapWorkflowUniforms]: WebGLUniformLocation };
-  /**
-   * @param context
-   */
+  /** @param context - The WebGL(1|2) context */
   constructor(context: Context) {
     // get gl from context
     const { gl, type, devicePixelRatio } = context;
@@ -189,9 +186,7 @@ export default class HeatmapWorkflow extends Workflow implements HeatmapWorkflow
     this.#setupFBO();
   }
 
-  /**
-   *
-   */
+  /** Bind the extent/quad buffer */
   #bindExtentBuffer(): void {
     const { gl, context, extentBuffer } = this;
 
@@ -207,8 +202,9 @@ export default class HeatmapWorkflow extends Workflow implements HeatmapWorkflow
   }
 
   /**
-   * @param heatmapData
-   * @param tile
+   * Build the heatmap source
+   * @param heatmapData - the heatmap data sent from the tile worker
+   * @param tile - the tile that the features are drawn on
    */
   buildSource(heatmapData: HeatmapData, tile: Tile): void {
     const { gl, context } = this;
@@ -238,9 +234,10 @@ export default class HeatmapWorkflow extends Workflow implements HeatmapWorkflow
   }
 
   /**
-   * @param source
-   * @param tile
-   * @param featureGuideArray
+   * Build the heatmap features
+   * @param source - the heatmap source
+   * @param tile - the tile that the features are drawn on
+   * @param featureGuideArray - the array of feature guides
    */
   #buildFeatures(source: HeatmapSource, tile: Tile, featureGuideArray: Float32Array): void {
     const features: HeatmapFeatureSpec[] = [];
@@ -271,21 +268,23 @@ export default class HeatmapWorkflow extends Workflow implements HeatmapWorkflow
   }
 
   /**
-   * @param layerBase
-   * @param layer
+   * Build the layer definition
+   * @param layerBase - the common layer attributes
+   * @param layer - the user defined layer attributes
+   * @returns a built layer definition that's ready to describe how to render a feature
    */
   buildLayerDefinition(layerBase: LayerDefinitionBase, layer: HeatmapStyle): HeatmapDefinition {
     const { type, context } = this;
     const { source, layerIndex, lch, visible } = layerBase;
     // PRE) get layer base
     // layout
-    const { weight } = layer;
     let {
       // paint
       radius,
       opacity,
       intensity,
       // layout
+      weight,
       colorRamp,
       // properties
       geoFilter,
@@ -330,9 +329,7 @@ export default class HeatmapWorkflow extends Workflow implements HeatmapWorkflow
     return layerDefinition;
   }
 
-  /**
-   *
-   */
+  /** Setup an FBO for the heatmap. We draw to this FBO before rendering to the main FBO */
   #setupFBO(): void {
     const { gl, context } = this;
 
@@ -353,17 +350,13 @@ export default class HeatmapWorkflow extends Workflow implements HeatmapWorkflow
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
 
-  /**
-   *
-   */
+  /** Resize the heatmap FBO */
   resize(): void {
     const { gl, context } = this;
     context.updateTexture(this.texture, null, gl.canvas.width, gl.canvas.height);
   }
 
-  /**
-   *
-   */
+  /** Setup the texture draw workflow */
   setupTextureDraw(): void {
     const { gl, context, uniforms } = this;
     // set workflow. Will run use, but will also flush.
@@ -387,7 +380,9 @@ export default class HeatmapWorkflow extends Workflow implements HeatmapWorkflow
   }
 
   /**
-   * @param features
+   * Draw heatmap feature's textures
+   * @param features - features to draw
+   * @returns the resulting combination of associated features
    */
   textureDraw(features: HeatmapFeatureSpec[]): HeatmapFeatureSpec[] | undefined {
     if (features.length === 0) return undefined;
@@ -415,7 +410,8 @@ export default class HeatmapWorkflow extends Workflow implements HeatmapWorkflow
   }
 
   /**
-   * @param featureGuide
+   * Draw feature to early FBO
+   * @param featureGuide - feature to draw
    */
   drawToTexture(featureGuide: HeatmapFeatureSpec): void {
     // grab context
@@ -450,9 +446,7 @@ export default class HeatmapWorkflow extends Workflow implements HeatmapWorkflow
     gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, count);
   }
 
-  /**
-   *
-   */
+  /** Use the heatmap workflow */
   override use(): void {
     super.use();
     const { gl, context, uniforms } = this;
@@ -469,17 +463,18 @@ export default class HeatmapWorkflow extends Workflow implements HeatmapWorkflow
   }
 
   /**
-   * @param featureGuide
-   * @param _interactive
+   * Draw the heatmap feature
+   * @param feature - feature to draw
+   * @param _interactive - whether or not the feature is interactive
    */
-  draw(featureGuide: HeatmapFeatureSpec, _interactive = false): void {
+  draw(feature: HeatmapFeatureSpec, _interactive = false): void {
     // grab the context
     const { gl, context } = this;
     const { vao } = context;
-    // get current featureGuide data
+    // get current feature data
     const {
       layerGuide: { layerIndex, visible, colorRamp },
-    } = featureGuide;
+    } = feature;
     if (!visible) return;
     // set context's full screen fbo
     gl.bindVertexArray(vao);
@@ -495,9 +490,7 @@ export default class HeatmapWorkflow extends Workflow implements HeatmapWorkflow
     gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
   }
 
-  /**
-   *
-   */
+  /** Delete the heatmap workflow */
   override delete(): void {
     const { gl, texture, framebuffer } = this;
     // delete texture

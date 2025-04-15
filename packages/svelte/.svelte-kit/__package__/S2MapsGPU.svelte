@@ -37,7 +37,7 @@ const onScriptLoad = () => {
       options.offscreen = false;
     const map = new window.S2Map(options);
     mapInstance = map;
-    if (testing === true)
+    if (testing)
       window.testMap = map;
     if (typeof mapReady === "function")
       map.addEventListener("ready", () => {

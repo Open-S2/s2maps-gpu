@@ -25,22 +25,20 @@ import type {
   RasterWorkflowUniforms,
 } from './workflow.spec';
 
-/**
- *
- */
+/** Raster Feature is a standalone raster render storage unit that can be drawn to the GPU */
 export class RasterFeature extends Feature implements RasterFeatureSpec {
   type = 'raster' as const;
   opacity?: number; // webgl1
   saturation?: number; // webgl1
   contrast?: number; // webgl1
   /**
-   * @param layerGuide
-   * @param workflow
-   * @param source
-   * @param featureCode
-   * @param tile
-   * @param fadeStartTime
-   * @param parent
+   * @param layerGuide - layer guide for this feature
+   * @param workflow - the raster workflow
+   * @param source - the raster source
+   * @param featureCode - the encoded feature code that tells the GPU how to compute it's properties
+   * @param tile - the tile that the feature is drawn on
+   * @param fadeStartTime - the start time of the "fade" to be applied
+   * @param parent - the parent tile
    */
   constructor(
     public override layerGuide: RasterWorkflowLayerGuide,
@@ -55,7 +53,8 @@ export class RasterFeature extends Feature implements RasterFeatureSpec {
   }
 
   /**
-   * @param interactive
+   * Draw this feature to the GPU
+   * @param interactive - whether or not the feature is interactive for compute or render
    */
   override draw(interactive = false): void {
     super.draw(interactive);
@@ -63,8 +62,10 @@ export class RasterFeature extends Feature implements RasterFeatureSpec {
   }
 
   /**
-   * @param tile
-   * @param parent
+   * Duplicate this feature
+   * @param tile - the tile that the feature is drawn on
+   * @param parent - the parent tile if applicable
+   * @returns the duplicated feature
    */
   duplicate(tile: Tile, parent?: Tile): RasterFeature {
     const {
@@ -91,9 +92,10 @@ export class RasterFeature extends Feature implements RasterFeatureSpec {
   }
 
   /**
-   * @param opacity
-   * @param saturation
-   * @param contrast
+   * Set the webgl1 attributes if the context is webgl1
+   * @param opacity - the opacity
+   * @param saturation - the saturation
+   * @param contrast - the contrast
    */
   setWebGL1Attributes(opacity?: number, saturation?: number, contrast?: number): void {
     this.opacity = opacity;
@@ -102,17 +104,13 @@ export class RasterFeature extends Feature implements RasterFeatureSpec {
   }
 }
 
-/**
- *
- */
+/** Raster Workflow */
 export default class RasterWorkflow extends Workflow implements RasterWorkflowSpec {
   label = 'raster' as const;
   curSample: 'none' | 'linear' | 'nearest' = 'none';
   layerGuides = new Map<number, RasterWorkflowLayerGuide>();
   declare uniforms: { [key in RasterWorkflowUniforms]: WebGLUniformLocation };
-  /**
-   * @param context
-   */
+  /** @param context - the WebGL(1|2) context */
   constructor(context: Context) {
     // get gl from context
     const { type } = context;
@@ -124,7 +122,8 @@ export default class RasterWorkflow extends Workflow implements RasterWorkflowSp
   }
 
   /**
-   * @param type
+   * Set the sample type
+   * @param type - the sample type
    */
   #setSampleType(type: Resampling): void {
     const { curSample, gl } = this;
@@ -139,10 +138,11 @@ export default class RasterWorkflow extends Workflow implements RasterWorkflowSp
     }
   }
 
-  // workflows helps design the appropriate layer parameters
   /**
-   * @param layerBase
-   * @param layer
+   * Build a layer definition for this workflow given the user input layer
+   * @param layerBase - the common layer attributes
+   * @param layer - the user defined layer attributes
+   * @returns a built layer definition that's ready to describe how to render a raster feature
    */
   buildLayerDefinition(layerBase: LayerDefinitionBase, layer: RasterStyle): RasterDefinition {
     const { type } = this;
@@ -184,8 +184,9 @@ export default class RasterWorkflow extends Workflow implements RasterWorkflowSp
   }
 
   /**
-   * @param rasterData
-   * @param tile
+   * Build the source raster data into raster features
+   * @param rasterData - the input raster data
+   * @param tile - the tile we are building the features for
    */
   buildSource(rasterData: RasterData, tile: Tile): void {
     const { context } = this;
@@ -200,9 +201,10 @@ export default class RasterWorkflow extends Workflow implements RasterWorkflowSp
   }
 
   /**
-   * @param source
-   * @param rasterData
-   * @param tile
+   * Build features for this source
+   * @param source - the raster source
+   * @param rasterData - the input raster data
+   * @param tile - the tile we are building the features for
    */
   #buildFeatures(source: RasterSource, rasterData: RasterData, tile: Tile): void {
     const { featureGuides } = rasterData;
@@ -221,9 +223,7 @@ export default class RasterWorkflow extends Workflow implements RasterWorkflowSp
     tile.addFeatures(features);
   }
 
-  /**
-   *
-   */
+  /** Use this workflow as the current shaders for the GPU */
   override use(): void {
     super.use();
     const { context } = this;
@@ -235,10 +235,11 @@ export default class RasterWorkflow extends Workflow implements RasterWorkflowSp
   }
 
   /**
-   * @param featureGuide
-   * @param _interactive
+   * Draw a raster feature
+   * @param feature - the feature to draw
+   * @param _interactive - whether or not the feature is interactive
    */
-  draw(featureGuide: RasterFeatureSpec, _interactive = false): void {
+  draw(feature: RasterFeatureSpec, _interactive = false): void {
     // grab gl from the context
     const { type, gl, context, uniforms } = this;
     const { uFade, uOpacity, uContrast, uSaturation } = uniforms;
@@ -253,7 +254,7 @@ export default class RasterWorkflow extends Workflow implements RasterWorkflowSp
       contrast,
       saturation,
       layerGuide: { layerIndex, visible, resampling },
-    } = featureGuide;
+    } = feature;
     if (!visible) return;
     const { texture } = source;
     const { vao, count, offset } = (parent ?? tile).mask;

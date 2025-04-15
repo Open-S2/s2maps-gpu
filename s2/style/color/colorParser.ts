@@ -1,8 +1,6 @@
 import type { ColorArray } from 'style/color';
 
-/**
- *
- */
+/** ColorDefinition - [encoding, colors] */
 export type ColorDefinition = [encoding: string, colors: ColorArray];
 
 // there are three types of strings to parse
@@ -36,13 +34,13 @@ const COLOR_MAP = {
 
 /**
  * There are four types of strings to parse:
- * @first color names: 'red', 'black', etc
- * @second Hex: #ededed
- * @third lastly type encodings:
- * rgb(255, 255, 255)
- * rgba(255, 255, 255, 255)
- * hsv(180, 0.9, 0.7843137254901961)
- * hsva(180, 0.9, 0.7843137254901961, 1)
+ * - color names: 'red', 'black', etc
+ * - Hex: #ededed
+ * - lastly type encodings:
+ * - * rgb(255, 255, 255)
+ * - * rgba(255, 255, 255, 255)
+ * - * hsv(180, 0.9, 0.7843137254901961)
+ * - * hsva(180, 0.9, 0.7843137254901961, 1)
  * @param input - the string to parse
  * @returns the parsed color
  */
@@ -62,7 +60,9 @@ export default function colorParser(input: string): ColorDefinition {
 }
 
 /**
- * @param input
+ * Parse a hex string
+ * @param input - the string to parse
+ * @returns the parsed color
  */
 function parseHex(input: string): ColorDefinition {
   input = input.substring(1);
@@ -94,7 +94,9 @@ function parseHex(input: string): ColorDefinition {
 }
 
 /**
- * @param input
+ * Parse a type encoding into a color
+ * @param input - the string to parse
+ * @returns the parsed color
  */
 function parseString(input: string): ColorDefinition {
   // seperate type and values

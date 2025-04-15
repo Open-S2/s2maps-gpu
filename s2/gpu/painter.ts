@@ -30,107 +30,86 @@ import type {
 import type { PainterData, SpriteImageMessage } from 'workers/worker.spec';
 
 /**
+ * # GPU Painter
  *
+ * ## Description
+ * The GPU painter is the main entry point to the GPU features.
  */
 export default class Painter {
   context: WebGPUContext;
   workflows: Workflows = {};
   dirty = true;
   /**
-   * @param context
-   * @param options
+   * @param context - the GPU context wrapper
+   * @param options - map options to pull out the options that impact the painter and GPU
    */
   constructor(context: GPUCanvasContext, options: MapOptions) {
     this.context = new WebGPUContext(context, options, this);
   }
 
-  // called once to properly prepare the context
-  /**
-   *
-   */
+  /** called once to properly prepare the context */
   async prepare(): Promise<void> {
     await this.context.connectGPU();
   }
 
   /**
-   * @param tile
-   * @param data
+   * Given a tile, build the feature data associated with it
+   * @param tile - the tile to inject the features into
+   * @param data - the collection of data to sift through and build features
    */
   buildFeatureData(tile: Tile, data: PainterData): void {
-    // TODO: fix typescript
-    const workflow = this.workflows[data.type] as
-      | { buildSource: (data: PainterData, tile: Tile) => void }
-      | undefined;
-    workflow?.buildSource(data, tile);
+    const workflow = this.workflows[data.type] as Workflow | undefined;
+    workflow?.buildSource?.(data, tile);
   }
 
   /**
-   * @param buildSet
+   * Build all workflows used by the style layers
+   * @param buildSet - the set of workflows to build
    */
   async buildWorkflows(buildSet: Set<WorkflowType>): Promise<void> {
     const { workflows, context } = this;
     const workflowCases: WorkflowImports = {
-      /**
-       *
-       */
+      /** @returns a Fill Workflow */
       fill: () => new FillWorkflow(context),
-      /**
-       *
-       */
+      /** @returns a raster Workflow */
       raster: () => new RasterWorkflow(context),
-      // sensor: () => new SensorWorkflow(context),
-      /**
-       *
-       */
+      /** @returns a sensor Workflow (eventually) */
+      sensor: () => new RasterWorkflow(context),
+      /** @returns a line Workflow */
       line: () => new LineWorkflow(context),
-      /**
-       *
-       */
+      /** @returns a point Workflow */
       point: () => new PointWorkflow(context),
-      /**
-       *
-       */
+      /** @returns a heatmap Workflow */
       heatmap: () => new HeatmapWorkflow(context),
-      /**
-       *
-       */
+      /** @returns a hillshade Workflow */
       hillshade: () => new HillshadeWorkflow(context),
-      /**
-       *
-       */
+      /** @returns a shade Workflow */
       shade: () => new ShadeWorkflow(context),
-      /**
-       *
-       */
+      /** @returns a glyph Workflow */
       glyph: () => new GlyphWorkflow(context),
-      /**
-       *
-       */
+      /** @returns a wallpaper Workflow */
       wallpaper: () => new WallpaperWorkflow(context),
-      /**
-       *
-       */
+      /** @returns a skybox Workflow */
       skybox: () => new SkyboxWorkflow(context),
     };
     const promises: Array<Promise<void>> = [];
     for (const set of buildSet) {
-      // TODO: Figure out why eslint and tsc don't see an error but vscode does:
-      const workflow: Workflow = (workflows[set] = workflowCases[set]());
+      // @ts-expect-error - we know its a workflow
+      const workflow = (workflows[set] = workflowCases[set]());
       if (set === 'wallpaper' || set === 'skybox') workflows.background = workflows[set];
       promises.push(workflow.setup());
     }
     await Promise.allSettled(promises);
   }
 
-  /**
-   *
-   */
+  /** @returns a Uint8ClampedArray screen capture */
   async getScreen(): Promise<Uint8ClampedArray> {
     return await this.context.getRenderData();
   }
 
   /**
-   * @param mode
+   * Set the colorblind mode
+   * @param mode - colorblind mode to set
    */
   setColorMode(mode: ColorMode): void {
     this.dirty = true;
@@ -138,9 +117,10 @@ export default class Painter {
   }
 
   /**
-   * @param maxHeight
-   * @param images
-   * @param tiles
+   * Inject a glyph image to the GPU
+   * @param maxHeight - the maximum height of the texture
+   * @param images - the glyph images
+   * @param tiles - the tiles to update
    */
   injectGlyphImages(maxHeight: number, images: GlyphImages, tiles: Tile[]): void {
     const textureResized = this.context.injectImages(maxHeight, images);
@@ -151,8 +131,9 @@ export default class Painter {
   }
 
   /**
-   * @param data
-   * @param tiles
+   * Inject a sprite image to the GPU
+   * @param data - the raw image data of the sprite
+   * @param tiles - the tiles to update
    */
   injectSpriteImage(data: SpriteImageMessage, tiles: Tile[]): void {
     const textureResized = this.context.injectSpriteImage(data);
@@ -163,15 +144,17 @@ export default class Painter {
   }
 
   /**
-   * @param timeCache
+   * Inject a time cache for the sensor workflow
+   * @param timeCache - the time cache to inject
    */
   injectTimeCache(timeCache: TimeCache): void {
     this.workflows.sensor?.injectTimeCache(timeCache);
   }
 
   /**
-   * @param width
-   * @param height
+   * Resize the canvas
+   * @param width - new width
+   * @param height - new height
    */
   resize(width: number, height: number): void {
     this.context.resize((): void => {
@@ -184,8 +167,9 @@ export default class Painter {
   }
 
   /**
-   * @param projector
-   * @param tiles
+   * Paint all the tiles in view
+   * @param projector - the camera and what it currently sees
+   * @param tiles - all the tiles in view to paint
    */
   paint(projector: Projector, tiles: Tile[]): void {
     const { context, workflows } = this;
@@ -209,7 +193,7 @@ export default class Painter {
     for (const tile of featureTiles) tile.setScreenPositions(projector);
 
     // prep all tile's features to draw
-    const features = allFeatures.filter((f) => f.type !== 'heatmap');
+    const features: Features[] = allFeatures.filter((f) => f.type !== 'heatmap');
     // draw heatmap data if applicable, and a singular feature for the main render thread to draw the texture to the screen
     const heatmapFeatures = allFeatures.filter((f): f is HeatmapFeature => f.type === 'heatmap');
 
@@ -239,7 +223,8 @@ export default class Painter {
   }
 
   /**
-   * @param tiles
+   * Compute the interactive features in current view
+   * @param tiles - current view tiles that we need to sift through for interactive features
    */
   computeInteractive(tiles: Tile[]): void {
     const interactiveFeatures = tiles
@@ -255,7 +240,8 @@ export default class Painter {
   }
 
   /**
-   * @param features
+   * Compute the interactive features via the GPU
+   * @param features - input features that need to be computed
    */
   #computeInteractive(features: Features[]): void {
     const { device, frameBufferBindGroup } = this.context;
@@ -270,9 +256,7 @@ export default class Painter {
     device.queue.submit([commandEncoder.finish()]);
   }
 
-  /**
-   *
-   */
+  /** Delete the GPU instance */
   delete(): void {
     const { context, workflows } = this;
     for (const workflow of Object.values(workflows) as Workflow[]) workflow.destroy();
@@ -281,8 +265,10 @@ export default class Painter {
 }
 
 /**
- * @param a
- * @param b
+ * Sort the features
+ * @param a - first feature
+ * @param b - comparison feature
+ * @returns a negative value if a < b, 0 if a === b, and a positive value if a > b
  */
 function featureSort(a: Features, b: Features): number {
   // first check if the layer is the same

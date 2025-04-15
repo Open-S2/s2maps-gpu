@@ -1,12 +1,8 @@
 import Color, { interpolate } from './color';
 
-/**
- *
- */
+/** Input ease types names */
 export type EaseType = 'lin' | 'expo' | 'quad' | 'cubic' | 'step';
-/**
- *
- */
+/** Ease function container */
 export type EaseFunction<T> = (
   zoom: number,
   start: number,
@@ -18,8 +14,9 @@ export type EaseFunction<T> = (
 /**
  * Convert a string to a function that will return an interpolation
  * between two values or colors.
- * @param easeType
- * @param base
+ * @param easeType - ease type
+ * @param base - base value
+ * @returns an easing function
  */
 export default function getEasingFunction<T>(
   easeType: EaseType = 'lin',
@@ -47,21 +44,23 @@ export default function getEasingFunction<T>(
 }
 
 /**
- * y = mx
- * @param input
- * @param start
- * @param end
+ * Linear ease function: y = mx
+ * @param input - input value
+ * @param start - start value
+ * @param end - end value
+ * @returns the interpolated value
  */
 function linear(input: number, start: number, end: number): number {
   return (input - start) / (end - start);
 }
 
 /**
- * y = e^x OR y = Math.pow(2, 10 * x)
- * @param input
- * @param start
- * @param end
- * @param base
+ * Exponential ease function: y = e^x OR y = Math.pow(2, 10 * x)
+ * @param input - input value
+ * @param start - start value
+ * @param end - end value
+ * @param base - base value
+ * @returns the interpolated value
  */
 function exponential(input: number, start: number, end: number, base: number): number {
   // grab change
@@ -79,30 +78,33 @@ function exponential(input: number, start: number, end: number, base: number): n
 }
 
 /**
- * y = x^2
- * @param input
- * @param start
- * @param end
+ * Quadratic ease function: y = x^2
+ * @param input - input value
+ * @param start - start value
+ * @param end - end value
+ * @returns the interpolated value
  */
 function quad(input: number, start: number, end: number): number {
   return Math.pow(input - start, 2) / Math.pow(end - start, 2);
 }
 
 /**
- * y = x^3
- * @param input
- * @param start
- * @param end
+ * Cubic ease function: y = x^3
+ * @param input - input value
+ * @param start - start value
+ * @param end - end value
+ * @returns the interpolated value
  */
 function cubic(input: number, start: number, end: number): number {
   return Math.pow(input - start, 3) / Math.pow(end - start, 3);
 }
 
 /**
- * y = 1 or 0
- * @param input
- * @param _start
- * @param end
+ * Stepping ease function: y = 1 or 0
+ * @param input - input value
+ * @param _start - start value
+ * @param end - end value
+ * @returns the interpolated value
  */
 function step(input: number, _start: number, end: number): number {
   return input > end ? 1 : 0;

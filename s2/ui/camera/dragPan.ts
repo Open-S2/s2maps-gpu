@@ -1,8 +1,6 @@
 const DOUBLE_CLICK_TIMEOUT = 175;
 
-/**
- *
- */
+/** An interface that models the user touch event items we are interested in */
 export interface UserTouchEvent {
   length: number;
   [key: number]: {
@@ -13,9 +11,7 @@ export interface UserTouchEvent {
   };
 }
 
-/**
- *
- */
+/** An interface that models the click event items we are interested in */
 export interface ClickEvent {
   detail: {
     posX: number;
@@ -24,12 +20,18 @@ export interface ClickEvent {
 }
 
 /**
+ * # DragPan
+ *
+ * ## Description
  * DragPan is a class that handles mouse and touch events for panning and zooming
- * @example
+ *
+ * ## Example
+ * ```ts
  * const dragPan = new DragPan()
  * dragPan.addEventListener('move', () => {
  *  console.info(dragPan.movementX, dragPan.movementY)
  * })
+ * ```
  */
 export default class DragPan extends EventTarget {
   zoomActive = false; // allow two finger zooming
@@ -56,7 +58,7 @@ export default class DragPan extends EventTarget {
 
   /**
    * Beginning of a touch event, user has just touched the screen
-   * @param touches
+   * @param touches - collection of touch events
    */
   onTouchStart(touches: UserTouchEvent): void {
     this.#setTouchDelta(touches);
@@ -65,7 +67,7 @@ export default class DragPan extends EventTarget {
 
   /**
    * User has let go, we don't know if it was a swipe, a click, or a double click
-   * @param touches
+   * @param touches - collection of touch events
    */
   onTouchEnd(touches: UserTouchEvent): void {
     this.#setTouchDelta(touches);
@@ -88,7 +90,7 @@ export default class DragPan extends EventTarget {
 
   /**
    * User is actively moving their fingers
-   * @param touches
+   * @param touches - collection of touch events
    */
   #setTouchDelta(touches: UserTouchEvent): void {
     const { length } = touches;
@@ -117,8 +119,8 @@ export default class DragPan extends EventTarget {
 
   /**
    * User has let go of the left mouse button
-   * @param posX
-   * @param posY
+   * @param posX - x position of the click
+   * @param posY - y position of the click
    */
   onMouseUp(posX = 0, posY = 0): void {
     this.mouseActive = false;
@@ -150,8 +152,8 @@ export default class DragPan extends EventTarget {
   /**
    * tracks movement if the left click actively pressed
    * or it tracks what features are currently active
-   * @param movementX
-   * @param movementY
+   * @param movementX - the change in x position
+   * @param movementY - the change in y position
    */
   onMouseMove(movementX: number, movementY: number): void {
     if (this.mouseActive) {
@@ -165,7 +167,7 @@ export default class DragPan extends EventTarget {
 
   /**
    * User is using a touch screen and is actively moving their finger(s)
-   * @param touches
+   * @param touches - collection of touch events
    */
   onTouchMove(touches: UserTouchEvent): void {
     const { length } = touches;

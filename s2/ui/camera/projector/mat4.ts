@@ -1,8 +1,6 @@
 import type { Point3D, VectorPoint } from 'gis-tools';
 
-/**
- *
- */
+/** @returns a 4x4 identity matrix */
 export function create(): Float32Array {
   const m = new Float32Array(16);
   m[0] = 1;
@@ -14,24 +12,26 @@ export function create(): Float32Array {
 }
 
 /**
- * @param m
+ * Clone a matrix
+ * @param m - input matrix to clone
+ * @returns cloned matrix
  */
 export function clone(m: Float32Array): Float32Array {
   const out = new Float32Array(m.length);
 
-  m.forEach((v, i) => {
-    out[i] = v;
-  });
+  m.forEach((v, i) => (out[i] = v));
 
   return out;
 }
 
 /**
- * @param m
- * @param width
- * @param height
- * @param near
- * @param far
+ * Prepare an Blend matrix
+ * @param m - input matrix
+ * @param width - viewport width
+ * @param height - viewport height
+ * @param near - near plane
+ * @param far - far plane
+ * @returns the blended matrix
  */
 export function blend(
   m: Float32Array,
@@ -67,10 +67,12 @@ export function blend(
 }
 
 /**
- * @param m
- * @param width
- * @param height
- * @param far
+ * Prepare an Orthographic projection matrix
+ * @param m - input matrix
+ * @param width - viewport width
+ * @param height - viewport height
+ * @param far - far plane
+ * @returns the orthographic matrix
  */
 export function ortho(m: Float32Array, width: number, height: number, far: number): Float32Array {
   m[0] = 1 / width;
@@ -94,11 +96,13 @@ export function ortho(m: Float32Array, width: number, height: number, far: numbe
 }
 
 /**
- * @param m
- * @param fovy
- * @param aspect
- * @param near
- * @param far
+ * Prepare a perspective projection matrix
+ * @param m - input matrix
+ * @param fovy - field of view
+ * @param aspect - viewport aspect
+ * @param near - near plane
+ * @param far - far plane
+ * @returns the perspective matrix
  */
 export function perspective(
   m: Float32Array,
@@ -135,8 +139,10 @@ export function perspective(
 }
 
 /**
- * @param eye
- * @param up
+ * Prepare a lookAt matrix
+ * @param eye - camera position
+ * @param up - camera up vector
+ * @returns the lookAt matrix
  */
 export function lookAt(eye: VectorPoint, up: VectorPoint): Float32Array {
   const m = new Float32Array(16);
@@ -209,8 +215,10 @@ export function lookAt(eye: VectorPoint, up: VectorPoint): Float32Array {
 }
 
 /**
- * @param m
- * @param v
+ * Add a center to the matrix
+ * @param m - input matrix
+ * @param v - center vector
+ * @returns the matrix
  */
 export function addCenter(m: Float32Array, v: Float32Array): Float32Array {
   m[12] = v[0];
@@ -222,8 +230,10 @@ export function addCenter(m: Float32Array, v: Float32Array): Float32Array {
 }
 
 /**
- * @param m
- * @param v
+ * Translate the matrix given a vector
+ * @param m - input matrix
+ * @param v - vector
+ * @returns the matrix
  */
 export function translate(m: Float32Array, v: Float32Array | Point3D): Float32Array {
   const x = v[0];
@@ -239,8 +249,10 @@ export function translate(m: Float32Array, v: Float32Array | Point3D): Float32Ar
 }
 
 /**
- * @param m
- * @param v
+ * Scale the matrix via a vector
+ * @param m - input matrix
+ * @param v - vector
+ * @returns the matrix
  */
 export function scale(m: Float32Array, v: Float32Array | Point3D): Float32Array {
   const x = v[0];
@@ -264,8 +276,10 @@ export function scale(m: Float32Array, v: Float32Array | Point3D): Float32Array 
 }
 
 /**
- * @param m
- * @param rad
+ * Rotate the matrix
+ * @param m - input matrix
+ * @param rad - rotation in radians
+ * @returns the matrix
  */
 export function rotate(m: Float32Array, rad: Point3D): Float32Array {
   rotateX(m, rad[0]);
@@ -276,8 +290,10 @@ export function rotate(m: Float32Array, rad: Point3D): Float32Array {
 }
 
 /**
- * @param m
- * @param rad
+ * Rotate the matrix around the X axis
+ * @param m - input matrix
+ * @param rad - rotation in radians
+ * @returns the matrix
  */
 export function rotateX(m: Float32Array, rad: number): Float32Array {
   const s = Math.sin(rad);
@@ -304,8 +320,10 @@ export function rotateX(m: Float32Array, rad: number): Float32Array {
 }
 
 /**
- * @param m
- * @param rad
+ * Rotate the matrix around the Y axis
+ * @param m - input matrix
+ * @param rad - rotation in radians
+ * @returns the matrix
  */
 export function rotateY(m: Float32Array, rad: number): Float32Array {
   const s = Math.sin(rad);
@@ -332,8 +350,10 @@ export function rotateY(m: Float32Array, rad: number): Float32Array {
 }
 
 /**
- * @param m
- * @param rad
+ * Rotate the matrix around the Z axis
+ * @param m - input matrix
+ * @param rad - rotation in radians
+ * @returns the matrix
  */
 export function rotateZ(m: Float32Array, rad: number): Float32Array {
   const s = Math.sin(rad);
@@ -360,8 +380,10 @@ export function rotateZ(m: Float32Array, rad: number): Float32Array {
 }
 
 /**
- * @param m
- * @param v
+ * Multiply a matrix by a vector
+ * @param m - input matrix
+ * @param v - vector
+ * @returns the vector
  */
 export function multiplyVector(
   m: Float32Array,
@@ -376,8 +398,10 @@ export function multiplyVector(
 }
 
 /**
- * @param a
- * @param b
+ * Multiply two matrices
+ * @param a - input matrix
+ * @param b - input matrix
+ * @returns the matrix
  */
 export function multiply(a: Float32Array, b: Float32Array | number[]): Float32Array {
   const a00 = a[0];
@@ -434,7 +458,9 @@ export function multiply(a: Float32Array, b: Float32Array | number[]): Float32Ar
 }
 
 /**
- * @param matrix
+ * Invert a matrix
+ * @param matrix - input matrix
+ * @returns the inverted matrix
  */
 export function invert(matrix: Float32Array): null | Float32Array {
   const a00 = matrix[0];
@@ -492,8 +518,10 @@ export function invert(matrix: Float32Array): null | Float32Array {
 }
 
 /**
- * @param matrix
- * @param vector
+ * Project a 3D vector given an input matrix
+ * @param matrix - input matrix
+ * @param vector - vector to project
+ * @returns the projected vector
  */
 export function project(matrix: Float32Array, vector: VectorPoint): VectorPoint {
   const [mulX, mulY, mulZ, mulT] = multiplyVector(matrix, vector);

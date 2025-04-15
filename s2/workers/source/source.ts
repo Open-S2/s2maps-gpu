@@ -3,9 +3,11 @@ import { idParent, idToIJ } from 'gis-tools';
 import type { Session } from '.';
 import type {
   Attributions,
-  Format,
+  Encoding,
   LayerDefinition,
+  LayersMetaData,
   Projection,
+  Scheme,
   SourceMetadata,
   SourceType,
   VectorLayer,
@@ -13,34 +15,14 @@ import type {
 import type { ParentLayers, SourceFlushMessage, TileRequest } from '../worker.spec';
 
 /**
+ * # Generic Data Source Container
  *
- */
-export interface LayerMeta {
-  // layer
-  minzoom: number;
-  maxzoom: number;
-  fields?: Record<string, Array<string | number | boolean>>; // max fields size of 50
-}
-/**
- *
- */
-export type LayerMetaData = Record<string, LayerMeta>;
-
-// export type FaceBounds = Record<number, Record<number, BBox>>
-
-/**
- *
- */
-export type Metadata = Omit<SourceMetadata, 'path'>;
-
-/**
- *
+ * This class is wrapped by many other source types. It serves to handle all the generic cases
+ * of data sources like fetching metadata, handling flushes, and so on.
  */
 export default class Source {
   active = true;
-  /**
-   *
-   */
+  /** Resolver letting us know when the source is built */
   resolve: (value: void | PromiseLike<void>) => void = () => {};
   ready = new Promise<void>((resolve) => {
     this.resolve = resolve;
@@ -49,13 +31,13 @@ export default class Source {
   path: string;
   type: SourceType = 'vector'; // how to process the result
   extension = 'pbf';
-  encoding: 'none' | 'br' | 'gz' = 'none';
-  format: Format = 'zxy';
+  encoding: Encoding = 'none';
+  scheme: Scheme = 'xyz';
   projection: Projection;
   isTimeFormat = false;
   attributions: Attributions = {};
   styleLayers: LayerDefinition[];
-  layers?: LayerMetaData;
+  layers?: LayersMetaData;
   minzoom = 0;
   maxzoom = 20;
   size = 512; // used for raster type sources
@@ -65,12 +47,12 @@ export default class Source {
   session: Session;
   textEncoder: TextEncoder = new TextEncoder();
   /**
-   * @param name
-   * @param projection
-   * @param layers
-   * @param path
-   * @param needsToken
-   * @param session
+   * @param name - name of the source
+   * @param projection - the projection used
+   * @param layers - the style layers that are associated with this source
+   * @param path - the path to the source to fetch data
+   * @param needsToken - flag indicating if the source requires a token in the fetch
+   * @param session - the session that works with the token to make valid fetch requests on source data behind an API
    */
   constructor(
     name: string,
@@ -90,8 +72,9 @@ export default class Source {
 
   // if this function runs, we assume default tile source
   /**
-   * @param mapID
-   * @param metadata
+   * If this function runs, we assume a default quad-tree tile source
+   * @param mapID - the id of the map that is requesting data
+   * @param metadata - the metadata for the source
    */
   async build(mapID: string, metadata?: SourceMetadata): Promise<void> {
     if (metadata === undefined)
@@ -105,10 +88,11 @@ export default class Source {
   }
 
   /**
-   * @param metadata
-   * @param mapID
+   * Internal tool to builds the metadata for the source
+   * @param metadata - the source metadata
+   * @param mapID - the id of the map that we will be shipping the render data to
    */
-  _buildMetadata(metadata: Metadata, mapID: string): void {
+  _buildMetadata(metadata: SourceMetadata, mapID: string): void {
     this.active = true; // incase we use a "broken" aproach for metadata and insert later
     const minzoom = Number(metadata.minzoom);
     const maxzoom = Number(metadata.maxzoom);
@@ -117,6 +101,7 @@ export default class Source {
     if (Array.isArray(metadata.faces)) this.faces = new Set(metadata.faces ?? [0, 1, 2, 3, 4, 5]);
     if (typeof metadata.extension === 'string') this.extension = metadata.extension;
     this.attributions = metadata.attributions ?? {};
+    // TODO: Do we still need this?
     this.type = parseMetaType(metadata.type);
     if (typeof metadata.size === 'number') this.size = metadata.size;
     this.encoding = metadata.encoding ?? 'none';
@@ -135,16 +120,21 @@ export default class Source {
       for (const layer of vectorLayers) {
         if (layer.id === undefined) continue;
         const { minzoom, maxzoom } = layer;
-        this.layers[layer.id] = { minzoom: minzoom ?? 0, maxzoom: maxzoom ?? this.maxzoom };
+        this.layers[layer.id] = {
+          minzoom: minzoom ?? 0,
+          maxzoom: maxzoom ?? this.maxzoom,
+          drawTypes: [],
+          shape: {},
+        };
       }
     }
     // time series data check
-    if (metadata.scheme !== undefined) this.format = 'zxy';
+    if (metadata.scheme !== undefined) this.scheme = metadata.scheme;
     else if (metadata.format !== undefined && metadata.format !== 'pbf') {
-      this.format = metadata.format;
+      this.scheme = metadata.format as Scheme;
       this.isTimeFormat = metadata.format === 'tfzxy';
     }
-    if (this.format === 'zxy') this.faces.add(0);
+    if (this.scheme === 'xyz') this.faces.add(0);
     if (this.isTimeFormat) {
       postMessage({
         mapID,
@@ -161,13 +151,13 @@ export default class Source {
       postMessage({ mapID, type: 'attributions', attributions });
   }
 
-  // all tile requests undergo a basic check on whether that data exists
-  // within the metadata boundaries. layerIndexes exists to set a boundary
-  // of what layers the map is interested in (caused by style change add/edit layer)
   /**
-   * @param mapID
-   * @param tile
-   * @param flushMessage
+   * All tile requests undergo a basic check on whether that data exists
+   * within the metadata boundaries. layerIndexes exists to set a boundary
+   * of what layers the map is interested in (caused by style change add/edit layer)
+   * @param mapID - the id of the map
+   * @param tile - the tile
+   * @param flushMessage - the flush message
    */
   async tileRequest(
     mapID: string,
@@ -200,8 +190,9 @@ export default class Source {
   }
 
   /**
-   * @param tile
-   * @param layersToLoad
+   * Get the layer indexes that this tile is interested in
+   * @param tile - the tile request
+   * @param layersToLoad - the set of layers to load we are going to modify
    */
   #getLayerIndexes(tile: TileRequest, layersToLoad: Set<number>): void {
     const { layers, styleLayers } = this;
@@ -221,9 +212,10 @@ export default class Source {
   }
 
   /**
-   * @param mapID
-   * @param tile
-   * @param layersToLoad
+   * Get the parent data that this tile is interested in
+   * @param mapID - the id of the map that is requesting
+   * @param tile - the tile request
+   * @param layersToLoad - the set of layers to load
    */
   #getParentData(mapID: string, tile: TileRequest, layersToLoad: Set<number>): void {
     const { layers, styleLayers, name } = this;
@@ -272,12 +264,12 @@ export default class Source {
     }
   }
 
-  // if this function runs, we assume default tile source.
-  // in the default case, we want the worker to process the data
   /**
-   * @param mapID
-   * @param tile
-   * @param sourceName
+   * If this function runs, we assume default quad-tree tile source.
+   * In the default case, we want the worker to process the data
+   * @param mapID - the id of the map to ship the eventual render data back to
+   * @param tile - the tile request
+   * @param sourceName - the source name the data to belongs to
    */
   async _tileRequest(mapID: string, tile: TileRequest, sourceName: string): Promise<void> {
     const { path, session, type, extension, size } = this;
@@ -285,7 +277,7 @@ export default class Source {
     const { time, face, zoom, i, j } = parent ?? tile;
     const location =
       `${time !== undefined ? String(time) + '/' : ''}` +
-      (this.format === 'zxy'
+      (this.scheme === 'xyz'
         ? `${zoom}/${i}/${j}.${extension}`
         : `${face}/${zoom}/${i}/${j}.${extension}`);
 
@@ -298,12 +290,12 @@ export default class Source {
     }
   }
 
-  // If no data, we still have to let the tile worker know so it can prepare a proper flush
-  // as well as manage cases like "invert" type data.
   /**
-   * @param mapID
-   * @param tile
-   * @param sourceName
+   * If no data, we still have to let the tile worker know so it can prepare a proper flush
+   * as well as manage cases like "invert" type data.
+   * @param mapID - the id of the map
+   * @param tile - the tile request
+   * @param sourceName - the source name the data to belongs to
    */
   _flush(mapID: string, tile: TileRequest, sourceName: string): void {
     const { textEncoder, session } = this;
@@ -315,9 +307,11 @@ export default class Source {
   }
 
   /**
-   * @param path
-   * @param mapID
-   * @param json
+   * Fetch a tile
+   * @param path - the base path to the tile data
+   * @param mapID - the id of the map
+   * @param json - flag indicating if the data is json
+   * @returns the raw data or JSON metadata if found
    */
   async _fetch(
     path: string,
@@ -339,7 +333,9 @@ export default class Source {
 }
 
 /**
- * @param type
+ * Basic parsing tool to ensure the source type is valid
+ * @param type - the source type
+ * @returns the parsed source type
  */
 function parseMetaType(type: string): SourceType {
   if (['vector', 'json', 'raster', 'raster-dem', 'sensor', 'overlay'].includes(type))

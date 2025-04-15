@@ -6,8 +6,9 @@ import Animator from './camera/animator';
 import type { ColorMode } from 's2Map';
 import type { UserTouchEvent } from './camera/dragPan';
 import type { AnimationDirections, AnimationType } from './camera/animator';
-import type { GPUType, LayerStyle, StyleDefinition } from 'style/style.spec';
+import type { Attributions, GPUType, LayerStyle, StyleDefinition } from 'style/style.spec';
 import type {
+  MapGLMessage,
   RenderedMessageGL,
   ScreenshotMessageGL,
   SourceFlushMessage,
@@ -16,11 +17,47 @@ import type {
 } from 'workers/worker.spec';
 
 /**
+ * # Map MapOptions
  *
+ * User defined configuration options for the map.
+ *
+ * ## Rendering Options
+ * - `contextType`: Forces the use of specific GPU Context:
+ *   - `1`: WebGL
+ *   - `2`: WebGL2
+ *   - `3`: WebGPU
+ * - `offscreen`: Support OffscreenCanvas
+ * - `canvas`: Reference a canvas instead of a container
+ * - `container`: Can be a reference to an ID (string) or an HTMLElement
+ * - `style`: Either the style definition or a string URL pointing to the location of the style definition
+ * - `canvasMultiplier`: Control the number of fragments per pixel. [default: window.devicePixelRatio]
+ * - `darkMode`: boolean flag. Enable dark mode. [default: false]
+ *
+ * ## Control Options
+ * - `interactive`:boolean flag.  If true, the map will be interactive with user mouse/keyboard/finger inputs; [default: true]
+ * - `scrollZoom`: boolean flag. If true, allow user to use scroll wheel to zoom. [default: true]
+ * - `positionalZoom`: boolean flag. If true, cursor position impacts zoom's x & y directions. [default: true]
+ * - `controls`: boolean flag. If true, enable default controls; [default: true]
+ * - `zoomController`: boolean flag. Display zoom controller state. [default: true]
+ * - `compassController`: boolean flag. Display compass controller state. [default: true]
+ * - `colorblindController`: boolean flag. Display colorblind controller state. [default: true]
+ * - `canZoom`: boolean flag. Enable zooming functionality. [default: true]
+ * - `canMove`: boolean flag. Enable panning/moving functionality. [default: true]
+ * - `noClamp`: boolean flag. Allow latitude and longitude to pass their limits (-90, 90) and (-180, 180) respectively [default: false]
+ *
+ * ## Additional Options
+ * - `hash`: If true, the map will update the URL Hash with it's current View. [default: false]
+ * - `apiKey`: string. API key for the map service.
+ * - `urlMap`: An API URL that remaps any source strings that start with "example://" to whatever example is
+ *    - example: `{ "apiURL": "https://api.opens2.com" }`
+ * - `attributions`: Set additional attributions to be displayed on the map.
+      - example: `{ "OpenS2": "https://opens2.com/data" }`
+ * - `attributionOff`: boolean flag. Disable attribution display. [default: false]
+ * - `watermarkOff`: boolean flag. Disable watermark display. [default: false]
  */
 export interface MapOptions {
   /**
-   * Forces the use of:
+   * Forces the use of specific GPU Context:
    * - `1`: WebGL
    * - `2`: WebGL2
    * - `3`: WebGPU
@@ -30,12 +67,12 @@ export interface MapOptions {
   offscreen?: false;
   /** Reference a canvas instead of a container */
   canvas?: HTMLCanvasElement;
-  /** Can be a reference to an ID or an HTMLElement */
+  /** Can be a reference to an ID (string) or an HTMLElement */
   container?: string | HTMLElement;
-  /** If true, the map will be interactive; [default: true] */
+  /** If true, the map will be interactive with user mouse/keyboard/finger inputs; [default: true] */
   interactive?: boolean;
   /**
-   * If true, the map will update the URL Hash with it's current View
+   * If true, the map will update the URL Hash with it's current View.
    * e.g. `https://opens2.com/example/map#lon=0&lat=0&zoom=0&pitch=0&bearing=0`
    * [default: false]
    */
@@ -57,10 +94,10 @@ export interface MapOptions {
   urlMap?: Record<string, string>;
   /** Either the style definition or a string URL pointing to the location of the style definition */
   style: StyleDefinition | string;
-  /** if true, allow user to use scroll wheel to zoom. [default: true] */
+  /** If true, allow user to use scroll wheel to zoom. [default: true] */
   scrollZoom?: boolean;
-  /** if true, cursor position impacts zoom's x & y directions. [default: true] */
-  positionalZoom?: boolean; // If true, cursor position impacts zoom's x & y directions
+  /** If true, cursor position impacts zoom's x & y directions. [default: true] */
+  positionalZoom?: boolean;
   /** Control the number of fragments per pixel. [default: window.devicePixelRatio] */
   canvasMultiplier?: number;
   /**
@@ -73,18 +110,18 @@ export interface MapOptions {
    * }
    * ```
    */
-  attributions?: Record<string, string>;
-  /** Hide the attribution tag */
+  attributions?: Attributions;
+  /** Hide the attribution tag. [default: false] */
   attributionOff?: boolean;
-  /** Hide the logo */
+  /** Hide the logo. [default: false] */
   watermarkOff?: boolean;
   /** zoom, compass, and colorblind turned on or off. [default: true] */
   controls?: boolean;
-  /** controlling zoom controller state. [default: true] */
+  /** Display a zoom controller state. [default: true] */
   zoomController?: boolean;
-  /** controlling compass controller state. [default: true] */
+  /** Display a compass controller state. [default: true] */
   compassController?: boolean;
-  /** controlling colorblind controller state. [default: true] */
+  /** Display a colorblind controller state. [default: true] */
   colorblindController?: boolean;
   /** allow the user to zoom the map. [default: true] */
   canZoom?: boolean;
@@ -92,12 +129,15 @@ export interface MapOptions {
   canMove?: boolean;
   /** display controls, info icon, etc. in a dark style. [default: false] */
   darkMode?: boolean;
-  /** Alow latitude and longitude to pass their limits (-90, 90) and (-180, 180) respectively */
+  /** Alow latitude and longitude to pass their limits (-90, 90) and (-180, 180) respectively. [default: false] */
   noClamp?: boolean; // lat and lon can be any number
 }
 
 /**
+ * # S2 Map UI
  *
+ * Internal wrapper for the Camera.
+ * Manages user APIs and inputs for user interactions to the map
  */
 export default class S2MapUI extends Camera {
   renderNextFrame = false;
@@ -105,16 +145,12 @@ export default class S2MapUI extends Camera {
 
   /* API */
 
-  /**
-   *
-   */
+  /** Delete all tile cache, painter, and draw method */
   delete(): void {
     // delete all tiles
     this.tileCache.deleteAll();
     // to ensure no more draws, set the draw method to a noop
-    /**
-     *
-     */
+    /** empty the draw method */
     this._draw = () => {
       /* noop */
     };
@@ -123,9 +159,10 @@ export default class S2MapUI extends Camera {
   }
 
   /**
-   * @param lon
-   * @param lat
-   * @param zoom
+   * Jump to a specific location and zoom level
+   * @param lon - Longitude of the target location
+   * @param lat - Latitude of the target location
+   * @param zoom - Zoom level to set after jumping
    */
   jumpTo(lon: number, lat: number, zoom?: number): void {
     // update the projectors position
@@ -135,17 +172,18 @@ export default class S2MapUI extends Camera {
   }
 
   /**
-   * @param type
-   * @param directions
+   * Animate the map to a specific location and zoom level
+   * @param type - Type of animation to perform
+   * @param directions - Directions for the animation
    */
   animateTo(type: AnimationType, directions?: AnimationDirections): void {
     // build animator
     const animator = new Animator(this.projector, directions);
     const render = type === 'flyTo' ? animator.flyTo() : animator.easeTo();
     if (!render) return;
-    // set an animation fuction
     /**
-     * @param now
+     * set an animation function
+     * @param now - Current time in milliseconds from start
      */
     this.currAnimFunction = (now: number): void => {
       this._animate(animator, now * 0.001);
@@ -155,19 +193,21 @@ export default class S2MapUI extends Camera {
   }
 
   /**
-   * @param style
-   * @param ignorePosition
+   * Set the style of the map
+   * @param style - Style to set
+   * @param ignorePosition - Ignore the current position of the map
    */
   async setStyle(style: string | StyleDefinition, ignorePosition: boolean): Promise<void> {
     await this._setStyle(style, ignorePosition);
   }
 
-  // 1) updateStyle from the style object. return a list of "from->to" for tiles and "layerIDs" for webworkers
-  // 2) remove tiles from tileCache not in view
-  // 3) update the tileCache tiles using "from->to"
-  // 4) if a layer "source", "layer", or "filter" change it will be in "webworkers". Tell webworkers to rebuild
   /**
-   * @param _style
+   * Update the style of the map
+   * 1) updateStyle from the style object. return a list of "from->to" for tiles and "layerIDs" for webworkers
+   * 2) remove tiles from tileCache not in view
+   * 3) update the tileCache tiles using "from->to"
+   * 4) if a layer "source", "layer", or "filter" change it will be in "webworkers". Tell webworkers to rebuild
+   * @param _style - Style to update to
    */
   updateStyle(_style: StyleDefinition): void {
     // // build style for the map, painter, and webworkers
@@ -183,7 +223,8 @@ export default class S2MapUI extends Camera {
   }
 
   /**
-   * @param sourceNames
+   * Clear the source data from all tiles
+   * @param sourceNames - Names of sources to clear
    */
   clearSource(sourceNames: string[]): void {
     // delete source data from all tiles
@@ -196,11 +237,11 @@ export default class S2MapUI extends Camera {
     this.render();
   }
 
-  // sources: Array<[sourceName, href]>
   /**
-   * @param sources
-   * @param keepCache
-   * @param awaitReplace
+   * Reset the source data for all tiles
+   * @param sources - Array of [sourceName, href] pairs
+   * @param keepCache - Whether to keep the tile cache
+   * @param awaitReplace - Whether to await the replacement of the source data or clear the cache immediately
    */
   resetSource(
     sources: Array<[string, string | undefined]>,
@@ -218,7 +259,7 @@ export default class S2MapUI extends Camera {
     if (tileRequests.length > 0) {
       const msg: TileRequestMessage = { mapID, type: 'tilerequest', tiles: tileRequests, sources };
       if (webworker) postMessage(msg);
-      else parent?.onMessage({ data: msg });
+      else parent?.onMessage({ data: msg } as MessageEvent<MapGLMessage>);
     }
     // let the renderer know the painter is "dirty"
     painter.dirty = true;
@@ -227,8 +268,9 @@ export default class S2MapUI extends Camera {
   }
 
   /**
-   * @param _layer
-   * @param _nameIndex
+   * Add a new style layer to the map
+   * @param _layer - the style layer to add
+   * @param _nameIndex - the index position to add the layer
    */
   addLayer(_layer: LayerStyle, _nameIndex: number | string): void {
     // TODO
@@ -241,7 +283,8 @@ export default class S2MapUI extends Camera {
   }
 
   /**
-   * @param _nameIndex
+   * Delete a style layer from the map
+   * @param _nameIndex - the index position to delete the layer
    */
   deleteLayer(_nameIndex: number | string): void {
     // TODO
@@ -254,7 +297,8 @@ export default class S2MapUI extends Camera {
   }
 
   /**
-   * @param _layerChanges
+   * Reorder style layers on the map
+   * @param _layerChanges - the layer changes to make, their starting and end positions { [start]: end }
    */
   reorderLayers(_layerChanges: Record<number, number>): void {
     // TODO
@@ -267,32 +311,36 @@ export default class S2MapUI extends Camera {
   }
 
   /**
-   * @param _layer
-   * @param _nameIndex
-   * @param _fullUpdate
+   * Update a style layer on the map
+   * @param _layer - the layer to update
+   * @param _nameIndex - the index position to update the layer
+   * @param _fullUpdate - whether to update the layer completely or just the style
    */
   updateLayer(_layer: LayerStyle, _nameIndex: number | string, _fullUpdate = false): void {
     // TODO
   }
 
   /**
-   * @param state
+   * Set the move state (if true user can edit move, otherwise current move is locked in)
+   * @param state - new state
    */
   setMoveState(state: boolean): void {
     this.canMove = state;
   }
 
   /**
-   * @param state
+   * Set the zoom state (if true user can edit zoom, otherwise current zoom is locked in)
+   * @param state - new state
    */
   setZoomState(state: boolean): void {
     this.canZoom = state;
   }
 
   /**
-   * @param deltaZ
-   * @param deltaX
-   * @param deltaY
+   * Handle on zoom case
+   * @param deltaZ - The change in zoom level
+   * @param deltaX - The change in x position
+   * @param deltaY - The change in y position
    */
   override onZoom(deltaZ: number, deltaX = 0, deltaY = 0): void {
     this.dragPan.clear();
@@ -306,8 +354,9 @@ export default class S2MapUI extends Camera {
   }
 
   /**
-   * @param bearing
-   * @param pitch
+   * Update bearing and/or pitch from compass change
+   * @param bearing - the bearing avlue to update
+   * @param pitch - the pitch value to update
    */
   updateCompass(bearing: number, pitch: number): void {
     const { projector } = this;
@@ -319,10 +368,7 @@ export default class S2MapUI extends Camera {
     this.render();
   }
 
-  // snap to upside down if interested
-  /**
-   *
-   */
+  /** Handle compass on mouseup. Snap to north or south if close enough */
   mouseupCompass(): void {
     const { projector } = this;
     const { bearing } = projector;
@@ -339,7 +385,8 @@ export default class S2MapUI extends Camera {
       const animator = new Animator(projector, { duration: 1, bearing: newBearing });
       animator.compassTo();
       /**
-       * @param now
+       * Set the current animation function
+       * @param now - current time since start
        */
       this.currAnimFunction = (now: number) => {
         this._animate(animator, now * 0.001);
@@ -348,9 +395,7 @@ export default class S2MapUI extends Camera {
     }
   }
 
-  /**
-   *
-   */
+  /** Reset the compass to north */
   resetCompass(): void {
     const { projector } = this;
     const { bearing, pitch } = projector;
@@ -363,9 +408,10 @@ export default class S2MapUI extends Camera {
     });
     animator.compassTo();
     /**
-     * @param now
+     * Set the current animation function
+     * @param now - current time since start
      */
-    this.currAnimFunction = (now: number) => {
+    this.currAnimFunction = (now: number): void => {
       this._animate(animator, now * 0.001);
     };
     // send off a render
@@ -373,17 +419,16 @@ export default class S2MapUI extends Camera {
   }
 
   /**
-   * @param width
-   * @param height
+   * Resize the canvas
+   * @param width - new width
+   * @param height - new height
    */
   resize(width: number, height: number): void {
     this.resizeQueued = { width, height };
     this.render();
   }
 
-  /**
-   *
-   */
+  /** Takes a screenshot and ships the uint8 buffer back to the parent */
   screenshot(): void {
     const { id: mapID, painter, parent, webworker } = this;
     requestAnimationFrame(() => {
@@ -393,7 +438,7 @@ export default class S2MapUI extends Camera {
           const screen = data.buffer as ArrayBuffer;
           const msg: ScreenshotMessageGL = { mapID, type: 'screenshot', screen };
           if (webworker) postMessage(msg, [screen]);
-          else parent?.onMessage({ data: msg });
+          else parent?.onMessage({ data: msg } as MessageEvent<MapGLMessage>);
         });
       } else {
         this.screenshot();
@@ -402,7 +447,8 @@ export default class S2MapUI extends Camera {
   }
 
   /**
-   *
+   * Call this function to wait until the screen is fully rendered. A "rendered" message will be
+   * sent back to the parent when the screen is fully rendered
    */
   awaitFullyRendered(): void {
     const { id: mapID, parent, webworker } = this;
@@ -410,7 +456,7 @@ export default class S2MapUI extends Camera {
       if (this.#fullyRenderedScreen()) {
         const msg: RenderedMessageGL = { mapID, type: 'rendered' };
         if (webworker) postMessage({ type: 'rendered' });
-        parent?.onMessage({ data: msg });
+        parent?.onMessage({ data: msg } as MessageEvent<MapGLMessage>);
       } else {
         this.awaitFullyRendered();
       }
@@ -418,7 +464,8 @@ export default class S2MapUI extends Camera {
   }
 
   /**
-   *
+   * Called when the screen is fully rendered with all source/layer data
+   * @returns true if the screen is fully rendered
    */
   #fullyRenderedScreen(): boolean {
     // check tiles
@@ -436,10 +483,10 @@ export default class S2MapUI extends Camera {
     return fullyRendered;
   }
 
-  // some cases we can just do the work immediately, otherwise we do one job per frame
-  // to improve performance. Data is stored in the injection queue while it waits for it's frame.
   /**
-   * @param data
+   * some cases we can just do the work immediately, otherwise we do one job per frame
+   * to improve performance. Data is stored in the injection queue while it waits for it's frame.
+   * @param data - data to inject. Tile data resuls or a flush command (useful for clearing parent data or inverted fills, etc.)
    */
   injectData(data: TileWorkerMessage | SourceFlushMessage): void {
     if (data.type === 'flush') this._injectData(data);
@@ -450,7 +497,8 @@ export default class S2MapUI extends Camera {
   /* INPUT EVENTS */
 
   /**
-   * @param mode
+   * set the colorblind mode
+   * @param mode - colorblind mode
    */
   colorMode(mode: ColorMode): void {
     this.painter.setColorMode(mode);
@@ -458,10 +506,10 @@ export default class S2MapUI extends Camera {
     this.render();
   }
 
-  // for interaction with features on the screen
   /**
-   * @param x
-   * @param y
+   * for interaction with features on the screen
+   * @param x - x mouse position
+   * @param y - y mouse position
    */
   onCanvasMouseMove(x: number, y: number): void {
     if (!this._interactive) return;
@@ -471,7 +519,8 @@ export default class S2MapUI extends Camera {
   }
 
   /**
-   * @param touches
+   * action when the user touches the screen
+   * @param touches - collection of touch events
    */
   onTouchStart(touches: UserTouchEvent): void {
     this.dragPan.onTouchStart(touches);
@@ -482,11 +531,11 @@ export default class S2MapUI extends Camera {
     this.render();
   }
 
-  // builtin navigation controller inputs
   /**
-   * @param ctrl
-   * @param lon
-   * @param lat
+   * builtin navigation controller inputs
+   * @param ctrl - 'zoomIn' | 'zoomOut'
+   * @param lon - optional longitude
+   * @param lat - optional latitude
    */
   navEvent(ctrl: 'zoomIn' | 'zoomOut', lon?: number, lat?: number): void {
     this._navEvent(ctrl, lon, lat);
@@ -494,10 +543,9 @@ export default class S2MapUI extends Camera {
 
   /* DRAW */
 
-  // we don't want to over request rendering, so we render with a limiter to
-  // safely call render as many times as we like
   /**
-   *
+   * we don't want to over request rendering, so we render with a limiter to
+   * safely call render as many times as we like
    */
   override render(): void {
     if (!this._canDraw) return;

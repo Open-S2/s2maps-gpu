@@ -1,6 +1,6 @@
+import { ColorMode } from 's2Map';
 import loadShader from './loadShader';
 
-import type { ColorMode } from 's2Map';
 import type Context from '../context/context';
 import type { TileGL as Tile } from 'source/tile.spec';
 import type {
@@ -15,17 +15,15 @@ import type {
 } from './workflow.spec';
 import type { BBox, VectorPoint } from 'gis-tools';
 
-/**
- *
- */
+/** A Generic Feature that can be drawn to the GPU */
 export class Feature implements FeatureBase {
   /**
-   * @param workflow
-   * @param tile
-   * @param layerGuide
-   * @param featureCode
-   * @param parent
-   * @param bounds
+   * @param workflow - the input workflow
+   * @param tile - the tile that the feature is drawn on
+   * @param layerGuide - the layer guide
+   * @param featureCode - the feature code that tells the GPU how to compute it's properties
+   * @param parent - the parent tile if applicable
+   * @param bounds - the bounds of the tile if applicable
    */
   constructor(
     public workflow: WorkflowFeature,
@@ -37,7 +35,8 @@ export class Feature implements FeatureBase {
   ) {}
 
   /**
-   * @param interactive
+   * Draw the feature to the GPU
+   * @param interactive - whether or not the feature is interactive
    */
   draw(interactive = false): void {
     const { tile, parent, workflow, layerGuide } = this;
@@ -55,15 +54,11 @@ export class Feature implements FeatureBase {
     workflow.setInteractive(interactive);
   }
 
-  /**
-   *
-   */
+  /** Destroy the feature */
   destroy(): void {}
 }
 
-/**
- *
- */
+/** Generic Workflow used by most workflows */
 export default class Workflow implements WorkflowSpec {
   vertexShader!: WebGLShader;
   fragmentShader!: WebGLShader;
@@ -84,7 +79,7 @@ export default class Workflow implements WorkflowSpec {
   uniforms!: Record<string, WebGLUniformLocation>;
 
   /**
-   * @param context
+   * @param context - the context to use that tracks the GPU state
    */
   constructor(context: Context) {
     // set context
@@ -100,9 +95,9 @@ export default class Workflow implements WorkflowSpec {
   }
 
   /**
-   * @param vertex
-   * @param fragment
-   * @param attributeLocations
+   * @param vertex - the vertex shader
+   * @param fragment - the fragment shader
+   * @param attributeLocations - the attribute locations
    */
   buildShaders(
     vertex: ShaderSource,
@@ -135,7 +130,8 @@ export default class Workflow implements WorkflowSpec {
   }
 
   /**
-   * @param uniforms
+   * Setup the connections to uniforms in the shader
+   * @param uniforms - the mapping of uniform names to shader names
    */
   setupUniforms(uniforms: Uniforms): void {
     const { gl, glProgram } = this;
@@ -153,8 +149,9 @@ export default class Workflow implements WorkflowSpec {
   }
 
   /**
-   * @param attributes
-   * @param attributeLocations
+   * Setup shader attributes, their names and locations
+   * @param attributes - the mapping of attribute names to shader names
+   * @param attributeLocations - the mapping of attribute names to locations
    */
   setupAttributes(attributes: Attributes, attributeLocations: AttributeLocations): void {
     const { gl, glProgram } = this;
@@ -163,18 +160,14 @@ export default class Workflow implements WorkflowSpec {
     }
   }
 
-  /**
-   *
-   */
+  /** Delete the workflow and it's shaders */
   delete(): void {
     const { gl, vertexShader, fragmentShader } = this;
     gl.deleteShader(vertexShader);
     gl.deleteShader(fragmentShader);
   }
 
-  /**
-   *
-   */
+  /** Activate this workflow as the current shaders for the GPU */
   use(): void {
     const { gl, glProgram } = this;
     // reset tile tracker since it impacts wether we update our matrix or not
@@ -185,9 +178,10 @@ export default class Workflow implements WorkflowSpec {
   }
 
   /**
-   * @param matrix
-   * @param view
-   * @param aspect
+   * Inject uniforms that are common to the frame
+   * @param matrix - the projection matrix
+   * @param view - the view matrix
+   * @param aspect - the canvas aspect ratio
    */
   injectFrameUniforms(matrix: Float32Array, view: Float32Array, aspect: VectorPoint): void {
     this.updateMatrix = matrix;
@@ -195,9 +189,7 @@ export default class Workflow implements WorkflowSpec {
     this.updateAspect = aspect;
   }
 
-  /**
-   *
-   */
+  /** Flush the uniforms to the GPU */
   flush(): void {
     if (this.updateColorBlindMode !== null) this.setColorBlindMode(this.updateColorBlindMode);
     if (this.updateMatrix !== null) this.setMatrix(this.updateMatrix);
@@ -206,8 +198,9 @@ export default class Workflow implements WorkflowSpec {
   }
 
   /**
-   * @param tile
-   * @param parent
+   * Setup the tile uniforms
+   * @param tile - the tile
+   * @param parent - the parent tile if applicable
    */
   setTileUniforms(tile: Tile, parent?: Tile): void {
     const { gl, uniforms } = this;
@@ -225,7 +218,8 @@ export default class Workflow implements WorkflowSpec {
   }
 
   /**
-   * @param ratio
+   * Set the device pixel ratio uniform
+   * @param ratio - the device pixel ratio
    */
   setDevicePixelRatio(ratio: number): void {
     const { uniforms } = this;
@@ -234,19 +228,21 @@ export default class Workflow implements WorkflowSpec {
   }
 
   /**
-   * @param colorMode
+   * Set the colorblind mode uniform
+   * @param colorMode - the colorblind mode
    */
   setColorBlindMode(colorMode: ColorMode): void {
     const { gl, type, uniforms } = this;
     if (uniforms.uCBlind === undefined) return;
     this.gl.uniform1f(uniforms.uCBlind, colorMode);
-    if (type === 1 && colorMode !== 0) {
+    if (type === ColorMode.Protanopia && colorMode !== ColorMode.None) {
       // uCVD
       if (!('uCVD' in uniforms)) return;
-      if (colorMode === 1) gl.uniform1fv(uniforms.uCVD, [0, 2.02344, -2.52581, 0, 1, 0, 0, 0, 1]);
-      else if (colorMode === 2)
+      if (colorMode === ColorMode.Protanopia)
+        gl.uniform1fv(uniforms.uCVD, [0, 2.02344, -2.52581, 0, 1, 0, 0, 0, 1]);
+      else if (colorMode === ColorMode.Deuteranopia)
         gl.uniform1fv(uniforms.uCVD, [1, 0, 0, 0.494207, 0, 1.24827, 0, 0, 1]);
-      else if (colorMode === 3)
+      else if (colorMode === ColorMode.Tritanopia)
         gl.uniform1fv(uniforms.uCVD, [1, 0, 0, 0, 1, 0, -0.395913, 0.801109, 0]);
     }
     // flush update pointers
@@ -254,7 +250,8 @@ export default class Workflow implements WorkflowSpec {
   }
 
   /**
-   * @param matrix
+   * Set the current matrix uniform
+   * @param matrix - the matrix
    */
   setMatrix(matrix: Float32Array): void {
     const { uniforms } = this;
@@ -265,7 +262,8 @@ export default class Workflow implements WorkflowSpec {
   }
 
   /**
-   * @param inputs
+   * Setup basic inputs uniform values
+   * @param inputs - the inputs
    */
   setInputs(inputs: Float32Array): void {
     const { uniforms } = this;
@@ -275,7 +273,8 @@ export default class Workflow implements WorkflowSpec {
   }
 
   /**
-   * @param aspect
+   * Set the canvas aspect uniform values
+   * @param aspect - the aspect
    */
   setAspect(aspect: VectorPoint): void {
     const { uniforms } = this;
@@ -285,7 +284,8 @@ export default class Workflow implements WorkflowSpec {
   }
 
   /**
-   * @param faceST
+   * Set the faceST uniform values
+   * @param faceST - the faceST
    */
   setFaceST(faceST: number[]): void {
     const { uniforms } = this;
@@ -294,7 +294,8 @@ export default class Workflow implements WorkflowSpec {
   }
 
   /**
-   * @param bottomTop
+   * Set the tile position uniform
+   * @param bottomTop - the tile position
    */
   setTilePos(bottomTop: Float32Array): void {
     const { uniforms, gl } = this;
@@ -304,9 +305,10 @@ export default class Workflow implements WorkflowSpec {
   }
 
   /**
-   * @param layerIndex
-   * @param layerCode
-   * @param lch
+   * Set the layer code uniform data
+   * @param layerIndex - the layer index
+   * @param layerCode - the encoded layer data
+   * @param lch - whether or not the layer is LCH encoded or RGB
    */
   setLayerCode(layerIndex: number, layerCode: number[], lch = false): void {
     const { uniforms, gl } = this;
@@ -322,7 +324,8 @@ export default class Workflow implements WorkflowSpec {
   }
 
   /**
-   * @param interactive
+   * Set the interactive mode uniform
+   * @param interactive - the interactive mode
    */
   setInteractive(interactive: boolean): void {
     const { uniforms, gl } = this;
@@ -333,7 +336,8 @@ export default class Workflow implements WorkflowSpec {
   }
 
   /**
-   * @param featureCode
+   * Set the current feature code
+   * @param featureCode - the feature code
    */
   setFeatureCode(featureCode: number[]): void {
     const { uniforms, gl } = this;
@@ -343,7 +347,8 @@ export default class Workflow implements WorkflowSpec {
   }
 
   /**
-   * @param mode
+   * Set the curent draw mode (uniform used by the shader)
+   * @param mode - the draw mode
    */
   setMode(mode: number): void {
     const { uniforms, gl } = this;

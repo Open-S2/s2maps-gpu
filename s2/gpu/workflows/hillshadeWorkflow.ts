@@ -20,19 +20,11 @@ const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
   {
     // position
     arrayStride: 4 * 2,
-    attributes: [
-      {
-        shaderLocation: 0,
-        offset: 0,
-        format: 'float32x2',
-      },
-    ],
+    attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }],
   },
 ];
 
-/**
- *
- */
+/** Hillshade Feature is a standalone hillshade render storage unit that can be drawn to the GPU */
 export class HilllshadeFeature implements HillshadeFeatureSpec {
   type = 'hillshade' as const;
   sourceName: string;
@@ -40,15 +32,15 @@ export class HilllshadeFeature implements HillshadeFeatureSpec {
   bindGroup: GPUBindGroup;
   hillshadeBindGroup: GPUBindGroup;
   /**
-   * @param layerGuide
-   * @param workflow
-   * @param tile
-   * @param source
-   * @param featureCode
-   * @param hillshadeFadeBuffer
-   * @param featureCodeBuffer
-   * @param fadeStartTime
-   * @param parent
+   * @param layerGuide - the layer guide for this feature
+   * @param workflow - the hillshade workflow
+   * @param tile - the tile this feature is drawn on
+   * @param source - the hillshade source
+   * @param featureCode - the encoded feature code
+   * @param hillshadeFadeBuffer - the fade buffer
+   * @param featureCodeBuffer - the feature code buffer
+   * @param fadeStartTime - the start time of the fade for smooth transitions
+   * @param parent - the parent tile if applicable
    */
   constructor(
     public layerGuide: HillshadeWorkflowLayerGuideGPU,
@@ -68,18 +60,14 @@ export class HilllshadeFeature implements HillshadeFeatureSpec {
     this.hillshadeBindGroup = this.#buildHillshadeBindGroup();
   }
 
-  /**
-   *
-   */
+  /** Draw the feature to the GPU */
   draw(): void {
     const { tile, workflow } = this;
     workflow.context.setStencilReference(tile.tmpMaskID);
     workflow.draw(this);
   }
 
-  /**
-   *
-   */
+  /** Destroy the feature */
   destroy(): void {
     const { hillshadeFadeBuffer, featureCodeBuffer } = this;
     hillshadeFadeBuffer.destroy();
@@ -87,8 +75,10 @@ export class HilllshadeFeature implements HillshadeFeatureSpec {
   }
 
   /**
-   * @param tile
-   * @param parent
+   * Duplicate this feature
+   * @param tile - the tile this feature is drawn on
+   * @param parent - the parent tile if applicable
+   * @returns the duplicated feature
    */
   duplicate(tile: Tile, parent?: Tile): HilllshadeFeature {
     const {
@@ -119,7 +109,8 @@ export class HilllshadeFeature implements HillshadeFeatureSpec {
   }
 
   /**
-   *
+   * Build the bind group for the hillshade feature
+   * @returns the GPU Bind Group for the hillshade feature
    */
   #buildBindGroup(): GPUBindGroup {
     const { workflow, tile, parent, layerGuide, featureCodeBuffer } = this;
@@ -136,7 +127,8 @@ export class HilllshadeFeature implements HillshadeFeatureSpec {
   }
 
   /**
-   *
+   * Build the bind group for the hillshade feature
+   * @returns the GPU Bind Group for the hillshade feature
    */
   #buildHillshadeBindGroup(): GPUBindGroup {
     const { source, workflow, hillshadeFadeBuffer, layerGuide } = this;
@@ -155,32 +147,24 @@ export class HilllshadeFeature implements HillshadeFeatureSpec {
   }
 }
 
-/**
- *
- */
+/** Hillshade Workflow */
 export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
   context: WebGPUContext;
   layerGuides = new Map<number, HillshadeWorkflowLayerGuideGPU>();
   pipeline!: GPURenderPipeline;
   hillshadeBindGroupLayout!: GPUBindGroupLayout;
-  /**
-   * @param context
-   */
+  /** @param context - The WebGPU context */
   constructor(context: WebGPUContext) {
     this.context = context;
   }
 
-  /**
-   *
-   */
+  /** Setup the workflow */
   async setup(): Promise<void> {
     // create pipelines
     this.pipeline = await this.#getPipeline();
   }
 
-  /**
-   *
-   */
+  /** Destroy and cleanup the workflow */
   destroy(): void {
     for (const { layerBuffer, layerCodeBuffer, unpackBuffer } of this.layerGuides.values()) {
       layerBuffer.destroy();
@@ -189,10 +173,11 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
     }
   }
 
-  // workflow helps design the appropriate layer parameters
   /**
-   * @param layerBase
-   * @param layer
+   * Build the layer definition for this workflow
+   * @param layerBase - the common layer attributes
+   * @param layer - the user defined layer attributes
+   * @returns a built layer definition that's ready to describe how to render a feature
    */
   buildLayerDefinition(layerBase: LayerDefinitionBase, layer: HillshadeStyle): HillshadeDefinition {
     const { context } = this;
@@ -286,8 +271,9 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
   }
 
   /**
-   * @param hillshadeData
-   * @param tile
+   * Build the source hillshade data into hillshade features
+   * @param hillshadeData - the input hillshade data
+   * @param tile - the tile we are building the features for
    */
   buildSource(hillshadeData: HillshadeData, tile: Tile): void {
     const { context } = this;
@@ -303,10 +289,8 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
       indexBuffer: mask.indexBuffer,
       count: mask.count,
       offset: mask.offset,
-      /**
-       *
-       */
-      destroy: () => {
+      /** Destroy the raster source */
+      destroy: (): void => {
         texture.destroy();
       },
     };
@@ -315,9 +299,10 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
   }
 
   /**
-   * @param source
-   * @param hillshadeData
-   * @param tile
+   * Build hillshade features from input hillshade source
+   * @param source - the source to build features from
+   * @param hillshadeData - the input hillshade data
+   * @param tile - the tile we are building the features for
    */
   #buildFeatures(source: RasterSource, hillshadeData: HillshadeData, tile: Tile): void {
     const { context } = this;
@@ -354,11 +339,12 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
     tile.addFeatures(features);
   }
 
-  // https://programmer.ink/think/several-best-practices-of-webgpu.html
-  // BEST PRACTICE 6: it is recommended to create pipeline asynchronously
-  // BEST PRACTICE 7: explicitly define pipeline layouts
   /**
-   *
+   * Build the render pipeline for the hillshade workflow
+   * https://programmer.ink/think/several-best-practices-of-webgpu.html
+   * BEST PRACTICE 6: it is recommended to create pipeline asynchronously
+   * BEST PRACTICE 7: explicitly define pipeline layouts
+   * @returns the render pipeline
    */
   async #getPipeline(): Promise<GPURenderPipeline> {
     const { context } = this;
@@ -395,6 +381,7 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
         this.hillshadeBindGroupLayout,
       ],
     });
+    const cullMode: GPUCullMode = projection === 'S2' ? 'back' : 'front';
     const stencilState: GPUStencilFaceState = {
       compare: 'equal',
       failOp: 'keep',
@@ -405,26 +392,9 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
     return await device.createRenderPipelineAsync({
       label: 'Hillshade Pipeline',
       layout,
-      vertex: {
-        module,
-        entryPoint: 'vMain',
-        buffers: SHADER_BUFFER_LAYOUT,
-      },
-      fragment: {
-        module,
-        entryPoint: 'fMain',
-        targets: [
-          {
-            format,
-            blend: defaultBlend,
-          },
-        ],
-      },
-      primitive: {
-        topology: 'triangle-strip',
-        cullMode: projection === 'S2' ? 'back' : 'front',
-        stripIndexFormat: 'uint32',
-      },
+      vertex: { module, entryPoint: 'vMain', buffers: SHADER_BUFFER_LAYOUT },
+      fragment: { module, entryPoint: 'fMain', targets: [{ format, blend: defaultBlend }] },
+      primitive: { topology: 'triangle-strip', cullMode, stripIndexFormat: 'uint32' },
       multisample: { count: sampleCount },
       depthStencil: {
         depthWriteEnabled: true,
@@ -439,19 +409,16 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
   }
 
   /**
-   * @param root0
-   * @param root0.layerGuide
-   * @param root0.layerGuide.visible
-   * @param root0.bindGroup
-   * @param root0.hillshadeBindGroup
-   * @param root0.source
+   * Draw a screen quad with the hillshade feature's properties
+   * @param feature - hillshade feature
    */
-  draw({
-    layerGuide: { visible },
-    bindGroup,
-    hillshadeBindGroup,
-    source,
-  }: HillshadeFeatureSpec): void {
+  draw(feature: HillshadeFeatureSpec): void {
+    const {
+      layerGuide: { visible },
+      bindGroup,
+      hillshadeBindGroup,
+      source,
+    } = feature;
     if (!visible) return;
     // get current source data
     const { passEncoder } = this.context;

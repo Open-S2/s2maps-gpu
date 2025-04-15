@@ -13,9 +13,7 @@ import type {
 } from 'gpu/workflows/workflow.spec';
 import type { InteractiveObject, SourceFlushMessage, TileFlushMessage } from 'workers/worker.spec';
 
-/**
- *
- */
+/** A tile's 4 corners. */
 export interface Corners {
   topLeft: VectorPoint;
   topRight: VectorPoint;
@@ -35,22 +33,14 @@ export type Get<T, K extends keyof any, Fallback = undefined> =
 /** takes a union of interfaces and merges them so that any common key is a union of possibilities. */
 export type Combine<T> = { [K in AllKeysOf<T>]: Get<T, K> };
 
-/**
- *
- */
+/** Shared Context found in both WebGLContext and WebGPUContext. */
 export type SharedContext = Combine<WebGLContext | WebGPUContext>;
-/**
- *
- */
+/** Shared Features found in both WebGLContext and WebGPUContext. */
 export type SharedFeatures = Combine<FeaturesGL | FeaturesGPU>;
-/**
- *
- */
+/** Shared MaskSource found in both WebGLContext and WebGPUContext. */
 export type SharedMaskSource = Combine<MaskSourceGL | MaskSourceGPU>;
 
-/**
- *
- */
+/** A FaceST that will be encoded into the GPU */
 export type FaceST = [
   face: number,
   zoom: number,
@@ -117,19 +107,11 @@ export interface TileBase<C, F, M> {
   deleteSources: (sourceNames: string[]) => void;
 }
 
-/**
- *
- */
+/** TileBase with shared context. */
 export type Tile = TileBase<SharedContext, SharedFeatures, SharedMaskSource>;
-/**
- *
- */
+/** TileGL context */
 export type TileGL = TileBase<WebGLContext, FeaturesGL, MaskSourceGL>;
-/**
- *
- */
+/** TileGPU context */
 export type TileGPU = TileBase<WebGPUContext, FeaturesGPU, MaskSourceGPU>;
-/**
- *
- */
+/** Shared context found in both WebGLContext and WebGPUContext. */
 export type TileShared = TileGL & TileGPU;

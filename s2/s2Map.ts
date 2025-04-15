@@ -15,20 +15,30 @@ import type {
 } from './workers/worker.spec';
 
 // export types from './ui/s2mapUI'
-export type { Attributions, LayerStyle, StyleDefinition } from './style/style.spec';
 export type { MarkerDefinition } from './workers/source/markerSource';
 export type { AnimationDirections } from './ui/camera/animator';
 export type { UserTouchEvent } from './ui/camera/dragPan';
 
 /**
- *
+ * Color blind states
+ * - 0: none
+ * - 1: protanopia
+ * - 2: deuteranopia
+ * - 3: tritanopia
+ * - 4: greyscale
  */
-export type ColorMode = 0 | 1 | 2 | 3 | 4;
+export const ColorMode = {
+  None: 0,
+  Protanopia: 1,
+  Deuteranopia: 2,
+  Tritanopia: 3,
+  Greyscale: 4,
+} as const;
+/** colorblind mode */
+export type ColorMode = (typeof ColorMode)[keyof typeof ColorMode];
 
 declare global {
-  /**
-   *
-   */
+  /** a global object exposed to the window */
   interface Window {
     S2Map: typeof S2Map;
   }
@@ -51,16 +61,14 @@ export default class S2Map extends EventTarget {
   #attributions: Attributions = {};
   bearing = 0; // degrees
   pitch = 0; // degrees
-  colorMode: ColorMode = 0; // 0: none - 1: protanopia - 2: deuteranopia - 3: tritanopia - 4: greyscale
+  colorMode: ColorMode = ColorMode.None; // 0: none - 1: protanopia - 2: deuteranopia - 3: tritanopia - 4: greyscale
   map?: S2MapUI;
   hash = false;
   offscreen?: Worker;
   id: string = Math.random().toString(36).replace('0.', '');
   isNative = false;
   isReady = false;
-  /**
-   * @param options
-   */
+  /** @param options - map options */
   constructor(
     options: MapOptions = {
       canvasMultiplier: window.devicePixelRatio ?? 2,
@@ -99,9 +107,10 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * @param type
-   * @param listener
-   * @param options
+   * Add an event listener overriding the original
+   * @param type - type of event called
+   * @param listener - event listener
+   * @param options - event listener options
    */
   override addEventListener(
     type: string,
@@ -120,9 +129,7 @@ export default class S2Map extends EventTarget {
 
   /* BUILD/CONSTRUCTION FUNCTIONS */
 
-  /**
-   *
-   */
+  /** Interal ready function. Let the user know that the map is ready. */
   #ready(): void {
     this.isReady = true;
     this.#onCanvasReady();
@@ -130,7 +137,9 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * @param options
+   * Setup the container
+   * @param options - MapOptions
+   * @returns the canvas container element
    */
   #setupContainer(options: MapOptions): HTMLCanvasElement {
     if (this.#container === undefined) throw new Error('Container not found.');
@@ -155,8 +164,9 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * @param canvas
-   * @param options
+   * Setup the canvas, workers, etc.
+   * @param canvas - HTMLCanvasElement
+   * @param options - MapOptions
    */
   async #setupCanvas(canvas: HTMLCanvasElement, options: MapOptions): Promise<void> {
     const isBrowser = options.canvas === undefined;
@@ -230,7 +240,8 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * @param options
+   * Internal setup the control containers
+   * @param options - map options
    */
   #setupControlContainer(options: MapOptions): void {
     const {
@@ -249,9 +260,7 @@ export default class S2Map extends EventTarget {
       attribution.id = 's2-attribution';
       const info = window.document.createElement('div');
       info.className = info.id = 's2-info';
-      /**
-       *
-       */
+      /** Handle click on info bar */
       info.onclick = function () {
         attribution.classList.toggle('show');
       };
@@ -418,13 +427,13 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * @param root0
-   * @param root0.data
-   * @internal
    * Used by the MapUI either from a thread or directly. to either
    * send messages to Source/Tile Workers or to the user.
+   * @param message - The message to process
+   * @internal
    */
-  onMessage({ data }: { data: MapGLMessage }): void {
+  onMessage(message: MessageEvent<MapGLMessage>): void {
+    const { data } = message;
     const { mapID, type } = data;
     if (type === 'tilerequest') {
       window.S2WorkerPool.tileRequest(mapID, data.tiles, data.sources);
@@ -497,14 +506,15 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * @param e
-   * @param type
+   * Internal function to handle touch events
+   * @param event - touch event
+   * @param type - type of touch event
    */
-  #onTouch(e: TouchEvent, type: 'touchstart' | 'touchend' | 'touchmove'): void {
+  #onTouch(event: TouchEvent, type: 'touchstart' | 'touchend' | 'touchmove'): void {
     const { map, offscreen } = this;
     const canvasContainer = this.#canvasContainer;
-    e.preventDefault();
-    const { touches } = e;
+    event.preventDefault();
+    const { touches } = event;
     const { length } = touches;
     const touchEvent: UserTouchEvent = { length };
 
@@ -523,22 +533,24 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * @param e
+   * Internal function to handle scroll events
+   * @param event - wheel event
    */
-  #onScroll(e: WheelEvent): void {
-    e.preventDefault();
+  #onScroll(event: WheelEvent): void {
+    event.preventDefault();
     const { map, offscreen } = this;
-    const { clientX, clientY, deltaY } = e;
+    const { clientX, clientY, deltaY } = event;
     const rect = this.#canvas.getBoundingClientRect();
     offscreen?.postMessage({ type: 'scroll', rect, clientX, clientY, deltaY });
     map?.onZoom(deltaY, clientX - rect.left, clientY - rect.top);
   }
 
   /**
-   * @param e
+   * Internal function to handle mouse down event
+   * @param event - mouse down event
    */
-  #onMouseDown(e: MouseEvent): void {
-    if (e.button !== 0) return;
+  #onMouseDown(event: MouseEvent): void {
+    if (event.button !== 0) return;
     const { map, offscreen } = this;
     // send off a mousedown
     offscreen?.postMessage({ type: 'mousedown' });
@@ -564,11 +576,12 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * @param e
+   * Internal function to handle mouse move
+   * @param event - mouse move event
    */
-  #onMouseMove(e: MouseEvent): void {
+  #onMouseMove(event: MouseEvent): void {
     const { map, offscreen } = this;
-    let { movementX, movementY } = e;
+    let { movementX, movementY } = event;
     movementX *= this.#canvasMultiplier;
     movementY *= this.#canvasMultiplier;
     offscreen?.postMessage({ type: 'mousemove', movementX, movementY });
@@ -576,11 +589,12 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * @param e
+   * Internal function to handle mouse move event inside the canvas
+   * @param event - mouse move event
    */
-  #onCanvasMouseMove(e: MouseEvent): void {
+  #onCanvasMouseMove(event: MouseEvent): void {
     const { map, offscreen } = this;
-    const { layerX, layerY } = getLayerCoordinates(e);
+    const { layerX, layerY } = getLayerCoordinates(event);
     const x = layerX * this.#canvasMultiplier;
     const y = layerY * this.#canvasMultiplier;
 
@@ -589,8 +603,9 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * @param bearing
-   * @param pitch
+   * Internal function to handle compass update. Expands upon camera compass update
+   * @param bearing - compass bearing
+   * @param pitch - compass pitch
    */
   _updateCompass(bearing: number, pitch: number): void {
     this.bearing = -bearing;
@@ -601,26 +616,21 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * @param e
+   * Internal function to handle mouse pressed down on the compass
+   * @param event - mouse down event
    */
-  #onCompassMouseDown(e: MouseEvent): void {
-    e.preventDefault();
+  #onCompassMouseDown(event: MouseEvent): void {
+    event.preventDefault();
     const { map, offscreen } = this;
     const { abs } = Math;
     let totalMovementX = 0;
     let totalMovementY = 0;
     /**
-     * @param root0
-     * @param root0.movementX
-     * @param root0.movementY
+     * Temp function to handle mouse movement while mouse is pressed on the compass
+     * @param mEvent - mouse move event
      */
-    const mouseMoveFunc = ({
-      movementX,
-      movementY,
-    }: {
-      movementX: number;
-      movementY: number;
-    }): void => {
+    const mouseMoveFunc = (mEvent: MouseEvent): void => {
+      const { movementX, movementY } = mEvent;
       if (movementX !== 0) {
         totalMovementX += abs(movementX);
         totalMovementY += abs(movementY);
@@ -651,9 +661,7 @@ export default class S2Map extends EventTarget {
   //   map?.resetCompass()
   // }
 
-  /**
-   *
-   */
+  /** resize the map */
   #resize(): void {
     const { map, offscreen } = this;
     const container = this.#container;
@@ -672,7 +680,8 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * @param ctrl
+   * Internal function to handle zoom in and zoom out events
+   * @param ctrl - 'zoomIn' | 'zoomOut'
    */
   #navEvent(ctrl: 'zoomIn' | 'zoomOut'): void {
     const { map, offscreen } = this;
@@ -681,13 +690,14 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * @param mode
+   * Internal function to set the colorblind mode
+   * @param mode - colorblind mode
    */
   #setColorMode(mode?: ColorMode): void {
     const { map, offscreen } = this;
     if (mode !== undefined) this.colorMode = mode;
     else this.colorMode++;
-    if (this.colorMode > 4) this.colorMode = 0;
+    if (this.colorMode > 4) this.colorMode = ColorMode.None;
     localStorage.setItem('s2maps:gpu:colorBlindMode', String(this.colorMode));
     // update the icon
     const cM = this.colorMode;
@@ -906,7 +916,7 @@ export default class S2Map extends EventTarget {
   /**
    * @param layerChanges
    */
-  reorderLayers(layerChanges: Record<string | number, number>): void {
+  reorderLayers(layerChanges: Record<number, number>): void {
     const { offscreen, map } = this;
     offscreen?.postMessage({ type: 'reorderLayers', layerChanges });
     map?.reorderLayers(layerChanges);
@@ -992,16 +1002,19 @@ function getContext(): 1 | 2 | 3 {
   return 1;
 }
 
-/**
- * @param root0
- * @param root0.target
- * @param root0.offsetX
- * @param root0.offsetY
- */
-function getLayerCoordinates({ target, offsetX, offsetY }: MouseEvent): {
+/** Internal function returns layer coordinates */
+interface LayerCoordinates {
   layerX: number;
   layerY: number;
-} {
+}
+
+/**
+ * Internal tool to get layer coordinates
+ * @param event - mouse event
+ * @returns the layer coordinates in a series of elements
+ */
+function getLayerCoordinates(event: MouseEvent): LayerCoordinates {
+  const { target, offsetX, offsetY } = event;
   const targetElement = target as HTMLElement | null;
   let currentElement = targetElement;
 

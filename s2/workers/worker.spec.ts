@@ -1,6 +1,7 @@
 import type { AnimationDirections } from 'ui/camera/animator';
+import type { ColorMode } from 's2/s2Map';
 import type { Glyph } from 'workers/process/glyph/familySource';
-import type { ImageMetadata } from './source/imageSource';
+import type { ImageSourceMetadata } from './source/imageSource';
 import type { MapOptions } from 'ui/s2mapUI';
 import type { MarkerDefinition } from './source/markerSource';
 import type { UserTouchEvent } from 'ui/camera/dragPan';
@@ -10,29 +11,24 @@ import type {
   Attributions,
   LayerDefinition,
   Projection,
+  Source,
   StyleDefinition,
   StylePackage,
 } from 'style/style.spec';
 import type { BBox, Face, Properties } from 'gis-tools';
 import type { GlyphImages, GlyphMetadata } from './source/glyphSource';
 
-/** GENERIC WORKER TYPES */
+/* GENERIC WORKER TYPES */
 
-/**
- *
- */
-export type CancelTileRequest = number[]; // S2CellIDs of tiles e.g. ['204', '1003', '1245', ...]
+/** S2CellIDs of tiles e.g. ['204n', '1003n', '1245n', ...] */
+export type CancelTileRequest = number[];
 
-/**
- *
- */
+/** Tracks the map who made the request */
 export interface MapID {
   mapID: string;
 }
 
-/**
- *
- */
+/** Parent Layer Information. Layer indexes effected by this parent tile */
 export interface ParentLayer {
   face: Face;
   zoom: number;
@@ -43,14 +39,10 @@ export interface ParentLayer {
   time?: number;
 }
 
-/**
- *
- */
+/** Parent Layer Information. Layer indexes effected by this parent tile */
 export type ParentLayers = Record<string | number, ParentLayer>;
 
-/**
- *
- */
+/** Tile Request */
 export interface TileRequest {
   id: bigint;
   face: Face;
@@ -65,18 +57,7 @@ export interface TileRequest {
   layerIndexes?: number[];
 }
 
-/**
- *
- */
-export interface Feature {
-  geometry: never[];
-  properties: Properties;
-  indices?: number[];
-}
-
-/**
- *
- */
+/** Interactive Object sub properties */
 export interface InteractiveObject extends Properties {
   __id: number;
   __cursor: string;
@@ -85,7 +66,9 @@ export interface InteractiveObject extends Properties {
   __layer: string;
 }
 
-/** FRONT END TO MAP WORKER MESSAGES */
+/* FRONT END TO MAP WORKER MESSAGES */
+
+/** Canvas message shipping the canvas element from the front end to the map worker */
 export interface CanvasMessage {
   type: 'canvas';
   options: MapOptions;
@@ -93,18 +76,14 @@ export interface CanvasMessage {
   id: string;
 }
 
-/**
- *
- */
+/** Resize message sent from the front end to the map worker */
 export interface ResizeMessage {
   type: 'resize';
   width: number;
   height: number;
 }
 
-/**
- *
- */
+/** Scroll message sent from the front end to the map worker */
 export interface ScrollMessage {
   type: 'scroll';
   deltaY: number;
@@ -118,16 +97,12 @@ export interface ScrollMessage {
   };
 }
 
-/**
- *
- */
+/** Mouse down message sent from the front end to the map worker */
 export interface MousedownMessage {
   type: 'mousedown';
 }
 
-/**
- *
- */
+/** Mouse up message sent from the front end to the map worker */
 export interface MouseupMessage {
   type: 'mouseup';
   clientX: number;
@@ -140,51 +115,39 @@ export interface MouseupMessage {
   };
 }
 
-/**
- *
- */
+/** Mouse move message sent from the front end to the map worker */
 export interface MousemoveMessage {
   type: 'mousemove';
   movementX: number;
   movementY: number;
 }
 
-/**
- *
- */
+/** Canvas mouse move message sent from the front end to the map worker */
 export interface CanvasMousemoveMessage {
   type: 'canvasmousemove';
   x: number;
   y: number;
 }
 
-/**
- *
- */
+/** Touch start message sent from the front end to the map worker */
 export interface TouchstartMessage {
   type: 'touchstart';
   touchEvent: UserTouchEvent;
 }
 
-/**
- *
- */
+/** Touch end message sent from the front end to the map worker */
 export interface TouchendMessage {
   type: 'touchend';
   touchEvent: UserTouchEvent;
 }
 
-/**
- *
- */
+/** Touch move message sent from the front end to the map worker */
 export interface TouchmoveMessage {
   type: 'touchmove';
   touchEvent: UserTouchEvent;
 }
 
-/**
- *
- */
+/** Navigation message sent from the front end to the map worker */
 export interface NavMessage {
   type: 'nav';
   ctrl: 'zoomIn' | 'zoomOut';
@@ -192,48 +155,36 @@ export interface NavMessage {
   lat?: number;
 }
 
-/**
- *
- */
+/** Mouse up compass message sent from the front end to the map worker */
 export interface MouseupCompassMessage {
   type: 'mouseupCompass';
 }
 
-/**
- *
- */
+/** Reset compass message sent from the front end to the map worker */
 export interface ResetCompassMessage {
   type: 'resetCompass';
 }
 
-/**
- *
- */
+/** Color mode message sent from the front end to the map worker */
 export interface ColorModeMessage {
   type: 'colorMode';
-  mode: 0 | 1 | 2 | 3;
+  mode: ColorMode;
 }
 
-/**
- *
- */
+/** Set style message sent from the front end to the map worker */
 export interface SetStyleMessage {
   type: 'setStyle';
   style: StyleDefinition;
   ignorePosition: boolean;
 }
 
-/**
- *
- */
+/** Update style message sent from the front end to the map worker */
 export interface UpdateStyleMessage {
   type: 'updateStyle';
   style: StyleDefinition;
 }
 
-/**
- *
- */
+/** Jump to message sent from the front end to the map worker */
 export interface JumpToMessage {
   type: 'jumpTo';
   lon: number;
@@ -241,55 +192,41 @@ export interface JumpToMessage {
   zoom?: number;
 }
 
-/**
- *
- */
+/** Ease to message sent from the front end to the map worker */
 export interface EaseToMessage {
   type: 'easeTo';
   directions?: AnimationDirections;
 }
 
-/**
- *
- */
+/** Fly to message sent from the front end to the map worker */
 export interface FlyToMessage {
   type: 'flyTo';
   directions?: AnimationDirections;
 }
 
-/**
- *
- */
+/** Move state message sent from the front end to the map worker */
 export interface MoveStateMessage {
   type: 'moveState';
   state: boolean;
 }
 
-/**
- *
- */
+/** Zoom state message sent from the front end to the map worker */
 export interface ZoomStateMessage {
   type: 'zoomState';
   state: boolean;
 }
 
-/**
- *
- */
+/** Screenshot request message sent from the front end to the map worker */
 export interface ScreenshotMessage {
   type: 'screenshot';
 }
 
-/**
- *
- */
+/** Await rendered message sent from the front end to the map worker */
 export interface AwaitRenderedMessage {
   type: 'awaitRendered';
 }
 
-/**
- *
- */
+/** Reset source message sent from the front end to the map worker */
 export interface ResetSourceMessage {
   type: 'resetSource';
   sourceNames: Array<[string, string | undefined]>;
@@ -297,26 +234,20 @@ export interface ResetSourceMessage {
   awaitReplace: boolean;
 }
 
-/**
- *
- */
+/** Clear source message sent from the front end to the map worker */
 export interface ClearSourceMessage {
   type: 'clearSource';
   sourceNames: string[];
 }
 
-/**
- *
- */
+/** Add layer message sent from the front end to the map worker */
 export interface AddLayerMessage {
   type: 'addLayer';
   layer: LayerDefinition;
   nameIndex: number | string;
 }
 
-/**
- *
- */
+/** Update layer message sent from the front end to the map worker */
 export interface UpdateLayerMessage {
   type: 'updateLayer';
   layer: LayerDefinition;
@@ -324,32 +255,24 @@ export interface UpdateLayerMessage {
   fullUpdate: boolean;
 }
 
-/**
- *
- */
+/** Delete layer message sent from the front end to the map worker */
 export interface DeleteLayerMessage {
   type: 'deleteLayer';
   nameIndex: number | string;
 }
 
-/**
- *
- */
+/** Reorder layers message sent from the front end to the map worker */
 export interface ReorderLayersMessage {
   type: 'reorderLayers';
   layerChanges: Record<number, number>;
 }
 
-/**
- *
- */
+/** Delete message sent from the front end to the map worker */
 export interface DeleteMessage {
   type: 'delete';
 }
 
-/**
- *
- */
+/** Message sent from the front end to the map worker */
 export type S2MapMessage =
   | CanvasMessage
   | ResizeMessage
@@ -383,62 +306,56 @@ export type S2MapMessage =
   | ReorderLayersMessage
   | DeleteMessage;
 
-/** FRONT END TO SOURCE WORKER MESSAGES */
+/* FRONT END TO SOURCE WORKER MESSAGES */
 
-/**
- *
- */
+/** Add markers message sent from the front end to the source worker */
 export interface AddMarkersMessage extends MapID {
   type: 'addMarkers';
   markers: MarkerDefinition[];
   sourceName: string;
 }
 
-/**
- *
- */
+/** Delete markers message sent from the front end to the source worker */
 export interface DeleteMarkersMessage extends MapID {
   type: 'deleteMarkers';
   ids: number[];
   sourceName: string;
 }
 
-/**
- *
- */
+/** Add source message sent from the front end to the source worker */
+export interface AddSourceMessage extends MapID {
+  type: 'addSource';
+  sourceName: string;
+  source: Source;
+  tileRequest: TileRequest[];
+}
+
+/** Delete source message sent from the front end to the source worker */
 export interface DeleteSourceMessage extends MapID {
   type: 'deleteSource';
   sourceNames: string[];
 }
 
-/**
- *
- */
+/** Messages sent from the front end to the source worker */
 export type S2MapToSourceMessage = AddMarkersMessage | DeleteMarkersMessage | DeleteSourceMessage;
 
-/** UI GL REQUESTS -> S2Map or Worker Pool */
+/* UI GL REQUESTS -> S2Map or Worker Pool */
 
-/**
- *
- */
+/** Tile request message sent from the map worker to the source worker */
 export interface TileRequestMessage extends MapID {
   type: 'tilerequest';
   tiles: TileRequest[];
   sources: Array<[string, string | undefined]>;
 }
 
-/**
- *
- */
+/** Time request message sent from the map worker to the source worker */
 export interface TimeRequestMessage extends MapID {
   type: 'timerequest';
   tiles: TileRequest[];
   sourceNames: string[];
 }
 
-/**
- *
- */
+/** Messages sent from the map worker to the source worker */
 export interface MouseEnterMessage extends MapID {
   type: 'mouseenter';
   /** The features that the mouse just "entered" into */
@@ -447,9 +364,7 @@ export interface MouseEnterMessage extends MapID {
   currentFeatures: InteractiveObject[];
 }
 
-/**
- *
- */
+/** Messages sent from the map worker to the source worker */
 export interface MouseLeaveMessage extends MapID {
   type: 'mouseleave';
   /** The features that the mouse just "left" */
@@ -458,9 +373,7 @@ export interface MouseLeaveMessage extends MapID {
   currentFeatures: InteractiveObject[];
 }
 
-/**
- *
- */
+/** Messages sent from the map worker to the source worker */
 export interface MouseClickMessage extends MapID {
   type: 'click';
   features: InteractiveObject[];
@@ -468,17 +381,13 @@ export interface MouseClickMessage extends MapID {
   lat: number;
 }
 
-/**
- *
- */
+/** View message sent from the map worker to the front end */
 export interface ViewMessage extends MapID {
   type: 'view';
   view: Required<View>;
 }
 
-/**
- *
- */
+/** Requesting a style from the map worker to the source worker */
 export interface RequestStyleMessage extends MapID {
   type: 'requestStyle';
   style: string; // url
@@ -487,26 +396,20 @@ export interface RequestStyleMessage extends MapID {
   urlMap?: Record<string, string>;
 }
 
-/**
- *
- */
+/** Style request message sent from the map worker to the front end */
 export interface StyleMessage extends MapID {
   type: 'style';
   style: StylePackage;
 }
 
-/**
- *
- */
+/** Update compass message sent from the map worker to the front end */
 export interface UpdateCompassMessage extends MapID {
   type: 'updateCompass';
   bearing: number;
   pitch: number;
 }
 
-/**
- *
- */
+/** Add layer message sent from the map worker to the source worker */
 export interface AddLayerMessageGL extends MapID {
   type: 'addLayer';
   layer: LayerDefinition;
@@ -514,47 +417,35 @@ export interface AddLayerMessageGL extends MapID {
   tileRequest: TileRequest[];
 }
 
-/**
- *
- */
+/** Delete layer message sent from the map worker to the source worker */
 export interface DeleteLayerMessageGL extends MapID {
   type: 'deleteLayer';
   index: number;
 }
 
-/**
- *
- */
+/** Reorder layers message sent from the map worker to the source worker */
 export interface ReorderLayersMessageGL extends MapID {
   type: 'reorderLayers';
   layerChanges: Record<number, number>;
 }
 
-/**
- *
- */
+/** Screenshot message sent from the map worker to the front end */
 export interface ScreenshotMessageGL extends MapID {
   type: 'screenshot';
   screen: ArrayBuffer;
 }
 
-/**
- *
- */
+/** Rendered message sent from the map worker to the front end */
 export interface RenderedMessageGL extends MapID {
   type: 'rendered';
 }
 
-/**
- *
- */
+/** Ready message sent from the map worker to the front end */
 export interface ReadyMessageGL extends MapID {
   type: 'ready';
 }
 
-/**
- *
- */
+/** Collection of messages that can be sent from the map worker to the front end */
 export type MapGLMessage =
   | TileRequestMessage
   | TimeRequestMessage
@@ -572,9 +463,7 @@ export type MapGLMessage =
   | RenderedMessageGL
   | ReadyMessageGL;
 
-/**
- *
- */
+/** Collection of messages that can be sent from the map worker to the source worker */
 export type MapGLToSourceMessage =
   | RequestStyleMessage
   | StyleMessage
@@ -584,28 +473,22 @@ export type MapGLToSourceMessage =
   | DeleteLayerMessageGL
   | ReorderLayersMessageGL;
 
-/** SOURCE WORKER MESSAGES */
+/* SOURCE WORKER MESSAGES */
 
-/**
- *
- */
+/** Attribution message sent from the source worker to the front-end */
 export interface AttributionsMessage extends MapID {
   type: 'attributions';
   attributions: Attributions;
 }
 
-/**
- *
- */
+/** Style message sent from the source worker to the front-end */
 export interface SourceSetStyleMessage extends MapID {
   type: 'setStyle';
   style: StyleDefinition;
   ignorePosition: boolean;
 }
 
-/**
- *
- */
+/** Sprite image message sent from the source worker to the front-end */
 export interface SpriteImageMessage extends MapID {
   type: 'spriteimage';
   name: string;
@@ -617,9 +500,7 @@ export interface SpriteImageMessage extends MapID {
   image: ImageBitmap;
 }
 
-/**
- *
- */
+/** Flush message sent from the source worker to the front-end */
 export interface SourceFlushMessage extends MapID {
   type: 'flush';
   from: 'source';
@@ -627,28 +508,22 @@ export interface SourceFlushMessage extends MapID {
   layersToBeLoaded: Set<number>;
 }
 
-/**
- *
- */
+/** Collection of messages that can be sent from the source worker to the front-end */
 export type SourceWorkerMessage =
   | AttributionsMessage
   | SourceSetStyleMessage
   | SpriteImageMessage
   | SourceFlushMessage;
 
-/** TILE WORKER MESSAGES */
+/* TILE WORKER MESSAGES */
 
-/**
- *
- */
+/** Worker message base. Used in most messages from the tile worker to the source worker or front-end */
 export interface WorkerMessageBase extends MapID {
   tileID: bigint;
   sourceName: string;
 }
 
-/**
- *
- */
+/** Fill render data from the Tile Worker to the front-end */
 export interface FillData extends WorkerMessageBase {
   type: 'fill';
   vertexBuffer: ArrayBuffer;
@@ -658,9 +533,7 @@ export interface FillData extends WorkerMessageBase {
   featureGuideBuffer: ArrayBuffer;
 }
 
-/**
- *
- */
+/** Line render data from the Tile Worker to the front-end */
 export interface LineData extends WorkerMessageBase {
   type: 'line';
   vertexBuffer: ArrayBuffer;
@@ -668,9 +541,7 @@ export interface LineData extends WorkerMessageBase {
   featureGuideBuffer: ArrayBuffer;
 }
 
-/**
- *
- */
+/** Glyph render data from the Tile Worker to the front-end */
 export interface GlyphData extends WorkerMessageBase {
   type: 'glyph';
   glyphFilterBuffer: ArrayBuffer;
@@ -681,26 +552,20 @@ export interface GlyphData extends WorkerMessageBase {
   featureGuideBuffer: ArrayBuffer;
 }
 
-/**
- *
- */
+/** Glyph image data from the Tile Worker to the front-end */
 export interface GlyphImageData extends MapID {
   type: 'glyphimages';
   maxHeight: number;
   images: GlyphImages;
 }
 
-/**
- *
- */
+/** Raster data guide shipped from the Tile Worker to the front-end */
 export interface RasterDataGuide {
   code: number[];
   layerIndex: number;
 }
 
-/**
- *
- */
+/** Raster data shipped from the Tile Worker to the front-end */
 export interface RasterData extends WorkerMessageBase {
   type: 'raster';
   image: ImageBitmap;
@@ -708,9 +573,7 @@ export interface RasterData extends WorkerMessageBase {
   featureGuides: RasterDataGuide[];
 }
 
-/**
- *
- */
+/** Hillshade data shipped from the Tile Worker to the front-end */
 export interface HillshadeData extends WorkerMessageBase {
   type: 'hillshade';
   image: ImageBitmap;
@@ -718,9 +581,7 @@ export interface HillshadeData extends WorkerMessageBase {
   featureGuides: RasterDataGuide[];
 }
 
-/**
- *
- */
+/** Sensor data shipped from the Tile Worker to the front-end */
 export interface SensorData extends WorkerMessageBase {
   type: 'sensor';
   image: ImageBitmap;
@@ -729,9 +590,7 @@ export interface SensorData extends WorkerMessageBase {
   time: number;
 }
 
-/**
- *
- */
+/** Point data shipped from the Tile Worker to the front-end */
 export interface PointData extends WorkerMessageBase {
   type: 'point';
   vertexBuffer: ArrayBuffer;
@@ -739,9 +598,7 @@ export interface PointData extends WorkerMessageBase {
   featureGuideBuffer: ArrayBuffer;
 }
 
-/**
- *
- */
+/** Heatmap data shipped from the Tile Worker to the front-end */
 export interface HeatmapData extends WorkerMessageBase {
   type: 'heatmap';
   vertexBuffer: ArrayBuffer;
@@ -750,18 +607,14 @@ export interface HeatmapData extends WorkerMessageBase {
   featureGuideBuffer: ArrayBuffer;
 }
 
-/**
- *
- */
+/** Interactive data shipped from the Tile Worker to the front-end */
 export interface InteractiveData extends WorkerMessageBase {
   type: 'interactive';
   interactiveGuideBuffer: ArrayBuffer;
   interactiveDataBuffer: ArrayBuffer;
 }
 
-/**
- *
- */
+/** Tile Flush message shipped from the Tile Worker to the front-end */
 export interface TileFlushMessage extends MapID {
   type: 'flush';
   from: 'tile';
@@ -770,17 +623,13 @@ export interface TileFlushMessage extends MapID {
   deadLayers: number[];
 }
 
-/**
- *
- */
+/** Temporal source data shipped from the Tile Worker to the front-end */
 export interface TimeSourceData extends WorkerMessageBase {
   type: 'timesource';
   interval: number;
 }
 
-/**
- *
- */
+/** All rendering type data grouped */
 export type PainterData =
   | RasterData
   | HillshadeData
@@ -791,9 +640,7 @@ export type PainterData =
   | HeatmapData
   | GlyphData;
 
-/**
- *
- */
+/** Tile worker messages that are shipped from a Tile Worker to the front end */
 export type TileWorkerMessage =
   | FillData
   | LineData
@@ -811,33 +658,26 @@ export type TileWorkerMessage =
 
 /** TILE WORKER TO SOURCE WORKER MESSAGES */
 
-/**
- *
- */
+/** Glyph Request asked by the Tile Worker to the Source Worker */
 export interface GlyphRequestMessage extends MapID {
   type: 'glyphrequest';
   workerID: number;
   reqID: string;
   glyphList: Record<string, string[]>;
 }
-/**
- *
- */
+
+/** Messages the Tile Worker's ship to the Source Worker */
 export type TileWorkerToSourceWorkerMessage = GlyphRequestMessage;
 
 /* SOURCE WORKER TO TILE WORKER MESSAGES */
 
-/**
- *
- */
+/** Add layer message sent from the Source Worker to the Tile Worker */
 export interface AddLayerMessageTileWorker extends MapID {
   type: 'addLayer';
   layer: LayerDefinition;
   index: number;
 }
-/**
- *
- */
+/** Vector tile message sent from the Source Worker to the Tile Worker */
 export interface VectorMessage extends MapID {
   type: 'vector';
   tile: TileRequest;
@@ -845,9 +685,7 @@ export interface VectorMessage extends MapID {
   data: ArrayBuffer;
 }
 
-/**
- *
- */
+/** Raster tile message sent from the Source Worker to the Tile Worker */
 export interface RasterMessage extends MapID {
   type: 'raster';
   tile: TileRequest;
@@ -856,9 +694,7 @@ export interface RasterMessage extends MapID {
   size: number;
 }
 
-/**
- *
- */
+/** JSON data message sent from the Source Worker to the Tile Worker */
 export interface JSONDataMessage extends MapID {
   type: 'jsondata';
   tile: TileRequest;
@@ -866,18 +702,14 @@ export interface JSONDataMessage extends MapID {
   data: ArrayBuffer;
 }
 
-/**
- *
- */
+/** Glyph metadata message sent from the Source Worker to the Tile Worker */
 export interface GlyphMetadataMessage extends MapID {
   type: 'glyphmetadata';
   glyphMetadata: GlyphMetadata[];
-  imageMetadata: ImageMetadata[];
+  imageMetadata: ImageSourceMetadata[];
 }
 
-/**
- *
- */
+/** Glyph response message sent from the Source Worker to the Tile Worker */
 export interface GlyphResponseMessage extends MapID {
   type: 'glyphresponse';
   reqID: string;
@@ -887,32 +719,26 @@ export interface GlyphResponseMessage extends MapID {
 
 /* WORKER POOL MESSAGE */
 
-/**
- *
- */
+/** Message from the worker pool to the tile workers so they can track their own id and total tile worker count */
 export interface WorkerPoolPortMessage {
   type: 'port';
   id: number;
   totalWorkers: number;
 }
 
-/**
- *
- */
+/* LISTED MESSAGES */
+
+/** List of messages that are sent from the WorkerPool */
 export type WorkerPoolMessage = WorkerPoolPortMessage;
 
-/**
- *
- */
+/** List of messages that are sent from the SourceWorker */
 export type SourceWorkerMessages =
   | TileWorkerToSourceWorkerMessage
   | S2MapToSourceMessage
   | WorkerPoolMessage
   | MapGLToSourceMessage;
 
-/**
- *
- */
+/** List of messages that are sent from the TileWorker */
 export type TileWorkerMessages =
   | WorkerPoolMessage
   | StyleMessage

@@ -5,11 +5,9 @@ import type { Glyph } from './glyph/familySource';
 import type { GlyphMetadata } from 'workers/source/glyphSource';
 import type { GlyphRequestMessage } from 'workers/worker.spec';
 import type { IDGen } from './process.spec';
-import type { ImageMetadata } from 'workers/source/imageSource';
+import type { ImageSourceMetadata } from 'workers/source/imageSource';
 
-/**
- *
- */
+/** Glyph Request Tracker */
 export interface GlyphRequestTracker {
   glyphFamilyCount: number;
   processed: number;
@@ -17,13 +15,9 @@ export interface GlyphRequestTracker {
   resolve: () => void;
 }
 
-/**
- *
- */
+/** Map of Glyph/Icon Sources, their requests and their resolves */
 export class MapGlyphSource extends Map<string, FamilySource> {
-  /**
-   *
-   */
+  /** resolve mechanic to ensure the glyph/icon source is built */
   resolve: (value: void | PromiseLike<void>) => void = (): void => {};
   ready = new Promise<void>((resolve) => {
     this.resolve = resolve;
@@ -32,7 +26,9 @@ export class MapGlyphSource extends Map<string, FamilySource> {
   glyphRequestTracker = new Map<string, GlyphRequestTracker>();
 
   /**
-   * @param family
+   * Get a glyph/icon family or list of glyph/icon families
+   * @param family - the name(s) of the glyph/icon family
+   * @returns the glyph/icon family(ies)
    */
   getFamily(family: string | string[]): undefined | FamilySource | FamilySource[] {
     if (Array.isArray(family)) {
@@ -48,7 +44,9 @@ export class MapGlyphSource extends Map<string, FamilySource> {
 }
 
 /**
+ * Image Store
  *
+ * Manages the Glyph/Icon sources, Sprites, and Images (like fill pattern images)
  */
 export default class ImageStore {
   // mapId: GlyphSourceMap EX 'map1': GlyphSourceMap
@@ -58,8 +56,9 @@ export default class ImageStore {
   sourceWorker!: MessagePort;
 
   /**
-   * @param idGen
-   * @param sourceWorker
+   * Setup the image store
+   * @param idGen - id generator
+   * @param sourceWorker - the source worker to send requests to
    */
   setup(idGen: IDGen, sourceWorker: MessagePort): void {
     this.idGen = idGen;
@@ -67,14 +66,16 @@ export default class ImageStore {
   }
 
   /**
-   * @param mapID
+   * Setup a glyph/icon source
+   * @param mapID - the id of the map to setup the glyph/icon source for
    */
   setupMap(mapID: string): void {
     this.glyphSources.set(mapID, new MapGlyphSource());
   }
 
   /**
-   * @param mapID
+   * Wait for the glyph/icon source to be ready
+   * @param mapID - the id of the map to await the glyph/icon source for
    */
   async getReady(mapID: string): Promise<void> {
     const glyphSource = this.glyphSources.get(mapID);
@@ -82,7 +83,9 @@ export default class ImageStore {
   }
 
   /**
-   * @param mapID
+   * Get the glyph/icon source
+   * @param mapID - the id of the map to get the glyph/icon source for
+   * @returns the glyph/icon source
    */
   getGlyphSource(mapID: string): MapGlyphSource {
     const store = this.glyphSources.get(mapID);
@@ -91,8 +94,10 @@ export default class ImageStore {
   }
 
   /**
-   * @param mapID
-   * @param family
+   * Get a glyph/icon family
+   * @param mapID - the id of the map to get the glyph/icon source for
+   * @param family - the name of the glyph/icon family
+   * @returns the glyph/icon family
    */
   getFamilyMap(mapID: string, family: string): FamilySource {
     const glyphSource = this.getGlyphSource(mapID);
@@ -102,9 +107,10 @@ export default class ImageStore {
   }
 
   /**
-   * @param mapID
-   * @param families
-   * @param glyphs
+   * Parse specific ligatures
+   * @param mapID - the id of the map
+   * @param families - the name(s) of the glyph/icon family
+   * @param glyphs - the ligature codes
    */
   parseLigatures(mapID: string, families: string[], glyphs: string[]): void {
     // split the glyphs string[] into pieces everytime we see a space or line break characters
@@ -138,10 +144,12 @@ export default class ImageStore {
   }
 
   /**
-   * @param mapID
-   * @param tileID
-   * @param glyphCodes
-   * @param families
+   * Add missing glyphs
+   * @param mapID - the id of the map
+   * @param tileID - the id of the tile
+   * @param glyphCodes - the codes of the glyphs
+   * @param families - the name(s) of the glyph/icon family
+   * @returns true if there are missing glyphs
    */
   addMissingGlyph(
     mapID: string,
@@ -162,16 +170,17 @@ export default class ImageStore {
     return missing;
   }
 
-  // NOTE: This function is called from the source thread ONLY ONCE per mapID before anything is processed
   /**
-   * @param mapID
-   * @param glyphMetadata
-   * @param imageMetadata
+   * Process metadata for a collection of glyph/icon/sprite/image metadatas
+   * NOTE: This function is called from the source thread ONLY ONCE per mapID before anything is processed
+   * @param mapID - the id of the map to process the metadatas for
+   * @param glyphMetadata - the glyph/icon metadatas
+   * @param imageMetadata - the sprite/image metadatas
    */
   processMetadata(
     mapID: string,
     glyphMetadata: GlyphMetadata[],
-    imageMetadata: ImageMetadata[],
+    imageMetadata: ImageSourceMetadata[],
   ): void {
     const glyphSource = this.glyphSources.get(mapID);
     if (glyphSource === undefined) return;
@@ -188,9 +197,10 @@ export default class ImageStore {
   }
 
   /**
-   * @param mapID
-   * @param tileID
-   * @param sourceName
+   * Process missing data
+   * @param mapID - the id of the map to process the missing data for
+   * @param tileID - the id of the tile that has missing data
+   * @param sourceName - the name of the source that has missing data
    */
   async processMissingData(mapID: string, tileID: bigint, sourceName: string): Promise<void> {
     const { idGen, sourceWorker } = this;
@@ -239,10 +249,11 @@ export default class ImageStore {
   }
 
   /**
-   * @param mapID
-   * @param reqID
-   * @param glyphMetadata
-   * @param familyName
+   * Process a response from the source thread
+   * @param mapID - the id of the map
+   * @param reqID - the id of the request
+   * @param glyphMetadata - the glyph metadata
+   * @param familyName - the name of the family
    */
   processGlyphResponse(
     mapID: string,
@@ -265,11 +276,11 @@ export default class ImageStore {
     }
   }
 
-  // a response from the sourceThread for glyph data
   /**
-   * @param mapID
-   * @param familyName
-   * @param glyphs
+   * a response from the sourceThread for glyph data
+   * @param mapID - the id of the map to process the response for
+   * @param familyName - the name of the family
+   * @param glyphs - the glyphs to import
    */
   importGlyphs(mapID: string, familyName: string, glyphs: Glyph[]): void {
     const familyMap = this.getFamilyMap(mapID, familyName);
@@ -280,9 +291,11 @@ export default class ImageStore {
   }
 
   /**
-   * @param mapID
-   * @param familyName
-   * @param name
+   * Get an image pattern (used by fills)
+   * @param mapID - the id of the map
+   * @param familyName - the name of the family
+   * @param name - the name of the pattern
+   * @returns the pattern guide
    */
   getPattern(mapID: string, familyName: string, name?: string): Glyph {
     if (name === undefined) return NULL_GLYPH;

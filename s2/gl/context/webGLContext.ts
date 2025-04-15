@@ -4,7 +4,8 @@ import type { MapOptions } from 'ui/s2mapUI';
 import type { Painter } from '../painter.spec';
 
 /**
- *
+ * # WebGL Context
+ * Wrapper for WebGL context with plugins
  */
 export default class WebGLContext extends Context {
   elementIndexUint: OES_element_index_uint | null;
@@ -12,9 +13,9 @@ export default class WebGLContext extends Context {
   vertexArrayObject: OES_vertex_array_object | null;
   textureFloat: OES_texture_float | null;
   /**
-   * @param context
-   * @param options
-   * @param painter
+   * @param context - the WebGL rendering context
+   * @param options - map options to pull out wegl specific options
+   * @param painter - painter wrapper
    */
   constructor(context: WebGLRenderingContext, options: MapOptions, painter: Painter) {
     super(context, options, painter);
@@ -40,30 +41,28 @@ export default class WebGLContext extends Context {
     this._createDefaultQuad();
   }
 
-  /**
-   *
-   */
+  /** Interal polyfill ensures the renderer supports the required extensions */
   #polyfill(): void {
     const gl = this.gl as WebGLRenderingContext;
     // OES_vertex_array_object
     if (this.vertexArrayObject !== null) {
       const vertexArrayObject = this.vertexArrayObject;
-      // createVertexArray
       /**
-       *
+       * createVertexArray
+       * @returns the vertex array object if it was created successfully
        */
       gl.createVertexArray = (): WebGLVertexArrayObject | null =>
         vertexArrayObject.createVertexArrayOES() as WebGLVertexArrayObject | null;
-      // bindVertexArray
       /**
-       * @param vao
+       * bindVertexArray
+       * @param vao - the vertex array object to bind
        */
       gl.bindVertexArray = (vao: WebGLVertexArrayObject | null) => {
         vertexArrayObject.bindVertexArrayOES(vao);
       };
-      // deleteVertexArray
       /**
-       * @param vao
+       * deleteVertexArray
+       * @param vao - the vertex array object to delete
        */
       gl.deleteVertexArray = (vao: WebGLVertexArrayObject | null) => {
         vertexArrayObject.deleteVertexArrayOES(vao);
@@ -72,20 +71,20 @@ export default class WebGLContext extends Context {
     // ANGLE_instanced_arrays
     if (this.angledInstancedArrays !== null) {
       const angledInstancedArrays = this.angledInstancedArrays;
-      // vertexAttribDivisor
       /**
-       * @param index
-       * @param divisor
+       * vertexAttribDivisor
+       * @param index - the attribute index
+       * @param divisor - the divisor
        */
       gl.vertexAttribDivisor = (index: number, divisor: number) => {
         angledInstancedArrays.vertexAttribDivisorANGLE(index, divisor);
       };
-      // drawArraysInstanced
       /**
-       * @param mode
-       * @param first
-       * @param count
-       * @param instanceCount
+       * drawArraysInstanced
+       * @param mode - the draw mode
+       * @param first - the first index
+       * @param count - the size of each instance
+       * @param instanceCount - the number of instances
        */
       gl.drawArraysInstanced = (
         mode: number,
@@ -95,13 +94,13 @@ export default class WebGLContext extends Context {
       ) => {
         angledInstancedArrays.drawArraysInstancedANGLE(mode, first, count, instanceCount);
       };
-      // drawElementsInstanced
       /**
-       * @param mode
-       * @param count
-       * @param type
-       * @param offset
-       * @param primcount
+       * drawElementsInstanced
+       * @param mode - the draw mode
+       * @param count - the size of each instance
+       * @param type - the data type
+       * @param offset - the offset of the data to start reading from
+       * @param primcount - the number of instances
        */
       gl.drawElementsInstanced = (
         mode: number,

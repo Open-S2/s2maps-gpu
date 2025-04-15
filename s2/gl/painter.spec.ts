@@ -1,3 +1,4 @@
+import type { ColorMode } from 's2/s2Map';
 import type { GlyphImages } from 'workers/source/glyphSource';
 import type Projector from 'ui/camera/projector';
 import type { TileGL as Tile } from 'source/tile.spec';
@@ -21,7 +22,7 @@ export interface Painter {
   resize: (width: number, height: number) => void;
   getScreen: () => Promise<Uint8ClampedArray>;
   injectGlyphImages: (maxHeight: number, images: GlyphImages, tile: Tile[]) => void;
-  setColorMode: (mode: 0 | 1 | 2 | 3 | 4) => void;
+  setColorMode: (mode: ColorMode) => void;
   delete: () => void;
   injectFrameUniforms: (matrix: Float32Array, view: Float32Array, aspect: VectorPoint) => void;
   injectSpriteImage: (data: SpriteImageMessage, tiles: Tile[]) => void;

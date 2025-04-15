@@ -9,7 +9,7 @@ import type {
   Glyphs,
   HeatmapStyle,
   HillshadeStyle,
-  JSONFeatures,
+  JSONCollection,
   Join,
   LayerStyle,
   LineStyle,
@@ -45,7 +45,9 @@ import type {
 } from '@maplibre/maplibre-gl-style-spec';
 
 /**
- * @param input
+ * Convert a MapLibre style to an s2maps style
+ * @param input - the MapLibre style
+ * @returns the s2maps style
  */
 export default function maplibreStyleConverter(input: StyleSpecification): StyleDefinition {
   const { center, zoom, bearing, pitch, sprite, sources } = input;
@@ -74,7 +76,9 @@ export default function maplibreStyleConverter(input: StyleSpecification): Style
 }
 
 /**
- * @param input
+ * Convert source inputs
+ * @param input - the MapLibre input sources
+ * @returns the s2maps sources
  */
 function convertSources(input: Record<string, SourceSpecification>): Sources {
   const sources: Sources = {};
@@ -94,7 +98,7 @@ function convertSources(input: Record<string, SourceSpecification>): Sources {
       sources[name] = {
         path: '',
         extension: 'geojson',
-        data: data as JSONFeatures | undefined,
+        data: data as JSONCollection | undefined,
         type: 'json',
         maxzoom,
         cluster,
@@ -116,8 +120,9 @@ function convertSources(input: Record<string, SourceSpecification>): Sources {
           type,
           minzoom,
           maxzoom,
-          bounds,
-          format: 'zxy',
+          // bounds,
+          scheme: 'xyz',
+          old_bounds: bounds,
         };
       }
     }
@@ -127,7 +132,9 @@ function convertSources(input: Record<string, SourceSpecification>): Sources {
 }
 
 /**
- * @param input
+ * Convert spite specific inputs
+ * @param input - the MapLibre input sprite
+ * @returns the s2maps sprite
  */
 function convertSprite(input: SpriteSpecification): Sprites {
   const res: Sprites = {};
@@ -142,8 +149,10 @@ function convertSprite(input: SpriteSpecification): Sprites {
 
 // TODO: symbol, fill-extrusion
 /**
- * @param layer
- * @param glyphs
+ * Convert a MapLibre layer to an s2maps layer
+ * @param layer - the MapLibre layer
+ * @param glyphs - associated glyphs to inject into
+ * @returns the s2maps layer
  */
 function convertLayer(layer: LayerSpecification, glyphs: Glyphs): undefined | LayerStyle {
   const { type } = layer;
@@ -163,7 +172,9 @@ function convertLayer(layer: LayerSpecification, glyphs: Glyphs): undefined | La
 
 // TODO: background-pattern
 /**
- * @param backgroundLayer
+ * Convert a MapLibre background layer
+ * @param backgroundLayer - the MapLibre background layer
+ * @returns the s2maps background layer
  */
 function convertLayerBackground(backgroundLayer: BackgroundLayerSpecification): FillStyle {
   const { id, metadata, minzoom, maxzoom, layout = {}, paint = {} } = backgroundLayer;
@@ -184,7 +195,9 @@ function convertLayerBackground(backgroundLayer: BackgroundLayerSpecification): 
 // TODO: PAINT: fill-antialias, fill-outline-color, fill-translate, fill-translate-anchor, fill-pattern
 // TODO: LAYOUT: fill-sort-key
 /**
- * @param fillLayer
+ * Convert a MapLibre fill layer
+ * @param fillLayer - the MapLibre fill layer
+ * @returns the s2maps fill layer
  */
 function convertLayerFill(fillLayer: FillLayerSpecification): FillStyle {
   const {
@@ -217,7 +230,9 @@ function convertLayerFill(fillLayer: FillLayerSpecification): FillStyle {
 // TODO: line-miter-limit, line-round-limit, line-sort-key, line-translate, line-translate-anchor, line-pattern
 // TODO: line-blur, line-gradient, line-offset, line-gap-width, line-dasharray
 /**
- * @param lineLayer
+ * Convert a MapLibre line layer
+ * @param lineLayer - the MapLibre line layer
+ * @returns the s2maps line layer
  */
 function convertLayerLine(lineLayer: LineLayerSpecification): LineStyle {
   const {
@@ -258,7 +273,9 @@ function convertLayerLine(lineLayer: LineLayerSpecification): LineStyle {
 
 // TODO: raster-hue-rotate, raster-brightness-min, raster-brightness-max
 /**
- * @param input
+ * Convert a MapLibre raster layer
+ * @param input - the MapLibre input layer
+ * @returns the s2maps raster layer
  */
 function convertLayerRaster(input: RasterLayerSpecification): undefined | RasterStyle {
   const {
@@ -291,7 +308,9 @@ function convertLayerRaster(input: RasterLayerSpecification): undefined | Raster
 
 // TODO: hillshade-illumination-anchor
 /**
- * @param input
+ * Convert a MapLibre hillshade layer
+ * @param input - the MapLibre input layer
+ * @returns the s2maps hillshade layer
  */
 function convertLayerHillshade(input?: HillshadeLayerSpecification): HillshadeStyle {
   if (input === undefined) throw new Error('Hillshade layer not supported');
@@ -326,7 +345,9 @@ function convertLayerHillshade(input?: HillshadeLayerSpecification): HillshadeSt
 }
 
 /**
- * @param input
+ * Convert a MapLibre heatmap layer
+ * @param input - the MapLibre input layer
+ * @returns the s2maps heatmap layer
  */
 function convertLayerHeatmap(input?: HeatmapLayerSpecification): HeatmapStyle {
   if (input === undefined) throw new Error('Heatmap layer not supported');
@@ -363,7 +384,9 @@ function convertLayerHeatmap(input?: HeatmapLayerSpecification): HeatmapStyle {
 // TODO: circle-sort-key, circle-blur, translate, translate-anchor
 // NOTE: circle-stroke-opacity? should I implement?
 /**
- * @param input
+ * Convert a MapLibre circle layer
+ * @param input - the MapLibre input layer
+ * @returns the s2maps circle layer
  */
 function convertLayerCircle(input: CircleLayerSpecification): undefined | PointStyle {
   const {
@@ -398,8 +421,10 @@ function convertLayerCircle(input: CircleLayerSpecification): undefined | PointS
 
 // TODO: opacity, MANYYYYY different properties to convert
 /**
- * @param input
- * @param glyphs
+ * Convert a MapLibre symbol layer
+ * @param input - the MapLibre input layer
+ * @param glyphs - associated glyphs to inject into
+ * @returns the s2maps symbol layer
  */
 function convertLayerSymbol(
   input: SymbolLayerSpecification,
@@ -503,7 +528,9 @@ function convertLayerSymbol(
 
 // TODO:
 /**
- * @param input
+ * Convert a MapLibre color ramp
+ * @param input - the MapLibre input color ramp
+ * @returns the s2maps color ramp
  */
 function convertColorRamp(
   input?: ExpressionSpecification,
@@ -518,7 +545,9 @@ function convertColorRamp(
 }
 
 /**
- * @param input
+ * Convert a MapLibre filter
+ * @param input - the MapLibre input filter
+ * @returns the s2maps filter
  */
 function convertFilter(input?: FilterSpecification): undefined | Filter {
   if (Array.isArray(input)) {
@@ -555,7 +584,9 @@ function convertFilter(input?: FilterSpecification): undefined | Filter {
 
 // TODO:
 /**
- * @param input
+ * Convert a MapLibre property
+ * @param input - the MapLibre input property
+ * @returns the s2maps property
  */
 function convertPropertyValueSpecification<T extends NotNullOrObject>(
   input?: PropertyValueSpecification<T>,
@@ -573,7 +604,9 @@ function convertPropertyValueSpecification<T extends NotNullOrObject>(
 }
 
 /**
- * @param input
+ * Convert a MapLibre property
+ * @param input - the MapLibre input property
+ * @returns the s2maps property
  */
 function convertPropertyValueSpecificationMatch<T extends NotNullOrObject>(
   input: [
@@ -614,9 +647,7 @@ function convertPropertyValueSpecificationMatch<T extends NotNullOrObject>(
   return res;
 }
 
-/**
- *
- */
+/** A Maplibre data-driven interval type property */
 type IntervalType<T> =
   | {
       type: 'interval';
@@ -645,7 +676,9 @@ type IntervalType<T> =
 
 // TODO:
 /**
- * @param input
+ * Convert a MapLibre data-driven property
+ * @param input - the MapLibre input property
+ * @returns the s2maps property
  */
 function convertDataDrivenPropertyValueSpecification<T extends NotNullOrObject>(
   input?: DataDrivenPropertyValueSpecification<T>,
@@ -669,7 +702,9 @@ function convertDataDrivenPropertyValueSpecification<T extends NotNullOrObject>(
 
 // for now assume interval
 /**
- * @param input
+ * Convert a MapLibre data-driven property
+ * @param input - the MapLibre input property
+ * @returns the s2maps property
  */
 function convertDataDrivenPropertyValueSpecificationStops<T extends NotNullOrObject>(
   input: IntervalType<T>,
@@ -695,10 +730,11 @@ function convertDataDrivenPropertyValueSpecificationStops<T extends NotNullOrObj
   return res;
 }
 
-// create a function that takes a string as an input
-// if the input string has {word} (brackets around the word), replace it with "?word"
 /**
- * @param input
+ * create a function that takes a string as an input
+ * if the input string has {word} (brackets around the word), replace it with "?word"
+ * @param input - the input string
+ * @returns the output string
  */
 function replaceBrackets<T>(input: string): T {
   if (typeof input !== 'string') return input;
@@ -706,8 +742,10 @@ function replaceBrackets<T>(input: string): T {
 }
 
 /**
- * @param inputDashes
- * @param color
+ * Convert a MapLibre dash array
+ * @param inputDashes - the MapLibre input dash array
+ * @param color - the color of the dash
+ * @returns the s2maps dash array
  */
 function convertDashArray(
   inputDashes: PropertyValueSpecification<number[]>,

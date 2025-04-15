@@ -1,13 +1,9 @@
 import { Cache } from 'gis-tools';
 import Source from './source';
 
-import type { Metadata } from './source';
 import type { Point3D } from 'gis-tools';
+import type { SourceMetadata } from 'style/style.spec';
 import type { TileRequest } from '../worker.spec';
-// import type { Face } projections'
-
-// NOTE: This is officially deprecated and will be removed in the future to be replaced
-// by S2PMTilesSource.
 
 const MAX_SIZE = 2_000_000; // ~2 MB
 const NODE_SIZE = 10;
@@ -16,15 +12,18 @@ const ROOT_DIR_SIZE = DIR_SIZE * 6; // (81_900) -> 6 faces of 6 level directorie
 const DB_METADATA_SIZE = ROOT_DIR_SIZE + 20; // (81_920) -> 6 faces of 6 level directories + their leaves + 20 bytes for the header
 
 /**
+ * # S2 Tiles Source
  *
+ * A Tile caching mechanic that stores all tile data in a single file. Great for cloud storage.
+ *
+ * NOTE: This is most likely deprecated and may be removed in the future to be replaced
+ * by S2PMTilesSource.
  */
 export default class S2TilesSource extends Source {
   version = 1;
   rootDir: Record<number, DataView> = {};
   dirCache = new Cache<number, DataView>(15);
-  /**
-   * @param mapID
-   */
+  /** @param mapID - the id of the map we are fetching data for */
   override async build(mapID: string): Promise<void> {
     // fetch the metadata
     const ab = (await this.getRange(`${this.path}?type=dir`, 0, DB_METADATA_SIZE, mapID)) as
@@ -58,15 +57,20 @@ export default class S2TilesSource extends Source {
     // create root directories
     for (const face of [0, 1, 2, 3, 4, 5])
       this.rootDir[face] = new DataView(ab, 20 + face * DIR_SIZE, DIR_SIZE);
-    const metadata = (await this.getRange(`${this.path}?type=metadata`, mO, mL, mapID)) as Metadata;
+    const metadata = (await this.getRange(
+      `${this.path}?type=metadata`,
+      mO,
+      mL,
+      mapID,
+    )) as SourceMetadata;
     this._buildMetadata(metadata, mapID);
   }
 
-  // Here, we use the memory mapped file directory tree system to find our data
   /**
-   * @param mapID
-   * @param tile
-   * @param sourceName
+   * Here, we use the memory mapped file directory tree system to find our data
+   * @param mapID - the id of the map we are fetching data for
+   * @param tile - the tile request
+   * @param sourceName - the name of the source
    */
   override async _tileRequest(mapID: string, tile: TileRequest, sourceName: string): Promise<void> {
     const { type, encoding, session, size } = this;
@@ -98,11 +102,13 @@ export default class S2TilesSource extends Source {
   }
 
   /**
-   * @param mapID
-   * @param dir
-   * @param zoom
-   * @param i
-   * @param j
+   * Walk the directory tree
+   * @param mapID - the map id
+   * @param dir - the current directory we are walking
+   * @param zoom - current zoom
+   * @param i - current i-coordinate
+   * @param j - current j-coordinate
+   * @returns the offset and length of either the next directory or raw data
    */
   async #walk(
     mapID: string,
@@ -142,9 +148,11 @@ export default class S2TilesSource extends Source {
   }
 
   /**
-   * @param mapID
-   * @param offset
-   * @param length
+   * Get a directory
+   * @param mapID - the map id we are are fetching data for
+   * @param offset - the start of the directory
+   * @param length - the length of the directory
+   * @returns the directory
    */
   async #getDir(mapID: string, offset: number, length: number): Promise<undefined | DataView> {
     if (this.dirCache.has(offset)) return this.dirCache.get(offset);
@@ -159,10 +167,12 @@ export default class S2TilesSource extends Source {
   }
 
   /**
-   * @param url
-   * @param offset
-   * @param length
-   * @param mapID
+   * Get a range request
+   * @param url - the base href to build a range request from
+   * @param offset - the start of the range
+   * @param length - the length of the range
+   * @param mapID - the map id we are going to build render data for
+   * @returns raw tile data or directory data
    */
   async getRange(
     url: string,
@@ -187,19 +197,23 @@ export default class S2TilesSource extends Source {
 }
 
 /**
- * @param dataview
- * @param pos
+ * Given a dataview and a position, get a 48-bit integer
+ * @param dataview - the dataview
+ * @param pos - the position to start reading from
+ * @returns a 48-bit integer
  */
-const getUint48 = (dataview: DataView, pos: number): number => {
+function getUint48(dataview: DataView, pos: number): number {
   return dataview.getUint32(pos + 2, true) * (1 << 16) + dataview.getUint16(pos, true);
-};
+}
 
 /**
- * @param zoom
- * @param x
- * @param y
+ * Given a starting point, find a list of path offsets to traverse
+ * @param zoom - starting zoom-level
+ * @param x - starting x-coordinate
+ * @param y - starting y-coordinate
+ * @returns a list of path offsets
  */
-const getPath = (zoom: number, x: number, y: number): number[] => {
+function getPath(zoom: number, x: number, y: number): number[] {
   const { max, pow } = Math;
   const path: Point3D[] = [];
 
@@ -215,7 +229,7 @@ const getPath = (zoom: number, x: number, y: number): number[] => {
   // store leftovers
   path.push([zoom, x, y]);
 
-  return path.map(([zoom, x, y]) => {
+  return path.map(([zoom, x, y]): number => {
     let val = 0;
     // adjust by position at current zoom
     val += y * (1 << zoom) + x;
@@ -224,4 +238,4 @@ const getPath = (zoom: number, x: number, y: number): number[] => {
 
     return val;
   });
-};
+}

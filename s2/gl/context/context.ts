@@ -1,3 +1,4 @@
+import { GPUType } from 'style/style.spec';
 import buildMask from './buildMask';
 
 import type { BBox } from 'gis-tools';
@@ -5,14 +6,12 @@ import type { ColorArray } from 'style/color';
 import type { GlyphImages } from 'workers/source/glyphSource';
 import type { MapOptions } from 'ui/s2mapUI';
 import type { Painter } from '../painter.spec';
+import type { Projection } from 'style/style.spec';
 import type { SpriteImageMessage } from 'workers/worker.spec';
 import type { TileGL as Tile } from 'source/tile.spec';
-import type { GPUType, Projection } from 'style/style.spec';
 import type { MaskSource, TileMaskSource, Workflow } from '../workflows/workflow.spec';
 
-/**
- *
- */
+/** Frame buffer object like wrapper */
 export interface FBO {
   width: number;
   height: number;
@@ -27,12 +26,16 @@ const DEPTH_ESPILON = 1 / Math.pow(2, 16);
 // CONSIDER: get apple devices https://github.com/pmndrs/detect-gpu/blob/master/src/internal/deobfuscateAppleGPU.ts
 
 /**
+ * # Context
  *
+ * ## Description
+ * A WebGL(1|2) context with GPU information.
+ * A useful wrapper to store state and reduce costly GPU calls when unnecessary
  */
 export default class Context {
   gl: WebGLRenderingContext | WebGL2RenderingContext;
   painter: Painter;
-  type: GPUType = 1;
+  type: GPUType = GPUType.WebGL1;
   projection: Projection = 'S2';
   presentation: { width: number; height: number } = { width: 0, height: 0 };
   renderer: string; // ex: AMD Radeon Pro 560 OpenGL Engine (https://github.com/pmndrs/detect-gpu)
@@ -60,9 +63,9 @@ export default class Context {
   nullTexture!: WebGLTexture;
   sharedFBO: FBO;
   /**
-   * @param context
-   * @param options
-   * @param painter
+   * @param context - The WebGL1 or WebGL2 context to read from
+   * @param options - Map options
+   * @param painter - The painter that will use this context to manage rendering state
    */
   constructor(
     context: WebGLRenderingContext | WebGL2RenderingContext,
@@ -97,19 +100,19 @@ export default class Context {
     this.defaultBlend();
   }
 
-  // SETUP NULL TEXTURE
+  /* SETUP NULL TEXTURE */
 
-  /**
-   *
-   */
+  /** Setup a null texture for cases where we don't need to use the texture but the uniform is required */
   #buildNullTexture(): void {
     this.nullTexture = this.buildTexture(null, 1);
   }
 
-  // MANAGE FRAMEBUFFER OBJECTS
+  /* MANAGE FRAMEBUFFER OBJECTS */
 
   /**
-   * @param height
+   * Setup a framebuffer for things like glyph/icon/sprite/image rendering
+   * @param height - The height of the framebuffer
+   * @returns A framebuffer that can handle glyph/icon/sprite/image rendering
    */
   #buildFramebuffer(height: number): FBO {
     const { gl } = this;
@@ -156,7 +159,8 @@ export default class Context {
   }
 
   /**
-   * @param height
+   * Increase the size of the glyph/icon/sprite/image framebuffer to accomodate more data
+   * @param height - The height of the framebuffer
    */
   #increaseFBOSize(height: number): void {
     const { gl, type, sharedFBO } = this;
@@ -194,7 +198,8 @@ export default class Context {
   }
 
   /**
-   * @param fbo
+   * Delete a framebuffer
+   * @param fbo - The framebuffer to cleanup
    */
   #deleteFBO(fbo: FBO): void {
     const { gl } = this;
@@ -205,11 +210,12 @@ export default class Context {
     }
   }
 
-  // MANAGE IMAGE IMPORTS
+  /* MANAGE IMAGE IMPORTS */
 
   /**
-   * @param maxHeight
-   * @param images
+   * Inject a glyph/icon image to the GPU
+   * @param maxHeight - the maximum height of the texture required to hold the image
+   * @param images - the glyph/icon images
    */
   injectImages(maxHeight: number, images: GlyphImages): void {
     const { gl } = this;
@@ -236,7 +242,8 @@ export default class Context {
   }
 
   /**
-   * @param data
+   * Inject a sprite image to the GPU
+   * @param data - the raw image data of the sprite
    */
   injectSpriteImage(data: SpriteImageMessage): void {
     const { gl } = this;
@@ -272,11 +279,9 @@ export default class Context {
       );
   }
 
-  // SETUP INTERACTIVE BUFFER
+  /* SETUP INTERACTIVE BUFFER */
 
-  /**
-   *
-   */
+  /** Setup an interactive FBO */
   #buildInteractFBO(): void {
     const { gl } = this;
     // TEXTURE & STENCIL
@@ -300,9 +305,7 @@ export default class Context {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
 
-  /**
-   *
-   */
+  /** Resize the size of the canvas and all associating buffers */
   resize(): void {
     const { width, height } = this.gl.canvas;
     this.presentation = { width, height };
@@ -310,7 +313,8 @@ export default class Context {
   }
 
   /**
-   * @param interactive
+   * Set the interactive mode
+   * @param interactive - the interactive mode (true means it is interactive)
    */
   setInteractive(interactive: boolean): void {
     this.interactive = interactive;
@@ -318,7 +322,8 @@ export default class Context {
   }
 
   /**
-   * @param projection
+   * Set the projection type (S2 or WM)
+   * @param projection - the projection
    */
   setProjection(projection: Projection): void {
     const { gl } = this;
@@ -327,9 +332,7 @@ export default class Context {
     else gl.cullFace(gl.FRONT);
   }
 
-  /**
-   *
-   */
+  /** Resize the interactive buffer */
   resizeInteract(): void {
     const { gl, interactive } = this;
     const width = interactive ? gl.canvas.width : 1;
@@ -349,8 +352,10 @@ export default class Context {
   }
 
   /**
-   * @param x
-   * @param y
+   * Get the collection of features found at the mouse position
+   * @param x - x mouse position
+   * @param y - y mouse position
+   * @returns the collection of features found
    */
   async getFeatureAtMousePosition(x: number, y: number): Promise<number[]> {
     const { gl, interactFramebuffer, featurePoint } = this;
@@ -368,9 +373,7 @@ export default class Context {
     return await res;
   }
 
-  /**
-   *
-   */
+  /** Delete/cleanup the context */
   delete(): void {
     const { gl, vertexBuffer, vao, interactTexture, stencilBuffer, interactFramebuffer } = this;
     // remove local data
@@ -394,9 +397,7 @@ export default class Context {
 
   /** CONSTRUCTION */
 
-  /**
-   *
-   */
+  /** Create a default quad for cases where a quad is needed (avoid allocation for every quad) */
   _createDefaultQuad(): void {
     const { gl } = this;
     // create a vertex array object
@@ -408,14 +409,16 @@ export default class Context {
     gl.bindVertexArray(null);
   }
 
-  // the zoom determines the number of divisions necessary to maintain a visually
-  // asthetic spherical shape. As we zoom in, the tiles are practically flat,
-  // so division is less useful.
-  // 0, 1 => 16  ;  2, 3 => 8  ;  4, 5 => 4  ;  6, 7 => 2  ;  8+ => 1
-  // context stores masks so we don't keep recreating them and put excess stress and memory on the GPU
   /**
-   * @param division
-   * @param tile
+   * Get the mask for a tile
+   * the zoom determines the number of divisions necessary to maintain a visually
+   * asthetic spherical shape. As we zoom in, the tiles are practically flat,
+   * so division is less useful.
+   * 0, 1 => 16  ;  2, 3 => 8  ;  4, 5 => 4  ;  6, 7 => 2  ;  8+ => 1
+   * context stores masks so we don't keep recreating them and put excess stress and memory on the GPU
+   * @param division - number of division to slice the geometry by
+   * @param tile - the tile to create the mask for
+   * @returns the mask
    */
   getMask(division: number, tile: Tile): TileMaskSource {
     const { masks } = this;
@@ -425,14 +428,12 @@ export default class Context {
       mask = buildMask(division, this);
       masks.set(division, mask);
     }
-
+    // we want to mimic the functionality of other draw structures
     const tileMaskSource: TileMaskSource = {
       ...mask,
       tile,
-      /**
-       *
-       */
-      draw: () => {
+      /** internal draw command */
+      draw: (): void => {
         const { fill } = this.painter.workflows;
         if (fill === undefined) return;
         // let the context know the current workflow
@@ -442,18 +443,14 @@ export default class Context {
         fill.setTileUniforms(tile);
         fill.drawMask(tileMaskSource);
       },
-      /**
-       *
-       */
-      destroy: () => {},
+      /** internal destroy command */
+      destroy: (): void => {},
     };
 
     return tileMaskSource;
   }
 
-  /**
-   *
-   */
+  /** Draw a quad */
   drawQuad(): void {
     const { gl, vao } = this;
     // bind the vao
@@ -462,34 +459,29 @@ export default class Context {
     gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
   }
 
-  /** PREP PHASE */
+  /* PREP PHASE */
 
-  /**
-   *
-   */
+  /** Reset the viewport */
   resetViewport(): void {
     const { gl } = this;
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   }
 
-  /**
-   *
-   */
+  /** Bind to the main buffer */
   bindMainBuffer(): void {
     const { gl } = this;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
 
   /**
-   * @param clearColor
+   * Set a clear color for the initialization draws (like the background color)
+   * @param clearColor - the clear color
    */
   setClearColor(clearColor: ColorArray): void {
     this.clearColorRGBA = clearColor;
   }
 
-  /**
-   *
-   */
+  /** Setup a new scene for future draw calls */
   newScene(): void {
     const { gl } = this;
     // ensure we are attached to the main buffer
@@ -502,16 +494,15 @@ export default class Context {
     gl.clear(gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
   }
 
-  /**
-   *
-   */
+  /** Reset the current workflow */
   resetWorkflow(): void {
     this.currWorkflow = undefined;
   }
 
   /**
-   * @param workflow
-   * @param use
+   * Set the current workflow
+   * @param workflow - the workflow to set as the current
+   * @param use - flag to say we want to also activate the workflow
    */
   setWorkflow(workflow: Workflow, use = true): void {
     if (this.currWorkflow?.label === workflow.label) return;
@@ -519,9 +510,7 @@ export default class Context {
     this.currWorkflow = workflow;
   }
 
-  /**
-   *
-   */
+  /** Clear the interact buffer */
   clearInteractBuffer(): void {
     const { gl } = this;
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.interactFramebuffer);
@@ -530,40 +519,36 @@ export default class Context {
     gl.clear(gl.STENCIL_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
   }
 
-  /**
-   *
-   */
+  /** Clear the canvas using the current clear color */
   clearColor(): void {
     const { gl } = this;
     gl.clearColor(...this.clearColorRGBA);
     gl.blendColor(0, 0, 0, 0);
   }
 
-  /**
-   *
-   */
+  /** Clear both the color and depth buffers */
   clearColorDepthBuffers(): void {
     const { gl } = this;
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
   }
 
-  /**
-   *
-   */
+  /** Clear the color buffer */
   clearColorBuffer(): void {
     const { gl } = this;
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
   }
 
-  /** TEXTURE */
+  /* TEXTURE */
 
   /**
-   * @param imageData
-   * @param width
-   * @param height
-   * @param repeat
+   * Build a new texture
+   * @param imageData - the raw image data to inject to the texture
+   * @param width - width of the texture
+   * @param height - height of the texture
+   * @param repeat - should the texture repeat
+   * @returns the texture
    */
   buildTexture(
     imageData: null | ArrayBufferView | ImageBitmap,
@@ -604,10 +589,11 @@ export default class Context {
   }
 
   /**
-   * @param texture
-   * @param imageData
-   * @param width
-   * @param height
+   * Update an existing texture
+   * @param texture - the texture to update
+   * @param imageData - the new image data to inject
+   * @param width - the new width
+   * @param height - the new height
    */
   updateTexture(
     texture: WebGLTexture,
@@ -634,11 +620,9 @@ export default class Context {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
   }
 
-  /** DEPTH */
+  /* DEPTH */
 
-  /**
-   *
-   */
+  /** Enable depth testing */
   enableDepthTest(): void {
     const { gl, depthState } = this;
     if (!depthState) {
@@ -647,9 +631,7 @@ export default class Context {
     }
   }
 
-  /**
-   *
-   */
+  /** Disable depth testing */
   disableDepthTest(): void {
     const { gl, depthState } = this;
     if (depthState) {
@@ -658,9 +640,7 @@ export default class Context {
     }
   }
 
-  /**
-   *
-   */
+  /** Always pass depth test */
   alwaysDepth(): void {
     const { gl, zTestMode } = this;
     if (zTestMode !== 0) {
@@ -669,9 +649,7 @@ export default class Context {
     }
   }
 
-  /**
-   *
-   */
+  /** Depth testing should pass if the depth is less than the reference value */
   lessDepth(): void {
     const { gl, zTestMode } = this;
     if (zTestMode !== 1) {
@@ -680,9 +658,7 @@ export default class Context {
     }
   }
 
-  /**
-   *
-   */
+  /** Depth testing should pass if the depth is less than or equal to the reference value */
   lequalDepth(): void {
     const { gl, zTestMode } = this;
     if (zTestMode !== 2) {
@@ -692,7 +668,8 @@ export default class Context {
   }
 
   /**
-   * @param depthPos
+   * Set the depth range
+   * @param depthPos - the depth position
    */
   setDepthRange(depthPos: number): void {
     const { gl, zLow, zHigh } = this;
@@ -703,9 +680,7 @@ export default class Context {
     }
   }
 
-  /**
-   *
-   */
+  /** Reset the depth range to the full depth range */
   resetDepthRange(): void {
     const { gl, zLow, zHigh } = this;
     if (zLow !== 0 || zHigh !== 1) {
@@ -715,11 +690,9 @@ export default class Context {
     }
   }
 
-  /** CULLING */
+  /* CULLING */
 
-  /**
-   *
-   */
+  /** Enable face culling */
   enableCullFace(): void {
     const { gl, cullState } = this;
     if (!cullState) {
@@ -728,9 +701,7 @@ export default class Context {
     }
   }
 
-  /**
-   *
-   */
+  /** Disable face culling */
   disableCullFace(): void {
     const { gl, cullState } = this;
     if (cullState) {
@@ -739,11 +710,9 @@ export default class Context {
     }
   }
 
-  /** BLENDING */
+  /* BLENDING */
 
-  /**
-   *
-   */
+  /** Enable blending */
   enableBlend(): void {
     const { gl, blendState } = this;
     if (!blendState) {
@@ -752,9 +721,7 @@ export default class Context {
     }
   }
 
-  /**
-   *
-   */
+  /** Disable blending */
   disableBlend(): void {
     const { gl, blendState } = this;
     if (blendState) {
@@ -763,9 +730,7 @@ export default class Context {
     }
   }
 
-  /**
-   *
-   */
+  /** Set the blending mode to a default state */
   defaultBlend(): void {
     const { gl, blendMode } = this;
     this.enableBlend();
@@ -775,9 +740,7 @@ export default class Context {
     }
   }
 
-  /**
-   *
-   */
+  /** Set the blending mode to blend mode */
   shadeBlend(): void {
     const { gl, blendMode } = this;
     this.enableBlend();
@@ -787,9 +750,7 @@ export default class Context {
     }
   }
 
-  /**
-   *
-   */
+  /** Set the blending mode to inversion mode */
   inversionBlend(): void {
     const { gl, blendMode } = this;
     this.enableBlend();
@@ -799,9 +760,7 @@ export default class Context {
     }
   }
 
-  /**
-   *
-   */
+  /** Set the blending mode to zero mode */
   zeroBlend(): void {
     const { gl, blendMode } = this;
     this.enableBlend();
@@ -811,9 +770,7 @@ export default class Context {
     }
   }
 
-  /**
-   *
-   */
+  /** Set the blending mode to one mode */
   oneBlend(): void {
     const { gl, blendMode } = this;
     this.enableBlend();
@@ -823,11 +780,9 @@ export default class Context {
     }
   }
 
-  /** STENCILING */
+  /* STENCILING */
 
-  /**
-   *
-   */
+  /** Enable stencil testing */
   enableStencilTest(): void {
     const { gl, stencilState } = this;
     if (!stencilState) {
@@ -836,9 +791,7 @@ export default class Context {
     }
   }
 
-  /**
-   *
-   */
+  /** Disable stencil testing */
   disableStencilTest(): void {
     const { gl, stencilState } = this;
     if (stencilState) {
@@ -848,7 +801,8 @@ export default class Context {
   }
 
   /**
-   * @param ref
+   * Set the stencil function to always pass but you can still update the reference value
+   * @param ref - the reference value
    */
   stencilFuncAlways(ref: number): void {
     const { gl } = this;
@@ -858,7 +812,8 @@ export default class Context {
   }
 
   /**
-   * @param ref
+   * Set the stencil function to pass if the stencil value is equal to the reference value
+   * @param ref - the reference value
    */
   stencilFuncEqual(ref: number): void {
     const { gl } = this;
@@ -867,18 +822,14 @@ export default class Context {
     gl.stencilFunc(gl.EQUAL, ref, 0xff);
   }
 
-  /**
-   *
-   */
+  /** Set the stenci mode to default */
   stencilDefault(): void {
     const { gl } = this;
     gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE);
     gl.colorMask(true, true, true, true);
   }
 
-  /**
-   *
-   */
+  /** Set the stencil mode to invert */
   stencilInvert(): void {
     const { gl } = this;
     gl.colorMask(false, false, false, false);
@@ -886,9 +837,7 @@ export default class Context {
     gl.stencilFunc(gl.ALWAYS, 0, 0xff);
   }
 
-  /**
-   *
-   */
+  /** Set the stencil mode to zero */
   stencilZero(): void {
     const { gl } = this;
     gl.colorMask(true, true, true, true);
@@ -896,11 +845,9 @@ export default class Context {
     gl.stencilFunc(gl.NOTEQUAL, 0, 0xff);
   }
 
-  /** MASKING */
+  /* MASKING */
 
-  /**
-   *
-   */
+  /** enable mask testing */
   enableMaskTest(): void {
     const { gl } = this;
     this.defaultBlend();
@@ -911,14 +858,17 @@ export default class Context {
     gl.colorMask(false, false, false, false);
   }
 
-  /**
-   *
-   */
+  /** setup to "flush" a mask's coverage */
   flushMask(): void {
     this.gl.colorMask(true, true, true, true);
   }
 
-  /** VAO */
+  /* VAO */
+
+  /**
+   * Build a vertex array object
+   * @returns the vertex array object
+   */
   buildVAO(): WebGLVertexArrayObject {
     const { gl } = this;
     const vao = gl.createVertexArray();
@@ -929,17 +879,19 @@ export default class Context {
     return vao;
   }
 
-  /** Attributes */
+  /* Attributes */
 
   /**
-   * @param ab
-   * @param indx
-   * @param size
-   * @param type
-   * @param normalized
-   * @param stride
-   * @param offset
-   * @param instance
+   * Bind a vertex attribute
+   * @param ab - the array buffer
+   * @param indx - the index
+   * @param size - the size
+   * @param type - the type
+   * @param normalized - if true, normalize the input data
+   * @param stride - the stride
+   * @param offset - the offset
+   * @param instance - if true, the VAO is used for instancing
+   * @returns the buffer
    */
   bindEnableVertexAttr(
     ab: ArrayBufferView,
@@ -959,9 +911,11 @@ export default class Context {
   }
 
   /**
-   * @param ab
-   * @param attributes
-   * @param instance
+   * Bind mulitiple vertex attribute
+   * @param ab - the array buffer
+   * @param attributes - the collection of attributes that use the same buffer
+   * @param instance - if true, the resulting VAO is used for instancing
+   * @returns the buffer
    */
   bindEnableVertexAttrMulti(
     ab: ArrayBufferView,
@@ -986,7 +940,9 @@ export default class Context {
   }
 
   /**
-   * @param ab
+   * Bind and buffer an input array
+   * @param ab - the array buffer
+   * @returns the buffer
    */
   bindAndBuffer(ab: ArrayBufferView): WebGLBuffer {
     const { gl } = this;
@@ -1000,13 +956,14 @@ export default class Context {
   }
 
   /**
-   * @param indx
-   * @param size
-   * @param type
-   * @param normalized
-   * @param stride
-   * @param offset
-   * @param instance
+   * Define the state of a vertex attribute
+   * @param indx - the index
+   * @param size - the size
+   * @param type - the type
+   * @param normalized - if true, normalize the input data
+   * @param stride - the stride
+   * @param offset - the offset
+   * @param instance - if true, the VAO is used for instancing
    */
   defineBufferState(
     indx: number,
@@ -1026,7 +983,9 @@ export default class Context {
   }
 
   /**
-   * @param ab
+   * Bind an element array
+   * @param ab - the array buffer to bind
+   * @returns the buffer
    */
   bindElementArray(ab: ArrayBufferView): WebGLBuffer {
     const { gl } = this;
@@ -1039,11 +998,9 @@ export default class Context {
     return buf;
   }
 
-  /** CLEANUP */
+  /* CLEANUP */
 
-  /**
-   *
-   */
+  /** At the end of rendering a frame/scene, call this function to cleanup the state */
   finish(): void {
     const { gl } = this;
     gl.bindVertexArray(null);
@@ -1053,7 +1010,9 @@ export default class Context {
 }
 
 /**
- * @param renderer
+ * A helper function to clean up the renderer string to be more human readable
+ * @param renderer - the renderer string
+ * @returns the cleaned string
  */
 function cleanRenderer(renderer: string): string {
   return renderer.toLowerCase().replace(/angle \((.+)\)*$/, '$1');

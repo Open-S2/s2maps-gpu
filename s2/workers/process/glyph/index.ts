@@ -1,4 +1,5 @@
 import CollisionTester from './collisionTester';
+import { GPUType } from 'style/style.spec';
 import coalesceField from 'style/coalesceField';
 import featureSort from '../util/featureSort';
 import parseFeatureFunction from 'style/parseFeatureFunction';
@@ -20,13 +21,10 @@ import {
 } from '../util';
 
 import type { CodeDesign } from '../vectorWorker';
-import type { FlatPoint } from 's2/geometry';
 import type ImageStore from '../imageStore';
-import type { VectorPoints } from 'open-vector-tile';
 import type {
   Alignment,
   Anchor,
-  GPUType,
   GlyphDefinition,
   GlyphWorkerLayer,
   Placement,
@@ -39,10 +37,9 @@ import type {
   IDGen,
   VTFeature,
 } from '../process.spec';
+import type { Point, VectorMultiPoint } from 'gis-tools';
 
-/**
- *
- */
+/** Worker for processing glyph data */
 export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec {
   collisionTest: CollisionTester = new CollisionTester();
   imageStore: ImageStore;
@@ -50,11 +47,11 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
   sourceWorker: MessagePort;
   tileSize: number;
   /**
-   * @param idGen
-   * @param gpuType
-   * @param sourceWorker
-   * @param imageStore
-   * @param tileSize
+   * @param idGen - id generator to ensure features don't overlap
+   * @param gpuType - the GPU context of the map renderer (WebGL(1|2) | WebGPU)
+   * @param sourceWorker - the source worker to send requests to
+   * @param imageStore - the image store to pull/request the needed glyphs/icons
+   * @param tileSize - the tile size
    */
   constructor(
     idGen: IDGen,
@@ -70,7 +67,9 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
   }
 
   /**
-   * @param glyphLayer
+   * Setup a glyph layer for future processing of vector data
+   * @param glyphLayer - the glyph layer
+   * @returns the layer to process future glyph data
    */
   setupLayer(glyphLayer: GlyphDefinition): GlyphWorkerLayer {
     const {
@@ -141,8 +140,8 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       textFamily: parseFeatureFunction<string | string[]>(textFamily),
       textField: parseFeatureFunction<string | string[]>(textField),
       textAnchor: parseFeatureFunction<Anchor>(textAnchor),
-      textOffset: parseFeatureFunction<FlatPoint>(textOffset),
-      textPadding: parseFeatureFunction<FlatPoint>(textPadding),
+      textOffset: parseFeatureFunction<Point>(textOffset),
+      textPadding: parseFeatureFunction<Point>(textPadding),
       textWordWrap: parseFeatureFunction<number>(textWordWrap),
       textAlign: parseFeatureFunction<Alignment>(textAlign),
       textKerning: parseFeatureFunction<number>(textKerning),
@@ -150,8 +149,8 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       iconFamily: parseFeatureFunction<string | string[]>(iconFamily),
       iconField: parseFeatureFunction<string | string[]>(iconField),
       iconAnchor: parseFeatureFunction<Anchor>(iconAnchor),
-      iconOffset: parseFeatureFunction<FlatPoint>(iconOffset),
-      iconPadding: parseFeatureFunction<FlatPoint>(iconPadding),
+      iconOffset: parseFeatureFunction<Point>(iconOffset),
+      iconPadding: parseFeatureFunction<Point>(iconPadding),
       // properties
       geoFilter,
       interactive,
@@ -164,12 +163,14 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
   }
 
   /**
-   * @param tile
-   * @param extent
-   * @param feature
-   * @param glyphLayer
-   * @param mapID
-   * @param sourceName
+   * Build a Glyph Feature from input vector data
+   * @param tile - the tile request
+   * @param extent - the extent of the tile
+   * @param feature - the input vector tile feature
+   * @param glyphLayer - the glyph worker layer describing how to process the feature
+   * @param mapID - the id of the map to ship the data back to
+   * @param sourceName - the name of the source the data belongs to
+   * @returns true if the feature was built
    */
   async buildFeature(
     tile: TileRequest,
@@ -184,31 +185,37 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     const { layerIndex, overdraw, interactive, geoFilter, noShaping } = glyphLayer;
     const { gpuType, imageStore, featureStore } = this;
     const { properties } = feature;
-    let featureType = feature.type;
+    let featureType = feature.geoType();
+    const pointType = featureType === 'Point' || featureType === 'MultiPoint';
     const storeID: string = `${mapID}:${String(tile.id)}:${sourceName}`;
     if (!featureStore.has(storeID)) featureStore.set(storeID, []);
     // ensure that our imageStore is ready
     await imageStore.getReady(mapID);
     // filter as necessary
-    if (geoFilter.includes('poly') && (featureType === 3 || featureType === 4)) return false;
-    if (geoFilter.includes('line') && featureType === 2) return false;
-    if (geoFilter.includes('point') && featureType === 1) return false;
+    if (geoFilter.includes('poly') && (featureType === 'Polygon' || featureType === 'MultiPolygon'))
+      return false;
+    if (
+      geoFilter.includes('line') &&
+      (featureType === 'LineString' || featureType === 'MultiLineString')
+    )
+      return false;
+    if (geoFilter.includes('point') && pointType) return false;
     // load geometry
-    let geometry = feature.loadGeometry?.();
+    let geometry = feature.loadPoints();
     if (geometry === undefined) return false;
     // get the placement, spacing, and orientation
     let placement = glyphLayer.placement([], properties, zoom);
     const spacing = (glyphLayer.spacing([], properties, zoom) / tileSize) * extent;
     // if we are placing along a line, but the geometry is a point, we skip
-    if (featureType === 1 && placement !== 'point') placement = 'point';
+    if (pointType && placement !== 'point') placement = 'point';
     // if geometry is a line or poly, we may need to flatten it depending upon the placement
-    if (featureType !== 1 && placement !== 'line' && placement !== 'line-center-path') {
+    if (!pointType && placement !== 'line' && placement !== 'line-center-path') {
       if (placement === 'point') geometry = getSpacedPoints(geometry, featureType, spacing, extent);
       else if (placement === 'line-center-point') geometry = getCenterPoints(geometry, featureType);
-      featureType = 1;
+      featureType = 'Point';
     }
     // preprocess geometry
-    const clip = scaleShiftClip(geometry, featureType, extent, tile);
+    const clip = scaleShiftClip(geometry, 4, extent, tile) as VectorMultiPoint;
     if (clip.length === 0) return false;
 
     // build out all the individual s,t tile positions from the feature geometry
@@ -262,7 +269,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
         overdraw,
         layerIndex,
         gl2Code,
-        code: gpuType === 1 ? gl1Code : gl2Code,
+        code: gpuType === GPUType.WebGL1 ? gl1Code : gl2Code,
         // layout
         family,
         field,
@@ -291,8 +298,8 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     // prep id tracker and store
     const ids: number[] = [];
     const store = featureStore.get(storeID);
-    if (featureType === 1) {
-      for (const point of clip as VectorPoints) {
+    if (pointType) {
+      for (const point of clip as VectorMultiPoint) {
         const id = idGen.getNum();
         const idRGB = idToRGB(id);
         ids.push(id);
@@ -356,10 +363,11 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
   }
 
   /**
-   * @param mapID
-   * @param tile
-   * @param sourceName
-   * @param wait
+   * Flush a tile-request to the render thread
+   * @param mapID - id of the map to ship the data back to
+   * @param tile - tile request
+   * @param sourceName - name of the source the data belongs to
+   * @param wait - wait function. We need to wait for a response of missing glyph/icon data beore flushing
    */
   override async flush(
     mapID: string,
@@ -380,13 +388,14 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     this.featureStore.delete(storeID);
   }
 
-  // actually flushing because the glyph response came back (if needed)
-  // and all glyphs are ready to be processed
   /**
-   * @param mapID
-   * @param tile
-   * @param sourceName
-   * @param features
+   * We hit this function after flush's await is resolved.
+   * actually flushing because the glyph response came back (if needed)
+   * and all glyphs are ready to be processed
+   * @param mapID - id of the map to ship the data back to
+   * @param tile - tile request
+   * @param sourceName - name of the source the data belongs to
+   * @param features - glyph features to ship
    */
   #flushReadyFeatures(
     mapID: string,
@@ -426,10 +435,12 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
   }
 
   /**
-   * @param mapID
-   * @param family
-   * @param field
-   * @param outColor
+   * Build the glyph codes and colors for an icon
+   * @param mapID - id of the map
+   * @param family - icon family
+   * @param field - icon field
+   * @param outColor - output color
+   * @returns glyph codes for the icon
    */
   #mapIcon(mapID: string, family: string[], field: string, outColor: number[]): string[] {
     const fieldCodes: string[] = [];
@@ -446,15 +457,16 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
   }
 
   /**
-   * @param mapID
-   * @param sourceName
-   * @param tileID
+   * Flush the features
+   * @param mapID - id of the map
+   * @param sourceName - name of the source
+   * @param tileID - tile id
    */
   #flush(mapID: string, sourceName: string, tileID: bigint): void {
     const storeID: string = `${mapID}:${tileID}:${sourceName}`;
     const features = this.featureStore.get(storeID) ?? [];
     if (features.length === 0) return;
-    if (this.gpuType === 3) {
+    if (this.gpuType === GPUType.WebGPU) {
       this.#flushPoints3(mapID, sourceName, tileID, features);
     } else this.#flushPoints2(mapID, sourceName, tileID, features);
     // cleanup
@@ -462,10 +474,11 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
   }
 
   /**
-   * @param mapID
-   * @param sourceName
-   * @param tileID
-   * @param features
+   * WebGL 1 & 2 Flushing
+   * @param mapID - id of the map to ship the data back to
+   * @param sourceName - name of the source the data belongs to
+   * @param tileID - tile id the data belongs to
+   * @param features - features to ship
    */
   #flushPoints2(mapID: string, sourceName: string, tileID: bigint, features: GlyphObject[]): void {
     // setup draw thread variables
@@ -582,10 +595,11 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
   }
 
   /**
-   * @param mapID
-   * @param sourceName
-   * @param tileID
-   * @param features
+   * WebGPU glyph data to be flushed / sent to the front-end
+   * @param mapID - map id to ship the data back to
+   * @param sourceName - name of the source the data belongs to
+   * @param tileID - tile id the data belongs to
+   * @param features - collection of glyph features to flush into the renderer
    */
   #flushPoints3(mapID: string, sourceName: string, tileID: bigint, features: GlyphObject[]): void {
     // ID => { index: resultIndex, count: how many share the same resultIndex }
@@ -734,7 +748,9 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
 }
 
 /**
- * @param u32value
+ * Store a value as a 32 bit float
+ * @param u32value - a 32 bit unsigned integer
+ * @returns a 32 bit float
  */
 function storeAsFloat32(u32value: number): number {
   const buffer = new ArrayBuffer(4);
@@ -746,7 +762,9 @@ function storeAsFloat32(u32value: number): number {
 }
 
 /**
- * @param input
+ * Decode HTML entities
+ * @param input - the string to decode
+ * @returns the decoded string
  */
 function decodeHtmlEntities(input: string): string {
   return input.replace(/&#x([0-9A-Fa-f]+);/g, function (_, hex: string) {

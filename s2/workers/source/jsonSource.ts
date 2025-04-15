@@ -7,13 +7,18 @@ import type { SourceMetadata } from 'style/style.spec';
 import type { TileRequest } from '../worker.spec';
 
 /**
+ * # JSON Source
  *
+ * ## Description
+ * A source that is a json file that contains geojson or s2json data.
+ *
+ * The json can be stored as a tile store or a point cluster.
  */
 export default class JSONSource extends Source {
   json!: TileStore | WMPointCluster;
   /**
-   * @param mapID
-   * @param metadata
+   * @param mapID - the id of the map to build for
+   * @param metadata - the metadata for the source
    */
   override async build(mapID: string, metadata?: SourceMetadata): Promise<void> {
     const json =
@@ -39,7 +44,7 @@ export default class JSONSource extends Source {
         minzoom,
         maxzoom,
         faces: [...faces],
-        layers: { default: { minzoom: 0, maxzoom: 30, fields: {} } },
+        layers: { default: { minzoom: 0, maxzoom: 30, drawTypes: [], shape: {} } },
         extension: projection === 'S2' ? 's2json' : 'geojson',
         attributions: 'attributions' in json ? json.attributions : {},
       },
@@ -48,8 +53,9 @@ export default class JSONSource extends Source {
   }
 
   /**
-   * @param mapID
-   * @param tile
+   * Fetch a tile
+   * @param mapID - the id of the map requesting data
+   * @param tile - the tile request
    */
   override async _tileRequest(mapID: string, tile: TileRequest): Promise<void> {
     const { name, json, session, textEncoder } = this;

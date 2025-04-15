@@ -2,8 +2,10 @@ import type { Feature } from '../process.spec';
 import type { GlyphObject } from '../glyph/glyph.spec';
 
 /**
- * @param a
- * @param b
+ * Sort features or glyph features
+ * @param a - first feature
+ * @param b - comparison feature
+ * @returns a negative value if a < b, 0 if a === b, and a positive value if a > b
  */
 export default function featureSort(a: Feature | GlyphObject, b: Feature | GlyphObject): number {
   // layerIndex
@@ -11,7 +13,7 @@ export default function featureSort(a: Feature | GlyphObject, b: Feature | Glyph
   // glyph -> sort by glyphType (`point` or `path`) then by type (`text` or `icon`)
   if (diff === 0 && 'family' in a && 'family' in b) {
     diff = parseGlyphType(a.glyphType) - parseGlyphType(b.glyphType);
-    if (diff === 0) diff = parseType(a.type) - parseType(b.type);
+    if (diff === 0) diff = parseRenderType(a.type) - parseRenderType(b.type);
   }
   // if diff is still 0, sort by code
   let index = 0;
@@ -25,7 +27,9 @@ export default function featureSort(a: Feature | GlyphObject, b: Feature | Glyph
 }
 
 /**
- * @param type
+ * Parse a glyph type into a sorting number
+ * @param type - glyph type (point or path)
+ * @returns 0 for point, 1 for path
  */
 function parseGlyphType(type: 'point' | 'path'): number {
   if (type === 'point') return 0;
@@ -33,9 +37,11 @@ function parseGlyphType(type: 'point' | 'path'): number {
 }
 
 /**
- * @param type
+ * Parse a render type into a sorting number
+ * @param type - render type (text or icon)
+ * @returns 0 for text, 1 for icon
  */
-function parseType(type: 'text' | 'icon'): number {
+function parseRenderType(type: 'text' | 'icon'): number {
   if (type === 'icon') return 1;
   return 0;
 }

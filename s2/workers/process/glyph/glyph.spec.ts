@@ -3,9 +3,7 @@ import type { PathData } from '../util';
 import type { Point } from 'gis-tools';
 import type { Alignment, Anchor } from 'style/style.spec';
 
-/**
- *
- */
+/** a bounding box like structure */
 export interface SquareNode {
   id: number;
   minX: number;
@@ -14,35 +12,27 @@ export interface SquareNode {
   maxY: number;
 }
 
-/**
- *
- */
+/** a bounding circle like structure */
 export interface RoundNode {
   x: number;
   y: number;
   r: number;
 }
 
-/**
- *
- */
+/** collection of round nodes */
 export interface RoundNodes {
   id: number;
   nodes: RoundNode[];
 }
 
-/**
- *
- */
+/** a node is a collection of square or round nodes */
 export type Node = SquareNode | RoundNodes;
 
-/**
- *
- */
-export type GlyphData = [string, string]; // [family, char]
+/** a glyph descriptor. */
+export type GlyphData = [family: string, char: string];
 
 /**
- *
+ * Glyph Base properties found in all glyph types
  */
 export interface GlyphBase {
   // organization parameters
@@ -77,7 +67,7 @@ export interface GlyphBase {
 }
 
 /**
- *
+ * Glyph Point is a glyph rendering that has a singular anchor point to render from
  */
 export interface GlyphPoint extends GlyphBase, SquareNode {
   glyphType: 'point';
@@ -102,9 +92,7 @@ export interface GlyphPoint extends GlyphBase, SquareNode {
   ];
 }
 
-/**
- *
- */
+/** Glyph's renderered along a path have their own filter data */
 export type PathFilter = [
   s: number,
   t: number,
@@ -121,9 +109,7 @@ export type PathFilter = [
   padding: number,
 ];
 
-/**
- *
- */
+/** Glyph Path data is a collection of glyphs that follow along a vector line */
 export interface GlyphPath extends GlyphBase, RoundNodes {
   glyphType: 'path';
   // store geometry data and type to properly build later
@@ -133,7 +119,5 @@ export interface GlyphPath extends GlyphBase, RoundNodes {
   filters: PathFilter[];
 }
 
-/**
- *
- */
+/** A Glpyh object is either a GlyphPoint or GlyphPath */
 export type GlyphObject = GlyphPoint | GlyphPath;

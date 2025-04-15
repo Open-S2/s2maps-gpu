@@ -1,3 +1,4 @@
+import { GPUType } from 'style/style.spec';
 import { earclip } from 'earclip';
 import parseFeatureFunction from 'style/parseFeatureFunction';
 import parseFilter from 'style/parseFilter';
@@ -7,24 +8,22 @@ import { featureSort, scaleShiftClip } from './util';
 import type { CodeDesign } from './vectorWorker';
 import type ImageStore from './imageStore';
 import type { FillData, TileRequest } from '../worker.spec';
-import type { FillDefinition, FillWorkerLayer, GPUType } from 'style/style.spec';
+import type { FillDefinition, FillWorkerLayer } from 'style/style.spec';
 import type { FillFeature, FillWorker as FillWorkerSpec, IDGen, VTFeature } from './process.spec';
 
 import type { VectorMultiPolygon } from 'gis-tools';
 
 const MAX_FEATURE_BATCH_SIZE = 1 << 6; // 64
 
-/**
- *
- */
+/** Worker for processing fill data */
 export default class FillWorker extends VectorWorker implements FillWorkerSpec {
   featureStore = new Map<string, FillFeature[]>(); // tileID -> features
   invertLayers = new Map<number, FillWorkerLayer>();
   imageStore: ImageStore;
   /**
-   * @param idGen
-   * @param gpuType
-   * @param imageStore
+   * @param idGen - id generator to ensure features don't overlap
+   * @param gpuType - the GPU context of the map renderer (WebGL(1|2) | WebGPU)
+   * @param imageStore - the image store to pull/request the needed pattern images
    */
   constructor(idGen: IDGen, gpuType: GPUType, imageStore: ImageStore) {
     super(idGen, gpuType);
@@ -32,7 +31,9 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
   }
 
   /**
-   * @param fillLayer
+   * Setup a fill layer for processing
+   * @param fillLayer - the fill layer
+   * @returns the worker layer to process future fill data
    */
   setupLayer(fillLayer: FillDefinition): FillWorkerLayer {
     const {
@@ -84,12 +85,14 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
   }
 
   /**
-   * @param tile
-   * @param extent
-   * @param feature
-   * @param fillLayer
-   * @param mapID
-   * @param sourceName
+   * Build a fill feature from input vector features
+   * @param tile - the tile request
+   * @param extent - the tile extent
+   * @param feature - the vector tile feature
+   * @param fillLayer - the fill worker layer
+   * @param mapID - the map id to ship the data back to
+   * @param sourceName - the source name the data to belongs to
+   * @returns true if the feature was built
    */
   async buildFeature(
     tile: TileRequest,
@@ -118,15 +121,14 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     }
     const hasParent = tile.parent !== undefined;
     const [geometry, indices] =
-      !hasParent && 'loadGeometryFlat' in feature
-        ? feature.loadGeometryFlat!()
-        : [feature.loadPolys(), [] as number[]];
+      !hasParent && 'loadGeometryFlat' in feature ? feature.loadGeometryFlat!() : [[], []];
     let vertices: number[] = [];
-
     if (geometry === undefined) return false;
 
     // if not parent and indices, the polygon has already been "solved"
     if (hasParent || indices.length === 0) {
+      const [geometry] = feature.loadPolys() ?? [];
+      if (geometry === undefined) return false;
       // preprocess geometry
       const clip = scaleShiftClip(
         geometry as VectorMultiPolygon,
@@ -162,7 +164,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
       vertices,
       indices,
       layerIndex,
-      code: gpuType === 1 ? gl1Code : gl2Code,
+      code: gpuType === GPUType.WebGL1 ? gl1Code : gl2Code,
       gl2Code,
       pattern,
       patternFamily,
@@ -182,10 +184,11 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
   }
 
   /**
-   * @param mapID
-   * @param tile
-   * @param sourceName
-   * @param wait
+   * Flush the fill feature data to be shipped out
+   * @param mapID - id of the map to ship the data back to
+   * @param tile - tile request
+   * @param sourceName - source name the data to belongs to
+   * @param wait - this promise must be resloved before flushing. Ensures pattern data is ready
    */
   override async flush(
     mapID: string,
@@ -217,12 +220,14 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     this.featureStore.delete(storeID);
   }
 
-  // NOTE: You can not build invert features that require properties data
   /**
-   * @param tile
-   * @param fillWorkerLayer
-   * @param mapID
-   * @param sourceName
+   * Build inverted features if necessary
+   * NOTE: You can not build invert features that require properties data
+   * @param tile - tile request
+   * @param fillWorkerLayer - the fill worker layer that guides the feature processing
+   * @param mapID - the map id that the feature belongs to
+   * @param sourceName - the source name that the feature belongs to
+   * @returns the inverted fill data to be rendered if it exists
    */
   async #buildInvertFeature(
     tile: TileRequest,
@@ -252,7 +257,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
       vertices: [-0.1, -0.1, 1.1, -0.1, 1.1, 1.1, -0.1, 1.1],
       indices: [0, 2, 1, 2, 0, 3],
       layerIndex,
-      code: gpuType === 1 ? gl1Code : gl2Code,
+      code: gpuType === GPUType.WebGL1 ? gl1Code : gl2Code,
       gl2Code,
       pattern,
       patternFamily,
@@ -269,9 +274,10 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
   }
 
   /**
-   * @param mapID
-   * @param sourceName
-   * @param tileID
+   * Flush the fill data to the main thread
+   * @param mapID - map id to ship the data back to
+   * @param sourceName - source name the data to belongs to
+   * @param tileID - tile id the data to belongs to
    */
   #flush(mapID: string, sourceName: string, tileID: bigint): void {
     const storeID: string = `${mapID}:${tileID}:${sourceName}`;
@@ -334,7 +340,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
       encodingIndex = encodingIndexes[feKey];
       if (encodingIndex === undefined) {
         encodingIndex = encodingIndexes[feKey] =
-          this.gpuType === 1 ? encodings.length / 5 : encodings.length;
+          this.gpuType === GPUType.WebGL1 ? encodings.length / 5 : encodings.length;
         encodings.push(...code);
       }
       // store
@@ -384,7 +390,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     const indexBuffer = new Uint32Array(indices).buffer as ArrayBuffer;
     const idBuffer = new Uint8ClampedArray(ids).buffer as ArrayBuffer; // pre-store each id as an rgb value
     const codeTypeBuffer =
-      this.gpuType === 3
+      this.gpuType === GPUType.WebGPU
         ? (new Uint32Array(codeType).buffer as ArrayBuffer)
         : (new Uint8Array(codeType).buffer as ArrayBuffer);
     const featureGuideBuffer = new Float32Array(featureGuide).buffer as ArrayBuffer;

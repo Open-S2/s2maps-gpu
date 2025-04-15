@@ -1,7 +1,7 @@
 import ImageSource from './imageSource';
 
 import type { SpriteImageMessage } from 'workers/worker.spec';
-import type { ImageMetadata, Metadata } from './imageSource';
+import type { ImageMetadata, ImageSourceMetadata } from './imageSource';
 
 /** Sprite Metadata */
 export interface SpriteMetadata {
@@ -12,19 +12,21 @@ export interface SpriteMetadata {
   y: number;
   pixelRatio: number;
 }
-/**
- *
- */
+/** Collection of Sprites Metadata */
 export type SpritesMetadata = Record<string, SpriteMetadata>;
 
 /**
+ * # SpriteSource
  *
+ * A collection of images relating to a single source
  */
 export default class SpriteSource extends ImageSource {
   /**
-   * @param mapID
+   * Build the image source metadata
+   * @param mapID - the id of the map to build for
+   * @returns the image metadata
    */
-  override async build(mapID: string): Promise<undefined | ImageMetadata> {
+  override async build(mapID: string): Promise<undefined | ImageSourceMetadata> {
     const { name, fileType, path, texturePack } = this;
     // grab the metadata and sprites
     const [spriteMeta, sprites] = (await Promise.all([
@@ -39,7 +41,7 @@ export default class SpriteSource extends ImageSource {
       this.active = false;
       console.error(`Failed to fetch sprite source ${name}`);
     } else {
-      const metadata: Metadata = {};
+      const metadata: ImageMetadata = {};
       // store the metadata
       let texW = 0;
       let texH = 0;

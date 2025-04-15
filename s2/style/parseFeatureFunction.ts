@@ -18,23 +18,20 @@ import type {
   ValueType,
 } from './style.spec';
 
-/**
- *
- */
+/** Data Condition wrapper */
 interface DataConditionList<U> {
   condition: FilterFunction;
   result: LayerWorkerFunction<U>;
 }
-
-/**
- *
- */
+/** Callback for various conditions */
 export type Callback<T extends NotNullOrObject, U> = (i: T) => U;
 
-// This functionality is built for the tile worker.
 /**
- * @param input
- * @param cb
+ * This functionality is built for the tile worker. It helps with building data the GPU can parse
+ * to manipulate input values into output values on the GPU.
+ * @param input - input value or property
+ * @param cb - callback function
+ * @returns a generic layer worker function
  */
 export default function parseFeatureFunction<T extends NotNullOrObject, U = T>(
   input: ValueType<T> | Property<ValueType<T>>,
@@ -60,8 +57,10 @@ export default function parseFeatureFunction<T extends NotNullOrObject, U = T>(
 }
 
 /**
- * @param inputValue
- * @param cb
+ * Input value function parser
+ * @param inputValue - input value
+ * @param cb - callback function
+ * @returns a generic layer worker function designed for input values
  */
 function inputValueFunction<T extends NotNullOrObject, U>(
   inputValue: InputValue<ValueType<T>>,
@@ -84,8 +83,10 @@ function inputValueFunction<T extends NotNullOrObject, U>(
 }
 
 /**
- * @param dataCondition
- * @param cb
+ * Data condition function parser
+ * @param dataCondition - data condition input
+ * @param cb - callback function
+ * @returns a generic layer worker function designed for data conditions
  */
 function dataConditionFunction<T extends NotNullOrObject, U>(
   dataCondition: DataCondition<ValueType<T>>,
@@ -121,8 +122,10 @@ function dataConditionFunction<T extends NotNullOrObject, U>(
 }
 
 /**
- * @param dataRange
- * @param cb
+ * Data range function parser
+ * @param dataRange - data range
+ * @param cb - callback function
+ * @returns a generic layer worker function for data ranges
  */
 function dataRangeFunction<T extends NotNullOrObject, U>(
   dataRange: DataRangeEase<NumberColor<T>> | DataRangeStep<ValueType<T>>,
@@ -171,8 +174,10 @@ function dataRangeFunction<T extends NotNullOrObject, U>(
 
 // TODO: Support type property (defaults to 'zoom')
 /**
- * @param inputRange
- * @param cb
+ * Input range function parser
+ * @param inputRange - input range
+ * @param cb - callback function
+ * @returns a generic layer worker function for input ranges
  */
 function inputRangeFunction<T extends NotNullOrObject, U>(
   inputRange: InputRangeEase<NumberColor<T>> | InputRangeStep<ValueType<T>>,

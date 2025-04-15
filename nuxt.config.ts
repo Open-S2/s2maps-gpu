@@ -29,21 +29,21 @@ export default defineNuxtConfig({
     './pages/**/*',
     // TODO: Comment this out when done
     '../gis-tools/src/**/*',
-    // './plugins/**/*',
-    // './public/**/*'
+    './plugins/**/*',
+    './public/**/*',
   ],
 
   ignore: ['node_modules', 'dist', 'build', 'buildS2', 'buildS2-dev', 'buildS2-local'],
 
   modules: ['@nuxt/eslint'],
   eslint: {
-    // TODO: add this in when ready
     // checker: true // <---
   },
 
   css: [fileURLToPath(new URL('./assets/styles/globals.css', import.meta.url))],
 
   vite: {
+    // @ts-expect-error - these work fine for now. They were built for webpack, we are using them for
     plugins: [wgsl(), glsl()],
   },
 

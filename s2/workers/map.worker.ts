@@ -4,18 +4,22 @@ import type { MapOptions } from 'ui/s2mapUI';
 import type { S2MapMessage } from './worker.spec';
 
 /**
+ * # Map Worker
  *
+ * ## Description
+ * A seperate thread to render the map / canvas.
  */
 export default class MapWorker {
   s2mapUI!: S2MapUI;
   /**
-   * @param root0
-   * @param root0.data
+   * Map Worker's input messages to handle
+   * @param message - the message
    */
-  onmessage({ data }: { data: S2MapMessage }): void {
+  onmessage(message: MessageEvent<S2MapMessage>): void {
+    const { data } = message;
     const { type } = data;
 
-    if (type === 'canvas') this._prepCanvas(data.options, data.canvas, data.id);
+    if (type === 'canvas') this.#prepCanvas(data.options, data.canvas, data.id);
     else if (type === 'resize') this.s2mapUI.resize(data.width, data.height);
     else if (type === 'scroll')
       this.s2mapUI.onZoom(data.deltaY, data.clientX - data.rect.left, data.clientY - data.rect.top);
@@ -56,11 +60,12 @@ export default class MapWorker {
   }
 
   /**
-   * @param options
-   * @param canvas
-   * @param id
+   * Prep the canvas
+   * @param options - the map options
+   * @param canvas - the canvas to prep
+   * @param id - the id of the map
    */
-  _prepCanvas(options: MapOptions, canvas: HTMLCanvasElement, id: string): void {
+  #prepCanvas(options: MapOptions, canvas: HTMLCanvasElement, id: string): void {
     this.s2mapUI = new S2MapUI(options, canvas, id);
   }
 }

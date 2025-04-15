@@ -17,9 +17,7 @@ import type Projector from 'ui/camera/projector';
 import type { StyleDefinition } from 'style/style.spec';
 import type { SkyboxWorkflow as SkyboxWorkflowSpec, SkyboxWorkflowUniforms } from './workflow.spec';
 
-/**
- *
- */
+/** Skybox Workflow renders a user styled skybox to the GPU */
 export default class SkyboxWorkflow extends Workflow implements SkyboxWorkflowSpec {
   label = 'skybox' as const;
   cubeMap: WebGLTexture;
@@ -29,9 +27,7 @@ export default class SkyboxWorkflow extends Workflow implements SkyboxWorkflowSp
   angle: number = degToRad(40);
   matrix: Float32Array = new Float32Array(16);
   declare uniforms: { [key in SkyboxWorkflowUniforms]: WebGLUniformLocation };
-  /**
-   * @param context
-   */
+  /** @param context - The WebGL(1|2) context */
   constructor(context: Context) {
     // get gl from context
     const { gl, type } = context;
@@ -47,9 +43,10 @@ export default class SkyboxWorkflow extends Workflow implements SkyboxWorkflowSp
   }
 
   /**
-   * @param style
-   * @param camera
-   * @param urlMap
+   * Update the skybox style
+   * @param style - user defined style attributes
+   * @param camera - The camera
+   * @param urlMap - The url map to properly resolve urls
    */
   updateStyle(style: StyleDefinition, camera: Camera, urlMap?: Record<string, string>): void {
     const { context } = this;
@@ -72,9 +69,10 @@ export default class SkyboxWorkflow extends Workflow implements SkyboxWorkflowSp
   }
 
   /**
-   * @param index
-   * @param path
-   * @param camera
+   * Get an image and assign to cube map
+   * @param index - the index of the face on the cube
+   * @param path - the path to the image
+   * @param camera - The camera
    */
   async #getImage(index: number, path: string, camera: Camera): Promise<void> {
     const { gl } = this;
@@ -112,7 +110,8 @@ export default class SkyboxWorkflow extends Workflow implements SkyboxWorkflowSp
   }
 
   /**
-   * @param projector
+   * Update the perspective matrix
+   * @param projector - The projector
    */
   #updateMatrix(projector: Projector): void {
     const { gl, uniforms, fov, angle, matrix } = this;
@@ -129,16 +128,12 @@ export default class SkyboxWorkflow extends Workflow implements SkyboxWorkflowSp
     gl.uniformMatrix4fv(uniforms.uMatrix, false, matrix);
   }
 
-  /**
-   *
-   */
+  /** Flush the uniforms to the GPU (no-op) */
   override flush(): void {
     /* no-op */
   }
 
-  /**
-   *
-   */
+  /** Use this workflow as the current shaders for the GPU */
   override use(): void {
     super.use();
     const { context } = this;
@@ -151,7 +146,8 @@ export default class SkyboxWorkflow extends Workflow implements SkyboxWorkflowSp
   }
 
   /**
-   * @param projector
+   * Draw the skybox
+   * @param projector - The projector
    */
   draw(projector: Projector): void {
     // setup variables

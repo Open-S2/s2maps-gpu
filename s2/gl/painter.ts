@@ -37,7 +37,10 @@ import type {
 import type { PainterData, SpriteImageMessage } from 'workers/worker.spec';
 
 /**
+ * # WebGL(1|2) Painter
  *
+ * ## Description
+ * A painter for WebGL(1|2) contexts
  */
 export default class Painter implements PainterSpec {
   context: WebGL2Context | WebGLContext;
@@ -45,9 +48,9 @@ export default class Painter implements PainterSpec {
   curWorkflow?: WorkflowKey;
   dirty = true;
   /**
-   * @param context
-   * @param type
-   * @param options
+   * @param context - a WebGL(1|2) context wrapper
+   * @param type - 1 for WebGL 1, 2 for WebGL 2
+   * @param options - map options to pull out the options that impact the painter and GPU
    */
   constructor(
     context: WebGL2RenderingContext | WebGLRenderingContext,
@@ -60,23 +63,13 @@ export default class Painter implements PainterSpec {
     else this.context = new WebGLContext(context as WebGLRenderingContext, options, this);
   }
 
-  /**
-   *
-   */
+  /** called once to properly prepare the context */
   async prepare(): Promise<void> {}
 
   /**
-   *
-   */
-  delete(): void {
-    const { context, workflows } = this;
-    for (const workflow of Object.values(workflows)) workflow.delete();
-    context.delete();
-  }
-
-  /**
-   * @param tile
-   * @param data
+   * Given a tile, build the feature data associated with it
+   * @param tile - the tile to inject the features into
+   * @param data - the collection of data to sift through and build features
    */
   buildFeatureData(tile: Tile, data: PainterData): void {
     const workflow = this.workflows[data.type] as
@@ -86,60 +79,37 @@ export default class Painter implements PainterSpec {
   }
 
   /**
-   * @param buildSet
+   * Build all workflows used by the style layers
+   * @param buildSet - the set of workflows to build
    */
   async buildWorkflows(buildSet: Set<WorkflowType>): Promise<void> {
     const { workflows, context } = this;
     const promises: Array<Promise<void>> = [];
     const workflowImports: WorkflowImports = {
       /** @returns a fill rendering tool */
-      fill: () => {
-        return new FillWorkflow(context);
-      },
+      fill: async () => await new FillWorkflow(context),
       /** @returns a glyph rendering tool */
-      glyphFilter: () => {
-        return new GlyphFilterWorkflow(context);
-      },
+      glyphFilter: async () => await new GlyphFilterWorkflow(context),
       /** @returns a glyph rendering tool */
-      glyph: () => {
-        return new GlyphWorkflow(context);
-      },
+      glyph: async () => await new GlyphWorkflow(context),
       /** @returns a heatmap rendering tool */
-      heatmap: () => {
-        return new HeatmapWorkflow(context);
-      },
+      heatmap: async () => await new HeatmapWorkflow(context),
       /** @returns a hillshade rendering tool */
-      hillshade: () => {
-        return new HillshadeWorkflow(context);
-      },
+      hillshade: async () => await new HillshadeWorkflow(context),
       /** @returns a line rendering tool */
-      line: () => {
-        return new LineWorkflow(context);
-      },
+      line: async () => await new LineWorkflow(context),
       /** @returns a point rendering tool */
-      point: () => {
-        return new PointWorkflow(context);
-      },
+      point: async () => await new PointWorkflow(context),
       /** @returns a raster rendering tool */
-      raster: () => {
-        return new RasterWorkflow(context);
-      },
+      raster: async () => await new RasterWorkflow(context),
       /** @returns a sensor rendering tool */
-      sensor: async () => {
-        return await import('./workflows/sensorWorkflow');
-      },
+      sensor: async () => await import('./workflows/sensorWorkflow'),
       /** @returns a shade rendering tool */
-      shade: () => {
-        return new ShadeWorkflow(context);
-      },
+      shade: async () => await new ShadeWorkflow(context),
       /** @returns a skybox rendering tool */
-      skybox: () => {
-        return new SkyboxWorkflow(context);
-      },
+      skybox: async () => await new SkyboxWorkflow(context),
       /** @returns a wallpaper rendering tool */
-      wallpaper: () => {
-        return new WallpaperWorkflow(context);
-      },
+      wallpaper: async () => await new WallpaperWorkflow(context),
     };
     const workflowKeys: Array<keyof Omit<Workflows, 'background'>> = [];
     for (const workflow of buildSet) {
@@ -156,7 +126,7 @@ export default class Painter implements PainterSpec {
               const { default: pModule } = res;
               workflows[key as 'sensor'] = await pModule(context);
             } else {
-              workflows[key] = res;
+              (workflows[key] as Workflow) = res;
             }
             if (key === 'wallpaper' || key === 'skybox') workflows.background = workflows[key];
           })
@@ -173,9 +143,10 @@ export default class Painter implements PainterSpec {
   }
 
   /**
-   * @param matrix
-   * @param view
-   * @param aspect
+   * Inject frame uniforms. WebGL requires uniforms to be update before each draw
+   * @param matrix - the projection matrix
+   * @param view - the view matrix
+   * @param aspect - the canvas aspect ratio
    */
   injectFrameUniforms(matrix: Float32Array, view: Float32Array, aspect: VectorPoint): void {
     const { workflows } = this;
@@ -185,15 +156,17 @@ export default class Painter implements PainterSpec {
   }
 
   /**
-   * @param timeCache
+   * Inject a time cache for the sensor workflow
+   * @param timeCache - the time cache to inject
    */
   injectTimeCache(timeCache: TimeCache): void {
     this.workflows.sensor?.injectTimeCache(timeCache);
   }
 
   /**
-   * @param _width
-   * @param _height
+   * Resize the canvas
+   * @param _width - new width
+   * @param _height - new height
    */
   resize(_width: number, _height: number): void {
     const { context } = this;
@@ -211,8 +184,9 @@ export default class Painter implements PainterSpec {
   }
 
   /**
-   * @param projector
-   * @param tiles
+   * Paint all the tiles in view
+   * @param projector - the camera and what it currently sees
+   * @param tiles - all the tiles in view to paint
    */
   paint(projector: Projector, tiles: Tile[]): void {
     const { context, workflows } = this;
@@ -240,7 +214,7 @@ export default class Painter implements PainterSpec {
     for (const tile of featureTiles) tile.setScreenPositions(projector);
 
     // prep all tile's features to draw
-    const features = allFeatures.filter((f) => f.type !== 'heatmap');
+    const features: Features[] = allFeatures.filter((f) => f.type !== 'heatmap');
     // draw heatmap data if applicable, and a singular feature for the main render thread to draw the texture to the screen
     const heatmapFeatures = allFeatures.filter((f): f is HeatmapFeature => f.type === 'heatmap');
 
@@ -274,7 +248,8 @@ export default class Painter implements PainterSpec {
   }
 
   /**
-   * @param tiles
+   * Compute the interactive features in current view
+   * @param tiles - current view tiles that we need to sift through for interactive features
    */
   computeInteractive(tiles: Tile[]): void {
     const interactiveFeatures = tiles
@@ -301,22 +276,25 @@ export default class Painter implements PainterSpec {
   }
 
   /**
-   * @param maxHeight
-   * @param images
+   * Inject a glyph image to the GPU
+   * @param maxHeight - the maximum height of the texture
+   * @param images - the glyph images
    */
   injectGlyphImages(maxHeight: number, images: GlyphImages): void {
     this.context.injectImages(maxHeight, images);
   }
 
   /**
-   * @param data
+   * Inject a sprite image to the GPU
+   * @param data - the raw image data of the sprite
    */
   injectSpriteImage(data: SpriteImageMessage): void {
     this.context.injectSpriteImage(data);
   }
 
   /**
-   * @param mode
+   * Set the colorblind mode
+   * @param mode - colorblind mode to set
    */
   setColorMode(mode: ColorMode): void {
     this.dirty = true;
@@ -327,11 +305,20 @@ export default class Painter implements PainterSpec {
       workflow.updateColorBlindMode = mode;
     }
   }
+
+  /** Delete the GPU and painter instance */
+  delete(): void {
+    const { context, workflows } = this;
+    for (const workflow of Object.values(workflows)) workflow.delete();
+    context.delete();
+  }
 }
 
 /**
- * @param a
- * @param b
+ * Sort the features
+ * @param a - first feature
+ * @param b - comparison feature
+ * @returns a negative value if a < b, 0 if a === b, and a positive value if a > b
  */
 function featureSort(a: Features, b: Features): number {
   // first check if the layer is the same
