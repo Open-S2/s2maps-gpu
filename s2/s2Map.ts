@@ -21,11 +21,11 @@ export type { UserTouchEvent } from './ui/camera/dragPan';
 
 /**
  * Color blind states
- * - 0: none
- * - 1: protanopia
- * - 2: deuteranopia
- * - 3: tritanopia
- * - 4: greyscale
+ * - 0: None
+ * - 1: Protanopia
+ * - 2: Deuteranopia
+ * - 3: Tritanopia
+ * - 4: Greyscale
  */
 export const ColorMode = {
   None: 0,
@@ -61,7 +61,7 @@ export default class S2Map extends EventTarget {
   #attributions: Attributions = {};
   bearing = 0; // degrees
   pitch = 0; // degrees
-  colorMode: ColorMode = ColorMode.None; // 0: none - 1: protanopia - 2: deuteranopia - 3: tritanopia - 4: greyscale
+  colorMode: ColorMode = ColorMode.None;
   map?: S2MapUI;
   hash = false;
   offscreen?: Worker;
@@ -711,7 +711,18 @@ export default class S2Map extends EventTarget {
   /* API */
 
   /**
+   * Delete the map instance to cleanup all resources
    *
+   * ### Example
+   * ```ts
+   * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
+   * import type { MapOptions } from 's2maps-gpu';
+   *
+   * const options: MapOptions = { ... }
+   * const map = new S2Map(options)
+   * // do something with the map
+   * map.delete() // cleanup
+   * ```
    */
   delete(): void {
     const { offscreen, map } = this;

@@ -4,6 +4,7 @@ import type { EaseType } from './easingFunctions';
 import type { View } from 'ui/camera/projector';
 import type {
   Attributions,
+  BBox,
   JSONCollection,
   Point,
   Projection,
@@ -15,9 +16,9 @@ import type {
   Encoding,
   Extensions,
   Face,
-  FaceBounds,
   ImageExtensions,
   LayersMetaData,
+  S2Bounds,
   Scheme,
   SourceType,
   TileStatsMetadata,
@@ -42,61 +43,83 @@ export type { ColorArray } from './color';
 export type { View } from 'ui/camera/projector';
 export type * from 's2-tilejson';
 
-/**
- *
- */
+/** Optionalized tile metadata. Helps source workers to parse malformed tilesets */
 export interface OptionalizedTileMetadata {
   /** The version of the s2-tilejson spec */
   s2tilejson?: string;
-  /** The version of the data */
-  version?: string;
-  /** The name of the data */
-  name?: string;
+  /** The type of the tileset */
+  type?: SourceType;
   /** The extension when requesting a tile */
   extension?: Extensions;
-  /** The scheme of the data */
-  scheme?: Scheme;
-  /** The description of the data */
-  description?: string;
-  /** The type of the data */
-  type: SourceType;
-  /** The encoding of the data */
-  encoding?: Encoding;
-  /** List of faces that have data */
+  /** List of faces that have tileset */
   faces?: Face[];
-  /** WM Tile fetching bounds. Helpful to not make unecessary requests for tiles we know don't exist */
-  bounds?: WMBounds;
-  /** S2 Tile fetching bounds. Helpful to not make unecessary requests for tiles we know don't exist */
-  facesbounds?: FaceBounds;
   /** minzoom at which to request tiles. [default=0] */
   minzoom?: number;
   /** maxzoom at which to request tiles. [default=27] */
   maxzoom?: number;
-  /** The center of the data */
-  center?: Center;
-  /** { ['human readable string']: 'href' } */
-  attributions?: Attributions;
   /** Track layer metadata */
   layers?: LayersMetaData;
+  /** WM Tile fetching bounds. Helpful to not make unecessary requests for tiles we know don't exist */
+  wmbounds?: WMBounds;
+  /** S2 Tile fetching bounds. Helpful to not make unecessary requests for tiles we know don't exist */
+  s2bounds?: S2Bounds;
+  /** Floating point bounding box array [west, south, east, north]. */
+  bounds?: BBox;
+  /** { ['human readable string']: 'href' } */
+  attributions?: Attributions;
+  /** The version of the tileset. Matches the pattern: `\d+\.\d+\.\d+\w?[\w\d]*`. */
+  version?: string;
+  /** The name of the tileset */
+  name?: string;
+  /** The scheme of the tileset */
+  scheme?: Scheme;
+  /** The description of the tileset */
+  description?: string;
+  /** The encoding of the tileset */
+  encoding?: Encoding;
+  /** The center of the tileset */
+  centerpoint?: Center;
   /** Track tile stats for each face and total overall */
   tilestats?: TileStatsMetadata;
-  /** Old spec, track basic layer metadata */
-  vector_layers?: VectorLayer[];
   /** Allow additional properties */
   [key: string]: unknown;
+
+  // old spec properties to hold for backwards compatibility
+
+  /** track basic layer metadata */
+  vector_layers?: VectorLayer[];
+  /**
+   * Version of the TileJSON spec used.
+   * Matches the pattern: `\d+\.\d+\.\d+\w?[\w\d]*`.
+   */
+  tilejson?: string;
+  /** Array of tile URL templates. */
+  tiles?: string[];
+  /** Attribution string. */
+  attribution?: string;
+  /** Center coordinate array [longitude, latitude, zoom]. */
+  center?: [lon: number, lat: number, zoom: number];
+  // NOTE: Data is rarely used by the old tilejson spec, and it conflicts with the data property
+  // used by internal extra source types
+  // /** Array of data source URLs. */
+  // data?: string[];
+  /** Fill zoom level. Must be between 0 and 30. */
+  fillzoom?: number;
+  /** Array of UTFGrid URL templates. */
+  grids?: string[];
+  /** Legend of the tileset. */
+  legend?: string;
+  /** Template for interactivity. */
+  template?: string;
 }
 
-/**
- *
- */
+/** All source input objects contain these shapes */
 export type SourceMetadata = OptionalizedTileMetadata &
   ClusterOptions &
   TileStoreOptions & {
+    // TODO: Figure out if we need to remove this requirement
+    /** Sometimes provided for to have easier access to fetch the source data */
     path?: string;
-
-    // Mapbox TileJSON fields
-    /** Array of tile URL templates. */
-    tiles?: string[];
 
     /** The size of the tile in pixels if some form of raster data */
     size?: number; // required by raster type sources
@@ -112,8 +135,6 @@ export type SourceMetadata = OptionalizedTileMetadata &
     sourceName?: string;
     /** If you want to directly inject the geojson or s2json data */
     data?: JSONCollection;
-    /** If the data is filled with a huge collection of points, you can specify to cluster the data before displaying it. */
-    cluster?: boolean;
     /** Other build engines place layer data inside a json string */
     json?: string;
   };
@@ -130,9 +151,7 @@ export interface MarkerSource {
   path: '_markers';
   data: JSONCollection;
 }
-/**
- *
- */
+/** List of all source inputs. A String is just a href to SourceMetadata */
 export type Source = string | SourceMetadata | JSONSource | LocalSource | MarkerSource;
 /**
  * Where to fetch data and JSON guides on how to fetch them. If JSON data, it can be included directly in the source
@@ -140,9 +159,9 @@ export type Source = string | SourceMetadata | JSONSource | LocalSource | Marker
  * ex.
  * ```json
  * "sources": {
-        "countries": "/s2json/countriesHD.s2json",
-        "earthquakes": "/s2json/earthquakes.s2json"
-      }
+ *   "countries": "/s2json/countriesHD.s2json",
+ *   "earthquakes": "/s2json/earthquakes.s2json"
+ * }
  * ```
  */
 export type Sources = Record<string, Source>; // address to source or source itself
@@ -993,9 +1012,14 @@ export type UnkownLayerStyle = LayerStyleBase;
 // FILL //
 
 /**
- * Fill type
+ * # Fill Style Guide
  *
- * Base Properties:
+ * ## Description
+ *
+ * A Fill layer guide defines how polygons should be colored, if they include patterns,
+ * are inverted, interactive, etc.
+ *
+ * ### Base Properties:
  * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
  * - `source` - the source of the data use
  * - `layer` - the source's layer. Defaults to "default" for JSON data
@@ -1006,16 +1030,16 @@ export type UnkownLayerStyle = LayerStyleBase;
  * - `visible` - whether the layer is visible or not
  * - `metadata` - additional metadata. Used by style generators
  *
- * Optional paint properties:
+ * ### Optional paint properties:
  * - `color`
  * - `opacity`
  *
- * Optional layout properties:
+ * ### Optional layout properties:
  * - `pattern`
  * - `patternMovement`
  * - `patternFamily`
  *
- * Optional properties:
+ * ### Optional properties:
  * - `invert` - if true, invert where the fill is drawn to on the map
  * - `interactive` - if true, when hovering over the fill, the property data will be sent to the UI via an Event
  * - `cursor` - the cursor to use when hovering over the fill
@@ -1023,9 +1047,9 @@ export type UnkownLayerStyle = LayerStyleBase;
  */
 export interface FillStyle extends LayerStyleBase {
   /**
-   * Fill type
+   * # Fill Style Guide
    *
-   * Base Properties:
+   * ### Base Properties:
    * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
    * - `source` - the source of the data use
    * - `layer` - the source's layer. Defaults to "default" for JSON data
@@ -1036,16 +1060,16 @@ export interface FillStyle extends LayerStyleBase {
    * - `visible` - whether the layer is visible or not
    * - `metadata` - additional metadata. Used by style generators
    *
-   * Optional paint properties:
+   * ### Optional paint properties:
    * - `color`
    * - `opacity`
    *
-   * Optional layout properties:
+   * ### Optional layout properties:
    * - `pattern`
    * - `patternMovement`
    * - `patternFamily`
    *
-   * Optional properties:
+   * ### Optional properties:
    * - `invert` - if true, invert where the fill is drawn to on the map
    * - `interactive` - if true, when hovering over the fill, the property data will be sent to the UI via an Event
    * - `cursor` - the cursor to use when hovering over the fill
@@ -1253,13 +1277,58 @@ export type Alignment = 'auto' | 'center' | 'left' | 'right';
 /** Placement for a glyph layer */
 export type Placement = 'point' | 'line' | 'line-center-point' | 'line-center-path';
 /**
+ * # Glyph Style Guide
  *
+ * ### Base Properties:
+ * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
+ * - `source` - the source of the data use
+ * - `layer` - the source's layer. Defaults to "default" for JSON data
+ * - `minzoom` - the minimum zoom level at which the layer will be visible
+ * - `maxzoom` - the maximum zoom level at which the layer will be visible
+ * - `filter` - a filter function to filter out features from the source layer
+ * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+ * - `visible` - whether the layer is visible or not
+ * - `metadata` - additional metadata. Used by style generators
+ *
+ * ### Optional paint properties:
+ * - `textSize` - size of the glyphs in pixels
+ * - `textFill` - fill color for glyphs
+ * - `textStroke` - stroke color for glyphs
+ * - `textStrokeWidth` - stroke width for glyphs in pixels
+ * - `iconSize` - size of the icons in pixels
+ *
+ * ### Optional layout properties:
+ * - `placement` - Can be `point`, `line`, `line-center-path` or `line-center-point`. Only relavent if geometry is not a point.
+ * - `spacing` - The distance between glyphs in pixels. Only relavent if geometry is not a point.
+ * - `textFamily` - The font family to use for the glyphs. Can be multiple options, first is default with each proceeding option as a fallback.
+ * - `textField` - The description of the content to be rendered. Can be the text itself, or can be a transfromation input that uses the features properties to build a text string.
+ * - `textAnchor` - The anchor position for the text being rendered. An example is "center" or "bottom-left"
+ * - `textOffset` - The x and y offset of the text relative to the anchor in pixels
+ * - `textPadding` - The width and height padding around the rendered glyphs to ensure stronger filtering of other text/icons nearby
+ * - `textRotate` - The rotation of the glyphs relative to the anchor
+ * - `textWordWrap` - Wrapping size in pixels. This ensures a max width of the box containing the words.
+ * - `textAlign` - Alignment tool to build the words from the `left`, `middle` or `right` positions. Only noticable if words are wrapping.
+ * - `textKerning` - Excess kerning for each glyph for individual glyph spacing between eachother.
+ * - `textLineHeight` - Adjust the lineheight of glyphs to improve vertical spacing.
+ * - `iconFamily` - The source family name to use for the icons. Can be multiple options, first is default with each proceeding option as a fallback.
+ * - `iconField` - The name of the icon to render. Can be multiple options, first is default with each proceeding option as a fallback.
+ * - `iconAnchor` - The anchor position for the icon to be rendered relative to the centerpoint of the icon. An example is "center" or "bottom-left"
+ * - `iconOffset` - The x and y offset of the icon relative to the anchor in pixels
+ * - `iconPadding` - The width and height padding around the rendered icon to ensure stronger filtering of other text/icons nearby
+ * - `iconRotate` - The rotation of the icons relative to the anchor
+ *
+ * ### Optional properties:
+ * - `geoFilter` - filter the geometry types that will be drawn. Options are `point`, `line`, `poly`
+ * - `overdraw` - if true, the layer will be drawn regardless of other glyph layers
+ * - `interactive` - if true, when hovering over the glyph, the property data will be sent to the UI via an Event
+ * - `viewCollisions` - if true, the layer glyphs will display the collision boxes and colorize them based on if they are colliding or not
+ * - `cursor` - the cursor to use when hovering over the glyph
  */
 export interface GlyphStyle extends LayerStyleBase {
   /**
-   * Glyph type
+   * # Glyph Style Guide
    *
-   * Base Properties:
+   * ### Base Properties:
    * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
    * - `source` - the source of the data use
    * - `layer` - the source's layer. Defaults to "default" for JSON data
@@ -1270,35 +1339,35 @@ export interface GlyphStyle extends LayerStyleBase {
    * - `visible` - whether the layer is visible or not
    * - `metadata` - additional metadata. Used by style generators
    *
-   * Optional paint properties:
-   * - `textSize`
-   * - `textFill`
-   * - `textStroke`
-   * - `textStrokeWidth`
-   * - `iconSize`
+   * ### Optional paint properties:
+   * - `textSize` - size of the glyphs in pixels
+   * - `textFill` - fill color for glyphs
+   * - `textStroke` - stroke color for glyphs
+   * - `textStrokeWidth` - stroke width for glyphs in pixels
+   * - `iconSize` - size of the icons in pixels
    *
-   * Optional layout properties:
-   * - `placement`
-   * - `spacing`
-   * - `textFamily`
-   * - `textField`
-   * - `textAnchor`
-   * - `textOffset`
-   * - `textPadding`
-   * - `textRotate`
-   * - `textWordWrap`
-   * - `textAlign`
-   * - `textKerning`
-   * - `textLineHeight`
-   * - `iconFamily`
-   * - `iconField`
-   * - `iconAnchor`
-   * - `iconOffset`
-   * - `iconPadding`
-   * - `iconRotate`
+   * ### Optional layout properties:
+   * - `placement` - Can be `point`, `line`, `line-center-path` or `line-center-point`. Only relavent if geometry is not a point.
+   * - `spacing` - The distance between glyphs in pixels. Only relavent if geometry is not a point.
+   * - `textFamily` - The font family to use for the glyphs. Can be multiple options, first is default with each proceeding option as a fallback.
+   * - `textField` - The description of the content to be rendered. Can be the text itself, or can be a transfromation input that uses the features properties to build a text string.
+   * - `textAnchor` - The anchor position for the text being rendered. An example is "center" or "bottom-left"
+   * - `textOffset` - The x and y offset of the text relative to the anchor in pixels
+   * - `textPadding` - The width and height padding around the rendered glyphs to ensure stronger filtering of other text/icons nearby
+   * - `textRotate` - The rotation of the glyphs relative to the anchor
+   * - `textWordWrap` - Wrapping size in pixels. This ensures a max width of the box containing the words.
+   * - `textAlign` - Alignment tool to build the words from the `left`, `middle` or `right` positions. Only noticable if words are wrapping.
+   * - `textKerning` - Excess kerning for each glyph for individual glyph spacing between eachother.
+   * - `textLineHeight` - Adjust the lineheight of glyphs to improve vertical spacing.
+   * - `iconFamily` - The source family name to use for the icons. Can be multiple options, first is default with each proceeding option as a fallback.
+   * - `iconField` - The name of the icon to render. Can be multiple options, first is default with each proceeding option as a fallback.
+   * - `iconAnchor` - The anchor position for the icon to be rendered relative to the centerpoint of the icon. An example is "center" or "bottom-left"
+   * - `iconOffset` - The x and y offset of the icon relative to the anchor in pixels
+   * - `iconPadding` - The width and height padding around the rendered icon to ensure stronger filtering of other text/icons nearby
+   * - `iconRotate` - The rotation of the icons relative to the anchor
    *
-   * Optional properties:
-   * - `geoFilter` - filter the geometry types that will be drawn
+   * ### Optional properties:
+   * - `geoFilter` - filter the geometry types that will be drawn. Options are `point`, `line`, `poly`
    * - `overdraw` - if true, the layer will be drawn regardless of other glyph layers
    * - `interactive` - if true, when hovering over the glyph, the property data will be sent to the UI via an Event
    * - `viewCollisions` - if true, the layer glyphs will display the collision boxes and colorize them based on if they are colliding or not
@@ -1482,7 +1551,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * A LAYOUT `Property`.
    * @default `325`
    *
-   * The distance between glyphs. Only relavent if geometry is not a point.
+   * The distance between glyphs in pixels. Only relavent if geometry is not a point.
    *
    * ex.
    *
@@ -1546,6 +1615,9 @@ export interface GlyphStyle extends LayerStyleBase {
    * A LAYOUT `PropertyOnlyStep`.
    * @default `""` (empty string)
    *
+   * The description of the content to be rendered. Can be the text itself, or can be a transfromation
+   * input that uses the features properties to build a text string.
+   *
    * ex.
    *
    * ```json
@@ -1599,6 +1671,8 @@ export interface GlyphStyle extends LayerStyleBase {
   /**
    * A LAYOUT `PropertyOnlyStep`.
    * @default `"center"`
+   *
+   * The anchor position for the text being rendered.
    *
    * Options are `"center"`, `"left"`, `"right"`, `"top"`, `"bottom"`, `"top-left"`, `"top-right"`, `"bottom-left"`, `"bottom-right"`
    *
@@ -2044,13 +2118,36 @@ export interface GlyphWorkerLayer extends LayerWorkerBase {
 // HEATMAP //
 
 /**
+ * # Heatmap Layer Guide
  *
+ * ### Base Properties:
+ * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
+ * - `source` - the source of the data use
+ * - `layer` - the source's layer. Defaults to "default" for JSON data
+ * - `minzoom` - the minimum zoom level at which the layer will be visible
+ * - `maxzoom` - the maximum zoom level at which the layer will be visible
+ * - `filter` - a filter function to filter out features from the source layer
+ * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+ * - `visible` - whether the layer is visible or not
+ * - `metadata` - additional metadata. Used by style generators
+ *
+ * Optional paint properties:
+ * - `radius` - the radius of the heatmap in pixels
+ * - `opacity` - the opacity of the heatmap. Between 0 and 1 inclusive
+ * - `intensity` - the intensity of the heatmap
+ *
+ * ### Optional layout properties:
+ * - `weight` - A weight multiplier to apply to each of the heatmap's points
+ *
+ * ### Optional properties:
+ * - `geoFilter` - filter the geometry types that will be drawn.
+ * - `colorRamp` - Build a interpolation ramp to help the sensor data be converted into RGBA. May be `sinebow` or `sinebow-extended`
  */
 export interface HeatmapStyle extends LayerStyleBase {
   /**
-   * Heatmap type
+   * # Heatmap Layer Guide
    *
-   * Base Properties:
+   * # Base Properties:
    * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
    * - `source` - the source of the data use
    * - `layer` - the source's layer. Defaults to "default" for JSON data
@@ -2061,17 +2158,17 @@ export interface HeatmapStyle extends LayerStyleBase {
    * - `visible` - whether the layer is visible or not
    * - `metadata` - additional metadata. Used by style generators
    *
-   * Optional paint properties:
-   * - `radius`
-   * - `opacity`
-   * - `intensity`
+   * ### Optional paint properties:
+   * - `radius` - the radius of the heatmap in pixels
+   * - `opacity` - the opacity of the heatmap. Between 0 and 1 inclusive
+   * - `intensity` - the intensity of the heatmap
    *
-   * Optional layout properties:
-   * - `weight`
+   * ### Optional layout properties:
+   * - `weight` - A weight multiplier to apply to each of the heatmap's points
    *
-   * Optional properties:
-   * - `geoFilter` - filter the geometry types that will be drawn.
-   * - `colorRamp` - the color ramp to use for the heatmap. Defaults to `sinebow`
+   * ### Optional properties:
+   * - `geoFilter` - filter the geometry types that will be drawn. Options are `point`, `line`, `poly`.
+   * - `colorRamp` - Build a interpolation ramp to help the sensor data be converted into RGBA. May be `sinebow` or `sinebow-extended`
    */
   type: 'heatmap';
   // paint
@@ -2238,13 +2335,40 @@ export type Cap = 'butt' | 'square' | 'round';
 /** Line join options */
 export type Join = 'bevel' | 'miter' | 'round';
 /**
+ * Line Style Guide
  *
+ * # Base Properties:
+ * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
+ * - `source` - the source of the data use
+ * - `layer` - the source's layer. Defaults to "default" for JSON data
+ * - `minzoom` - the minimum zoom level at which the layer will be visible
+ * - `maxzoom` - the maximum zoom level at which the layer will be visible
+ * - `filter` - a filter function to filter out features from the source layer
+ * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+ * - `visible` - whether the layer is visible or not
+ * - `metadata` - additional metadata. Used by style generators
+ *
+ * ### Optional paint properties:
+ * - `color` - the color of the line
+ * - `opacity` - the opacity of the line
+ * - `width` - the width of the line in pixels
+ * - `gapwidth` - split the line into two segments to reduce rendering artifacts
+ *
+ * ### Optional layout properties:
+ * - `cap` - the cap of the line. Either `butt`, `square`, or `round`
+ * - `join` - the joiner used for the line. Either `bevel`, `miter`, or `round`
+ * - `dasharray` - A sequence of lengths and gaps that describe the pattern of dashes and gaps used to draw the line
+ *
+ * ### Optional properties:
+ * - `geoFilter` - filter the geometry types that will be drawn.
+ * - `interactive` - if true, when hovering over the line, the property data will be sent to the UI via an Event
+ * - `cursor` - the cursor to use when hovering over the line
  */
 export interface LineStyle extends LayerStyleBase {
   /**
-   * Line type
+   * # Line Style Guide
    *
-   * Base Properties:
+   * ### Base Properties:
    * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
    * - `source` - the source of the data use
    * - `layer` - the source's layer. Defaults to "default" for JSON data
@@ -2255,19 +2379,19 @@ export interface LineStyle extends LayerStyleBase {
    * - `visible` - whether the layer is visible or not
    * - `metadata` - additional metadata. Used by style generators
    *
-   * Optional paint properties:
-   * - `color`
-   * - `opacity`
-   * - `width`
-   * - `gapwidth`
+   * ### Optional paint properties:
+   * - `color` - the color of the line
+   * - `opacity` - the opacity of the line
+   * - `width` - the width of the line in pixels
+   * - `gapwidth` - split the line into two segments to reduce rendering artifacts
    *
-   * Optional layout properties:
-   * - `cap`
-   * - `join`
-   * - `dasharray`
+   * ### Optional layout properties:
+   * - `cap` - the cap of the line. Either `butt`, `square`, or `round`
+   * - `join` - the joiner used for the line. Either `bevel`, `miter`, or `round`
+   * - `dasharray` - A sequence of lengths and gaps that describe the pattern of dashes and gaps used to draw the line
    *
-   * Optional properties:
-   * - `geoFilter` - filter the geometry types that will be drawn.
+   * ### Optional properties:
+   * - `geoFilter` - filter the geometry types that will be drawn. Options are `point`, `line`, `poly`.
    * - `interactive` - if true, when hovering over the line, the property data will be sent to the UI via an Event
    * - `cursor` - the cursor to use when hovering over the line
    */
@@ -2452,9 +2576,7 @@ export interface LineStyle extends LayerStyleBase {
   /** the cursor to use when hovering over the line. Defaults to "default" */
   cursor?: Cursor;
 }
-/**
- *
- */
+/** A parsed user defined layer guide that replaced undefined values with defaults */
 export interface LineDefinition extends LayerDefinitionBase {
   type: 'line';
   // paint
@@ -2472,9 +2594,7 @@ export interface LineDefinition extends LayerDefinitionBase {
   interactive: boolean;
   cursor: Cursor;
 }
-/**
- *
- */
+/** A Line layer guide setup for the workflow to build layer feature data */
 export interface LineWorkflowLayerGuide extends LayerWorkflowGuideBase {
   dashed: boolean;
   dashCount: number;
@@ -2483,17 +2603,13 @@ export interface LineWorkflowLayerGuide extends LayerWorkflowGuideBase {
   interactive: boolean;
   cursor: Cursor;
 }
-/**
- *
- */
+/** An extension to the line workflow layer guide for WebGPU */
 export interface LineWorkflowLayerGuideGPU extends Omit<LineWorkflowLayerGuide, 'dashTexture'> {
   layerBuffer: GPUBuffer;
   layerCodeBuffer: GPUBuffer;
   dashTexture: GPUTexture;
 }
-/**
- *
- */
+/** Line Worker Layer guide to help process line feature data to be rendered */
 export interface LineWorkerLayer extends LayerWorkerBase {
   type: 'line';
   cap: LayerWorkerFunction<Cap>;
@@ -2509,9 +2625,9 @@ export interface LineWorkerLayer extends LayerWorkerBase {
 // POINT //
 
 /**
- * Point type
+ * # Point Style Guide
  *
- * Base Properties:
+ * ### Base Properties:
  * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
  * - `source` - the source of the data use
  * - `layer` - the source's layer. Defaults to "default" for JSON data
@@ -2522,23 +2638,23 @@ export interface LineWorkerLayer extends LayerWorkerBase {
  * - `visible` - whether the layer is visible or not
  * - `metadata` - additional metadata. Used by style generators
  *
- * Optional paint properties:
+ * ### Optional paint properties:
  * - `color`
  * - `radius`
  * - `stroke`
  * - `strokeWidth`
  * - `opacity`
  *
- * Optional properties:
+ * ### Optional properties:
  * - `geoFilter` - filter the geometry types that will be drawn.
  * - `interactive` - if true, when hovering over the line, the property data will be sent to the UI via an Event
  * - `cursor` - the cursor to use when hovering over the line
  */
 export interface PointStyle extends LayerStyleBase {
   /**
-   * Point type
+   * # Point Style Guide
    *
-   * Base Properties:
+   * ### Base Properties:
    * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
    * - `source` - the source of the data use
    * - `layer` - the source's layer. Defaults to "default" for JSON data
@@ -2549,15 +2665,15 @@ export interface PointStyle extends LayerStyleBase {
    * - `visible` - whether the layer is visible or not
    * - `metadata` - additional metadata. Used by style generators
    *
-   * Optional paint properties:
+   * ### Optional paint properties:
    * - `color`
    * - `radius`
    * - `stroke`
    * - `strokeWidth`
    * - `opacity`
    *
-   * Optional properties:
-   * - `geoFilter` - filter the geometry types that will be drawn.
+   * ### Optional properties:
+   * - `geoFilter` - filter the geometry types that will be drawn. Options are `point`, `line`, `poly`.
    * - `interactive` - if true, when hovering over the line, the property data will be sent to the UI via an Event
    * - `cursor` - the cursor to use when hovering over the line
    */
@@ -2723,9 +2839,7 @@ export interface PointWorkflowLayerGuideGPU extends PointWorkflowLayerGuide {
   layerBuffer: GPUBuffer;
   layerCodeBuffer: GPUBuffer;
 }
-/**
- *
- */
+/** Internal interface using user defined layer guide via a Tile Worker to prepare data for rendering */
 export interface PointWorkerLayer extends LayerWorkerBase {
   type: 'point';
   getCode: BuildCodeFunction;
@@ -2736,16 +2850,36 @@ export interface PointWorkerLayer extends LayerWorkerBase {
 
 // RASTER //
 
-/** Raster resampling method */
+/** Raster resampling method. Either `nearest` or `linear` */
 export type Resampling = GPUFilterMode;
 /**
+ * # Raster Style Guide
  *
+ * ### Base Properties:
+ * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
+ * - `source` - the source of the data use
+ * - `layer` - the source's layer. Defaults to "default" for JSON data
+ * - `minzoom` - the minimum zoom level at which the layer will be visible
+ * - `maxzoom` - the maximum zoom level at which the layer will be visible
+ * - `filter` - a filter function to filter out features from the source layer
+ * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+ * - `visible` - whether the layer is visible or not
+ * - `metadata` - additional metadata. Used by style generators
+ *
+ * ### Optional paint properties:
+ * - `opacity`
+ * - `saturation`
+ * - `contrast`
+ *
+ * ### Optional layout properties:
+ * - `resampling` - The resampling method. Either `nearest` or `linear`
+ * - `fadeDuration` - The time it takes for each raster tile to fade in and out of view in milliseconds
  */
 export interface RasterStyle extends LayerStyleBase {
   /**
-   * Raster type
+   * # Raster Style Guide
    *
-   * Base Properties:
+   * ### Base Properties:
    * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
    * - `source` - the source of the data use
    * - `layer` - the source's layer. Defaults to "default" for JSON data
@@ -2756,14 +2890,14 @@ export interface RasterStyle extends LayerStyleBase {
    * - `visible` - whether the layer is visible or not
    * - `metadata` - additional metadata. Used by style generators
    *
-   * Optional paint properties:
+   * ### Optional paint properties:
    * - `opacity`
    * - `saturation`
    * - `contrast`
    *
-   * Optional layout properties:
-   * - `resampling`
-   * - `fadeDuration`
+   * ### Optional layout properties:
+   * - `resampling` - The resampling method. Either `nearest` or `linear`
+   * - `fadeDuration` - The time it takes for each raster tile to fade in and out of view in milliseconds
    */
   type: 'raster';
   // paint
@@ -2849,9 +2983,7 @@ export interface RasterStyle extends LayerStyleBase {
   /** The duration of the fade in milliseconds. Defaults to `300` */
   fadeDuration?: number;
 }
-/**
- *
- */
+/** A Raster layer guide parsed from a user defined layer guide, replacing undefined values with defaults */
 export interface RasterDefinition extends LayerDefinitionBase {
   type: 'raster';
   // paint
@@ -2859,23 +2991,17 @@ export interface RasterDefinition extends LayerDefinitionBase {
   saturation: number | Property<number>;
   contrast: number | Property<number>;
 }
-/**
- *
- */
+/** A worflow layer guide parsed from a user defined layer guide, designed to help shape raster feature data into renderable targets */
 export interface RasterWorkflowLayerGuide extends LayerWorkflowGuideBase {
   fadeDuration: number;
   resampling: Resampling;
 }
-/**
- *
- */
+/** An extension to the raster workflow layer guide for WebGPU */
 export interface RasterWorkflowLayerGuideGPU extends RasterWorkflowLayerGuide {
   layerBuffer: GPUBuffer;
   layerCodeBuffer: GPUBuffer;
 }
-/**
- *
- */
+/** A worker layer guide parsed from a user defined layer guide for the Tile Raster Workers to prepare data for rendering */
 export interface RasterWorkerLayer extends LayerWorkerBaseRaster {
   type: 'raster';
   getCode: BuildCodeFunctionZoom;
@@ -2883,9 +3009,7 @@ export interface RasterWorkerLayer extends LayerWorkerBaseRaster {
 
 // HILLSHADE //
 
-/**
- *
- */
+/** Hillshade unpacking guide to convert RGBA encoded values into a f32 */
 export interface UnpackDefinition {
   offset: number;
   zFactor: number;
@@ -2894,9 +3018,7 @@ export interface UnpackDefinition {
   bMultiplier: number;
   aMultiplier: number;
 }
-/**
- *
- */
+/** Hillshade unpacking guide to convert RGBA encoded values into a f32 */
 export type UnpackData = [
   offset: number,
   zFactor: number,
@@ -2906,13 +3028,36 @@ export type UnpackData = [
   aMul: number,
 ];
 /**
+ * # Hillshade Style Guide
  *
+ * ### Base Properties:
+ * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
+ * - `source` - the source of the data use
+ * - `layer` - the source's layer. Defaults to "default" for JSON data
+ * - `minzoom` - the minimum zoom level at which the layer will be visible
+ * - `maxzoom` - the maximum zoom level at which the layer will be visible
+ * - `filter` - a filter function to filter out features from the source layer
+ * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+ * - `visible` - whether the layer is visible or not
+ * - `metadata` - additional metadata. Used by style generators
+ *
+ * ### Optional paint properties:
+ * - `opacity`
+ * - `azimuth`
+ * - `altitude`
+ * - `shadowColor`
+ * - `highlightColor`
+ * - `accentColor`
+ *
+ * ### Optional layout properties:
+ * - `fadeDuration` - The time it takes for each raster tile to fade in and out of view in milliseconds
+ * - `unpack` - Descriptor to help the GPU know how to unpack the incoming RGBA data into a f32.
  */
 export interface HillshadeStyle extends LayerStyleBase {
   /**
-   * Hillshade type
+   * # Hillshade Style Guide
    *
-   * Base Properties:
+   * ### Base Properties:
    * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
    * - `source` - the source of the data use
    * - `layer` - the source's layer. Defaults to "default" for JSON data
@@ -2923,7 +3068,7 @@ export interface HillshadeStyle extends LayerStyleBase {
    * - `visible` - whether the layer is visible or not
    * - `metadata` - additional metadata. Used by style generators
    *
-   * Optional paint properties:
+   * ### Optional paint properties:
    * - `opacity`
    * - `azimuth`
    * - `altitude`
@@ -2931,9 +3076,9 @@ export interface HillshadeStyle extends LayerStyleBase {
    * - `highlightColor`
    * - `accentColor`
    *
-   * Optional layout properties:
-   * - `fadeDuration`
-   * - `unpack`
+   * ### Optional layout properties:
+   * - `fadeDuration` - The time it takes for each raster tile to fade in and out of view in milliseconds
+   * - `unpack` - Descriptor to help the GPU know how to unpack the incoming RGBA data into a f32.
    */
   type: 'hillshade';
   // layout
@@ -3141,9 +3286,7 @@ export interface HillshadeStyle extends LayerStyleBase {
    */
   unpack?: UnpackDefinition;
 }
-/**
- *
- */
+/** Parsed user hillshade layer guide that replaced undefined values with defaults */
 export interface HillshadeDefinition extends LayerDefinitionBase {
   type: 'hillshade';
   // layout
@@ -3155,25 +3298,19 @@ export interface HillshadeDefinition extends LayerDefinitionBase {
   accentColor: string | Property<string>;
   unpack: UnpackDefinition;
 }
-/**
- *
- */
+/** A worflow layer guide parsed from a user defined layer guide, designed to help shape hillshade feature data into renderable targets */
 export interface HillshadeWorkflowLayerGuide extends LayerWorkflowGuideBase {
   fadeDuration: number;
   unpack: UnpackData;
 }
-/**
- *
- */
+/** An extension to the hillshade workflow layer guide for WebGPU */
 export interface HillshadeWorkflowLayerGuideGPU
   extends Omit<HillshadeWorkflowLayerGuide, 'unpack'> {
   layerBuffer: GPUBuffer;
   layerCodeBuffer: GPUBuffer;
   unpackBuffer: GPUBuffer;
 }
-/**
- *
- */
+/** A worker layer guide parsed from a user defined layer guide for the Tile Raster Workers to prepare data for rendering */
 export interface HillshadeWorkerLayer extends LayerWorkerBaseRaster {
   type: 'hillshade';
   getCode: BuildCodeFunctionZoom;
@@ -3182,13 +3319,35 @@ export interface HillshadeWorkerLayer extends LayerWorkerBaseRaster {
 // SENSOR */
 
 /**
+ * # Sensor Style Guide
  *
+ * ### Base Properties:
+ * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
+ * - `source` - the source of the data use
+ * - `layer` - the source's layer. Defaults to "default" for JSON data
+ * - `minzoom` - the minimum zoom level at which the layer will be visible
+ * - `maxzoom` - the maximum zoom level at which the layer will be visible
+ * - `filter` - a filter function to filter out features from the source layer
+ * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+ * - `visible` - whether the layer is visible or not
+ * - `metadata` - additional metadata. Used by style generators
+ *
+ * ### Optional paint properties:
+ * - `opacity`
+ *
+ * ### Optional layout properties:
+ * - `fadeDuration` - The time it takes for each raster tile to fade in and out of view in milliseconds
+ * - `colorRamp` - Build a interpolation ramp to help the sensor data be converted into RGBA. May be `sinebow` or `sinebow-extended`
+ *
+ * ### Optional properties:
+ * - `interactive` - if true, when hovering over the fill, the property data will be sent to the UI via an Event
+ * - `cursor` - the cursor to use when hovering over the fill
  */
 export interface SensorStyle extends LayerStyleBase {
   /**
-   * Sensor type
+   * # Sensor Style Guide
    *
-   * Base Properties:
+   * ### Base Properties:
    * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
    * - `source` - the source of the data use
    * - `layer` - the source's layer. Defaults to "default" for JSON data
@@ -3199,14 +3358,14 @@ export interface SensorStyle extends LayerStyleBase {
    * - `visible` - whether the layer is visible or not
    * - `metadata` - additional metadata. Used by style generators
    *
-   * Optional paint properties:
+   * ### Optional paint properties:
    * - `opacity`
    *
-   * Optional layout properties:
-   * - `fadeDuration`
-   * - `colorRamp`
+   * ### Optional layout properties:
+   * - `fadeDuration` - The time it takes for each raster tile to fade in and out of view in milliseconds
+   * - `colorRamp` - Build a interpolation ramp to help the sensor data be converted into RGBA. May be `sinebow` or `sinebow-extended`
    *
-   * Optional properties:
+   * ### Optional properties:
    * - `interactive` - if true, when hovering over the fill, the property data will be sent to the UI via an Event
    * - `cursor` - the cursor to use when hovering over the fill
    */
@@ -3262,9 +3421,7 @@ export interface SensorStyle extends LayerStyleBase {
   /** the cursor to use when hovering over the fill. Defaults to "default" */
   cursor?: Cursor;
 }
-/**
- *
- */
+/** A Raster layer guide parsed from a user defined layer guide, replacing undefined values with defaults */
 export interface SensorDefinition extends LayerDefinitionBase {
   type: 'sensor';
   // paint
@@ -3275,36 +3432,44 @@ export interface SensorDefinition extends LayerDefinitionBase {
   interactive: boolean;
   cursor: Cursor;
 }
-/**
- *
- */
+/** A worflow layer guide parsed from a user defined layer guide, designed to help shape sensor feature data into renderable targets */
 export interface SensorWorkflowLayerGuide extends LayerWorkflowGuideBase {
   // properties
   fadeDuration: number;
   colorRamp: WebGLTexture;
 }
-/**
- *
- */
+/** An extension to the sensor workflow layer guide for WebGPU */
 export interface SensorWorkflowLayerGuideGPU extends SensorWorkflowLayerGuide {
   colorRame: GPUTexture;
 }
-/**
- *
- */
+/** A worker layer guide parsed from a user defined layer guide for the Tile Sensor Workers to prepare data for rendering */
 export interface SensorWorkerLayer extends LayerWorkerBaseRaster {
   type: 'sensor';
   getCode: BuildCodeFunctionZoom;
 }
 
 /**
+ * # Shade Style Guide
  *
+ * ### Base Properties:
+ * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
+ * - `source` - the source of the data use
+ * - `layer` - the source's layer. Defaults to "default" for JSON data
+ * - `minzoom` - the minimum zoom level at which the layer will be visible
+ * - `maxzoom` - the maximum zoom level at which the layer will be visible
+ * - `filter` - a filter function to filter out features from the source layer
+ * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+ * - `visible` - whether the layer is visible or not
+ * - `metadata` - additional metadata. Used by style generators
+ *
+ * ### Optional paint properties:
+ * - `color` - Color of the shade
  */
 export interface ShadeStyle extends LayerStyleBase {
   /**
-   * Shade type
+   * # Shade Style Guide
    *
-   * Base Properties:
+   * ### Base Properties:
    * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
    * - `source` - the source of the data use
    * - `layer` - the source's layer. Defaults to "default" for JSON data
@@ -3315,8 +3480,8 @@ export interface ShadeStyle extends LayerStyleBase {
    * - `visible` - whether the layer is visible or not
    * - `metadata` - additional metadata. Used by style generators
    *
-   * Optional paint properties:
-   * - `color`
+   * ### Optional paint properties:
+   * - `color` - Color of the shade
    */
   type: 'shade';
   // layout
@@ -3346,28 +3511,20 @@ export interface ShadeStyle extends LayerStyleBase {
    */
   color?: string | PropertyOnlyStep<string>;
 }
-/**
- *
- */
+/** Parsed user shade layer guide that replaced undefined values with defaults */
 export interface ShadeDefinition extends LayerDefinitionBase {
   type: 'shade';
   // layout
   color: string | PropertyOnlyStep<string>;
 }
-/**
- *
- */
+/** A worflow layer guide parsed from a user defined layer guide, designed to help shape shade feature data into renderable targets */
 export type ShadeWorkflowLayerGuide = LayerWorkflowGuideBase;
-/**
- *
- */
+/** An extension to the shade workflow layer guide for WebGPU */
 export interface ShadeWorkflowLayerGuideGPU extends ShadeWorkflowLayerGuide {
   layerBuffer: GPUBuffer;
   layerCodeBuffer: GPUBuffer;
 }
-/**
- *
- */
+/** A worker layer guide parsed from a user defined layer guide for the Tile Workers to prepare data for rendering */
 export interface ShadeWorkerLayer extends LayerWorkerBase {
   type: 'shade';
 }
@@ -3502,20 +3659,31 @@ export interface WallpaperStyle {
 // TIME SERIES //
 
 /**
+ * # Time Series Style
  *
+ * Temporal data is a series of gridded tiles that can be visualized as an animation.
+ * Describe the time series beginning and end dates, speed, and pause duration.
+ *
+ * ### Properties
+ * - `startDate`: Date formatted string or unix timestamp (e.g. 1631124000000)
+ * - `endDate`: Date formatted string or unix timestamp (e.g. 1631124000000)
+ * - `speed`: Seconds in time series per second (e.g. 10800 seconds per second)
+ * - `pauseDuration`: Time to wait before animating in seconds (e.g. 3 seconds)
+ * - `autoPlay`: If true, start playing automatically
+ * - `loop`: If true, loop the animation
  */
 export interface TimeSeriesStyle {
-  /** date formatted string or unix timestamp */
+  /** Date formatted string or unix timestamp (e.g. 1631124000000) */
   startDate?: number | string;
-  /** date formatted string or unix timestamp (e.g. 1631124000000) */
+  /** Date formatted string or unix timestamp (e.g. 1631124000000) */
   endDate?: number | string;
-  /** seconds in time series per second (e.g. 10800 seconds per second) */
+  /** Seconds in time series per second (e.g. 10800 seconds per second) */
   speed?: number;
-  /** in seconds (e.g. 3 seconds) */
+  /** Time to wait before animating in seconds (e.g. 3 seconds) */
   pauseDuration?: number;
-  /** if true, start playing automatically */
+  /** If true, start playing automatically */
   autoPlay?: boolean;
-  /** if true, loop the animation */
+  /** If true, loop the animation */
   loop?: boolean;
 }
 
@@ -3524,11 +3692,11 @@ export interface TimeSeriesStyle {
 /**
  * # STYLE DEFINITION
  *
- * ## Description
+ * ### Description
  * This is the user defined guide for how to render the map. This definition includes directions of what data
  * to render, where to get said data, and how to style each data as layers.
  *
- * ## Rendering Properties
+ * ### Rendering Properties
  * - `projection`: `"S2"` (Spherical Geometry) or `"WG"` (Web Mercator). Defaults to S2
  * - `sources`: Most critical, a list of source data, how to fetch for rendering
  * - `timeSeries`: Time series data is a WIP. Is a guide on how to render &/ animate data at various timestamps
@@ -3542,7 +3710,7 @@ export interface TimeSeriesStyle {
  * - `wallpaper`: Wallpaper is often used with vector data. Control the coloring of the background.
  * - `clearColor`: Background color for sections where the painter doesn't draw to. Defaults to `rgba(0, 0, 0, 0)`
  *
- * ## Camera Properties
+ * ### Camera Properties
  * - `view`: `zoom`, `lon`, `lat`, `bearing`, `pitch`. Defaults to 0 for all.
  * - `zNear`: zNear is a parameter for the camera. Recommend not touching.
  * - `zFar`: zFar is a parameter for the camera. Recommend not touching.
@@ -3552,12 +3720,12 @@ export interface TimeSeriesStyle {
  * - `maxLatPosition`: The maximum latitude position. Useful for the S2 Projection to avoid wonky movemeny at low zooms
  * - `zoomOffset`: Often times to improve the quality of raster data, you can apply a zoomOffset for tiles to render.
  *
- * ## Base Properties
+ * ### Base Properties
  * - `version`: version of the style - not used for anything other than debugging
  * - `name`: name of the style - not used for anything other than debugging
  * - `description`: description of the style - not used for anything other than debugging
  *
- * ## Flags
+ * ### Flags
  * - `constrainZoomToFill`: Strictly a WG Projection property. Force the view to fill. Defaults to `false`
  * - `duplicateHorizontally`: Strictly a WG Projection property. Render the world map as necessary to fill the screen horizontally. Defaults to `true`
  * - `noClamp`: Allow the camera to go past the max-min latitudes. Useful for animations. Defaults to `false`
@@ -3725,7 +3893,19 @@ export interface StyleDefinition {
    * Default is `rgba(0, 0, 0, 0)` (transparent)
    */
   clearColor?: ColorArray;
-  /** Layers are the main way to render data on the map. */
+  /**
+   * Layers are the main way to render data on the map.
+   * Your layer options are:
+   * - fill - Draw polygons with a fill color, outline, and opacity
+   * - glyph - Draw text, icons, sprites, etc.
+   * - heatmap - Takes lots of points as an input and produces a heatmap
+   * - hillshade - Draw hillshading on the map given an input elevation tile.
+   * - line - Lines with variable width, cap, and join types
+   * - point - Draw individual points, even if they're clustered, deconstruct lines and polygons, etc.
+   * - raster - RGBA encoded tile data
+   * - sensor - Sensor data is a temporal construct that takes gridded data and draws it on the map using a color ramp.
+   * - shade - Draw a nice "shade" gradient on the globe to give it depth if you're using the S2 Projection. Usually only want one.
+   */
   layers?: LayerStyle[];
   /** @experimental Utilize WIP experimental components that still have bugs in them. */
   experimental?: boolean;

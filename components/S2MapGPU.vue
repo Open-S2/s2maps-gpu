@@ -30,9 +30,9 @@ export default {
       const config = useRuntimeConfig()
       const options: MapOptions = {
         urlMap: {
-          apiURL: config.public.dataURL,
-          dataURL: config.public.dataURL,
-          baseURL: config.public.baseURL
+          apiURL: config.public.dataURL as string,
+          dataURL: config.public.dataURL as string,
+          baseURL: config.public.baseURL as string
         },
         attributionOff: true,
         watermarkOff: true,

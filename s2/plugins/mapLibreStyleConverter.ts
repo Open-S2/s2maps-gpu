@@ -98,7 +98,7 @@ function convertSources(input: Record<string, SourceSpecification>): Sources {
       sources[name] = {
         path: '',
         extension: 'geojson',
-        data: data as JSONCollection | undefined,
+        data: data as JSONCollection,
         type: 'json',
         maxzoom,
         cluster,
@@ -120,9 +120,8 @@ function convertSources(input: Record<string, SourceSpecification>): Sources {
           type,
           minzoom,
           maxzoom,
-          // bounds,
+          bounds,
           scheme: 'xyz',
-          old_bounds: bounds,
         };
       }
     }

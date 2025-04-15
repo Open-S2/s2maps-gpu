@@ -5,25 +5,22 @@ import type { Analytics, StyleDefinition } from 'style/style.spec';
 // an API key enables the user to construct a session token
 // a session token lasts 10 minutes and allows the user to make requests for data
 
-/**
- *
- */
+/** A Session manager object */
 interface SessionKey {
   apiKey?: string;
   token?: string;
   exp?: number;
 }
-
-/**
- *
- */
+/** A Session response object */
 interface SessionResponse {
   token: string;
   maxAge: number;
 }
 
 /**
+ * Session Manager
  *
+ * Keep up to date with API keys and session tokens
  */
 export default class Session {
   analytics?: Analytics;
@@ -34,9 +31,10 @@ export default class Session {
   sessionPromise?: Promise<SessionKey | undefined>;
 
   /**
-   * @param mapID
-   * @param analytics
-   * @param apiKey
+   * Load a style via a URL, sending off analytics and utilizing the apiKey if needed
+   * @param mapID - the id of the map
+   * @param analytics - basic analytics about the GPU and screen dimensions
+   * @param apiKey - the api key if needed
    */
   loadStyle(mapID: string, analytics: Analytics, apiKey?: string): void {
     this.analytics = analytics;
@@ -44,9 +42,10 @@ export default class Session {
   }
 
   /**
-   * @param _messagePort
-   * @param postPort
-   * @param id
+   * Load a worker
+   * @param _messagePort - unused
+   * @param postPort - the port for a worker to send session messages to
+   * @param id - the id of the worker
    */
   loadWorker(
     _messagePort: MessageChannel['port1'],
@@ -58,7 +57,8 @@ export default class Session {
   }
 
   /**
-   *
+   * Request a worker to process data
+   * @returns the port for the worker
    */
   requestWorker(): MessagePort {
     const worker = this.workers[this.currWorker];
@@ -69,16 +69,19 @@ export default class Session {
   }
 
   /**
-   * @param mapID
+   * Check if the map has an API key
+   * @param mapID - the id of the map
+   * @returns true if the map has an API key
    */
   hasAPIKey(mapID: string): boolean {
     return this.sessionKeys[mapID]?.apiKey !== undefined;
   }
 
   /**
-   * @param mapID
-   * @param style
-   * @param urlMap
+   * Request a style from the server
+   * @param mapID - the id of the map
+   * @param style - the style url
+   * @param urlMap - the url map to properly modify and resolve urls
    */
   async requestStyle(mapID: string, style: string, urlMap?: Record<string, string>): Promise<void> {
     // grab the auth token
@@ -99,7 +102,9 @@ export default class Session {
   }
 
   /**
-   * @param mapID
+   * Request a session token from the server to start fetching data
+   * @param mapID - the id of the map
+   * @returns the session token if available and/or successful
    */
   async requestSessionToken(mapID: string): Promise<string | undefined | 'failed'> {
     const failed = 'failed';

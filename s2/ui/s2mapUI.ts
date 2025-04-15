@@ -19,9 +19,31 @@ import type {
 /**
  * # Map MapOptions
  *
+ * ## Description
+ *
  * User defined configuration options for the map.
  *
- * ## Rendering Options
+ * At a minimum, you probably want to define a `style` and a `container`.
+ *
+ * ex.
+ * ```ts
+ * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
+ * import type { MapOptions, StyleDefinition } from 's2maps-gpu';
+ *
+ * // build a style guide of sources to fetch and layers to render
+ * const style: StyleDefinition = { ... };
+ * // setup options for the map
+ * const options: MapOptions = {
+ *   container: 'map', // the ID of the HTML element to render the map into
+ *   // reference a canvas instead of a container:
+ *   // canvas: userPulledCanvasElement
+ *   style,
+ * }
+ * // Build the map
+ * const map = new S2Map(options);
+ * ```
+ *
+ * ### Rendering Options
  * - `contextType`: Forces the use of specific GPU Context:
  *   - `1`: WebGL
  *   - `2`: WebGL2
@@ -33,7 +55,7 @@ import type {
  * - `canvasMultiplier`: Control the number of fragments per pixel. [default: window.devicePixelRatio]
  * - `darkMode`: boolean flag. Enable dark mode. [default: false]
  *
- * ## Control Options
+ * ### Control Options
  * - `interactive`:boolean flag.  If true, the map will be interactive with user mouse/keyboard/finger inputs; [default: true]
  * - `scrollZoom`: boolean flag. If true, allow user to use scroll wheel to zoom. [default: true]
  * - `positionalZoom`: boolean flag. If true, cursor position impacts zoom's x & y directions. [default: true]
@@ -45,7 +67,7 @@ import type {
  * - `canMove`: boolean flag. Enable panning/moving functionality. [default: true]
  * - `noClamp`: boolean flag. Allow latitude and longitude to pass their limits (-90, 90) and (-180, 180) respectively [default: false]
  *
- * ## Additional Options
+ * ### Additional Options
  * - `hash`: If true, the map will update the URL Hash with it's current View. [default: false]
  * - `apiKey`: string. API key for the map service.
  * - `urlMap`: An API URL that remaps any source strings that start with "example://" to whatever example is

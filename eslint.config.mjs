@@ -4,13 +4,14 @@ import eslint from '@eslint/js';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 import jsdoc from 'eslint-plugin-jsdoc';
 import prettierConfig from 'eslint-config-prettier';
-import withNuxt from './.nuxt/eslint.config.mjs';
+// import withNuxt from './.nuxt/eslint.config.mjs';
 // TODO: Eventually support tsdoc instead of jsdoc [https://github.com/microsoft/tsdoc/issues/374]
 // albiet it seems like jsdoc gets way more love and has a ton of ts support
 // import tsdocs from 'eslint-plugin-tsdoc';
 import tseslint from 'typescript-eslint';
 
-export default withNuxt(
+// export default withNuxt(
+export default tseslint.config(
   eslint.configs.recommended,
   // @ts-expect-error - its mad that the types were not written correctly
   tseslint.configs.recommended,
