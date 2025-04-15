@@ -2,6 +2,7 @@ import Color, { interpolate } from '.';
 
 import type { ColorArray } from './';
 import type { ColorBlindAdjust } from './colorBlindAdjust';
+import type { ColorRamp } from 'style/style.spec';
 
 /**
  * Build a color ramp given a string defined ramp style or ramp guide
@@ -9,10 +10,7 @@ import type { ColorBlindAdjust } from './colorBlindAdjust';
  * @param lch - whether or not to use lch
  * @returns Uint8ClampedArray
  */
-export function buildColorRamp(
-  ramp: 'sinebow' | 'sinebow-extended' | Array<{ stop: number; color: string }>,
-  lch = false,
-): Uint8ClampedArray {
+export function buildColorRamp(ramp: ColorRamp, lch = false): Uint8ClampedArray {
   const { round } = Math;
   // create ramp image
   // (4) RGBA * (5) height (base color, protanopia, deuteranopia, tritanopia, greyscale) * (255) width

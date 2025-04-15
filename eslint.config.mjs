@@ -13,7 +13,6 @@ import tseslint from 'typescript-eslint';
 // export default withNuxt(
 export default tseslint.config(
   eslint.configs.recommended,
-  // @ts-expect-error - its mad that the types were not written correctly
   tseslint.configs.recommended,
   eslintPluginPrettierRecommended,
   // ...(await withNuxt()),
@@ -21,7 +20,7 @@ export default tseslint.config(
   {
     languageOptions: {
       parserOptions: {
-        project: ['./tsconfig.json'],
+        project: ['./tsconfig.eslint.json'],
         tsconfigRootDir: import.meta.dirname,
       },
     },

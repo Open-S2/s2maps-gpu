@@ -2,10 +2,4 @@
 
 Not a replacement for the full tracker. Used on a large PR basis
 
-[x] - replace `s2-pmtiles` module with `gis-tools` S2PMTilesReader
-[x] - fix all Properties cases
-[ ] - replace style code that overlaps with gis-tools, s2tilejson, s2json
-[ ] - replace all metadata stuff with s2tilejson. Used by sources
-[ ] - replace all local `geometry` code with `gis-tools`
-
 [ ] - Use modern playwrite for faster testing

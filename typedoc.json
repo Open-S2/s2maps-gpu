@@ -23,6 +23,8 @@
     "html",
     "css",
     "markdown",
-    "yaml"
+    "yaml",
+    "glsl",
+    "wgsl"
   ]
 }

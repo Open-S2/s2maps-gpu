@@ -108,7 +108,7 @@ function dataConditionFunction<T extends NotNullOrObject, U>(
       for (let i = 0, cl = conditionList.length; i < cl; i++) {
         // run through the conditionList
         const { condition, result } = conditionList[i];
-        if (condition(properties)) {
+        if (condition(properties) === true) {
           code.push(i + 1);
           return result(code, properties, zoom);
         }

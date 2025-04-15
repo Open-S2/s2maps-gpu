@@ -2,6 +2,7 @@ import type {
   Alignment,
   Anchor,
   Cap,
+  ColorRamp,
   Comparator,
   FillStyle,
   Filter,
@@ -531,9 +532,7 @@ function convertLayerSymbol(
  * @param input - the MapLibre input color ramp
  * @returns the s2maps color ramp
  */
-function convertColorRamp(
-  input?: ExpressionSpecification,
-): undefined | Array<{ stop: number; color: string }> {
+function convertColorRamp(input?: ExpressionSpecification): undefined | ColorRamp {
   if (Array.isArray(input)) {
     return undefined;
   } else if (typeof input === 'object') {
@@ -620,9 +619,7 @@ function convertPropertyValueSpecificationMatch<T extends NotNullOrObject>(
 ): undefined | T | Property<T> {
   const [, expression, ...rest] = input;
   const fallback = rest.pop();
-  // TODO: Figure out why eslint and tsc don't see an error but vscode does:
-  // @ts-expect-error - fix later
-  if (expression[0] !== 'get') return undefined;
+  if (!Array.isArray(expression) || expression[0] !== 'get') return undefined;
   const key = expression[1];
   // we return a dataCondition
   const res: Property<T> = {

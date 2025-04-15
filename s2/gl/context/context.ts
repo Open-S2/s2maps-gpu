@@ -20,6 +20,11 @@ export interface FBO {
   stencil: WebGLRenderbuffer;
   glyphFramebuffer: WebGLFramebuffer;
 }
+/** Context presentation */
+export interface ContextPresentation {
+  width: number;
+  height: number;
+}
 
 const DEPTH_ESPILON = 1 / Math.pow(2, 16);
 
@@ -37,7 +42,7 @@ export default class Context {
   painter: Painter;
   type: GPUType = GPUType.WebGL1;
   projection: Projection = 'S2';
-  presentation: { width: number; height: number } = { width: 0, height: 0 };
+  presentation: ContextPresentation = { width: 0, height: 0 };
   renderer: string; // ex: AMD Radeon Pro 560 OpenGL Engine (https://github.com/pmndrs/detect-gpu)
   devicePixelRatio: number;
   interactive = false;

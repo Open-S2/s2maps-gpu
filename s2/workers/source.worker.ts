@@ -429,7 +429,7 @@ export default class SourceWorker {
       };
       for (const source of Object.values(mapSources)) {
         if (sourceNames.length > 0 && !sourceNames.includes(source.name)) continue;
-        if (source.isTimeFormat) continue;
+        if (source.isTimeFormat === true) continue;
         await source.tileRequest(mapID, { ...tile }, flush);
       }
       postMessage(flush);
@@ -458,7 +458,7 @@ export default class SourceWorker {
         layersToBeLoaded: new Set<number>(),
       };
       for (const source of Object.values(mapSources)) {
-        if (!source.isTimeFormat || !sourceNames.includes(source.name)) continue;
+        if (source.isTimeFormat !== true || !sourceNames.includes(source.name)) continue;
         await source.tileRequest(mapID, { ...tile }, flush);
       }
       postMessage(flush);

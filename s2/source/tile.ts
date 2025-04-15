@@ -342,7 +342,7 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
         parent !== undefined &&
         // corner-case: empty data/missing tile -> flushes ALL layers,
         // but that layer MAY BE inverted so we don't kill it.
-        !(('invert' in layerGuide && layerGuide.invert) ?? false)
+        !(('invert' in layerGuide && layerGuide.invert === true) ?? false)
       )
         featureGuides.splice(i, 1);
     }

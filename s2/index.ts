@@ -7,6 +7,8 @@ export * from './style/style.spec';
 export * from './plugins';
 export * from './util';
 
+export type * from './workers/worker.spec';
+
 /**
  * Creator of the library:
  * Github handle - @CraigglesO

@@ -416,7 +416,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
       currFeatures,
       tileCache,
     } = this;
-    if (!style.interactive) return;
+    if (style.interactive !== true) return;
     const foundObjects = new Map<number, InteractiveObject>();
     const featureIDs = await painter.context.getFeatureAtMousePosition(x, y);
     // if we found an ID and said feature is not the same as the current, we dive down
@@ -690,7 +690,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
       const parent = tileCache.get(pID);
       if (parent !== undefined) tile.injectParentTile(parent, style.layers);
     }
-    if (tile.outofBounds) {
+    if (tile.outofBounds === true) {
       // This is a WM only case. Inject "wrapped" tile's featureGuides as a reference
       const wrappedID: bigint = tileIDWrappedWM(id);
       if (!tileCache.has(wrappedID)) res.push(...this.#createTiles(wrappedID));
@@ -716,14 +716,14 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     // prep tiles
     const tiles = this.getTiles();
     // if any changes, we paint new scene
-    if (style.dirty || painter.dirty || projector.dirty) {
+    if (style.dirty === true || painter.dirty || projector.dirty) {
       // store for future draw that it was a "dirty" frame
       this.wasDirtyLastFrame = true;
       // paint scene
       painter.paint(projector, tiles);
     }
     // draw the interactive elements if there was no movement/zoom change
-    if (style.interactive && !projector.dirty && this.wasDirtyLastFrame) {
+    if (style.interactive === true && !projector.dirty && this.wasDirtyLastFrame) {
       this.wasDirtyLastFrame = false;
       painter.computeInteractive(tiles);
     }

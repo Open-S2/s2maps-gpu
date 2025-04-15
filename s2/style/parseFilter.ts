@@ -26,7 +26,7 @@ export interface Conditional {
 /**
  * Condition object.
  *
- * Also @see {@link parseFilter}
+ * Also @see {@link Filter}
  *
  * When creating conditionals, you have two ways to do it:
  *
@@ -78,6 +78,8 @@ export interface Condition extends NestedKey {
 }
 
 /**
+ * Filter Definition
+ *
  * example:
  *
  * ```json
@@ -107,7 +109,15 @@ export interface Condition extends NestedKey {
  * }
  * ```
  */
-export type Filter = { and: Filter[] } | { or: Filter[] } | Condition;
+export type Filter = AndFilter | OrFilter | Condition;
+/** And Gate Filter */
+export interface AndFilter {
+  and: Filter[];
+}
+/** Or Gate Filter */
+export interface OrFilter {
+  or: Filter[];
+}
 
 /**
  * Parse a filter into a filter function

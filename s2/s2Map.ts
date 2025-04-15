@@ -28,10 +28,15 @@ export type { UserTouchEvent } from './ui/camera/dragPan';
  * - 4: Greyscale
  */
 export const ColorMode = {
+  /** None */
   None: 0,
+  /** Protanopia */
   Protanopia: 1,
+  /** Deuteranopia */
   Deuteranopia: 2,
+  /** Tritanopia */
   Tritanopia: 3,
+  /** Greyscale */
   Greyscale: 4,
 } as const;
 /** colorblind mode */
@@ -964,11 +969,11 @@ export default class S2Map extends EventTarget {
     const { offscreen, map } = this;
     return await new Promise<null | Uint8Array>((resolve) => {
       /**
-       * @param event
+       * Setup a listener for when the screenshot to be shipped back
+       * @param event - the response with the screenshot
        */
-      const listener = (event: Event): void => {
-        const ce = event as CustomEvent<Uint8Array | null>;
-        resolve(ce?.detail);
+      const listener = (event: CustomEvent<Uint8Array | null>): void => {
+        resolve(event?.detail);
       };
       this.addEventListener('screenshot', listener, { once: true });
       offscreen?.postMessage({ type: 'screenshot' });

@@ -36,8 +36,8 @@ export type {
   Projection,
   TileStoreOptions,
 } from 'gis-tools';
-export type { Filter, FilterFunction } from './parseFilter';
-export type { EaseType } from './easingFunctions';
+export type * from './parseFilter';
+export type * from './easingFunctions';
 export type { MapOptions } from 'ui/s2mapUI';
 export type { ColorArray } from './color';
 export type { View } from 'ui/camera/projector';
@@ -1008,6 +1008,20 @@ export interface LayerWorkerBaseRaster {
 }
 /** Default case for unknown layer types, should never be used */
 export type UnkownLayerStyle = LayerStyleBase;
+
+// Generic Layer Style Types //
+
+/** The types of vector geometry that can be filtered */
+export type GeoFilter = 'point' | 'line' | 'poly';
+/** List of vector geometry filters */
+export type GeoFilters = GeoFilter[];
+/** Color Ramp Interpolation guide */
+export interface ColorRampInput {
+  stop: number;
+  color: string;
+}
+/** Color Ramp options */
+export type ColorRamp = 'sinebow' | 'sinebow-extended' | ColorRampInput[];
 
 // FILL //
 
@@ -2024,7 +2038,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * Ex. `["line"]` - only draw lines
    * Defaults to empty.
    */
-  geoFilter?: Array<'point' | 'line' | 'poly'>;
+  geoFilter?: GeoFilters;
   /** if true, the layer will be drawn regardless of other glyph layers. Default false */
   overdraw?: boolean;
   /** if true, when hovering over the glyph, the property data will be sent to the UI via an Event. Default false */
@@ -2063,7 +2077,7 @@ export interface GlyphDefinition extends LayerDefinitionBase {
   iconOffset: Point | PropertyOnlyStep<Point>;
   iconPadding: Point | PropertyOnlyStep<Point>;
   // properties
-  geoFilter: Array<'point' | 'line' | 'poly'>;
+  geoFilter: GeoFilters;
   overdraw: boolean;
   interactive: boolean;
   noShaping: boolean;
@@ -2108,7 +2122,7 @@ export interface GlyphWorkerLayer extends LayerWorkerBase {
   iconOffset: LayerWorkerFunction<Point>;
   iconPadding: LayerWorkerFunction<Point>;
   // properties
-  geoFilter: Array<'point' | 'line' | 'poly'>;
+  geoFilter: GeoFilters;
   overdraw: boolean;
   interactive: boolean;
   noShaping: boolean;
@@ -2286,14 +2300,14 @@ export interface HeatmapStyle extends LayerStyleBase {
    * }
    * ```
    */
-  colorRamp?: 'sinebow' | 'sinebow-extended' | Array<{ stop: number; color: string }>;
+  colorRamp?: ColorRamp;
   /**
    * Filter the geometry types that will be drawn.
    * An empty array will support all geometry types.
    * Ex. `["line"]` - only draw lines
    * Defaults to `['line', 'poly']` (only points will be drawn).
    */
-  geoFilter?: Array<'point' | 'line' | 'poly'>;
+  geoFilter?: GeoFilters;
 }
 /** A parsed heatmap guide that injects defaults for missing properties */
 export interface HeatmapDefinition extends LayerDefinitionBase {
@@ -2304,8 +2318,8 @@ export interface HeatmapDefinition extends LayerDefinitionBase {
   intensity: number | Property<number>;
   weight: number | Property<number>;
   // properties
-  colorRamp: 'sinebow' | 'sinebow-extended' | Array<{ stop: number; color: string }>;
-  geoFilter: Array<'point' | 'line' | 'poly'>;
+  colorRamp: ColorRamp;
+  geoFilter: GeoFilters;
 }
 /** A built heatmap guide used by the heatmap workflow. */
 export interface HeatmapWorkflowLayerGuide extends LayerWorkflowGuideBase {
@@ -2325,7 +2339,7 @@ export interface HeatmapWorkerLayer extends LayerWorkerBase {
   type: 'heatmap';
   getCode: BuildCodeFunction;
   weight: LayerWorkerFunction<number>;
-  geoFilter: Array<'point' | 'line' | 'poly'>;
+  geoFilter: GeoFilters;
 }
 
 // LINE //
@@ -2810,7 +2824,7 @@ export interface PointStyle extends LayerStyleBase {
    * Ex. `["line"]` - only draw lines
    * Defaults to `['line', 'poly']`.
    */
-  geoFilter?: Array<'point' | 'line' | 'poly'>;
+  geoFilter?: GeoFilters;
   /** if true, when hovering over the line, the property data will be sent to the UI via an Event. Defaults to `false` */
   interactive?: boolean;
   /** the cursor to use when hovering over the line. Defaults to "default" */
@@ -2826,7 +2840,7 @@ export interface PointDefinition extends LayerDefinitionBase {
   strokeWidth: number | Property<number>;
   opacity: number | Property<number>;
   // properties
-  geoFilter: Array<'point' | 'line' | 'poly'>;
+  geoFilter: GeoFilters;
   interactive: boolean;
   cursor: Cursor;
 }
@@ -2843,7 +2857,7 @@ export interface PointWorkflowLayerGuideGPU extends PointWorkflowLayerGuide {
 export interface PointWorkerLayer extends LayerWorkerBase {
   type: 'point';
   getCode: BuildCodeFunction;
-  geoFilter: Array<'point' | 'line' | 'poly'>;
+  geoFilter: GeoFilters;
   interactive: boolean;
   cursor: Cursor;
 }
@@ -3415,7 +3429,7 @@ export interface SensorStyle extends LayerStyleBase {
    * }
    * ```
    */
-  colorRamp?: 'sinebow' | 'sinebow-extended' | Array<{ stop: number; color: string }>;
+  colorRamp?: ColorRamp;
   /** if true, when hovering over the fill, the property data will be sent to the UI via an Event. Defaults to false */
   interactive?: boolean;
   /** the cursor to use when hovering over the fill. Defaults to "default" */
@@ -3428,7 +3442,7 @@ export interface SensorDefinition extends LayerDefinitionBase {
   opacity: number | Property<number>;
   // properties
   fadeDuration: number;
-  colorRamp: 'sinebow' | 'sinebow-extended' | Array<{ stop: number; color: string }>;
+  colorRamp: ColorRamp;
   interactive: boolean;
   cursor: Cursor;
 }
@@ -3583,8 +3597,11 @@ export type InteractiveWorkerLayer =
  * - `3` -> WebGPU
  */
 export const GPUType = {
+  /** WebGL1 */
   WebGL1: 1,
+  /** WebGL2 */
   WebGL2: 2,
+  /** WebGPU */
   WebGPU: 3,
 } as const;
 /** colorblind mode */

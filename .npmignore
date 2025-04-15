@@ -9,11 +9,3 @@
 
 # Exclude all contents of dist folder except plugins
 !/dist/
-
-# playwright
-playwright-report/
-playwright-backup/
-.eslintrc-auto-import.json
-test-results/
-blob-report/
-playwright/.cache/
