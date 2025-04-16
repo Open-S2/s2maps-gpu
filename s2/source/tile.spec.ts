@@ -75,7 +75,7 @@ export interface TileBase<C, F, M> {
   uniforms: Float32Array;
   bottomTop: Float32Array;
   state: 'loading' | 'loaded' | 'deleted';
-  type: 'S2' | 'WG';
+  type: 'S2' | 'WM';
   // S2 specific features
   faceST: FaceST;
   corners?: Corners;

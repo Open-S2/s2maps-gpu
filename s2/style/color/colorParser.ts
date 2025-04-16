@@ -44,7 +44,7 @@ const COLOR_MAP = {
  * @param input - the string to parse
  * @returns the parsed color
  */
-export default function colorParser(input: string): ColorDefinition {
+export function colorParser(input: string): ColorDefinition {
   if (COLOR_MAP[input as keyof typeof COLOR_MAP] !== undefined) {
     const u = COLOR_MAP[input as keyof typeof COLOR_MAP];
     const r = u >> 16;

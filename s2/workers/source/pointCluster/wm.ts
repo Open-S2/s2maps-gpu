@@ -60,7 +60,7 @@ export default class PointCluser {
   indexes: Array<PointIndex<Cluster>> = [];
   points: VectorPointFeature[] = [];
   faces = new Set<Face>([0]);
-  projection = 'WG';
+  projection = 'WM';
   /** @param options - cluster options */
   constructor(options: ClusterOptions = {}) {
     this.options = { ...this.options, ...options };

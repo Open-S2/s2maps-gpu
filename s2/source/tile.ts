@@ -68,12 +68,12 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
   uniforms = new Float32Array(7); // [isS2, face, zoom, sLow, tLow, deltaS, deltaT]
   bottomTop = new Float32Array(8);
   state: 'loading' | 'loaded' | 'deleted' = 'loading';
-  type: 'S2' | 'WG' = 'S2';
+  type: 'S2' | 'WM' = 'S2';
   faceST!: FaceST;
   matrix!: Float32Array;
   layersLoaded = new Set<number>();
   layersToBeLoaded?: Set<number>;
-  // WG only feature: if the tile is "out of bounds", it references a real world tile
+  // WM only feature: if the tile is "out of bounds", it references a real world tile
   // by copying the parents featureGuides.
   outofBounds = false;
   dependents: Array<Tile<C, F, M>> = [];
@@ -444,7 +444,7 @@ export class WMTile<
   F extends SharedFeatures,
   M extends SharedMaskSource,
 > extends Tile<C, F, M> {
-  override type = 'WG' as const;
+  override type = 'WM' as const;
   override matrix: Float32Array = new Float32Array(16);
   /**
    * @param context - a GPU context or WebGL context

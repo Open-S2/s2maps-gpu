@@ -4,9 +4,23 @@
 <h1 align="center">S2 Maps GPU</h1>
 
 <p align="center">
-<a href="https://discord.opens2.com" target="_blank"><img height=20 src="https://img.shields.io/discord/953563031701426206" /></a>
-<img src="https://img.shields.io/github/stars/Open-S2/s2maps-gpu" alt="stars">
-<a href="https://standardjs.com"><img src="https://img.shields.io/badge/code_style-standard-brightgreen.svg" alt="standard style" /></a>
+  <img src="https://img.shields.io/github/stars/Open-S2/s2maps-gpu" alt="stars">
+  <a href="https://img.shields.io/github/actions/workflow/status/Open-S2/s2maps-gpu/test.yml?logo=github">
+    <img src="https://img.shields.io/github/actions/workflow/status/Open-S2/s2maps-gpu/test.yml?logo=github" alt="GitHub Actions Workflow Status">
+  </a>
+  <a href="https://www.npmjs.com/package/s2maps-gpu">
+    <img src="https://img.shields.io/npm/dm/s2maps-gpu.svg" alt="downloads">
+  </a>
+  <img src="https://raw.githubusercontent.com/Open-S2/s2maps-gpu/master/assets/doc-coverage.svg" alt="doc-coverage">
+  <a href="https://open-s2.github.io/s2maps-gpu/">
+    <img src="https://img.shields.io/badge/docs-typescript-yellow.svg" alt="docs-ts">
+  </a>
+  <a href="https://coveralls.io/github/Open-S2/s2maps-gpu?branch=master">
+    <img src="https://coveralls.io/repos/github/Open-S2/s2maps-gpu/badge.svg?branch=master" alt="code-coverage">
+  </a>
+  <a href="https://discord.opens2.com">
+    <img src="https://img.shields.io/discord/953563031701426206?logo=discord&logoColor=white" alt="Discord">
+  </a>
 </p>
 
 <div align="center">

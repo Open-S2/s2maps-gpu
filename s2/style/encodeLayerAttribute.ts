@@ -1,4 +1,4 @@
-import Color from './color/index.js';
+import { Color } from './color/index.js';
 
 import type {
   DataCondition,

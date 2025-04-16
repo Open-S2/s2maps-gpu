@@ -4,6 +4,7 @@ import type S2MapUI from 'ui/s2mapUI.js';
 import type { SensorTextureDefinition } from 'ui/camera/timeCache.js';
 import type { TileGPU as Tile } from 'source/tile.spec.js';
 import type TimeCache from 'ui/camera/timeCache.js';
+import type { UrlMap } from 'util/index.js';
 import type { WebGPUContext } from '../context/index.js';
 import type {
   FillData,
@@ -549,6 +550,6 @@ export interface SkyboxWorkflow extends Workflow<unknown> {
   facesReady: number;
   ready: boolean;
 
-  updateStyle: (style: StyleDefinition, s2mapGL: S2MapUI, urlMap?: Record<string, string>) => void;
+  updateStyle: (style: StyleDefinition, s2mapGL: S2MapUI, urlMap?: UrlMap) => void;
   draw: (feature: Projector) => void;
 }

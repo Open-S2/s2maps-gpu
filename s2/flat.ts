@@ -4,7 +4,6 @@ export { default as S2Map } from './s2Map.js';
 
 export * from './s2Map.js';
 export * from './style/style.spec.js';
-export * from './plugins/index.js';
 export * from './util/index.js';
 
 /**

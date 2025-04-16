@@ -3,7 +3,7 @@ import type { StyleDefinition } from 'style/style.spec.js';
 const style: StyleDefinition = {
   version: 1,
   experimental: true,
-  projection: 'WG',
+  projection: 'WM',
   name: 'WM Icons',
   view: {
     lon: 0,

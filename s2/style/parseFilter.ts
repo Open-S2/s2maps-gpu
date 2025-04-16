@@ -80,6 +80,13 @@ export interface Condition extends NestedKey {
 /**
  * Filter Definition
  *
+ * A filter is a set of conditions that are used to filter out features.
+ *
+ * ### Parameters
+ * - `key`: The key to filter on
+ * - `comparator`: [See {@link Comparator}] The comparator to use
+ * - `value`: The value to compare
+ *
  * example:
  *
  * ```json

@@ -1,9 +1,9 @@
-import { mapLibreStyleConverter } from 's2/plugins/index.js';
+import { convertMaplibreStyle } from 's2/plugins.js';
 
 import type { StyleSpecification } from '@maplibre/maplibre-gl-style-spec';
 
 // NOTE: at the bottom of the file:
-// export const style = mapLibreStyleConverter(maplibreStyle)
+// export const style = convertMaplibreStyle(maplibreStyle)
 
 const maplibreStyle: StyleSpecification = {
   name: 'MapLibre',
@@ -846,4 +846,4 @@ const maplibreStyle: StyleSpecification = {
   },
 };
 
-export default mapLibreStyleConverter(maplibreStyle);
+export default convertMaplibreStyle(maplibreStyle);

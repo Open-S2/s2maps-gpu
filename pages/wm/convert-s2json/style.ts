@@ -3,7 +3,7 @@ import type { StyleDefinition } from 'style/style.spec.js';
 const style: StyleDefinition = {
   version: 1,
   name: 'Convert S2JSON to GeoJSON',
-  projection: 'WG',
+  projection: 'WM',
   view: {
     lon: 0,
     lat: 0,

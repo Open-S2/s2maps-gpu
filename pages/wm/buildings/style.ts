@@ -2,7 +2,7 @@ import type { StyleDefinition } from 'style/style.spec.js';
 
 const style: StyleDefinition = {
   version: 1,
-  projection: 'WG',
+  projection: 'WM',
   name: 'WM GeoJSON',
   view: {
     // lon:   Location SALT LAKE CITY    Latitude  40.76078000    Longitude  -111.89105000  ,

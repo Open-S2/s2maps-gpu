@@ -1,4 +1,4 @@
-import Color from 'style/color/index.js';
+import { Color } from 'style/color/index.js';
 import Workflow from './workflow.js';
 
 // WEBGL1

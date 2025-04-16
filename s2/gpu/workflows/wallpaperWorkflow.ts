@@ -1,4 +1,4 @@
-import Color from 'style/color/index.js';
+import { Color } from 'style/color/index.js';
 import shaderCode from '../shaders/wallpaper.wgsl';
 
 import type Projector from 'ui/camera/projector/index.js';

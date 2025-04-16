@@ -1,13 +1,13 @@
 import type { ClusterOptions } from 'workers/source/pointCluster/index.js';
 import type { ColorArray } from './color/index.js';
 import type { EaseType } from './easingFunctions.js';
+import type { UrlMap } from 'util/index.js';
 import type { View } from 'ui/camera/projector/index.js';
 import type {
   Attributions,
   BBox,
   JSONCollection,
   Point,
-  Projection,
   Properties,
   TileStoreOptions,
 } from 'gis-tools/index.js';
@@ -33,15 +33,17 @@ export type {
   JSONCollection,
   VectorPoint,
   Properties,
-  Projection,
   TileStoreOptions,
 } from 'gis-tools/index.js';
 export type * from './parseFilter.js';
 export type * from './easingFunctions.js';
 export type { MapOptions } from 'ui/s2mapUI.js';
-export type { ColorArray } from './color/index.js';
+export type * from './color/index.js';
 export type { View } from 'ui/camera/projector/index.js';
 export type * from 's2-tilejson';
+
+/** Whether the projection is S2 or WM */
+export type Projection = 'S2' | 'WM';
 
 /** Optionalized tile metadata. Helps source workers to parse malformed tilesets */
 export interface OptionalizedTileMetadata {
@@ -209,6 +211,10 @@ export type Icons = Glyphs;
  *
  * If you want to use a different format, you can use an object instead of a string.
  *
+ * ### Parameters
+ * - `path`: The path to the sprite
+ * - `fileType`: The file type of the sprite
+ *
  * ex.
  * ```json
  * "sprites": {
@@ -253,7 +259,27 @@ export type Sprites = Record<
 // Worker:
 // Definition[paint + layout] -> parseFeatureFunction (updates all paint + layout properties to LayerFunction)
 
-/** Matches the `CSSStyleDeclaration['cursor']` property */
+/**
+ * # Cursor Options
+ * [MDN Reference](https://developer.mozilla.org/docs/Web/CSS/cursor)
+ *
+ * Matches the `CSSStyleDeclaration['cursor']` property
+ *
+ * The default is `"default"`
+ *
+ * ### Common Options
+ * - `"pointer"`
+ * - `"progress"`
+ * - `"crosshair"`
+ * - `"move"`
+ * - `"text"`
+ * - `"grab"`
+ * - `"grabbing"`
+ * - `"help"`
+ * - `"none"`
+ * - `"zoom-in"`
+ * - `"zoom-out"`
+ */
 export type Cursor = CSSStyleDeclaration['cursor'];
 
 /** The workflow takes a layer and builds a function that modifies a feature into renderable data */
@@ -446,7 +472,7 @@ export interface DataCondition<T extends NotNullOrObject> {
  *
  * ### Properties:
  * - `key`: Access value in feature properties by either its key or a nested key.
- * - `ease`: The ease effect. Choose between `lin` | `expo` | `quad` | `cubic` | `step` [default: `lin`]
+ * - `ease`: [See {@link EaseType}] The ease effect. Choose between `lin` | `expo` | `quad` | `cubic` | `step` [default: `lin`]
  * - `base`: Used by `expo`, `quad`, or `cubic` ease functions. Ranges from 0 -> 2 where 1 is linear, 0 is slow start, 2 is slow finish. [default: 1]
  * - `ranges`: Set the range stops and the input values to apply at those stops.
  */
@@ -582,7 +608,7 @@ export interface DataRangeStep<T extends NotNullOrObject> {
  *
  * ### Properties
  * - `type`: The type of input to use. Options are `zoom` | `lon` | `lat` | `angle` | `pitch`
- * - `ease`: The ease effect. Choose between `lin` | `expo` | `quad` | `cubic` | `step` [default: `lin`]
+ * - `ease`: [See {@link EaseType}] The ease effect. Choose between `lin` | `expo` | `quad` | `cubic` | `step` [default: `lin`]
  * - `base`: Used by `expo`, `quad`, or `cubic` ease functions. Ranges from 0 -> 2 where 1 is linear, 0 is slow start, 2 is slow finish. [default: 1]
  * - `ranges`: Set the range stops and the input values to apply at those stops.
  */
@@ -1173,7 +1199,21 @@ export type LayerDataType =
   | 'hillshade'
   | 'sensor';
 
-/** The base layer style. Used by almost all layers to define how a layer should be rendered */
+/**
+ * # Base Layer
+ *
+ * The base layer style. Used by almost all layers to define common attributes.
+ *
+ * - `name`: the name of the layer, useful for sorting a layer on insert or for removal
+ * - `source`: the name of the source whose data this layer will use
+ * - `layer`: the source's layer. Defaults to "default" for JSON data
+ * - `minzoom`: the minimum zoom level at which the layer will be visible
+ * - `maxzoom`: the maximum zoom level at which the layer will be visible
+ * - `filter`: [See {@link Filter}] a filter function to filter out features from the source layer
+ * - `lch`: use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+ * - `visible`: whether the layer is visible or not
+ * - `metadata`: additional metadata. Used by style generators
+ */
 export interface LayerStyleBase<M = unknown> {
   type?: LayerType;
   /** The name of the layer - useful for sorting a layer on insert or for removal */
@@ -1300,15 +1340,16 @@ export type ColorRamp = 'sinebow' | 'sinebow-extended' | ColorRampInput[];
  * are inverted, interactive, etc.
  *
  * ### Base Properties:
- * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
- * - `source` - the source of the data use
- * - `layer` - the source's layer. Defaults to "default" for JSON data
- * - `minzoom` - the minimum zoom level at which the layer will be visible
- * - `maxzoom` - the maximum zoom level at which the layer will be visible
- * - `filter` - a filter function to filter out features from the source layer
- * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
- * - `visible` - whether the layer is visible or not
- * - `metadata` - additional metadata. Used by style generators
+ * [See {@link LayerStyleBase}]
+ * - `name`: the name of the layer, useful for sorting a layer on insert or for removal
+ * - `source`: the name of the source whose data this layer will use
+ * - `layer`: the source's layer. Defaults to "default" for JSON data
+ * - `minzoom`: the minimum zoom level at which the layer will be visible
+ * - `maxzoom`: the maximum zoom level at which the layer will be visible
+ * - `filter`: [See {@link Filter}] a filter function to filter out features from the source layer
+ * - `lch`: use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+ * - `visible`: whether the layer is visible or not
+ * - `metadata`: additional metadata. Used by style generators
  *
  * ### Optional paint properties:
  * - `color`
@@ -1320,28 +1361,29 @@ export type ColorRamp = 'sinebow' | 'sinebow-extended' | ColorRampInput[];
  * - `patternFamily`
  *
  * ### Optional properties:
- * - `invert` - if true, invert where the fill is drawn to on the map
- * - `interactive` - if true, when hovering over the fill, the property data will be sent to the UI via an Event
- * - `cursor` - the cursor to use when hovering over the fill
- * - `opaque` - if true, the fill will be drawn opaque and not allow transparency. Used for performance gains.
+ * - `invert`: if true, invert where the fill is drawn to on the map
+ * - `interactive`: if true, when hovering over the fill, the property data will be sent to the UI via an Event
+ * - `cursor`: [See {@link Cursor}] the cursor to use when hovering over the fill
+ * - `opaque`: if true, the fill will be drawn opaque and not allow transparency. Used for performance gains.
  */
 export interface FillStyle extends LayerStyleBase {
   /**
    * # Fill Style Guide
    *
    * ### Base Properties:
-   * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
-   * - `source` - the source of the data use
-   * - `layer` - the source's layer. Defaults to "default" for JSON data
-   * - `minzoom` - the minimum zoom level at which the layer will be visible
-   * - `maxzoom` - the maximum zoom level at which the layer will be visible
-   * - `filter` - a filter function to filter out features from the source layer
-   * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
-   * - `visible` - whether the layer is visible or not
-   * - `metadata` - additional metadata. Used by style generators
+   * [See {@link LayerStyleBase}]
+   * - `name`: the name of the layer, useful for sorting a layer on insert or for removal
+   * - `source`: the name of the source whose data this layer will use
+   * - `layer`: the source's layer. Defaults to "default" for JSON data
+   * - `minzoom`: the minimum zoom level at which the layer will be visible
+   * - `maxzoom`: the maximum zoom level at which the layer will be visible
+   * - `filter`: [See {@link Filter}] a filter function to filter out features from the source layer
+   * - `lch`: use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+   * - `visible`: whether the layer is visible or not
+   * - `metadata`: additional metadata. Used by style generators
    *
    * ### Optional paint properties:
-   * - `color`
+   * - `color`: {@link Color} of the shade. Input either a `string` encoded color or wrap it in a {@link Property}.
    * - `opacity`
    *
    * ### Optional layout properties:
@@ -1350,10 +1392,10 @@ export interface FillStyle extends LayerStyleBase {
    * - `patternFamily`
    *
    * ### Optional properties:
-   * - `invert` - if true, invert where the fill is drawn to on the map
-   * - `interactive` - if true, when hovering over the fill, the property data will be sent to the UI via an Event
-   * - `cursor` - the cursor to use when hovering over the fill
-   * - `opaque` - if true, the fill will be drawn opaque and not allow transparency. Used for performance gains.
+   * - `invert`: if true, invert where the fill is drawn to on the map
+   * - `interactive`: if true, when hovering over the fill, the property data will be sent to the UI via an Event
+   * - `cursor`: [See {@link Cursor}] the cursor to use when hovering over the fill
+   * - `opaque`: if true, the fill will be drawn opaque and not allow transparency. Used for performance gains.
    */
   type: 'fill';
   // paint
@@ -1374,12 +1416,12 @@ export interface FillStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   color?: string | Property<string>;
   /**
@@ -1398,12 +1440,12 @@ export interface FillStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   opacity?: number | Property<number>;
   // layout
@@ -1428,12 +1470,12 @@ export interface FillStyle extends LayerStyleBase {
    * ```
    *
    * Your list of PropertyOnlyStep options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   pattern?: string | PropertyOnlyStep<string>;
   /**
@@ -1447,12 +1489,12 @@ export interface FillStyle extends LayerStyleBase {
    * ```
    *
    * Your list of PropertyOnlyStep options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   patternMovement?: boolean | PropertyOnlyStep<boolean>;
   /**
@@ -1479,12 +1521,12 @@ export interface FillStyle extends LayerStyleBase {
    * ```
    *
    * Your list of PropertyOnlyStep options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   patternFamily?: string | PropertyOnlyStep<string>;
   // properties
@@ -1560,98 +1602,100 @@ export type Placement = 'point' | 'line' | 'line-center-point' | 'line-center-pa
  * # Glyph Style Guide
  *
  * ### Base Properties:
- * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
- * - `source` - the source of the data use
- * - `layer` - the source's layer. Defaults to "default" for JSON data
- * - `minzoom` - the minimum zoom level at which the layer will be visible
- * - `maxzoom` - the maximum zoom level at which the layer will be visible
- * - `filter` - a filter function to filter out features from the source layer
- * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
- * - `visible` - whether the layer is visible or not
- * - `metadata` - additional metadata. Used by style generators
+ * [See {@link LayerStyleBase}]
+ * - `name`: the name of the layer, useful for sorting a layer on insert or for removal
+ * - `source`: the name of the source whose data this layer will use
+ * - `layer`: the source's layer. Defaults to "default" for JSON data
+ * - `minzoom`: the minimum zoom level at which the layer will be visible
+ * - `maxzoom`: the maximum zoom level at which the layer will be visible
+ * - `filter`: [See {@link Filter}] a filter function to filter out features from the source layer
+ * - `lch`: use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+ * - `visible`: whether the layer is visible or not
+ * - `metadata`: additional metadata. Used by style generators
  *
  * ### Optional paint properties:
- * - `textSize` - size of the glyphs in pixels
- * - `textFill` - fill color for glyphs
- * - `textStroke` - stroke color for glyphs
- * - `textStrokeWidth` - stroke width for glyphs in pixels
- * - `iconSize` - size of the icons in pixels
+ * - `textSize`: size of the glyphs in pixels
+ * - `textFill`: fill color for glyphs
+ * - `textStroke`: stroke color for glyphs
+ * - `textStrokeWidth`: stroke width for glyphs in pixels
+ * - `iconSize`: size of the icons in pixels
  *
  * ### Optional layout properties:
- * - `placement` - Can be `point`, `line`, `line-center-path` or `line-center-point`. Only relavent if geometry is not a point.
- * - `spacing` - The distance between glyphs in pixels. Only relavent if geometry is not a point.
- * - `textFamily` - The font family to use for the glyphs. Can be multiple options, first is default with each proceeding option as a fallback.
- * - `textField` - The description of the content to be rendered. Can be the text itself, or can be a transfromation input that uses the features properties to build a text string.
- * - `textAnchor` - The anchor position for the text being rendered. An example is "center" or "bottom-left"
- * - `textOffset` - The x and y offset of the text relative to the anchor in pixels
- * - `textPadding` - The width and height padding around the rendered glyphs to ensure stronger filtering of other text/icons nearby
- * - `textRotate` - The rotation of the glyphs relative to the anchor
- * - `textWordWrap` - Wrapping size in pixels. This ensures a max width of the box containing the words.
- * - `textAlign` - Alignment tool to build the words from the `left`, `middle` or `right` positions. Only noticable if words are wrapping.
- * - `textKerning` - Excess kerning for each glyph for individual glyph spacing between eachother.
- * - `textLineHeight` - Adjust the lineheight of glyphs to improve vertical spacing.
- * - `iconFamily` - The source family name to use for the icons. Can be multiple options, first is default with each proceeding option as a fallback.
- * - `iconField` - The name of the icon to render. Can be multiple options, first is default with each proceeding option as a fallback.
- * - `iconAnchor` - The anchor position for the icon to be rendered relative to the centerpoint of the icon. An example is "center" or "bottom-left"
- * - `iconOffset` - The x and y offset of the icon relative to the anchor in pixels
- * - `iconPadding` - The width and height padding around the rendered icon to ensure stronger filtering of other text/icons nearby
- * - `iconRotate` - The rotation of the icons relative to the anchor
+ * - `placement`: Can be `point`, `line`, `line-center-path` or `line-center-point`. Only relavent if geometry is not a point.
+ * - `spacing`: The distance between glyphs in pixels. Only relavent if geometry is not a point.
+ * - `textFamily`: The font family to use for the glyphs. Can be multiple options, first is default with each proceeding option as a fallback.
+ * - `textField`: The description of the content to be rendered. Can be the text itself, or can be a transfromation input that uses the features properties to build a text string.
+ * - `textAnchor`: The anchor position for the text being rendered. An example is "center" or "bottom-left"
+ * - `textOffset`: The x and y offset of the text relative to the anchor in pixels
+ * - `textPadding`: The width and height padding around the rendered glyphs to ensure stronger filtering of other text/icons nearby
+ * - `textRotate`: The rotation of the glyphs relative to the anchor
+ * - `textWordWrap`: Wrapping size in pixels. This ensures a max width of the box containing the words.
+ * - `textAlign`: Alignment tool to build the words from the `left`, `middle` or `right` positions. Only noticable if words are wrapping.
+ * - `textKerning`: Excess kerning for each glyph for individual glyph spacing between eachother.
+ * - `textLineHeight`: Adjust the lineheight of glyphs to improve vertical spacing.
+ * - `iconFamily`: The source family name to use for the icons. Can be multiple options, first is default with each proceeding option as a fallback.
+ * - `iconField`: The name of the icon to render. Can be multiple options, first is default with each proceeding option as a fallback.
+ * - `iconAnchor`: The anchor position for the icon to be rendered relative to the centerpoint of the icon. An example is "center" or "bottom-left"
+ * - `iconOffset`: The x and y offset of the icon relative to the anchor in pixels
+ * - `iconPadding`: The width and height padding around the rendered icon to ensure stronger filtering of other text/icons nearby
+ * - `iconRotate`: The rotation of the icons relative to the anchor
  *
  * ### Optional properties:
- * - `geoFilter` - filter the geometry types that will be drawn. Options are `point`, `line`, `poly`
- * - `overdraw` - if true, the layer will be drawn regardless of other glyph layers
- * - `interactive` - if true, when hovering over the glyph, the property data will be sent to the UI via an Event
- * - `viewCollisions` - if true, the layer glyphs will display the collision boxes and colorize them based on if they are colliding or not
- * - `cursor` - the cursor to use when hovering over the glyph
+ * - `geoFilter`: [See {@link GeoFilter}] filter the geometry types that will be drawn. Options are `point`, `line`, `poly`
+ * - `overdraw`: if true, the layer will be drawn regardless of other glyph layers
+ * - `interactive`: if true, when hovering over the glyph, the property data will be sent to the UI via an Event
+ * - `viewCollisions`: if true, the layer glyphs will display the collision boxes and colorize them based on if they are colliding or not
+ * - `cursor`: [See {@link Cursor}] the cursor to use when hovering over the glyph
  */
 export interface GlyphStyle extends LayerStyleBase {
   /**
    * # Glyph Style Guide
    *
    * ### Base Properties:
-   * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
-   * - `source` - the source of the data use
-   * - `layer` - the source's layer. Defaults to "default" for JSON data
-   * - `minzoom` - the minimum zoom level at which the layer will be visible
-   * - `maxzoom` - the maximum zoom level at which the layer will be visible
-   * - `filter` - a filter function to filter out features from the source layer
-   * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
-   * - `visible` - whether the layer is visible or not
-   * - `metadata` - additional metadata. Used by style generators
+   * [See {@link LayerStyleBase}]
+   * - `name`: the name of the layer, useful for sorting a layer on insert or for removal
+   * - `source`: the name of the source whose data this layer will use
+   * - `layer`: the source's layer. Defaults to "default" for JSON data
+   * - `minzoom`: the minimum zoom level at which the layer will be visible
+   * - `maxzoom`: the maximum zoom level at which the layer will be visible
+   * - `filter`: [See {@link Filter}] a filter function to filter out features from the source layer
+   * - `lch`: use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+   * - `visible`: whether the layer is visible or not
+   * - `metadata`: additional metadata. Used by style generators
    *
    * ### Optional paint properties:
-   * - `textSize` - size of the glyphs in pixels
-   * - `textFill` - fill color for glyphs
-   * - `textStroke` - stroke color for glyphs
-   * - `textStrokeWidth` - stroke width for glyphs in pixels
-   * - `iconSize` - size of the icons in pixels
+   * - `textSize`: size of the glyphs in pixels
+   * - `textFill`: fill color for glyphs
+   * - `textStroke`: stroke color for glyphs
+   * - `textStrokeWidth`: stroke width for glyphs in pixels
+   * - `iconSize`: size of the icons in pixels
    *
    * ### Optional layout properties:
-   * - `placement` - Can be `point`, `line`, `line-center-path` or `line-center-point`. Only relavent if geometry is not a point.
-   * - `spacing` - The distance between glyphs in pixels. Only relavent if geometry is not a point.
-   * - `textFamily` - The font family to use for the glyphs. Can be multiple options, first is default with each proceeding option as a fallback.
-   * - `textField` - The description of the content to be rendered. Can be the text itself, or can be a transfromation input that uses the features properties to build a text string.
-   * - `textAnchor` - The anchor position for the text being rendered. An example is "center" or "bottom-left"
-   * - `textOffset` - The x and y offset of the text relative to the anchor in pixels
-   * - `textPadding` - The width and height padding around the rendered glyphs to ensure stronger filtering of other text/icons nearby
-   * - `textRotate` - The rotation of the glyphs relative to the anchor
-   * - `textWordWrap` - Wrapping size in pixels. This ensures a max width of the box containing the words.
-   * - `textAlign` - Alignment tool to build the words from the `left`, `middle` or `right` positions. Only noticable if words are wrapping.
-   * - `textKerning` - Excess kerning for each glyph for individual glyph spacing between eachother.
-   * - `textLineHeight` - Adjust the lineheight of glyphs to improve vertical spacing.
-   * - `iconFamily` - The source family name to use for the icons. Can be multiple options, first is default with each proceeding option as a fallback.
-   * - `iconField` - The name of the icon to render. Can be multiple options, first is default with each proceeding option as a fallback.
-   * - `iconAnchor` - The anchor position for the icon to be rendered relative to the centerpoint of the icon. An example is "center" or "bottom-left"
-   * - `iconOffset` - The x and y offset of the icon relative to the anchor in pixels
-   * - `iconPadding` - The width and height padding around the rendered icon to ensure stronger filtering of other text/icons nearby
-   * - `iconRotate` - The rotation of the icons relative to the anchor
+   * - `placement`: Can be `point`, `line`, `line-center-path` or `line-center-point`. Only relavent if geometry is not a point.
+   * - `spacing`: The distance between glyphs in pixels. Only relavent if geometry is not a point.
+   * - `textFamily`: The font family to use for the glyphs. Can be multiple options, first is default with each proceeding option as a fallback.
+   * - `textField`: The description of the content to be rendered. Can be the text itself, or can be a transfromation input that uses the features properties to build a text string.
+   * - `textAnchor`: The anchor position for the text being rendered. An example is "center" or "bottom-left"
+   * - `textOffset`: The x and y offset of the text relative to the anchor in pixels
+   * - `textPadding`: The width and height padding around the rendered glyphs to ensure stronger filtering of other text/icons nearby
+   * - `textRotate`: The rotation of the glyphs relative to the anchor
+   * - `textWordWrap`: Wrapping size in pixels. This ensures a max width of the box containing the words.
+   * - `textAlign`: Alignment tool to build the words from the `left`, `middle` or `right` positions. Only noticable if words are wrapping.
+   * - `textKerning`: Excess kerning for each glyph for individual glyph spacing between eachother.
+   * - `textLineHeight`: Adjust the lineheight of glyphs to improve vertical spacing.
+   * - `iconFamily`: The source family name to use for the icons. Can be multiple options, first is default with each proceeding option as a fallback.
+   * - `iconField`: The name of the icon to render. Can be multiple options, first is default with each proceeding option as a fallback.
+   * - `iconAnchor`: The anchor position for the icon to be rendered relative to the centerpoint of the icon. An example is "center" or "bottom-left"
+   * - `iconOffset`: The x and y offset of the icon relative to the anchor in pixels
+   * - `iconPadding`: The width and height padding around the rendered icon to ensure stronger filtering of other text/icons nearby
+   * - `iconRotate`: The rotation of the icons relative to the anchor
    *
    * ### Optional properties:
-   * - `geoFilter` - filter the geometry types that will be drawn. Options are `point`, `line`, `poly`
-   * - `overdraw` - if true, the layer will be drawn regardless of other glyph layers
-   * - `interactive` - if true, when hovering over the glyph, the property data will be sent to the UI via an Event
-   * - `viewCollisions` - if true, the layer glyphs will display the collision boxes and colorize them based on if they are colliding or not
-   * - `cursor` - the cursor to use when hovering over the glyph
+   * - `geoFilter`: [See {@link GeoFilter}] filter the geometry types that will be drawn. Options are `point`, `line`, `poly`
+   * - `overdraw`: if true, the layer will be drawn regardless of other glyph layers
+   * - `interactive`: if true, when hovering over the glyph, the property data will be sent to the UI via an Event
+   * - `viewCollisions`: if true, the layer glyphs will display the collision boxes and colorize them based on if they are colliding or not
+   * - `cursor`: [See {@link Cursor}] the cursor to use when hovering over the glyph
    */
   type: 'glyph';
   // paint
@@ -1672,12 +1716,12 @@ export interface GlyphStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   textSize?: number | Property<number>;
   /**
@@ -1697,12 +1741,12 @@ export interface GlyphStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   textFill?: string | Property<string>;
   /**
@@ -1722,12 +1766,12 @@ export interface GlyphStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   textStroke?: string | Property<string>;
   /**
@@ -1747,12 +1791,12 @@ export interface GlyphStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   textStrokeWidth?: number | Property<number>;
   /**
@@ -1772,12 +1816,12 @@ export interface GlyphStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   iconSize?: number | Property<number>;
   // layout
@@ -1819,12 +1863,12 @@ export interface GlyphStyle extends LayerStyleBase {
    * ```
    *
    * Your list of PropertyOnlyStep options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   placement?: Placement | PropertyOnlyStep<Placement>;
   /**
@@ -1846,12 +1890,12 @@ export interface GlyphStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   spacing?: number | Property<number>;
   /**
@@ -1883,12 +1927,12 @@ export interface GlyphStyle extends LayerStyleBase {
    * ```
    *
    * Your list of PropertyOnlyStep options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   textFamily?: string | string[] | PropertyOnlyStep<string | string[]>;
   /**
@@ -1926,12 +1970,12 @@ export interface GlyphStyle extends LayerStyleBase {
    * ```
    *
    * Transforms:
-   * - `"?"` - coalesce from properties
-   * - `"!"` - transform the result
-   * - `"U"` - uppercase
-   * - `"L"` - lowercase
-   * - `"C"` - capitalize
-   * - `"P"` - language aquisition (e.g. "XX" -> "en"). Defined by navigator.language (browser)
+   * - `"?"`: coalesce from properties
+   * - `"!"`: transform the result
+   * - `"U"`: uppercase
+   * - `"L"`: lowercase
+   * - `"C"`: capitalize
+   * - `"P"`: language aquisition (e.g. "XX" -> "en"). Defined by navigator.language (browser)
    *
    * ex.
    * ```json
@@ -1940,12 +1984,12 @@ export interface GlyphStyle extends LayerStyleBase {
    * ```
    *
    * Your list of PropertyOnlyStep options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   textField?: string | string[] | PropertyOnlyStep<string | string[]>;
   /**
@@ -1969,12 +2013,12 @@ export interface GlyphStyle extends LayerStyleBase {
    * ```
    *
    * Your list of PropertyOnlyStep options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   textAnchor?: Anchor | PropertyOnlyStep<Anchor>;
   /**
@@ -1994,12 +2038,12 @@ export interface GlyphStyle extends LayerStyleBase {
    * ```
    *
    * Your list of PropertyOnlyStep options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   textOffset?: Point | PropertyOnlyStep<Point>;
   /**
@@ -2019,12 +2063,12 @@ export interface GlyphStyle extends LayerStyleBase {
    * ```
    *
    * Your list of PropertyOnlyStep options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   textPadding?: Point | PropertyOnlyStep<Point>;
   /**
@@ -2044,12 +2088,12 @@ export interface GlyphStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   textWordWrap?: number | PropertyOnlyStep<number>;
   /**
@@ -2071,12 +2115,12 @@ export interface GlyphStyle extends LayerStyleBase {
    * ```
    *
    * Your list of PropertyOnlyStep options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   textAlign?: Alignment | PropertyOnlyStep<Alignment>;
   /**
@@ -2096,12 +2140,12 @@ export interface GlyphStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   textKerning?: number | PropertyOnlyStep<number>;
   /**
@@ -2121,12 +2165,12 @@ export interface GlyphStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   textLineHeight?: number | PropertyOnlyStep<number>;
   /**
@@ -2158,12 +2202,12 @@ export interface GlyphStyle extends LayerStyleBase {
    * ```
    *
    * Your list of PropertyOnlyStep options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   iconFamily?: string | string[] | PropertyOnlyStep<string | string[]>;
   /**
@@ -2198,12 +2242,12 @@ export interface GlyphStyle extends LayerStyleBase {
    * ```
    *
    * Transforms:
-   * - `"?"` - coalesce from properties
-   * - `"!"` - transform the result
-   * - `"U"` - uppercase
-   * - `"L"` - lowercase
-   * - `"C"` - capitalize
-   * - `"P"` - language aquisition (e.g. "XX" -> "en"). Defined by navigator.language (browser)
+   * - `"?"`: coalesce from properties
+   * - `"!"`: transform the result
+   * - `"U"`: uppercase
+   * - `"L"`: lowercase
+   * - `"C"`: capitalize
+   * - `"P"`: language aquisition (e.g. "XX" -> "en"). Defined by navigator.language (browser)
    *
    * ex.
    * ```json
@@ -2212,12 +2256,12 @@ export interface GlyphStyle extends LayerStyleBase {
    * ```
    *
    * Your list of PropertyOnlyStep options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   iconField?: string | string[] | PropertyOnlyStep<string | string[]>;
   /**
@@ -2239,12 +2283,12 @@ export interface GlyphStyle extends LayerStyleBase {
    * ```
    *
    * Your list of PropertyOnlyStep options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   iconAnchor?: Anchor | PropertyOnlyStep<Anchor>;
   /**
@@ -2264,12 +2308,12 @@ export interface GlyphStyle extends LayerStyleBase {
    * ```
    *
    * Your list of PropertyOnlyStep options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   iconOffset?: Point | PropertyOnlyStep<Point>;
   /**
@@ -2289,19 +2333,19 @@ export interface GlyphStyle extends LayerStyleBase {
    * ```
    *
    * Your list of PropertyOnlyStep options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   iconPadding?: Point | PropertyOnlyStep<Point>;
   // properties
   /**
    * Filter the geometry types that will be drawn.
    * An empty array will support all geometry types.
-   * Ex. `["line"]` - only draw lines
+   * Ex. `["line"]`: only draw lines
    * Defaults to empty.
    */
   geoFilter?: GeoFilters;
@@ -2401,54 +2445,55 @@ export interface GlyphWorkerLayer extends LayerWorkerBase {
  * # Heatmap Layer Guide
  *
  * ### Base Properties:
- * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
- * - `source` - the source of the data use
- * - `layer` - the source's layer. Defaults to "default" for JSON data
- * - `minzoom` - the minimum zoom level at which the layer will be visible
- * - `maxzoom` - the maximum zoom level at which the layer will be visible
- * - `filter` - a filter function to filter out features from the source layer
- * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
- * - `visible` - whether the layer is visible or not
- * - `metadata` - additional metadata. Used by style generators
+ * [See {@link LayerStyleBase}]
+ * - `name`: the name of the layer, useful for sorting a layer on insert or for removal
+ * - `source`: the name of the source whose data this layer will use
+ * - `layer`: the source's layer. Defaults to "default" for JSON data
+ * - `minzoom`: the minimum zoom level at which the layer will be visible
+ * - `maxzoom`: the maximum zoom level at which the layer will be visible
+ * - `filter`: [See {@link Filter}] a filter function to filter out features from the source layer
+ * - `lch`: use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+ * - `visible`: whether the layer is visible or not
+ * - `metadata`: additional metadata. Used by style generators
  *
  * Optional paint properties:
- * - `radius` - the radius of the heatmap in pixels
- * - `opacity` - the opacity of the heatmap. Between 0 and 1 inclusive
- * - `intensity` - the intensity of the heatmap
+ * - `radius`: the radius of the heatmap in pixels
+ * - `opacity`: the opacity of the heatmap. Between 0 and 1 inclusive
+ * - `intensity`: the intensity of the heatmap
  *
  * ### Optional layout properties:
- * - `weight` - A weight multiplier to apply to each of the heatmap's points
+ * - `weight`: A weight multiplier to apply to each of the heatmap's points
  *
  * ### Optional properties:
- * - `geoFilter` - filter the geometry types that will be drawn.
- * - `colorRamp` - Build a interpolation ramp to help the sensor data be converted into RGBA. May be `sinebow` or `sinebow-extended`
+ * - `geoFilter`: [See {@link GeoFilter}] filter the geometry types that will be drawn.
+ * - `colorRamp`: Build a interpolation ramp to help the sensor data be converted into RGBA. May be `sinebow` or `sinebow-extended`
  */
 export interface HeatmapStyle extends LayerStyleBase {
   /**
    * # Heatmap Layer Guide
    *
    * # Base Properties:
-   * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
-   * - `source` - the source of the data use
-   * - `layer` - the source's layer. Defaults to "default" for JSON data
-   * - `minzoom` - the minimum zoom level at which the layer will be visible
-   * - `maxzoom` - the maximum zoom level at which the layer will be visible
-   * - `filter` - a filter function to filter out features from the source layer
-   * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
-   * - `visible` - whether the layer is visible or not
-   * - `metadata` - additional metadata. Used by style generators
+   * - `name`: the name of the layer, useful for sorting a layer on insert or for removal
+   * - `source`: the name of the source whose data this layer will use
+   * - `layer`: the source's layer. Defaults to "default" for JSON data
+   * - `minzoom`: the minimum zoom level at which the layer will be visible
+   * - `maxzoom`: the maximum zoom level at which the layer will be visible
+   * - `filter`: [See {@link Filter}] a filter function to filter out features from the source layer
+   * - `lch`: use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+   * - `visible`: whether the layer is visible or not
+   * - `metadata`: additional metadata. Used by style generators
    *
    * ### Optional paint properties:
-   * - `radius` - the radius of the heatmap in pixels
-   * - `opacity` - the opacity of the heatmap. Between 0 and 1 inclusive
-   * - `intensity` - the intensity of the heatmap
+   * - `radius`: the radius of the heatmap in pixels
+   * - `opacity`: the opacity of the heatmap. Between 0 and 1 inclusive
+   * - `intensity`: the intensity of the heatmap
    *
    * ### Optional layout properties:
-   * - `weight` - A weight multiplier to apply to each of the heatmap's points
+   * - `weight`: A weight multiplier to apply to each of the heatmap's points
    *
    * ### Optional properties:
-   * - `geoFilter` - filter the geometry types that will be drawn. Options are `point`, `line`, `poly`.
-   * - `colorRamp` - Build a interpolation ramp to help the sensor data be converted into RGBA. May be `sinebow` or `sinebow-extended`
+   * - `geoFilter`: [See {@link GeoFilter}] filter the geometry types that will be drawn. Options are `point`, `line`, `poly`.
+   * - `colorRamp`: Build a interpolation ramp to help the sensor data be converted into RGBA. May be `sinebow` or `sinebow-extended`
    */
   type: 'heatmap';
   // paint
@@ -2468,12 +2513,12 @@ export interface HeatmapStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   radius?: number | Property<number>;
   /**
@@ -2492,12 +2537,12 @@ export interface HeatmapStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   opacity?: number | Property<number>;
   /**
@@ -2516,12 +2561,12 @@ export interface HeatmapStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   intensity?: number | Property<number>;
   /**
@@ -2540,12 +2585,12 @@ export interface HeatmapStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   weight?: number | Property<number>;
   // properties
@@ -2570,7 +2615,7 @@ export interface HeatmapStyle extends LayerStyleBase {
   /**
    * Filter the geometry types that will be drawn.
    * An empty array will support all geometry types.
-   * Ex. `["line"]` - only draw lines
+   * Ex. `["line"]`: only draw lines
    * Defaults to `['line', 'poly']` (only points will be drawn).
    */
   geoFilter?: GeoFilters;
@@ -2618,62 +2663,63 @@ export type Join = 'bevel' | 'miter' | 'round';
  * Line Style Guide
  *
  * # Base Properties:
- * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
- * - `source` - the source of the data use
- * - `layer` - the source's layer. Defaults to "default" for JSON data
- * - `minzoom` - the minimum zoom level at which the layer will be visible
- * - `maxzoom` - the maximum zoom level at which the layer will be visible
- * - `filter` - a filter function to filter out features from the source layer
- * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
- * - `visible` - whether the layer is visible or not
- * - `metadata` - additional metadata. Used by style generators
+ * - `name`: the name of the layer, useful for sorting a layer on insert or for removal
+ * - `source`: the name of the source whose data this layer will use
+ * - `layer`: the source's layer. Defaults to "default" for JSON data
+ * - `minzoom`: the minimum zoom level at which the layer will be visible
+ * - `maxzoom`: the maximum zoom level at which the layer will be visible
+ * - `filter`: [See {@link Filter}] a filter function to filter out features from the source layer
+ * - `lch`: use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+ * - `visible`: whether the layer is visible or not
+ * - `metadata`: additional metadata. Used by style generators
  *
  * ### Optional paint properties:
- * - `color` - the color of the line
- * - `opacity` - the opacity of the line
- * - `width` - the width of the line in pixels
- * - `gapwidth` - split the line into two segments to reduce rendering artifacts
+ * - `color`: the color of the line
+ * - `opacity`: the opacity of the line
+ * - `width`: the width of the line in pixels
+ * - `gapwidth`: split the line into two segments to reduce rendering artifacts
  *
  * ### Optional layout properties:
- * - `cap` - the cap of the line. Either `butt`, `square`, or `round`
- * - `join` - the joiner used for the line. Either `bevel`, `miter`, or `round`
- * - `dasharray` - A sequence of lengths and gaps that describe the pattern of dashes and gaps used to draw the line
+ * - `cap`: the cap of the line. Either `butt`, `square`, or `round`
+ * - `join`: the joiner used for the line. Either `bevel`, `miter`, or `round`
+ * - `dasharray`: A sequence of lengths and gaps that describe the pattern of dashes and gaps used to draw the line
  *
  * ### Optional properties:
- * - `geoFilter` - filter the geometry types that will be drawn.
- * - `interactive` - if true, when hovering over the line, the property data will be sent to the UI via an Event
- * - `cursor` - the cursor to use when hovering over the line
+ * - `geoFilter`: [See {@link GeoFilter}] filter the geometry types that will be drawn.
+ * - `interactive`: if true, when hovering over the line, the property data will be sent to the UI via an Event
+ * - `cursor`: [See {@link Cursor}] the cursor to use when hovering over the line
  */
 export interface LineStyle extends LayerStyleBase {
   /**
    * # Line Style Guide
    *
    * ### Base Properties:
-   * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
-   * - `source` - the source of the data use
-   * - `layer` - the source's layer. Defaults to "default" for JSON data
-   * - `minzoom` - the minimum zoom level at which the layer will be visible
-   * - `maxzoom` - the maximum zoom level at which the layer will be visible
-   * - `filter` - a filter function to filter out features from the source layer
-   * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
-   * - `visible` - whether the layer is visible or not
-   * - `metadata` - additional metadata. Used by style generators
+   * [See {@link LayerStyleBase}]
+   * - `name`: the name of the layer, useful for sorting a layer on insert or for removal
+   * - `source`: the name of the source whose data this layer will use
+   * - `layer`: the source's layer. Defaults to "default" for JSON data
+   * - `minzoom`: the minimum zoom level at which the layer will be visible
+   * - `maxzoom`: the maximum zoom level at which the layer will be visible
+   * - `filter`: [See {@link Filter}] a filter function to filter out features from the source layer
+   * - `lch`: use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+   * - `visible`: whether the layer is visible or not
+   * - `metadata`: additional metadata. Used by style generators
    *
    * ### Optional paint properties:
-   * - `color` - the color of the line
-   * - `opacity` - the opacity of the line
-   * - `width` - the width of the line in pixels
-   * - `gapwidth` - split the line into two segments to reduce rendering artifacts
+   * - `color`: {@link Color} of the shade. Input either a `string` encoded color or wrap it in a {@link Property}.
+   * - `opacity`: the opacity of the line
+   * - `width`: the width of the line in pixels
+   * - `gapwidth`: split the line into two segments to reduce rendering artifacts
    *
    * ### Optional layout properties:
-   * - `cap` - the cap of the line. Either `butt`, `square`, or `round`
-   * - `join` - the joiner used for the line. Either `bevel`, `miter`, or `round`
-   * - `dasharray` - A sequence of lengths and gaps that describe the pattern of dashes and gaps used to draw the line
+   * - `cap`: the cap of the line. Either `butt`, `square`, or `round`
+   * - `join`: the joiner used for the line. Either `bevel`, `miter`, or `round`
+   * - `dasharray`: A sequence of lengths and gaps that describe the pattern of dashes and gaps used to draw the line
    *
    * ### Optional properties:
-   * - `geoFilter` - filter the geometry types that will be drawn. Options are `point`, `line`, `poly`.
-   * - `interactive` - if true, when hovering over the line, the property data will be sent to the UI via an Event
-   * - `cursor` - the cursor to use when hovering over the line
+   * - `geoFilter`: [See {@link GeoFilter}] filter the geometry types that will be drawn. Options are `point`, `line`, `poly`.
+   * - `interactive`: if true, when hovering over the line, the property data will be sent to the UI via an Event
+   * - `cursor`: [See {@link Cursor}] the cursor to use when hovering over the line
    */
   type: 'line';
   // paint
@@ -2694,12 +2740,12 @@ export interface LineStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   color?: string | Property<string>;
   /**
@@ -2718,12 +2764,12 @@ export interface LineStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   opacity?: number | Property<number>;
   /**
@@ -2742,12 +2788,12 @@ export interface LineStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   width?: number | Property<number>;
   /**
@@ -2769,12 +2815,12 @@ export interface LineStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   gapwidth?: number | Property<number>;
   // layout
@@ -2798,12 +2844,12 @@ export interface LineStyle extends LayerStyleBase {
    * ```
    *
    * Your list of PropertyOnlyStep options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   cap?: Cap | PropertyOnlyStep<Cap>;
   /**
@@ -2825,12 +2871,12 @@ export interface LineStyle extends LayerStyleBase {
    * ```
    *
    * Your list of PropertyOnlyStep options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   join?: Join | PropertyOnlyStep<Join>;
   // properties
@@ -2847,7 +2893,7 @@ export interface LineStyle extends LayerStyleBase {
   /**
    * Filter the geometry types that will be drawn.
    * An empty array will supports both `line` & `polygon` geometry types.
-   * Ex. `["line"]` - only draw lines
+   * Ex. `["line"]`: only draw lines
    * Defaults to empty.
    */
   geoFilter?: Array<'line' | 'poly'>;
@@ -2908,54 +2954,56 @@ export interface LineWorkerLayer extends LayerWorkerBase {
  * # Point Style Guide
  *
  * ### Base Properties:
- * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
- * - `source` - the source of the data use
- * - `layer` - the source's layer. Defaults to "default" for JSON data
- * - `minzoom` - the minimum zoom level at which the layer will be visible
- * - `maxzoom` - the maximum zoom level at which the layer will be visible
- * - `filter` - a filter function to filter out features from the source layer
- * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
- * - `visible` - whether the layer is visible or not
- * - `metadata` - additional metadata. Used by style generators
+ * [See {@link LayerStyleBase}]
+ * - `name`: the name of the layer, useful for sorting a layer on insert or for removal
+ * - `source`: the name of the source whose data this layer will use
+ * - `layer`: the source's layer. Defaults to "default" for JSON data
+ * - `minzoom`: the minimum zoom level at which the layer will be visible
+ * - `maxzoom`: the maximum zoom level at which the layer will be visible
+ * - `filter`: [See {@link Filter}] a filter function to filter out features from the source layer
+ * - `lch`: use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+ * - `visible`: whether the layer is visible or not
+ * - `metadata`: additional metadata. Used by style generators
  *
  * ### Optional paint properties:
- * - `color`
+ * - `color`: {@link Color} of the shade. Input either a `string` encoded color or wrap it in a {@link Property}.
  * - `radius`
  * - `stroke`
  * - `strokeWidth`
  * - `opacity`
  *
  * ### Optional properties:
- * - `geoFilter` - filter the geometry types that will be drawn.
- * - `interactive` - if true, when hovering over the line, the property data will be sent to the UI via an Event
- * - `cursor` - the cursor to use when hovering over the line
+ * - `geoFilter`: [See {@link GeoFilter}] filter the geometry types that will be drawn.
+ * - `interactive`: if true, when hovering over the line, the property data will be sent to the UI via an Event
+ * - `cursor`: [See {@link Cursor}] the cursor to use when hovering over the line
  */
 export interface PointStyle extends LayerStyleBase {
   /**
    * # Point Style Guide
    *
    * ### Base Properties:
-   * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
-   * - `source` - the source of the data use
-   * - `layer` - the source's layer. Defaults to "default" for JSON data
-   * - `minzoom` - the minimum zoom level at which the layer will be visible
-   * - `maxzoom` - the maximum zoom level at which the layer will be visible
-   * - `filter` - a filter function to filter out features from the source layer
-   * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
-   * - `visible` - whether the layer is visible or not
-   * - `metadata` - additional metadata. Used by style generators
+   * [See {@link LayerStyleBase}]
+   * - `name`: the name of the layer, useful for sorting a layer on insert or for removal
+   * - `source`: the name of the source whose data this layer will use
+   * - `layer`: the source's layer. Defaults to "default" for JSON data
+   * - `minzoom`: the minimum zoom level at which the layer will be visible
+   * - `maxzoom`: the maximum zoom level at which the layer will be visible
+   * - `filter`: [See {@link Filter}] a filter function to filter out features from the source layer
+   * - `lch`: use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+   * - `visible`: whether the layer is visible or not
+   * - `metadata`: additional metadata. Used by style generators
    *
    * ### Optional paint properties:
-   * - `color`
+   * - `color`: {@link Color} of the shade. Input either a `string` encoded color or wrap it in a {@link Property}.
    * - `radius`
    * - `stroke`
    * - `strokeWidth`
    * - `opacity`
    *
    * ### Optional properties:
-   * - `geoFilter` - filter the geometry types that will be drawn. Options are `point`, `line`, `poly`.
-   * - `interactive` - if true, when hovering over the line, the property data will be sent to the UI via an Event
-   * - `cursor` - the cursor to use when hovering over the line
+   * - `geoFilter`: [See {@link GeoFilter}] filter the geometry types that will be drawn. Options are `point`, `line`, `poly`.
+   * - `interactive`: if true, when hovering over the line, the property data will be sent to the UI via an Event
+   * - `cursor`: [See {@link Cursor}] the cursor to use when hovering over the line
    */
   type: 'point';
   // paint
@@ -2976,12 +3024,12 @@ export interface PointStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   color?: string | Property<string>;
   /**
@@ -3001,12 +3049,12 @@ export interface PointStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   radius?: number | Property<number>;
   /**
@@ -3026,12 +3074,12 @@ export interface PointStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   stroke?: string | Property<string>;
   /**
@@ -3051,12 +3099,12 @@ export interface PointStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   strokeWidth?: number | Property<number>;
   /**
@@ -3075,19 +3123,19 @@ export interface PointStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   opacity?: number | Property<number>;
   // properties
   /**
    * Filter the geometry types that will be drawn.
    * An empty array will support all geometry types.
-   * Ex. `["line"]` - only draw lines
+   * Ex. `["line"]`: only draw lines
    * Defaults to `['line', 'poly']`.
    */
   geoFilter?: GeoFilters;
@@ -3136,15 +3184,16 @@ export type Resampling = GPUFilterMode;
  * # Raster Style Guide
  *
  * ### Base Properties:
- * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
- * - `source` - the source of the data use
- * - `layer` - the source's layer. Defaults to "default" for JSON data
- * - `minzoom` - the minimum zoom level at which the layer will be visible
- * - `maxzoom` - the maximum zoom level at which the layer will be visible
- * - `filter` - a filter function to filter out features from the source layer
- * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
- * - `visible` - whether the layer is visible or not
- * - `metadata` - additional metadata. Used by style generators
+ * [See {@link LayerStyleBase}]
+ * - `name`: the name of the layer, useful for sorting a layer on insert or for removal
+ * - `source`: the name of the source whose data this layer will use
+ * - `layer`: the source's layer. Defaults to "default" for JSON data
+ * - `minzoom`: the minimum zoom level at which the layer will be visible
+ * - `maxzoom`: the maximum zoom level at which the layer will be visible
+ * - `filter`: [See {@link Filter}] a filter function to filter out features from the source layer
+ * - `lch`: use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+ * - `visible`: whether the layer is visible or not
+ * - `metadata`: additional metadata. Used by style generators
  *
  * ### Optional paint properties:
  * - `opacity`
@@ -3152,23 +3201,24 @@ export type Resampling = GPUFilterMode;
  * - `contrast`
  *
  * ### Optional layout properties:
- * - `resampling` - The resampling method. Either `nearest` or `linear`
- * - `fadeDuration` - The time it takes for each raster tile to fade in and out of view in milliseconds
+ * - `resampling`: The resampling method. Either `nearest` or `linear`
+ * - `fadeDuration`: The time it takes for each raster tile to fade in and out of view in milliseconds
  */
 export interface RasterStyle extends LayerStyleBase {
   /**
    * # Raster Style Guide
    *
    * ### Base Properties:
-   * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
-   * - `source` - the source of the data use
-   * - `layer` - the source's layer. Defaults to "default" for JSON data
-   * - `minzoom` - the minimum zoom level at which the layer will be visible
-   * - `maxzoom` - the maximum zoom level at which the layer will be visible
-   * - `filter` - a filter function to filter out features from the source layer
-   * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
-   * - `visible` - whether the layer is visible or not
-   * - `metadata` - additional metadata. Used by style generators
+   * [See {@link LayerStyleBase}]
+   * - `name`: the name of the layer, useful for sorting a layer on insert or for removal
+   * - `source`: the name of the source whose data this layer will use
+   * - `layer`: the source's layer. Defaults to "default" for JSON data
+   * - `minzoom`: the minimum zoom level at which the layer will be visible
+   * - `maxzoom`: the maximum zoom level at which the layer will be visible
+   * - `filter`: [See {@link Filter}] a filter function to filter out features from the source layer
+   * - `lch`: use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+   * - `visible`: whether the layer is visible or not
+   * - `metadata`: additional metadata. Used by style generators
    *
    * ### Optional paint properties:
    * - `opacity`
@@ -3176,8 +3226,8 @@ export interface RasterStyle extends LayerStyleBase {
    * - `contrast`
    *
    * ### Optional layout properties:
-   * - `resampling` - The resampling method. Either `nearest` or `linear`
-   * - `fadeDuration` - The time it takes for each raster tile to fade in and out of view in milliseconds
+   * - `resampling`: The resampling method. Either `nearest` or `linear`
+   * - `fadeDuration`: The time it takes for each raster tile to fade in and out of view in milliseconds
    */
   type: 'raster';
   // paint
@@ -3197,12 +3247,12 @@ export interface RasterStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   opacity?: number | Property<number>;
   /**
@@ -3221,12 +3271,12 @@ export interface RasterStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   saturation?: number | Property<number>;
   /**
@@ -3245,12 +3295,12 @@ export interface RasterStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   contrast?: number | Property<number>;
   // properties
@@ -3311,15 +3361,16 @@ export type UnpackData = [
  * # Hillshade Style Guide
  *
  * ### Base Properties:
- * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
- * - `source` - the source of the data use
- * - `layer` - the source's layer. Defaults to "default" for JSON data
- * - `minzoom` - the minimum zoom level at which the layer will be visible
- * - `maxzoom` - the maximum zoom level at which the layer will be visible
- * - `filter` - a filter function to filter out features from the source layer
- * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
- * - `visible` - whether the layer is visible or not
- * - `metadata` - additional metadata. Used by style generators
+ * [See {@link LayerStyleBase}]
+ * - `name`: the name of the layer, useful for sorting a layer on insert or for removal
+ * - `source`: the name of the source whose data this layer will use
+ * - `layer`: the source's layer. Defaults to "default" for JSON data
+ * - `minzoom`: the minimum zoom level at which the layer will be visible
+ * - `maxzoom`: the maximum zoom level at which the layer will be visible
+ * - `filter`: [See {@link Filter}] a filter function to filter out features from the source layer
+ * - `lch`: use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+ * - `visible`: whether the layer is visible or not
+ * - `metadata`: additional metadata. Used by style generators
  *
  * ### Optional paint properties:
  * - `opacity`
@@ -3330,23 +3381,24 @@ export type UnpackData = [
  * - `accentColor`
  *
  * ### Optional layout properties:
- * - `fadeDuration` - The time it takes for each raster tile to fade in and out of view in milliseconds
- * - `unpack` - Descriptor to help the GPU know how to unpack the incoming RGBA data into a f32.
+ * - `fadeDuration`: The time it takes for each raster tile to fade in and out of view in milliseconds
+ * - `unpack`: Descriptor to help the GPU know how to unpack the incoming RGBA data into a f32.
  */
 export interface HillshadeStyle extends LayerStyleBase {
   /**
    * # Hillshade Style Guide
    *
    * ### Base Properties:
-   * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
-   * - `source` - the source of the data use
-   * - `layer` - the source's layer. Defaults to "default" for JSON data
-   * - `minzoom` - the minimum zoom level at which the layer will be visible
-   * - `maxzoom` - the maximum zoom level at which the layer will be visible
-   * - `filter` - a filter function to filter out features from the source layer
-   * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
-   * - `visible` - whether the layer is visible or not
-   * - `metadata` - additional metadata. Used by style generators
+   * [See {@link LayerStyleBase}]
+   * - `name`: the name of the layer, useful for sorting a layer on insert or for removal
+   * - `source`: the name of the source whose data this layer will use
+   * - `layer`: the source's layer. Defaults to "default" for JSON data
+   * - `minzoom`: the minimum zoom level at which the layer will be visible
+   * - `maxzoom`: the maximum zoom level at which the layer will be visible
+   * - `filter`: [See {@link Filter}] a filter function to filter out features from the source layer
+   * - `lch`: use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+   * - `visible`: whether the layer is visible or not
+   * - `metadata`: additional metadata. Used by style generators
    *
    * ### Optional paint properties:
    * - `opacity`
@@ -3357,8 +3409,8 @@ export interface HillshadeStyle extends LayerStyleBase {
    * - `accentColor`
    *
    * ### Optional layout properties:
-   * - `fadeDuration` - The time it takes for each raster tile to fade in and out of view in milliseconds
-   * - `unpack` - Descriptor to help the GPU know how to unpack the incoming RGBA data into a f32.
+   * - `fadeDuration`: The time it takes for each raster tile to fade in and out of view in milliseconds
+   * - `unpack`: Descriptor to help the GPU know how to unpack the incoming RGBA data into a f32.
    */
   type: 'hillshade';
   // layout
@@ -3378,12 +3430,12 @@ export interface HillshadeStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   opacity?: number | Property<number>;
   /**
@@ -3402,12 +3454,12 @@ export interface HillshadeStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   azimuth?: number | Property<number>;
   /**
@@ -3426,12 +3478,12 @@ export interface HillshadeStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   altitude?: number | Property<number>;
   /**
@@ -3451,12 +3503,12 @@ export interface HillshadeStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   shadowColor?: string | Property<string>;
   /**
@@ -3476,12 +3528,12 @@ export interface HillshadeStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   highlightColor?: string | Property<string>;
   /**
@@ -3501,12 +3553,12 @@ export interface HillshadeStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   accentColor?: string | Property<string>;
   // properties
@@ -3602,52 +3654,54 @@ export interface HillshadeWorkerLayer extends LayerWorkerBaseRaster {
  * # Sensor Style Guide
  *
  * ### Base Properties:
- * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
- * - `source` - the source of the data use
- * - `layer` - the source's layer. Defaults to "default" for JSON data
- * - `minzoom` - the minimum zoom level at which the layer will be visible
- * - `maxzoom` - the maximum zoom level at which the layer will be visible
- * - `filter` - a filter function to filter out features from the source layer
- * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
- * - `visible` - whether the layer is visible or not
- * - `metadata` - additional metadata. Used by style generators
+ * [See {@link LayerStyleBase}]
+ * - `name`: the name of the layer, useful for sorting a layer on insert or for removal
+ * - `source`: the name of the source whose data this layer will use
+ * - `layer`: the source's layer. Defaults to "default" for JSON data
+ * - `minzoom`: the minimum zoom level at which the layer will be visible
+ * - `maxzoom`: the maximum zoom level at which the layer will be visible
+ * - `filter`: [See {@link Filter}] a filter function to filter out features from the source layer
+ * - `lch`: use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+ * - `visible`: whether the layer is visible or not
+ * - `metadata`: additional metadata. Used by style generators
  *
  * ### Optional paint properties:
  * - `opacity`
  *
  * ### Optional layout properties:
- * - `fadeDuration` - The time it takes for each raster tile to fade in and out of view in milliseconds
- * - `colorRamp` - Build a interpolation ramp to help the sensor data be converted into RGBA. May be `sinebow` or `sinebow-extended`
+ * - `fadeDuration`: The time it takes for each raster tile to fade in and out of view in milliseconds
+ * - `colorRamp`: Build a interpolation ramp to help the sensor data be converted into RGBA. May be `sinebow` or `sinebow-extended`
  *
  * ### Optional properties:
- * - `interactive` - if true, when hovering over the fill, the property data will be sent to the UI via an Event
- * - `cursor` - the cursor to use when hovering over the fill
+ * - `interactive`: if true, when hovering over the fill, the property data will be sent to the UI via an Event
+ * - `cursor`: [See {@link Cursor}] the cursor to use when hovering over the fill
  */
 export interface SensorStyle extends LayerStyleBase {
   /**
    * # Sensor Style Guide
    *
    * ### Base Properties:
-   * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
-   * - `source` - the source of the data use
-   * - `layer` - the source's layer. Defaults to "default" for JSON data
-   * - `minzoom` - the minimum zoom level at which the layer will be visible
-   * - `maxzoom` - the maximum zoom level at which the layer will be visible
-   * - `filter` - a filter function to filter out features from the source layer
-   * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
-   * - `visible` - whether the layer is visible or not
-   * - `metadata` - additional metadata. Used by style generators
+   * [See {@link LayerStyleBase}]
+   * - `name`: the name of the layer, useful for sorting a layer on insert or for removal
+   * - `source`: the name of the source whose data this layer will use
+   * - `layer`: the source's layer. Defaults to "default" for JSON data
+   * - `minzoom`: the minimum zoom level at which the layer will be visible
+   * - `maxzoom`: the maximum zoom level at which the layer will be visible
+   * - `filter`: [See {@link Filter}] a filter function to filter out features from the source layer
+   * - `lch`: use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+   * - `visible`: whether the layer is visible or not
+   * - `metadata`: additional metadata. Used by style generators
    *
    * ### Optional paint properties:
    * - `opacity`
    *
    * ### Optional layout properties:
-   * - `fadeDuration` - The time it takes for each raster tile to fade in and out of view in milliseconds
-   * - `colorRamp` - Build a interpolation ramp to help the sensor data be converted into RGBA. May be `sinebow` or `sinebow-extended`
+   * - `fadeDuration`: The time it takes for each raster tile to fade in and out of view in milliseconds
+   * - `colorRamp`: Build a interpolation ramp to help the sensor data be converted into RGBA. May be `sinebow` or `sinebow-extended`
    *
    * ### Optional properties:
-   * - `interactive` - if true, when hovering over the fill, the property data will be sent to the UI via an Event
-   * - `cursor` - the cursor to use when hovering over the fill
+   * - `interactive`: if true, when hovering over the fill, the property data will be sent to the UI via an Event
+   * - `cursor`: [See {@link Cursor}] the cursor to use when hovering over the fill
    */
   type: 'sensor';
   // paint
@@ -3667,12 +3721,12 @@ export interface SensorStyle extends LayerStyleBase {
    * ```
    *
    * Your list of Property options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   opacity?: number | Property<number>;
   // properties
@@ -3732,36 +3786,38 @@ export interface SensorWorkerLayer extends LayerWorkerBaseRaster {
  * # Shade Style Guide
  *
  * ### Base Properties:
- * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
- * - `source` - the source of the data use
- * - `layer` - the source's layer. Defaults to "default" for JSON data
- * - `minzoom` - the minimum zoom level at which the layer will be visible
- * - `maxzoom` - the maximum zoom level at which the layer will be visible
- * - `filter` - a filter function to filter out features from the source layer
- * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
- * - `visible` - whether the layer is visible or not
- * - `metadata` - additional metadata. Used by style generators
+ * [See {@link LayerStyleBase}]
+ * - `name`: the name of the layer, useful for sorting a layer on insert or for removal
+ * - `source`: the name of the source whose data this layer will use
+ * - `layer`: the source's layer. Defaults to "default" for JSON data
+ * - `minzoom`: the minimum zoom level at which the layer will be visible
+ * - `maxzoom`: the maximum zoom level at which the layer will be visible
+ * - `filter`: [See {@link Filter}] a filter function to filter out features from the source layer
+ * - `lch`: use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+ * - `visible`: whether the layer is visible or not
+ * - `metadata`: additional metadata. Used by style generators
  *
  * ### Optional paint properties:
- * - `color` - Color of the shade
+ * - `color`: {@link Color} of the shade. Input either a `string` encoded color or wrap it in a {@link PropertyOnlyStep}.
  */
 export interface ShadeStyle extends LayerStyleBase {
   /**
    * # Shade Style Guide
    *
    * ### Base Properties:
-   * - `name` - the name of the layer, useful for sorting a layer on insert or for removal
-   * - `source` - the source of the data use
-   * - `layer` - the source's layer. Defaults to "default" for JSON data
-   * - `minzoom` - the minimum zoom level at which the layer will be visible
-   * - `maxzoom` - the maximum zoom level at which the layer will be visible
-   * - `filter` - a filter function to filter out features from the source layer
-   * - `lch` - use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
-   * - `visible` - whether the layer is visible or not
-   * - `metadata` - additional metadata. Used by style generators
+   * [See {@link LayerStyleBase}]
+   * - `name`: the name of the layer, useful for sorting a layer on insert or for removal
+   * - `source`: the name of the source whose data this layer will use
+   * - `layer`: the source's layer. Defaults to "default" for JSON data
+   * - `minzoom`: the minimum zoom level at which the layer will be visible
+   * - `maxzoom`: the maximum zoom level at which the layer will be visible
+   * - `filter`: [See {@link Filter}] a filter function to filter out features from the source layer
+   * - `lch`: use LCH coloring instead of RGB. Useful for color changing when the new color is very different from the old one
+   * - `visible`: whether the layer is visible or not
+   * - `metadata`: additional metadata. Used by style generators
    *
    * ### Optional paint properties:
-   * - `color` - Color of the shade
+   * - `color`: {@link Color} of the shade. Input either a `string` encoded color or wrap it in a {@link PropertyOnlyStep}.
    */
   type: 'shade';
   // layout
@@ -3770,24 +3826,22 @@ export interface ShadeStyle extends LayerStyleBase {
    * @default `"rgba(0, 0, 0, 1)"`
    *
    * ex.
-   *
    * ```json
    * { "color": "rgba(240, 2, 5, 1)" }
    * ```
    *
    * ex.
-   *
    * ```json
    * { "color": { "inputValue": { "key": "type", "fallback": "blue" } } }
    * ```
    *
    * Your list of PropertyOnlyStep options are:
-   * - `inputValue` - access value in feature properties
-   * - `dataCondition` - filter based on feature property conditions
-   * - `dataRange` - filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange` - filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState` - filter based on feature state
-   * - `fallback` - if all else fails, use this value
+   * - `inputValue`: access value in feature properties
+   * - `dataCondition`: filter based on feature property conditions
+   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
+   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
+   * - `featureState`: filter based on feature state
+   * - `fallback`: if all else fails, use this value
    */
   color?: string | PropertyOnlyStep<string>;
 }
@@ -3863,16 +3917,6 @@ export type InteractiveWorkerLayer =
  * - `3` -> WebGPU
  */
 export type GPUType = 1 | 2 | 3;
-// export const GPUType = {
-//   /** WebGL1 */
-//   WebGL1: 1,
-//   /** WebGL2 */
-//   WebGL2: 2,
-//   /** WebGPU */
-//   WebGPU: 3,
-// } as const;
-// /** colorblind mode */
-// export type GPUType = (typeof GPUType)[keyof typeof GPUType];
 
 /** Basic analytics information sent to servers */
 export interface Analytics {
@@ -3900,10 +3944,68 @@ export interface StylePackage {
   analytics: Analytics;
   experimental: boolean;
   apiKey?: string;
-  urlMap?: Record<string, string>;
+  urlMap?: UrlMap;
 }
 
-/** WALLPAPER */
+/**
+ * # Skybox Style
+ *
+ * Render a skybox image as a background to the map.
+ *
+ * ex. [See {@link UrlMap} to understand how to use the `path` property like this example]
+ * ```json
+ * "skybox": {
+ *   "path": "baseURL://backgrounds/milkyway",
+ *   "loadingBackground": "rgb(9, 8, 17)",
+ *   "size": 2048,
+ *   "type": "webp",
+ * }
+ * ```
+ *
+ * ### Common Folder Structure
+ * ```markdown
+ * ./public/backgrounds
+ * └── milkyway
+ *     ├── 1024
+ *     │   ├── 0.jpg
+ *     │   ├── 0.webp
+ *     │   ├── 1.jpg
+ *     │   ├── 1.webp
+ *     │   ├── 2.jpg
+ *     │   ├── 2.webp
+ *     │   ├── 3.jpg
+ *     │   ├── 3.webp
+ *     │   ├── 4.jpg
+ *     │   ├── 4.webp
+ *     │   ├── 5.jpg
+ *     │   └── 5.webp
+ *     └── 2048
+ *         ├── 0.jpg
+ *         ├── 0.png
+ *         ├── 0.webp
+ *         ├── 1.jpg
+ *         ├── 1.png
+ *         ├── 1.webp
+ *         ├── 2.jpg
+ *         ├── 2.png
+ *         ├── 2.webp
+ *         ├── 3.jpg
+ *         ├── 3.png
+ *         ├── 3.webp
+ *         ├── 4.jpg
+ *         ├── 4.png
+ *         ├── 4.webp
+ *         ├── 5.jpg
+ *         ├── 5.png
+ *         └── 5.webp
+ * ```
+ *
+ * ### Properties
+ * - `path`: path to the skybox image folder
+ * - `size`: size of the skybox image (the path's folder may support multiple)
+ * - `type`: type of image (the path's folder may support multiple)
+ * - `loadingBackground`: background color of the skybox while waiting for it to load images
+ */
 export interface SkyboxStyle {
   /** path to the skybox image folder */
   path: string;
@@ -3916,6 +4018,8 @@ export interface SkyboxStyle {
 }
 
 /**
+ * # Wallpaper Style
+ *
  * Wallpaper is often used with vector data. Control the coloring of the background.
  *
  * ex.
@@ -3928,6 +4032,12 @@ export interface SkyboxStyle {
  *   "halo": "rgb(230, 255, 255)"
  * }
  * ```
+ *
+ * ### Properties
+ * - `background`: background color is the most seen color zoomed out
+ * - `fade1`: color of the border around the sphere
+ * - `fade2`: second color of the border around the sphere (further away then fade1)
+ * - `halo`: color of the softest border around the sphere (closest to the sphere and smallest fade factor)
  */
 export interface WallpaperStyle {
   /** background color is the most seen color zoomed out */
@@ -3981,21 +4091,21 @@ export interface TimeSeriesStyle {
  * to render, where to get said data, and how to style each data as layers.
  *
  * ### Rendering Properties
- * - `projection`: `"S2"` (Spherical Geometry) or `"WG"` (Web Mercator). Defaults to S2
- * - `sources`: Most critical, a list of source data, how to fetch for rendering
- * - `timeSeries`: Time series data is a WIP. Is a guide on how to render &/ animate data at various timestamps
- * - `layers`: array of layer definitions, describing how to render the scene
- * - `glyphs`: Glyph Data (both fonts and icons) and how to fetch them
- * - `icons`: Icon sources and how to fetch them
- * - `fonts`: Font sources and how to fetch them
- * - `sprites`: Sprites sources, where to fetch, can be a string or an object
+ * - `projection`: [See {@link Projection}] `"S2"` (Spherical Geometry) or `"WM"` (Web Mercator). Defaults to S2
+ * - `sources`: [See {@link Sources}] Most critical, a list of source data, how to fetch for rendering
+ * - `timeSeries`: [See {@link TimeSeriesStyle}] Time series data is a WIP. Is a guide on how to render &/ animate data at various timestamps
+ * - `layers`: [See {@link LayerStyle}] array of layer definitions, describing how to render the scene
+ * - `glyphs`: [See {@link Glyphs}] Glyph Data (both fonts and icons) and how to fetch them
+ * - `icons`: [See {@link Icons}] Icon sources and how to fetch them
+ * - `fonts`: [See {@link Fonts}] Font sources and how to fetch them
+ * - `sprites`: [See {@link Sprites}] Sprites sources, where to fetch, can be a string or an object
  * - `images`: Image names and where to fetch them
- * - `skybox`: Skybox is often used as a background feature for raster data. Uses a skybox image to render to the screen.
- * - `wallpaper`: Wallpaper is often used with vector data. Control the coloring of the background.
+ * - `skybox`: [See {@link SkyboxStyle}] Skybox is often used as a background feature for raster data. Uses a skybox image to render to the screen.
+ * - `wallpaper`: [See {@link WallpaperStyle}] Wallpaper is often used with vector data. Control the coloring of the background.
  * - `clearColor`: Background color for sections where the painter doesn't draw to. Defaults to `rgba(0, 0, 0, 0)`
  *
  * ### Camera Properties
- * - `view`: `zoom`, `lon`, `lat`, `bearing`, `pitch`. Defaults to 0 for all.
+ * - `view`: [See {@link View}] `zoom`, `lon`, `lat`, `bearing`, `pitch`. Defaults to 0 for all.
  * - `zNear`: zNear is a parameter for the camera. Recommend not touching.
  * - `zFar`: zFar is a parameter for the camera. Recommend not touching.
  * - `minzoom`: The furthest away from the planet you allow
@@ -4010,8 +4120,8 @@ export interface TimeSeriesStyle {
  * - `description`: description of the style - not used for anything other than debugging
  *
  * ### Flags
- * - `constrainZoomToFill`: Strictly a WG Projection property. Force the view to fill. Defaults to `false`
- * - `duplicateHorizontally`: Strictly a WG Projection property. Render the world map as necessary to fill the screen horizontally. Defaults to `true`
+ * - `constrainZoomToFill`: Strictly a WM Projection property. Force the view to fill. Defaults to `false`
+ * - `duplicateHorizontally`: Strictly a WM Projection property. Render the world map as necessary to fill the screen horizontally. Defaults to `true`
  * - `noClamp`: Allow the camera to go past the max-min latitudes. Useful for animations. Defaults to `false`
  * - `experimental`: Enable experimental features
  */
@@ -4020,7 +4130,7 @@ export interface StyleDefinition {
   version?: number;
   /** name of the style - not used for anything other than debugging */
   name?: string;
-  /** Use Either The Web Mercator "WG" or the "S2" Projection */
+  /** Use Either The Web Mercator "WM" or the "S2" Projection */
   projection?: Projection;
   /** description of the style - not used for anything other than debugging */
   description?: string;
@@ -4043,12 +4153,12 @@ export interface StyleDefinition {
   /** The closest you allow the camera to get to the planet */
   maxzoom?: number;
   /**
-   * Strictly a WG Projection property. Force the view to fill.
+   * Strictly a WM Projection property. Force the view to fill.
    * Defaults to `false`.
    */
   constrainZoomToFill?: boolean;
   /**
-   * Strictly a WG Projection property. Render the world map as necessary to fill the screen horizontally.
+   * Strictly a WM Projection property. Render the world map as necessary to fill the screen horizontally.
    * Defaults to `true`.
    */
   duplicateHorizontally?: boolean;

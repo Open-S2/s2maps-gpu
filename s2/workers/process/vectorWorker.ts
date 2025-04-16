@@ -1,4 +1,4 @@
-import Color from 'style/color/index.js';
+import { Color } from 'style/color/index.js';
 import parseFeatureFunction from 'style/parseFeatureFunction.js';
 
 import type { Callback } from 'style/parseFeatureFunction.js';

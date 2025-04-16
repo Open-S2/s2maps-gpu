@@ -1,5 +1,6 @@
 import type { MarkerDefinition } from './source/markerSource.js';
 import type S2Map from '../s2Map.js';
+import type { UrlMap } from 'util/index.js';
 import type {
   AddLayerMessageGL,
   AddMarkersMessage,
@@ -106,7 +107,7 @@ export class WorkerPool {
     style: string,
     analytics: Analytics,
     apiKey?: string,
-    urlMap?: Record<string, string>,
+    urlMap?: UrlMap,
   ): void {
     const msg: RequestStyleMessage = {
       mapID,

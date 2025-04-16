@@ -28,7 +28,7 @@ export type ColorBlindAdjust = 'protanopia' | 'deuteranopia' | 'tritanopia' | 'g
  * @param type - the type of colorblindness adjustment
  * @returns the adjusted color
  */
-export default function colorBlindAdjust(
+export function colorBlindAdjust(
   color: ColorArray,
   type: ColorBlindAdjust = 'tritanopia',
 ): ColorArray {

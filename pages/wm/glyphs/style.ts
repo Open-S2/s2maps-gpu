@@ -3,7 +3,7 @@ import type { StyleDefinition } from 'style/style.spec.js';
 const style: StyleDefinition = {
   version: 1,
   name: 'WM Glyphs',
-  projection: 'WG',
+  projection: 'WM',
   view: {
     lon: -40,
     lat: 37.778443127730476,

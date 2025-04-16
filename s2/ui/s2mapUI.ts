@@ -4,6 +4,7 @@ import Camera from './camera/index.js';
 import Animator from './camera/animator.js';
 
 import type { ColorMode } from 's2/s2Map.js';
+import type { UrlMap } from 'util/index.js';
 import type { UserTouchEvent } from './camera/dragPan.js';
 import type { AnimationDirections, AnimationType } from './camera/animator.js';
 import type { Attributions, GPUType, LayerStyle, StyleDefinition } from 'style/style.spec.js';
@@ -23,7 +24,7 @@ import type {
  *
  * User defined configuration options for the map.
  *
- * At a minimum, you probably want to define a `style` and a `container`.
+ * At a minimum, you probably want to define a {@link StyleDefinition} and an HTML element `container`.
  *
  * ex.
  * ```ts
@@ -44,14 +45,14 @@ import type {
  * ```
  *
  * ### Rendering Options
- * - `contextType`: Forces the use of specific GPU Context:
+ * - `contextType`: [See {@link GPUType}] Forces the use of specific GPU Context:
  *   - `1`: WebGL
  *   - `2`: WebGL2
  *   - `3`: WebGPU
  * - `offscreen`: Support OffscreenCanvas
  * - `canvas`: Reference a canvas instead of a container
  * - `container`: Can be a reference to an ID (string) or an HTMLElement
- * - `style`: Either the style definition or a string URL pointing to the location of the style definition
+ * - `style`: [See {@link StyleDefinition}] Either the style definition or a string URL pointing to the location of the style definition
  * - `canvasMultiplier`: Control the number of fragments per pixel. [default: window.devicePixelRatio]
  * - `darkMode`: boolean flag. Enable dark mode. [default: false]
  *
@@ -70,7 +71,7 @@ import type {
  * ### Additional Options
  * - `hash`: If true, the map will update the URL Hash with it's current View. [default: false]
  * - `apiKey`: string. API key for the map service.
- * - `urlMap`: An API URL that remaps any source strings that start with "example://" to whatever example is
+ * - `urlMap`: [See {@link UrlMap}] An API URL that remaps any source strings that start with "example://" to whatever example is
  *    - example: `{ "apiURL": "https://api.opens2.com" }`
  * - `attributions`: Set additional attributions to be displayed on the map.
       - example: `{ "OpenS2": "https://opens2.com/data" }`
@@ -113,7 +114,7 @@ export interface MapOptions {
    * }
    * ```
    */
-  urlMap?: Record<string, string>;
+  urlMap?: UrlMap;
   /** Either the style definition or a string URL pointing to the location of the style definition */
   style: StyleDefinition | string;
   /** If true, allow user to use scroll wheel to zoom. [default: true] */

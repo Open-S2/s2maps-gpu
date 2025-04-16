@@ -1,6 +1,6 @@
-import Color from 'style/color/index.js';
+import { Color } from 'style/color/index.js';
 import Workflow from './workflow.js';
-import adjustURL from 'util/adjustURL.js';
+import { adjustURL } from 'util/index.js';
 import { degToRad } from 'gis-tools/index.js';
 import { invert, multiply, perspective, rotate } from 'ui/camera/projector/mat4.js';
 
@@ -15,6 +15,7 @@ import type Camera from 'ui/camera/index.js';
 import type Context from '../context/context.js';
 import type Projector from 'ui/camera/projector/index.js';
 import type { StyleDefinition } from 'style/style.spec.js';
+import type { UrlMap } from 'util/index.js';
 import type {
   SkyboxWorkflow as SkyboxWorkflowSpec,
   SkyboxWorkflowUniforms,
@@ -51,7 +52,7 @@ export default class SkyboxWorkflow extends Workflow implements SkyboxWorkflowSp
    * @param camera - The camera
    * @param urlMap - The url map to properly resolve urls
    */
-  updateStyle(style: StyleDefinition, camera: Camera, urlMap?: Record<string, string>): void {
+  updateStyle(style: StyleDefinition, camera: Camera, urlMap?: UrlMap): void {
     const { context } = this;
     const { skybox } = style;
     const { type, size, loadingBackground } = skybox ?? {};

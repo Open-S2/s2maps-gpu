@@ -1,4 +1,4 @@
-import Color, { interpolate } from './index.js';
+import { Color, interpolate } from './index.js';
 
 import type { ColorArray } from './index.js';
 import type { ColorBlindAdjust } from './colorBlindAdjust.js';

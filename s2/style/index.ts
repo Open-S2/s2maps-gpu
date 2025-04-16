@@ -3,6 +3,7 @@ import type { WorkflowType as GLWorkflowType } from 'gl/workflows/workflow.spec.
 import type { WorkflowType as GPUWorkflowType } from 'gpu/workflows/workflow.spec.js';
 import type { MapOptions } from 'ui/s2mapUI.js';
 import type { TileShared as Tile } from 'source/tile.spec.js';
+import type { UrlMap } from 's2/index.js';
 import type {
   Analytics,
   FillDefinition,
@@ -28,7 +29,7 @@ import type { RequestStyleMessage, TileRequest } from 'workers/worker.spec.js';
 export default class Style {
   camera: Camera;
   apiKey?: string;
-  urlMap?: Record<string, string>;
+  urlMap?: UrlMap;
   maskLayers: Array<FillDefinition | ShadeDefinition> = [];
   layers: LayerDefinition[] = [];
   interactive = false;

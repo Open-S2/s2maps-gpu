@@ -1,9 +1,11 @@
-import colorBlindAdjust from './colorBlindAdjust.js';
-import colorParser from './colorParser.js';
+import { colorBlindAdjust } from './colorBlindAdjust.js';
+import { colorParser } from './colorParser.js';
 
 import type { ColorBlindAdjust } from './colorBlindAdjust.js';
 
+export * from './colorBlindAdjust.js';
 export * from './colorGenerators.js';
+export * from './colorParser.js';
 /** ColorArray - [r, g, b, a] */
 export type ColorArray = [r: number, g: number, b: number, a: number];
 
@@ -18,7 +20,7 @@ export type ColorArray = [r: number, g: number, b: number, a: number];
  *  [link two](http://www.daltonize.org/),
  *  and [ink three](https://galactic.ink/labs/Color-Vision/Javascript/Color.Vision.Daltonize.js)
  */
-export default class Color {
+export class Color {
   val: ColorArray;
   type = 'rgb';
   /**

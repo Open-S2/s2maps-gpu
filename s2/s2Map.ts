@@ -5,8 +5,7 @@ import type { MapOptions } from './ui/s2mapUI.js';
 import type { MarkerDefinition } from './workers/source/markerSource.js';
 import type S2MapUI from './ui/s2mapUI.js';
 import type { UserTouchEvent } from './ui/camera/dragPan.js';
-import type { VectorPoint } from 'gis-tools/index.js';
-import type { Attributions, LayerStyle, StyleDefinition } from './style/style.spec.js';
+import type { Attributions, GPUType, LayerStyle, StyleDefinition } from './style/style.spec.js';
 import type {
   MapGLMessage,
   MouseClickMessage,
@@ -48,6 +47,7 @@ declare global {
  * An S2 and WM WebGL1, WebGL2, and WebGPU powered map engine.
  *
  * ### Basic JS/TS example:
+ * Note that the most important components to build a map are the {@link MapOptions} and the {@link StyleDefinition}.
  * ```ts
  * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
  * import type { MapOptions, StyleDefinition } from 's2maps-gpu';
@@ -102,30 +102,30 @@ declare global {
  * - `delete`: fired to ping that the map is deleting itself.
  *
  * ## API
- * - `setDarkMode`
- * - `getContainer`
- * - `getCanvasContainer`
- * - `getContainerDimensions`
- * - `setStyle`
- * - `updateStyle`
- * - `setMoveState`
- * - `setZoomState`
- * - `jumpTo`
- * - `easeTo`
- * - `flyTo`
- * - `addSource`
- * - `updateSource`
- * - `resetSource`
- * - `deleteSource`
- * - `addLayer`
- * - `updateLayer`
- * - `deleteLayer`
- * - `reorderLayers`
- * - `addMarker`
- * - `removeMarker`
- * - `screenshot`
- * - `awaitFullyRendered`
- * - `delete`
+ * - {@link S2Map.setDarkMode}: Update the state of the map's UI mode. True for dark-mode, false for light-mode
+ * - {@link S2Map.getContainer}: Get the HTML element that the map is rendered into
+ * - {@link S2Map.getCanvasContainer}: Get the HTML element that the map's canvas is rendered into
+ * - {@link S2Map.getContainerDimensions}: Get the dimensions of the map's container as a `[width, height]` tuple
+ * - {@link S2Map.setStyle}: Set a new style, replacing the current one if it exists
+ * - {@link S2Map.updateStyle}: Update the map's current style with new attributes, by checking for changes and updating accordingly
+ * - {@link S2Map.setMoveState}: Update the users ability to move the map around or not.
+ * - {@link S2Map.setZoomState}: Update the users ability to zoom the map in and out or not.
+ * - {@link S2Map.jumpTo}: Jump to a specific location's longitude, latitude, and optionally zoom
+ * - {@link S2Map.easeTo}:
+ * - {@link S2Map.flyTo}:
+ * - {@link S2Map.addSource}:
+ * - {@link S2Map.updateSource}:
+ * - {@link S2Map.resetSource}:
+ * - {@link S2Map.deleteSource}:
+ * - {@link S2Map.addLayer}:
+ * - {@link S2Map.updateLayer}:
+ * - {@link S2Map.deleteLayer}:
+ * - {@link S2Map.reorderLayers}:
+ * - {@link S2Map.addMarker}:
+ * - {@link S2Map.removeMarker}:
+ * - {@link S2Map.screenshot}: Take a screenshot of the current state of the map. Returns the screenshot as a `Uint8ClampedArray`
+ * - {@link S2Map.awaitFullyRendered}: Async function to wait for the map to have all source and layer data rendered to the screen
+ * - {@link S2Map.delete}: Delete the map instance and cleanup all it's resources
  *
  * ## Future API
  * - `getBounds` & `setBounds`
@@ -136,16 +136,16 @@ declare global {
  * ## Plugins
  *
  * ### MapLibre Style Converter
- * - {@link mapLibreStyleConverter}
+ * See {@link plugins.convertMaplibreStyle}
  *
  * #### Example
  * ```ts
- * import { mapLibreStyleConverter } from 's2/plugins/index.js';
+ * import { convertMaplibreStyle } from 's2maps-gpu/plugins';
  * import type { StyleSpecification } from '@maplibre/maplibre-gl-style-spec';
  * // setup maplibre style
  * const maplibreStyle: StyleSpecification = { ... };
  * // convert to s2maps style
- * const s2mapsStyle = mapLibreStyleConverter(maplibreStyle);
+ * const s2mapsStyle = convertMaplibreStyle(maplibreStyle);
  * // create a map with it
  * const map = new S2Map({ ..., style: s2mapsStyle });
  * ```
@@ -835,24 +835,27 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   *
+   * Get the HTML element that the map is rendered into
+   * @returns The HTML element
    */
   getContainer(): HTMLElement | undefined {
     return this.#container;
   }
 
   /**
-   *
+   * Get the HTML element that the map's canvas is rendered into
+   * @returns The HTML element
    */
   getCanvasContainer(): HTMLElement {
     return this.#canvasContainer;
   }
 
   /**
-   *
+   * Get the dimensions of the map's container
+   * @returns The dimensions of the map's container
    */
-  getContainerDimensions(): null | VectorPoint {
-    return { x: this.#container?.clientWidth ?? 0, y: this.#container?.clientHeight ?? 0 };
+  getContainerDimensions(): null | [width: number, height: number] {
+    return [this.#container?.clientWidth ?? 0, this.#container?.clientHeight ?? 0];
   }
 
   /**
@@ -878,9 +881,21 @@ export default class S2Map extends EventTarget {
     await map?.setStyle(style, ignorePosition);
   }
 
-  // in this case, check for changes and update accordingly
   /**
-   * @param style
+   * Update the map's current style with new attributes, by checking for changes and updating accordingly
+   *
+   * ### Example
+   * ```ts
+   * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
+   * import type { MapOptions, StyleDefinition } from 's2maps-gpu';
+   *
+   * const options: MapOptions = { ..., style: { ... } };
+   * const map = new S2Map(options);
+   * // Update the style with new attributes
+   * const newStyle: StyleDefinition = { ... };
+   * map.updateStyle(newStyle);
+   * ```
+   * @param style - The new style to update the old style with
    */
   updateStyle(style: StyleDefinition): void {
     const { offscreen, map } = this;
@@ -931,10 +946,22 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * TODO: USE a view instead
-   * @param lon
-   * @param lat
-   * @param zoom
+   * Jump to a specific location's longitude, latitude, and optionally zoom
+   *
+   * ### Example
+   * ```ts
+   * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
+   * import type { MapOptions } from 's2maps-gpu';
+   *
+   * const options: MapOptions = { ..., view: { lon: 0, lat: 0, zoom: 0 } };
+   * const map = new S2Map(options);
+   * // wait for map to load, then jump to a specific location
+   * await map.awaitFullLoaded();
+   * map.jumpTo(-120, 60, 7);
+   * ```
+   * @param lon - The longitude to jump to
+   * @param lat - The latitude to jump to
+   * @param zoom - The zoom level to jump to if specified
    */
   jumpTo(lon: number, lat: number, zoom?: number): void {
     const { offscreen, map } = this;
@@ -1078,7 +1105,7 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * Take a screenshot of the current state of the map. Returns the
+   * Take a screenshot of the current state of the map. Returns the screenshot as an `Uint8ClampedArray`.
    *
    * ### Example
    * ```ts
@@ -1144,7 +1171,7 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * Delete the map instance to cleanup all resources
+   * Delete the map instance and cleanup all it's resources
    *
    * ### Example
    * ```ts
@@ -1180,7 +1207,7 @@ export default class S2Map extends EventTarget {
  * Figure out the best canvas we have access to
  * @returns 1 for WebGL, 2 for WebGL2, 3 for WebGPU
  */
-function getContext(): 1 | 2 | 3 {
+function getContext(): GPUType {
   let tmpContext = document.createElement('canvas').getContext('webgpu');
   if (tmpContext !== null) {
     return 3;

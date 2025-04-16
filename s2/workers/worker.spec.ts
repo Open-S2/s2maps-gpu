@@ -4,6 +4,7 @@ import type { Glyph } from 'workers/process/glyph/familySource.js';
 import type { ImageSourceMetadata } from './source/imageSource.js';
 import type { MapOptions } from 'ui/s2mapUI.js';
 import type { MarkerDefinition } from './source/markerSource.js';
+import type { UrlMap } from 'util/index.js';
 import type { UserTouchEvent } from 'ui/camera/dragPan.js';
 import type { View } from 'ui/camera/projector/index.js';
 import type {
@@ -393,7 +394,7 @@ export interface RequestStyleMessage extends MapID {
   style: string; // url
   analytics: Analytics;
   apiKey?: string;
-  urlMap?: Record<string, string>;
+  urlMap?: UrlMap;
 }
 
 /** Style request message sent from the map worker to the front end */

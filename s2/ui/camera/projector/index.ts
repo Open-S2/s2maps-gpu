@@ -93,7 +93,7 @@ export default class Projector {
    */
   constructor(config: MapOptions, camera: Camera) {
     const { canvasMultiplier, positionalZoom, noClamp, style } = config;
-    if (typeof style === 'object' && style.projection === 'WG') this.projection = 'WG';
+    if (typeof style === 'object' && style.projection === 'WM') this.projection = 'WM';
     if (canvasMultiplier !== undefined) this.multiplier = canvasMultiplier;
     if (positionalZoom === false) this.positionalZoom = false;
     this.webworker = camera.webworker;
@@ -463,7 +463,7 @@ export default class Projector {
     // adjust bearing
     view.bearing = this.#clampDeg(view.bearing);
     // adjust view if constrained to fill
-    if (projection === 'WG' && constrainZoomToFill) this.#clampConstraint(view);
+    if (projection === 'WM' && constrainZoomToFill) this.#clampConstraint(view);
   }
 
   /**

@@ -1,5 +1,6 @@
-import adjustURL from 'util/adjustURL.js';
+import { adjustURL } from 'util/index.js';
 
+import type { UrlMap } from 'util/index.js';
 import type { Analytics, StyleDefinition } from 'style/style.spec.js';
 
 // an API key enables the user to construct a session token
@@ -83,7 +84,7 @@ export default class Session {
    * @param style - the style url
    * @param urlMap - the url map to properly modify and resolve urls
    */
-  async requestStyle(mapID: string, style: string, urlMap?: Record<string, string>): Promise<void> {
+  async requestStyle(mapID: string, style: string, urlMap?: UrlMap): Promise<void> {
     // grab the auth token
     const Authorization = await this.requestSessionToken(mapID);
     if (Authorization === undefined) return;

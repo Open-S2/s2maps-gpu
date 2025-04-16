@@ -2,7 +2,7 @@ import type { StyleDefinition } from 'style/style.spec.js';
 
 const style: StyleDefinition = {
   version: 1,
-  projection: 'WG',
+  projection: 'WM',
   name: 'WM Fill Pattern',
   view: {
     lon: 0,

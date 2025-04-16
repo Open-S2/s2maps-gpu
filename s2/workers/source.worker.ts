@@ -1,4 +1,4 @@
-import adjustURL from '../util/adjustURL.js';
+import { adjustURL } from '../util/index.js';
 import {
   GlyphSource,
   ImageSource,
@@ -15,6 +15,7 @@ import {
 
 import type { ImageSourceMetadata } from './source/imageSource.js';
 import type { MarkerDefinition } from './source/markerSource.js';
+import type { UrlMap } from 'util/index.js';
 import type {
   Analytics,
   GPUType,
@@ -149,7 +150,7 @@ export default class SourceWorker {
     style: string,
     analytics: Analytics,
     apiKey?: string,
-    urlMap?: Record<string, string>,
+    urlMap?: UrlMap,
   ): void {
     // build maps session
     this.session.loadStyle(mapID, analytics, apiKey);

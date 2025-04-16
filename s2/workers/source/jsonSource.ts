@@ -35,7 +35,10 @@ export default class JSONSource extends Source {
       this.json.cluster();
     } else {
       // use the projection from the style
-      this.json = new TileStore(json, { ...metadata, projection: this.projection });
+      this.json = new TileStore(json, {
+        ...metadata,
+        projection: this.projection === 'S2' ? 'S2' : 'WG',
+      });
     }
     const { projection, minzoom, maxzoom, faces } = this.json;
     this._buildMetadata(

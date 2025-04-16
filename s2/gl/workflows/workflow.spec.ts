@@ -6,6 +6,7 @@ import type S2MapUI from 'ui/s2mapUI.js';
 import type { SensorTextureDefinition } from 'ui/camera/timeCache.js';
 import type { TileGL as Tile } from 'source/tile.spec.js';
 import type TimeCache from 'ui/camera/timeCache.js';
+import type { UrlMap } from 'util/index.js';
 import type { WallpaperScheme } from './wallpaperWorkflow.js';
 import type { BBox, VectorPoint } from 'gis-tools/index.js';
 import type {
@@ -611,7 +612,7 @@ export interface SkyboxWorkflow extends Omit<WorkflowSpec, 'draw'> {
   matrix: Float32Array;
   uniforms: { [key in SkyboxWorkflowUniforms]: WebGLUniformLocation };
 
-  updateStyle: (style: StyleDefinition, s2mapGL: S2MapUI, urlMap?: Record<string, string>) => void;
+  updateStyle: (style: StyleDefinition, s2mapGL: S2MapUI, urlMap?: UrlMap) => void;
   draw: (projector: Projector) => void;
 }
 

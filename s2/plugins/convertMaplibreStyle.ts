@@ -47,10 +47,22 @@ import type {
 
 /**
  * Convert a MapLibre style to an s2maps style
+ *
+ * ex.
+ * ```ts
+ * import { convertMaplibreStyle } from 's2maps-gpu/plugins';
+ * import type { StyleSpecification } from '@maplibre/maplibre-gl-style-spec';
+ * // setup maplibre style
+ * const maplibreStyle: StyleSpecification = { ... };
+ * // convert to s2maps style
+ * const s2mapsStyle = convertMaplibreStyle(maplibreStyle);
+ * // create a map with it
+ * const map = new S2Map({ ..., style: s2mapsStyle });
+ * ```
  * @param input - the MapLibre style
  * @returns the s2maps style
  */
-export default function maplibreStyleConverter(input: StyleSpecification): StyleDefinition {
+export function convertMaplibreStyle(input: StyleSpecification): StyleDefinition {
   const { center, zoom, bearing, pitch, sprite, sources } = input;
 
   const glyphs: Glyphs = {};
@@ -64,7 +76,7 @@ export default function maplibreStyleConverter(input: StyleSpecification): Style
       bearing,
       pitch,
     },
-    projection: 'WG',
+    projection: 'WM',
     glyphs,
     sources: convertSources(sources),
     sprites: sprite !== undefined ? convertSprite(sprite) : undefined,
