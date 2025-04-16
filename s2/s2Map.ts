@@ -9,9 +9,13 @@ import type { VectorPoint } from 'gis-tools/index.js';
 import type { Attributions, LayerStyle, StyleDefinition } from './style/style.spec.js';
 import type {
   MapGLMessage,
+  MouseClickMessage,
+  MouseEnterMessage,
+  MouseLeaveMessage,
   ResetSourceMessage,
   SourceWorkerMessage,
   TileWorkerMessage,
+  ViewMessage,
 } from './workers/worker.spec.js';
 
 export type * from './ui/s2mapUI.js';
@@ -27,20 +31,7 @@ export type { UserTouchEvent } from './ui/camera/dragPan.js';
  * - 3: Tritanopia
  * - 4: Greyscale
  */
-export const ColorMode = {
-  /** None */
-  None: 0,
-  /** Protanopia */
-  Protanopia: 1,
-  /** Deuteranopia */
-  Deuteranopia: 2,
-  /** Tritanopia */
-  Tritanopia: 3,
-  /** Greyscale */
-  Greyscale: 4,
-} as const;
-/** colorblind mode */
-export type ColorMode = (typeof ColorMode)[keyof typeof ColorMode];
+export type ColorMode = 0 | 1 | 2 | 3 | 4;
 
 declare global {
   /** a global object exposed to the window */
@@ -49,9 +40,115 @@ declare global {
   }
 }
 
-// S2Map is called by the user and includes the API to interact with the mapping engine
 /**
+ * # The S2 Map GPU Engine
  *
+ * ## Description
+ *
+ * An S2 and WM WebGL1, WebGL2, and WebGPU powered map engine.
+ *
+ * ### Basic JS/TS example:
+ * ```ts
+ * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
+ * import type { MapOptions, StyleDefinition } from 's2maps-gpu';
+ *
+ * // build a style guide of sources to fetch and layers to render
+ * const style: StyleDefinition = { ... };
+ * // setup options for the map
+ * const options: MapOptions = {
+ *   container: 'map', // the ID of the HTML element to render the map into
+ *   // You can reference a canvas instead of a container:
+ *   // canvas: userPulledCanvasElement
+ *   style,
+ * };
+ * // Build the map
+ * const map = new S2Map(options);
+ * ```
+ *
+ * ### HTML Example
+ * ```html
+ * <!DOCTYPE html>
+ * <html lang="en">
+ *   <head>
+ *     <meta charset="utf-8" />
+ *     <title>Display a map</title>
+ *     <meta name="viewport" content="initial-scale=1,width=device-width" />
+ *     <!-- import s2maps-gpu. BE SURE TO CHECK AND UPDATE TO LATEST VERSION -->
+ *     <script src="https://opens2.com/s2maps-gpu/v0.6.0/s2maps-gpu.min.js" crossorigin="anonymous"></script>
+ *     <link rel="stylesheet" href="https://opens2.com/s2maps-gpu/v0.6.0/s2maps-gpu.min.css" />
+ *   </head>
+ *   <body>
+ *     <div id="map"></div>
+ *     <script>
+ *       // grab container div
+ *       const container = document.getElementById('map');
+ *       // setup map style
+ *       const style = { ... };
+ *       // create the map
+ *       const map = new S2Map({ style, container });
+ *     </script>
+ *   </body>
+ * </html>
+ * ```
+ *
+ * ## Events
+ * - `ready`: fired when the map is ready to be interacted with / make API calls. Ships this map {@link S2Map}
+ * - `mouseleave`: fired when the mouse leaves the map. Ships {@link MouseLeaveMessage}
+ * - `mouseenter`: fired when the mouse enters the map. Ships {@link MouseEnterMessage}
+ * - `click`: fired when the user clicks on the map. Ships {@link MouseClickMessage}
+ * - `view`: fired when the map view changes. Ships {@link ViewMessage}
+ * - `screenshot`: fired as a result of a screenshot that was requested. Ships a `Uint8ClampedArray`
+ * - `rendered`: fired when the map is fully rendered.
+ * - `delete`: fired to ping that the map is deleting itself.
+ *
+ * ## API
+ * - `setDarkMode`
+ * - `getContainer`
+ * - `getCanvasContainer`
+ * - `getContainerDimensions`
+ * - `setStyle`
+ * - `updateStyle`
+ * - `setMoveState`
+ * - `setZoomState`
+ * - `jumpTo`
+ * - `easeTo`
+ * - `flyTo`
+ * - `addSource`
+ * - `updateSource`
+ * - `resetSource`
+ * - `deleteSource`
+ * - `addLayer`
+ * - `updateLayer`
+ * - `deleteLayer`
+ * - `reorderLayers`
+ * - `addMarker`
+ * - `removeMarker`
+ * - `screenshot`
+ * - `awaitFullyRendered`
+ * - `delete`
+ *
+ * ## Future API
+ * - `getBounds` & `setBounds`
+ * - `setProjection` & `getProjection`
+ * - `getStyle`
+ * - `setView`
+ *
+ * ## Plugins
+ *
+ * ### MapLibre Style Converter
+ * - {@link mapLibreStyleConverter}
+ *
+ * #### Example
+ * ```ts
+ * import { mapLibreStyleConverter } from 's2/plugins/index.js';
+ * import type { StyleSpecification } from '@maplibre/maplibre-gl-style-spec';
+ * // setup maplibre style
+ * const maplibreStyle: StyleSpecification = { ... };
+ * // convert to s2maps style
+ * const s2mapsStyle = mapLibreStyleConverter(maplibreStyle);
+ * // create a map with it
+ * const map = new S2Map({ ..., style: s2mapsStyle });
+ * ```
  */
 export default class S2Map extends EventTarget {
   readonly #container?: HTMLElement;
@@ -66,7 +163,7 @@ export default class S2Map extends EventTarget {
   #attributions: Attributions = {};
   bearing = 0; // degrees
   pitch = 0; // degrees
-  colorMode: ColorMode = ColorMode.None;
+  colorMode: ColorMode = 0;
   map?: S2MapUI;
   hash = false;
   offscreen?: Worker;
@@ -447,16 +544,16 @@ export default class S2Map extends EventTarget {
     } else if (type === 'mouseenter') {
       const { features } = data;
       this.#canvas.style.cursor = features[0]?.__cursor ?? 'default';
-      this.dispatchEvent(new CustomEvent('mouseenter', { detail: data }));
+      this.dispatchEvent(new CustomEvent('mouseenter', { detail: data as MouseEnterMessage }));
     } else if (type === 'mouseleave') {
       const { currentFeatures } = data;
       if (currentFeatures.length === 0) this.#canvas.style.cursor = 'default';
-      this.dispatchEvent(new CustomEvent('mouseleave', { detail: data }));
+      this.dispatchEvent(new CustomEvent('mouseleave', { detail: data as MouseLeaveMessage }));
     } else if (type === 'click') {
-      this.dispatchEvent(new CustomEvent('click', { detail: data }));
+      this.dispatchEvent(new CustomEvent('click', { detail: data as MouseClickMessage }));
     } else if (type === 'view') {
       if (this.hash) setHash(data.view);
-      this.dispatchEvent(new CustomEvent('view', { detail: data }));
+      this.dispatchEvent(new CustomEvent('view', { detail: data as ViewMessage }));
     } else if (type === 'requestStyle') {
       window.S2WorkerPool.requestStyle(mapID, data.style, data.analytics, data.apiKey);
     } else if (type === 'style') {
@@ -611,6 +708,7 @@ export default class S2Map extends EventTarget {
    * Internal function to handle compass update. Expands upon camera compass update
    * @param bearing - compass bearing
    * @param pitch - compass pitch
+   * @internal
    */
   _updateCompass(bearing: number, pitch: number): void {
     this.bearing = -bearing;
@@ -702,7 +800,7 @@ export default class S2Map extends EventTarget {
     const { map, offscreen } = this;
     if (mode !== undefined) this.colorMode = mode;
     else this.colorMode++;
-    if (this.colorMode > 4) this.colorMode = ColorMode.None;
+    if (this.colorMode > 4) this.colorMode = 0;
     localStorage.setItem('s2maps:gpu:colorBlindMode', String(this.colorMode));
     // update the icon
     const cM = this.colorMode;
@@ -716,38 +814,6 @@ export default class S2Map extends EventTarget {
   /* API */
 
   /**
-   * Delete the map instance to cleanup all resources
-   *
-   * ### Example
-   * ```ts
-   * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
-   * import type { MapOptions } from 's2maps-gpu';
-   *
-   * const options: MapOptions = { ... }
-   * const map = new S2Map(options)
-   * // do something with the map
-   * map.delete() // cleanup
-   * ```
-   */
-  delete(): void {
-    const { offscreen, map } = this;
-    this.dispatchEvent(new Event('delete'));
-    offscreen?.postMessage({ type: 'delete' });
-    offscreen?.terminate();
-    map?.delete();
-    // reset the worker pool
-    window.S2WorkerPool.delete();
-    // remove all canvas listeners via cloning
-    if (this.#canvas instanceof HTMLCanvasElement)
-      this.#canvas.replaceWith(this.#canvas.cloneNode(true));
-    // cleanup the html
-    if (this.#container !== undefined) {
-      while (this.#container.lastChild !== null)
-        this.#container.removeChild(this.#container.lastChild);
-    }
-  }
-
-  /**
    * Update the state of the map's UI mode.
    *
    * ### Example
@@ -755,10 +821,10 @@ export default class S2Map extends EventTarget {
    * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
    * import type { MapOptions } from 's2maps-gpu';
    *
-   * const options: MapOptions = { ..., darkMode: false }
-   * const map = new S2Map(options)
+   * const options: MapOptions = { ..., darkMode: false };
+   * const map = new S2Map(options);
    * // do something with the map
-   * map.setDarkMode(true)
+   * map.setDarkMode(true);
    * ```
    * @param state - which UI mode to set the map to. `true` for dark-mode, `false` for light-mode
    */
@@ -789,10 +855,22 @@ export default class S2Map extends EventTarget {
     return { x: this.#container?.clientWidth ?? 0, y: this.#container?.clientHeight ?? 0 };
   }
 
-  // in this case, reset the style from scratch
   /**
-   * @param style
-   * @param ignorePosition
+   * Set a new style, replacing the current one if it exists
+   *
+   * ### Example
+   * ```ts
+   * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
+   * import type { MapOptions, StyleDefinition } from 's2maps-gpu';
+   *
+   * const options: MapOptions = { ... };
+   * const map = new S2Map(options);
+   * // setup and set a new style
+   * const style: StyleDefinition = { ... };
+   * await map.setStyle(style);
+   * ```
+   * @param style - The user defined style of how data should be rendered
+   * @param ignorePosition - if set to true, don't update the map's position to the style's view guide [Default=`true`]
    */
   async setStyle(style: StyleDefinition, ignorePosition = true): Promise<void> {
     const { offscreen, map } = this;
@@ -811,7 +889,19 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * @param state
+   * Update the users ability to move the map around or not.
+   *
+   * ### Example
+   * ```ts
+   * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
+   * import type { MapOptions } from 's2maps-gpu';
+   *
+   * const options: MapOptions = { ..., canMove: false };
+   * const map = new S2Map(options);
+   * // Update the move state so the user can move around
+   * const screen = map.setMoveState(true);
+   * ```
+   * @param state - Sets the move state. If `true`, the user can move the map.
    */
   setMoveState(state: boolean): void {
     const { offscreen, map } = this;
@@ -820,7 +910,19 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * @param state
+   * Update the users ability to zoom the map in and out or not.
+   *
+   * ### Example
+   * ```ts
+   * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
+   * import type { MapOptions } from 's2maps-gpu';
+   *
+   * const options: MapOptions = { ..., canZoom: false };
+   * const map = new S2Map(options);
+   * // Update the zoom state so the user can update the zoom position
+   * const screen = map.setZoomState(true);
+   * ```
+   * @param state - Sets the zoom state. If `true`, the user can zoom the map in and out.
    */
   setZoomState(state: boolean): void {
     const { offscreen, map } = this;
@@ -829,6 +931,7 @@ export default class S2Map extends EventTarget {
   }
 
   /**
+   * TODO: USE a view instead
    * @param lon
    * @param lat
    * @param zoom
@@ -876,12 +979,12 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * @param sourceNames
+   * @param sourceNames - Array of [sourceName, href]. Href is optional but if provided, the source href will be updated
    * @param keepCache
    * @param awaitReplace
    */
   resetSource(
-    sourceNames: Array<[string, string | undefined]>,
+    sourceNames: Array<[sourceName: string, href: string | undefined]>,
     keepCache = false,
     awaitReplace = false,
   ): void {
@@ -975,26 +1078,55 @@ export default class S2Map extends EventTarget {
   }
 
   /**
+   * Take a screenshot of the current state of the map. Returns the
    *
+   * ### Example
+   * ```ts
+   * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
+   * import type { MapOptions } from 's2maps-gpu';
+   *
+   * const options: MapOptions = { ... };
+   * const map = new S2Map(options);
+   * // wait for the map to be full rendered
+   * await map.awaitFullyRendered();
+   * // request the current screen
+   * const screen = await map.screenshot();
+   * ```
+   * @returns An RGBA encoded `Uint8ClampedArray` that is of size `canvas.width` * `canvas.height`
    */
-  async screenshot(): Promise<null | Uint8Array> {
+  async screenshot(): Promise<null | Uint8ClampedArray> {
     const { offscreen, map } = this;
-    return await new Promise<null | Uint8Array>((resolve) => {
+    return await new Promise<null | Uint8ClampedArray>((resolve) => {
       /**
        * Setup a listener for when the screenshot to be shipped back
        * @param event - the response with the screenshot
        */
-      const listener = (event: CustomEvent<Uint8Array | null>): void => {
+      const listener = (event: CustomEvent<Uint8ClampedArray | null>): void => {
         resolve(event?.detail);
       };
-      this.addEventListener('screenshot', listener, { once: true });
+      this.addEventListener('screenshot', listener as EventListener, { once: true });
       offscreen?.postMessage({ type: 'screenshot' });
       map?.screenshot();
     });
   }
 
   /**
+   * Async function to wait for the map to have all source and layer data rendered to the screen
    *
+   * Useful for ensuring the map is rendered before running tests, starting an animation,
+   * making changes, etc.
+   *
+   * ### Example
+   * ```ts
+   * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
+   * import type { MapOptions } from 's2maps-gpu';
+   *
+   * const options: MapOptions = { ... };
+   * const map = new S2Map(options);
+   * // wait for the map to be full rendered before making future changes
+   * await map.awaitFullyRendered();
+   * // do more stuff
+   * ```
    */
   async awaitFullyRendered(): Promise<void> {
     const { offscreen, map } = this;
@@ -1009,6 +1141,38 @@ export default class S2Map extends EventTarget {
       offscreen?.postMessage({ type: 'awaitRendered' });
       map?.awaitFullyRendered();
     });
+  }
+
+  /**
+   * Delete the map instance to cleanup all resources
+   *
+   * ### Example
+   * ```ts
+   * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
+   * import type { MapOptions } from 's2maps-gpu';
+   *
+   * const options: MapOptions = { ... }
+   * const map = new S2Map(options)
+   * // do something with the map
+   * map.delete() // cleanup
+   * ```
+   */
+  delete(): void {
+    const { offscreen, map } = this;
+    this.dispatchEvent(new Event('delete'));
+    offscreen?.postMessage({ type: 'delete' });
+    offscreen?.terminate();
+    map?.delete();
+    // reset the worker pool
+    window.S2WorkerPool.delete();
+    // remove all canvas listeners via cloning
+    if (this.#canvas instanceof HTMLCanvasElement)
+      this.#canvas.replaceWith(this.#canvas.cloneNode(true));
+    // cleanup the html
+    if (this.#container !== undefined) {
+      while (this.#container.lastChild !== null)
+        this.#container.removeChild(this.#container.lastChild);
+    }
   }
 }
 

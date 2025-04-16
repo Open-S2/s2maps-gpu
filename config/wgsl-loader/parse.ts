@@ -12,7 +12,7 @@ export default function (path: string, contents: string): string {
  * @param path
  * @param contents
  */
-function parse(path, contents) {
+function parse(path: string, contents: string): string {
   const relativePath = path.split('/').slice(0, -1).join('/');
   return _parse(relativePath, contents);
 }

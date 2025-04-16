@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'url';
-import glsl from './config/glsl-loader/vite';
-import wgsl from './config/wgsl-loader/vite';
+import glsl from './config/glsl-loader/vite.js';
+import wgsl from './config/wgsl-loader/vite.js';
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -49,7 +49,7 @@ export default defineNuxtConfig({
 
   alias: {
     s2: fileURLToPath(new URL('./s2', import.meta.url)),
-    geometry: fileURLToPath(new URL('./s2/geometry', import.meta.url)),
+    'gis-tools': fileURLToPath(new URL('./s2/gis-tools', import.meta.url)),
     gl: fileURLToPath(new URL('./s2/gl', import.meta.url)),
     gpu: fileURLToPath(new URL('./s2/gpu', import.meta.url)),
     plugins: fileURLToPath(new URL('./s2/plugins', import.meta.url)),

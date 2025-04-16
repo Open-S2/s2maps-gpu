@@ -1,7 +1,7 @@
-import { ColorMode } from 's2/s2Map.js';
 import buildMask from './buildMask.js';
 
 import type { ColorArray } from 'style/color/index.js';
+import type { ColorMode } from 's2/s2Map.js';
 import type { GlyphImages } from 'workers/source/glyphSource.js';
 import type { MapOptions } from 'ui/s2mapUI.js';
 import type { Painter } from 'gpu/painter.spec.js';
@@ -73,7 +73,7 @@ export default class WebGPUContext {
   #resizeNextFrame = false;
   #resizeCB?: () => void;
   // track current states
-  colorMode: ColorMode = ColorMode.None;
+  colorMode: ColorMode = 0;
   stencilRef = -1;
   currPipeline: undefined | GPURenderPipeline | GPUComputePipeline;
   findingFeature = false;

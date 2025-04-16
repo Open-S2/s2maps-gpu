@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 's2';
+import type { StyleDefinition } from 's2/index.js';
 
 const style: StyleDefinition = {
   version: 1,

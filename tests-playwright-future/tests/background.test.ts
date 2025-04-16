@@ -1,7 +1,7 @@
 import S2MapGPU from '../components/S2MapGPU.vue';
-import S2Style from '../../pages/s2/background/style';
-import WMStyle from '../../pages/wm/background/style';
-import { waitMap } from './util';
+import S2Style from '../../pages/s2/background/style.js';
+import WMStyle from '../../pages/wm/background/style.js';
+import { waitMap } from './util.js';
 import { expect, test } from '@playwright/experimental-ct-vue';
 
 test.describe('Background', () => {

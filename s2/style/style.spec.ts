@@ -328,11 +328,43 @@ export interface NestedKey {
 }
 
 /**
+ * # Input Value
  *
+ * Input values directly access properties data from the feature.
+ *
+ * ex.
+ *
+ * Lets say you have a feature with the following properties:
+ * ```ts
+ * const properties = {
+ *   class: {
+ *     type: 'blue',
+ *     subclass: 'deep'
+ *   }
+ * }
+ * ```
+ *
+ * You can utilize/access the `type` property with the following:
+ *
+ * ```json
+ * {
+ *   "color": {
+ *      "inputValue": {
+ *         "key": {
+ *            "nestedKey": "class",
+ *            "key": "type"
+ *         },
+ *         "fallback": "blue"
+ *      }
+ *   }
+ * }
+ * ```
+ *
+ * ### Properties:
+ * - `key`: Access value in feature properties by either its key or a nested key.
+ * - `fallback`: If the property search for a key turns up no value, the fallback is used.
  */
 export interface InputValue<T extends NotNullOrObject> {
-  /** If the property search for a key turns up no value, the fallback is used. */
-  fallback: T;
   /**
    * Access value in feature properties by either its key or a nested key.
    *
@@ -346,10 +378,35 @@ export interface InputValue<T extends NotNullOrObject> {
    * this would be used to filter features where `feature.properties.class.type === 'ocean'`
    */
   key: string | NestedKey;
+  /** If the property search for a key turns up no value, the fallback is used. */
+  fallback: T;
 }
 
 /**
+ * # Data Condition
  *
+ * Data conditions are used to filter features based on what property values the feature has.
+ * If the condition's filter passes, the input is used.
+ * If all conditions fail, the fallback is used.
+ *
+ * ex.
+ * ```json
+ * "color": {
+ *   "dataCondition": {
+ *     "conditions": [
+ *       {
+ *         "filter": { "key": "country", "comparator": "==", "value": "US" },
+ *         "input": "#007bfe"
+ *       }
+ *     ],
+ *     "fallback": "#23374d"
+ *   }
+ * }
+ * ```
+ *
+ * ### Properties:
+ * - `conditions`: array of `{ filter: Filter, input: T | Property<T> }`. If Filter passes, the input is used
+ * - `fallback`: The Value `T` or a `Property<T>`. If the conditional search failed, the fallback is used.
  */
 export interface DataCondition<T extends NotNullOrObject> {
   /**
@@ -367,7 +424,31 @@ export interface DataCondition<T extends NotNullOrObject> {
 // export type DataRange<T extends NotNullOrObject> = DataRangeStep<T> | DataRangeEase<T>
 
 /**
+ * # Data Range Ease
  *
+ * Data Range is used to group features based on a range of values and apply specific design attributes for those groups.
+ * If the feature's value falls within the range, the fallback is used.
+ *
+ * ex.
+ * ```json
+ * "weight": {
+ *   "dataRange": {
+ *     "key": "mag",
+ *     "ease": "expo",
+ *     "base": 1.5,
+ *     "ranges": [
+ *       { "stop": 0, "input": 0 },
+ *       { "stop": 8, "input": 1 }
+ *     ]
+ *   }
+ * }
+ * ```
+ *
+ * ### Properties:
+ * - `key`: Access value in feature properties by either its key or a nested key.
+ * - `ease`: The ease effect. Choose between `lin` | `expo` | `quad` | `cubic` | `step` [default: `lin`]
+ * - `base`: Used by `expo`, `quad`, or `cubic` ease functions. Ranges from 0 -> 2 where 1 is linear, 0 is slow start, 2 is slow finish. [default: 1]
+ * - `ranges`: Set the range stops and the input values to apply at those stops.
  */
 export interface DataRangeEase<T extends number | string> {
   /**
@@ -416,7 +497,32 @@ export interface DataRangeEase<T extends number | string> {
 }
 
 /**
+ * # Data Range Step
  *
+ * Data Range Step is used to group features based on a range of values and apply specific design
+ * attributes for those groups. If the feature's value falls within the range, the fallback is used.
+ *
+ * The "step" type is more limited than an ease type, often used by LAYOUT styling where the change is
+ * immediate to each stop.
+ *
+ * ex.
+ * ```json
+ * "opacity": {
+ *   "inputRange": {
+ *     "type": "zoom",
+ *     "ease": "step",
+ *     "ranges": [
+ *       { "stop": 0, "input": 1 },
+ *       { "stop": 5, "input": 0 }
+ *     ]
+ *   }
+ * }
+ * ```
+ *
+ * ### Properties
+ * - `ease`: Must be `"step"` if provided
+ * - `key`: Access value in feature properties by either its key or a nested key.
+ * - `ranges`: Set the range stops and the input values to apply at those stops.
  */
 export interface DataRangeStep<T extends NotNullOrObject> {
   ease?: 'step';
@@ -454,7 +560,31 @@ export interface DataRangeStep<T extends NotNullOrObject> {
 }
 
 /**
+ * # Input Range Ease
  *
+ * Input Range is used to group features based on a range of values based upon a `type` provided and apply specific design attributes for those groups.
+ * If the feature's value falls within the range, the fallback is used.
+ *
+ * ex.
+ * ```json
+ * "radius": {
+ *   "inputRange": {
+ *     "type": "zoom",
+ *     "ease": "expo",
+ *     "base": 1.5,
+ *     "ranges": [
+ *       { "stop": 0, "input": 3 },
+ *       { "stop": 8, "input": 30 }
+ *     ]
+ *   }
+ * }
+ * ```
+ *
+ * ### Properties
+ * - `type`: The type of input to use. Options are `zoom` | `lon` | `lat` | `angle` | `pitch`
+ * - `ease`: The ease effect. Choose between `lin` | `expo` | `quad` | `cubic` | `step` [default: `lin`]
+ * - `base`: Used by `expo`, `quad`, or `cubic` ease functions. Ranges from 0 -> 2 where 1 is linear, 0 is slow start, 2 is slow finish. [default: 1]
+ * - `ranges`: Set the range stops and the input values to apply at those stops.
  */
 export interface InputRangeEase<T extends number | string> {
   /** `zoom` | `lon` | `lat` | `angle` | `pitch` */
@@ -492,7 +622,33 @@ export interface InputRangeEase<T extends number | string> {
 }
 
 /**
+ * # Input Range Step
  *
+ * Input Range is used to group features based on a range of values based upon a `type` provided and apply specific design attributes for those groups.
+ * If the feature's value falls within the range, the fallback is used.
+ *
+ * The "step" type is more limited than an ease type, often used by LAYOUT styling where the change is
+ * immediate to each stop.
+ *
+ * ex.
+ * ```json
+ * "radius": {
+ *   "inputRange": {
+ *     "type": "zoom",
+ *     "ease": "expo",
+ *     "base": 1.5,
+ *     "ranges": [
+ *       { "stop": 0, "input": 3 },
+ *       { "stop": 8, "input": 30 }
+ *     ]
+ *   }
+ * }
+ * ```
+ *
+ * ### Properties
+ * - `ease`: Must be `"step"`
+ * - `type`: The type of input to use. Options are `zoom` | `lon` | `lat` | `angle` | `pitch`
+ * - `ranges`: Set the range stops and the input values to apply at those stops.
  */
 export interface InputRangeStep<T extends NotNullOrObject> {
   ease: 'step';
@@ -551,7 +707,43 @@ export type ValueType<T> = T extends NotNullOrObject ? T : never;
 export type NumberColor<T> = T extends number | string ? T : never;
 
 /**
+ * # Property
  *
+ * An extremely maleable input that allows you to style input data as either the value itself or
+ * something that mutates on user input changes, data input changes, feature state like hovering, etc.
+ *
+ * ex.
+ * ```json
+ * { "color": "rgba(240, 2, 5, 1)" }
+ * ```
+ *
+ * ex.
+ * ```json
+ * { "color": { "inputValue": { "key": "type", "fallback": "blue" } } }
+ * ```
+ *
+ * ex.
+ * ```json
+ * "weight": {
+ *   "dataRange": {
+ *     "key": "mag",
+ *     "ease": "expo",
+ *     "base": 1.5,
+ *     "ranges": [
+ *       { "stop": 0, "input": 0 },
+ *       { "stop": 8, "input": 1 }
+ *     ]
+ *   }
+ * }
+ * ```
+ *
+ * ### Your list of Property options are:
+ * - `inputValue`: access value in feature properties
+ * - `dataCondition`: filter based on feature property conditions
+ * - `dataRange`: filter based on feature property ranges
+ * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+ * - `featureState`: filter based on feature state
+ * - `fallback`: if all else fails, use this value
  */
 export interface Property<T extends NotNullOrObject> {
   /**
@@ -644,20 +836,20 @@ export interface Property<T extends NotNullOrObject> {
    *
    * ```json
    * "color": {
-        "dataCondition": {
-          "conditions": [
-            {
-              "filter": { "key": "__sum", "comparator": ">", "value": 750 },
-              "input": "#f28cb1"
-            },
-            {
-              "filter": { "key": "__sum", "comparator": ">", "value": 100 },
-              "input": "#f1f075"
-            }
-          ],
-          "fallback": "#51bbd6"
-        }
-      }
+   *  "dataCondition": {
+   *     "conditions": [
+   *       {
+   *         "filter": { "key": "__sum", "comparator": ">", "value": 750 },
+   *         "input": "#f28cb1"
+   *       },
+   *       {
+   *         "filter": { "key": "__sum", "comparator": ">", "value": 100 },
+   *         "input": "#f1f075"
+   *       }
+   *     ],
+   *     "fallback": "#51bbd6"
+   *   }
+   * }
    * ```
    */
   dataCondition?: DataCondition<ValueType<T>>;
@@ -748,7 +940,45 @@ export interface Property<T extends NotNullOrObject> {
 }
 
 /**
+ * # Property Only Step
  *
+ * An extremely maleable input that allows you to style input data as either the value itself or
+ * something that mutates on user input changes, data input changes, feature state like hovering, etc.
+ *
+ * The "step" type is more limited than a standard Property, often used by LAYOUT styling where the change is
+ * immediate to each stop if ranges are used. Thus impacts `dataRange` and `inputRange` exclusively.
+ *
+ * ex.
+ * ```json
+ * { "color": "rgba(240, 2, 5, 1)" }
+ * ```
+ *
+ * ex.
+ * ```json
+ * { "color": { "inputValue": { "key": "type", "fallback": "blue" } } }
+ * ```
+ *
+ * ex.
+ * ```json
+ * "opacity": {
+ *   "dataRange": {
+ *     "key": "age",
+ *     "ease": "step",
+ *     "ranges": [
+ *       { "stop": 0, "input": 0 },
+ *       { "stop": 50, "input": 1 }
+ *     ]
+ *   }
+ * }
+ * ```
+ *
+ * ### Your list of Property options are:
+ * - `inputValue`: access value in feature properties
+ * - `dataCondition`: filter based on feature property conditions
+ * - `dataRange`: filter based on feature property ranges
+ * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+ * - `featureState`: filter based on feature state
+ * - `fallback`: if all else fails, use this value
  */
 export interface PropertyOnlyStep<T extends NotNullOrObject> {
   /**

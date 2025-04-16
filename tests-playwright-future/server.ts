@@ -1,7 +1,7 @@
 import path from 'node:path';
 
 Bun.serve({
-  port: 8080,
+  port: 3000,
   /**
    * Fetch the appropriate file
    * @param req - the request
@@ -37,4 +37,4 @@ async function getPublicData(req: Request): Promise<Response> {
   return new Response(fileData.stream());
 }
 
-console.info('Server running on http://localhost:8080');
+console.info('Server running on http://localhost:3000');

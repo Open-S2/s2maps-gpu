@@ -1,6 +1,6 @@
-import { ColorMode } from 's2/s2Map.js';
 import loadShader from './loadShader.js';
 
+import type { ColorMode } from 's2/s2Map.js';
 import type Context from '../context/context.js';
 import type { TileGL as Tile } from 'source/tile.spec.js';
 import type {
@@ -235,14 +235,13 @@ export default class Workflow implements WorkflowSpec {
     const { gl, type, uniforms } = this;
     if (uniforms.uCBlind === undefined) return;
     this.gl.uniform1f(uniforms.uCBlind, colorMode);
-    if (type === ColorMode.Protanopia && colorMode !== ColorMode.None) {
+    if (type === 1 && colorMode !== 0) {
       // uCVD
       if (!('uCVD' in uniforms)) return;
-      if (colorMode === ColorMode.Protanopia)
-        gl.uniform1fv(uniforms.uCVD, [0, 2.02344, -2.52581, 0, 1, 0, 0, 0, 1]);
-      else if (colorMode === ColorMode.Deuteranopia)
+      if (colorMode === 1) gl.uniform1fv(uniforms.uCVD, [0, 2.02344, -2.52581, 0, 1, 0, 0, 0, 1]);
+      else if (colorMode === 2)
         gl.uniform1fv(uniforms.uCVD, [1, 0, 0, 0.494207, 0, 1.24827, 0, 0, 1]);
-      else if (colorMode === ColorMode.Tritanopia)
+      else if (colorMode === 3)
         gl.uniform1fv(uniforms.uCVD, [1, 0, 0, 0, 1, 0, -0.395913, 0.801109, 0]);
     }
     // flush update pointers

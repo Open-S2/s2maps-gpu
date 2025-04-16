@@ -5,12 +5,13 @@
 </template>
 
 <script lang='ts'>
-import type { MapOptions, S2Map as S2MapType } from 's2'
+import type { MapOptions, S2Map as S2MapType } from 's2/index.ts'
 
 declare global {
   interface Window { testMap: S2MapType }
 }
 
+/** Test Map component for Playwright */
 export default {
   name: 'S2MapGPU',
   props: {

@@ -1,7 +1,7 @@
 import AutoImport from 'unplugin-auto-import/vite';
 import Components from 'unplugin-vue-components/vite';
 // import { resolve } from 'path';
-import tsconfigPaths from 'vite-tsconfig-paths';
+// import tsconfigPaths from 'vite-tsconfig-paths';
 import vue from '@vitejs/plugin-vue';
 import { defineConfig, devices } from '@playwright/experimental-ct-vue';
 
@@ -33,9 +33,9 @@ export default defineConfig({
     ctViteConfig: {
       plugins: [
         vue(),
-        tsconfigPaths({
-          configNames: ['tsconfig.eslint.json'],
-        }),
+        // tsconfigPaths({
+        //   configNames: ['tsconfig.json'],
+        // }),
         AutoImport({
           imports: [
             'vue',
@@ -102,23 +102,23 @@ export default defineConfig({
       name: 'Google Chrome',
       use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     },
-    {
-      name: 'Google Chrome Beta',
-      use: { ...devices['Desktop Chrome'], channel: 'chrome-beta' },
-    },
-    {
-      name: 'Microsoft Edge',
-      use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    },
-    {
-      name: 'Microsoft Edge Developer Edition',
-      use: { ...devices['Desktop Edge'], channel: 'msedge-dev' },
-    },
+    // {
+    //   name: 'Google Chrome Beta',
+    //   use: { ...devices['Desktop Chrome'], channel: 'chrome-beta' },
+    // },
+    // {
+    //   name: 'Microsoft Edge',
+    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
+    // },
+    // {
+    //   name: 'Microsoft Edge Developer Edition',
+    //   use: { ...devices['Desktop Edge'], channel: 'msedge-dev' },
+    // },
   ],
 
   webServer: {
     command: 'bun run ./server.ts',
-    url: 'http://localhost:8080',
+    url: 'http://localhost:3000',
     timeout: 5 * 1_000,
     reuseExistingServer: true,
     stdout: 'pipe',

@@ -1,5 +1,5 @@
-import GlslPlugin from './config/glsl-loader/bun';
-import WgslPlugin from './config/wgsl-loader/bun';
+import GlslPlugin from './config/glsl-loader/bun.js';
+import WgslPlugin from './config/wgsl-loader/bun.js';
 import path from 'node:path';
 import { existsSync, lstatSync, readdirSync, rmdirSync, unlinkSync } from 'node:fs';
 

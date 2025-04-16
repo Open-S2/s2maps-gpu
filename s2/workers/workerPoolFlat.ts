@@ -141,7 +141,7 @@ export class WorkerPool {
   tileRequest(
     mapID: string,
     tiles: TileRequest[],
-    sources: Array<[string, string | undefined]> = [],
+    sources: Array<[sourceName: string, href: string | undefined]> = [],
   ): void {
     const msg: TileRequestMessage = { mapID, type: 'tilerequest', tiles, sources };
     this.sourceWorker.postMessage(msg);

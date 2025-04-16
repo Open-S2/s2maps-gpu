@@ -1,4 +1,4 @@
-import { waitMap } from './util';
+import { waitMap } from './util.js';
 import { expect, test } from '@playwright/test';
 
 test('WM->Markers->Default', async ({ page }) => {

@@ -1,4 +1,4 @@
-import adjustURL from 'util/adjustURL';
+import adjustURL from 'util/adjustURL.js';
 import { describe, expect, test } from 'bun:test';
 
 describe('adjustURL', () => {

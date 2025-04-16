@@ -1,4 +1,4 @@
-import { isSafari } from 'util/polyfill';
+import { isSafari } from 'util/polyfill.js';
 import { describe, expect, test } from 'bun:test';
 
 describe('polyfill', () => {

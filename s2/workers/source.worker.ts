@@ -405,10 +405,12 @@ export default class SourceWorker {
   async #requestTile(
     mapID: string,
     tiles: TileRequest[],
-    sources: Array<[string, string | undefined]> = [],
+    sources: Array<[sourceName: string, href: string | undefined]> = [],
   ): Promise<void> {
     const { sources: mapSources } = this.maps[mapID];
-    const newHrefs = sources.filter((s) => s[1] !== undefined) as Array<[string, string]>;
+    const newHrefs = sources.filter((s) => s[1] !== undefined) as Array<
+      [sourceName: string, href: string]
+    >;
     const sourceNames = sources.map((s) => s[0]);
     // if new hrefs update sources
     for (const [sourceName, href] of newHrefs) {

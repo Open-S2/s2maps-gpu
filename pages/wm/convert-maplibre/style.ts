@@ -1,4 +1,4 @@
-import { mapLibreStyleConverter } from 's2/plugins';
+import { mapLibreStyleConverter } from 's2/plugins/index.js';
 
 import type { StyleSpecification } from '@maplibre/maplibre-gl-style-spec';
 

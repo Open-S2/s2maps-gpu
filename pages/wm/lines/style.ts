@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 'style/style.spec';
+import type { StyleDefinition } from 'style/style.spec.js';
 
 const style: StyleDefinition = {
   version: 1,

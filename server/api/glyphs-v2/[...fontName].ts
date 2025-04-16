@@ -48,14 +48,14 @@ export default defineEventHandler((event) => {
       'SELECT data FROM glyph_multi where name = ? AND code = ?',
     );
     for (const piece of pieces) {
-      if (piece.includes('-')) {
+      if (piece.includes('-') === true) {
         const [from, to] = piece.split('-').map(base36);
         for (let i = from; i <= to; i++) {
           batchStmt.push(stmt.get(name, String(i)) as undefined | { data: string });
         }
       } else {
         // if piece includes a dot, it's a substitution code
-        const code = piece.includes('.') ? piece : String(base36(piece));
+        const code = piece.includes('.') === true ? piece : String(base36(piece));
         batchStmt.push(stmt.get(name, code) as undefined | { data: string });
       }
     }

@@ -1,12 +1,12 @@
-import GlslPlugin from '../config/glsl-loader/bun';
-import SvgPlugin from '../config/svg-loader';
-import WgslPlugin from '../config/wgsl-loader/bun';
+import GlslPlugin from '../config/glsl-loader/bun.ts';
+import SvgPlugin from '../config/svg-loader.ts';
+import WgslPlugin from '../config/wgsl-loader/bun.ts';
 import { filesize } from 'filesize';
 import { finished } from 'node:stream/promises';
 import fs from 'node:fs';
-import inlineWorkerPlugin from '../config/inline-worker-plugin';
+import inlineWorkerPlugin from '../config/inline-worker-plugin/index.ts';
 import path from 'node:path';
-import { version } from '../package.json';
+import { version } from '../package.json' with { type: 'json' };
 import zlib from 'node:zlib';
 import { blue, green, red, yellow } from 'picocolors';
 import {
@@ -137,9 +137,10 @@ function deleteFolder(folderPath: string): void {
 
 /** Build and print file sizes */
 function getFileSizes(): void {
-  const res = {
-    js: {},
-    css: {},
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const res: Record<string, any> = {
+    js: {} as Record<string, Record<string, string>>,
+    css: {} as Record<string, Record<string, string>>,
     jsTotalmin: 0 as number | string,
     jsTotalgz: 0 as number | string,
     jsTotalbr: 0 as number | string,

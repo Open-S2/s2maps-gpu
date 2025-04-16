@@ -229,7 +229,7 @@ export interface AwaitRenderedMessage {
 /** Reset source message sent from the front end to the map worker */
 export interface ResetSourceMessage {
   type: 'resetSource';
-  sourceNames: Array<[string, string | undefined]>;
+  sourceNames: Array<[sourceName: string, href: string | undefined]>;
   keepCache: boolean;
   awaitReplace: boolean;
 }
@@ -345,7 +345,7 @@ export type S2MapToSourceMessage = AddMarkersMessage | DeleteMarkersMessage | De
 export interface TileRequestMessage extends MapID {
   type: 'tilerequest';
   tiles: TileRequest[];
-  sources: Array<[string, string | undefined]>;
+  sources: Array<[sourceName: string, href: string | undefined]>;
 }
 
 /** Time request message sent from the map worker to the source worker */

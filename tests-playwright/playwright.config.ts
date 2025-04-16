@@ -2,9 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 const CI_BOOL = Boolean(process.env.CI);
 
-/**
- * See https://playwright.dev/docs/test-configuration.
- */
+/** See https://playwright.dev/docs/test-configuration. */
 export default defineConfig({
   testDir: './tests',
   /* The base directory, relative to the config file, for snapshot files created with toMatchSnapshot and toHaveScreenshot. */

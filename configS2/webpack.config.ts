@@ -83,7 +83,10 @@ const conifguration: Configuration = {
       // You might not need the "*" alias here, Webpack handles node_modules
     },
     // modules: ['node_modules'],
-    plugins: [new TsconfigPathsPlugin({ configFile: path.join(_dirname, '../tsconfig.json') })],
+    plugins: [
+      '...',
+      new TsconfigPathsPlugin({ configFile: path.join(_dirname, '../tsconfig.json') }),
+    ],
   },
   optimization: {
     // usedExports: true,

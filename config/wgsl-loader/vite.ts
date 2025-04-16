@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+// @ts-nocheck
+
 /**
  * @module vite-plugin-wgsl
  * @author Ustym Ukhman <ustym.ukhman@gmail.com>

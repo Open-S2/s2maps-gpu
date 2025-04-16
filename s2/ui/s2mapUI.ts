@@ -266,7 +266,7 @@ export default class S2MapUI extends Camera {
    * @param awaitReplace - Whether to await the replacement of the source data or clear the cache immediately
    */
   resetSource(
-    sources: Array<[string, string | undefined]>,
+    sources: Array<[sourceName: string, href: string | undefined]>,
     keepCache = false,
     awaitReplace = false,
   ): void {
@@ -281,7 +281,7 @@ export default class S2MapUI extends Camera {
     if (tileRequests.length > 0) {
       const msg: TileRequestMessage = { mapID, type: 'tilerequest', tiles: tileRequests, sources };
       if (webworker) postMessage(msg);
-      else parent?.onMessage({ data: msg } as MessageEvent<MapGLMessage>);
+      else parent?.onMessage({ data: msg } as MessageEvent<TileRequestMessage>);
     }
     // let the renderer know the painter is "dirty"
     painter.dirty = true;

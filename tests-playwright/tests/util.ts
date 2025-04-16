@@ -1,4 +1,4 @@
-import type { S2Map } from 's2';
+import type { S2Map } from 's2/index.js';
 
 declare global {
   /** Global expose the testMap */
