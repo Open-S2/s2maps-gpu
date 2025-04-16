@@ -1,24 +1,24 @@
 /** STYLE */
-import Style from 'style';
+import Style from 'style/index.js';
 /** GEOMETRY / PROJECTIONS */
-import Projector from './projector';
-import { tileIDWrappedWM } from './projector/getTiles';
-import { idIsFace, idParent } from 'gis-tools';
+import Projector from './projector/index.js';
+import { tileIDWrappedWM } from './projector/getTiles/index.js';
+import { idIsFace, idParent } from 'gis-tools/index.js';
 /** SOURCES */
-import Animator from './animator';
-import Cache from './cache';
-import DragPan from './dragPan';
-import TimeCache from './timeCache';
-import { createTile } from 'source';
+import Animator from './animator.js';
+import Cache from './cache.js';
+import DragPan from './dragPan.js';
+import TimeCache from './timeCache.js';
+import { createTile } from 'source/index.js';
 /** PAINT */
-import type { Painter as GLPainter } from 'gl/painter.spec';
-import type { Painter as GPUPainter } from 'gpu/painter.spec';
-import type { MapOptions } from '../s2mapUI';
+import type { Painter as GLPainter } from 'gl/painter.spec.js';
+import type { Painter as GPUPainter } from 'gpu/painter.spec.js';
+import type { MapOptions } from '../s2mapUI.js';
 
-import type { ClickEvent } from './dragPan';
-import type S2Map from 's2Map';
-import type { VectorPoint } from 'gis-tools';
-import type { Combine, TileShared as Tile } from 'source/tile.spec';
+import type { ClickEvent } from './dragPan.js';
+import type S2Map from 's2/s2Map.js';
+import type { VectorPoint } from 'gis-tools/index.js';
+import type { Combine, TileShared as Tile } from 'source/tile.spec.js';
 import type {
   InteractiveObject,
   MapGLMessage,
@@ -31,8 +31,8 @@ import type {
   TileRequest,
   TileWorkerMessage,
   ViewMessage,
-} from 'workers/worker.spec';
-import type { StyleDefinition, TimeSeriesStyle } from 'style/style.spec';
+} from 'workers/worker.spec.js';
+import type { StyleDefinition, TimeSeriesStyle } from 'style/style.spec.js';
 
 /** Resize dimensions */
 export interface ResizeDimensions {
@@ -227,7 +227,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     if (contextType === 3) {
       context = this.#canvas.getContext('webgpu') as unknown as GPUCanvasContext; // GPUCanvasContext
       if (context === null) return false;
-      const Painter = await import('gpu').then((m) => m.Painter);
+      const Painter = await import('gpu/index.js').then((m) => m.Painter);
       this.painter = new Painter(context, options) as unknown as P;
       await this.painter.prepare();
     } else {
@@ -251,7 +251,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
         context = this.#canvas.getContext('webgl', webglOptions) as WebGLRenderingContext;
       }
       if (context === null) return false;
-      const Painter = await import('gl').then((m) => m.Painter);
+      const Painter = await import('gl/index.js').then((m) => m.Painter);
       this.painter = new Painter(context, type, options) as unknown as P;
     }
 
@@ -416,7 +416,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
       currFeatures,
       tileCache,
     } = this;
-    if (style.interactive !== true) return;
+    if (!style.interactive) return;
     const foundObjects = new Map<number, InteractiveObject>();
     const featureIDs = await painter.context.getFeatureAtMousePosition(x, y);
     // if we found an ID and said feature is not the same as the current, we dive down
@@ -690,7 +690,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
       const parent = tileCache.get(pID);
       if (parent !== undefined) tile.injectParentTile(parent, style.layers);
     }
-    if (tile.outofBounds === true) {
+    if (tile.outofBounds) {
       // This is a WM only case. Inject "wrapped" tile's featureGuides as a reference
       const wrappedID: bigint = tileIDWrappedWM(id);
       if (!tileCache.has(wrappedID)) res.push(...this.#createTiles(wrappedID));
@@ -716,14 +716,14 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     // prep tiles
     const tiles = this.getTiles();
     // if any changes, we paint new scene
-    if (style.dirty === true || painter.dirty || projector.dirty) {
+    if (style.dirty || painter.dirty || projector.dirty) {
       // store for future draw that it was a "dirty" frame
       this.wasDirtyLastFrame = true;
       // paint scene
       painter.paint(projector, tiles);
     }
     // draw the interactive elements if there was no movement/zoom change
-    if (style.interactive === true && !projector.dirty && this.wasDirtyLastFrame) {
+    if (style.interactive && !projector.dirty && this.wasDirtyLastFrame) {
       this.wasDirtyLastFrame = false;
       painter.computeInteractive(tiles);
     }

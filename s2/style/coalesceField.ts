@@ -1,5 +1,5 @@
-import type { NestedKey } from './style.spec';
-import type { Properties } from 'gis-tools';
+import type { NestedKey } from './style.spec.js';
+import type { Properties } from 'gis-tools/index.js';
 
 const language = navigator.language.split('-')[0] ?? 'en';
 

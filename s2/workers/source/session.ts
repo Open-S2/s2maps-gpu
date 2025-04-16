@@ -1,6 +1,6 @@
-import adjustURL from 'util/adjustURL';
+import adjustURL from 'util/adjustURL.js';
 
-import type { Analytics, StyleDefinition } from 'style/style.spec';
+import type { Analytics, StyleDefinition } from 'style/style.spec.js';
 
 // an API key enables the user to construct a session token
 // a session token lasts 10 minutes and allows the user to make requests for data

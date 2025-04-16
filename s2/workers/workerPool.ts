@@ -1,5 +1,5 @@
-import type { MarkerDefinition } from './source/markerSource';
-import type S2Map from '../s2Map';
+import type { MarkerDefinition } from './source/markerSource.js';
+import type S2Map from '../s2Map.js';
 import type {
   AddLayerMessageGL,
   AddMarkersMessage,
@@ -16,8 +16,8 @@ import type {
   TileWorkerMessage,
   TimeRequestMessage,
   WorkerPoolPortMessage,
-} from './worker.spec';
-import type { Analytics, LayerDefinition, Source, StylePackage } from 'style/style.spec';
+} from './worker.spec.js';
+import type { Analytics, LayerDefinition, Source, StylePackage } from 'style/style.spec.js';
 
 declare global {
   /** expose the worker pool to the global scope so all maps can share it */

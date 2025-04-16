@@ -31,14 +31,15 @@
     // "useDefineForClassFields": true,                  /* Emit ECMAScript-standard-compliant class fields. */
 
     /* Modules */
-    "module": "Preserve" /* Specify what module code is generated. */,
+    "module": "ESNext" /* Specify what module code is generated. */,
     "rootDir": "." /* Specify the root folder within your source files. */,
-    "moduleResolution": "bundler" /* Specify how TypeScript looks up a file from a given module specifier. */,
+    "moduleResolution": "nodenext" /* Specify how TypeScript looks up a file from a given module specifier. */,
     "baseUrl": "." /* Specify the base directory to resolve non-relative module names. */,
-    "paths": {    
+    "paths": {
       "*" : ["./*"],
       "s2/*": ["./s2/*"],
-      "geometry/*": ["./s2/geometry/*"],
+      "config/*": ["./config/*"],
+      "gis-tools/*": ["./s2/gis-tools/*"],
       "gl/*": ["./s2/gl/*"],
       "gpu/*": ["./s2/gpu/*"],
       "plugins/*": ["./s2/plugins/*"],
@@ -47,7 +48,6 @@
       "ui/*": ["./s2/ui/*"],
       "util/*": ["./s2/util/*"],
       "workers/*": ["./s2/workers/*"]
-      // "s2-pmtiles/browser": ["./node_modules/s2-pmtiles/dist/browser.d.ts"]
     },
     // "paths": {},                                      /* Specify a set of entries that re-map imports to additional lookup locations. */
     // "rootDirs": [],                                   /* Allow multiple folders to be treated as one when resolving modules. */
@@ -130,8 +130,8 @@
     "configS2/**/*.ts",
     // "configS2/**/*.js",
     "tests/**/*.ts",
-    "playwright/**/*.ts",
-    "playwright/**/*.vue",
+    "tests-playwright/**/*.ts",
+    "tests-playwright/**/*.vue",
     "server/**/*.ts",
     "pages/**/*.ts",
     "pages/**/*.vue",

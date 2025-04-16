@@ -1,5 +1,5 @@
 import type { S2FeatureCollection } from 'gis-tools';
-import type { StyleDefinition } from 'style/style.spec';
+import type { StyleDefinition } from 'style/style.spec.js';
 
 const data: S2FeatureCollection = {
   type: 'S2FeatureCollection',

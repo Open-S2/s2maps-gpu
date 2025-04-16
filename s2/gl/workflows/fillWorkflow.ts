@@ -1,7 +1,7 @@
-import { colorFunc } from 'workers/process/vectorWorker';
-import encodeLayerAttribute from 'style/encodeLayerAttribute';
-import parseFeatureFunction from 'style/parseFeatureFunction';
-import Workflow, { Feature } from './workflow';
+import { colorFunc } from 'workers/process/vectorWorker.js';
+import encodeLayerAttribute from 'style/encodeLayerAttribute.js';
+import parseFeatureFunction from 'style/parseFeatureFunction.js';
+import Workflow, { Feature } from './workflow.js';
 
 // WEBGL1
 import frag1 from '../shaders/fill1.fragment.glsl';
@@ -10,24 +10,24 @@ import vert1 from '../shaders/fill1.vertex.glsl';
 import frag2 from '../shaders/fill2.fragment.glsl';
 import vert2 from '../shaders/fill2.vertex.glsl';
 
-import type Context from '../context/context';
-import type { FillData } from 'workers/worker.spec';
-import type { TileGL as Tile } from 'source/tile.spec';
-import type { VectorPoint } from 'gis-tools';
+import type Context from '../context/context.js';
+import type { FillData } from 'workers/worker.spec.js';
+import type { TileGL as Tile } from 'source/tile.spec.js';
+import type { VectorPoint } from 'gis-tools/index.js';
 import type {
   ColorArray,
   FillDefinition,
   FillStyle,
   FillWorkflowLayerGuide,
   LayerDefinitionBase,
-} from 'style/style.spec';
+} from 'style/style.spec.js';
 import type {
   FillFeature as FillFeatureSpec,
   FillSource,
   FillWorkflow as FillWorkflowSpec,
   FillWorkflowUniforms,
   TileMaskSource,
-} from './workflow.spec';
+} from './workflow.spec.js';
 
 /** Fill Feature is a standalone fill render storage unit that can be drawn to the GPU */
 export class FillFeature extends Feature implements FillFeatureSpec {

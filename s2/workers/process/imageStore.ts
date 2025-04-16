@@ -1,11 +1,11 @@
-import FamilySource from './glyph/familySource';
-import { NULL_GLYPH } from './glyph/buildGlyphQuads';
+import FamilySource from './glyph/familySource.js';
+import { NULL_GLYPH } from './glyph/buildGlyphQuads.js';
 
-import type { Glyph } from './glyph/familySource';
-import type { GlyphMetadata } from 'workers/source/glyphSource';
-import type { GlyphRequestMessage } from 'workers/worker.spec';
-import type { IDGen } from './process.spec';
-import type { ImageSourceMetadata } from 'workers/source/imageSource';
+import type { Glyph } from './glyph/familySource.js';
+import type { GlyphMetadata } from 'workers/source/glyphSource.js';
+import type { GlyphRequestMessage } from 'workers/worker.spec.js';
+import type { IDGen } from './process.spec.js';
+import type { ImageSourceMetadata } from 'workers/source/imageSource.js';
 
 /** Glyph Request Tracker */
 export interface GlyphRequestTracker {

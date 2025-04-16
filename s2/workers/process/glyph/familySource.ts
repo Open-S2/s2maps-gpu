@@ -1,5 +1,5 @@
-import type { ColorArray } from 'style/color';
-import type { ImageMetadata, ImageSourceMetadata } from 'workers/source/imageSource';
+import type { ColorArray } from 'style/color/index.js';
+import type { ImageMetadata, ImageSourceMetadata } from 'workers/source/imageSource.js';
 
 /** A Glyph Container. Tracks all the glyph's properties, shape, size, etc. */
 export interface Glyph {

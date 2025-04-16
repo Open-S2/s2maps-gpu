@@ -1,10 +1,10 @@
-import Source from './source';
-import { TileStore } from 'gis-tools';
-import { WMPointCluster } from './pointCluster';
+import Source from './source.js';
+import { TileStore } from 'gis-tools/index.js';
+import { WMPointCluster } from './pointCluster/index.js';
 
-import type { JSONCollection } from 'gis-tools';
-import type { SourceMetadata } from 'style/style.spec';
-import type { TileRequest } from '../worker.spec';
+import type { JSONCollection } from 'gis-tools/index.js';
+import type { SourceMetadata } from 'style/style.spec.js';
+import type { TileRequest } from '../worker.spec.js';
 
 /**
  * # JSON Source

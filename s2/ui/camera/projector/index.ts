@@ -1,4 +1,4 @@
-import * as mat4 from './mat4';
+import * as mat4 from './mat4.js';
 import {
   EARTH_RADIUS,
   EARTH_RADIUS_EQUATORIAL,
@@ -9,14 +9,14 @@ import {
   pointMulScalar,
   pointNormalize,
   pxToLL,
-} from 'gis-tools';
-import { cursorToLonLatS2, cursorToLonLatWM } from './cursorToLonLat';
-import { getTilesS2, getTilesWM } from './getTiles';
+} from 'gis-tools/index.js';
+import { cursorToLonLatS2, cursorToLonLatWM } from './cursorToLonLat.js';
+import { getTilesS2, getTilesWM } from './getTiles/index.js';
 
-import type Camera from '..';
-import type { MapOptions } from 'ui/s2mapUI';
-import type { Point3D, VectorPoint } from 'gis-tools';
-import type { Projection, StyleDefinition } from 'style/style.spec';
+import type Camera from '../index.js';
+import type { MapOptions } from 'ui/s2mapUI.js';
+import type { Point3D, VectorPoint } from 'gis-tools/index.js';
+import type { Projection, StyleDefinition } from 'style/style.spec.js';
 
 /**
  * # View

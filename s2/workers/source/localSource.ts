@@ -1,7 +1,7 @@
-import type Session from './session';
-import type { Face, LayerDefinition } from 'style/style.spec';
-import type { SourceFlushMessage, TileRequest } from '../worker.spec';
-import type { VectorPoint, VectorPolygon } from 'gis-tools';
+import type Session from './session.js';
+import type { Face, LayerDefinition } from 'style/style.spec.js';
+import type { SourceFlushMessage, TileRequest } from '../worker.spec.js';
+import type { VectorPoint, VectorPolygon } from 'gis-tools/index.js';
 
 /** Local Tile Properties */
 export interface LocalTileProperties {

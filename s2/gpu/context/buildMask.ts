@@ -1,5 +1,5 @@
-import type { MaskSource } from '../workflows/workflow.spec';
-import type { WebGPUContext } from '.';
+import type { MaskSource } from '../workflows/workflow.spec.js';
+import type { WebGPUContext } from './index.js';
 
 /**
  * Builds a mask source

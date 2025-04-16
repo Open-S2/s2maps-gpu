@@ -1,9 +1,9 @@
-import colorBlindAdjust from './colorBlindAdjust';
-import colorParser from './colorParser';
+import colorBlindAdjust from './colorBlindAdjust.js';
+import colorParser from './colorParser.js';
 
-import type { ColorBlindAdjust } from './colorBlindAdjust';
+import type { ColorBlindAdjust } from './colorBlindAdjust.js';
 
-export * from './colorGenerators';
+export * from './colorGenerators.js';
 /** ColorArray - [r, g, b, a] */
 export type ColorArray = [r: number, g: number, b: number, a: number];
 

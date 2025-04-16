@@ -1,9 +1,9 @@
-import { Cache } from 'gis-tools';
-import Source from './source';
+import { Cache } from 'gis-tools/index.js';
+import Source from './source.js';
 
-import type { Point3D } from 'gis-tools';
-import type { SourceMetadata } from 'style/style.spec';
-import type { TileRequest } from '../worker.spec';
+import type { Point3D } from 'gis-tools/index.js';
+import type { SourceMetadata } from 'style/style.spec.js';
+import type { TileRequest } from '../worker.spec.js';
 
 const MAX_SIZE = 2_000_000; // ~2 MB
 const NODE_SIZE = 10;

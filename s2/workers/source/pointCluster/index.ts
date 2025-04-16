@@ -1,6 +1,6 @@
-export { default as PointIndex } from './pointIndex';
+export { default as PointIndex } from './pointIndex.js';
 // export { default as S2PointCluster } from './s2'
-export { default as WMPointCluster } from './wm';
+export { default as WMPointCluster } from './wm.js';
 
 /** Options for point clustering */
 export interface ClusterOptions {

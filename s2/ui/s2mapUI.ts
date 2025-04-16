@@ -1,12 +1,12 @@
 /** CAMERA */
-import Camera from './camera/index';
+import Camera from './camera/index.js';
 /** SOURCES */
-import Animator from './camera/animator';
+import Animator from './camera/animator.js';
 
-import type { ColorMode } from 's2Map';
-import type { UserTouchEvent } from './camera/dragPan';
-import type { AnimationDirections, AnimationType } from './camera/animator';
-import type { Attributions, GPUType, LayerStyle, StyleDefinition } from 'style/style.spec';
+import type { ColorMode } from 's2/s2Map.js';
+import type { UserTouchEvent } from './camera/dragPan.js';
+import type { AnimationDirections, AnimationType } from './camera/animator.js';
+import type { Attributions, GPUType, LayerStyle, StyleDefinition } from 'style/style.spec.js';
 import type {
   MapGLMessage,
   RenderedMessageGL,
@@ -14,7 +14,7 @@ import type {
   SourceFlushMessage,
   TileRequestMessage,
   TileWorkerMessage,
-} from 'workers/worker.spec';
+} from 'workers/worker.spec.js';
 
 /**
  * # Map MapOptions

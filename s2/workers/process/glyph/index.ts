@@ -1,43 +1,43 @@
-import CollisionTester from './collisionTester';
-import { GPUType } from 'style/style.spec';
-import coalesceField from 'style/coalesceField';
-import featureSort from '../util/featureSort';
-import parseFeatureFunction from 'style/parseFeatureFunction';
-import parseFilter from 'style/parseFilter';
+import CollisionTester from './collisionTester.js';
+import coalesceField from 'style/coalesceField.js';
+import featureSort from '../util/featureSort.js';
+import parseFeatureFunction from 'style/parseFeatureFunction.js';
+import parseFilter from 'style/parseFilter.js';
 import { DEFAULT_OPTIONS_WITHOUT_BIDI_SHAPING, shapeString } from 'unicode-shaper';
 import {
   QUAD_SIZE_PATH,
   QUAD_SIZE_TEXT,
   buildGlyphPathQuads,
   buildGlyphPointQuads,
-} from './buildGlyphQuads';
-import VectorWorker, { colorFunc, idToRGB } from '../vectorWorker';
+} from './buildGlyphQuads.js';
+import VectorWorker, { colorFunc, idToRGB } from '../vectorWorker.js';
 import {
   getCenterPoints,
   getPointsAndPathsAlongLines,
   getPointsAndPathsAtCenterOfLines,
   getSpacedPoints,
   scaleShiftClip,
-} from '../util';
+} from '../util/index.js';
 
-import type { CodeDesign } from '../vectorWorker';
-import type ImageStore from '../imageStore';
+import type { CodeDesign } from '../vectorWorker.js';
+import type ImageStore from '../imageStore.js';
 import type {
   Alignment,
   Anchor,
+  GPUType,
   GlyphDefinition,
   GlyphWorkerLayer,
   Placement,
-} from 'style/style.spec';
-import type { GlyphBase, GlyphObject, GlyphPath, GlyphPoint } from './glyph.spec';
-import type { GlyphData, TileRequest } from 'workers/worker.spec';
+} from 'style/style.spec.js';
+import type { GlyphBase, GlyphObject, GlyphPath, GlyphPoint } from './glyph.spec.js';
+import type { GlyphData, TileRequest } from 'workers/worker.spec.js';
 import type {
   GlyphFeature,
   GlyphWorker as GlyphWorkerSpec,
   IDGen,
   VTFeature,
-} from '../process.spec';
-import type { Point, VectorMultiPoint } from 'gis-tools';
+} from '../process.spec.js';
+import type { Point, VectorMultiPoint } from 'gis-tools/index.js';
 
 /** Worker for processing glyph data */
 export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec {
@@ -269,7 +269,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
         overdraw,
         layerIndex,
         gl2Code,
-        code: gpuType === GPUType.WebGL1 ? gl1Code : gl2Code,
+        code: gpuType === 1 ? gl1Code : gl2Code,
         // layout
         family,
         field,
@@ -466,7 +466,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     const storeID: string = `${mapID}:${tileID}:${sourceName}`;
     const features = this.featureStore.get(storeID) ?? [];
     if (features.length === 0) return;
-    if (this.gpuType === GPUType.WebGPU) {
+    if (this.gpuType === 3) {
       this.#flushPoints3(mapID, sourceName, tileID, features);
     } else this.#flushPoints2(mapID, sourceName, tileID, features);
     // cleanup

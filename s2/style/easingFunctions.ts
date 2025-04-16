@@ -1,4 +1,4 @@
-import Color, { interpolate } from './color';
+import Color, { interpolate } from './color/index.js';
 
 /** Input ease types names */
 export type EaseType = 'lin' | 'expo' | 'quad' | 'cubic' | 'step';

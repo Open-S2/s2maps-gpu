@@ -1,4 +1,4 @@
-import type { View } from 'ui/camera/projector';
+import type { View } from 'ui/camera/projector/index.js';
 
 /**
  * Sets the hash in the location bar given the current view

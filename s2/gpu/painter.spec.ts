@@ -1,11 +1,11 @@
-import type { ColorMode } from 's2/s2Map';
-import type { GlyphImages } from 'workers/source/glyphSource';
-import type Projector from 'ui/camera/projector';
-import type { TileGPU as Tile } from 'source/tile.spec';
-import type TimeCache from 'ui/camera/timeCache';
-import type { WebGPUContext } from './context';
-import type { PainterData, SpriteImageMessage } from 'workers/worker.spec';
-import type { WorkflowKey, WorkflowType, Workflows } from './workflows/workflow.spec';
+import type { ColorMode } from 's2/s2Map.js';
+import type { GlyphImages } from 'workers/source/glyphSource.js';
+import type Projector from 'ui/camera/projector/index.js';
+import type { TileGPU as Tile } from 'source/tile.spec.js';
+import type TimeCache from 'ui/camera/timeCache.js';
+import type { WebGPUContext } from './context/index.js';
+import type { PainterData, SpriteImageMessage } from 'workers/worker.spec.js';
+import type { WorkflowKey, WorkflowType, Workflows } from './workflows/workflow.spec.js';
 
 /**
  * WebGPU Painter interface

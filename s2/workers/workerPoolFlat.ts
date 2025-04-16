@@ -1,9 +1,9 @@
-import SourceWorker from './source.worker';
-import TileWorker from './tile.worker';
+import SourceWorker from './source.worker.js';
+import TileWorker from './tile.worker.js';
 
-import type { MarkerDefinition } from './source/markerSource';
-import type S2Map from '../s2Map';
-import type { WorkerPool as WorkerPoolMain } from './workerPool';
+import type { MarkerDefinition } from './source/markerSource.js';
+import type S2Map from '../s2Map.js';
+import type { WorkerPool as WorkerPoolMain } from './workerPool.js';
 import type {
   AddLayerMessageGL,
   AddMarkersMessage,
@@ -20,8 +20,8 @@ import type {
   TileWorkerMessage,
   TimeRequestMessage,
   WorkerPoolPortMessage,
-} from './worker.spec';
-import type { Analytics, LayerDefinition, Source, StylePackage } from 'style/style.spec';
+} from './worker.spec.js';
+import type { Analytics, LayerDefinition, Source, StylePackage } from 'style/style.spec.js';
 
 const AVAILABLE_WORKERS: number = Math.floor((window.navigator.hardwareConcurrency ?? 4) / 2);
 /**

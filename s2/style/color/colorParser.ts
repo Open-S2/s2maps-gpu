@@ -1,4 +1,4 @@
-import type { ColorArray } from 'style/color';
+import type { ColorArray } from './index.js';
 
 /** ColorDefinition - [encoding, colors] */
 export type ColorDefinition = [encoding: string, colors: ColorArray];

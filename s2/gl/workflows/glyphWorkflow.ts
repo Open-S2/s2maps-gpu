@@ -1,5 +1,5 @@
-import encodeLayerAttribute from 'style/encodeLayerAttribute';
-import Workflow, { Feature } from './workflow';
+import encodeLayerAttribute from 'style/encodeLayerAttribute.js';
+import Workflow, { Feature } from './workflow.js';
 
 // WEBGL1
 import frag1 from '../shaders/glyph1.fragment.glsl';
@@ -8,24 +8,24 @@ import vert1 from '../shaders/glyph1.vertex.glsl';
 import frag2 from '../shaders/glyph2.fragment.glsl';
 import vert2 from '../shaders/glyph2.vertex.glsl';
 
-import type { BBox } from 'gis-tools';
-import type { ColorArray } from 'style/color';
-import type Context from '../context/context';
-import type { GlyphData } from 'workers/worker.spec';
-import type { TileGL as Tile } from 'source/tile.spec';
+import type { BBox } from 'gis-tools/index.js';
+import type { ColorArray } from 'style/color/index.js';
+import type Context from '../context/context.js';
+import type { GlyphData } from 'workers/worker.spec.js';
+import type { TileGL as Tile } from 'source/tile.spec.js';
 import type {
   GlyphDefinition,
   GlyphStyle,
   GlyphWorkflowLayerGuide,
   LayerDefinitionBase,
-} from 'style/style.spec';
+} from 'style/style.spec.js';
 import type {
   GlyphFeature as GlyphFeatureSpec,
   GlyphFilterWorkflow,
   GlyphSource,
   GlyphWorkflow as GlyphWorkflowSpec,
   GlyphWorkflowUniforms,
-} from './workflow.spec';
+} from './workflow.spec.js';
 
 /** Glyph Feature is a standalone glyph render storage unit that can be drawn to the GPU */
 export class GlyphFeature extends Feature implements GlyphFeatureSpec {

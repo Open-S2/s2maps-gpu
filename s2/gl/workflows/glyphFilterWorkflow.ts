@@ -1,4 +1,4 @@
-import Workflow from './workflow';
+import Workflow from './workflow.js';
 
 // WEBGL1
 import frag1 from '../shaders/glyphFilter1.fragment.glsl';
@@ -7,12 +7,12 @@ import vert1 from '../shaders/glyphFilter1.vertex.glsl';
 import frag2 from '../shaders/glyphFilter2.fragment.glsl';
 import vert2 from '../shaders/glyphFilter2.vertex.glsl';
 
-import type Context from '../context/context';
+import type Context from '../context/context.js';
 import type {
   GlyphFeature,
   GlyphFilterUniforms,
   GlyphFilterWorkflow as GlyphFilterWorkflowSpec,
-} from './workflow.spec';
+} from './workflow.spec.js';
 
 /** Glyph Filter Feature is a standalone glyph filter compute storage unit that can be processed by the GPU */
 export default class GlyphFilterWorkflow extends Workflow implements GlyphFilterWorkflowSpec {

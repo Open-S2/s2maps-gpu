@@ -1,6 +1,6 @@
-import { Orthodrome } from 'gis-tools';
+import { Orthodrome } from 'gis-tools/index.js';
 
-import type Projector from './projector';
+import type Projector from './projector/index.js';
 
 /** Easing function */
 export type Easing = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';

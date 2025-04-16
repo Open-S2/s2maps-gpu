@@ -1,9 +1,22 @@
-import { convert, pointFromLonLat, pointToST, projectX, projectY, transformPoint } from 'gis-tools';
+import {
+  convert,
+  pointFromLonLat,
+  pointToST,
+  projectX,
+  projectY,
+  transformPoint,
+} from 'gis-tools/index.js';
 
-import type { Session } from '.';
-import type { Face, JSONCollection, Properties, VectorPoint, VectorPointFeature } from 'gis-tools';
-import type { LayerDefinition, Projection, SourceMetadata } from 'style/style.spec';
-import type { SourceFlushMessage, TileRequest } from '../worker.spec';
+import type { Session } from './index.js';
+import type {
+  Face,
+  JSONCollection,
+  Properties,
+  VectorPoint,
+  VectorPointFeature,
+} from 'gis-tools/index.js';
+import type { LayerDefinition, Projection, SourceMetadata } from 'style/style.spec.js';
+import type { SourceFlushMessage, TileRequest } from '../worker.spec.js';
 
 /** Marker definition tracking lon/lat, html, and properties associated with it */
 export interface MarkerDefinition {

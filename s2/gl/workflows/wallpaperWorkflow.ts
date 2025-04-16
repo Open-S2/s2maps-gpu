@@ -1,5 +1,5 @@
-import Color from 'style/color';
-import Workflow from './workflow';
+import Color from 'style/color/index.js';
+import Workflow from './workflow.js';
 
 // WEBGL1
 import frag1 from '../shaders/wallpaper1.fragment.glsl';
@@ -8,15 +8,15 @@ import vert1 from '../shaders/wallpaper1.vertex.glsl';
 import frag2 from '../shaders/wallpaper2.fragment.glsl';
 import vert2 from '../shaders/wallpaper2.vertex.glsl';
 
-import type { ColorBlindAdjust } from 'style/color/colorBlindAdjust';
-import type Context from '../context/context';
-import type Projector from 'ui/camera/projector';
-import type { StyleDefinition } from 'style/style.spec';
-import type { VectorPoint } from 'gis-tools';
+import type { ColorBlindAdjust } from 'style/color/colorBlindAdjust.js';
+import type Context from '../context/context.js';
+import type Projector from 'ui/camera/projector/index.js';
+import type { StyleDefinition } from 'style/style.spec.js';
+import type { VectorPoint } from 'gis-tools/index.js';
 import type {
   WallpaperWorkflow as WallpaperWorkflowSpec,
   WallpaperWorkflowUniforms,
-} from './workflow.spec';
+} from './workflow.spec.js';
 
 /** Storage for a wallpaper scheme */
 export interface WallpaperScheme {

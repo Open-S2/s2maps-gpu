@@ -1,13 +1,13 @@
-import './util/polyfill';
-import './workers/workerPool';
-export { default as S2Map } from './s2Map';
+import './util/polyfill.js';
+import './workers/workerPool.js';
+export { default as S2Map } from './s2Map.js';
 
-export * from './s2Map';
-export * from './style/style.spec';
-export * from './plugins';
-export * from './util';
+export * from './s2Map.js';
+export * from './style/style.spec.js';
+export * from './plugins/index.js';
+export * from './util/index.js';
 
-export type * from './workers/worker.spec';
+export type * from './workers/worker.spec.js';
 
 /**
  * Creator of the library:

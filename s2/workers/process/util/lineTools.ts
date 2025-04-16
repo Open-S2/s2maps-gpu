@@ -1,6 +1,6 @@
-import { findCenterPoints, findSpacedPoints, pointAngle } from './pointTools';
+import { findCenterPoints, findSpacedPoints, pointAngle } from './pointTools.js';
 
-import type { Cap } from 'style/style.spec';
+import type { Cap } from 'style/style.spec.js';
 import type {
   MValue,
   VectorCoordinates,
@@ -9,7 +9,7 @@ import type {
   VectorMultiLineString,
   VectorMultiPolygon,
   VectorPoint,
-} from 'gis-tools';
+} from 'gis-tools/index.js';
 
 /** An output of drawLine */
 export interface Line {

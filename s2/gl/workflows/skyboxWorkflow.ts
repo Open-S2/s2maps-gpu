@@ -1,8 +1,8 @@
-import Color from 'style/color';
-import Workflow from './workflow';
-import adjustURL from 'util/adjustURL';
-import { degToRad } from 'gis-tools';
-import { invert, multiply, perspective, rotate } from 'ui/camera/projector/mat4';
+import Color from 'style/color/index.js';
+import Workflow from './workflow.js';
+import adjustURL from 'util/adjustURL.js';
+import { degToRad } from 'gis-tools/index.js';
+import { invert, multiply, perspective, rotate } from 'ui/camera/projector/mat4.js';
 
 // WEBGL1
 import frag1 from '../shaders/skybox1.fragment.glsl';
@@ -11,11 +11,14 @@ import vert1 from '../shaders/skybox1.vertex.glsl';
 import frag2 from '../shaders/skybox2.fragment.glsl';
 import vert2 from '../shaders/skybox2.vertex.glsl';
 
-import type Camera from 'ui/camera';
-import type Context from '../context/context';
-import type Projector from 'ui/camera/projector';
-import type { StyleDefinition } from 'style/style.spec';
-import type { SkyboxWorkflow as SkyboxWorkflowSpec, SkyboxWorkflowUniforms } from './workflow.spec';
+import type Camera from 'ui/camera/index.js';
+import type Context from '../context/context.js';
+import type Projector from 'ui/camera/projector/index.js';
+import type { StyleDefinition } from 'style/style.spec.js';
+import type {
+  SkyboxWorkflow as SkyboxWorkflowSpec,
+  SkyboxWorkflowUniforms,
+} from './workflow.spec.js';
 
 /** Skybox Workflow renders a user styled skybox to the GPU */
 export default class SkyboxWorkflow extends Workflow implements SkyboxWorkflowSpec {

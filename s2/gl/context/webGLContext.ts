@@ -1,7 +1,7 @@
-import Context from './context';
+import Context from './context.js';
 
-import type { MapOptions } from 'ui/s2mapUI';
-import type { Painter } from '../painter.spec';
+import type { MapOptions } from 'ui/s2mapUI.js';
+import type { Painter } from '../painter.spec.js';
 
 /**
  * # WebGL Context

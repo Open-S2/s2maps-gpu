@@ -1,4 +1,4 @@
-import Workflow, { Feature } from './workflow';
+import Workflow, { Feature } from './workflow.js';
 
 import frag1 from '../shaders/shade1.fragment.glsl';
 import vert1 from '../shaders/shade1.vertex.glsl';
@@ -6,20 +6,20 @@ import vert1 from '../shaders/shade1.vertex.glsl';
 import frag2 from '../shaders/shade2.fragment.glsl';
 import vert2 from '../shaders/shade2.vertex.glsl';
 
-import type Context from '../context/context';
-import type { TileGL as Tile } from 'source/tile.spec';
+import type Context from '../context/context.js';
+import type { TileGL as Tile } from 'source/tile.spec.js';
 import type {
   LayerDefinitionBase,
   ShadeDefinition,
   ShadeStyle,
   ShadeWorkflowLayerGuide,
-} from 'style/style.spec';
+} from 'style/style.spec.js';
 import type {
   MaskSource,
   ShadeFeature as ShadeFeatureSpec,
   ShadeWorkflow as ShadeWorkflowSpec,
   ShadeWorkflowUniforms,
-} from './workflow.spec';
+} from './workflow.spec.js';
 
 /** Shape Feature is a standalone shade render storage unit that can be drawn to the GPU */
 export class ShadeFeature extends Feature implements ShadeFeatureSpec {

@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "esnext",
+    "target": "ESNext",
     "lib": [
       "DOM",
       "DOM.Iterable",
@@ -14,29 +14,29 @@
     "declaration": true,
     "skipLibCheck": true,
     "noEmit": false,
-    "module": "esnext",
-    "moduleResolution": "Bundler",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "incremental": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "types": ["@webgpu/types"],
-    "baseUrl": "s2", // This must be specified if "paths" is.
+    "baseUrl": "." /* Specify the base directory to resolve non-relative module names. */,
     "paths": {
       "*" : ["./*"],
-      "s2/*": ["./*"],
-      "geometry/*": ["./geometry/*"],
-      "gl/*": ["./gl/*"],
-      "gpu/*": ["./gpu/*"],
-      "plugins/*": ["./plugins/*"],
-      "source/*": ["./source/*"],
-      "style/*": ["./style/*"],
-      "ui/*": ["./ui/*"],
-      "util/*": ["./util/*"],
-      "workers/*": ["./workers/*"],
-      "s2-pmtiles/browser": ["./node_modules/s2-pmtiles/dist/browser.d.ts"]
-    }
+      "s2/*": ["./s2/*"],
+      "config/*": ["./config/*"],
+      "gis-tools/*": ["./s2/gis-tools/*"],
+      "gl/*": ["./s2/gl/*"],
+      "gpu/*": ["./s2/gpu/*"],
+      "plugins/*": ["./s2/plugins/*"],
+      "source/*": ["./s2/source/*"],
+      "style/*": ["./s2/style/*"],
+      "ui/*": ["./s2/ui/*"],
+      "util/*": ["./s2/util/*"],
+      "workers/*": ["./s2/workers/*"]
+    },
   },
   "ts-node": {
     "esm": true,
@@ -45,5 +45,6 @@
   "include": [
     "types/*.d.ts",
     "s2/**/*.ts"
-  ]
+  ],
+  "exclude": ["node_modules"]
 }

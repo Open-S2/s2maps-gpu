@@ -1,4 +1,4 @@
-import { project } from 'ui/camera/projector/mat4';
+import { project } from 'ui/camera/projector/mat4.js';
 import {
   bboxST,
   idLevel,
@@ -10,12 +10,12 @@ import {
   pointMulScalar,
   pointNormalize,
   pointSub,
-} from 'gis-tools';
+} from 'gis-tools/index.js';
 
-import type Projector from 'ui/camera/projector';
-import type { Context as WebGLContext } from 'gl/context';
-import type { WebGPUContext } from 'gpu/context';
-import type { BBox, Face } from 'gis-tools';
+import type Projector from 'ui/camera/projector/index.js';
+import type { Context as WebGLContext } from 'gl/context/index.js';
+import type { WebGPUContext } from 'gpu/context/index.js';
+import type { BBox, Face } from 'gis-tools/index.js';
 import type {
   Corners,
   FaceST,
@@ -25,9 +25,13 @@ import type {
   TileGL,
   TileGPU,
   TileBase as TileSpec,
-} from './tile.spec';
-import type { InteractiveObject, SourceFlushMessage, TileFlushMessage } from 'workers/worker.spec';
-import type { LayerDefinition, Projection } from 'style/style.spec';
+} from './tile.spec.js';
+import type {
+  InteractiveObject,
+  SourceFlushMessage,
+  TileFlushMessage,
+} from 'workers/worker.spec.js';
+import type { LayerDefinition, Projection } from 'style/style.spec.js';
 
 /**
  * Create a new Tile given the approprate projection, context and ID.

@@ -1,5 +1,5 @@
-import encodeLayerAttribute from 'style/encodeLayerAttribute';
-import Workflow, { Feature } from './workflow';
+import encodeLayerAttribute from 'style/encodeLayerAttribute.js';
+import Workflow, { Feature } from './workflow.js';
 
 // WEBGL1
 import frag1 from '../shaders/raster1.fragment.glsl';
@@ -8,22 +8,22 @@ import vert1 from '../shaders/raster1.vertex.glsl';
 import frag2 from '../shaders/raster2.fragment.glsl';
 import vert2 from '../shaders/raster2.vertex.glsl';
 
-import type Context from '../context/context';
-import type { RasterData } from 'workers/worker.spec';
-import type { TileGL as Tile } from 'source/tile.spec';
+import type Context from '../context/context.js';
+import type { RasterData } from 'workers/worker.spec.js';
+import type { TileGL as Tile } from 'source/tile.spec.js';
 import type {
   LayerDefinitionBase,
   RasterDefinition,
   RasterStyle,
   RasterWorkflowLayerGuide,
   Resampling,
-} from 'style/style.spec';
+} from 'style/style.spec.js';
 import type {
   RasterFeature as RasterFeatureSpec,
   RasterSource,
   RasterWorkflow as RasterWorkflowSpec,
   RasterWorkflowUniforms,
-} from './workflow.spec';
+} from './workflow.spec.js';
 
 /** Raster Feature is a standalone raster render storage unit that can be drawn to the GPU */
 export class RasterFeature extends Feature implements RasterFeatureSpec {

@@ -1,21 +1,21 @@
-import { buildDashImage } from 'style/color';
-import encodeLayerAttribute from 'style/encodeLayerAttribute';
+import { buildDashImage } from 'style/color/index.js';
+import encodeLayerAttribute from 'style/encodeLayerAttribute.js';
 import shaderCode from '../shaders/line.wgsl';
 
-import type { LineData } from 'workers/worker.spec';
-import type { TileGPU as Tile } from 'source/tile.spec';
-import type { WebGPUContext } from '../context';
+import type { LineData } from 'workers/worker.spec.js';
+import type { TileGPU as Tile } from 'source/tile.spec.js';
+import type { WebGPUContext } from '../context/index.js';
 import type {
   LayerDefinitionBase,
   LineDefinition,
   LineStyle,
   LineWorkflowLayerGuideGPU,
-} from 'style/style.spec';
+} from 'style/style.spec.js';
 import type {
   LineFeature as LineFeatureSpec,
   LineSource,
   LineWorkflow as LineWorkflowSpec,
-} from './workflow.spec';
+} from './workflow.spec.js';
 
 const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
   {

@@ -1,14 +1,15 @@
-import type { BunPlugin } from 'bun';
+import type { BunPlugin, OnLoadResult, PluginBuilder } from 'bun';
 
 // TODO: Some shaders may #include inside an already #included file. This is not supported yet.
 
 const WgslPlugin: BunPlugin = {
   name: 'WGSL loader',
   /**
-   * @param build
+   * Setup plugin
+   * @param build - plugin build
    */
-  setup(build) {
-    build.onLoad({ filter: /\.wgsl$/ }, async (args) => {
+  setup(build: PluginBuilder): void {
+    build.onLoad({ filter: /\.wgsl$/ }, async (args): Promise<OnLoadResult> => {
       const { path } = args;
       // load the file:
       const file = await Bun.file(path).text();
@@ -36,7 +37,9 @@ const WgslPlugin: BunPlugin = {
 };
 
 /**
- * @param str
+ * Sanitize a string for export
+ * @param str - The string to sanitize
+ * @returns The sanitized string
  */
 function sanitizeStringForExport(str: string): string {
   // Remove single-line comments

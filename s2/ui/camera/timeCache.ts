@@ -1,10 +1,10 @@
-import Cache from './cache';
+import Cache from './cache.js';
 
-import type Camera from '.';
-import type { SensorSource } from 'gl/workflows/workflow.spec';
-import type { TileShared as Tile } from 'source/tile.spec';
-import type { TileRequest } from 'workers/worker.spec';
-import type { TimeSeriesStyle } from 'style/style.spec';
+import type Camera from './index.js';
+import type { SensorSource } from 'gl/workflows/workflow.spec.js';
+import type { TileShared as Tile } from 'source/tile.spec.js';
+import type { TileRequest } from 'workers/worker.spec.js';
+import type { TimeSeriesStyle } from 'style/style.spec.js';
 
 /** Tracker for time sources */
 export interface TimeSource {

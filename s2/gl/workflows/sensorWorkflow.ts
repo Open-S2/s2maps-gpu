@@ -1,6 +1,6 @@
-import { Feature } from './workflow';
-import { buildColorRamp } from 'style/color';
-import encodeLayerAttribute from 'style/encodeLayerAttribute';
+import { Feature } from './workflow.js';
+import { buildColorRamp } from 'style/color/index.js';
+import encodeLayerAttribute from 'style/encodeLayerAttribute.js';
 
 // WEBGL1
 import frag1 from '../shaders/sensors1.fragment.glsl';
@@ -9,23 +9,23 @@ import vert1 from '../shaders/sensors1.vertex.glsl';
 import frag2 from '../shaders/sensors2.fragment.glsl';
 import vert2 from '../shaders/sensors2.vertex.glsl';
 
-import type Context from '../context/context';
-import type { SensorData } from 'workers/worker.spec';
-import type { SensorTextureDefinition } from 'ui/camera/timeCache';
-import type { TileGL as Tile } from 'source/tile.spec';
-import type TimeCache from 'ui/camera/timeCache';
+import type Context from '../context/context.js';
+import type { SensorData } from 'workers/worker.spec.js';
+import type { SensorTextureDefinition } from 'ui/camera/timeCache.js';
+import type { TileGL as Tile } from 'source/tile.spec.js';
+import type TimeCache from 'ui/camera/timeCache.js';
 import type {
   LayerDefinitionBase,
   SensorDefinition,
   SensorStyle,
   SensorWorkflowLayerGuide,
-} from 'style/style.spec';
+} from 'style/style.spec.js';
 import type {
   SensorFeature as SensorFeatureSpec,
   SensorSource,
   SensorWorkflow as SensorWorkflowSpec,
   SensorWorkflowUniforms,
-} from './workflow.spec';
+} from './workflow.spec.js';
 
 /** Sensor Feature is a standalone sensor render storage unit that can be drawn to the GPU */
 export class SensorFeature extends Feature implements SensorFeatureSpec {
@@ -107,7 +107,7 @@ export class SensorFeature extends Feature implements SensorFeatureSpec {
  * @returns the sensor workflow
  */
 export default async function sensorWorkflow(context: Context): Promise<SensorWorkflowSpec> {
-  const Workflow = await import('./workflow').then((m) => m.default);
+  const Workflow = await import('./workflow.js').then((m) => m.default);
 
   /** Sensor Workflow that draws sensor features for WebGL(1|2) */
   class SensorWorkflow extends Workflow implements SensorWorkflowSpec {

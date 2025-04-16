@@ -1,11 +1,11 @@
-import { getPathPos } from '../util';
+import { getPathPos } from '../util/index.js';
 
-import type { Glyph } from './familySource';
-import type { MapGlyphSource } from '../imageStore';
-import type { Point } from 'gis-tools';
-import type { Alignment, Anchor } from 'style/style.spec';
-import type { GlyphPath, GlyphPoint, PathFilter } from './glyph.spec';
-import type { Path, QuadPos } from '../util';
+import type { Glyph } from './familySource.js';
+import type { MapGlyphSource } from '../imageStore.js';
+import type { Point } from 'gis-tools/index.js';
+import type { Alignment, Anchor } from 'style/style.spec.js';
+import type { GlyphPath, GlyphPoint, PathFilter } from './glyph.spec.js';
+import type { Path, QuadPos } from '../util/index.js';
 
 /**
  * Quads

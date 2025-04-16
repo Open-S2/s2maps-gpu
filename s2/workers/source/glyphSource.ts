@@ -1,10 +1,10 @@
 import { zagzig } from 'open-vector-tile';
 
-import type Session from './session';
+import type Session from './session.js';
 
-import type { Glyph } from 'workers/process/glyph/familySource';
-import type TexturePack from './texturePack';
-import type { GlyphImageData, GlyphResponseMessage } from 'workers/worker.spec';
+import type { Glyph } from 'workers/process/glyph/familySource.js';
+import type TexturePack from './texturePack.js';
+import type { GlyphImageData, GlyphResponseMessage } from 'workers/worker.spec.js';
 
 /** Unparsed state of glyph metadata, letting Tile Workers know of what glyphs are available */
 export interface GlyphMetadataUnparsed {

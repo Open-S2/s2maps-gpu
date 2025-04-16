@@ -1,15 +1,14 @@
-import { GPUType } from 'style/style.spec';
-import buildMask from './buildMask';
+import buildMask from './buildMask.js';
 
-import type { BBox } from 'gis-tools';
-import type { ColorArray } from 'style/color';
-import type { GlyphImages } from 'workers/source/glyphSource';
-import type { MapOptions } from 'ui/s2mapUI';
-import type { Painter } from '../painter.spec';
-import type { Projection } from 'style/style.spec';
-import type { SpriteImageMessage } from 'workers/worker.spec';
-import type { TileGL as Tile } from 'source/tile.spec';
-import type { MaskSource, TileMaskSource, Workflow } from '../workflows/workflow.spec';
+import type { BBox } from 'gis-tools/index.js';
+import type { ColorArray } from 'style/color/index.js';
+import type { GlyphImages } from 'workers/source/glyphSource.js';
+import type { MapOptions } from 'ui/s2mapUI.js';
+import type { Painter } from '../painter.spec.js';
+import type { SpriteImageMessage } from 'workers/worker.spec.js';
+import type { TileGL as Tile } from 'source/tile.spec.js';
+import type { GPUType, Projection } from 'style/style.spec.js';
+import type { MaskSource, TileMaskSource, Workflow } from '../workflows/workflow.spec.js';
 
 /** Frame buffer object like wrapper */
 export interface FBO {
@@ -40,7 +39,7 @@ const DEPTH_ESPILON = 1 / Math.pow(2, 16);
 export default class Context {
   gl: WebGLRenderingContext | WebGL2RenderingContext;
   painter: Painter;
-  type: GPUType = GPUType.WebGL1;
+  type: GPUType = 1;
   projection: Projection = 'S2';
   presentation: ContextPresentation = { width: 0, height: 0 };
   renderer: string; // ex: AMD Radeon Pro 560 OpenGL Engine (https://github.com/pmndrs/detect-gpu)

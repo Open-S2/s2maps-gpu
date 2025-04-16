@@ -1,7 +1,7 @@
-import type { VectorPoint } from 'gis-tools';
+import type { VectorPoint } from 'gis-tools/index.js';
 
-export { default as getTilesS2 } from './S2';
-export { default as getTilesWM } from './WM';
+export { default as getTilesS2 } from './S2.js';
+export { default as getTilesWM } from './WM.js';
 
 /**
  * check 3D point boundries of a rectangle are within the range of [-1,1]

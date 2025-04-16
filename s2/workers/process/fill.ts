@@ -1,17 +1,21 @@
-import { GPUType } from 'style/style.spec';
 import { earclip } from 'earclip';
-import parseFeatureFunction from 'style/parseFeatureFunction';
-import parseFilter from 'style/parseFilter';
-import VectorWorker, { colorFunc, idToRGB } from './vectorWorker';
-import { featureSort, scaleShiftClip } from './util';
+import parseFeatureFunction from 'style/parseFeatureFunction.js';
+import parseFilter from 'style/parseFilter.js';
+import VectorWorker, { colorFunc, idToRGB } from './vectorWorker.js';
+import { featureSort, scaleShiftClip } from './util/index.js';
 
-import type { CodeDesign } from './vectorWorker';
-import type ImageStore from './imageStore';
-import type { FillData, TileRequest } from '../worker.spec';
-import type { FillDefinition, FillWorkerLayer } from 'style/style.spec';
-import type { FillFeature, FillWorker as FillWorkerSpec, IDGen, VTFeature } from './process.spec';
+import type { CodeDesign } from './vectorWorker.js';
+import type ImageStore from './imageStore.js';
+import type { FillData, TileRequest } from '../worker.spec.js';
+import type { FillDefinition, FillWorkerLayer, GPUType } from 'style/style.spec.js';
+import type {
+  FillFeature,
+  FillWorker as FillWorkerSpec,
+  IDGen,
+  VTFeature,
+} from './process.spec.js';
 
-import type { VectorMultiPolygon } from 'gis-tools';
+import type { VectorMultiPolygon } from 'gis-tools/index.js';
 
 const MAX_FEATURE_BATCH_SIZE = 1 << 6; // 64
 
@@ -164,7 +168,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
       vertices,
       indices,
       layerIndex,
-      code: gpuType === GPUType.WebGL1 ? gl1Code : gl2Code,
+      code: gpuType === 1 ? gl1Code : gl2Code,
       gl2Code,
       pattern,
       patternFamily,
@@ -257,7 +261,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
       vertices: [-0.1, -0.1, 1.1, -0.1, 1.1, 1.1, -0.1, 1.1],
       indices: [0, 2, 1, 2, 0, 3],
       layerIndex,
-      code: gpuType === GPUType.WebGL1 ? gl1Code : gl2Code,
+      code: gpuType === 1 ? gl1Code : gl2Code,
       gl2Code,
       pattern,
       patternFamily,
@@ -340,7 +344,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
       encodingIndex = encodingIndexes[feKey];
       if (encodingIndex === undefined) {
         encodingIndex = encodingIndexes[feKey] =
-          this.gpuType === GPUType.WebGL1 ? encodings.length / 5 : encodings.length;
+          this.gpuType === 1 ? encodings.length / 5 : encodings.length;
         encodings.push(...code);
       }
       // store
@@ -390,7 +394,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     const indexBuffer = new Uint32Array(indices).buffer as ArrayBuffer;
     const idBuffer = new Uint8ClampedArray(ids).buffer as ArrayBuffer; // pre-store each id as an rgb value
     const codeTypeBuffer =
-      this.gpuType === GPUType.WebGPU
+      this.gpuType === 3
         ? (new Uint32Array(codeType).buffer as ArrayBuffer)
         : (new Uint8Array(codeType).buffer as ArrayBuffer);
     const featureGuideBuffer = new Float32Array(featureGuide).buffer as ArrayBuffer;

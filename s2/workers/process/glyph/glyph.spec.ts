@@ -1,7 +1,7 @@
-import type { ColorArray } from 'style/color';
-import type { PathData } from '../util';
-import type { Point } from 'gis-tools';
-import type { Alignment, Anchor } from 'style/style.spec';
+import type { ColorArray } from 'style/color/index.js';
+import type { PathData } from '../util/index.js';
+import type { Point } from 'gis-tools/index.js';
+import type { Alignment, Anchor } from 'style/style.spec.js';
 
 /** a bounding box like structure */
 export interface SquareNode {

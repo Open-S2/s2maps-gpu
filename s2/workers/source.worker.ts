@@ -1,4 +1,4 @@
-import adjustURL from '../util/adjustURL';
+import adjustURL from '../util/adjustURL.js';
 import {
   GlyphSource,
   ImageSource,
@@ -11,10 +11,10 @@ import {
   Source,
   SpriteSource,
   TexturePack,
-} from './source';
+} from './source/index.js';
 
-import type { ImageSourceMetadata } from './source/imageSource';
-import type { MarkerDefinition } from './source/markerSource';
+import type { ImageSourceMetadata } from './source/imageSource.js';
+import type { MarkerDefinition } from './source/markerSource.js';
 import type {
   Analytics,
   GPUType,
@@ -24,14 +24,14 @@ import type {
   SourceMetadata,
   StylePackage,
   Source as StyleSource,
-} from 'style/style.spec';
-import type { GlyphMetadata, GlyphMetadataUnparsed } from './source/glyphSource';
+} from 'style/style.spec.js';
+import type { GlyphMetadata, GlyphMetadataUnparsed } from './source/glyphSource.js';
 import type {
   GlyphMetadataMessage,
   SourceFlushMessage,
   SourceWorkerMessages,
   TileRequest,
-} from './worker.spec';
+} from './worker.spec.js';
 
 /** Store map of all source types */
 type SourceMap = Record<

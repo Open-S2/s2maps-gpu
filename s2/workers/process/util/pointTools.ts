@@ -1,4 +1,4 @@
-import { flattenGeometryToLines, lineLength } from './lineTools';
+import { flattenGeometryToLines, lineLength } from './lineTools.js';
 
 import type {
   MValue,
@@ -6,8 +6,8 @@ import type {
   VectorGeometryType,
   VectorMultiPoint,
   VectorPoint,
-} from 'gis-tools';
-import type { Path, PathData } from './lineTools';
+} from 'gis-tools/index.js';
+import type { Path, PathData } from './lineTools.js';
 
 /**
  * Flatten all geometry types to points

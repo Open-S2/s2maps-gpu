@@ -1,10 +1,10 @@
-import Color from 'style/color';
+import Color from 'style/color/index.js';
 import shaderCode from '../shaders/wallpaper.wgsl';
 
-import type Projector from 'ui/camera/projector';
-import type { StyleDefinition } from 'style/style.spec';
-import type { WallpaperWorkflow as WallpaperWorkflowSpec } from './workflow.spec';
-import type { WebGPUContext } from '../context';
+import type Projector from 'ui/camera/projector/index.js';
+import type { StyleDefinition } from 'style/style.spec.js';
+import type { WallpaperWorkflow as WallpaperWorkflowSpec } from './workflow.spec.js';
+import type { WebGPUContext } from '../context/index.js';
 
 /** Wallpaper color guide */
 export interface WallpaperScheme {

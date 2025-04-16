@@ -1,7 +1,7 @@
-import S2MapUI from 'ui/s2mapUI';
+import S2MapUI from 'ui/s2mapUI.js';
 
-import type { MapOptions } from 'ui/s2mapUI';
-import type { S2MapMessage } from './worker.spec';
+import type { MapOptions } from 'ui/s2mapUI.js';
+import type { S2MapMessage } from './worker.spec.js';
 
 /**
  * # Map Worker

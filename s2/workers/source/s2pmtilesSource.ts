@@ -1,8 +1,8 @@
-import { S2PMTilesReader } from 'gis-tools';
-import Source from './source';
+import { S2PMTilesReader } from 'gis-tools/index.js';
+import Source from './source.js';
 
-import type { SourceMetadata } from 'style/style.spec';
-import type { TileRequest } from '../worker.spec';
+import type { SourceMetadata } from 'style/style.spec.js';
+import type { TileRequest } from '../worker.spec.js';
 
 /**
  * # S2 PMTiles Source

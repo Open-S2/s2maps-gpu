@@ -1,7 +1,7 @@
-import type { ClusterOptions } from 'workers/source/pointCluster';
-import type { ColorArray } from './color';
-import type { EaseType } from './easingFunctions';
-import type { View } from 'ui/camera/projector';
+import type { ClusterOptions } from 'workers/source/pointCluster/index.js';
+import type { ColorArray } from './color/index.js';
+import type { EaseType } from './easingFunctions.js';
+import type { View } from 'ui/camera/projector/index.js';
 import type {
   Attributions,
   BBox,
@@ -10,7 +10,7 @@ import type {
   Projection,
   Properties,
   TileStoreOptions,
-} from 'gis-tools';
+} from 'gis-tools/index.js';
 import type {
   Center,
   Encoding,
@@ -25,9 +25,9 @@ import type {
   VectorLayer,
   WMBounds,
 } from 's2-tilejson';
-import type { Filter, FilterFunction } from 'style/parseFilter';
+import type { Filter, FilterFunction } from 'style/parseFilter.js';
 
-export type { ClusterOptions } from 'workers/source/pointCluster';
+export type { ClusterOptions } from 'workers/source/pointCluster/index.js';
 export type {
   BBox,
   JSONCollection,
@@ -35,12 +35,12 @@ export type {
   Properties,
   Projection,
   TileStoreOptions,
-} from 'gis-tools';
-export type * from './parseFilter';
-export type * from './easingFunctions';
-export type { MapOptions } from 'ui/s2mapUI';
-export type { ColorArray } from './color';
-export type { View } from 'ui/camera/projector';
+} from 'gis-tools/index.js';
+export type * from './parseFilter.js';
+export type * from './easingFunctions.js';
+export type { MapOptions } from 'ui/s2mapUI.js';
+export type { ColorArray } from './color/index.js';
+export type { View } from 'ui/camera/projector/index.js';
 export type * from 's2-tilejson';
 
 /** Optionalized tile metadata. Helps source workers to parse malformed tilesets */
@@ -264,6 +264,8 @@ export type BuildCodeFunction = (zoom: number, properties: Properties) => [numbe
 export type BuildCodeFunctionZoom = (zoom: number) => number[];
 
 /**
+ * # Comparator
+ *
  * One of `"==" | "!=" | ">" | ">=" | "<" | "<=" | "in" | "!in" | "has" | "!has"`
  *
  * Used by the filter function to determine if a feature should be included in the render.
@@ -285,15 +287,39 @@ export type BuildCodeFunctionZoom = (zoom: number) => number[];
 export type Comparator = '==' | '!=' | '>' | '>=' | '<' | '<=' | 'in' | '!in' | 'has' | '!has';
 
 /**
+ * # Nested Key
  *
+ * Access value in feature properties by either its key or dive into a neste key
+ *
+ * ### Key
+ * If the key is immediately accessible, set the key.
+ * If the key is `class` for example, this would be used to filter feature's values where
+ * `feature.properties.class === 'ocean'`
+ *
+ * ex.
+ * ```json
+ * { "filter": { "key": "class", "comparator": "==", "value": "ocean" } }
+ * ```
+ *
+ * ### Nested Key
+ *
+ * nested conditions are used to dive into nested properties
+ *
+ * ex.
+ * ```json
+ * { "filter": { "nestedKey": "class", "key": { "key": "type", "comparator": "==", "value": "ocean" } } }
+ * ```
+ * ex.
  */
 export interface NestedKey {
   /**
    * nested conditions are used to dive into nested properties
+   *
    * ex.
    * ```json
    * { "filter": { "nestedKey": "class", "key": { "key": "type", "comparator": "==", "value": "ocean" } } }
    * ```
+   *
    * this would be used to filter features where `feature.properties.class.type === 'ocean'`
    */
   nestedKey?: string;
@@ -393,6 +419,7 @@ export interface DataRangeEase<T extends number | string> {
  *
  */
 export interface DataRangeStep<T extends NotNullOrObject> {
+  ease?: 'step';
   /**
    * Access value in feature properties by either its key or a nested key.
    *
@@ -406,7 +433,6 @@ export interface DataRangeStep<T extends NotNullOrObject> {
    * this would be used to filter features where `feature.properties.class.type === 'ocean'`
    */
   key: string | NestedKey; // the objects[key] -> value used as position on range
-  ease?: 'step';
   /** Unused by "step" ease functions. Kept to avoid errors in Typescript */
   base?: number; // 0 -> 2
   /**
@@ -469,9 +495,9 @@ export interface InputRangeEase<T extends number | string> {
  *
  */
 export interface InputRangeStep<T extends NotNullOrObject> {
+  ease: 'step';
   /** "zoom" | "lon" | "lat" | "angle" | "pitch" */
   type: 'zoom' | 'lon' | 'lat' | 'angle' | 'pitch';
-  ease: 'step';
   /** Unused by "step" ease functions. Kept to avoid errors in Typescript */
   base?: number; // 0 -> 2
   /**
@@ -493,7 +519,9 @@ export interface InputRangeStep<T extends NotNullOrObject> {
 }
 
 /**
+ * # Feature State
  *
+ * UNDER CONSTRUCTION - DO NOT USE EXPECTING CONSISTENT RESULTS
  */
 export interface FeatureState<T extends NotNullOrObject> {
   condition: 'default' /* (inactive) */ | 'active' | 'hover' | 'selected' | 'disabled';
@@ -502,7 +530,15 @@ export interface FeatureState<T extends NotNullOrObject> {
   input: T | Property<T>;
 }
 
-/** A value that is not null or an object */
+/**
+ * A value that is not null or an object
+ * Thus possible values are:
+ * - string
+ * - number
+ * - boolean
+ * - bigint
+ * - Array<options above>
+ */
 export type NotNullOrObject =
   | string
   | number
@@ -3596,16 +3632,17 @@ export type InteractiveWorkerLayer =
  * - `2` -> WebGL2
  * - `3` -> WebGPU
  */
-export const GPUType = {
-  /** WebGL1 */
-  WebGL1: 1,
-  /** WebGL2 */
-  WebGL2: 2,
-  /** WebGPU */
-  WebGPU: 3,
-} as const;
-/** colorblind mode */
-export type GPUType = (typeof GPUType)[keyof typeof GPUType];
+export type GPUType = 1 | 2 | 3;
+// export const GPUType = {
+//   /** WebGL1 */
+//   WebGL1: 1,
+//   /** WebGL2 */
+//   WebGL2: 2,
+//   /** WebGPU */
+//   WebGPU: 3,
+// } as const;
+// /** colorblind mode */
+// export type GPUType = (typeof GPUType)[keyof typeof GPUType];
 
 /** Basic analytics information sent to servers */
 export interface Analytics {

@@ -1,15 +1,14 @@
-import { ColorMode } from 's2Map';
-import { GPUType } from 'style/style.spec';
-import buildMask from './buildMask';
+import { ColorMode } from 's2/s2Map.js';
+import buildMask from './buildMask.js';
 
-import type { ColorArray } from 'style/color';
-import type { GlyphImages } from 'workers/source/glyphSource';
-import type { MapOptions } from 'ui/s2mapUI';
-import type { Painter } from 'gpu/painter.spec';
-import type { Projection } from 'style/style.spec';
-import type { SpriteImageMessage } from 'workers/worker.spec';
-import type { Tile } from 'source/tile.spec';
-import type { MaskSource, TileMaskSource } from 'gpu/workflows/workflow.spec';
+import type { ColorArray } from 'style/color/index.js';
+import type { GlyphImages } from 'workers/source/glyphSource.js';
+import type { MapOptions } from 'ui/s2mapUI.js';
+import type { Painter } from 'gpu/painter.spec.js';
+import type { SpriteImageMessage } from 'workers/worker.spec.js';
+import type { Tile } from 'source/tile.spec.js';
+import type { GPUType, Projection } from 'style/style.spec.js';
+import type { MaskSource, TileMaskSource } from 'gpu/workflows/workflow.spec.js';
 
 const DEPTH_ESPILON = 1 / Math.pow(2, 20);
 
@@ -34,7 +33,7 @@ export interface PaddedBuffer {
 export default class WebGPUContext {
   ready = false;
   // constants/semi-constants
-  type: GPUType = GPUType.WebGPU; // specifying that we are using a WebGPUContext
+  type: GPUType = 3; // specifying that we are using a WebGPUContext
   renderer = ''; // ex: AMD Radeon Pro 560 OpenGL Engine (https://github.com/pmndrs/detect-gpu)
   gpu: GPUCanvasContext;
   device!: GPUDevice;

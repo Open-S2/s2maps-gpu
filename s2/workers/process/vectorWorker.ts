@@ -1,10 +1,10 @@
-import Color from 'style/color';
-import parseFeatureFunction from 'style/parseFeatureFunction';
+import Color from 'style/color/index.js';
+import parseFeatureFunction from 'style/parseFeatureFunction.js';
 
-import type { Callback } from 'style/parseFeatureFunction';
-import type { ColorArray } from 'style/color';
-import type { IDGen } from './process.spec';
-import type { Properties } from 'gis-tools';
+import type { Callback } from 'style/parseFeatureFunction.js';
+import type { ColorArray } from 'style/color/index.js';
+import type { IDGen } from './process.spec.js';
+import type { Properties } from 'gis-tools/index.js';
 import type {
   BuildCodeFunction,
   GPUType,
@@ -13,8 +13,8 @@ import type {
   NotNullOrObject,
   Property,
   ValueType,
-} from 'style/style.spec';
-import type { InteractiveObject, TileRequest } from '../worker.spec';
+} from 'style/style.spec.js';
+import type { InteractiveObject, TileRequest } from '../worker.spec.js';
 
 /** Code design input wrapper */
 export type CodeDesignInput<T extends NotNullOrObject> =

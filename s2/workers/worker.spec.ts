@@ -1,11 +1,11 @@
-import type { AnimationDirections } from 'ui/camera/animator';
-import type { ColorMode } from 's2/s2Map';
-import type { Glyph } from 'workers/process/glyph/familySource';
-import type { ImageSourceMetadata } from './source/imageSource';
-import type { MapOptions } from 'ui/s2mapUI';
-import type { MarkerDefinition } from './source/markerSource';
-import type { UserTouchEvent } from 'ui/camera/dragPan';
-import type { View } from 'ui/camera/projector';
+import type { AnimationDirections } from 'ui/camera/animator.js';
+import type { ColorMode } from 's2/s2Map.js';
+import type { Glyph } from 'workers/process/glyph/familySource.js';
+import type { ImageSourceMetadata } from './source/imageSource.js';
+import type { MapOptions } from 'ui/s2mapUI.js';
+import type { MarkerDefinition } from './source/markerSource.js';
+import type { UserTouchEvent } from 'ui/camera/dragPan.js';
+import type { View } from 'ui/camera/projector/index.js';
 import type {
   Analytics,
   Attributions,
@@ -14,9 +14,9 @@ import type {
   Source,
   StyleDefinition,
   StylePackage,
-} from 'style/style.spec';
-import type { BBox, Face, Properties } from 'gis-tools';
-import type { GlyphImages, GlyphMetadata } from './source/glyphSource';
+} from 'style/style.spec.js';
+import type { BBox, Face, Properties } from 'gis-tools/index.js';
+import type { GlyphImages, GlyphMetadata } from './source/glyphSource.js';
 
 /* GENERIC WORKER TYPES */
 

@@ -1,21 +1,21 @@
-import encodeLayerAttribute from 'style/encodeLayerAttribute';
+import encodeLayerAttribute from 'style/encodeLayerAttribute.js';
 import shaderCode from '../shaders/glyph.wgsl';
 
-import type { BBox } from 'gis-tools';
-import type { GlyphData } from 'workers/worker.spec';
-import type { TileGPU as Tile } from 'source/tile.spec';
-import type { WebGPUContext } from '../context';
+import type { BBox } from 'gis-tools/index.js';
+import type { GlyphData } from 'workers/worker.spec.js';
+import type { TileGPU as Tile } from 'source/tile.spec.js';
+import type { WebGPUContext } from '../context/index.js';
 import type {
   GlyphDefinition,
   GlyphStyle,
   GlyphWorkflowLayerGuideGPU,
   LayerDefinitionBase,
-} from 'style/style.spec';
+} from 'style/style.spec.js';
 import type {
   GlyphFeature as GlyphFeatureSpec,
   GlyphSource,
   GlyphWorkflow as GlyphWorkflowSpec,
-} from './workflow.spec';
+} from './workflow.spec.js';
 
 /** st (0), adjustXY (1), xy (2), wh (3), texXY (4), texWH (5) */
 const SUB_SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [0, 1, 2, 3, 4, 5].map((i) => ({

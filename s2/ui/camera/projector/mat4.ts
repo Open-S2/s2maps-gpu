@@ -1,4 +1,4 @@
-import type { Point3D, VectorPoint } from 'gis-tools';
+import type { Point3D, VectorPoint } from 'gis-tools/index.js';
 
 /** @returns a 4x4 identity matrix */
 export function create(): Float32Array {

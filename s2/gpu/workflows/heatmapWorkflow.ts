@@ -1,22 +1,22 @@
-import { buildColorRamp } from 'style/color';
-import encodeLayerAttribute from 'style/encodeLayerAttribute';
+import { buildColorRamp } from 'style/color/index.js';
+import encodeLayerAttribute from 'style/encodeLayerAttribute.js';
 import shaderCode from '../shaders/heatmap.wgsl';
 
-import type { BBox } from 'gis-tools';
-import type { HeatmapData } from 'workers/worker.spec';
-import type { TileGPU as Tile } from 'source/tile.spec';
-import type { WebGPUContext } from '../context';
+import type { BBox } from 'gis-tools/index.js';
+import type { HeatmapData } from 'workers/worker.spec.js';
+import type { TileGPU as Tile } from 'source/tile.spec.js';
+import type { WebGPUContext } from '../context/index.js';
 import type {
   HeatmapDefinition,
   HeatmapStyle,
   HeatmapWorkflowLayerGuideGPU,
   LayerDefinitionBase,
-} from 'style/style.spec';
+} from 'style/style.spec.js';
 import type {
   HeatmapFeature as HeatmapFeatureSpec,
   HeatmapSource,
   HeatmapWorkflow as HeatmapWorkflowSpec,
-} from './workflow.spec';
+} from './workflow.spec.js';
 
 const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
   {

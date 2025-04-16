@@ -1,22 +1,22 @@
-import encodeLayerAttribute from 'style/encodeLayerAttribute';
+import encodeLayerAttribute from 'style/encodeLayerAttribute.js';
 import shaderCode from '../shaders/fill.wgsl';
 
-import type { FillData } from 'workers/worker.spec';
-import type { TileGPU as Tile } from 'source/tile.spec';
-import type { WebGPUContext } from '../context';
+import type { FillData } from 'workers/worker.spec.js';
+import type { TileGPU as Tile } from 'source/tile.spec.js';
+import type { WebGPUContext } from '../context/index.js';
 import type {
   FillDefinition,
   FillStyle,
   FillWorkflowLayerGuideGPU,
   LayerDefinitionBase,
-} from 'style/style.spec';
+} from 'style/style.spec.js';
 import type {
   FillFeature as FillFeatureSpec,
   FillSource,
   FillWorkflow as FillWorkflowSpec,
   MaskSource,
   TileMaskSource,
-} from './workflow.spec';
+} from './workflow.spec.js';
 
 const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
   {

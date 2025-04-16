@@ -1,9 +1,9 @@
-import PointIndex from './pointIndex';
-import { Tile, convert, idLevel, idToIJ } from 'gis-tools';
+import PointIndex from './pointIndex.js';
+import { Tile, convert, idLevel, idToIJ } from 'gis-tools/index.js';
 
-import type { ClusterOptions } from './';
-import type { Point } from './pointIndex';
-import type { Face, JSONCollection, VectorPointFeature } from 'gis-tools';
+import type { ClusterOptions } from './index.js';
+import type { Point } from './pointIndex.js';
+import type { Face, JSONCollection, VectorPointFeature } from 'gis-tools/index.js';
 
 /** Comparison function - if true the features can be grouped */
 export type Comparator = (a: VectorPointFeature, b: VectorPointFeature) => boolean;

@@ -1,23 +1,23 @@
-import { isSafari, parseHash, setHash } from './util';
+import { isSafari, parseHash, setHash } from './util/index.js';
 
-import type { AnimationDirections } from './ui/camera/animator';
-import type { MapOptions } from './ui/s2mapUI';
-import type { MarkerDefinition } from './workers/source/markerSource';
-import type S2MapUI from './ui/s2mapUI';
-import type { UserTouchEvent } from './ui/camera/dragPan';
-import type { VectorPoint } from 'gis-tools';
-import type { Attributions, LayerStyle, StyleDefinition } from './style/style.spec';
+import type { AnimationDirections } from './ui/camera/animator.js';
+import type { MapOptions } from './ui/s2mapUI.js';
+import type { MarkerDefinition } from './workers/source/markerSource.js';
+import type S2MapUI from './ui/s2mapUI.js';
+import type { UserTouchEvent } from './ui/camera/dragPan.js';
+import type { VectorPoint } from 'gis-tools/index.js';
+import type { Attributions, LayerStyle, StyleDefinition } from './style/style.spec.js';
 import type {
   MapGLMessage,
   ResetSourceMessage,
   SourceWorkerMessage,
   TileWorkerMessage,
-} from './workers/worker.spec';
+} from './workers/worker.spec.js';
 
-// export types from './ui/s2mapUI'
-export type { MarkerDefinition } from './workers/source/markerSource';
-export type { AnimationDirections } from './ui/camera/animator';
-export type { UserTouchEvent } from './ui/camera/dragPan';
+export type * from './ui/s2mapUI.js';
+export type { MarkerDefinition } from './workers/source/markerSource.js';
+export type { AnimationDirections } from './ui/camera/animator.js';
+export type { UserTouchEvent } from './ui/camera/dragPan.js';
 
 /**
  * Color blind states
@@ -195,7 +195,7 @@ export default class S2Map extends EventTarget {
         offscreenCanvas,
       ]);
     } else {
-      const Map = await import('./ui/s2mapUI').then((m) => m.default);
+      const Map = await import('./ui/s2mapUI.js').then((m) => m.default);
       this.map = new Map(options, canvas, this.id, this);
     }
     // now that canvas is setup, add control containers as necessary
@@ -748,7 +748,19 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * @param state
+   * Update the state of the map's UI mode.
+   *
+   * ### Example
+   * ```ts
+   * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
+   * import type { MapOptions } from 's2maps-gpu';
+   *
+   * const options: MapOptions = { ..., darkMode: false }
+   * const map = new S2Map(options)
+   * // do something with the map
+   * map.setDarkMode(true)
+   * ```
+   * @param state - which UI mode to set the map to. `true` for dark-mode, `false` for light-mode
    */
   setDarkMode(state: boolean = false): void {
     const classList = this.#container?.classList;

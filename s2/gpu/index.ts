@@ -1,2 +1,2 @@
-export * from './context';
-export { default as Painter } from './painter';
+export * from './context/index.js';
+export { default as Painter } from './painter.js';

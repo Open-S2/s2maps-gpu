@@ -1,8 +1,8 @@
-import Color, { interpolate } from '.';
+import Color, { interpolate } from './index.js';
 
-import type { ColorArray } from './';
-import type { ColorBlindAdjust } from './colorBlindAdjust';
-import type { ColorRamp } from 'style/style.spec';
+import type { ColorArray } from './index.js';
+import type { ColorBlindAdjust } from './colorBlindAdjust.js';
+import type { ColorRamp } from 'style/style.spec.js';
 
 /**
  * Build a color ramp given a string defined ramp style or ramp guide

@@ -1,5 +1,5 @@
-import type { Feature } from '../process.spec';
-import type { GlyphObject } from '../glyph/glyph.spec';
+import type { Feature } from '../process.spec.js';
+import type { GlyphObject } from '../glyph/glyph.spec.js';
 
 /**
  * Sort features or glyph features

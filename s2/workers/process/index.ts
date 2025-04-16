@@ -1,14 +1,14 @@
-import FillWorker from './fill';
-import GlyphWorker from './glyph';
-import { IDGen } from './process.spec';
-import ImageStore from './imageStore';
-import LineWorker from './line';
-import PointWorker from './point';
-import RasterWorker from './raster';
+import FillWorker from './fill.js';
+import GlyphWorker from './glyph/index.js';
+import { IDGen } from './process.spec.js';
+import ImageStore from './imageStore.js';
+import LineWorker from './line.js';
+import PointWorker from './point.js';
+import RasterWorker from './raster.js';
 
-import type { Glyph } from './glyph/familySource';
-import type { GlyphMetadata } from 'workers/source/glyphSource';
-import type { ImageSourceMetadata } from 'workers/source/imageSource';
+import type { Glyph } from './glyph/familySource.js';
+import type { GlyphMetadata } from 'workers/source/glyphSource.js';
+import type { ImageSourceMetadata } from 'workers/source/imageSource.js';
 import type {
   GPUType,
   HillshadeWorkerLayer,
@@ -18,9 +18,9 @@ import type {
   SensorWorkerLayer,
   StylePackage,
   WorkerLayer,
-} from 'style/style.spec';
-import type { TileFlushMessage, TileRequest } from '../worker.spec';
-import type { VTTile, VectorWorker, Workers } from './process.spec';
+} from 'style/style.spec.js';
+import type { TileFlushMessage, TileRequest } from '../worker.spec.js';
+import type { VTTile, VectorWorker, Workers } from './process.spec.js';
 
 /**
  * # Process Manager

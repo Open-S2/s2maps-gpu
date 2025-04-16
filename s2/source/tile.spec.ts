@@ -1,17 +1,21 @@
-import type { LayerDefinition } from 'style/style.spec';
-import type Projector from 'ui/camera/projector';
-import type WebGLContext from 'gl/context/context';
-import type WebGPUContext from 'gpu/context/context';
-import type { BBox, Face, VectorPoint } from 'gis-tools';
+import type { LayerDefinition } from 'style/style.spec.js';
+import type Projector from 'ui/camera/projector/index.js';
+import type WebGLContext from 'gl/context/context.js';
+import type WebGPUContext from 'gpu/context/context.js';
+import type { BBox, Face, VectorPoint } from 'gis-tools/index.js';
 import type {
   Features as FeaturesGL,
   TileMaskSource as MaskSourceGL,
-} from 'gl/workflows/workflow.spec';
+} from 'gl/workflows/workflow.spec.js';
 import type {
   Features as FeaturesGPU,
   TileMaskSource as MaskSourceGPU,
-} from 'gpu/workflows/workflow.spec';
-import type { InteractiveObject, SourceFlushMessage, TileFlushMessage } from 'workers/worker.spec';
+} from 'gpu/workflows/workflow.spec.js';
+import type {
+  InteractiveObject,
+  SourceFlushMessage,
+  TileFlushMessage,
+} from 'workers/worker.spec.js';
 
 /** A tile's 4 corners. */
 export interface Corners {

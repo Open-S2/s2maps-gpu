@@ -1,13 +1,13 @@
 // import { isSafari } util/polyfill'
-import { GPUType } from 'style/style.spec';
-import { colorFunc } from './vectorWorker';
-import parseFeatureFunction from 'style/parseFeatureFunction';
+import { colorFunc } from './vectorWorker.js';
+import parseFeatureFunction from 'style/parseFeatureFunction.js';
 
-import type { CodeDesign } from './vectorWorker';
-import type { RasterWorker as RasterWorkerSpec } from './process.spec';
+import type { CodeDesign } from './vectorWorker.js';
+import type { RasterWorker as RasterWorkerSpec } from './process.spec.js';
 import type {
   BuildCodeFunctionZoom,
   ColorArray,
+  GPUType,
   HillshadeDefinition,
   HillshadeWorkerLayer,
   LayerWorkerFunction,
@@ -15,14 +15,14 @@ import type {
   RasterWorkerLayer,
   SensorDefinition,
   SensorWorkerLayer,
-} from 'style/style.spec';
+} from 'style/style.spec.js';
 import type {
   HillshadeData,
   RasterData,
   RasterDataGuide,
   SensorData,
   TileRequest,
-} from '../worker.spec';
+} from '../worker.spec.js';
 
 /** Worker for processing raster data */
 export default class RasterWorker implements RasterWorkerSpec {
@@ -92,7 +92,7 @@ export default class RasterWorker implements RasterWorkerSpec {
         .map((func) => func(code, properties, zoom))
         .flat();
 
-      return gpuType === GPUType.WebGL1 ? webgl1Code : code;
+      return gpuType === 1 ? webgl1Code : code;
     };
   }
 

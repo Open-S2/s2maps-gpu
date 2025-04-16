@@ -1,8 +1,8 @@
-import { ColorMode } from 's2Map';
-import loadShader from './loadShader';
+import { ColorMode } from 's2/s2Map.js';
+import loadShader from './loadShader.js';
 
-import type Context from '../context/context';
-import type { TileGL as Tile } from 'source/tile.spec';
+import type Context from '../context/context.js';
+import type { TileGL as Tile } from 'source/tile.spec.js';
 import type {
   AttributeLocations,
   Attributes,
@@ -12,8 +12,8 @@ import type {
   Uniforms,
   Workflow as WorkflowFeature,
   WorkflowSpec,
-} from './workflow.spec';
-import type { BBox, VectorPoint } from 'gis-tools';
+} from './workflow.spec.js';
+import type { BBox, VectorPoint } from 'gis-tools/index.js';
 
 /** A Generic Feature that can be drawn to the GPU */
 export class Feature implements FeatureBase {

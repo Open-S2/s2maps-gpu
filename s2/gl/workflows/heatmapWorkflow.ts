@@ -1,6 +1,6 @@
-import { buildColorRamp } from 'style/color';
-import encodeLayerAttribute from 'style/encodeLayerAttribute';
-import Workflow, { Feature } from './workflow';
+import { buildColorRamp } from 'style/color/index.js';
+import encodeLayerAttribute from 'style/encodeLayerAttribute.js';
+import Workflow, { Feature } from './workflow.js';
 
 // WEBGL1
 import frag1 from '../shaders/heatmap1.fragment.glsl';
@@ -9,22 +9,22 @@ import vert1 from '../shaders/heatmap1.vertex.glsl';
 import frag2 from '../shaders/heatmap2.fragment.glsl';
 import vert2 from '../shaders/heatmap2.vertex.glsl';
 
-import type Context from '../context/context';
-import type { HeatmapData } from 'workers/worker.spec';
-import type { TileGL as Tile } from 'source/tile.spec';
+import type Context from '../context/context.js';
+import type { HeatmapData } from 'workers/worker.spec.js';
+import type { TileGL as Tile } from 'source/tile.spec.js';
 import type {
   BBox,
   HeatmapDefinition,
   HeatmapStyle,
   HeatmapWorkflowLayerGuide,
   LayerDefinitionBase,
-} from 'style/style.spec';
+} from 'style/style.spec.js';
 import type {
   HeatmapFeature as HeatmapFeatureSpec,
   HeatmapSource,
   HeatmapWorkflow as HeatmapWorkflowSpec,
   HeatmapWorkflowUniforms,
-} from './workflow.spec';
+} from './workflow.spec.js';
 
 /** Heatmap Feature is a standalone heatmap render storage unit that can be drawn to the GPU */
 export class HeatmapFeature extends Feature implements HeatmapFeatureSpec {

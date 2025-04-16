@@ -1,8 +1,8 @@
-import getEasingFunction from './easingFunctions';
-import parseFilter from './parseFilter';
+import getEasingFunction from './easingFunctions.js';
+import parseFilter from './parseFilter.js';
 
-import type { FilterFunction } from './parseFilter';
-import type { Properties } from 'gis-tools';
+import type { FilterFunction } from './parseFilter.js';
+import type { Properties } from 'gis-tools/index.js';
 import type {
   DataCondition,
   DataRangeEase,
@@ -16,7 +16,7 @@ import type {
   NumberColor,
   Property,
   ValueType,
-} from './style.spec';
+} from './style.spec.js';
 
 /** Data Condition wrapper */
 interface DataConditionList<U> {

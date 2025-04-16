@@ -1,14 +1,13 @@
-import { GPUType } from 'style/style.spec';
-import parseFeatureFunction from 'style/parseFeatureFunction';
-import parseFilter from 'style/parseFilter';
-import VectorWorker, { colorFunc, idToRGB } from './vectorWorker';
-import { drawLine, featureSort, scaleShiftClip } from './util';
+import parseFeatureFunction from 'style/parseFeatureFunction.js';
+import parseFilter from 'style/parseFilter.js';
+import VectorWorker, { colorFunc, idToRGB } from './vectorWorker.js';
+import { drawLine, featureSort, scaleShiftClip } from './util/index.js';
 
-import type { CodeDesign } from './vectorWorker';
-import type { VectorMultiLineString } from 'gis-tools';
-import type { Cap, Join, LineDefinition, LineWorkerLayer } from 'style/style.spec';
-import type { LineData, TileRequest } from '../worker.spec';
-import type { LineFeature, LineWorker as LineWorkerSpec, VTFeature } from './process.spec';
+import type { CodeDesign } from './vectorWorker.js';
+import type { VectorMultiLineString } from 'gis-tools/index.js';
+import type { Cap, Join, LineDefinition, LineWorkerLayer } from 'style/style.spec.js';
+import type { LineData, TileRequest } from '../worker.spec.js';
+import type { LineFeature, LineWorker as LineWorkerSpec, VTFeature } from './process.spec.js';
 
 /** Worker for processing line data */
 export default class LineWorker extends VectorWorker implements LineWorkerSpec {
@@ -131,7 +130,7 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
       vertices,
       lengthSoFar,
       layerIndex,
-      code: gpuType === GPUType.WebGL1 ? gl1Code : gl2Code,
+      code: gpuType === 1 ? gl1Code : gl2Code,
       gl2Code,
       idRGB: idToRGB(id),
     };

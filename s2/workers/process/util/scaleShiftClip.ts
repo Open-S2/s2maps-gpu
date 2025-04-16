@@ -1,4 +1,4 @@
-import type { TileRequest } from 'workers/worker.spec';
+import type { TileRequest } from 'workers/worker.spec.js';
 import type {
   VectorCoordinates,
   VectorLineString,
@@ -7,7 +7,7 @@ import type {
   VectorMultiPolygon,
   VectorPoint,
   VectorPolygon,
-} from 'gis-tools';
+} from 'gis-tools/index.js';
 /**
  * Source data may only tilelize data to a certain max zoom, but we may request a tile at a higher zoom
  * Therefore we scale, shift, and clip the geometry as needed for that specific higher zoomed tile.

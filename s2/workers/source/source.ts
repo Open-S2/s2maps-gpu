@@ -1,6 +1,6 @@
-import { idParent, idToIJ } from 'gis-tools';
+import { idParent, idToIJ } from 'gis-tools/index.js';
 
-import type { Session } from '.';
+import type { Session } from './index.js';
 import type {
   Attributions,
   Encoding,
@@ -11,8 +11,8 @@ import type {
   SourceMetadata,
   SourceType,
   VectorLayer,
-} from 'style/style.spec';
-import type { ParentLayers, SourceFlushMessage, TileRequest } from '../worker.spec';
+} from 'style/style.spec.js';
+import type { ParentLayers, SourceFlushMessage, TileRequest } from '../worker.spec.js';
 
 /**
  * # Generic Data Source Container

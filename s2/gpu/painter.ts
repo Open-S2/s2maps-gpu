@@ -1,4 +1,4 @@
-import { WebGPUContext } from './context';
+import { WebGPUContext } from './context/index.js';
 import {
   FillWorkflow,
   GlyphWorkflow,
@@ -10,14 +10,14 @@ import {
   ShadeWorkflow,
   SkyboxWorkflow,
   WallpaperWorkflow,
-} from './workflows';
+} from './workflows/index.js';
 
-import type { ColorMode } from 's2Map';
-import type { GlyphImages } from 'workers/source/glyphSource';
-import type { MapOptions } from 'ui/s2mapUI';
-import type Projector from 'ui/camera/projector';
-import type { TileGPU as Tile } from 'source/tile.spec';
-import type TimeCache from 'ui/camera/timeCache';
+import type { ColorMode } from 's2/s2Map.js';
+import type { GlyphImages } from 'workers/source/glyphSource.js';
+import type { MapOptions } from 'ui/s2mapUI.js';
+import type Projector from 'ui/camera/projector/index.js';
+import type { TileGPU as Tile } from 'source/tile.spec.js';
+import type TimeCache from 'ui/camera/timeCache.js';
 import type {
   Features,
   GlyphFeature,
@@ -26,8 +26,8 @@ import type {
   WorkflowImports,
   WorkflowType,
   Workflows,
-} from './workflows/workflow.spec';
-import type { PainterData, SpriteImageMessage } from 'workers/worker.spec';
+} from './workflows/workflow.spec.js';
+import type { PainterData, SpriteImageMessage } from 'workers/worker.spec.js';
 
 /**
  * # GPU Painter

@@ -1,5 +1,5 @@
-import { project } from '../mat4';
-import { boxIntersects, pointBoundaries } from '.';
+import { project } from '../mat4.js';
+import { boxIntersects, pointBoundaries } from './index.js';
 
 import {
   bboxST,
@@ -12,9 +12,9 @@ import {
   pointMulScalar,
   pointNormalize,
   pointToIJ,
-} from 'gis-tools';
+} from 'gis-tools/index.js';
 
-import type { BBox, Face, S2CellId, VectorPoint } from 'gis-tools';
+import type { BBox, Face, S2CellId, VectorPoint } from 'gis-tools/index.js';
 
 /** Track the face-i-j positions */
 type FaceIJ = [face: number, i: number, j: number];

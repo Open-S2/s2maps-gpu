@@ -24,7 +24,7 @@ import type {
   Sprites,
   StyleDefinition,
   ValueType,
-} from 'style/style.spec';
+} from 'style/style.spec.js';
 import type {
   BackgroundLayerSpecification,
   CircleLayerSpecification,

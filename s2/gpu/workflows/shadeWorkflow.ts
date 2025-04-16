@@ -1,19 +1,19 @@
-import encodeLayerAttribute from 'style/encodeLayerAttribute';
+import encodeLayerAttribute from 'style/encodeLayerAttribute.js';
 import shaderCode from '../shaders/shade.wgsl';
 
-import type { TileGPU as Tile } from 'source/tile.spec';
-import type { WebGPUContext } from '../context';
+import type { TileGPU as Tile } from 'source/tile.spec.js';
+import type { WebGPUContext } from '../context/index.js';
 import type {
   LayerDefinitionBase,
   ShadeDefinition,
   ShadeStyle,
   ShadeWorkflowLayerGuideGPU,
-} from 'style/style.spec';
+} from 'style/style.spec.js';
 import type {
   MaskSource,
   ShadeFeature as ShadeFeatureSpec,
   ShadeWorkflow as ShadeWorkflowSpec,
-} from './workflow.spec';
+} from './workflow.spec.js';
 
 const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
   {

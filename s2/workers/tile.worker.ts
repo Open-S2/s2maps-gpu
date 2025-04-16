@@ -1,11 +1,11 @@
 import { VectorTile } from 'open-vector-tile';
 // import { parseLayers } style/conditionals'
-import ProcessManager from './process';
+import ProcessManager from './process/index.js';
 
-import type { VTTile } from './process/process.spec';
-import type { VectorGeometry } from 'gis-tools';
-import type { LayerDefinition, StylePackage } from 'style/style.spec';
-import type { TileRequest, TileWorkerMessages } from './worker.spec';
+import type { VTTile } from './process/process.spec.js';
+import type { VectorGeometry } from 'gis-tools/index.js';
+import type { LayerDefinition, StylePackage } from 'style/style.spec.js';
+import type { TileRequest, TileWorkerMessages } from './worker.spec.js';
 
 /**
  * # Tile Worker

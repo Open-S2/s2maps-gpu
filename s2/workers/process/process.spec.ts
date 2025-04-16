@@ -1,6 +1,6 @@
-import type { GlyphObject } from './glyph/glyph.spec';
-import type { Features as PointHeatFeatures } from './point';
-import type { TileRequest } from '../worker.spec';
+import type { GlyphObject } from './glyph/glyph.spec.js';
+import type { Features as PointHeatFeatures } from './point.js';
+import type { TileRequest } from '../worker.spec.js';
 import type {
   Cap,
   ColorArray,
@@ -22,7 +22,7 @@ import type {
   RasterWorkerLayer,
   SensorDefinition,
   SensorWorkerLayer,
-} from 'style/style.spec';
+} from 'style/style.spec.js';
 import type {
   Properties,
   VectorGeometryType,
@@ -31,7 +31,7 @@ import type {
   VectorMultiPoint,
   VectorMultiPolygon,
   VectorMultiPolygonOffset,
-} from 'gis-tools';
+} from 'gis-tools/index.js';
 
 // 32bit: 4,294,967,295 --- 24bit: 16,777,216 --- 22bit: 4,194,304 --- 16bit: 65,535 --- 7bit: 128
 export const ID_MAX_SIZE = 1 << 22;

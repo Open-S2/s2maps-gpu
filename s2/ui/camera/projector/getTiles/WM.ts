@@ -1,9 +1,9 @@
-import { project } from '../mat4';
-import { boxIntersects, pointBoundaries } from '.';
-import { idFromIJ, isOutOfBoundsWM, llToTile, llToTilePx } from 'gis-tools';
+import { project } from '../mat4.js';
+import { boxIntersects, pointBoundaries } from './index.js';
+import { idFromIJ, isOutOfBoundsWM, llToTile, llToTilePx } from 'gis-tools/index.js';
 
-import type { Point3D } from 'gis-tools';
-import type Projector from '../';
+import type { Point3D } from 'gis-tools/index.js';
+import type Projector from '../index.js';
 
 /** Track the face-i-j positions */
 type ZoomXY = [zoom: number, x: number, y: number];

@@ -1,4 +1,4 @@
-import { projectX, projectY } from 'gis-tools';
+import { projectX, projectY } from 'gis-tools/index.js';
 
 /** A basic vector point that allows for arbitrary data */
 export interface Point<T> {

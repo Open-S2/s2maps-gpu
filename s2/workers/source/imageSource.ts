@@ -1,8 +1,8 @@
-import type { Glyph } from 'workers/process/glyph/familySource';
-import type { ImageExtensions } from 'style/style.spec';
-import type Session from './session';
-import type { SpriteImageMessage } from 'workers/worker.spec';
-import type TexturePack from './texturePack';
+import type { Glyph } from 'workers/process/glyph/familySource.js';
+import type { ImageExtensions } from 'style/style.spec.js';
+import type Session from './session.js';
+import type { SpriteImageMessage } from 'workers/worker.spec.js';
+import type TexturePack from './texturePack.js';
 
 /** Metadata for an image source */
 export type ImageMetadata = Record<string, Glyph>;

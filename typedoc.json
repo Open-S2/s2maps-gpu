@@ -1,5 +1,5 @@
 {
-  "entryPoints": ["s2/index.ts"], // Adjust to your main TypeScript file(s)
+  "entryPoints": ["s2/index.ts", "s2/plugins/index.ts"], // Adjust to your main TypeScript file(s)
   "plugin": [
     // https://github.com/Gerrit0/typedoc-plugin-coverage
     "typedoc-plugin-coverage"

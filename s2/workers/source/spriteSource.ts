@@ -1,7 +1,7 @@
-import ImageSource from './imageSource';
+import ImageSource from './imageSource.js';
 
-import type { SpriteImageMessage } from 'workers/worker.spec';
-import type { ImageMetadata, ImageSourceMetadata } from './imageSource';
+import type { SpriteImageMessage } from 'workers/worker.spec.js';
+import type { ImageMetadata, ImageSourceMetadata } from './imageSource.js';
 
 /** Sprite Metadata */
 export interface SpriteMetadata {

@@ -1,4 +1,4 @@
-import Color from './color';
+import Color from './color/index.js';
 
 import type {
   DataCondition,
@@ -11,7 +11,7 @@ import type {
   NumberColor,
   Property,
   ValueType,
-} from './style.spec';
+} from './style.spec.js';
 
 /**
  * This encoder is built for webgl/webgpu to parse for conditional drawing.

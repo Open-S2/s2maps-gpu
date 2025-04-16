@@ -1,6 +1,6 @@
-import { MAXLAT, llToPX, pxToLL } from 'gis-tools';
+import { MAXLAT, llToPX, pxToLL } from 'gis-tools/index.js';
 
-import type { VectorPoint } from 'gis-tools';
+import type { VectorPoint } from 'gis-tools/index.js';
 
 // https://github.com/proj4js/proj4js/blob/master/lib/projections/ortho.js
 const EPSLN = 1.0e-10;

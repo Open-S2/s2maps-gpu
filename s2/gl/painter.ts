@@ -1,5 +1,5 @@
 /** CONTEXTS */
-import { WebGL2Context, WebGLContext } from './context';
+import { WebGL2Context, WebGLContext } from './context/index.js';
 /** WORKFLOWS */
 import {
   FillWorkflow,
@@ -13,16 +13,16 @@ import {
   ShadeWorkflow,
   SkyboxWorkflow,
   WallpaperWorkflow,
-} from './workflows';
+} from './workflows/index.js';
 
-import type { ColorMode } from 's2Map';
-import type { GlyphImages } from 'workers/source/glyphSource';
-import type { MapOptions } from 'ui/s2mapUI';
-import type { Painter as PainterSpec } from './painter.spec';
-import type Projector from 'ui/camera/projector';
-import type { TileGL as Tile } from 'source/tile.spec';
-import type TimeCache from 'ui/camera/timeCache';
-import type { VectorPoint } from 'gis-tools';
+import type { ColorMode } from 's2/s2Map.js';
+import type { GlyphImages } from 'workers/source/glyphSource.js';
+import type { MapOptions } from 'ui/s2mapUI.js';
+import type { Painter as PainterSpec } from './painter.spec.js';
+import type Projector from 'ui/camera/projector/index.js';
+import type { TileGL as Tile } from 'source/tile.spec.js';
+import type TimeCache from 'ui/camera/timeCache.js';
+import type { VectorPoint } from 'gis-tools/index.js';
 import type {
   Features,
   GlyphFeature,
@@ -33,8 +33,8 @@ import type {
   WorkflowKey,
   WorkflowType,
   Workflows,
-} from './workflows/workflow.spec';
-import type { PainterData, SpriteImageMessage } from 'workers/worker.spec';
+} from './workflows/workflow.spec.js';
+import type { PainterData, SpriteImageMessage } from 'workers/worker.spec.js';
 
 /**
  * # WebGL(1|2) Painter
@@ -103,7 +103,7 @@ export default class Painter implements PainterSpec {
       /** @returns a raster rendering tool */
       raster: async () => await new RasterWorkflow(context),
       /** @returns a sensor rendering tool */
-      sensor: async () => await import('./workflows/sensorWorkflow'),
+      sensor: async () => await import('./workflows/sensorWorkflow.js'),
       /** @returns a shade rendering tool */
       shade: async () => await new ShadeWorkflow(context),
       /** @returns a skybox rendering tool */

@@ -1,7 +1,7 @@
-import coalesceField from './coalesceField';
+import coalesceField from './coalesceField.js';
 
-import type { Properties } from 'gis-tools';
-import type { Comparator, NestedKey, NotNullOrObject } from './style.spec';
+import type { Properties } from 'gis-tools/index.js';
+import type { Comparator, NestedKey, NotNullOrObject } from './style.spec.js';
 
 // examples:
 // filter: { key: 'class', comparator: '==', value: 'ocean' }

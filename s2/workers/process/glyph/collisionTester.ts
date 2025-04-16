@@ -1,4 +1,4 @@
-import type { Node, RoundNodes, SquareNode } from './glyph.spec';
+import type { Node, RoundNodes, SquareNode } from './glyph.spec.js';
 
 /** Generic compare function */
 export type CompareFunction = (a: Node, b: Node) => number;

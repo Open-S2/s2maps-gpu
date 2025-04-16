@@ -1,8 +1,8 @@
-import type Camera from 'ui/camera';
-import type { WorkflowType as GLWorkflowType } from 'gl/workflows/workflow.spec';
-import type { WorkflowType as GPUWorkflowType } from 'gpu/workflows/workflow.spec';
-import type { MapOptions } from 'ui/s2mapUI';
-import type { TileShared as Tile } from 'source/tile.spec';
+import type Camera from 'ui/camera/index.js';
+import type { WorkflowType as GLWorkflowType } from 'gl/workflows/workflow.spec.js';
+import type { WorkflowType as GPUWorkflowType } from 'gpu/workflows/workflow.spec.js';
+import type { MapOptions } from 'ui/s2mapUI.js';
+import type { TileShared as Tile } from 'source/tile.spec.js';
 import type {
   Analytics,
   FillDefinition,
@@ -12,8 +12,8 @@ import type {
   ShadeDefinition,
   StyleDefinition,
   StylePackage,
-} from './style.spec';
-import type { RequestStyleMessage, TileRequest } from 'workers/worker.spec';
+} from './style.spec.js';
+import type { RequestStyleMessage, TileRequest } from 'workers/worker.spec.js';
 
 /**
  * # Style Engine

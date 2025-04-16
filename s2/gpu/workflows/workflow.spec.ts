@@ -1,10 +1,10 @@
-import type { BBox } from 'gis-tools';
-import type Projector from 'ui/camera/projector';
-import type S2MapUI from 'ui/s2mapUI';
-import type { SensorTextureDefinition } from 'ui/camera/timeCache';
-import type { TileGPU as Tile } from 'source/tile.spec';
-import type TimeCache from 'ui/camera/timeCache';
-import type { WebGPUContext } from '../context';
+import type { BBox } from 'gis-tools/index.js';
+import type Projector from 'ui/camera/projector/index.js';
+import type S2MapUI from 'ui/s2mapUI.js';
+import type { SensorTextureDefinition } from 'ui/camera/timeCache.js';
+import type { TileGPU as Tile } from 'source/tile.spec.js';
+import type TimeCache from 'ui/camera/timeCache.js';
+import type { WebGPUContext } from '../context/index.js';
 import type {
   FillData,
   GlyphData,
@@ -15,7 +15,7 @@ import type {
   PointData,
   RasterData,
   SensorData,
-} from 'workers/worker.spec';
+} from 'workers/worker.spec.js';
 import type {
   FillDefinition,
   FillStyle,
@@ -46,7 +46,7 @@ import type {
   ShadeStyle,
   ShadeWorkflowLayerGuideGPU,
   StyleDefinition,
-} from 'style/style.spec';
+} from 'style/style.spec.js';
 
 // SOURCES
 

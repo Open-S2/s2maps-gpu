@@ -1,12 +1,12 @@
-import type { ColorMode } from 's2/s2Map';
-import type { GlyphImages } from 'workers/source/glyphSource';
-import type Projector from 'ui/camera/projector';
-import type { TileGL as Tile } from 'source/tile.spec';
-import type TimeCache from 'ui/camera/timeCache';
-import type { VectorPoint } from 'gis-tools';
-import type { PainterData, SpriteImageMessage } from 'workers/worker.spec';
-import type { WebGL2Context, WebGLContext } from './context';
-import type { WorkflowKey, WorkflowType, Workflows } from './workflows/workflow.spec';
+import type { ColorMode } from 's2/s2Map.js';
+import type { GlyphImages } from 'workers/source/glyphSource.js';
+import type Projector from 'ui/camera/projector/index.js';
+import type { TileGL as Tile } from 'source/tile.spec.js';
+import type TimeCache from 'ui/camera/timeCache.js';
+import type { VectorPoint } from 'gis-tools/index.js';
+import type { PainterData, SpriteImageMessage } from 'workers/worker.spec.js';
+import type { WebGL2Context, WebGLContext } from './context/index.js';
+import type { WorkflowKey, WorkflowType, Workflows } from './workflows/workflow.spec.js';
 
 /** A generic painter interface. */
 export interface Painter {

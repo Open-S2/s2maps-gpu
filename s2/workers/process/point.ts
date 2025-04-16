@@ -1,25 +1,24 @@
-import { GPUType } from 'style/style.spec';
-import parseFeatureFunction from 'style/parseFeatureFunction';
-import parseFilter from 'style/parseFilter';
-import VectorWorker, { colorFunc, idToRGB } from './vectorWorker';
-import { featureSort, scaleShiftClip } from './util';
+import parseFeatureFunction from 'style/parseFeatureFunction.js';
+import parseFilter from 'style/parseFilter.js';
+import VectorWorker, { colorFunc, idToRGB } from './vectorWorker.js';
+import { featureSort, scaleShiftClip } from './util/index.js';
 
-import type { CodeDesign } from './vectorWorker';
-import type { HeatmapData, PointData, TileRequest } from '../worker.spec';
+import type { CodeDesign } from './vectorWorker.js';
+import type { HeatmapData, PointData, TileRequest } from '../worker.spec.js';
 import type {
   HeatmapDefinition,
   HeatmapWorkerLayer,
   PointDefinition,
   PointWorkerLayer,
-} from 'style/style.spec';
+} from 'style/style.spec.js';
 import type {
   HeatmapFeature,
   PointFeature,
   PointWorker as PointWorkerSpec,
   VTFeature,
-} from './process.spec';
+} from './process.spec.js';
 
-import type { VectorGeometryType, VectorMultiPoint } from 'gis-tools';
+import type { VectorGeometryType, VectorMultiPoint } from 'gis-tools/index.js';
 
 /** Internal organization to hold specific point features */
 export interface Features {
@@ -141,9 +140,9 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
     if (vertices.length === 0) return false;
 
     const codeLoBoth = getCode(zoom, properties);
-    const codeLo = codeLoBoth[gpuType === GPUType.WebGL1 ? 0 : 1];
+    const codeLo = codeLoBoth[gpuType === 1 ? 0 : 1];
     const gl2Code = codeLoBoth[1];
-    const codeHi = getCode(zoom + 1, properties)[gpuType === GPUType.WebGL1 ? 0 : 1];
+    const codeHi = getCode(zoom + 1, properties)[gpuType === 1 ? 0 : 1];
     const typeFeature = {
       vertices,
       layerIndex,

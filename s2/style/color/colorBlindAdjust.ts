@@ -1,7 +1,7 @@
 // https://www.nature.com/articles/nmeth.1618
 // http://www.daltonize.org/
 // https://galactic.ink/labs/Color-Vision/Javascript/Color.Vision.Daltonize.js
-import type { ColorArray } from './';
+import type { ColorArray } from './index.js';
 
 /** color vision deficiency types */
 export interface CVDType {

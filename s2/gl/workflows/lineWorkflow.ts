@@ -1,6 +1,6 @@
-import { buildDashImage } from 'style/color';
-import encodeLayerAttribute from 'style/encodeLayerAttribute';
-import Workflow, { Feature } from './workflow';
+import { buildDashImage } from 'style/color/index.js';
+import encodeLayerAttribute from 'style/encodeLayerAttribute.js';
+import Workflow, { Feature } from './workflow.js';
 
 // WEBGL1
 import frag1 from '../shaders/line1.fragment.glsl';
@@ -9,22 +9,22 @@ import vert1 from '../shaders/line1.vertex.glsl';
 import frag2 from '../shaders/line2.fragment.glsl';
 import vert2 from '../shaders/line2.vertex.glsl';
 
-import type Context from '../context/context';
-import type { LineData } from 'workers/worker.spec';
-import type { TileGL as Tile } from 'source/tile.spec';
+import type Context from '../context/context.js';
+import type { LineData } from 'workers/worker.spec.js';
+import type { TileGL as Tile } from 'source/tile.spec.js';
 import type {
   ColorArray,
   LayerDefinitionBase,
   LineDefinition,
   LineStyle,
   LineWorkflowLayerGuide,
-} from 'style/style.spec';
+} from 'style/style.spec.js';
 import type {
   LineFeature as LineFeatureSpec,
   LineSource,
   LineWorkflow as LineWorkflowSpec,
   LineWorkflowUniforms,
-} from './workflow.spec';
+} from './workflow.spec.js';
 
 /** Line Feature is a standalone line render storage unit that can be drawn to the GPU */
 export class LineFeature extends Feature implements LineFeatureSpec {
