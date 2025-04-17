@@ -1396,9 +1396,9 @@ export type ColorRamp = 'sinebow' | 'sinebow-extended' | ColorRampInput[];
  * - `opacity`: the opacity of the fill. Choose between [0, 1], or pull out the value using a {@link Property}.
  *
  * ### Optional layout properties:
- * - `pattern`
- * - `patternMovement`
- * - `patternFamily`
+ * - `pattern`: Draw a pattern on the fill given an input image. Input either a `string` pull out the value using a {@link PropertyOnlyStep}.
+ * - `patternMovement`: Boolean flag. If true, the pattern will move with the map rather than being static. Input either a `boolean` or pull out the value using a {@link PropertyOnlyStep}.
+ * - `patternFamily`: If left as the default, the pattern will be searched within any images added to the style. Otherwise use a sprite sheet. Input is either a string to the sprite sheet name, or pull out the value using a {@link PropertyOnlyStep}.
  *
  * ### Optional properties:
  * - `invert`: if true, invert where the fill is drawn to on the map
@@ -1427,9 +1427,9 @@ export interface FillStyle extends LayerStyleBase {
    * - `opacity` the opacity of the fill. Choose between [0, 1], or pull out the value using a {@link Property}.
    *
    * ### Optional layout properties:
-   * - `pattern`
-   * - `patternMovement`
-   * - `patternFamily`
+   * - `pattern`: Draw a pattern on the fill given an input image. Input either a `string` pull out the value using a {@link PropertyOnlyStep}.
+   * - `patternMovement`: Boolean flag. If true, the pattern will move with the map rather than being static. Input either a `boolean` or pull out the value using a {@link PropertyOnlyStep}.
+   * - `patternFamily`: If left as the default, the pattern will be searched within any images added to the style. Otherwise use a sprite sheet. Input is either a string to the sprite sheet name, or pull out the value using a {@link PropertyOnlyStep}.
    *
    * ### Optional properties:
    * - `invert`: if true, invert where the fill is drawn to on the map
@@ -2703,9 +2703,9 @@ export type Join = 'bevel' | 'miter' | 'round';
  * - `gapwidth`: split the line into two segments to reduce rendering artifacts
  *
  * ### Optional layout properties:
- * - `cap`: the cap of the line. Either `butt`, `square`, or `round`
- * - `join`: the joiner used for the line. Either `bevel`, `miter`, or `round`
- * - `dasharray`: A sequence of lengths and gaps that describe the pattern of dashes and gaps used to draw the line
+ * - `cap`: [See {@link Cap}] the cap of the line. Either `butt`, `square`, or `round`
+ * - `join`: [See {@link Join}] the joiner used for the line. Either `bevel`, `miter`, or `round`
+ * - `dasharray`: A sequence of lengths and gaps that describe the pattern of dashes and gaps used to draw the line. Written as `Array<[length: number, color: string]>`
  *
  * ### Optional properties:
  * - `geoFilter`: [See {@link GeoFilter}] filter the geometry types that will be drawn.
@@ -2735,9 +2735,9 @@ export interface LineStyle extends LayerStyleBase {
    * - `gapwidth`: split the line into two segments to reduce rendering artifacts
    *
    * ### Optional layout properties:
-   * - `cap`: the cap of the line. Either `butt`, `square`, or `round`
-   * - `join`: the joiner used for the line. Either `bevel`, `miter`, or `round`
-   * - `dasharray`: A sequence of lengths and gaps that describe the pattern of dashes and gaps used to draw the line
+   * - `cap`: [See {@link Cap}] the cap of the line. Either `butt`, `square`, or `round`
+   * - `join`: [See {@link Join}] the joiner used for the line. Either `bevel`, `miter`, or `round`
+   * - `dasharray`: A sequence of lengths and gaps that describe the pattern of dashes and gaps used to draw the line. Written as `Array<[length: number, color: string]>`
    *
    * ### Optional properties:
    * - `geoFilter`: [See {@link GeoFilter}] filter the geometry types that will be drawn. Options are `point`, `line`, `poly`.
@@ -2912,7 +2912,7 @@ export interface LineStyle extends LayerStyleBase {
    * { "dasharray": [ [30, "#bbd3de"], [12, "rgba(255, 255, 255, 0)"] ] }
    * ```
    */
-  dasharray?: Array<[number, string]>;
+  dasharray?: Array<[length: number, color: string]>;
   /**
    * Filter the geometry types that will be drawn.
    * An empty array will supports both `line` & `polygon` geometry types.
@@ -2990,9 +2990,9 @@ export interface LineWorkerLayer extends LayerWorkerBase {
  *
  * ### Optional paint properties:
  * - `color`: {@link Color} of the point. Input either a `string` pull out the value using a {@link Property}.
- * - `radius`
+ * - `radius`: radial size of the point in pixels. Input either a `number` pull out the value using a {@link Property}.
  * - `stroke`: {@link Color} of the stroke. Input either a `string` pull out the value using a {@link Property}.
- * - `strokeWidth`
+ * - `strokeWidth`: the width of the stroke in pixels. Input either a `number` pull out the value using a {@link Property}.
  * - `opacity`: the opacity of the point. Choose between [0, 1], or pull out the value using a {@link Property}.
  *
  * ### Optional properties:
@@ -3018,9 +3018,9 @@ export interface PointStyle extends LayerStyleBase {
    *
    * ### Optional paint properties:
    * - `color`: {@link Color} of the point. Input either a `string` pull out the value using a {@link Property}.
-   * - `radius`
+   * - `radius`: radial size of the point in pixels. Input either a `number` pull out the value using a {@link Property}.
    * - `stroke`: {@link Color} of the stroke. Input either a `string` pull out the value using a {@link Property}.
-   * - `strokeWidth`
+   * - `strokeWidth`: the width of the stroke in pixels. Input either a `number` pull out the value using a {@link Property}.
    * - `opacity`: the opacity of the point. Choose between [0, 1], or pull out the value using a {@link Property}.
    *
    * ### Optional properties:
@@ -3220,11 +3220,11 @@ export type Resampling = GPUFilterMode;
  *
  * ### Optional paint properties:
  * - `opacity`: the opacity of the raster. Choose between [0, 1], or pull out the value using a {@link Property}.
- * - `saturation`
- * - `contrast`
+ * - `saturation`: the saturation of the raster. Choose between [-1, 1], or pull out the value using a {@link Property}.
+ * - `contrast`: the contrast of the raster. Choose between [-1, 1], or pull out the value using a {@link Property}.
  *
  * ### Optional layout properties:
- * - `resampling`: The resampling method. Either `nearest` or `linear`
+ * - `resampling`: [See {@link Resampling}] The resampling method. Either `nearest` or `linear`
  * - `fadeDuration`: The time it takes for each raster tile to fade in and out of view in milliseconds
  */
 export interface RasterStyle extends LayerStyleBase {
@@ -3245,11 +3245,11 @@ export interface RasterStyle extends LayerStyleBase {
    *
    * ### Optional paint properties:
    * - `opacity`: the opacity of the raster. Choose between [0, 1], or pull out the value using a {@link Property}.
-   * - `saturation`
-   * - `contrast`
+   * - `saturation`: the saturation of the raster. Choose between [-1, 1], or pull out the value using a {@link Property}.
+   * - `contrast`: the contrast of the raster. Choose between [-1, 1], or pull out the value using a {@link Property}.
    *
    * ### Optional layout properties:
-   * - `resampling`: The resampling method. Either `nearest` or `linear`
+   * - `resampling`: [See {@link Resampling}] The resampling method. Either `nearest` or `linear`
    * - `fadeDuration`: The time it takes for each raster tile to fade in and out of view in milliseconds
    */
   type: 'raster';
@@ -3397,11 +3397,11 @@ export type UnpackData = [
  *
  * ### Optional paint properties:
  * - `opacity`: the opacity of the hillshade. Choose between [0, 1], or pull out the value using a {@link Property}.
- * - `azimuth`
- * - `altitude`
- * - `shadowColor`
- * - `highlightColor`
- * - `accentColor`
+ * - `azimuth`: the azimuth of the sun's position casting the light in degrees [0, 360]. Input a `number` or pull out the value using a {@link Property}.
+ * - `altitude`: the altitude of the raster in degrees [0, 90]. Input a `number` or pull out the value using a {@link Property}.
+ * - `shadowColor`: {@link Color} of the shadows. Input either a `string` pull out the value using a {@link Property}.
+ * - `highlightColor`: {@link Color} of the highlights. Input either a `string` pull out the value using a {@link Property}.
+ * - `accentColor`: {@link Color} of the accents. Input either a `string` pull out the value using a {@link Property}.
  *
  * ### Optional layout properties:
  * - `fadeDuration`: The time it takes for each raster tile to fade in and out of view in milliseconds
@@ -3425,11 +3425,11 @@ export interface HillshadeStyle extends LayerStyleBase {
    *
    * ### Optional paint properties:
    * - `opacity`: the opacity of the hillshade. Choose between [0, 1], or pull out the value using a {@link Property}.
-   * - `azimuth`
-   * - `altitude`
-   * - `shadowColor`
-   * - `highlightColor`
-   * - `accentColor`
+   * - `azimuth`: the azimuth of the sun's position casting the light in degrees [0, 360]. Input a `number` or pull out the value using a {@link Property}.
+   * - `altitude`: the altitude of the raster in degrees [0, 90]. Input a `number` or pull out the value using a {@link Property}.
+   * - `shadowColor`: {@link Color} of the shadows. Input either a `string` pull out the value using a {@link Property}.
+   * - `highlightColor`: {@link Color} of the highlights. Input either a `string` pull out the value using a {@link Property}.
+   * - `accentColor`: {@link Color} of the accents. Input either a `string` pull out the value using a {@link Property}.
    *
    * ### Optional layout properties:
    * - `fadeDuration`: The time it takes for each raster tile to fade in and out of view in milliseconds

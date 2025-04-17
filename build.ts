@@ -11,9 +11,9 @@ await Bun.build({
   entrypoints: [
     './s2/index.ts',
     // './s2/ui/s2mapUI.ts',
-    // './s2/workers/map.worker.ts',
-    // './s2/workers/source.worker.ts',
-    // './s2/workers/tile.worker.ts',
+    './s2/workers/map.worker.ts',
+    './s2/workers/source.worker.ts',
+    './s2/workers/tile.worker.ts',
   ],
   outdir: './buildS2-local',
   minify: false,
@@ -21,7 +21,8 @@ await Bun.build({
   splitting: true,
   target: 'browser',
   publicPath: `https://opens2.com/s2maps-gpu/v${version}/`,
-  naming: '[name]-[hash].[ext]',
+  // naming: '[name]-[hash].[ext]',
+  naming: '[name].[ext]',
   plugins: [GlslPlugin, WgslPlugin],
 });
 

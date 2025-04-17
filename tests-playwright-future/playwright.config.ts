@@ -56,20 +56,6 @@ export default defineConfig({
           extensions: ['vue'],
         }),
       ],
-      // resolve: {
-      //   alias: {
-      //     s2: resolve(__dirname, '../s2'),
-      //     //     geometry: resolve(__dirname, '../s2/geometry'),
-      //     //     gl: resolve(__dirname, '../s2/gl'),
-      //     //     gpu: resolve(__dirname, '../s2/gpu'),
-      //     //     plugins: resolve(__dirname, '../s2/plugins'),
-      //     //     source: resolve(__dirname, '../s2/source'),
-      //     //     style: resolve(__dirname, '../s2/style'),
-      //     //     ui: resolve(__dirname, '../s2/ui'),
-      //     //     util: resolve(__dirname, '../s2/util'),
-      //     //     workers: resolve(__dirname, '../s2/workers')
-      //   },
-      // },
     },
   },
 
