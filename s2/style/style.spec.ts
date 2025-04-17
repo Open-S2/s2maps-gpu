@@ -211,6 +211,8 @@ export type Icons = Glyphs;
  *
  * If you want to use a different format, you can use an object instead of a string.
  *
+ * See {@link UrlMap} to use your own scheme/protocol for the URL path.
+ *
  * ### Parameters
  * - `path`: The path to the sprite
  * - `fileType`: The file type of the sprite
@@ -1553,6 +1555,8 @@ export interface FillStyle extends LayerStyleBase {
    *    sprites: { fishSprites: { path: 'http://...' } }
    * }
    * ```
+   *
+   * See {@link UrlMap} to use your own scheme/protocol for the URL path.
    *
    * You can then add to the layer:
    *
@@ -4247,6 +4251,8 @@ export interface StyleDefinition {
    *
    * If you want to use a different format, you can use an object instead of a string.
    *
+   * See {@link UrlMap} to use your own scheme/protocol for the URL path.
+   *
    * ex.
    * ```json
    * "sprites": {
@@ -4277,6 +4283,8 @@ export interface StyleDefinition {
   images?: Record<string, string>;
   /**
    * Skybox is often used as a background feature for raster data. Uses a skybox image to render to the screen.
+   *
+   * See {@link UrlMap} to use your own scheme/protocol for the URL path.
    *
    * ex.
    * ```json
