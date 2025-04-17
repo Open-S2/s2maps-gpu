@@ -25,7 +25,7 @@ import type {
   VectorLayer,
   WMBounds,
 } from 's2-tilejson';
-import type { Filter, FilterFunction } from 'style/parseFilter.js';
+import type { Filter, FilterFunction } from './parseFilter.js';
 
 export type { ClusterOptions } from 'workers/source/pointCluster/index.js';
 export type {
@@ -318,9 +318,8 @@ export type Comparator = '==' | '!=' | '>' | '>=' | '<' | '<=' | 'in' | '!in' | 
  * Access value in feature properties by either its key or dive into a neste key
  *
  * ### Key
- * If the key is immediately accessible, set the key.
- * If the key is `class` for example, this would be used to filter feature's values where
- * `feature.properties.class === 'ocean'`
+ * - If the key is immediately accessible, set the key.
+ * - If the key is `class` for example, this would be used to filter feature's values where `feature.properties.class === 'ocean'`
  *
  * ex.
  * ```json
@@ -328,8 +327,8 @@ export type Comparator = '==' | '!=' | '>' | '>=' | '<' | '<=' | 'in' | '!in' | 
  * ```
  *
  * ### Nested Key
- *
- * nested conditions are used to dive into nested properties
+ * - Nested conditions are used to dive into nested properties
+ * - If the feature properties has say `feature.properties.class.type === 'ocean'` and we want to access the `type` key
  *
  * ex.
  * ```json
@@ -387,7 +386,7 @@ export interface NestedKey {
  * ```
  *
  * ### Properties:
- * - `key`: Access value in feature properties by either its key or a nested key.
+ * - `key`: [See {@link NestedKey}] Access value in feature properties by either its key or a nested key.
  * - `fallback`: If the property search for a key turns up no value, the fallback is used.
  */
 export interface InputValue<T extends NotNullOrObject> {
@@ -397,6 +396,7 @@ export interface InputValue<T extends NotNullOrObject> {
    * If the key is `class` for example, this would be used to filter feature's values where `feature.properties.class === 'ocean'`
    *
    * nested conditions are used to dive into nested properties
+   *
    * ex.
    * ```json
    * { "filter": { "nestedKey": "class", "key": { "key": "type", "comparator": "==", "value": "ocean" } } }
@@ -409,11 +409,40 @@ export interface InputValue<T extends NotNullOrObject> {
 }
 
 /**
+ * # Condition
+ *
+ * Data conditions are used to filter features based on what property values the feature has.
+ * - If the condition's filter passes, the input is used.
+ * - If all conditions fail, the fallback is used.
+ *
+ * ### Properties:
+ * - `filter`: [See {@link Filter}] Filter conditions are used to filter features based on what property values the feature has.
+ * - `input`: [See {@link Property}] Input values directly access properties data from the feature. The input value must be a {@link NotNullOrObject}
+ *
+ * ex.
+ * ```json
+ * {
+ *   "filter": { "key": "country", "comparator": "==", "value": "US" },
+ *   "input": "#007bfe"
+ * }
+ * ```
+ */
+export interface ConditionFilter<T extends NotNullOrObject> {
+  filter: Filter;
+  input: T | Property<T>;
+}
+
+/**
  * # Data Condition
  *
  * Data conditions are used to filter features based on what property values the feature has.
- * If the condition's filter passes, the input is used.
- * If all conditions fail, the fallback is used.
+ * - If the condition's filter passes, the input is used.
+ * - If all conditions fail, the fallback is used.
+ * - Input value must be at a minimum a {@link NotNullOrObject}
+ *
+ * ### Properties:
+ * - `conditions`: [See {@link ConditionFilter}] array of `{ filter: Filter, input: T | Property<T> }`. If Filter passes, the input is used
+ * - `fallback`: if all else fails, use this value. A value of `T` itself or pull from feature properties using {@link Property}
  *
  * ex.
  * ```json
@@ -430,24 +459,45 @@ export interface InputValue<T extends NotNullOrObject> {
  * }
  * ```
  *
- * ### Properties:
- * - `conditions`: array of `{ filter: Filter, input: T | Property<T> }`. If Filter passes, the input is used
- * - `fallback`: The Value `T` or a `Property<T>`. If the conditional search failed, the fallback is used.
  */
 export interface DataCondition<T extends NotNullOrObject> {
   /**
    * conditions is an array of `{ filter: Filter, input: T | Property<T> }`
    * If the filter passes, the input is used.
    */
-  conditions: Array<{
-    filter: Filter;
-    input: T | Property<T>;
-  }>;
+  conditions: ConditionFilter<T>[];
   /** If the conditional search fails, the fallback is used. */
   fallback: T | Property<T>;
 }
 
-// export type DataRange<T extends NotNullOrObject> = DataRangeStep<T> | DataRangeEase<T>
+/** One of {@link DataRangeEase} or {@link DataRangeStep} */
+export type DataRange<T> = DataRangeEase<NumberColor<T>> | DataRangeStep<ValueType<T>>;
+
+/** One of {@link InputRangeEase} or {@link InputRangeStep} */
+export type InputRange<T> = InputRangeEase<NumberColor<T>> | InputRangeStep<ValueType<T>>;
+
+/**
+ * # Range
+ *
+ * Set the range stops and the input values to apply at those stops.
+ *
+ * ### Properties
+ * - `stop`: A stop point in the range.
+ * - `input`: [See {@link Property}] A value to apply at the stop. The input value must be a {@link NotNullOrObject}
+ *
+ * ex.
+ * ```json
+ * "ranges": [
+ *   { "stop": 0, "input": 0 },
+ *   { "stop": 5, "input": 0.5 },
+ *   { "stop": 8, "input": 1 }
+ * ]
+ * ```
+ */
+export interface Range<T extends NotNullOrObject> {
+  stop: number;
+  input: T | Property<T>;
+}
 
 /**
  * # Data Range Ease
@@ -471,10 +521,10 @@ export interface DataCondition<T extends NotNullOrObject> {
  * ```
  *
  * ### Properties:
- * - `key`: Access value in feature properties by either its key or a nested key.
+ * - `key`: [See {@link NestedKey}] Access value in feature properties by either its key or a nested key.
  * - `ease`: [See {@link EaseType}] The ease effect. Choose between `lin` | `expo` | `quad` | `cubic` | `step` [default: `lin`]
  * - `base`: Used by `expo`, `quad`, or `cubic` ease functions. Ranges from 0 -> 2 where 1 is linear, 0 is slow start, 2 is slow finish. [default: 1]
- * - `ranges`: Set the range stops and the input values to apply at those stops.
+ * - `ranges`: [See {@link Range}] Set the range stops and the input values to apply at those stops.
  */
 export interface DataRangeEase<T extends number | string> {
   /**
@@ -516,10 +566,7 @@ export interface DataRangeEase<T extends number | string> {
    * ]
    * ```
    */
-  ranges: Array<{
-    stop: number;
-    input: T | Property<T>;
-  }>;
+  ranges: Range<T>[];
 }
 
 /**
@@ -547,8 +594,8 @@ export interface DataRangeEase<T extends number | string> {
  *
  * ### Properties
  * - `ease`: Must be `"step"` if provided
- * - `key`: Access value in feature properties by either its key or a nested key.
- * - `ranges`: Set the range stops and the input values to apply at those stops.
+ * - `key`: [See {@link NestedKey}] Access value in feature properties by either its key or a nested key.
+ * - `ranges`: [See {@link Range}] Set the range stops and the input values to apply at those stops.
  */
 export interface DataRangeStep<T extends NotNullOrObject> {
   ease?: 'step';
@@ -558,6 +605,7 @@ export interface DataRangeStep<T extends NotNullOrObject> {
    * If the key is `class` for example, this would be used to filter feature's values where `feature.properties.class === 'ocean'`
    *
    * nested conditions are used to dive into nested properties
+   *
    * ex.
    * ```json
    * { "filter": { "nestedKey": "class", "key": { "key": "type", "comparator": "==", "value": "ocean" } } }
@@ -569,6 +617,7 @@ export interface DataRangeStep<T extends NotNullOrObject> {
   base?: number; // 0 -> 2
   /**
    * Set the range stops and the input values to apply at those stops.
+   * See {@link Range}
    *
    * ex.
    * ```json
@@ -579,10 +628,7 @@ export interface DataRangeStep<T extends NotNullOrObject> {
    * ]
    * ```
    */
-  ranges: Array<{
-    stop: number;
-    input: T | Property<T>;
-  }>;
+  ranges: Range<T>[];
 }
 
 /**
@@ -610,7 +656,7 @@ export interface DataRangeStep<T extends NotNullOrObject> {
  * - `type`: The type of input to use. Options are `zoom` | `lon` | `lat` | `angle` | `pitch`
  * - `ease`: [See {@link EaseType}] The ease effect. Choose between `lin` | `expo` | `quad` | `cubic` | `step` [default: `lin`]
  * - `base`: Used by `expo`, `quad`, or `cubic` ease functions. Ranges from 0 -> 2 where 1 is linear, 0 is slow start, 2 is slow finish. [default: 1]
- * - `ranges`: Set the range stops and the input values to apply at those stops.
+ * - `ranges`: [See {@link Range}] Set the range stops and the input values to apply at those stops.
  */
 export interface InputRangeEase<T extends number | string> {
   /** `zoom` | `lon` | `lat` | `angle` | `pitch` */
@@ -641,10 +687,7 @@ export interface InputRangeEase<T extends number | string> {
    * ]
    * ```
    */
-  ranges: Array<{
-    stop: number;
-    input: T | Property<T>;
-  }>;
+  ranges: Range<T>[];
 }
 
 /**
@@ -674,7 +717,7 @@ export interface InputRangeEase<T extends number | string> {
  * ### Properties
  * - `ease`: Must be `"step"`
  * - `type`: The type of input to use. Options are `zoom` | `lon` | `lat` | `angle` | `pitch`
- * - `ranges`: Set the range stops and the input values to apply at those stops.
+ * - `ranges`: [See {@link Range}] Set the range stops and the input values to apply at those stops.
  */
 export interface InputRangeStep<T extends NotNullOrObject> {
   ease: 'step';
@@ -694,10 +737,7 @@ export interface InputRangeStep<T extends NotNullOrObject> {
    * ]
    * ```
    */
-  ranges: Array<{
-    stop: number;
-    input: T | Property<T>;
-  }>;
+  ranges: Range<T>[];
 }
 
 /**
@@ -763,13 +803,13 @@ export type NumberColor<T> = T extends number | string ? T : never;
  * }
  * ```
  *
- * ### Your list of Property options are:
- * - `inputValue`: access value in feature properties
- * - `dataCondition`: filter based on feature property conditions
- * - `dataRange`: filter based on feature property ranges
- * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
- * - `featureState`: filter based on feature state
- * - `fallback`: if all else fails, use this value
+ * ### Your list of options are:
+ * - `inputValue`: [See {@link InputValue}] access value in feature properties
+ * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+ * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+ * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+ * - `featureState`: [See {@link FeatureState}] filter based on feature state
+ * - `fallback`: if all else fails, use this value. A value of `T` itself or pull from feature properties using {@link Property}
  */
 export interface Property<T extends NotNullOrObject> {
   /**
@@ -844,16 +884,16 @@ export interface Property<T extends NotNullOrObject> {
    * ex.
    * ```json
    * "color": {
-        "dataCondition": {
-          "conditions": [
-            {
-              "filter": { "key": "country", "comparator": "==", "value": "US" },
-              "input": "#007bfe"
-            }
-          ],
-          "fallback": "#23374d"
-        }
-      }
+   *    "dataCondition": {
+   *      "conditions": [
+   *        {
+   *          "filter": { "key": "country", "comparator": "==", "value": "US" },
+   *          "input": "#007bfe"
+   *         }
+   *      ],
+   *      "fallback": "#23374d"
+   *    }
+   *  }
    * ```
    *
    * ex.
@@ -999,12 +1039,12 @@ export interface Property<T extends NotNullOrObject> {
  * ```
  *
  * ### Your list of Property options are:
- * - `inputValue`: access value in feature properties
- * - `dataCondition`: filter based on feature property conditions
- * - `dataRange`: filter based on feature property ranges
- * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
- * - `featureState`: filter based on feature state
- * - `fallback`: if all else fails, use this value
+ * - `inputValue`: [See {@link InputValue}] access value in feature properties
+ * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+ * - `dataRange`: [See {@link DataRangeStep}] filter based on feature property ranges
+ * - `inputRange`: [See {@link InputRangeStep}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+ * - `featureState`: [See {@link FeatureState}] filter based on feature state
+ * - `fallback`: if all else fails, use this value. A value of `T` itself or pull from feature properties using {@link Property}
  */
 export interface PropertyOnlyStep<T extends NotNullOrObject> {
   /**
@@ -1056,16 +1096,16 @@ export interface PropertyOnlyStep<T extends NotNullOrObject> {
    * ex.
    * ```json
    * "color": {
-        "dataCondition": {
-          "conditions": [
-            {
-              "filter": { "key": "country", "comparator": "==", "value": "US" },
-              "input": "#007bfe"
-            }
-          ],
-          "fallback": "#23374d"
-        }
-      }
+   *    "dataCondition": {
+   *     "conditions": [
+   *       {
+   *         "filter": { "key": "country", "comparator": "==", "value": "US" },
+   *         "input": "#007bfe"
+   *       }
+   *     ],
+   *     "fallback": "#23374d"
+   *   }
+   * }
    * ```
    *
    * ex.
@@ -1074,20 +1114,20 @@ export interface PropertyOnlyStep<T extends NotNullOrObject> {
    *
    * ```json
    * "color": {
-        "dataCondition": {
-          "conditions": [
-            {
-              "filter": { "key": "__sum", "comparator": ">", "value": 750 },
-              "input": "#f28cb1"
-            },
-            {
-              "filter": { "key": "__sum", "comparator": ">", "value": 100 },
-              "input": "#f1f075"
-            }
-          ],
-          "fallback": "#51bbd6"
-        }
-      }
+   *    "dataCondition": {
+   *       "conditions": [
+   *         {
+   *           "filter": { "key": "__sum", "comparator": ">", "value": 750 },
+   *           "input": "#f28cb1"
+   *         },
+   *         {
+   *           "filter": { "key": "__sum", "comparator": ">", "value": 100 },
+   *           "input": "#f1f075"
+   *         }
+   *       ],
+   *       "fallback": "#51bbd6"
+   *     }
+   *   }
    * ```
    */
   dataCondition?: DataCondition<ValueType<T>>;
@@ -1352,8 +1392,8 @@ export type ColorRamp = 'sinebow' | 'sinebow-extended' | ColorRampInput[];
  * - `metadata`: additional metadata. Used by style generators
  *
  * ### Optional paint properties:
- * - `color`
- * - `opacity`
+ * - `color`: {@link Color} of the fill. Input either a `string` pull out the value using a {@link Property}.
+ * - `opacity`: the opacity of the fill. Choose between [0, 1], or pull out the value using a {@link Property}.
  *
  * ### Optional layout properties:
  * - `pattern`
@@ -1362,7 +1402,7 @@ export type ColorRamp = 'sinebow' | 'sinebow-extended' | ColorRampInput[];
  *
  * ### Optional properties:
  * - `invert`: if true, invert where the fill is drawn to on the map
- * - `interactive`: if true, when hovering over the fill, the property data will be sent to the UI via an Event
+ * - `interactive`: boolean flag. If true, when hovering over the fill, the property data will be sent to the UI via an Event
  * - `cursor`: [See {@link Cursor}] the cursor to use when hovering over the fill
  * - `opaque`: if true, the fill will be drawn opaque and not allow transparency. Used for performance gains.
  */
@@ -1383,8 +1423,8 @@ export interface FillStyle extends LayerStyleBase {
    * - `metadata`: additional metadata. Used by style generators
    *
    * ### Optional paint properties:
-   * - `color`: {@link Color} of the shade. Input either a `string` encoded color or wrap it in a {@link Property}.
-   * - `opacity`
+   * - `color`: {@link Color} of the fill. Input either a `string` pull out the value using a {@link Property}.
+   * - `opacity` the opacity of the fill. Choose between [0, 1], or pull out the value using a {@link Property}.
    *
    * ### Optional layout properties:
    * - `pattern`
@@ -1393,7 +1433,7 @@ export interface FillStyle extends LayerStyleBase {
    *
    * ### Optional properties:
    * - `invert`: if true, invert where the fill is drawn to on the map
-   * - `interactive`: if true, when hovering over the fill, the property data will be sent to the UI via an Event
+   * - `interactive`: boolean flag. If true, when hovering over the fill, the property data will be sent to the UI via an Event
    * - `cursor`: [See {@link Cursor}] the cursor to use when hovering over the fill
    * - `opaque`: if true, the fill will be drawn opaque and not allow transparency. Used for performance gains.
    */
@@ -1415,13 +1455,13 @@ export interface FillStyle extends LayerStyleBase {
    * { "color": { "inputValue": { "key": "type", "fallback": "blue" } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `string` itself or pull from feature properties using {@link Property}
    */
   color?: string | Property<string>;
   /**
@@ -1439,13 +1479,13 @@ export interface FillStyle extends LayerStyleBase {
    * { "opacity": { "inputValue": { "key": "opacity", "fallback": 1 } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `number` itself or pull from feature properties using {@link Property}
    */
   opacity?: number | Property<number>;
   // layout
@@ -1469,13 +1509,13 @@ export interface FillStyle extends LayerStyleBase {
    * { "type": "fill", "pattern": "whale" }
    * ```
    *
-   * Your list of PropertyOnlyStep options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link PropertyOnlyStep} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRangeStep}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRangeStep}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `string` itself or pull from feature properties using {@link Property}
    */
   pattern?: string | PropertyOnlyStep<string>;
   /**
@@ -1488,13 +1528,13 @@ export interface FillStyle extends LayerStyleBase {
    * { "type": "fill", "pattern": "whale", "patternMovement": true }
    * ```
    *
-   * Your list of PropertyOnlyStep options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link PropertyOnlyStep} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRangeStep}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRangeStep}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `boolean` itself or pull from feature properties using {@link Property}
    */
   patternMovement?: boolean | PropertyOnlyStep<boolean>;
   /**
@@ -1520,13 +1560,13 @@ export interface FillStyle extends LayerStyleBase {
    * { "type": "fill", "pattern": "whale", "patternFamily": "fishSprites" }
    * ```
    *
-   * Your list of PropertyOnlyStep options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link PropertyOnlyStep} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRangeStep}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRangeStep}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `string` itself or pull from feature properties using {@link Property}
    */
   patternFamily?: string | PropertyOnlyStep<string>;
   // properties
@@ -1643,7 +1683,7 @@ export type Placement = 'point' | 'line' | 'line-center-point' | 'line-center-pa
  * ### Optional properties:
  * - `geoFilter`: [See {@link GeoFilter}] filter the geometry types that will be drawn. Options are `point`, `line`, `poly`
  * - `overdraw`: if true, the layer will be drawn regardless of other glyph layers
- * - `interactive`: if true, when hovering over the glyph, the property data will be sent to the UI via an Event
+ * - `interactive`: boolean flag. If true, when hovering over the glyph, the property data will be sent to the UI via an Event
  * - `viewCollisions`: if true, the layer glyphs will display the collision boxes and colorize them based on if they are colliding or not
  * - `cursor`: [See {@link Cursor}] the cursor to use when hovering over the glyph
  */
@@ -1693,7 +1733,7 @@ export interface GlyphStyle extends LayerStyleBase {
    * ### Optional properties:
    * - `geoFilter`: [See {@link GeoFilter}] filter the geometry types that will be drawn. Options are `point`, `line`, `poly`
    * - `overdraw`: if true, the layer will be drawn regardless of other glyph layers
-   * - `interactive`: if true, when hovering over the glyph, the property data will be sent to the UI via an Event
+   * - `interactive`: boolean flag. If true, when hovering over the glyph, the property data will be sent to the UI via an Event
    * - `viewCollisions`: if true, the layer glyphs will display the collision boxes and colorize them based on if they are colliding or not
    * - `cursor`: [See {@link Cursor}] the cursor to use when hovering over the glyph
    */
@@ -1704,24 +1744,22 @@ export interface GlyphStyle extends LayerStyleBase {
    * @default `16`
    *
    * ex.
-   *
    * ```json
    * { "textSize": 24 }
    * ```
    *
    * ex.
-   *
    * ```json
    * { "textSize": { "inputValue": { "key": "size", "fallback": 36 } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `number` itself or pull from feature properties using {@link Property}
    */
   textSize?: number | Property<number>;
   /**
@@ -1729,24 +1767,22 @@ export interface GlyphStyle extends LayerStyleBase {
    * @default `"rgba(0, 0, 0, 1)"`
    *
    * ex.
-   *
    * ```json
    * { "textFill": "rgba(240, 2, 5, 1)" }
    * ```
    *
    * ex.
-   *
    * ```json
    * { "textFill": { "inputValue": { "key": "size", "fallback": "blue" } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `string` itself or pull from feature properties using {@link Property}
    */
   textFill?: string | Property<string>;
   /**
@@ -1754,24 +1790,22 @@ export interface GlyphStyle extends LayerStyleBase {
    * @default `"rgba(0, 0, 0, 1)"`
    *
    * ex.
-   *
    * ```json
    * { "textStroke": "rgba(240, 2, 5, 1)" }
    * ```
    *
    * ex.
-   *
    * ```json
    * { "textStroke": { "inputValue": { "key": "stroke", "fallback": "blue" } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `string` itself or pull from feature properties using {@link Property}
    */
   textStroke?: string | Property<string>;
   /**
@@ -1779,24 +1813,22 @@ export interface GlyphStyle extends LayerStyleBase {
    * @default `0`
    *
    * ex.
-   *
    * ```json
    * { "textStrokeWidth": 2 }
    * ```
    *
    * ex.
-   *
    * ```json
    * { "textStrokeWidth": { "inputValue": { "key": "strokeWidth", "fallback": 0 } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `number` itself or pull from feature properties using {@link Property}
    */
   textStrokeWidth?: number | Property<number>;
   /**
@@ -1804,24 +1836,22 @@ export interface GlyphStyle extends LayerStyleBase {
    * @default `16`
    *
    * ex.
-   *
    * ```json
    * { "iconSize": 24 }
    * ```
    *
    * ex.
-   *
    * ```json
    * { "iconSize": { "inputValue": { "key": "size", "fallback": 42 } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `number` itself or pull from feature properties using {@link Property}
    */
   iconSize?: number | Property<number>;
   // layout
@@ -1851,24 +1881,22 @@ export interface GlyphStyle extends LayerStyleBase {
    * as points are (box shaped).
    *
    * ex.
-   *
    * ```json
    * { "type": "glyph", "placement": "point" }
    * ```
    *
    * ex.
-   *
    * ```json
    * { "placement": { "inputValue": { "key": "placementType", "fallback": "point" } } }
    * ```
    *
-   * Your list of PropertyOnlyStep options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link PropertyOnlyStep} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRangeStep}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRangeStep}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `Placement` itself or pull from feature properties using {@link Property}
    */
   placement?: Placement | PropertyOnlyStep<Placement>;
   /**
@@ -1878,24 +1906,22 @@ export interface GlyphStyle extends LayerStyleBase {
    * The distance between glyphs in pixels. Only relavent if geometry is not a point.
    *
    * ex.
-   *
    * ```json
    * { "spacing": 250 }
    * ```
    *
    * ex.
-   *
    * ```json
    * { "spacing": { "inputValue": { "key": "space-between", "fallback": 350 } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `number` itself or pull from feature properties using {@link Property}
    */
   spacing?: number | Property<number>;
   /**
@@ -1908,7 +1934,6 @@ export interface GlyphStyle extends LayerStyleBase {
    * you're most likely using a sprite sheet and you'll need to specify the "family" of the pattern which is the name of the sprite sheet.
    *
    * ex.
-   *
    * Setting up the style definition with an image:
    * ```ts
    * const style: StyleDefinition = {
@@ -1926,13 +1951,13 @@ export interface GlyphStyle extends LayerStyleBase {
    * { "type": "glyph", "textFamily": ["robotoMedium", "notoMedium"] }
    * ```
    *
-   * Your list of PropertyOnlyStep options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link PropertyOnlyStep} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRangeStep}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRangeStep}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `string | string[]` itself or pull from feature properties using {@link Property}
    */
   textFamily?: string | string[] | PropertyOnlyStep<string | string[]>;
   /**
@@ -1972,9 +1997,9 @@ export interface GlyphStyle extends LayerStyleBase {
    * Transforms:
    * - `"?"`: coalesce from properties
    * - `"!"`: transform the result
-   * - `"U"`: uppercase
-   * - `"L"`: lowercase
-   * - `"C"`: capitalize
+   * - - `"U"`: uppercase
+   * - - `"L"`: lowercase
+   * - - `"C"`: capitalize
    * - `"P"`: language aquisition (e.g. "XX" -> "en"). Defined by navigator.language (browser)
    *
    * ex.
@@ -1983,13 +2008,13 @@ export interface GlyphStyle extends LayerStyleBase {
    * // cooalesced: "u.s. - UNITED STATES"
    * ```
    *
-   * Your list of PropertyOnlyStep options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link PropertyOnlyStep} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRangeStep}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRangeStep}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `string | string[]` itself or pull from feature properties using {@link Property}
    */
   textField?: string | string[] | PropertyOnlyStep<string | string[]>;
   /**
@@ -2012,13 +2037,13 @@ export interface GlyphStyle extends LayerStyleBase {
    * { "textAnchor": { "inputValue": { "key": "anchor", "fallback": "center" } } }
    * ```
    *
-   * Your list of PropertyOnlyStep options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link PropertyOnlyStep} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRangeStep}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRangeStep}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `Anchor` itself or pull from feature properties using {@link Property}
    */
   textAnchor?: Anchor | PropertyOnlyStep<Anchor>;
   /**
@@ -2037,13 +2062,13 @@ export interface GlyphStyle extends LayerStyleBase {
    * { "textOffset": { "inputValue": { "key": "offset", "fallback": [0, 0] } } }
    * ```
    *
-   * Your list of PropertyOnlyStep options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link PropertyOnlyStep} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRangeStep}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRangeStep}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `Point` itself or pull from feature properties using {@link Property}
    */
   textOffset?: Point | PropertyOnlyStep<Point>;
   /**
@@ -2062,13 +2087,13 @@ export interface GlyphStyle extends LayerStyleBase {
    * { "textPadding": { "inputValue": { "key": "padding", "fallback": [0, 0] } } }
    * ```
    *
-   * Your list of PropertyOnlyStep options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link PropertyOnlyStep} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRangeStep}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRangeStep}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `Point` itself or pull from feature properties using {@link Property}
    */
   textPadding?: Point | PropertyOnlyStep<Point>;
   /**
@@ -2087,13 +2112,13 @@ export interface GlyphStyle extends LayerStyleBase {
    * { "textWordWrap": { "inputValue": { "key": "wrapSize", "fallback": 6 } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link PropertyOnlyStep} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRangeStep}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRangeStep}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `number` itself or pull from feature properties using {@link Property}
    */
   textWordWrap?: number | PropertyOnlyStep<number>;
   /**
@@ -2114,13 +2139,13 @@ export interface GlyphStyle extends LayerStyleBase {
    * { "textAlign": { "inputValue": { "key": "align", "fallback": "center" } } }
    * ```
    *
-   * Your list of PropertyOnlyStep options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link PropertyOnlyStep} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRangeStep}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRangeStep}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `Alignment` itself or pull from feature properties using {@link Property}
    */
   textAlign?: Alignment | PropertyOnlyStep<Alignment>;
   /**
@@ -2139,13 +2164,13 @@ export interface GlyphStyle extends LayerStyleBase {
    * { "textKerning": { "inputValue": { "key": "kerning", "fallback": 0 } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link PropertyOnlyStep} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `number` itself or pull from feature properties using {@link Property}
    */
   textKerning?: number | PropertyOnlyStep<number>;
   /**
@@ -2164,13 +2189,13 @@ export interface GlyphStyle extends LayerStyleBase {
    * { "textLineHeight": { "inputValue": { "key": "lineHeight", "fallback": 0 } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link PropertyOnlyStep} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `number` itself or pull from feature properties using {@link Property}
    */
   textLineHeight?: number | PropertyOnlyStep<number>;
   /**
@@ -2201,13 +2226,13 @@ export interface GlyphStyle extends LayerStyleBase {
    * { "type": "glyph", "iconFamily": ["streets", "base"] }
    * ```
    *
-   * Your list of PropertyOnlyStep options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link PropertyOnlyStep} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRangeStep}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRangeStep}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `string | string[]` itself or pull from feature properties using {@link Property}
    */
   iconFamily?: string | string[] | PropertyOnlyStep<string | string[]>;
   /**
@@ -2215,13 +2240,11 @@ export interface GlyphStyle extends LayerStyleBase {
    * @default `""` (empty string)
    *
    * ex.
-   *
    * ```json
    * { "iconField": "plane" }
    * ```
    *
    * ex.
-   *
    * ```json
    * { "iconField": { "inputValue": { "key": "aircraft", "fallback": "plane" } } }
    * ```
@@ -2244,9 +2267,9 @@ export interface GlyphStyle extends LayerStyleBase {
    * Transforms:
    * - `"?"`: coalesce from properties
    * - `"!"`: transform the result
-   * - `"U"`: uppercase
-   * - `"L"`: lowercase
-   * - `"C"`: capitalize
+   * - - `"U"`: uppercase
+   * - - `"L"`: lowercase
+   * - - `"C"`: capitalize
    * - `"P"`: language aquisition (e.g. "XX" -> "en"). Defined by navigator.language (browser)
    *
    * ex.
@@ -2255,13 +2278,13 @@ export interface GlyphStyle extends LayerStyleBase {
    * // cooalesced: "u.s. - UNITED STATES"
    * ```
    *
-   * Your list of PropertyOnlyStep options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link PropertyOnlyStep} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRangeStep}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRangeStep}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `string | string[]` itself or pull from feature properties using {@link Property}
    */
   iconField?: string | string[] | PropertyOnlyStep<string | string[]>;
   /**
@@ -2282,13 +2305,13 @@ export interface GlyphStyle extends LayerStyleBase {
    * { "textOffset": { "inputValue": { "key": "positioning", "fallback": "center" } } }
    * ```
    *
-   * Your list of PropertyOnlyStep options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link PropertyOnlyStep} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRangeStep}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRangeStep}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `Anchor` itself or pull from feature properties using {@link Property}
    */
   iconAnchor?: Anchor | PropertyOnlyStep<Anchor>;
   /**
@@ -2307,13 +2330,13 @@ export interface GlyphStyle extends LayerStyleBase {
    * { "iconOffset": { "inputValue": { "key": "offset", "fallback": [0, 0] } } }
    * ```
    *
-   * Your list of PropertyOnlyStep options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link PropertyOnlyStep} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRangeStep}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRangeStep}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `Point` itself or pull from feature properties using {@link Property}
    */
   iconOffset?: Point | PropertyOnlyStep<Point>;
   /**
@@ -2332,13 +2355,13 @@ export interface GlyphStyle extends LayerStyleBase {
    * { "iconPadding": { "inputValue": { "key": "padding", "fallback": [0, 0] } } }
    * ```
    *
-   * Your list of PropertyOnlyStep options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link PropertyOnlyStep} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRangeStep}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRangeStep}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `Point` itself or pull from feature properties using {@link Property}
    */
   iconPadding?: Point | PropertyOnlyStep<Point>;
   // properties
@@ -2458,7 +2481,7 @@ export interface GlyphWorkerLayer extends LayerWorkerBase {
  *
  * Optional paint properties:
  * - `radius`: the radius of the heatmap in pixels
- * - `opacity`: the opacity of the heatmap. Between 0 and 1 inclusive
+ * - `opacity`: the opacity of the heatmap. Choose between [0, 1], or pull out the value using a {@link Property}.
  * - `intensity`: the intensity of the heatmap
  *
  * ### Optional layout properties:
@@ -2466,7 +2489,7 @@ export interface GlyphWorkerLayer extends LayerWorkerBase {
  *
  * ### Optional properties:
  * - `geoFilter`: [See {@link GeoFilter}] filter the geometry types that will be drawn.
- * - `colorRamp`: Build a interpolation ramp to help the sensor data be converted into RGBA. May be `sinebow` or `sinebow-extended`
+ * - `colorRamp`: [See {@link ColorRamp}] Build a interpolation ramp to help the sensor data be converted into RGBA. May be `sinebow` or `sinebow-extended`
  */
 export interface HeatmapStyle extends LayerStyleBase {
   /**
@@ -2485,7 +2508,7 @@ export interface HeatmapStyle extends LayerStyleBase {
    *
    * ### Optional paint properties:
    * - `radius`: the radius of the heatmap in pixels
-   * - `opacity`: the opacity of the heatmap. Between 0 and 1 inclusive
+   * - `opacity`: the opacity of the heatmap. Choose between [0, 1], or pull out the value using a {@link Property}.
    * - `intensity`: the intensity of the heatmap
    *
    * ### Optional layout properties:
@@ -2493,7 +2516,7 @@ export interface HeatmapStyle extends LayerStyleBase {
    *
    * ### Optional properties:
    * - `geoFilter`: [See {@link GeoFilter}] filter the geometry types that will be drawn. Options are `point`, `line`, `poly`.
-   * - `colorRamp`: Build a interpolation ramp to help the sensor data be converted into RGBA. May be `sinebow` or `sinebow-extended`
+   * - `colorRamp`: [See {@link ColorRamp}] Build a interpolation ramp to help the sensor data be converted into RGBA. May be `sinebow` or `sinebow-extended`
    */
   type: 'heatmap';
   // paint
@@ -2512,13 +2535,13 @@ export interface HeatmapStyle extends LayerStyleBase {
    * { "radius": { "inputValue": { "key": "size", "fallback": 3.5 } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `number` itself or pull from feature properties using {@link Property}
    */
   radius?: number | Property<number>;
   /**
@@ -2536,13 +2559,13 @@ export interface HeatmapStyle extends LayerStyleBase {
    * { "opacity": { "inputValue": { "key": "opacity", "fallback": 1 } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `number` itself or pull from feature properties using {@link Property}
    */
   opacity?: number | Property<number>;
   /**
@@ -2560,13 +2583,13 @@ export interface HeatmapStyle extends LayerStyleBase {
    * { "intensity": { "inputValue": { "key": "strength", "fallback": 1 } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `number` itself or pull from feature properties using {@link Property}
    */
   intensity?: number | Property<number>;
   /**
@@ -2584,13 +2607,13 @@ export interface HeatmapStyle extends LayerStyleBase {
    * { "weight": { "inputValue": { "key": "impact", "fallback": 1 } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `number` itself or pull from feature properties using {@link Property}
    */
   weight?: number | Property<number>;
   // properties
@@ -2674,8 +2697,8 @@ export type Join = 'bevel' | 'miter' | 'round';
  * - `metadata`: additional metadata. Used by style generators
  *
  * ### Optional paint properties:
- * - `color`: the color of the line
- * - `opacity`: the opacity of the line
+ * - `color`: {@link Color} of the line. Input either a `string` pull out the value using a {@link Property}.
+ * - `opacity`: the opacity of the line. Choose between [0, 1], or pull out the value using a {@link Property}.
  * - `width`: the width of the line in pixels
  * - `gapwidth`: split the line into two segments to reduce rendering artifacts
  *
@@ -2686,7 +2709,7 @@ export type Join = 'bevel' | 'miter' | 'round';
  *
  * ### Optional properties:
  * - `geoFilter`: [See {@link GeoFilter}] filter the geometry types that will be drawn.
- * - `interactive`: if true, when hovering over the line, the property data will be sent to the UI via an Event
+ * - `interactive`: boolean flag. If true, when hovering over the line, the property data will be sent to the UI via an Event
  * - `cursor`: [See {@link Cursor}] the cursor to use when hovering over the line
  */
 export interface LineStyle extends LayerStyleBase {
@@ -2706,8 +2729,8 @@ export interface LineStyle extends LayerStyleBase {
    * - `metadata`: additional metadata. Used by style generators
    *
    * ### Optional paint properties:
-   * - `color`: {@link Color} of the shade. Input either a `string` encoded color or wrap it in a {@link Property}.
-   * - `opacity`: the opacity of the line
+   * - `color`: {@link Color} of the line. Input either a `string` pull out the value using a {@link Property}.
+   * - `opacity`: the opacity of the line. Choose between [0, 1], or pull out the value using a {@link Property}.
    * - `width`: the width of the line in pixels
    * - `gapwidth`: split the line into two segments to reduce rendering artifacts
    *
@@ -2718,7 +2741,7 @@ export interface LineStyle extends LayerStyleBase {
    *
    * ### Optional properties:
    * - `geoFilter`: [See {@link GeoFilter}] filter the geometry types that will be drawn. Options are `point`, `line`, `poly`.
-   * - `interactive`: if true, when hovering over the line, the property data will be sent to the UI via an Event
+   * - `interactive`: boolean flag. If true, when hovering over the line, the property data will be sent to the UI via an Event
    * - `cursor`: [See {@link Cursor}] the cursor to use when hovering over the line
    */
   type: 'line';
@@ -2739,13 +2762,13 @@ export interface LineStyle extends LayerStyleBase {
    * { "color": { "inputValue": { "key": "type", "fallback": "blue" } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `string` itself or pull from feature properties using {@link Property}
    */
   color?: string | Property<string>;
   /**
@@ -2763,13 +2786,13 @@ export interface LineStyle extends LayerStyleBase {
    * { "opacity": { "inputValue": { "key": "opacity", "fallback": 1 } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `number` itself or pull from feature properties using {@link Property}
    */
   opacity?: number | Property<number>;
   /**
@@ -2787,13 +2810,13 @@ export interface LineStyle extends LayerStyleBase {
    * { "width": { "inputValue": { "key": "roadWidth", "fallback": 3.5 } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `number` itself or pull from feature properties using {@link Property}
    */
   width?: number | Property<number>;
   /**
@@ -2814,13 +2837,13 @@ export interface LineStyle extends LayerStyleBase {
    * { "gapWidth": { "inputValue": { "key": "partitionSize", "fallback": 1.5 } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `number` itself or pull from feature properties using {@link Property}
    */
   gapwidth?: number | Property<number>;
   // layout
@@ -2843,13 +2866,13 @@ export interface LineStyle extends LayerStyleBase {
    * { "cap": { "inputValue": { "key": "capType", "fallback": "round" } } }
    * ```
    *
-   * Your list of PropertyOnlyStep options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link PropertyOnlyStep} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRangeStep}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRangeStep}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `Cap` itself or pull from feature properties using {@link Property}
    */
   cap?: Cap | PropertyOnlyStep<Cap>;
   /**
@@ -2870,13 +2893,13 @@ export interface LineStyle extends LayerStyleBase {
    * { "join": { "inputValue": { "key": "joinType", "fallback": "round" } } }
    * ```
    *
-   * Your list of PropertyOnlyStep options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link PropertyOnlyStep} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRangeStep}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRangeStep}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `Join` itself or pull from feature properties using {@link Property}
    */
   join?: Join | PropertyOnlyStep<Join>;
   // properties
@@ -2966,15 +2989,15 @@ export interface LineWorkerLayer extends LayerWorkerBase {
  * - `metadata`: additional metadata. Used by style generators
  *
  * ### Optional paint properties:
- * - `color`: {@link Color} of the shade. Input either a `string` encoded color or wrap it in a {@link Property}.
+ * - `color`: {@link Color} of the point. Input either a `string` pull out the value using a {@link Property}.
  * - `radius`
- * - `stroke`
+ * - `stroke`: {@link Color} of the stroke. Input either a `string` pull out the value using a {@link Property}.
  * - `strokeWidth`
- * - `opacity`
+ * - `opacity`: the opacity of the point. Choose between [0, 1], or pull out the value using a {@link Property}.
  *
  * ### Optional properties:
  * - `geoFilter`: [See {@link GeoFilter}] filter the geometry types that will be drawn.
- * - `interactive`: if true, when hovering over the line, the property data will be sent to the UI via an Event
+ * - `interactive`: boolean flag. If true, when hovering over the line, the property data will be sent to the UI via an Event
  * - `cursor`: [See {@link Cursor}] the cursor to use when hovering over the line
  */
 export interface PointStyle extends LayerStyleBase {
@@ -2994,15 +3017,15 @@ export interface PointStyle extends LayerStyleBase {
    * - `metadata`: additional metadata. Used by style generators
    *
    * ### Optional paint properties:
-   * - `color`: {@link Color} of the shade. Input either a `string` encoded color or wrap it in a {@link Property}.
+   * - `color`: {@link Color} of the point. Input either a `string` pull out the value using a {@link Property}.
    * - `radius`
-   * - `stroke`
+   * - `stroke`: {@link Color} of the stroke. Input either a `string` pull out the value using a {@link Property}.
    * - `strokeWidth`
-   * - `opacity`
+   * - `opacity`: the opacity of the point. Choose between [0, 1], or pull out the value using a {@link Property}.
    *
    * ### Optional properties:
    * - `geoFilter`: [See {@link GeoFilter}] filter the geometry types that will be drawn. Options are `point`, `line`, `poly`.
-   * - `interactive`: if true, when hovering over the line, the property data will be sent to the UI via an Event
+   * - `interactive`: boolean flag. If true, when hovering over the line, the property data will be sent to the UI via an Event
    * - `cursor`: [See {@link Cursor}] the cursor to use when hovering over the line
    */
   type: 'point';
@@ -3023,13 +3046,13 @@ export interface PointStyle extends LayerStyleBase {
    * { "color": { "inputValue": { "key": "type", "fallback": "blue" } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `string` itself or pull from feature properties using {@link Property}
    */
   color?: string | Property<string>;
   /**
@@ -3048,13 +3071,13 @@ export interface PointStyle extends LayerStyleBase {
    * { "radius": { "inputValue": { "key": "size", "fallback": "blue" } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `number` itself or pull from feature properties using {@link Property}
    */
   radius?: number | Property<number>;
   /**
@@ -3073,13 +3096,13 @@ export interface PointStyle extends LayerStyleBase {
    * { "stroke": { "inputValue": { "key": "stroke", "fallback": "blue" } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `string` itself or pull from feature properties using {@link Property}
    */
   stroke?: string | Property<string>;
   /**
@@ -3098,13 +3121,13 @@ export interface PointStyle extends LayerStyleBase {
    * { "strokeWidth": { "inputValue": { "key": "strokeSize", "fallback": "blue" } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `strokeWidth` itself or pull from feature properties using {@link Property}
    */
   strokeWidth?: number | Property<number>;
   /**
@@ -3122,13 +3145,13 @@ export interface PointStyle extends LayerStyleBase {
    * { "opacity": { "inputValue": { "key": "opacity", "fallback": 1 } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `opacity` itself or pull from feature properties using {@link Property}
    */
   opacity?: number | Property<number>;
   // properties
@@ -3196,7 +3219,7 @@ export type Resampling = GPUFilterMode;
  * - `metadata`: additional metadata. Used by style generators
  *
  * ### Optional paint properties:
- * - `opacity`
+ * - `opacity`: the opacity of the raster. Choose between [0, 1], or pull out the value using a {@link Property}.
  * - `saturation`
  * - `contrast`
  *
@@ -3221,7 +3244,7 @@ export interface RasterStyle extends LayerStyleBase {
    * - `metadata`: additional metadata. Used by style generators
    *
    * ### Optional paint properties:
-   * - `opacity`
+   * - `opacity`: the opacity of the raster. Choose between [0, 1], or pull out the value using a {@link Property}.
    * - `saturation`
    * - `contrast`
    *
@@ -3246,13 +3269,13 @@ export interface RasterStyle extends LayerStyleBase {
    * { "opacity": { "inputValue": { "key": "opacity", "fallback": 1 } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `opacity` itself or pull from feature properties using {@link Property}
    */
   opacity?: number | Property<number>;
   /**
@@ -3270,13 +3293,13 @@ export interface RasterStyle extends LayerStyleBase {
    * { "saturation": { "inputValue": { "key": "saturation", "fallback": 0.5 } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `saturation` itself or pull from feature properties using {@link Property}
    */
   saturation?: number | Property<number>;
   /**
@@ -3294,13 +3317,13 @@ export interface RasterStyle extends LayerStyleBase {
    * { "contrast": { "inputValue": { "key": "contrast", "fallback": 1 } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `number` itself or pull from feature properties using {@link Property}
    */
   contrast?: number | Property<number>;
   // properties
@@ -3373,7 +3396,7 @@ export type UnpackData = [
  * - `metadata`: additional metadata. Used by style generators
  *
  * ### Optional paint properties:
- * - `opacity`
+ * - `opacity`: the opacity of the hillshade. Choose between [0, 1], or pull out the value using a {@link Property}.
  * - `azimuth`
  * - `altitude`
  * - `shadowColor`
@@ -3401,7 +3424,7 @@ export interface HillshadeStyle extends LayerStyleBase {
    * - `metadata`: additional metadata. Used by style generators
    *
    * ### Optional paint properties:
-   * - `opacity`
+   * - `opacity`: the opacity of the hillshade. Choose between [0, 1], or pull out the value using a {@link Property}.
    * - `azimuth`
    * - `altitude`
    * - `shadowColor`
@@ -3410,7 +3433,7 @@ export interface HillshadeStyle extends LayerStyleBase {
    *
    * ### Optional layout properties:
    * - `fadeDuration`: The time it takes for each raster tile to fade in and out of view in milliseconds
-   * - `unpack`: Descriptor to help the GPU know how to unpack the incoming RGBA data into a f32.
+   * - `unpack`: [See {@link UnpackDefinition}] Descriptor to help the GPU know how to unpack the incoming RGBA data into a f32.
    */
   type: 'hillshade';
   // layout
@@ -3429,13 +3452,13 @@ export interface HillshadeStyle extends LayerStyleBase {
    * { "opacity": { "inputValue": { "key": "opacity", "fallback": 1 } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `number` itself or pull from feature properties using {@link Property}
    */
   opacity?: number | Property<number>;
   /**
@@ -3453,13 +3476,13 @@ export interface HillshadeStyle extends LayerStyleBase {
    * { "azimuth": { "inputValue": { "key": "az", "fallback": 0 } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `number` itself or pull from feature properties using {@link Property}
    */
   azimuth?: number | Property<number>;
   /**
@@ -3477,13 +3500,13 @@ export interface HillshadeStyle extends LayerStyleBase {
    * { "altitude": { "inputValue": { "key": "alt", "fallback": 45 } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `number` itself or pull from feature properties using {@link Property}
    */
   altitude?: number | Property<number>;
   /**
@@ -3502,13 +3525,13 @@ export interface HillshadeStyle extends LayerStyleBase {
    * { "shadowColor": { "inputValue": { "key": "shadow", "fallback": "black" } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `string` itself or pull from feature properties using {@link Property}
    */
   shadowColor?: string | Property<string>;
   /**
@@ -3527,13 +3550,13 @@ export interface HillshadeStyle extends LayerStyleBase {
    * { "highlightColor": { "inputValue": { "key": "accent", "fallback": "white" } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `string` itself or pull from feature properties using {@link Property}
    */
   highlightColor?: string | Property<string>;
   /**
@@ -3552,13 +3575,13 @@ export interface HillshadeStyle extends LayerStyleBase {
    * { "accentColor": { "inputValue": { "key": "accent", "fallback": "black" } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `string` itself or pull from feature properties using {@link Property}
    */
   accentColor?: string | Property<string>;
   // properties
@@ -3583,8 +3606,7 @@ export interface HillshadeStyle extends LayerStyleBase {
    *        color.g * unpack.gMultiplier +
    *        color.b * unpack.bMultiplier +
    *        color.a * unpack.aMultiplier
-   *      )
-   *      unpack.zFactor
+   *      ) * unpack.zFactor
    *    ) + unpack.offset;
    *  }
    *  ```
@@ -3666,14 +3688,14 @@ export interface HillshadeWorkerLayer extends LayerWorkerBaseRaster {
  * - `metadata`: additional metadata. Used by style generators
  *
  * ### Optional paint properties:
- * - `opacity`
+ * - `opacity`: the opacity of the sensor. Choose between [0, 1], or pull out the value using a {@link Property}.
  *
  * ### Optional layout properties:
  * - `fadeDuration`: The time it takes for each raster tile to fade in and out of view in milliseconds
- * - `colorRamp`: Build a interpolation ramp to help the sensor data be converted into RGBA. May be `sinebow` or `sinebow-extended`
+ * - `colorRamp`: [See {@link ColorRamp}] Build a interpolation ramp to help the sensor data be converted into RGBA. May be `sinebow` or `sinebow-extended`
  *
  * ### Optional properties:
- * - `interactive`: if true, when hovering over the fill, the property data will be sent to the UI via an Event
+ * - `interactive`: boolean flag. If true, when hovering over the fill, the property data will be sent to the UI via an Event
  * - `cursor`: [See {@link Cursor}] the cursor to use when hovering over the fill
  */
 export interface SensorStyle extends LayerStyleBase {
@@ -3693,14 +3715,14 @@ export interface SensorStyle extends LayerStyleBase {
    * - `metadata`: additional metadata. Used by style generators
    *
    * ### Optional paint properties:
-   * - `opacity`
+   * - `opacity`: the opacity of the sensor. Choose between [0, 1], or pull out the value using a {@link Property}.
    *
    * ### Optional layout properties:
    * - `fadeDuration`: The time it takes for each raster tile to fade in and out of view in milliseconds
-   * - `colorRamp`: Build a interpolation ramp to help the sensor data be converted into RGBA. May be `sinebow` or `sinebow-extended`
+   * - `colorRamp`: [See {@link ColorRamp}] Build a interpolation ramp to help the sensor data be converted into RGBA. May be `sinebow` or `sinebow-extended`
    *
    * ### Optional properties:
-   * - `interactive`: if true, when hovering over the fill, the property data will be sent to the UI via an Event
+   * - `interactive`: boolean flag. If true, when hovering over the fill, the property data will be sent to the UI via an Event
    * - `cursor`: [See {@link Cursor}] the cursor to use when hovering over the fill
    */
   type: 'sensor';
@@ -3720,13 +3742,13 @@ export interface SensorStyle extends LayerStyleBase {
    * { "opacity": { "inputValue": { "key": "opacity", "fallback": 1 } } }
    * ```
    *
-   * Your list of Property options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link Property} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `number` itself or pull from feature properties using {@link Property}
    */
   opacity?: number | Property<number>;
   // properties
@@ -3798,7 +3820,7 @@ export interface SensorWorkerLayer extends LayerWorkerBaseRaster {
  * - `metadata`: additional metadata. Used by style generators
  *
  * ### Optional paint properties:
- * - `color`: {@link Color} of the shade. Input either a `string` encoded color or wrap it in a {@link PropertyOnlyStep}.
+ * - `color`: {@link Color} of the shade. Input either a `string` pull out the value using a {@link PropertyOnlyStep}.
  */
 export interface ShadeStyle extends LayerStyleBase {
   /**
@@ -3817,7 +3839,7 @@ export interface ShadeStyle extends LayerStyleBase {
    * - `metadata`: additional metadata. Used by style generators
    *
    * ### Optional paint properties:
-   * - `color`: {@link Color} of the shade. Input either a `string` encoded color or wrap it in a {@link PropertyOnlyStep}.
+   * - `color`: {@link Color} of the shade. Input either a `string` pull out the value using a {@link PropertyOnlyStep}.
    */
   type: 'shade';
   // layout
@@ -3835,13 +3857,13 @@ export interface ShadeStyle extends LayerStyleBase {
    * { "color": { "inputValue": { "key": "type", "fallback": "blue" } } }
    * ```
    *
-   * Your list of PropertyOnlyStep options are:
-   * - `inputValue`: access value in feature properties
-   * - `dataCondition`: filter based on feature property conditions
-   * - `dataRange`: filter based on feature property ranges (but only allows an ease type of "step")
-   * - `inputRange`: filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch" (but only allows an ease type of "step")
-   * - `featureState`: filter based on feature state
-   * - `fallback`: if all else fails, use this value
+   * ### Your list of {@link PropertyOnlyStep} options are:
+   * - `inputValue`: [See {@link InputValue}] access value in feature properties
+   * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
+   * - `dataRange`: [See {@link DataRangeStep}] filter based on feature property ranges
+   * - `inputRange`: [See {@link InputRangeStep}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
+   * - `featureState`: [See {@link FeatureState}] filter based on feature state
+   * - `fallback`: if all else fails, use this value. A value of `string` itself or pull from feature properties using {@link Property}
    */
   color?: string | PropertyOnlyStep<string>;
 }
@@ -4130,7 +4152,7 @@ export interface StyleDefinition {
   version?: number;
   /** name of the style - not used for anything other than debugging */
   name?: string;
-  /** Use Either The Web Mercator "WM" or the "S2" Projection */
+  /** Use Either The Web Mercator "WM" or the "S2" Projection. [Default: `"S2"`] */
   projection?: Projection;
   /** description of the style - not used for anything other than debugging */
   description?: string;

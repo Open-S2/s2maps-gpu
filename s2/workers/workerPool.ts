@@ -221,7 +221,12 @@ export class WorkerPool {
    * @param index - the index to add the layer at
    * @param tileRequest - the list of tiles of all existing tiles in the map already to adjust
    */
-  addLayer(mapID: string, layer: LayerDefinition, index: number, tileRequest: TileRequest[]): void {
+  addLayer(
+    mapID: string,
+    layer: LayerDefinition,
+    index: number | undefined,
+    tileRequest: TileRequest[],
+  ): void {
     const msg: AddLayerMessageGL = { mapID, type: 'addLayer', layer, index, tileRequest };
     this.sourceWorker.postMessage(msg);
     for (const worker of this.workers) worker.postMessage(msg);

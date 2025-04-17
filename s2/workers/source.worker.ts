@@ -208,12 +208,14 @@ export default class SourceWorker {
   #addLayer(
     mapID: string,
     layer: LayerDefinition,
-    index: number,
+    index: number | undefined,
     _tileRequest: TileRequest[],
   ): void {
     // add the layer to the tile
     const { layers } = this.maps[mapID];
-    layers.splice(index, 0, layer);
+    if (index === undefined) layers.push(layer);
+    else layers.splice(index, 0, layer);
+    if (index === undefined) index = layers.length;
     for (let i = index + 1, ll = layers.length; i < ll; i++) {
       const layer = layers[i];
       layer.layerIndex++;

@@ -111,18 +111,18 @@ declare global {
  * - {@link S2Map.setMoveState}: Update the users ability to move the map around or not.
  * - {@link S2Map.setZoomState}: Update the users ability to zoom the map in and out or not.
  * - {@link S2Map.jumpTo}: Jump to a specific location's longitude, latitude, and optionally zoom
- * - {@link S2Map.easeTo}:
- * - {@link S2Map.flyTo}:
- * - {@link S2Map.addSource}:
- * - {@link S2Map.updateSource}:
- * - {@link S2Map.resetSource}:
- * - {@link S2Map.deleteSource}:
- * - {@link S2Map.addLayer}:
- * - {@link S2Map.updateLayer}:
- * - {@link S2Map.deleteLayer}:
- * - {@link S2Map.reorderLayers}:
- * - {@link S2Map.addMarker}:
- * - {@link S2Map.removeMarker}:
+ * - {@link S2Map.easeTo}: Use an easing function to travel to a specific location's longitude, latitude, and optionally zoom
+ * - {@link S2Map.flyTo}: Use an easing function to fly to a specific location's longitude, latitude, and optionally zoom
+ * - {@link S2Map.addSource}: Add a new source to the map. Sources are references to data and how to fetch it.
+ * - {@link S2Map.updateSource}: Update a source already added to the map and control the method the map updates the source
+ * - {@link S2Map.resetSource}: Reset a source's data already added to the map and control the method the map updates the source
+ * - {@link S2Map.deleteSource}: Delete a source's data from the map
+ * - {@link S2Map.addLayer}: Add a new style layer to the map
+ * - {@link S2Map.updateLayer}: Update the an existing style layer in a map given the layer's name or index
+ * - {@link S2Map.deleteLayer}: Delete an existing style layer in a map given the layer's name or index
+ * - {@link S2Map.reorderLayers}: Reorder layers in the map.
+ * - {@link S2Map.addMarker}: Add new marker(s) to the map
+ * - {@link S2Map.removeMarker}: Delete a marker or collection of markers from the map
  * - {@link S2Map.screenshot}: Take a screenshot of the current state of the map. Returns the screenshot as a `Uint8ClampedArray`
  * - {@link S2Map.awaitFullyRendered}: Async function to wait for the map to have all source and layer data rendered to the screen
  * - {@link S2Map.delete}: Delete the map instance and cleanup all it's resources
@@ -475,11 +475,12 @@ export default class S2Map extends EventTarget {
   /* INTERNAL API */
 
   /**
-   * @internal
-   * @param data - The data to inject
+   * Inject data into the map
    * Used by the WorkerPool.
    * Anytime a Source worker or Tile Worker has data to inject into the map,
    * it will call this function.
+   * @param data - The data to inject
+   * @internal
    */
   injectData(data: SourceWorkerMessage | TileWorkerMessage): void {
     const { type } = data;
@@ -970,7 +971,20 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * @param directions
+   * Use an easing function to travel to a specific location's longitude, latitude, and optionally zoom
+   *
+   * ### Example
+   * ```ts
+   * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
+   * import type { MapOptions } from 's2maps-gpu';
+   *
+   * const options: MapOptions = { ..., view: { lon: 0, lat: 0, zoom: 0 } };
+   * const map = new S2Map(options);
+   * // wait for map to load, then jump to a specific location
+   * await map.awaitFullLoaded();
+   * map.easeTo(-120, 60, 7);
+   * ```
+   * @param directions - animation guide for travel directions, speed, and easing
    */
   easeTo(directions?: AnimationDirections): void {
     const { offscreen, map } = this;
@@ -979,7 +993,20 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * @param directions
+   * Use an easing function to fly to a specific location's longitude, latitude, and optionally zoom
+   *
+   * ### Example
+   * ```ts
+   * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
+   * import type { MapOptions } from 's2maps-gpu';
+   *
+   * const options: MapOptions = { ..., view: { lon: 0, lat: 0, zoom: 0 } };
+   * const map = new S2Map(options);
+   * // wait for map to load, then jump to a specific location
+   * await map.awaitFullLoaded();
+   * map.flyTo(-120, 60, 7);
+   * ```
+   * @param directions - animation guide for travel directions, speed, and easing
    */
   flyTo(directions?: AnimationDirections): void {
     const { offscreen, map } = this;
@@ -988,27 +1015,67 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * @param sourceName
-   * @param href
+   * Add a new source to the map. Sources are references to data and how to fetch it.
+   *
+   * ### Example
+   * ```ts
+   * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
+   * import type { MapOptions } from 's2maps-gpu';
+   *
+   * const options: MapOptions = { ... };
+   * const map = new S2Map(options);
+   * // Add a new source to the map
+   * map.addSource('TheFreakinMoon', 'http://yup-im-the-moon.com/');
+   * ```
+   * @param sourceName - Name of the source
+   * @param href - the location of the source data
    */
   addSource(sourceName: string, href: string): void {
     this.updateSource(sourceName, href, false, false);
   }
 
   /**
-   * @param sourceName
-   * @param href
-   * @param keepCache
-   * @param awaitReplace
+   * Update a source already added to the map and control the method the map updates the source
+   *
+   * ### Example
+   * ```ts
+   * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
+   * import type { MapOptions } from 's2maps-gpu';
+   *
+   * const options: MapOptions = { ... };
+   * const map = new S2Map(options);
+   * // Add a new source to the map
+   * map.addSource('TheFreakinMoon', 'http://yup-im-the-moon.com/');
+   * // change the location of the moon
+   * map.updateSource('TheFreakinMoon', 'http://now-im-the-moon.com/', false, true);
+   * ```
+   * @param sourceName - Name of the source
+   * @param href - the new location of the source
+   * @param keepCache - Whether to keep the cache or not. don't delete any tiles, request replacements for all (for s2json since it's locally cached and fast)
+   * @param awaitReplace - Whether to await the replacement of tiles or not. to avoid flickering (i.e. adding/removing markers), we can wait for an update (from source+tile workers) on how the tile should look
    */
   updateSource(sourceName: string, href: string, keepCache = true, awaitReplace = true): void {
     this.resetSource([[sourceName, href]], keepCache, awaitReplace);
   }
 
   /**
+   * Reset a source's data already added to the map and control the method the map updates the source
+   *
+   * ### Example
+   * ```ts
+   * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
+   * import type { MapOptions } from 's2maps-gpu';
+   *
+   * const options: MapOptions = { ... };
+   * const map = new S2Map(options);
+   * // Add a new source to the map
+   * map.addSource('TheFreakinMoon', 'http://yup-im-the-moon.com/');
+   * // change the location of the moon
+   * map.resetSource(['TheFreakinMoon'], false, true);
+   * ```
    * @param sourceNames - Array of [sourceName, href]. Href is optional but if provided, the source href will be updated
-   * @param keepCache
-   * @param awaitReplace
+   * @param keepCache - Whether to keep the cache or not. don't delete any tiles, request replacements for all (for s2json since it's locally cached and fast)
+   * @param awaitReplace - Whether to await the replacement of tiles or not. to avoid flickering (i.e. adding/removing markers), we can wait for an update (from source+tile workers) on how the tile should look
    */
   resetSource(
     sourceNames: Array<[sourceName: string, href: string | undefined]>,
@@ -1023,7 +1090,23 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * @param sourceNames
+   * Delete a source's data from the map
+   *
+   * ### Example
+   * ```ts
+   * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
+   * import type { MapOptions } from 's2maps-gpu';
+   *
+   * const options: MapOptions = { ... };
+   * const map = new S2Map(options);
+   * // Add a new source to the map
+   * map.addSource('TheFreakinMoon', 'http://yup-im-the-moon.com/');
+   * // Do stuff ...
+   *
+   * // we are done rendering the moon
+   * map.deleteSource(['TheFreakinMoon', 'anotherSourceWeDontWantAnymore']);
+   * ```
+   * @param sourceNames - A single sourceName or an array of source names
    */
   deleteSource(sourceNames: string | string[]): void {
     const { offscreen, map } = this;
@@ -1035,24 +1118,49 @@ export default class S2Map extends EventTarget {
     map?.clearSource(sourceNames);
   }
 
-  // nameIndex -> if name it goes BEFORE the layer name specified. If layer name not found, it goes at the end
-  // if no nameIndex, it goes at the end
   /**
-   * @param layer
-   * @param nameIndex
+   * Add a new style layer to the map
+   * - If the nameIndex is a string, it will search through the existing layers for the layer with that name and add the layer at said index
+   * - If the nameIndex is a number, it will add the layer at that index in the style.layers array.
+   * - If no nameIndex is provided, it will add the layer at the end
+   *
+   * ### Example
+   * ```ts
+   * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
+   * import type { MapOptions } from 's2maps-gpu';
+   *
+   * const options: MapOptions = { ... };
+   * const map = new S2Map(options);
+   * // Add a new style layer to the map
+   * map.addLayer({ source: 'world', type: 'fill', color: 'red', ... });
+   * ```
+   * @param layer - The style layer to add
+   * @param nameIndex - The index to add the layer at
    */
-  addLayer(layer: LayerStyle, nameIndex: number | string): void {
+  addLayer(layer: LayerStyle, nameIndex?: number | string): void {
     const { offscreen, map } = this;
     offscreen?.postMessage({ type: 'addLayer', layer, nameIndex });
     map?.addLayer(layer, nameIndex);
   }
 
-  // fullUpdate -> if false, don't ask webworkers to reupdate
-  // nameIndex -> if name it finds the layer name to update, otherwise gives up
   /**
-   * @param layer
-   * @param nameIndex
-   * @param fullUpdate
+   * Update the an existing style layer in a map given the layer's name or index
+   * - If the nameIndex is a string, it will search through the existing layers for the layer with that name and update the layer at said index
+   * - If the nameIndex is a number, it will use the layer at that index in the style.layers array.
+   *
+   * ### Example
+   * ```ts
+   * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
+   * import type { MapOptions } from 's2maps-gpu';
+   *
+   * const options: MapOptions = { ... };
+   * const map = new S2Map(options);
+   * // Update the style layer
+   * map.updateLayer({ source: 'world', type: 'fill', color: 'red', ... }, 12);
+   * ```
+   * @param layer - The style layer to update/replace the old layer with
+   * @param nameIndex - The index/name of the style layer to update
+   * @param fullUpdate - If true, force a full re-render of the layer. Recommended to keep true unless you know what you're doing
    */
   updateLayer(layer: LayerStyle, nameIndex: number | string, fullUpdate = true): void {
     const { offscreen, map } = this;
@@ -1060,9 +1168,22 @@ export default class S2Map extends EventTarget {
     map?.updateLayer(layer, nameIndex, fullUpdate);
   }
 
-  // nameIndex -> if name it finds the layer name to update, otherwise gives up
   /**
-   * @param nameIndex
+   * Delete an existing style layer in a map given the layer's name or index
+   * - If the nameIndex is a string, it will search through the existing layers for the layer with that name and update the layer at said index
+   * - If the nameIndex is a number, it will use the layer at that index in the style.layers array.
+   *
+   * ### Example
+   * ```ts
+   * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
+   * import type { MapOptions } from 's2maps-gpu';
+   *
+   * const options: MapOptions = { ... };
+   * const map = new S2Map(options);
+   * // Delete an existing layer
+   * map.updateLayer(12);
+   * ```
+   * @param nameIndex - The index/name of the style layer to delete
    */
   deleteLayer(nameIndex: number | string): void {
     const { offscreen, map } = this;
@@ -1070,9 +1191,22 @@ export default class S2Map extends EventTarget {
     map?.deleteLayer(nameIndex);
   }
 
-  // { [+from]: +to }
   /**
-   * @param layerChanges
+   * Reorder layers in the map.
+   * - The key is the index of the layer to move
+   * - The value is the index to move the layer to
+   *
+   * ### Example
+   * ```ts
+   * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
+   * import type { MapOptions } from 's2maps-gpu';
+   *
+   * const options: MapOptions = { ... };
+   * const map = new S2Map(options);
+   * // Reorder layers
+   * map.reorderLayers({ 0: 1, 1: 0 });
+   * ```
+   * @param layerChanges - The guide of how to reorder the layers
    */
   reorderLayers(layerChanges: Record<number, number>): void {
     const { offscreen, map } = this;
@@ -1081,8 +1215,21 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * @param markers
-   * @param sourceName
+   * Add new marker(s) to the map
+   * - See {@link MarkerDefinition} to see the shape of a marker
+   *
+   * ### Example
+   * ```ts
+   * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
+   * import type { MapOptions } from 's2maps-gpu';
+   *
+   * const options: MapOptions = { ... };
+   * const map = new S2Map(options);
+   * // add a new marker
+   * map.addMarker({ id: 22, lat: 0, lon: 0, html: '<div>hello</div>' });
+   * ```
+   * @param markers - A single marker or an array of markers
+   * @param sourceName - The name of the source to add the marker(s) to. [Default: `"_markers"`]
    */
   addMarker(markers: MarkerDefinition | MarkerDefinition[], sourceName = '_markers'): void {
     if (!Array.isArray(markers)) markers = [markers];
@@ -1093,8 +1240,20 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * @param ids
-   * @param sourceName
+   * Delete a marker or collection of markers from the map
+   *
+   * ### Example
+   * ```ts
+   * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
+   * import type { MapOptions } from 's2maps-gpu';
+   *
+   * const options: MapOptions = { ... };
+   * const map = new S2Map(options);
+   * // add a new marker
+   * map.removeMarker(22);
+   * ```
+   * @param ids - A single marker id or an array of marker ids to delete
+   * @param sourceName - The name of the source to remove the marker(s) from. [Default: `"_markers"`]
    */
   removeMarker(ids: number | number[], sourceName = '_markers'): void {
     if (!Array.isArray(ids)) ids = [ids];

@@ -46,17 +46,12 @@ export default function coalesceField(
 
 /**
  * Parse unique strings that start with:
- * "?" - coalesce from properties
- *
- * "!" - transform the result
- *
- * "U" - uppercase
- *
- * "L" - lowercase
- *
- * "C" - capitalize
- *
- * "P" - language aquisition (e.g. "XX" -> "en"). Defined by navigator.language (browser)
+ * - "?": coalesce from properties
+ * - "!": transform the result
+ * - - "U": uppercase
+ * - - "L": lowercase
+ * - - "C": capitalize
+ * - "P": language aquisition (e.g. "XX" -> "en"). Defined by navigator.language (browser)
  * @param field - field string to parse
  * @param properties - properties to coalesce
  * @param fieldIsKey - whether the field is the key in properties or a value to coalesce

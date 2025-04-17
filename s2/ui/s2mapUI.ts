@@ -295,7 +295,7 @@ export default class S2MapUI extends Camera {
    * @param _layer - the style layer to add
    * @param _nameIndex - the index position to add the layer
    */
-  addLayer(_layer: LayerStyle, _nameIndex: number | string): void {
+  addLayer(_layer: LayerStyle, _nameIndex?: number | string): void {
     // TODO
     // // remove all tiles outside of view
     // const tileRequests = this._resetTileCache([], false, true)

@@ -245,7 +245,7 @@ export interface ClearSourceMessage {
 export interface AddLayerMessage {
   type: 'addLayer';
   layer: LayerDefinition;
-  nameIndex: number | string;
+  nameIndex?: number | string;
 }
 
 /** Update layer message sent from the front end to the map worker */
@@ -414,7 +414,7 @@ export interface UpdateCompassMessage extends MapID {
 export interface AddLayerMessageGL extends MapID {
   type: 'addLayer';
   layer: LayerDefinition;
-  index: number;
+  index?: number;
   tileRequest: TileRequest[];
 }
 

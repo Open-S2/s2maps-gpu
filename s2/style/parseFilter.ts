@@ -26,7 +26,10 @@ export interface Conditional {
 /**
  * Condition object.
  *
- * Also @see {@link Filter}
+ * ### Properties
+ * - `key`: [See {@link NestedKey}] The key to pull the value from the properties to compare
+ * - `comparator`: [See {@link Comparator}] Used by the filter function to determine if a feature should be included in the render.
+ * - `value`: [See {@link NotNullOrObject}] optional value to compare against
  *
  * When creating conditionals, you have two ways to do it:
  *
@@ -82,7 +85,12 @@ export interface Condition extends NestedKey {
  *
  * A filter is a set of conditions that are used to filter out features.
  *
- * ### Parameters
+ * ### Forms
+ * - And Gate Filter: {@link AndFilter}
+ * - Or Gate Filter: {@link OrFilter}
+ * - Condition: {@link Condition}
+ *
+ * ### Condition Parameters
  * - `key`: The key to filter on
  * - `comparator`: [See {@link Comparator}] The comparator to use
  * - `value`: The value to compare
