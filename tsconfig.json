@@ -53,7 +53,7 @@
     // "paths": {},                                      /* Specify a set of entries that re-map imports to additional lookup locations. */
     // "rootDirs": [],                                   /* Allow multiple folders to be treated as one when resolving modules. */
     // "typeRoots": [],                                  /* Specify multiple folders that act like `./node_modules/@types`. */
-    "types": ["@webgpu/types", "bun", "vue"],                          /* Specify type package names to be included without being referenced in a source file. */
+    "types": ["@webgpu/types", "bun", "vue", "svelte", "react"],                          /* Specify type package names to be included without being referenced in a source file. */
     // "allowUmdGlobalAccess": true,                     /* Allow accessing UMD globals from modules. */
     "resolveJsonModule": true,                        /* Enable importing .json files */
     // "noResolve": true,                                /* Disallow `import`s, `require`s or `<reference>`s from expanding the number of files TypeScript should add to a project. */
@@ -122,7 +122,10 @@
     "skipLibCheck": true /* Skip type checking all .d.ts files. */
   },
   "include": [
+    "package.json",
+    "nuxt.config.ts",
     "eslint.config.mjs",
+    "svelte.config.js",
     "build.ts",
     "benchmarks/**/*.ts",
     "s2/**/*.ts",
@@ -141,7 +144,6 @@
     "pages/**/*.ts",
     "pages/**/*.vue",
     "types/*.d.ts",
-    "nuxt.config.ts",
     "components/*.vue",
     ".nuxt/**/*.d.ts"
   ],

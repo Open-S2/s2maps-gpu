@@ -11,13 +11,6 @@ import { onMounted, onUnmounted, ref, toRaw } from 'vue';
 import type { MapOptions, S2Map } from 's2';
 import type { PropType, Ref } from 'vue';
 
-declare global {
-  /** Expose the testMap to global scope for testing purposes */
-  interface Window {
-    testMap: S2Map;
-  }
-}
-
 /** The exported container and mapInstance */
 export interface S2MapComponent {
   container: Ref<HTMLElement | undefined>;

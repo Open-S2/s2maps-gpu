@@ -6,6 +6,13 @@ import vue from '@vitejs/plugin-vue';
 import wgsl from '../config/wgsl-loader/vite.js';
 import { defineConfig, devices } from '@playwright/experimental-ct-vue';
 
+// https://github.com/mxschmitt/playwright-test-coverage/tree/ct-react-vite
+// const istanbulPlugin = istanbul({
+//   include: 's2/*',
+//   extension: ['.js', '.ts', '.vue', '.tsx', '.svelte'],
+//   forceBuildInstrument: true,
+// });
+
 /** See https://playwright.dev/docs/test-configuration. */
 export default defineConfig({
   testDir: './tests',
@@ -16,8 +23,7 @@ export default defineConfig({
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
-  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-  forbidOnly: !!process.env.CI,
+  forbidOnly: true,
   /* Retry on CI only */
 
   retries: 4,
@@ -29,6 +35,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     trace: 'on-first-retry',
+    ctPort: 3100,
     ctViteConfig: {
       plugins: [
         glsl(),
@@ -37,10 +44,18 @@ export default defineConfig({
         AutoImport({
           imports: ['vue', 'vue-router', '@vueuse/head'],
           dts: 'src/auto-imports.d.ts',
-          eslintrc: { enabled: true },
+          // eslintrc: { enabled: true },
         }),
         Components({ dirs: ['./components'], extensions: ['vue'] }),
       ],
+      build: {
+        sourcemap: 'inline',
+      },
+      worker: {
+        format: 'es',
+        /** @returns the inject plugins */
+        plugins: () => [glsl(), wgsl()],
+      },
       resolve: {
         alias: {
           s2: fileURLToPath(new URL('../s2', import.meta.url)),

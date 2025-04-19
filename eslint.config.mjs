@@ -1,19 +1,19 @@
 // @ts-check
 
-import eslint from '@eslint/js';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 import globals from 'globals';
 import jsdoc from 'eslint-plugin-jsdoc';
+import pluginSvelte from 'eslint-plugin-svelte';
 import pluginVue from 'eslint-plugin-vue';
 import prettierConfig from 'eslint-config-prettier';
-// import vueParser from 'vue-eslint-parser';
-// import withNuxt from './.nuxt/eslint.config.mjs';
 // TODO: Eventually support tsdoc instead of jsdoc [https://github.com/microsoft/tsdoc/issues/374]
 // albiet it seems like jsdoc gets way more love and has a ton of ts support
 // import tsdocs from 'eslint-plugin-tsdoc';
 import tseslint from 'typescript-eslint';
 
-// export default withNuxt(
+import svelteConfig from './svelte.config.js';
+// import svelteParser from 'svelte-eslint-parser';
+
 export default tseslint.config(
   {
     ignores: [
@@ -27,10 +27,10 @@ export default tseslint.config(
       '**/buildS2-flat',
     ],
   },
-  eslint.configs.recommended,
   tseslint.configs.recommended,
-  eslintPluginPrettierRecommended,
   ...pluginVue.configs['flat/recommended'],
+  ...pluginSvelte.configs['flat/recommended'],
+  // Typescript, React, Vue, Javascript, etc.
   {
     plugins: {
       'typescript-eslint': tseslint.plugin,
@@ -38,16 +38,19 @@ export default tseslint.config(
     languageOptions: {
       globals: {
         ...globals.browser,
+        svelte: true,
       },
       parserOptions: {
         parser: tseslint.parser,
         project: ['./tsconfig.eslint.json'],
-        extraFileExtensions: ['.vue'],
+        extraFileExtensions: ['.vue', '.svelte'],
         sourceType: 'module',
         tsconfigRootDir: import.meta.dirname,
+        svelteConfig,
       },
     },
   },
+  eslintPluginPrettierRecommended,
   prettierConfig,
   jsdoc.configs['flat/recommended-typescript'],
   {

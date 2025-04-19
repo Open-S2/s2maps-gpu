@@ -5,9 +5,11 @@
 </template>
 
 <script lang="ts">
+import { preloadMap } from '../preload.js';
 import { onMounted, onUnmounted, ref, shallowRef, toRaw } from 'vue';
 
-import type { MapOptions, S2Map } from 's2';
+import { BuildType } from '../preload.js';
+import type { MapOptions, S2Map } from 's2/index.js';
 import type { PropType, Ref } from 'vue';
 
 /** The exported container and mapInstance */
@@ -15,11 +17,6 @@ export interface S2MapComponent {
   container: Ref<HTMLElement | undefined>;
   mapInstance: Ref<S2Map | null>;
 }
-
-// TODO: PROP build type: 'preloaded' | 'flat' | 'prod' = 'prod'
-// - flat requests a flat version which doesn't require fetching workers seperately
-// - preloaded means the map is already loaded into the window object
-// - prod is the default which requests the map and css seperately
 
 export default {
   name: 'S2MapGPU',
@@ -33,6 +30,20 @@ export default {
       required: false,
       default: undefined,
     },
+    build: {
+      type: String as PropType<BuildType>,
+      required: true,
+    },
+    version: {
+      type: String as PropType<string>,
+      required: false,
+      default: 'latest',
+    },
+    testing: {
+      type: Boolean as PropType<boolean>,
+      required: false,
+      default: false,
+    },
   },
   /**
    * Setup the component, map instance, and mounting/unmounting config
@@ -40,18 +51,20 @@ export default {
    * @returns container and mapInstance
    */
   setup(props): S2MapComponent {
-    let { mapOptions, mapReady } = props;
+    let { mapOptions, mapReady, build, version, testing } = props;
     mapOptions = toRaw(mapOptions);
     const container = ref<HTMLElement>();
     const mapInstance = shallowRef<S2Map | null>(null);
 
     onMounted(async () => {
-      const { S2Map } = await import('s2');
+      await preloadMap(build, version);
+      const S2Map = window.S2Map;
       const options: MapOptions = {
         ...mapOptions,
         container: container.value,
       };
       const map = new S2Map(options);
+      if (testing === true) window.testMap = map;
 
       if (typeof mapReady === 'function')
         map.addEventListener(
@@ -82,7 +95,4 @@ export default {
   width: 100%;
   height: 100%;
 }
-</style>
-<style>
-@import url('../../s2/s2maps.css');
 </style>

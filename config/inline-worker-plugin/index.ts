@@ -1,6 +1,6 @@
 /* eslint-env node */
 import esbuild from 'esbuild';
-import findCacheDir from 'find-cache-dir';
+import findCacheDir from 'find-cache-directory';
 import fs from 'node:fs';
 import path from 'node:path';
 

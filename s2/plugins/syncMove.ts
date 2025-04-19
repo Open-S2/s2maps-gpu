@@ -1,4 +1,4 @@
-import type { S2Map, View, ViewMessage } from 's2';
+import type { S2Map, View, ViewMessage } from 's2/index.js';
 
 /** Handle the sync move event */
 export type SyncMoveListener = (event: CustomEvent<ViewMessage>) => void;

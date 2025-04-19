@@ -1,4 +1,30 @@
+import fs from 'fs';
+import path from 'path';
+import { randomBytes } from 'crypto';
+
 import type { S2Map } from 's2/index.ts';
+
+const istanbulCLIOutput = path.join(process.cwd(), '.nyc_output');
+
+/**
+ * Store the coverage in the .nyc_output folder
+ * @param coverageJSON - the coverage json
+ */
+export async function storeCoverage(coverageJSON: string): Promise<void> {
+  await fs.promises.mkdir(istanbulCLIOutput, { recursive: true });
+  fs.writeFileSync(
+    path.join(istanbulCLIOutput, `playwright_coverage_${generateUUID()}.json`),
+    coverageJSON,
+  );
+}
+
+/**
+ * Generate a random UUID
+ * @returns a random UUID
+ */
+export function generateUUID(): string {
+  return randomBytes(16).toString('hex');
+}
 
 /**
  * Mechanic to ensure the map is fully rendered

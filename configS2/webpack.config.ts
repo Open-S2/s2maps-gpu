@@ -89,9 +89,9 @@ const conifguration: Configuration = {
     ],
   },
   optimization: {
-    // usedExports: true,
-    // sideEffects: false,
-    // concatenateModules: true,
+    usedExports: true,
+    sideEffects: false,
+    concatenateModules: true,
     minimizer: ['...', new TerserPlugin({ extractComments: false })],
     splitChunks: {
       cacheGroups: {

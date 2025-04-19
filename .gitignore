@@ -30,6 +30,7 @@ logs
 .pnp.js
 
 # testing
+.nyc_output
 /coverage
 
 # next.js
@@ -64,9 +65,6 @@ yarn-error.log*
 
 # vercel
 .vercel
-
-# vscode
-.vscode
 
 # typescript
 *.tsbuildinfo

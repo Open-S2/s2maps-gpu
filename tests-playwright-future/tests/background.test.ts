@@ -1,17 +1,37 @@
 import S2MapGPU from '../components/S2MapGPU.vue';
 import S2Style from '../../pages/s2/background/style.js';
 import WMStyle from '../../pages/wm/background/style.js';
-import { waitMap } from './util.js';
 import { expect, test } from '@playwright/experimental-ct-vue';
+import { storeCoverage, waitMap } from './util.js';
+
+import v8toIstanbul from 'v8-to-istanbul';
 
 test.describe('Background', () => {
-  test('S2->Background->Default', async ({ page, mount }) => {
+  test('S2->Background->Default', async ({ page, mount, browser }) => {
+    const isChromium = browser.browserType().name() === 'chromium';
     const component = await mount(S2MapGPU, {
       props: { mapOptions: { style: S2Style } },
     });
+    // https://playwright.dev/docs/api/class-coverage
+    if (isChromium) await page.coverage.startJSCoverage();
     await page.waitForFunction(() => window.testMap !== undefined, { timeout: 5_000 });
     const success = await page.evaluate(waitMap);
     if (!success) throw new Error('waitMap failed');
+    if (isChromium) {
+      const coverage = await page.coverage.stopJSCoverage();
+      for (const { source, functions } of coverage) {
+        const converter = v8toIstanbul(
+          './tests-playwright-future/playwright/.cache/assets/assets/',
+          0,
+          {
+            source: source ?? '',
+          },
+        );
+        await converter.load();
+        converter.applyCoverage(functions);
+        await storeCoverage(JSON.stringify(converter.toIstanbul()));
+      }
+    }
     await expect(component).toHaveScreenshot('s2-background.png', { timeout: 2_000 });
   });
 

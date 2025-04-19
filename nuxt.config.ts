@@ -22,15 +22,7 @@ export default defineNuxtConfig({
     },
   },
 
-  watch: [
-    './s2/**/*',
-    './components/**/*',
-    './pages/**/*',
-    // TODO: Comment this out when done
-    '../gis-tools/src/**/*',
-    './plugins/**/*',
-    './public/**/*',
-  ],
+  watch: ['./s2/**/*', './components/**/*', './pages/**/*', './plugins/**/*', './public/**/*'],
 
   ignore: ['node_modules', 'dist', 'build', 'buildS2', 'buildS2-dev', 'buildS2-local'],
 

@@ -5,23 +5,23 @@
 </template>
 
 <script lang="ts">
-// import { S2Map } from 's2/index.js';
+import { S2Map } from 's2/index.js';
 import { onMounted, onUnmounted, ref, toRaw } from 'vue';
 
-import type { MapOptions, S2Map as S2MapType } from 's2/index.ts';
+import type { MapOptions } from 's2/index.ts';
 import type { PropType, Ref } from 'vue';
 
 declare global {
   /** Expose the testMap to global scope for testing purposes */
   interface Window {
-    testMap: S2MapType;
+    testMap: S2Map;
   }
 }
 
 /** The exported container and mapInstance */
 export interface S2MapComponent {
   container: Ref<HTMLElement | undefined>;
-  mapInstance: Ref<S2MapType | null>;
+  mapInstance: Ref<S2Map | null>;
 }
 
 /** Test Map component for Playwright */
@@ -42,7 +42,7 @@ export default {
     let { mapOptions } = props;
     mapOptions = toRaw(mapOptions);
     const container = ref<HTMLElement>();
-    const mapInstance = ref<S2MapType | null>(null) as Ref<S2MapType | null>;
+    const mapInstance = ref<S2Map | null>(null) as Ref<S2Map | null>;
 
     onMounted((): void => {
       const options: MapOptions = {
@@ -58,7 +58,7 @@ export default {
         // TODO: When flat build can handle offscreen, remove this
         offscreen: false,
       };
-      const map = new window.S2Map(options);
+      const map = new S2Map(options);
 
       /** Used by playwright to ensure the map is ready to render */
       window.testMap = toRaw(map);
