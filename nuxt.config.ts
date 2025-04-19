@@ -8,7 +8,7 @@ export default defineNuxtConfig({
   future: {
     compatibilityVersion: 4,
   },
-  compatibilityDate: '2025-04-07',
+
   experimental: {
     watcher: 'parcel', // 'chokidar' or 'parcel' are also options
   },
@@ -48,4 +48,6 @@ export default defineNuxtConfig({
     util: fileURLToPath(new URL('./s2/util', import.meta.url)),
     workers: fileURLToPath(new URL('./s2/workers', import.meta.url)),
   },
+
+  compatibilityDate: '2025-04-07',
 });

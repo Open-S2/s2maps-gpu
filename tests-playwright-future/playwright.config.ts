@@ -6,13 +6,6 @@ import vue from '@vitejs/plugin-vue';
 import wgsl from '../config/wgsl-loader/vite.js';
 import { defineConfig, devices } from '@playwright/experimental-ct-vue';
 
-// https://github.com/mxschmitt/playwright-test-coverage/tree/ct-react-vite
-// const istanbulPlugin = istanbul({
-//   include: 's2/*',
-//   extension: ['.js', '.ts', '.vue', '.tsx', '.svelte'],
-//   forceBuildInstrument: true,
-// });
-
 /** See https://playwright.dev/docs/test-configuration. */
 export default defineConfig({
   testDir: './tests',
