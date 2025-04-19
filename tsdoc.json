@@ -8,6 +8,10 @@
         {
             "tagName": "@default",
             "syntaxKind": "block"
+        },
+        {
+            "tagName": "@source",
+            "syntaxKind": "block"
         }
     ]
 }

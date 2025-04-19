@@ -29,13 +29,13 @@ export default class SpriteSource extends ImageSource {
   override async build(mapID: string): Promise<undefined | ImageSourceMetadata> {
     const { name, fileType, path, texturePack } = this;
     // grab the metadata and sprites
-    const [spriteMeta, sprites] = (await Promise.all([
-      this._fetch(`${path}.json`, mapID),
-      this._fetch(`${path}.${fileType}`, mapID),
+    const [spriteMeta, sprites] = await Promise.all([
+      this._fetch<SpritesMetadata>(`${path}.json`, mapID),
+      this._fetch<ArrayBuffer>(`${path}.${fileType}`, mapID),
     ]).catch((err) => {
       console.error(err);
       return [undefined, undefined];
-    })) as [SpritesMetadata | undefined, ArrayBuffer | undefined];
+    });
     // if either failed, stop their
     if (spriteMeta === undefined || sprites === undefined) {
       this.active = false;

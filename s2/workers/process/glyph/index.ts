@@ -563,13 +563,13 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     }
 
     // filter data
-    const glyphFilterBuffer = new Float32Array(glyphFilterData).buffer as ArrayBuffer;
-    const glyphFilterIDBuffer = new Uint8ClampedArray(glyphFilterIDs).buffer as ArrayBuffer;
+    const glyphFilterBuffer = new Float32Array(glyphFilterData).buffer;
+    const glyphFilterIDBuffer = new Uint8ClampedArray(glyphFilterIDs).buffer;
     // quad draw data
-    const glyphQuadBuffer = new Float32Array(glyphQuads).buffer as ArrayBuffer;
-    const glyphQuadIDBuffer = new Uint8ClampedArray(glyphQuadIDs).buffer as ArrayBuffer;
-    const glyphColorBuffer = new Uint8ClampedArray(glyphColors).buffer as ArrayBuffer;
-    const featureGuideBuffer = new Float32Array(featureGuide).buffer as ArrayBuffer;
+    const glyphQuadBuffer = new Float32Array(glyphQuads).buffer;
+    const glyphQuadIDBuffer = new Uint8ClampedArray(glyphQuadIDs).buffer;
+    const glyphColorBuffer = new Uint8ClampedArray(glyphColors).buffer;
+    const featureGuideBuffer = new Float32Array(featureGuide).buffer;
 
     const message: GlyphData = {
       mapID,
@@ -713,15 +713,15 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
     }
 
     // filter data
-    const glyphFilterBuffer = new Float32Array(glyphFilterData).buffer as ArrayBuffer;
+    const glyphFilterBuffer = new Float32Array(glyphFilterData).buffer;
     // unused by WebGPU
-    const glyphFilterIDBuffer = new Uint8ClampedArray([0]).buffer as ArrayBuffer;
+    const glyphFilterIDBuffer = new Uint8ClampedArray([0]).buffer;
     // quad draw data
-    const glyphQuadBuffer = new Float32Array(glyphQuads).buffer as ArrayBuffer;
+    const glyphQuadBuffer = new Float32Array(glyphQuads).buffer;
     // actually an index buffer not ID buffer
-    const glyphQuadIDBuffer = new Uint32Array(glyphQuadIDs).buffer as ArrayBuffer;
-    const glyphColorBuffer = new Float32Array(glyphColors).buffer as ArrayBuffer;
-    const featureGuideBuffer = new Float32Array(featureGuide).buffer as ArrayBuffer;
+    const glyphQuadIDBuffer = new Uint32Array(glyphQuadIDs).buffer;
+    const glyphColorBuffer = new Float32Array(glyphColors).buffer;
+    const featureGuideBuffer = new Float32Array(featureGuide).buffer;
 
     const message: GlyphData = {
       mapID,

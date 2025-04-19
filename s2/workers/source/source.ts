@@ -78,7 +78,7 @@ export default class Source {
    */
   async build(mapID: string, metadata?: SourceMetadata): Promise<void> {
     if (metadata === undefined)
-      metadata = (await this._fetch(`${this.path}/metadata.json`, mapID, true)) as SourceMetadata;
+      metadata = await this._fetch<SourceMetadata>(`${this.path}/metadata.json`, mapID, true);
     if (metadata === undefined) {
       this.active = false;
       console.error(`FAILED TO extrapolate ${this.path} metadata`);
@@ -280,7 +280,7 @@ export default class Source {
         ? `${zoom}/${i}/${j}.${extension}`
         : `${face}/${zoom}/${i}/${j}.${extension}`);
 
-    const data = (await this._fetch(`${path}/${location}`, mapID)) as ArrayBuffer | undefined;
+    const data = await this._fetch<ArrayBuffer>(`${path}/${location}`, mapID);
     if (data !== undefined) {
       const worker = session.requestWorker();
       worker.postMessage({ mapID, type, tile, sourceName, data, size }, [data]);
@@ -299,7 +299,7 @@ export default class Source {
   _flush(mapID: string, tile: TileRequest, sourceName: string): void {
     const { textEncoder, session } = this;
     // compress
-    const data = textEncoder.encode('{"layers":{}}').buffer as ArrayBuffer;
+    const data = textEncoder.encode('{"layers":{}}').buffer;
     // send off
     const worker = session.requestWorker();
     worker.postMessage({ mapID, type: 'jsondata', tile, sourceName, data }, [data]);
@@ -312,11 +312,7 @@ export default class Source {
    * @param json - flag indicating if the data is json
    * @returns the raw data or JSON metadata if found
    */
-  async _fetch(
-    path: string,
-    mapID: string,
-    json = false,
-  ): Promise<ArrayBuffer | SourceMetadata | undefined> {
+  async _fetch<T>(path: string, mapID: string, json = false): Promise<T | undefined> {
     const headers: { Authorization?: string } = {};
     if (this.needsToken) {
       const Authorization = await this.session.requestSessionToken(mapID);
@@ -327,7 +323,7 @@ export default class Source {
     if (res.status !== 200 && res.status !== 206) return;
     if (json || (res.headers.get('content-type') ?? '').includes('application/json'))
       return await res.json();
-    return await res.arrayBuffer();
+    return (await res.arrayBuffer()) as unknown as Promise<T>;
   }
 }
 

@@ -3,7 +3,7 @@ import { describe, expect, test } from 'bun:test';
 
 describe('polyfill', () => {
   test('isSafari', () => {
-    expect(isSafari).toBe(true);
+    expect(isSafari(window)).toBe(true);
   });
 
   test('isSafari on a chrome browser', () => {

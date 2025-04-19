@@ -5,24 +5,21 @@
 </template>
 
 <script lang="ts">
-import { useRuntimeConfig } from 'nuxt/app';
-import { onMounted, onUnmounted, ref, toRaw } from 'vue';
+import { onMounted, onUnmounted, ref, shallowRef, toRaw } from 'vue';
 
 import type { MapOptions, S2Map } from 's2';
 import type { PropType, Ref } from 'vue';
-
-declare global {
-  /** Expose the testMap to global scope for testing purposes */
-  interface Window {
-    testMap: S2Map;
-  }
-}
 
 /** The exported container and mapInstance */
 export interface S2MapComponent {
   container: Ref<HTMLElement | undefined>;
   mapInstance: Ref<S2Map | null>;
 }
+
+// TODO: PROP build type: 'preloaded' | 'flat' | 'prod' = 'prod'
+// - flat requests a flat version which doesn't require fetching workers seperately
+// - preloaded means the map is already loaded into the window object
+// - prod is the default which requests the map and css seperately
 
 export default {
   name: 'S2MapGPU',
@@ -46,27 +43,15 @@ export default {
     let { mapOptions, mapReady } = props;
     mapOptions = toRaw(mapOptions);
     const container = ref<HTMLElement>();
-    const mapInstance = ref<S2Map | null>(null) as Ref<S2Map | null>;
+    const mapInstance = shallowRef<S2Map | null>(null);
 
     onMounted(async () => {
       const { S2Map } = await import('s2');
-      const config = useRuntimeConfig();
       const options: MapOptions = {
-        urlMap: {
-          apiURL: config.public.dataURL as string,
-          dataURL: config.public.dataURL as string,
-          baseURL: config.public.baseURL as string,
-        },
-        attributionOff: true,
-        watermarkOff: true,
-        controls: false,
         ...mapOptions,
         container: container.value,
       };
       const map = new S2Map(options);
-
-      /** Used by playwright to ensure the map is ready to render */
-      window.testMap = toRaw(map);
 
       if (typeof mapReady === 'function')
         map.addEventListener(
@@ -89,8 +74,7 @@ export default {
 };
 </script>
 
-<style>
-@import url('../s2/s2maps.css');
+<style scoped>
 #map {
   position: absolute;
   top: 0;
@@ -98,4 +82,7 @@ export default {
   width: 100%;
   height: 100%;
 }
+</style>
+<style>
+@import url('../../s2/s2maps.css');
 </style>

@@ -12,10 +12,10 @@ const style: StyleDefinition = {
   minzoom: -0.5,
   maxzoom: 5,
   sources: {
-    land: '/geojson/land.geojson',
+    land: 'http://localhost:3000/geojson/land.geojson',
   },
   sprites: {
-    streets: '/sprites/streets/sprite@2x',
+    streets: 'http://localhost:3000/sprites/streets/sprite@2x',
   },
   layers: [
     {

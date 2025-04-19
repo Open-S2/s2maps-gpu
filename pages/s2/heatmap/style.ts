@@ -11,8 +11,8 @@ const style: StyleDefinition = {
   minzoom: -0.5,
   maxzoom: 5,
   sources: {
-    countries: '/s2json/countriesHD.s2json',
-    earthquakes: '/s2json/earthquakes.s2json',
+    countries: 'http://localhost:3000/s2json/countriesHD.s2json',
+    earthquakes: 'http://localhost:3000/s2json/earthquakes.s2json',
   },
   fonts: {},
   layers: [

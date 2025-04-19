@@ -226,9 +226,9 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
     }
 
     // Upon building the batches, convert to buffers and ship.
-    const vertexBuffer = new Float32Array(vertices).buffer as ArrayBuffer;
-    const lengthSoFarBuffer = new Float32Array(lengthSoFar).buffer as ArrayBuffer;
-    const featureGuideBuffer = new Float32Array(featureGuide).buffer as ArrayBuffer;
+    const vertexBuffer = new Float32Array(vertices).buffer;
+    const lengthSoFarBuffer = new Float32Array(lengthSoFar).buffer;
+    const featureGuideBuffer = new Float32Array(featureGuide).buffer;
     // ship the vector data.
     const data: LineData = {
       mapID,

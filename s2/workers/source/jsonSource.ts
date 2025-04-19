@@ -21,9 +21,7 @@ export default class JSONSource extends Source {
    * @param metadata - the metadata for the source
    */
   override async build(mapID: string, metadata?: SourceMetadata): Promise<void> {
-    const json =
-      metadata?.data ??
-      ((await this._fetch(`${this.path}`, mapID, true)) as unknown as JSONCollection);
+    const json = metadata?.data ?? (await this._fetch<JSONCollection>(`${this.path}`, mapID, true));
     if (json === undefined) {
       this.active = false;
       console.error(`FAILED TO extrapolate ${this.path} json data`);
@@ -74,7 +72,7 @@ export default class JSONSource extends Source {
         return;
       }
       // compress
-      const data = (await textEncoder.encode(JSON.stringify(vectorTile)).buffer) as ArrayBuffer;
+      const data = await textEncoder.encode(JSON.stringify(vectorTile)).buffer;
       // send off
       worker.postMessage({ mapID, type: 'jsondata', tile, sourceName: name, data }, [data]);
     } else {

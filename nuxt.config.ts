@@ -5,11 +5,10 @@ import wgsl from './config/wgsl-loader/vite.js';
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   devtools: { enabled: false },
-
   future: {
     compatibilityVersion: 4,
   },
-
+  compatibilityDate: '2025-04-07',
   experimental: {
     watcher: 'parcel', // 'chokidar' or 'parcel' are also options
   },
@@ -42,10 +41,7 @@ export default defineNuxtConfig({
 
   css: [fileURLToPath(new URL('./assets/styles/globals.css', import.meta.url))],
 
-  vite: {
-    // @ts-expect-error - these work fine for now. They were built for webpack, we are using them for
-    plugins: [wgsl(), glsl()],
-  },
+  vite: { plugins: [wgsl(), glsl()] },
 
   alias: {
     s2: fileURLToPath(new URL('./s2', import.meta.url)),
@@ -60,6 +56,4 @@ export default defineNuxtConfig({
     util: fileURLToPath(new URL('./s2/util', import.meta.url)),
     workers: fileURLToPath(new URL('./s2/workers', import.meta.url)),
   },
-
-  compatibilityDate: '2025-04-07',
 });

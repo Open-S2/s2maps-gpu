@@ -11,7 +11,7 @@ const style: StyleDefinition = {
   minzoom: -0.5,
   maxzoom: 5,
   sources: {
-    satellite: '/tiles/s2/modis',
+    satellite: 'http://localhost:3000/tiles/s2/modis',
   },
   fonts: {},
   skybox: {

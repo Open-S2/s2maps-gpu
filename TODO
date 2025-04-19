@@ -3,3 +3,26 @@
 Not a replacement for the full tracker. Used on a large PR basis
 
 [ ] - Use modern playwrite for faster testing
+
+## Converters
+
+[ ] - Mapbox options -> S2Map options
+[ ] - Maplibre options -> S2Map options
+[ ] - Maplibre style -> S2Map style
+[ ] - Mapbox style -> S2Map style
+
+## Plugins
+
+[ ] - compare: Enables users to compare two maps by swiping left and right.
+[ ] - controls: Adds controls for a ruler, style inspector, localization, and style switcher.
+[ ] - draw: Draw points, lines, polygons, circles, etc. on the map
+[ ] - minimap: Draw a minimap on the map.
+[ ] - Glyphs and Icons for personal consumption: fontawesome Icons / Personal Icons / personal built glyphs
+[x] - sync-move: ensure the camera is synced between multiple maps
+[ ] - data-import: Import over 29 readers (use gis-tools)
+
+## Frameworks
+
+[ ] - react
+[ ] - vue
+[ ] - svelte

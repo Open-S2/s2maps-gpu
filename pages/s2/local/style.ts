@@ -11,7 +11,7 @@ const style: StyleDefinition = {
   minzoom: -0.5,
   maxzoom: 5,
   sources: {
-    countries: '/s2json/countriesHD.s2json',
+    countries: 'http://localhost:3000/s2json/countriesHD.s2json',
     local: '_local',
   },
   fonts: {},
@@ -29,7 +29,7 @@ const style: StyleDefinition = {
       source: 'local',
       layer: 'boundary',
       type: 'line',
-      color: '#000000',
+      color: 'red',
       width: 2.5,
     },
   ],

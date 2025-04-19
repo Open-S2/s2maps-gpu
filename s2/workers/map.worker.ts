@@ -41,7 +41,7 @@ export default class MapWorker {
     else if (type === 'colorMode') this.s2mapUI.colorMode(data.mode);
     else if (type === 'setStyle') void this.s2mapUI.setStyle(data.style, data.ignorePosition);
     else if (type === 'updateStyle') this.s2mapUI.updateStyle(data.style);
-    else if (type === 'jumpTo') this.s2mapUI.jumpTo(data.lon, data.lat, data.zoom);
+    else if (type === 'jumpTo') this.s2mapUI.jumpTo(data.view);
     else if (type === 'easeTo' || type === 'flyTo') this.s2mapUI.animateTo(type, data.directions);
     else if (type === 'moveState') this.s2mapUI.canMove = data.state;
     else if (type === 'zoomState') this.s2mapUI.canZoom = data.state;

@@ -390,14 +390,12 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
     }
 
     // Upon building the batches, convert to buffers and ship.
-    const vertexBuffer = new Float32Array(vertices).buffer as ArrayBuffer;
-    const indexBuffer = new Uint32Array(indices).buffer as ArrayBuffer;
-    const idBuffer = new Uint8ClampedArray(ids).buffer as ArrayBuffer; // pre-store each id as an rgb value
+    const vertexBuffer = new Float32Array(vertices).buffer;
+    const indexBuffer = new Uint32Array(indices).buffer;
+    const idBuffer = new Uint8ClampedArray(ids).buffer; // pre-store each id as an rgb value
     const codeTypeBuffer =
-      this.gpuType === 3
-        ? (new Uint32Array(codeType).buffer as ArrayBuffer)
-        : (new Uint8Array(codeType).buffer as ArrayBuffer);
-    const featureGuideBuffer = new Float32Array(featureGuide).buffer as ArrayBuffer;
+      this.gpuType === 3 ? new Uint32Array(codeType).buffer : new Uint8Array(codeType).buffer;
+    const featureGuideBuffer = new Float32Array(featureGuide).buffer;
     // ship the vector data.
     const message: FillData = {
       mapID,

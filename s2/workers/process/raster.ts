@@ -1,4 +1,3 @@
-// import { isSafari } util/polyfill'
 import { colorFunc } from './vectorWorker.js';
 import parseFeatureFunction from 'style/parseFeatureFunction.js';
 

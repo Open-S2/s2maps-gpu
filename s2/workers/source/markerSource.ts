@@ -1,11 +1,4 @@
-import {
-  convert,
-  pointFromLonLat,
-  pointToST,
-  projectX,
-  projectY,
-  transformPoint,
-} from 'gis-tools/index.js';
+import { convert, transformPoint } from 'gis-tools/index.js';
 
 import type { Session } from './index.js';
 import type {
@@ -18,14 +11,18 @@ import type {
 import type { LayerDefinition, Projection, SourceMetadata } from 'style/style.spec.js';
 import type { SourceFlushMessage, TileRequest } from '../worker.spec.js';
 
+/** Marker metadata */
+export interface MarkerMetadata {
+  html?: string; // HTMLElement as a string
+}
+
 /** Marker definition tracking lon/lat, html, and properties associated with it */
 export interface MarkerDefinition {
   id?: number;
-  lon: number;
-  lat: number;
-  html?: string; // HTMLElement
-  properties?: Record<string, unknown>;
-  geometry?: VectorPoint;
+  face?: Face;
+  properties: Properties;
+  point: VectorPoint;
+  metadata?: MarkerMetadata;
 }
 
 /** Properties associated with markers */
@@ -35,8 +32,8 @@ interface MarkerProperties extends Properties {
 
 /** A storage container for Marker */
 export interface Marker {
-  id?: number;
-  html?: string; // HTMLElement
+  id: number;
+  metadata?: MarkerMetadata;
   properties: MarkerProperties;
   geometry: VectorPoint;
 }
@@ -79,49 +76,42 @@ export default class MarkerSource {
    * @param metadata - the metadata associated with the source
    */
   build(_mapID: string, metadata?: SourceMetadata): void {
-    const json: JSONCollection | undefined = metadata?.data;
-    const markers: MarkerDefinition[] = [];
+    const { projection } = this;
+    const json: JSONCollection<MarkerMetadata> | undefined = metadata?.data;
     if (json !== undefined) {
-      const features = convert('WG', json, undefined, true);
+      const features = convert(projection === 'WM' ? 'WG' : 'S2', json, true, true);
       for (const feature of features) {
+        const { id, face, properties, metadata } = feature;
         if (feature.geometry.type === 'Point') {
-          const marker: MarkerDefinition = {
-            id: feature.id,
-            lon: feature.geometry.coordinates.x,
-            lat: feature.geometry.coordinates.y,
-            properties: feature.properties,
-          };
-          markers.push(marker);
+          this.addMarker({ point: feature.geometry.coordinates, face, properties, id, metadata });
+        } else if (feature.geometry.type === 'MultiPoint') {
+          for (const point of feature.geometry.coordinates) {
+            this.addMarker({ point, face, properties, id, metadata });
+          }
         }
       }
     }
-    this.addMarkers(markers);
   }
 
   /**
-   * Add marker(s) to the source
-   * @param markers - the marker(s) to add
+   * Add marker to the source
+   * @param marker - the marker to add
    */
-  addMarkers(markers: MarkerDefinition[]): void {
-    const { projection } = this;
-    for (const marker of markers) {
-      const { lon, lat } = marker;
-      let { id, properties } = marker;
-      if (properties === undefined) properties = {};
-      // build face, s, t
-      const [face, x, y] =
-        projection === 'S2'
-          ? pointToST(pointFromLonLat({ x: lon, y: lat }))
-          : [0 as Face, projectX(lon), projectY(lat)];
-      // if no id, let's create one
-      if (id === undefined) {
-        id = this.idGen++;
-        if (this.idGen >= Number.MAX_SAFE_INTEGER) this.idGen = 0;
-      }
-      // store
-      properties.__markerID = id;
-      this[face].set(id, { properties: properties as MarkerProperties, geometry: { x, y } });
+  addMarker(marker: MarkerDefinition): void {
+    let { point, face, properties, id, metadata } = marker;
+    // if no id, let's create one
+    if (id === undefined) {
+      id = this.idGen++;
+      if (this.idGen >= Number.MAX_SAFE_INTEGER) this.idGen = 0;
     }
+    // store
+    properties.__markerID = id;
+    this[face ?? 0].set(id, {
+      id,
+      metadata,
+      properties: { __markerID: id, ...properties },
+      geometry: point,
+    });
   }
 
   /**
@@ -130,12 +120,12 @@ export default class MarkerSource {
    */
   deleteMarkers(ids: number[]): void {
     for (const id of ids) {
-      if (this[0].has(id)) this[0].delete(id);
-      else if (this[1].has(id)) this[1].delete(id);
-      else if (this[2].has(id)) this[2].delete(id);
-      else if (this[3].has(id)) this[3].delete(id);
-      else if (this[4].has(id)) this[4].delete(id);
-      else if (this[5].has(id)) this[5].delete(id);
+      this[0].delete(id);
+      this[1].delete(id);
+      this[2].delete(id);
+      this[3].delete(id);
+      this[4].delete(id);
+      this[5].delete(id);
     }
   }
 
@@ -183,7 +173,7 @@ export default class MarkerSource {
       layers: { default: { extent: 1, features, length: features.length } },
     };
     // encode for transfer
-    const uint8data = this.textEncoder.encode(JSON.stringify(data)).buffer as ArrayBuffer;
+    const uint8data = this.textEncoder.encode(JSON.stringify(data)).buffer;
     // request a worker and post
     const worker = this.session.requestWorker();
     worker.postMessage({ mapID, type: 'jsondata', tile, sourceName: name, data: uint8data }, [
@@ -202,7 +192,7 @@ export default class MarkerSource {
   _flush(mapID: string, tile: TileRequest): void {
     const { textEncoder, session, name } = this;
     // compress
-    const data = textEncoder.encode('{"layers":{}}').buffer as ArrayBuffer;
+    const data = textEncoder.encode('{"layers":{}}').buffer;
     // send off
     const worker = session.requestWorker();
     worker.postMessage({ mapID, type: 'jsondata', tile, sourceName: name, data }, [data]);

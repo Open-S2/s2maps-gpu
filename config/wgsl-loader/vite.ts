@@ -12,50 +12,43 @@
 
 import { createFilter } from '@rollup/pluginutils';
 import parse from './parse';
-import { transformWithEsbuild } from 'vite';
+import { Plugin, ResolvedConfig, transformWithEsbuild } from 'vite';
+
+// /**
+//  * @constant
+//  * @default
+//  * @readonly
+//  * @type {string}
+//  */
+// const DEFAULT_EXTENSION = 'wgsl';
 
 /**
  * @constant
  * @default
  * @readonly
- * @type {string}
- */
-const DEFAULT_EXTENSION = 'wgsl';
-
-/**
- * @constant
- * @default
- * @readonly
- * @type {readonly RegExp[]}
  */
 const DEFAULT_SHADERS = Object.freeze(['**/*.wgsl']);
 
 /**
  * @function
  * @name wgsl
- * @param options.include
- * @param options.exclude
- * @param options.warnDuplicatedImports
- * @param options.defaultExtension
- * @param options.compress
- * @param options.watch
- * @param options.root
+ * @param options - plugin options
+ * @param options.include - array of globs to include
+ * @param options.exclude - array of globs to exclude
  * @description Plugin entry point to import,
  * inline, (and compress) WGSL shader files
  * @see {@link https://vitejs.dev/guide/api-plugin.html}
- * @link https://github.com/UstymUkhman/vite-plugin-wgsl
- * @param options Plugin config object
  * @returns Vite plugin that converts shader code
  */
 export default function ({
   include = DEFAULT_SHADERS,
   exclude = undefined,
-  warnDuplicatedImports = true,
-  defaultExtension = DEFAULT_EXTENSION,
-  compress = false,
-  watch = true,
-  root = '/',
-} = {}) {
+  // warnDuplicatedImports = true,
+  // defaultExtension = DEFAULT_EXTENSION,
+  // compress = false,
+  // watch = true,
+  // root = '/',
+} = {}): Plugin {
   let config;
   const filter = createFilter(include, exclude);
   const prod = process.env.NODE_ENV === 'production';
@@ -65,15 +58,18 @@ export default function ({
     name: 'vite-plugin-wgsl',
 
     /**
-     * @param resolvedConfig
+     * Set the resolve Vite config into the plugin
+     * @param resolvedConfig - resolved Vite config
      */
-    configResolved(resolvedConfig) {
+    configResolved(resolvedConfig: ResolvedConfig): void {
       config = resolvedConfig;
     },
 
     /**
-     * @param source
-     * @param shader
+     * Transform GLSL shader files
+     * @param source - source location
+     * @param shader - shader code
+     * @returns transformed shader if matched
      */
     async transform(source, shader) {
       if (!filter(shader)) return;

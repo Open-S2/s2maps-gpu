@@ -12,10 +12,10 @@ const style: StyleDefinition = {
   minzoom: -0.5,
   maxzoom: 5,
   sources: {
-    countries: '/s2json/countriesHD.s2json',
+    countries: 'http://localhost:3000/s2json/countriesHD.s2json',
   },
   fonts: {
-    robotoMedium: '/api/glyphs-v2/RobotoMedium',
+    robotoMedium: 'http://localhost:3000/api/glyphs-v2/RobotoMedium',
   },
   layers: [
     {

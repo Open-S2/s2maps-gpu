@@ -16,7 +16,7 @@ const conifguration: Configuration = {
   mode: 'production',
   // These are the 'entry points' to our application.
   // This means they will be the 'root' imports that are included in JS bundle.
-  entry: path.join(_dirname, '/../assets/styles/s2maps.css'),
+  entry: path.join(_dirname, '/../s2/s2maps.css'),
   output: {
     path: path.join(_dirname, '/../buildS2'),
     filename: 'css.tmp',

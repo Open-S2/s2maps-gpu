@@ -53,7 +53,7 @@ const resultJS = await Bun.build({
   // naming: '[name].[ext]'
 });
 const resultCSS = await Bun.build({
-  entrypoints: ['./assets/styles/s2maps.css'],
+  entrypoints: ['./s2/s2maps.css'],
   outdir: './buildS2-flat',
   naming: 's2maps-gpu.min.css',
   minify: true,

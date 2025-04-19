@@ -53,7 +53,7 @@
 // vendors.min.js                48.32 kB      16.52 kB     13.45 kB
 // TOTAL:                        560.92 kB     153.97 kB    127.87 kB
 //
-// s2maps-gpu.flat.js            646.56 kB     157.66 kB    117.3 kB
+// s2maps-gpu.flat.js            630.51 kB     152.69 kB    113.76 kB
 
 // TODO: Better open-vector-tile treeshake (it can't shake 'addColumnData', figure out why)
 

@@ -276,15 +276,15 @@ export default class Projector {
    */
   onMove(movementX = 0, movementY = 0, multiplierX?: number, multiplierY?: number): void {
     this.#setMove(movementX, movementY);
-    const { lon, lat, tileSize, projection } = this;
+    const { lon, lat, tileSize, projection, multiplier } = this;
     let { bearing } = this;
     const { abs, max, min, PI, sin, cos } = Math;
     const zScale = max(this.zoomScale(), 1);
     const tileScale = tileSize / 512;
     const isS2 = projection === 'S2';
     // setup multipliers
-    if (multiplierX === undefined) multiplierX = isS2 ? 13 * 360 : 1.5;
-    if (multiplierY === undefined) multiplierY = isS2 ? 13 * 180 : 1.5;
+    if (multiplierX === undefined) multiplierX = multiplier * (isS2 ? 6.5 * 360 : 0.75);
+    if (multiplierY === undefined) multiplierY = multiplier * (isS2 ? 6.5 * 180 : 0.75);
     if (!isS2) {
       multiplierX *= tileScale;
       multiplierY *= tileScale;

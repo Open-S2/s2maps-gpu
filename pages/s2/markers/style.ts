@@ -11,7 +11,7 @@ const style: StyleDefinition = {
   minzoom: -1,
   maxzoom: 2.5,
   sources: {
-    countries: '/s2json/countriesHD.s2json',
+    countries: 'http://localhost:3000/s2json/countriesHD.s2json',
     markers: {
       type: 'markers',
       path: '_markers',
@@ -24,6 +24,14 @@ const style: StyleDefinition = {
             geometry: {
               type: 'Point',
               coordinates: [0, 0],
+            },
+          },
+          {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'Point',
+              coordinates: [20, 40],
             },
           },
         ],

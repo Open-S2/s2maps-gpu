@@ -11,7 +11,7 @@ const style: StyleDefinition = {
   minzoom: -1,
   maxzoom: 2.5,
   sources: {
-    hilbert: '/s2json/hilbert.s2json',
+    hilbert: 'http://localhost:3000/s2json/hilbert.s2json',
   },
   fonts: {},
   layers: [

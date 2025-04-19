@@ -7,7 +7,7 @@ import type { ColorMode } from 's2/s2Map.js';
 import type { UrlMap } from 'util/index.js';
 import type { UserTouchEvent } from './camera/dragPan.js';
 import type { AnimationDirections, AnimationType } from './camera/animator.js';
-import type { Attributions, GPUType, LayerStyle, StyleDefinition } from 'style/style.spec.js';
+import type { Attributions, GPUType, LayerStyle, StyleDefinition, View } from 'style/style.spec.js';
 import type {
   MapGLMessage,
   RenderedMessageGL,
@@ -183,14 +183,11 @@ export default class S2MapUI extends Camera {
 
   /**
    * Jump to a specific location and zoom level
-   * @param lon - Longitude of the target location
-   * @param lat - Latitude of the target location
-   * @param zoom - Zoom level to set after jumping
+   * @param view - View to jump to
    */
-  jumpTo(lon: number, lat: number, zoom?: number): void {
-    // update the projectors position
-    this.projector.setView({ lon, lat, zoom });
-    // render it out
+  jumpTo(view: View): void {
+    // update the projectors position and render the update
+    this.projector.setView(view);
     this.render();
   }
 
@@ -458,7 +455,7 @@ export default class S2MapUI extends Camera {
       if (this.#fullyRenderedScreen()) {
         // assuming the screen is ready for a screen shot we ask for a draw
         void painter.getScreen().then((data) => {
-          const screen = data.buffer as ArrayBuffer;
+          const screen = data.buffer;
           const msg: ScreenshotMessageGL = { mapID, type: 'screenshot', screen };
           if (webworker) postMessage(msg, [screen]);
           else parent?.onMessage({ data: msg } as MessageEvent<MapGLMessage>);

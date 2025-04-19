@@ -261,10 +261,10 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
     }
 
     // Upon building the batches, convert to buffers and ship.
-    const vertexBuffer = new Float32Array(vertices).buffer as ArrayBuffer;
-    const weightBuffer = new Float32Array(weights).buffer as ArrayBuffer;
-    const idBuffer = new Uint8ClampedArray(ids).buffer as ArrayBuffer; // pre-store each id as an rgb value
-    const featureGuideBuffer = new Float32Array(featureGuide).buffer as ArrayBuffer;
+    const vertexBuffer = new Float32Array(vertices).buffer;
+    const weightBuffer = new Float32Array(weights).buffer;
+    const idBuffer = new Uint8ClampedArray(ids).buffer; // pre-store each id as an rgb value
+    const featureGuideBuffer = new Float32Array(featureGuide).buffer;
     // ship the vector data.
     if (type === 'point') {
       const data: PointData = {

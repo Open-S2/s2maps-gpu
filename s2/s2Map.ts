@@ -5,7 +5,13 @@ import type { MapOptions } from './ui/s2mapUI.js';
 import type { MarkerDefinition } from './workers/source/markerSource.js';
 import type S2MapUI from './ui/s2mapUI.js';
 import type { UserTouchEvent } from './ui/camera/dragPan.js';
-import type { Attributions, GPUType, LayerStyle, StyleDefinition } from './style/style.spec.js';
+import type {
+  Attributions,
+  GPUType,
+  LayerStyle,
+  StyleDefinition,
+  View,
+} from './style/style.spec.js';
 import type {
   MapGLMessage,
   MouseClickMessage,
@@ -110,6 +116,7 @@ declare global {
  * - {@link S2Map.updateStyle}: Update the map's current style with new attributes, by checking for changes and updating accordingly
  * - {@link S2Map.setMoveState}: Update the users ability to move the map around or not.
  * - {@link S2Map.setZoomState}: Update the users ability to zoom the map in and out or not.
+ * - {@link S2Map.getView}: Get the current projector's view of the world
  * - {@link S2Map.jumpTo}: Jump to a specific location's longitude, latitude, and optionally zoom
  * - {@link S2Map.easeTo}: Use an easing function to travel to a specific location's longitude, latitude, and optionally zoom
  * - {@link S2Map.flyTo}: Use an easing function to fly to a specific location's longitude, latitude, and optionally zoom
@@ -279,7 +286,7 @@ export default class S2Map extends EventTarget {
     // TODO: Safari offscreenCanvas sucks currently. It's so janky. Leave this here for when it's fixed.
     if (
       options.offscreen !== false &&
-      !isSafari &&
+      !isSafari(window) &&
       typeof canvas.transferControlToOffscreen === 'function'
     ) {
       const offscreenCanvas = canvas.transferControlToOffscreen();
@@ -947,7 +954,45 @@ export default class S2Map extends EventTarget {
   }
 
   /**
-   * Jump to a specific location's longitude, latitude, and optionally zoom
+   * Get the current projector's view of the world
+   *
+   * ### Example
+   * ```ts
+   * import { S2Map } from 's2maps-gpu'; // or you can access it via the global `window.S2Map`
+   * import type { MapOptions, View } from 's2maps-gpu';
+   *
+   * const options: MapOptions = { ..., view: { lon: 0, lat: 0, zoom: 0 } };
+   * const map = new S2Map(options);
+   * // Get a filled in view object
+   * const view: Required<View> = await map.getView();
+   * ```
+   * @returns A filled in {@link View} object
+   */
+  async getView(): Promise<Required<View>> {
+    const { offscreen, map } = this;
+    if (map !== undefined) {
+      const { zoom, lon, lat, bearing, pitch } = map.projector;
+      return { zoom, lon, lat, bearing, pitch };
+    }
+    return await new Promise((resolve): void => {
+      /**
+       * Setup a listener for when the view to be shipped back
+       * @param event - the response with the view
+       */
+      const listener = (event: CustomEvent<Required<View>>): void => {
+        resolve(event?.detail);
+      };
+      this.addEventListener('view', listener as EventListener, { once: true });
+      // TODO: Does an empty jump to work? I think I remember no view changes don't cause a new render or updates
+      offscreen?.postMessage({ type: 'jumpTo', view: {} }); // use an empty jump to not edit anything
+    });
+  }
+
+  /**
+   * Jump to a specific location's longitude, latitude, and optionally zoom, bearing, and pitch.
+   * Takes a {@link View} object as an input.
+   *
+   * NOTE: If either the `lon` or `lat` are not set, it will assume the map's current position
    *
    * ### Example
    * ```ts
@@ -958,16 +1003,14 @@ export default class S2Map extends EventTarget {
    * const map = new S2Map(options);
    * // wait for map to load, then jump to a specific location
    * await map.awaitFullLoaded();
-   * map.jumpTo(-120, 60, 7);
+   * map.jumpTo({ lon: -120, lat: 60, zoom: 7 });
    * ```
-   * @param lon - The longitude to jump to
-   * @param lat - The latitude to jump to
-   * @param zoom - The zoom level to jump to if specified
+   * @param view - The view to jump to
    */
-  jumpTo(lon: number, lat: number, zoom?: number): void {
+  jumpTo(view: View): void {
     const { offscreen, map } = this;
-    offscreen?.postMessage({ type: 'jumpTo', lon, lat, zoom });
-    map?.jumpTo(lon, lat, zoom);
+    offscreen?.postMessage({ type: 'jumpTo', view });
+    map?.jumpTo(view);
   }
 
   /**

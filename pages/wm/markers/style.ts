@@ -12,7 +12,7 @@ const style: StyleDefinition = {
   minzoom: -1,
   maxzoom: 2.5,
   sources: {
-    land: '/geojson/land.geojson',
+    land: 'http://localhost:3000/geojson/land.geojson',
     markers: {
       type: 'markers',
       path: '_markers',

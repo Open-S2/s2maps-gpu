@@ -71,10 +71,10 @@ export default class ImageSource {
   ): Promise<undefined | ImageSourceMetadata> {
     const { metadata, texturePack } = this;
     // grab the metadata and sprites
-    const data = (await this._fetch(path, mapID).catch((err) => {
+    const data = await this._fetch<ArrayBuffer>(path, mapID).catch((err) => {
       console.error(err);
       return undefined;
-    })) as ArrayBuffer;
+    });
     // if either failed, stop their
     if (data === undefined) {
       this.active = false;
@@ -133,7 +133,7 @@ export default class ImageSource {
    * @param mapID - the id of the map
    * @returns the image or metadata
    */
-  async _fetch(path: string, mapID: string): Promise<undefined | ImageMetadata | ArrayBuffer> {
+  async _fetch<T>(path: string, mapID: string): Promise<undefined | T> {
     const { session } = this;
     const headers: { Authorization?: string } = {};
     if (session.hasAPIKey(mapID)) {
@@ -144,8 +144,8 @@ export default class ImageSource {
     const res = await fetch(path, { headers });
     if (res.status !== 200 && res.status !== 206) return;
     if (path.endsWith('json') || res.headers.get('content-type') === 'application/json') {
-      return (await res.json()) as ImageMetadata;
+      return await res.json();
     }
-    return await res.arrayBuffer();
+    return (await res.arrayBuffer()) as unknown as Promise<T>;
   }
 }

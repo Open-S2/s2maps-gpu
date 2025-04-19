@@ -25,7 +25,6 @@ export default defineConfig({
   use: {
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
-
     /* Base URL for all the tests. e.g. page.goto('/s2/fill') will route to 'http://127.0.0.1:3000/s2/fill' */
     baseURL: 'http://127.0.0.1:3000',
   },
@@ -33,37 +32,16 @@ export default defineConfig({
   /* Configure projects for major browsers */
   projects: [
     /* Test against desktop browsers */
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
     // /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] }
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] }
-    // },
+    // { name: 'Mobile Chrome', use: { ...devices['Pixel 5'] } },
+    // { name: 'Mobile Safari', use: { ...devices['iPhone 12'] } },
     // /* Test against branded browsers. */
     // NOTE: I don't know why but these refuse to work consistently (but works when testing dev locally)
-    // {
-    //   name: 'Google Chrome',
-    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' } // or 'chrome-beta'
-    // },
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: { ...devices['Desktop Edge'], channel: 'msedge' } // or 'msedge-dev'
-    // }
+    // { name: 'Google Chrome', use: { ...devices['Desktop Chrome'], channel: 'chrome' } },
+    // { name: 'Microsoft Edge', use: { ...devices['Desktop Edge'], channel: 'msedge' } },
   ],
 
   /* Configure dev server for tests */

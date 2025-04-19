@@ -12,10 +12,10 @@ const style: StyleDefinition = {
   minzoom: -0.5,
   maxzoom: 5,
   sources: {
-    countries: '/geojson/countries.geojson',
+    countries: 'http://localhost:3000/geojson/countries.geojson',
     earthquakes: {
       type: 'json',
-      path: '/geojson/earthquakes.geojson',
+      path: 'http://localhost:3000/geojson/earthquakes.geojson',
       extension: 'geojson',
       cluster: true,
       radius: 75,

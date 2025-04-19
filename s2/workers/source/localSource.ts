@@ -1,7 +1,7 @@
 import type Session from './session.js';
 import type { Face, LayerDefinition } from 'style/style.spec.js';
 import type { SourceFlushMessage, TileRequest } from '../worker.spec.js';
-import type { VectorPoint, VectorPolygon } from 'gis-tools/index.js';
+import type { VectorPointGeometry, VectorPolygonGeometry } from 'gis-tools/index.js';
 
 /** Local Tile Properties */
 export interface LocalTileProperties {
@@ -16,16 +16,14 @@ export interface LocalTileProperties {
 export interface FeatureBoundary {
   extent: number;
   properties: LocalTileProperties;
-  type: 'Polygon';
-  geometry: VectorPolygon;
+  geometry: VectorPolygonGeometry;
 }
 
 /** Point describing the tile */
 export interface GetFeatureName {
   extent: number;
   properties: LocalTileProperties;
-  type: 'Point';
-  geometry: VectorPoint;
+  geometry: VectorPointGeometry;
 }
 
 /** Local Tile */
@@ -97,16 +95,19 @@ export default class LocalSource {
             {
               extent: 1,
               properties: { id: String(id), face, zoom, i, j },
-              type: 'Polygon' as const,
-              geometry: [
-                [
-                  { x: 0, y: 0 },
-                  { x: 1, y: 0 },
-                  { x: 1, y: 1 },
-                  { x: 0, y: 1 },
-                  { x: 0, y: 0 },
+              geometry: {
+                type: 'Polygon',
+                is3D: false,
+                coordinates: [
+                  [
+                    { x: 0, y: 0 },
+                    { x: 1, y: 0 },
+                    { x: 1, y: 1 },
+                    { x: 0, y: 1 },
+                    { x: 0, y: 0 },
+                  ],
                 ],
-              ],
+              },
             },
           ],
         },
@@ -117,15 +118,18 @@ export default class LocalSource {
             {
               extent: 1,
               properties: { id: String(id), face, zoom, i, j },
-              type: 'Point', // Point
-              geometry: { x: 0.5, y: 0.5 },
+              geometry: {
+                type: 'Point',
+                is3D: false,
+                coordinates: { x: 0.5, y: 0.5 },
+              },
             },
           ],
         },
       },
     };
     // encode for transfer
-    const uint8data = this.textEncoder.encode(JSON.stringify(data)).buffer as ArrayBuffer;
+    const uint8data = this.textEncoder.encode(JSON.stringify(data)).buffer;
     // request a worker and post
     const worker = this.session.requestWorker();
     worker.postMessage({ mapID, type: 'jsondata', tile, sourceName: name, data: uint8data }, [

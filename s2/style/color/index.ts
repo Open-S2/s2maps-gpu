@@ -10,15 +10,20 @@ export * from './colorParser.js';
 export type ColorArray = [r: number, g: number, b: number, a: number];
 
 /**
+ * # Color manager
+ *
+ * ### Description
  * Color class to handle color conversions and adjustments. Supports RGB, HSV, HSL, and LCH.
- * COLOR INTERPOLATION: we support the use of the LCH color space
- * [interpolation guide here.](https://www.alanzucconi.com/2016/01/06/colour-interpolation/4/)
- * use [chroma.js](https://github.com/gka/chroma.js) as a guide to create best interpolation
+ *
+ * ### COLOR INTERPOLATION: we support the use of the LCH color space:
+ * - [interpolation guide here.](https://www.alanzucconi.com/2016/01/06/colour-interpolation/4/)
+ * - use [chroma.js](https://github.com/gka/chroma.js) as a guide to create best interpolation
  * hsv is a good secondary. Saved for posterity.
- * MORE INFORMATION ON COLOR BLIND ADJUST:
- * [link one](https://www.nature.com/articles/nmeth.1618),
- *  [link two](http://www.daltonize.org/),
- *  and [ink three](https://galactic.ink/labs/Color-Vision/Javascript/Color.Vision.Daltonize.js)
+ *
+ * ### MORE INFORMATION ON COLOR BLIND ADJUST:
+ * - [Link one](https://www.nature.com/articles/nmeth.1618),
+ * - [Link two](http://www.daltonize.org/),
+ * - [Link three](https://galactic.ink/labs/Color-Vision/Javascript/Color.Vision.Daltonize.js)
  */
 export class Color {
   val: ColorArray;

@@ -53,7 +53,7 @@ interface Map {
   glyphs: Record<string, GlyphSource>;
   sprites: Record<string, SpriteSource>;
   /** e.g. { apiURL: string, ... } */
-  urls: Record<string, string>;
+  urls: UrlMap;
   texturePack: TexturePack;
   images: ImageSource;
 }
@@ -500,7 +500,8 @@ export default class SourceWorker {
    */
   #addMarkers(mapID: string, markers: MarkerDefinition[], sourceName: string): void {
     const markerSource = this.#getMarkerSource(mapID, sourceName);
-    markerSource?.addMarkers(markers);
+    if (markerSource === undefined) return;
+    for (const marker of markers) markerSource.addMarker(marker);
   }
 
   /**

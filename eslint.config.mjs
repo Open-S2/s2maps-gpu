@@ -2,8 +2,11 @@
 
 import eslint from '@eslint/js';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
+import globals from 'globals';
 import jsdoc from 'eslint-plugin-jsdoc';
+import pluginVue from 'eslint-plugin-vue';
 import prettierConfig from 'eslint-config-prettier';
+// import vueParser from 'vue-eslint-parser';
 // import withNuxt from './.nuxt/eslint.config.mjs';
 // TODO: Eventually support tsdoc instead of jsdoc [https://github.com/microsoft/tsdoc/issues/374]
 // albiet it seems like jsdoc gets way more love and has a ton of ts support
@@ -12,19 +15,40 @@ import tseslint from 'typescript-eslint';
 
 // export default withNuxt(
 export default tseslint.config(
+  {
+    ignores: [
+      '*.d.ts',
+      '**/coverage',
+      '**/docs',
+      '**/dist',
+      '**/buildS2',
+      '**/buildS2-dev',
+      '**/buildS2-local',
+      '**/buildS2-flat',
+    ],
+  },
   eslint.configs.recommended,
   tseslint.configs.recommended,
   eslintPluginPrettierRecommended,
-  // ...(await withNuxt()),
-  prettierConfig,
+  ...pluginVue.configs['flat/recommended'],
   {
+    plugins: {
+      'typescript-eslint': tseslint.plugin,
+    },
     languageOptions: {
+      globals: {
+        ...globals.browser,
+      },
       parserOptions: {
+        parser: tseslint.parser,
         project: ['./tsconfig.eslint.json'],
+        extraFileExtensions: ['.vue'],
+        sourceType: 'module',
         tsconfigRootDir: import.meta.dirname,
       },
     },
   },
+  prettierConfig,
   jsdoc.configs['flat/recommended-typescript'],
   {
     rules: {
@@ -71,7 +95,7 @@ export default tseslint.config(
           contexts: ['TSInterfaceDeclaration', 'TSTypeAliasDeclaration', 'TSEnumDeclaration'],
         },
       ],
-      'jsdoc/check-tag-names': ['warn', { definedTags: ['experimental'] }],
+      'jsdoc/check-tag-names': ['warn', { definedTags: ['experimental', 'source'] }],
       'jsdoc/no-blank-block-descriptions': 'warn',
       // 'jsdoc/no-missing-syntax': 'warn',
       'jsdoc/no-blank-blocks': 'warn',
@@ -94,6 +118,7 @@ export default tseslint.config(
           caughtErrorsIgnorePattern: '^_',
         },
       ],
+      'vue/multi-word-component-names': 'off',
     },
   },
 );

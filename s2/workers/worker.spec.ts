@@ -188,9 +188,7 @@ export interface UpdateStyleMessage {
 /** Jump to message sent from the front end to the map worker */
 export interface JumpToMessage {
   type: 'jumpTo';
-  lon: number;
-  lat: number;
-  zoom?: number;
+  view: View;
 }
 
 /** Ease to message sent from the front end to the map worker */
@@ -433,7 +431,7 @@ export interface ReorderLayersMessageGL extends MapID {
 /** Screenshot message sent from the map worker to the front end */
 export interface ScreenshotMessageGL extends MapID {
   type: 'screenshot';
-  screen: ArrayBuffer;
+  screen: ArrayBufferLike;
 }
 
 /** Rendered message sent from the map worker to the front end */
