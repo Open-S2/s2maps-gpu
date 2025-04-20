@@ -9,25 +9,6 @@ declare global {
 }
 
 /**
- * A Browser compatible Gzip compression function
- * @param bytes - the data to decompress
- * @param format - the format of the data. Defaults to 'gzip'
- * @returns - the decompressed data
- */
-export async function compressStream(bytes: Uint8Array, format?: Format): Promise<Uint8Array> {
-  // Convert the string to a byte stream.
-  const stream = new Blob([bytes]).stream();
-  // Create a compressed stream.
-  const compressedStream = stream.pipeThrough(new CompressionStream((format ?? 'gzip') as 'gzip'));
-  // Read all the bytes from this stream.
-  const chunks: Uint8Array[] = [];
-  // @ts-expect-error - this works
-  for await (const chunk of compressedStream) chunks.push(chunk);
-
-  return await concatUint8Arrays(chunks);
-}
-
-/**
  * A Browser compatible Gzip decompression function
  * @param bytes - the data to decompress
  * @param format - the format of the data. Defaults to 'gzip'

@@ -11,7 +11,7 @@ import {
   idToFaceIJ,
 } from '../geometry/id.js';
 
-import type { FeatureIterator } from '../index.js';
+// import type { FeatureIterator } from '../index.js';
 import type {
   Face,
   JSONCollection,
@@ -100,17 +100,17 @@ export class Tile<
     return true;
   }
 
-  /**
-   * Add features from a reader to the tile, optionally to a specific layer to store it in. Defaults to "default".
-   * @param reader - the reader containing the input data
-   * @param layer - layer to store the feature to
-   */
-  async addReader(reader: FeatureIterator<M, D, P>, layer?: string): Promise<void> {
-    for await (const feature of reader) {
-      const vectorFeatures = convert(feature.type === 'S2Feature' ? 'S2' : 'WG', feature);
-      for (const vf of vectorFeatures) this.addFeature(vf, layer);
-    }
-  }
+  // /**
+  //  * Add features from a reader to the tile, optionally to a specific layer to store it in. Defaults to "default".
+  //  * @param reader - the reader containing the input data
+  //  * @param layer - layer to store the feature to
+  //  */
+  // async addReader(reader: FeatureIterator<M, D, P>, layer?: string): Promise<void> {
+  //   for await (const feature of reader) {
+  //     const vectorFeatures = convert(feature.type === 'S2Feature' ? 'S2' : 'WG', feature);
+  //     for (const vf of vectorFeatures) this.addFeature(vf, layer);
+  //   }
+  // }
 
   /**
    * Add a vector feature to the tile, optionally to a specific layer to store it in. Defaults to "default".

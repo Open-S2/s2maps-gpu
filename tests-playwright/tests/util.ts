@@ -1,14 +1,55 @@
-import type { S2Map } from 's2/index.js';
+import fs from 'fs';
+import path from 'path';
+import { randomBytes } from 'crypto';
+import v8toIstanbul from 'v8-to-istanbul';
 
-declare global {
-  /** Global expose the testMap */
-  interface Window {
-    testMap: S2Map;
+import type { S2Map } from 's2/index.ts';
+
+const istanbulCLIOutput = path.join(process.cwd(), '.nyc_output');
+
+// https://playwright.dev/docs/api/class-coverage
+
+/**
+ * Store the coverage in the .nyc_output folder
+ * @param coverage - The coverage to store
+ */
+export async function storeCoverage(
+  coverage: Array<{
+    url: string;
+    scriptId: string;
+    source?: string;
+    functions: Array<{
+      functionName: string;
+      isBlockCoverage: boolean;
+      ranges: Array<{ count: number; startOffset: number; endOffset: number }>;
+    }>;
+  }>,
+): Promise<void> {
+  await fs.promises.mkdir(istanbulCLIOutput, { recursive: true });
+  for (const { source, functions } of coverage) {
+    const converter = v8toIstanbul('./tests-playwright/playwright/.cache/assets/assets/', 0, {
+      source: source ?? '',
+    });
+    await converter.load();
+    converter.applyCoverage(functions);
+    const coverageJSON = JSON.stringify(converter.toIstanbul());
+    fs.writeFileSync(
+      path.join(istanbulCLIOutput, `playwright_coverage_${generateUUID()}.json`),
+      coverageJSON,
+    );
   }
 }
 
 /**
- * Wait for the map to be fully rendered
+ * Generate a random UUID
+ * @returns a random UUID
+ */
+export function generateUUID(): string {
+  return randomBytes(16).toString('hex');
+}
+
+/**
+ * Mechanic to ensure the map is fully rendered
  * @returns true if the map is fully rendered. false if it failed somehow
  */
 export async function waitMap(): Promise<boolean> {

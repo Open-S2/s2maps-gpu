@@ -42,9 +42,8 @@
     "lint:S2": "eslint s2 --ext .ts,.tsx,.vue",
     "test:S2": "bun test",
     "test:S2:watch": "bun test --watch",
-    "test:playwright": "rm -rf .nyc_output && playwright test -c ./tests-playwright-future/playwright.config.ts",
-    "test:playwright:ui": "bun run build:S2:flat && playwright test --ui -c ./tests-playwright/playwright.config.ts",
-    "test:playwright:ui:new": "playwright test --ui -c ./tests-playwright-future/playwright.config.ts",
+    "test:playwright": "rm -rf .nyc_output && playwright test -c ./tests-playwright/playwright.config.ts",
+    "test:playwright:ui": "playwright test --ui -c ./tests-playwright/playwright.config.ts",
     "cov:nyc": "nyc report",
     "prepare:toAdd": "bun run lint:S2 && bun run build:ESM && bun run build:types",
     "docs": "typedoc",
@@ -52,7 +51,8 @@
   },
   "exports": {
     ".": "./dist/index.js",
-    "./plugins": "./dist/plugins.js"
+    "./plugins": "./dist/plugins.js",
+    "./polyfills": "./dist/polyfills.js"
   },
   "main": "./dist/index.js",
   "types": "./dist-types/index.d.ts",

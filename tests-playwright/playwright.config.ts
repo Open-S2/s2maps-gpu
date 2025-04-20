@@ -1,32 +1,70 @@
-import { defineConfig, devices } from '@playwright/test';
-
-const CI_BOOL = Boolean(process.env.CI);
+import AutoImport from 'unplugin-auto-import/vite';
+import Components from 'unplugin-vue-components/vite';
+import { fileURLToPath } from 'url';
+import glsl from '../config/glsl-loader/vite.js';
+import vue from '@vitejs/plugin-vue';
+import wgsl from '../config/wgsl-loader/vite.js';
+import { defineConfig, devices } from '@playwright/experimental-ct-vue';
 
 /** See https://playwright.dev/docs/test-configuration. */
 export default defineConfig({
   testDir: './tests',
   /* The base directory, relative to the config file, for snapshot files created with toMatchSnapshot and toHaveScreenshot. */
   snapshotDir: './__snapshots__',
-  /* Update snapshots on CI. */
-  updateSnapshots: 'missing', // 'all', 'none', 'missing'
   /* Maximum time one test can run for. */
-  timeout: 15 * 1_000,
+  timeout: 10 * 1000,
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
-  forbidOnly: CI_BOOL ?? true,
-  /* Number of retries before conceding to a failure */
+  forbidOnly: true,
+  /* Retry on CI only */
+
   retries: 4,
   /* Opt out of parallel tests on CI. */
-  workers: CI_BOOL ? 1 : 3,
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+  workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
-    /* Base URL for all the tests. e.g. page.goto('/s2/fill') will route to 'http://127.0.0.1:3000/s2/fill' */
-    baseURL: 'http://127.0.0.1:3000',
+    ctPort: 3100,
+    ctViteConfig: {
+      plugins: [
+        glsl(),
+        wgsl(),
+        vue(),
+        AutoImport({
+          imports: ['vue', 'vue-router', '@vueuse/head'],
+          dts: 'src/auto-imports.d.ts',
+          // eslintrc: { enabled: true },
+        }),
+        Components({ dirs: ['./components'], extensions: ['vue'] }),
+      ],
+      build: {
+        sourcemap: 'inline',
+      },
+      worker: {
+        format: 'es',
+        /** @returns the inject plugins */
+        plugins: () => [glsl(), wgsl()],
+      },
+      resolve: {
+        alias: {
+          s2: fileURLToPath(new URL('../s2', import.meta.url)),
+          'gis-tools': fileURLToPath(new URL('../s2/gis-tools', import.meta.url)),
+          gl: fileURLToPath(new URL('../s2/gl', import.meta.url)),
+          gpu: fileURLToPath(new URL('../s2/gpu', import.meta.url)),
+          plugins: fileURLToPath(new URL('../s2/plugins', import.meta.url)),
+          source: fileURLToPath(new URL('../s2/source', import.meta.url)),
+          style: fileURLToPath(new URL('../s2/style', import.meta.url)),
+          svg: fileURLToPath(new URL('../s2/svg', import.meta.url)),
+          ui: fileURLToPath(new URL('../s2/ui', import.meta.url)),
+          util: fileURLToPath(new URL('../s2/util', import.meta.url)),
+          workers: fileURLToPath(new URL('../s2/workers', import.meta.url)),
+        },
+      },
+    },
   },
 
   /* Configure projects for major browsers */
@@ -35,22 +73,25 @@ export default defineConfig({
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
-    // /* Test against mobile viewports. */
-    // { name: 'Mobile Chrome', use: { ...devices['Pixel 5'] } },
-    // { name: 'Mobile Safari', use: { ...devices['iPhone 12'] } },
-    // /* Test against branded browsers. */
-    // NOTE: I don't know why but these refuse to work consistently (but works when testing dev locally)
+    /* Test against mobile viewports. */
+    { name: 'Mobile Chrome', use: { ...devices['Pixel 5'] } },
+    { name: 'Mobile Safari', use: { ...devices['iPhone 12'] } },
+    /* Test against branded browsers. */
     // { name: 'Google Chrome', use: { ...devices['Desktop Chrome'], channel: 'chrome' } },
+    // { name: 'Google Chrome Beta', use: { ...devices['Desktop Chrome'], channel: 'chrome-beta' } },
     // { name: 'Microsoft Edge', use: { ...devices['Desktop Edge'], channel: 'msedge' } },
+    // {
+    //   name: 'Microsoft Edge Developer Edition',
+    //   use: { ...devices['Desktop Edge'], channel: 'msedge-dev' },
+    // },
   ],
 
-  /* Configure dev server for tests */
   webServer: {
-    command: 'bun run dev:playwright',
-    url: 'http://127.0.0.1:3000/s2/background/webgl',
+    command: 'bun run ./server.ts',
+    url: 'http://localhost:3000',
+    timeout: 5 * 1_000,
     reuseExistingServer: true,
     stdout: 'pipe',
     stderr: 'pipe',
-    cwd: '../',
   },
 });

@@ -400,8 +400,8 @@ function _clipLine<M extends MValue = Properties>(
   let firstEnter = false;
 
   for (let i = 0; i < last; i++) {
-    const { x: ax, y: ay, t: az, m: am } = geom[i];
-    const { x: bx, y: by, m: bm } = geom[i + 1];
+    const { x: ax, y: ay, z: az, t: at, m: am } = geom[i];
+    const { x: bx, y: by, z: bz, m: bm } = geom[i + 1];
     const a = axis === 0 ? ax : ay;
     const b = axis === 0 ? bx : by;
     let entered = false;
@@ -412,19 +412,19 @@ function _clipLine<M extends MValue = Properties>(
     if (a < k1) {
       // ---|-->  | (line enters the clip region from the left)
       if (b > k1) {
-        intP = intersect(ax, ay, bx, by, k1, bm);
+        intP = intersect(ax, ay, bx, by, k1, bz, bm);
         slice.push(intP);
         entered = true;
       }
     } else if (a > k2) {
       // |  <--|--- (line enters the clip region from the right)
       if (b < k2) {
-        intP = intersect(ax, ay, bx, by, k2, bm);
+        intP = intersect(ax, ay, bx, by, k2, bz, bm);
         slice.push(intP);
         entered = true;
       }
     } else {
-      intP = { x: ax, y: ay, t: az, m: am };
+      intP = { x: ax, y: ay, z: az, t: at, m: am };
       slice.push(intP);
     }
 
@@ -440,13 +440,13 @@ function _clipLine<M extends MValue = Properties>(
     // EXIT CASES
     if (b < k1 && a >= k1) {
       // <--|---  | or <--|-----|--- (line exits the clip region on the left)
-      intP = intersect(ax, ay, bx, by, k1, bm ?? am);
+      intP = intersect(ax, ay, bx, by, k1, bz, bm ?? am);
       slice.push(intP);
       exited = true;
     }
     if (b > k2 && a <= k2) {
       // |  ---|--> or ---|-----|--> (line exits the clip region on the right)
-      intP = intersect(ax, ay, bx, by, k2, bm ?? am);
+      intP = intersect(ax, ay, bx, by, k2, az, bm ?? am);
       slice.push(intP);
       exited = true;
     }
@@ -489,6 +489,7 @@ function _clipLine<M extends MValue = Properties>(
  * @param bx - the second x
  * @param by - the second y
  * @param x - the x to intersect
+ * @param z - the z to insert
  * @param m - the MValue
  * @returns - the intersecting point
  */
@@ -498,10 +499,11 @@ function intersectX<M extends MValue = Properties>(
   bx: number,
   by: number,
   x: number,
+  z?: number,
   m?: M,
 ): VectorPoint<M> {
   const t = (x - ax) / (bx - ax);
-  return { x, y: ay + (by - ay) * t, m, t: 1 };
+  return { x, y: ay + (by - ay) * t, m, z, t: 1 };
 }
 
 /**
@@ -510,6 +512,7 @@ function intersectX<M extends MValue = Properties>(
  * @param bx - the second x
  * @param by - the second y
  * @param y - the y to intersect
+ * @param z - the z to insert
  * @param m - the MValue
  * @returns - the intersecting point
  */
@@ -519,10 +522,11 @@ function intersectY<M extends MValue = Properties>(
   bx: number,
   by: number,
   y: number,
+  z?: number,
   m?: M,
 ): VectorPoint<M> {
   const t = (y - ay) / (by - ay);
-  return { x: ax + (bx - ax) * t, y, m, t: 1 };
+  return { x: ax + (bx - ax) * t, y, z, m, t: 1 };
 }
 
 /**

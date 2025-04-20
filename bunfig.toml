@@ -1,10 +1,17 @@
 [test]
 
 # preload happydom for all tests
-preload = ["./tests/happydom.ts"]
+preload = ["./s2/polyfills"]
 
 # root directory
 root = "./tests"
 
 # always enable coverage
+# windows tests fails when using coverage
 coverage = true
+
+# new
+# coverageReporter = ["text", "lcov"]  # default ["text"]
+coverageReporter = ["lcov", "text"]  # default ["text"]
+coverageDir = "./coverage"  # default "coverage"
+# coverageThreshold = 0.95

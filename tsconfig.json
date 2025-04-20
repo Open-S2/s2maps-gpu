@@ -138,8 +138,6 @@
     "tests/**/*.ts",
     "tests-playwright/**/*.ts",
     "tests-playwright/**/*.vue",
-    "tests-playwright-future/**/*.ts",
-    "tests-playwright-future/**/*.vue",
     "server/**/*.ts",
     "pages/**/*.ts",
     "pages/**/*.vue",
