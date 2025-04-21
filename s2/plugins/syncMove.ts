@@ -12,6 +12,16 @@ export interface MapContainer {
 
 /**
  * Sync the camera between multiple maps
+ * ex.
+ * ```ts
+ * import { syncMove } from 's2maps-gpu/plugins';
+ * // create multiple maps
+ * const mapA = new S2Map({ ... });
+ * const mapB = new S2Map({ ... });
+ * const mapC = new S2Map({ ... });
+ * // sync the maps
+ * await syncMove(mapA, mapB, mapC);
+ * ```
  * @param maps - The maps to sync with eachother
  */
 export async function syncMove(...maps: S2Map[]): Promise<void> {

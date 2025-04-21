@@ -7,7 +7,7 @@ import type { MapOptions, View } from 's2';
  * Convert Maplibre `MapOptions` to S2 {@link MapOptions}
  *
  * ex.
- ```ts
+ * ```ts
  * import { convertMaplibreOptions } from 's2maps-gpu/plugins';
  * import type { MapOptions as MaplibreMapOptions } from 'maplibre-gl';
  * // setup maplibre options

@@ -3,7 +3,7 @@ import { expect, test } from 'bun:test';
 
 import type { LayerWorkerFunction, Properties } from 'style/style.spec.js';
 
-test('parseFeature', () => {
+test('parseFeature', (): void => {
   /**
    * Callback for the layer feature function
    * @param input - input value

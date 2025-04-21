@@ -107,5 +107,5 @@ function cubic(input: number, start: number, end: number): number {
  * @returns the interpolated value
  */
 function step(input: number, _start: number, end: number): number {
-  return input > end ? 1 : 0;
+  return input >= end ? 1 : 0;
 }

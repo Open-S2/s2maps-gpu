@@ -143,6 +143,7 @@ declare global {
  * ## Plugins
  * - MapLibre Map Options Converter: See {@link plugins.convertMaplibreOptions}
  * - MapLibre Style Converter: See {@link plugins.convertMaplibreStyle}
+ * - Sync map movements between multiple maps: See {@link plugins.syncMove}
  */
 export default class S2Map extends EventTarget {
   readonly #container?: HTMLElement;
