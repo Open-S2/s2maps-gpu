@@ -2,10 +2,11 @@ import { earclip } from 'earclip';
 import parseFeature from 's2/style/parseFeature.js';
 import parseFilter from 'style/parseFilter.js';
 import VectorWorker, { colorFunc, idToRGB } from './vectorWorker.js';
-import { featureSort, scaleShiftClip } from './util/index.js';
+import { featureSort, scaleShiftClipPolys } from './util/index.js';
 
 import type { CodeDesign } from './vectorWorker.js';
 import type ImageStore from './imageStore.js';
+import type { S2CellId } from 'gis-tools/index.js';
 import type { FillData, TileRequest } from '../worker.spec.js';
 import type { FillDefinition, FillWorkerLayer, GPUType } from 'style/style.spec.js';
 import type {
@@ -14,8 +15,6 @@ import type {
   IDGen,
   VTFeature,
 } from './process.spec.js';
-
-import type { S2CellId, VectorMultiPolygon } from 'gis-tools/index.js';
 
 const MAX_FEATURE_BATCH_SIZE = 1 << 6; // 64
 
@@ -134,12 +133,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
       const [geometry] = feature.loadPolys() ?? [];
       if (geometry === undefined) return false;
       // preprocess geometry
-      const clip = scaleShiftClip(
-        geometry as VectorMultiPolygon,
-        4,
-        extent,
-        tile,
-      ) as VectorMultiPolygon;
+      const clip = scaleShiftClipPolys(geometry, extent, tile);
       // create multiplier
       const multiplier = 1 / extent;
       // process

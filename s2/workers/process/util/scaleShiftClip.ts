@@ -6,8 +6,15 @@ import type {
   VectorMultiPoint,
   VectorMultiPolygon,
   VectorPoint,
-  VectorPolygon,
 } from 'gis-tools/index.js';
+
+/** The scale and shift parameters */
+interface ScaleShiftParams {
+  scale: number;
+  xShift: number;
+  yShift: number;
+}
+
 /**
  * Source data may only tilelize data to a certain max zoom, but we may request a tile at a higher zoom
  * Therefore we scale, shift, and clip the geometry as needed for that specific higher zoomed tile.
@@ -15,20 +22,13 @@ import type {
  * 1) scale up by distance between tiles (if parent is 2 zooms above, you double size twice)
  * 2) shift x and y by position of current tile
  * 3) clip the geometry by 0->extent (include buffer if not points)
- * @param geometry - input vector geometry
- * @param type - geometry type
- * @param extent - extent is the tile "pixel" size
+ * @param extent - the extent of the current tile
  * @param tile - the tile request
- * @returns vector geometry at the higher zoom
+ * @returns the scale, shift, and clip parameters
  */
-export default function scaleShiftClip(
-  geometry: VectorCoordinates,
-  type: number,
-  extent: number,
-  tile: TileRequest,
-): VectorCoordinates {
+export function scaleShiftParams(extent: number, tile: TileRequest): ScaleShiftParams | undefined {
   const { parent } = tile;
-  if (parent === undefined) return geometry;
+  if (parent === undefined) return;
   const parentZoom = parent.zoom;
   let { i, j, zoom } = tile;
   // get the scale
@@ -45,66 +45,123 @@ export default function scaleShiftClip(
     j = j >> 1;
     zoom--;
   }
-  // build
-  if (type === 1)
-    return scaleShiftClipPoints(geometry as VectorMultiPoint, extent, xShift, yShift, scale);
-  else if (type === 2 || type === 3 || type === 4)
-    return scaleShiftClipLines(
-      geometry as VectorMultiLineString,
-      type,
-      extent,
-      xShift,
-      yShift,
-      scale,
-    );
-  else return geometry;
+
+  return { scale, xShift, yShift };
+}
+
+/**
+ * Scale, shift, and clip polygons according to the tile request and extent
+ * @param geometry - input multi polygon
+ * @param extent - extent is the tile "pixel" size
+ * @param tile - the tile request
+ * @returns the scaled, shifted, and clipped polygons
+ */
+export function scaleShiftClipPoints(
+  geometry: VectorMultiPoint,
+  extent: number,
+  tile: TileRequest,
+): VectorMultiPoint {
+  const scaleShift = scaleShiftParams(extent, tile);
+  if (scaleShift === undefined) return geometry;
+  const { scale, xShift, yShift } = scaleShift;
+  return _scaleShiftClipPoints(geometry, extent, xShift, yShift, scale);
+}
+
+/**
+ * Scale, shift, and clip polygons according to the tile request and extent
+ * @param geometry - input multi polygon
+ * @param extent - extent is the tile "pixel" size
+ * @param tile - the tile request
+ * @returns the scaled, shifted, and clipped polygons
+ */
+export function scaleShiftClipLines(
+  geometry: VectorMultiLineString,
+  extent: number,
+  tile: TileRequest,
+): VectorMultiLineString {
+  const scaleShift = scaleShiftParams(extent, tile);
+  if (scaleShift === undefined) return geometry;
+  const { scale, xShift, yShift } = scaleShift;
+  return _scaleShiftClipLines(geometry, extent, xShift, yShift, scale);
+}
+
+/**
+ * Scale, shift, and clip polygons according to the tile request and extent
+ * @param geometry - input multi polygon
+ * @param extent - extent is the tile "pixel" size
+ * @param tile - the tile request
+ * @returns the scaled, shifted, and clipped polygons
+ */
+export function scaleShiftClipPolys(
+  geometry: VectorMultiPolygon,
+  extent: number,
+  tile: TileRequest,
+): VectorMultiPolygon {
+  const scaleShift = scaleShiftParams(extent, tile);
+  if (scaleShift === undefined) return geometry;
+  const { scale, xShift, yShift } = scaleShift;
+  return _scaleShiftClipPolys(geometry, extent, xShift, yShift, scale);
 }
 
 /**
  * scale, shift, and clip lines from linestrings or polygons
  * @param geometry - input vector geometry
- * @param type - geometry type
  * @param extent - extent is the tile "pixel" size
  * @param xShift - x-coordinate shift
  * @param yShift - y-coordinate shift
  * @param scale - scale factor
  * @returns resultant vector geometry post scale, shift, and clip
  */
-function scaleShiftClipLines(
-  geometry: VectorMultiLineString | VectorPolygon | VectorMultiPolygon,
-  type: 2 | 3 | 4,
+function _scaleShiftClipPolys(
+  geometry: VectorMultiPolygon,
   extent: number,
   xShift: number,
   yShift: number,
   scale: number,
-): VectorCoordinates {
+): VectorMultiPolygon {
   // shift & scale
-  if (type === 4) {
-    for (const poly of geometry) {
-      for (const line of poly) shiftScale(line as VectorLineString, xShift, yShift, scale);
-    }
-  } else {
-    for (const line of geometry) shiftScale(line as VectorLineString, xShift, yShift, scale);
+  for (const poly of geometry) {
+    for (const line of poly) shiftScale(line, xShift, yShift, scale);
   }
   // clip
   let newGeometry: VectorCoordinates = [];
-  if (type === 4) {
-    const newGeo: VectorMultiPolygon = [];
-    for (const poly of geometry) {
-      const newPoly: VectorMultiLineString = [];
-      for (const line of poly) newPoly.push(...clipLine(line as VectorLineString, extent, true));
-      if (newPoly.length > 0) newGeo.push(newPoly);
-    }
-    newGeometry = newGeo;
-  } else {
-    const newGeo: VectorMultiLineString = [];
-    for (const line of geometry) {
-      newGeo.push(...clipLine(line as VectorLineString, extent, type === 3));
-    }
-    newGeometry = newGeo;
+  const newGeo: VectorMultiPolygon = [];
+  for (const poly of geometry) {
+    const newPoly: VectorMultiLineString = [];
+    for (const line of poly) newPoly.push(...clipLine(line, extent, true));
+    if (newPoly.length > 0) newGeo.push(newPoly);
   }
+  newGeometry = newGeo;
 
   if (newGeometry.length > 0) return newGeometry;
+  else return [];
+}
+
+/**
+ * scale, shift, and clip lines from linestrings or polygons
+ * @param geometry - input vector geometry
+ * @param extent - extent is the tile "pixel" size
+ * @param xShift - x-coordinate shift
+ * @param yShift - y-coordinate shift
+ * @param scale - scale factor
+ * @returns resultant vector geometry post scale, shift, and clip
+ */
+function _scaleShiftClipLines(
+  geometry: VectorMultiLineString,
+  extent: number,
+  xShift: number,
+  yShift: number,
+  scale: number,
+): VectorMultiLineString {
+  // shift & scale
+  for (const line of geometry) shiftScale(line, xShift, yShift, scale);
+  // clip
+  const newGeo: VectorMultiLineString = [];
+  for (const line of geometry) {
+    newGeo.push(...clipLine(line, extent, false));
+  }
+
+  if (newGeo.length > 0) return newGeo;
   else return [];
 }
 
@@ -117,7 +174,7 @@ function scaleShiftClipLines(
  * @param scale - scale factor
  * @returns resultant vector points post scale, shift, and clip
  */
-function scaleShiftClipPoints(
+function _scaleShiftClipPoints(
   geometry: VectorMultiPoint,
   extent: number,
   xShift: number,

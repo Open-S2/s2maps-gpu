@@ -16,7 +16,7 @@ import {
   getPointsAndPathsAlongLines,
   getPointsAndPathsAtCenterOfLines,
   getSpacedPoints,
-  scaleShiftClip,
+  scaleShiftClipPoints,
 } from '../util/index.js';
 
 import type { CodeDesign } from '../vectorWorker.js';
@@ -215,7 +215,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       featureType = 'Point';
     }
     // preprocess geometry
-    const clip = scaleShiftClip(geometry, 4, extent, tile) as VectorMultiPoint;
+    const clip = scaleShiftClipPoints(geometry, extent, tile);
     if (clip.length === 0) return false;
 
     // build out all the individual s,t tile positions from the feature geometry

@@ -15,7 +15,6 @@ test('WM->Raster->Default', async ({ page }) => {
   await expect(page).toHaveScreenshot('wm-raster.png', { timeout: 2_000 });
 });
 
-// TODO: fix these tests
 // test('S2->Raster->WebGL', async ({ page }) => {
 //   await page.goto('/s2/raster/webgl', { waitUntil: 'domcontentloaded' })
 //   await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })
@@ -23,7 +22,6 @@ test('WM->Raster->Default', async ({ page }) => {
 //   await expect(page).toHaveScreenshot('s2-raster-webgl.png', { timeout: 2_000 })
 // })
 
-// TODO: fix these tests
 // test('WM->Raster->WebGL', async ({ page }) => {
 //   await page.goto('/wm/raster/webgl', { waitUntil: 'domcontentloaded' })
 //   await page.waitForFunction(() => window.testMap !== undefined, { timeout: 7_000 })

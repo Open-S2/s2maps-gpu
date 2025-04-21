@@ -36,8 +36,8 @@ const AVAILABLE_WORKERS: number = Math.floor((window.navigator.hardwareConcurren
  *
  * Communications channels are created for:
  * - SourceWorker<->TileWorker
- * - TileWorker->Map Object
- * - SourceWorker->Map Object
+ * - TileWorker->Worker Pool->Map Object
+ * - SourceWorker->Worker Pool->Map Object
  *
  * There is a two way channel for SourceWorker<->TileWorker mostly because of glyphs,images, etc.
  */

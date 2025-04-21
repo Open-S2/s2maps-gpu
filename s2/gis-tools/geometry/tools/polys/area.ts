@@ -11,8 +11,6 @@ import type {
   VectorPolygonGeometry,
 } from '../../../index.js';
 
-// TODO: polygon(s)AreaS2(...)
-
 /**
  * Find the area of a collection of polygons. Assumes geometry is in lon-lat space
  * @param polygons - the collection of polygons

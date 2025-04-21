@@ -97,12 +97,6 @@ export function bboxOverlap(b1: BBOX, b2: BBOX): undefined | BBOX {
   // find the middle two Y values
   const bottom = b1[1] < b2[1] ? b2[1] : b1[1];
   const top = b1[3] < b2[3] ? b1[3] : b2[3];
-  // TODO: handle z if there is one
-  // if (b1.length > 4) {
-  //   const minZ = b1[4] < b2[4] ? b1[4] : b2[4];
-  //   const maxZ = b1[5] < b2[5] ? b2[5] : b1[5];
-  //   return [left, bottom, right, top, minZ, maxZ];
-  // }
 
   return [left, bottom, right, top];
 }

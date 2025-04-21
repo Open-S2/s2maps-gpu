@@ -1,13 +1,13 @@
 import parseFeature from 's2/style/parseFeature.js';
 import parseFilter from 'style/parseFilter.js';
 import VectorWorker, { colorFunc, idToRGB } from './vectorWorker.js';
-import { drawLine, featureSort, scaleShiftClip } from './util/index.js';
+import { drawLine, featureSort, scaleShiftClipLines } from './util/index.js';
 
 import type { CodeDesign } from './vectorWorker.js';
+import type { S2CellId } from 'gis-tools/index.js';
 import type { Cap, Join, LineDefinition, LineWorkerLayer } from 'style/style.spec.js';
 import type { LineData, TileRequest } from '../worker.spec.js';
 import type { LineFeature, LineWorker as LineWorkerSpec, VTFeature } from './process.spec.js';
-import type { S2CellId, VectorMultiLineString } from 'gis-tools/index.js';
 
 /** Worker for processing line data */
 export default class LineWorker extends VectorWorker implements LineWorkerSpec {
@@ -102,7 +102,7 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
     // find a max distance to modify lines too large (round off according to the sphere)
     const maxDistance = division === 1 ? 0 : extent / division;
     // preprocess geometry
-    const geo = scaleShiftClip(geometry, 2, extent, tile) as VectorMultiLineString;
+    const geo = scaleShiftClipLines(geometry, extent, tile);
     // draw
     for (const lineString of geo) {
       // build the vertex, normal, and index data

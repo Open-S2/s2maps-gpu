@@ -408,7 +408,6 @@ export class S2Tile<
   override setScreenPositions(projector: Projector): void {
     if (this.corners !== undefined) {
       const { eye } = projector;
-      // const eyeKM = eye.map((e) => e * 1000);
       const eyeKM = pointMulScalar(eye, 1000);
       const matrix = projector.getMatrix('km');
       // pull out the S2Points

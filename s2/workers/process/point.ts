@@ -1,7 +1,7 @@
 import parseFeature from 's2/style/parseFeature.js';
 import parseFilter from 'style/parseFilter.js';
 import VectorWorker, { colorFunc, idToRGB } from './vectorWorker.js';
-import { featureSort, scaleShiftClip } from './util/index.js';
+import { featureSort, scaleShiftClipPoints } from './util/index.js';
 
 import type { CodeDesign } from './vectorWorker.js';
 import type { HeatmapData, PointData, TileRequest } from '../worker.spec.js';
@@ -17,7 +17,7 @@ import type {
   PointWorker as PointWorkerSpec,
   VTFeature,
 } from './process.spec.js';
-import type { S2CellId, VectorGeometryType, VectorMultiPoint } from 'gis-tools/index.js';
+import type { S2CellId, VectorGeometryType } from 'gis-tools/index.js';
 
 /** Internal organization to hold specific point features */
 export interface Features {
@@ -120,7 +120,7 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
     const points = feature.loadPoints();
     if (points === undefined) return false;
     // preprocess geometry
-    const clip = scaleShiftClip(points, 1, extent ?? 1, tile) as VectorMultiPoint;
+    const clip = scaleShiftClipPoints(points, extent, tile);
     if (clip === undefined) return false;
     const vertices: number[] = [];
     const weights: number[] = [];

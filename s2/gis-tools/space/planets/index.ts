@@ -1,7 +1,5 @@
 // https://nssdc.gsfc.nasa.gov/planetary/factsheet/
 
-// TODO: Support finding positional data https://aa.quae.nl/en/reken/hemelpositie.html
-
 export * from './earth.js';
 export * from './jupiter.js';
 export * from './mars.js';
