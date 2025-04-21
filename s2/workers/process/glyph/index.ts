@@ -37,7 +37,7 @@ import type {
   IDGen,
   VTFeature,
 } from '../process.spec.js';
-import type { Point, VectorMultiPoint } from 'gis-tools/index.js';
+import type { Point, S2CellId, VectorMultiPoint } from 'gis-tools/index.js';
 
 /** Worker for processing glyph data */
 export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec {
@@ -462,7 +462,7 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
    * @param sourceName - name of the source
    * @param tileID - tile id
    */
-  #flush(mapID: string, sourceName: string, tileID: bigint): void {
+  #flush(mapID: string, sourceName: string, tileID: S2CellId): void {
     const storeID: string = `${mapID}:${tileID}:${sourceName}`;
     const features = this.featureStore.get(storeID) ?? [];
     if (features.length === 0) return;
@@ -480,7 +480,12 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
    * @param tileID - tile id the data belongs to
    * @param features - features to ship
    */
-  #flushPoints2(mapID: string, sourceName: string, tileID: bigint, features: GlyphObject[]): void {
+  #flushPoints2(
+    mapID: string,
+    sourceName: string,
+    tileID: S2CellId,
+    features: GlyphObject[],
+  ): void {
     // setup draw thread variables
     const glyphFilterData: number[] = [];
     const glyphFilterIDs: number[] = [];
@@ -601,7 +606,12 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
    * @param tileID - tile id the data belongs to
    * @param features - collection of glyph features to flush into the renderer
    */
-  #flushPoints3(mapID: string, sourceName: string, tileID: bigint, features: GlyphObject[]): void {
+  #flushPoints3(
+    mapID: string,
+    sourceName: string,
+    tileID: S2CellId,
+    features: GlyphObject[],
+  ): void {
     // ID => { index: resultIndex, count: how many share the same resultIndex }
     let currIndex = 0;
     const resultIndexMap = new Map<number, number>();

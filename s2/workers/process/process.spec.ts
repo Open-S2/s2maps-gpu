@@ -25,6 +25,7 @@ import type {
 } from 'style/style.spec.js';
 import type {
   Properties,
+  S2CellId,
   VectorGeometryType,
   VectorMultiLineOffset,
   VectorMultiLineString,
@@ -156,7 +157,7 @@ export interface VectorWorker {
     sourceName: string,
     wait: Promise<void>,
   ) => Promise<void>;
-  postInteractive: (mapID: string, sourceName: string, tileID: bigint) => void;
+  postInteractive: (mapID: string, sourceName: string, tileID: S2CellId) => void;
 }
 
 /** Fill Worker */

@@ -11,12 +11,15 @@ import {
   pxToLL,
 } from 'gis-tools/index.js';
 import { cursorToLonLatS2, cursorToLonLatWM } from './cursorToLonLat.js';
-import { getTilesS2, getTilesWM } from './getTiles/index.js';
+import { getTilesInViewS2, getTilesInViewWM } from './getTiles/index.js';
 
 import type Camera from '../index.js';
 import type { MapOptions } from 'ui/s2mapUI.js';
+import type { TileInView } from './getTiles/index.js';
 import type { Point3D, VectorPoint } from 'gis-tools/index.js';
 import type { Projection, StyleDefinition } from 'style/style.spec.js';
+
+export * from './getTiles/index.js';
 
 /**
  * # View
@@ -51,7 +54,7 @@ export type MatrixType = 'm' | 'km'; // meters or kilometers
  * Also used as a tool to find the tiles that are currently visible.
  * @see {@link Camera}
  */
-export default class Projector {
+export class Projector {
   camera: Camera;
   projection: Projection = 'S2';
   webworker = false;
@@ -351,14 +354,13 @@ export default class Projector {
   }
 
   /** @returns the tiles in this projector's current view */
-  getTilesInView(): bigint[] {
-    // (Tile IDs)
+  getTilesInView(): TileInView[] {
     const { projection, radius, zoom, zoomOffset, lon, lat } = this;
     if (projection === 'S2') {
       const matrix = this.getMatrix('m');
-      return getTilesS2(zoom + zoomOffset, lon, lat, matrix, radius);
+      return getTilesInViewS2(zoom + zoomOffset, lon, lat, matrix, radius);
     }
-    return getTilesWM(zoom + zoomOffset, lon, lat, this);
+    return getTilesInViewWM(zoom + zoomOffset, lon, lat, this);
   }
 
   /**
@@ -376,15 +378,14 @@ export default class Projector {
     zoom: number,
     bearing: number,
     pitch: number,
-  ): bigint[] {
-    // (S2CellIDs)
+  ): TileInView[] {
     const { projection, radius, zoomOffset } = this;
     if (projection === 'S2') {
       const matrix = this.#getMatrixS2('m', false, lon, lat, zoom, bearing, pitch);
-      return getTilesS2(zoom + zoomOffset, lon, lat, matrix, radius);
+      return getTilesInViewS2(zoom + zoomOffset, lon, lat, matrix, radius);
     }
     // TODO: bearing and pitch without editing the projection?
-    return getTilesWM(zoom + zoomOffset, lon, lat, this);
+    return getTilesInViewWM(zoom + zoomOffset, lon, lat, this);
   }
 
   /* INTERNAL FUNCTIONS */

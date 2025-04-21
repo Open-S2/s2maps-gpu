@@ -3,7 +3,7 @@ import { Tile, convert, idLevel, idToIJ } from 'gis-tools/index.js';
 
 import type { ClusterOptions } from './index.js';
 import type { Point } from './pointIndex.js';
-import type { Face, JSONCollection, VectorPointFeature } from 'gis-tools/index.js';
+import type { Face, JSONCollection, S2CellId, VectorPointFeature } from 'gis-tools/index.js';
 
 /** Comparison function - if true the features can be grouped */
 export type Comparator = (a: VectorPointFeature, b: VectorPointFeature) => boolean;
@@ -129,7 +129,7 @@ export default class PointCluser {
    * @param id - the tile id
    * @returns a tile filled with cluster points that are in the tile
    */
-  getTile(id: bigint): Tile {
+  getTile(id: S2CellId): Tile {
     const { radius, extent, maxzoom } = this.options;
     const level = idLevel(id);
     const [zoom, i, j] = idToIJ(id, level);

@@ -1,32 +1,24 @@
 import { project } from '../mat4.js';
-import { boxIntersects, pointBoundaries } from './index.js';
-
 import {
   bboxST,
   getNeighborsIJ,
   idFromFace,
   idFromIJ,
-  idParent,
   pointFromLonLat,
   pointFromSTGL,
   pointMulScalar,
   pointNormalize,
   pointToIJ,
 } from 'gis-tools/index.js';
+import { boxIntersects, pointBoundaries } from './index.js';
 
-import type { BBox, Face, S2CellId, VectorPoint } from 'gis-tools/index.js';
+import type { TileInView } from './index.js';
+import type { BBox, Face, VectorPoint } from 'gis-tools/index.js';
 
 /** Track the face-i-j positions */
-type FaceIJ = [face: number, i: number, j: number];
+type FaceIJ = [face: Face, i: number, j: number];
 
-const ZERO_TILES = [
-  idFromFace(0),
-  idFromFace(1),
-  idFromFace(2),
-  idFromFace(3),
-  idFromFace(4),
-  idFromFace(5),
-];
+const ZERO_TILES: Face[] = [0, 1, 2, 3, 4, 5];
 
 /**
  * Given a camera position, get the tiles in current view
@@ -37,15 +29,16 @@ const ZERO_TILES = [
  * @param radius - the radius of the sphere
  * @returns list of Tile IDs
  */
-export default function getTilesInView(
+export function getTilesInViewS2(
   zoom: number,
   lon: number,
   lat: number,
   matrix: Float32Array,
   radius = 1,
-): S2CellId[] {
-  if (zoom < 1) return ZERO_TILES;
-  const tiles: S2CellId[] = [];
+): TileInView[] {
+  if (zoom < 1)
+    return ZERO_TILES.map((face) => ({ id: idFromFace(face), face, zoom: 0, x: 0, y: 0 }));
+  const tiles: TileInView[] = [];
   const checkList: FaceIJ[] = [];
   const checkedTiles = new Set<string>();
   zoom = zoom << 0; // move to whole number
@@ -57,7 +50,7 @@ export default function getTilesInView(
 
   // grab the first tile and prep neighbors for checks
   const [face, i, j] = pointToIJ(pointFromLonLat({ x: lon, y: lat }), zoom);
-  tiles.push(idParent(idFromIJ(face, i, j, zoom), zoom));
+  tiles.push({ id: idFromIJ(face, i, j, zoom), face, zoom, x: i, y: j });
   checkedTiles.add(`${String(face)}-${String(i)}-${String(j)}`);
   addNeighbors(face, zoom, i, j, checkedTiles, checkList);
   const zero = project(matrix, { x: 0, y: 0, z: 0 }).z!;
@@ -92,15 +85,16 @@ export default function getTilesInView(
       (pointBoundaries(bLProj, bRProj, tLProj, tRProj) ||
         boxIntersects(bLProj, bRProj, tLProj, tRProj))
     ) {
-      tiles.push(idParent(idFromIJ(face as Face, i, j, zoom), zoom));
+      const id = idFromIJ(face as Face, i, j, zoom);
+      tiles.push({ id, face, zoom, x: i, y: j });
       addNeighbors(face as Face, zoom, i, j, checkedTiles, checkList);
     }
   }
 
   // we sort by id to avoid text filtering to awkwardly swap back and forth
   return tiles.sort((a, b) => {
-    if (a > b) return 1;
-    else if (a < b) return -1;
+    if (a.id > b.id) return 1;
+    else if (a.id < b.id) return -1;
     else return 0;
   });
 }

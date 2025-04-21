@@ -1,7 +1,7 @@
 import { Color } from 'style/color/index.js';
 import shaderCode from '../shaders/wallpaper.wgsl';
 
-import type Projector from 'ui/camera/projector/index.js';
+import type { Projector } from 'ui/camera/projector/index.js';
 import type { StyleDefinition } from 'style/style.spec.js';
 import type { WallpaperWorkflow as WallpaperWorkflowSpec } from './workflow.spec.js';
 import type { WebGPUContext } from '../context/index.js';

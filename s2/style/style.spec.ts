@@ -816,14 +816,13 @@ export type NumberColor<T> = T extends number | string ? T : never;
 export interface Property<T extends NotNullOrObject> {
   /**
    * Input values directly access properties data from the feature.
-   *
-   * ex.
+   * @example Simple Key Access
    *
    * Lets say you have a feature with the following properties:
    * ```ts
    * const properties = {
    *   class: {
-   *     type: 'blue',
+   *     type: 'color-scheme',
    *     subclass: 'deep'
    *   }
    * }
@@ -844,8 +843,8 @@ export interface Property<T extends NotNullOrObject> {
    *   }
    * }
    * ```
-   *
-   * another ex. to get a better understanding of the `nestedKey`: (this is a contrived example)
+   * @example Nested Key Access
+   * to get a better understanding of the `nestedKey`: (this is a contrived example)
    *
    * Lets say you have a feature with the following properties:
    * ```ts

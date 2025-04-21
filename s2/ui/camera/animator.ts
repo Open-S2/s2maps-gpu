@@ -1,6 +1,6 @@
 import { Orthodrome } from 'gis-tools/index.js';
 
-import type Projector from './projector/index.js';
+import type { Projector, TileInView } from './projector/index.js';
 
 /** Easing function */
 export type Easing = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
@@ -47,7 +47,7 @@ export default class Animator {
   duration = 2.5;
   velocity = 0;
   futureOffset = 0;
-  futureTiles = new Map<number, bigint[]>(); // { timeKey: [tileID] }
+  futureTiles = new Map<number, TileInView[]>(); // { timeKey: [tileID] }
   futureKeys: number[] = [];
   ease: (time: number, start: number, delta: number, duration: number) => number;
   #increment?: (time: number) => IncrementResponse;
@@ -426,7 +426,7 @@ export default class Animator {
     const tileSet = new Set(projector.camera.getTiles().map((tile) => tile.id));
     const newTiles = new Map();
     let tilesFound: boolean;
-    const batch: Array<[low: number, high: number, pos: number, tiles: bigint[]]> = [
+    const batch: Array<[low: number, high: number, pos: number, tiles: TileInView[]]> = [
       [
         0,
         duration,
@@ -450,8 +450,8 @@ export default class Animator {
       const [low, high, pos, tiles] = tileList;
       // store any new tiles and track if any of them new
       for (const tile of tiles) {
-        if (!tileSet.has(tile)) {
-          tileSet.add(tile);
+        if (!tileSet.has(tile.id)) {
+          tileSet.add(tile.id);
           if (!newTiles.has(pos)) newTiles.set(pos, [tile]);
           tilesFound = true;
         }

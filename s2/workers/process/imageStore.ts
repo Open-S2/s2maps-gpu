@@ -6,6 +6,7 @@ import type { GlyphMetadata } from 'workers/source/glyphSource.js';
 import type { GlyphRequestMessage } from 'workers/worker.spec.js';
 import type { IDGen } from './process.spec.js';
 import type { ImageSourceMetadata } from 'workers/source/imageSource.js';
+import type { S2CellId } from 'gis-tools/index.js';
 
 /** Glyph Request Tracker */
 export interface GlyphRequestTracker {
@@ -153,7 +154,7 @@ export default class ImageStore {
    */
   addMissingGlyph(
     mapID: string,
-    tileID: bigint,
+    tileID: S2CellId,
     glyphCodes: string[],
     families: string[],
   ): boolean {
@@ -202,7 +203,7 @@ export default class ImageStore {
    * @param tileID - the id of the tile that has missing data
    * @param sourceName - the name of the source that has missing data
    */
-  async processMissingData(mapID: string, tileID: bigint, sourceName: string): Promise<void> {
+  async processMissingData(mapID: string, tileID: S2CellId, sourceName: string): Promise<void> {
     const { idGen, sourceWorker } = this;
     const glyphSource = this.getGlyphSource(mapID);
     const { glyphRequestTracker } = glyphSource;

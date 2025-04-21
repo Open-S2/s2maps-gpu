@@ -4,7 +4,6 @@ import parseFeature from 's2/style/parseFeature.js';
 import type { Callback } from 's2/style/parseFeature.js';
 import type { ColorArray } from 'style/color/index.js';
 import type { IDGen } from './process.spec.js';
-import type { Properties } from 'gis-tools/index.js';
 import type {
   BuildCodeFunction,
   GPUType,
@@ -15,6 +14,7 @@ import type {
   ValueType,
 } from 'style/style.spec.js';
 import type { InteractiveObject, TileRequest } from '../worker.spec.js';
+import type { Properties, S2CellId } from 'gis-tools/index.js';
 
 /** Code design input wrapper */
 export type CodeDesignInput<T extends NotNullOrObject> =
@@ -130,7 +130,7 @@ export default class VectorWorker {
    * @param sourceName - name of the source the data belongs to
    * @param tileID - tile id the features belong to
    */
-  postInteractive(mapID: string, sourceName: string, tileID: bigint): void {
+  postInteractive(mapID: string, sourceName: string, tileID: S2CellId): void {
     if (this.interactiveMap.size === 0) return;
     const interactiveGuide: number[] = [];
     const interactiveData: number[] = [];

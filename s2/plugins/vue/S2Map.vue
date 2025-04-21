@@ -13,11 +13,16 @@ import type { MapOptions, S2Map } from 's2/index.js';
 import type { PropType, Ref } from 'vue';
 
 /** The exported container and mapInstance */
-export interface S2MapComponent {
+export interface S2MapVueComponent {
   container: Ref<HTMLElement | undefined>;
   mapInstance: Ref<S2Map | null>;
 }
 
+/**
+ * # The S2MapGPU Vue Component
+ *
+ * TODO: Describe how to use the component. Also explain the install function for global access
+ */
 export default {
   name: 'S2MapGPU',
   props: {
@@ -50,7 +55,7 @@ export default {
    * @param props - Props passed to the component
    * @returns container and mapInstance
    */
-  setup(props): S2MapComponent {
+  setup(props): S2MapVueComponent {
     let { mapOptions, mapReady, build, version, testing } = props;
     mapOptions = toRaw(mapOptions);
     const container = ref<HTMLElement>();

@@ -7,6 +7,7 @@ import type {
   BBox,
   MValue,
   Properties,
+  S2CellId,
   VectorFeatures,
   VectorGeometry,
   VectorLineString,
@@ -29,7 +30,7 @@ export interface TileChild<
   P extends Properties = Properties,
 > {
   /** The id of the child tile */
-  id: bigint;
+  id: S2CellId;
   /** The child tile */
   tile: Tile<M, D, P>;
 }

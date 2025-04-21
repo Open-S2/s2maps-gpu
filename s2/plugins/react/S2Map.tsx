@@ -6,16 +6,16 @@ import type { MapOptions, S2Map } from 's2/index.js';
 /**
  * Props for the S2Map React Component.
  * Props are:
+ * - `build`: The build type for the S2Map instance. See {@link BuildType}.
  * - `mapOptions`: The options for the S2Map instance.
  * - `mapReady?`: A function to be called when the S2Map instance is ready. Optional
- * - `build`: The build type for the S2Map instance. See {@link BuildType}.
  * - `version?`: The version of the S2Map instance. Optional
  * - `children?`: Child elements to be rendered inside the S2Map instance. Optional
  */
-export interface S2MapComponentProps {
+export interface S2MapReactComponentProps {
+  build: BuildType;
   mapOptions: MapOptions;
   mapReady?: (s2map: S2Map) => void;
-  build: BuildType;
   version?: string;
   children?: React.ReactNode;
   testing?: boolean;
@@ -26,7 +26,9 @@ export interface S2MapComponentProps {
  * @param props - Props passed to the component
  * @returns - The S2Map React Component
  */
-export const ReactS2MapGPU: React.FC<S2MapComponentProps> = (props: S2MapComponentProps) => {
+export const ReactS2MapGPU: React.FC<S2MapReactComponentProps> = (
+  props: S2MapReactComponentProps,
+) => {
   const { mapOptions, mapReady, build, version, children, testing } = props;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [mapInstance, setMapInstance] = useState<S2Map | null>(null);

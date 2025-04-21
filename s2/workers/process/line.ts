@@ -4,10 +4,10 @@ import VectorWorker, { colorFunc, idToRGB } from './vectorWorker.js';
 import { drawLine, featureSort, scaleShiftClip } from './util/index.js';
 
 import type { CodeDesign } from './vectorWorker.js';
-import type { VectorMultiLineString } from 'gis-tools/index.js';
 import type { Cap, Join, LineDefinition, LineWorkerLayer } from 'style/style.spec.js';
 import type { LineData, TileRequest } from '../worker.spec.js';
 import type { LineFeature, LineWorker as LineWorkerSpec, VTFeature } from './process.spec.js';
+import type { S2CellId, VectorMultiLineString } from 'gis-tools/index.js';
 
 /** Worker for processing line data */
 export default class LineWorker extends VectorWorker implements LineWorkerSpec {
@@ -163,7 +163,7 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
    * @param tileID - the id of the tile that requested the lines
    * @param features - the features to flush to the render thread
    */
-  #flush(mapID: string, sourceName: string, tileID: bigint, features: LineFeature[]): void {
+  #flush(mapID: string, sourceName: string, tileID: S2CellId, features: LineFeature[]): void {
     // Step 1: Sort by layerIndex, than sort by feature code.
     features.sort(featureSort);
 

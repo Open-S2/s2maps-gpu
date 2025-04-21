@@ -1,8 +1,7 @@
 import type { LayerDefinition } from 'style/style.spec.js';
-import type Projector from 'ui/camera/projector/index.js';
 import type WebGLContext from 'gl/context/context.js';
 import type WebGPUContext from 'gpu/context/context.js';
-import type { BBox, Face, VectorPoint } from 'gis-tools/index.js';
+import type { BBox, Face, S2CellId, VectorPoint } from 'gis-tools/index.js';
 import type {
   Features as FeaturesGL,
   TileMaskSource as MaskSourceGL,
@@ -16,6 +15,7 @@ import type {
   SourceFlushMessage,
   TileFlushMessage,
 } from 'workers/worker.spec.js';
+import type { Projector, TmpWMID } from 'ui/camera/projector/index.js';
 
 /** A tile's 4 corners. */
 export interface Corners {
@@ -63,7 +63,7 @@ export type FaceST = [
  * data to ensure we get no awkward visuals.
  */
 export interface TileBase<C, F, M> {
-  id: bigint;
+  id: S2CellId;
   face: Face;
   i: number;
   j: number;
@@ -80,7 +80,7 @@ export interface TileBase<C, F, M> {
   faceST: FaceST;
   corners?: Corners;
   // WM specific features
-  outofBounds: boolean;
+  wrappedID?: TmpWMID;
   dependents: Array<TileBase<C, F, M>>;
   matrix: Float32Array;
 

@@ -57,7 +57,7 @@ import type {
  * - `darkMode`: boolean flag. Enable dark mode. [default: false]
  *
  * ### Control Options
- * - `interactive`:boolean flag.  If true, the map will be interactive with user mouse/keyboard/finger inputs; [default: true]
+ * - `interactive`: boolean flag.  If true, the map will be interactive with user mouse/keyboard/finger inputs; [default: true]
  * - `scrollZoom`: boolean flag. If true, allow user to use scroll wheel to zoom. [default: true]
  * - `positionalZoom`: boolean flag. If true, cursor position impacts zoom's x & y directions. [default: true]
  * - `controls`: boolean flag. If true, enable default controls; [default: true]

@@ -1,6 +1,6 @@
 import type { ColorMode } from 's2/s2Map.js';
 import type { GlyphImages } from 'workers/source/glyphSource.js';
-import type Projector from 'ui/camera/projector/index.js';
+import type { Projector } from 'ui/camera/projector/index.js';
 import type { TileGPU as Tile } from 'source/tile.spec.js';
 import type TimeCache from 'ui/camera/timeCache.js';
 import type { WebGPUContext } from './context/index.js';

@@ -893,14 +893,3 @@ export function compareIDs(a: S2CellId, b: S2CellId): -1 | 0 | 1 {
   if (a > b) return 1;
   return 0;
 }
-
-/**
- * Check if the tile is not a real world tile that fits inside a WM quad tree
- * Out of bounds tiles exist if the map has `duplicateHorizontally` set to true.
- * This is useful for filling in the canvas on the x axis instead of leaving it blank.
- * @param id - a tile ID
- * @returns - true if the id is out of bounds for WM
- */
-export function isOutOfBoundsWM(id: bigint): boolean {
-  return idFace(id) !== (0 as Face);
-}

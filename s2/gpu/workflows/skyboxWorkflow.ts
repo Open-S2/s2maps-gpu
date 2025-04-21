@@ -5,7 +5,7 @@ import shaderCode from '../shaders/skybox.wgsl';
 import { invert, multiply, perspective, rotate } from 'ui/camera/projector/mat4.js';
 
 import type Camera from 'ui/camera/index.js';
-import type Projector from 'ui/camera/projector/index.js';
+import type { Projector } from 'ui/camera/projector/index.js';
 import type { SkyboxWorkflow as SkyboxWorkflowSpec } from './workflow.spec.js';
 import type { StyleDefinition } from 'style/style.spec.js';
 import type { UrlMap } from 'util/index.js';

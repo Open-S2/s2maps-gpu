@@ -13,7 +13,7 @@ import vert2 from '../shaders/skybox2.vertex.glsl';
 
 import type Camera from 'ui/camera/index.js';
 import type Context from '../context/context.js';
-import type Projector from 'ui/camera/projector/index.js';
+import type { Projector } from 'ui/camera/projector/index.js';
 import type { StyleDefinition } from 'style/style.spec.js';
 import type { UrlMap } from 'util/index.js';
 import type {

@@ -2,13 +2,16 @@
   "entryPoints": ["s2/index.ts", "s2/plugins.ts"], // Adjust to your main TypeScript file(s)
   "plugin": [
     // https://github.com/Gerrit0/typedoc-plugin-coverage
-    "typedoc-plugin-coverage"
+    "typedoc-plugin-coverage",
+    // https://github.com/Gerrit0/typedoc-plugin-vue
+    "typedoc-plugin-vue",
   ],
   "out": "docs",
   "includeVersion": true,
   "excludePrivate": true,
   "excludeProtected": true,
   "excludeExternals": true,
+  "excludeVueProperties": true,
   "excludeNotDocumented": true,
   "hideGenerator": true,
   "disableSources": true,

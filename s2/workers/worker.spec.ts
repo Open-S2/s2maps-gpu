@@ -16,7 +16,7 @@ import type {
   StyleDefinition,
   StylePackage,
 } from 'style/style.spec.js';
-import type { BBox, Face, Properties } from 'gis-tools/index.js';
+import type { BBox, Face, Properties, S2CellId } from 'gis-tools/index.js';
 import type { GlyphImages, GlyphMetadata } from './source/glyphSource.js';
 
 /* GENERIC WORKER TYPES */
@@ -35,7 +35,7 @@ export interface ParentLayer {
   zoom: number;
   i: number;
   j: number;
-  id: bigint;
+  id: S2CellId;
   layerIndexes: number[];
   time?: number;
 }
@@ -45,7 +45,7 @@ export type ParentLayers = Record<string | number, ParentLayer>;
 
 /** Tile Request */
 export interface TileRequest {
-  id: bigint;
+  id: S2CellId;
   face: Face;
   zoom: number;
   i: number;
@@ -503,7 +503,7 @@ export interface SpriteImageMessage extends MapID {
 export interface SourceFlushMessage extends MapID {
   type: 'flush';
   from: 'source';
-  tileID: bigint;
+  tileID: S2CellId;
   layersToBeLoaded: Set<number>;
 }
 
@@ -518,7 +518,7 @@ export type SourceWorkerMessage =
 
 /** Worker message base. Used in most messages from the tile worker to the source worker or front-end */
 export interface WorkerMessageBase extends MapID {
-  tileID: bigint;
+  tileID: S2CellId;
   sourceName: string;
 }
 
@@ -617,7 +617,7 @@ export interface InteractiveData extends WorkerMessageBase {
 export interface TileFlushMessage extends MapID {
   type: 'flush';
   from: 'tile';
-  tileID: bigint;
+  tileID: S2CellId;
   sourceName: string;
   deadLayers: number[];
 }

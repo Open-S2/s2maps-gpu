@@ -10,7 +10,7 @@ import vert2 from '../shaders/wallpaper2.vertex.glsl';
 
 import type { ColorBlindAdjust } from 'style/color/colorBlindAdjust.js';
 import type Context from '../context/context.js';
-import type Projector from 'ui/camera/projector/index.js';
+import type { Projector } from 'ui/camera/projector/index.js';
 import type { StyleDefinition } from 'style/style.spec.js';
 import type { VectorPoint } from 'gis-tools/index.js';
 import type {

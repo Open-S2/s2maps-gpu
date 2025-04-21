@@ -1,21 +1,16 @@
 import { project } from 'ui/camera/projector/mat4.js';
 import {
   bboxST,
-  idLevel,
-  idToIJ,
-  isOutOfBoundsWM,
   llToTilePx,
-  pointFromS2CellID,
   pointFromSTGL,
   pointMulScalar,
   pointNormalize,
   pointSub,
 } from 'gis-tools/index.js';
 
-import type Projector from 'ui/camera/projector/index.js';
 import type { Context as WebGLContext } from 'gl/context/index.js';
 import type { WebGPUContext } from 'gpu/context/index.js';
-import type { BBox, Face } from 'gis-tools/index.js';
+import type { BBox, Face, S2CellId } from 'gis-tools/index.js';
 import type {
   Corners,
   FaceST,
@@ -32,28 +27,29 @@ import type {
   TileFlushMessage,
 } from 'workers/worker.spec.js';
 import type { LayerDefinition, Projection } from 'style/style.spec.js';
+import type { Projector, TileInView, TmpWMID } from 'ui/camera/projector/index.js';
 
 /**
  * Create a new Tile given the approprate projection, context and ID.
  * @param projection - the projection type (WM or S2)
  * @param context - the GPU or WebGL context
- * @param id - the tile ID
+ * @param tileInfo - the tile identifier
  * @returns the new Tile object
  */
 export function createTile(
   projection: Projection,
   context: WebGPUContext | WebGLContext,
-  id: bigint,
+  tileInfo: TileInView,
 ): TileGL & TileGPU {
   const Tile = projection === 'S2' ? S2Tile : WMTile;
-  return new Tile(context as unknown as SharedContext, id) as unknown as TileGL & TileGPU;
+  return new Tile(context as unknown as SharedContext, tileInfo) as unknown as TileGL & TileGPU;
 }
 
 /** Base Tile Class that all Tiles inherit from. */
 class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMaskSource>
   implements TileSpec<C, F, M>
 {
-  id: bigint;
+  id: S2CellId;
   face: Face = 0;
   i = 0;
   j = 0;
@@ -75,13 +71,13 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
   layersToBeLoaded?: Set<number>;
   // WM only feature: if the tile is "out of bounds", it references a real world tile
   // by copying the parents featureGuides.
-  outofBounds = false;
+  wrappedID?: TmpWMID;
   dependents: Array<Tile<C, F, M>> = [];
   /**
    * @param context - the GPU or WebGL context
    * @param id - the tile ID
    */
-  constructor(context: C, id: bigint) {
+  constructor(context: C, id: S2CellId) {
     this.context = context;
     this.id = id;
   }
@@ -365,17 +361,16 @@ export class S2Tile<
   corners?: Corners;
   /**
    * @param context - the context to use (GPU or WebGL)
-   * @param id - the tile ID
+   * @param tileInfo - Information about the tile
    */
-  constructor(context: C, id: bigint) {
+  constructor(context: C, tileInfo: TileInView) {
+    const { id, face, zoom, x, y } = tileInfo;
     super(context, id);
     const { max, min, floor } = Math;
-    const zoom = (this.zoom = idLevel(id));
-    const [face, i, j] = idToIJ(id, zoom);
     this.face = face;
-    this.i = i;
-    this.j = j;
-    const bbox = (this.bbox = bboxST(i, j, zoom));
+    this.i = x;
+    this.j = y;
+    const bbox = (this.bbox = bboxST(x, y, zoom));
     this.faceST = [face, zoom, bbox[2] - bbox[0], bbox[0], bbox[3] - bbox[1], bbox[1]];
     if (zoom >= 12) this.#buildCorners();
     // setup uniforms
@@ -448,19 +443,18 @@ export class WMTile<
   override matrix: Float32Array = new Float32Array(16);
   /**
    * @param context - a GPU context or WebGL context
-   * @param id - the tile ID
+   * @param tileInfo - Information about the tile
    */
-  constructor(context: C, id: bigint) {
+  constructor(context: C, tileInfo: TileInView) {
+    const { id, x, y, zoom, wrappedID } = tileInfo;
     super(context, id);
-    const { z: zoom = 0, x: i, y: j } = pointFromS2CellID(id);
-    this.i = i;
-    this.j = j;
+    this.i = x;
+    this.j = y;
     this.zoom = zoom;
-    // if i or j are out of bounds, we need to reference the parent tile's featureGuides
-    this.outofBounds = isOutOfBoundsWM(id);
+    this.wrappedID = wrappedID;
     // TODO: bboxWM? And do I apply it to the uniforms?
     // const bbox = this.bbox = bboxST(i, j, zoom)
-    this.bbox = bboxST(i, j, zoom);
+    this.bbox = bboxST(x, y, zoom);
     // setup uniforms
     this.uniforms = new Float32Array([
       0, // isS2

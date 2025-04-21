@@ -19,7 +19,7 @@ import type { ColorMode } from 's2/s2Map.js';
 import type { GlyphImages } from 'workers/source/glyphSource.js';
 import type { MapOptions } from 'ui/s2mapUI.js';
 import type { Painter as PainterSpec } from './painter.spec.js';
-import type Projector from 'ui/camera/projector/index.js';
+import type { Projector } from 'ui/camera/projector/index.js';
 import type { TileGL as Tile } from 'source/tile.spec.js';
 import type TimeCache from 'ui/camera/timeCache.js';
 import type { VectorPoint } from 'gis-tools/index.js';

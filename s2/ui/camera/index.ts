@@ -1,9 +1,8 @@
 /** STYLE */
 import Style from 'style/index.js';
 /** GEOMETRY / PROJECTIONS */
-import Projector from './projector/index.js';
-import { tileIDWrappedWM } from './projector/getTiles/index.js';
-import { idIsFace, idParent } from 'gis-tools/index.js';
+import { idParent } from 'gis-tools/index.js';
+import { Projector, mod } from './projector/index.js';
 /** SOURCES */
 import Animator from './animator.js';
 import Cache from './cache.js';
@@ -17,7 +16,7 @@ import type { MapOptions } from '../s2mapUI.js';
 
 import type { ClickEvent } from './dragPan.js';
 import type S2Map from 's2/s2Map.js';
-import type { VectorPoint } from 'gis-tools/index.js';
+import type { TileInView } from './projector/index.js';
 import type { Combine, TileShared as Tile } from 'source/tile.spec.js';
 import type {
   InteractiveObject,
@@ -32,6 +31,7 @@ import type {
   TileWorkerMessage,
   ViewMessage,
 } from 'workers/worker.spec.js';
+import type { S2CellId, VectorPoint } from 'gis-tools/index.js';
 import type { StyleDefinition, TimeSeriesStyle } from 'style/style.spec.js';
 
 /** Resize dimensions */
@@ -64,7 +64,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
   style: Style;
   projector: Projector;
   painter!: P;
-  tileCache = new Cache<bigint, Tile>();
+  tileCache = new Cache<S2CellId, Tile>();
   timeCache?: TimeCache;
   tilesInView: Tile[] = []; // S2CellIDs of the tiles
   lastTileViewState: number[] = [];
@@ -592,7 +592,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
    * @param interactiveDataBuffer - the raw data to pull the properties from
    */
   #injectInteractiveData(
-    tileID: bigint,
+    tileID: S2CellId,
     interactiveGuideBuffer: ArrayBuffer,
     interactiveDataBuffer: ArrayBuffer,
   ): void {
@@ -612,7 +612,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
    * @param tileID - the id of the tile
    * @returns the tile if the cache has it
    */
-  getTile(tileID: bigint): undefined | Tile {
+  getTile(tileID: S2CellId): undefined | Tile {
     return this.tileCache.get(tileID);
   }
 
@@ -621,16 +621,16 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     const { tileCache, projector, painter, style } = this;
     if (projector.dirty) {
       painter.dirty = true; // to avoid re-requesting getTiles (which is expensive), we set painter.dirty to true
-      let tilesInView: bigint[] = [];
+      let tilesInView: TileInView[] = [];
       // no matter what we need to update what's in view
       const newTiles: Tile[] = [];
       // update tiles in view
       tilesInView = projector.getTilesInView();
       // check if any of the tiles don't exist in the cache. If they don't create a new tile
-      for (const id of tilesInView) {
-        if (!tileCache.has(id)) {
+      for (const foundTile of tilesInView) {
+        if (!tileCache.has(foundTile.id)) {
           // tile not found, so we create it
-          const createdTiles = this.#createTiles(id);
+          const createdTiles = this.#createTiles(foundTile);
           // store reference for the style to request from webworker(s)
           newTiles.push(...createdTiles);
         }
@@ -638,10 +638,10 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
       // if new tiles exist, ensture the worker and painter are updated
       // do not request out of bounds tiles because they just reference
       // the "wrapped" real world tiles
-      const newTilesWithoutOutofBounds = newTiles.filter((tile) => !tile.outofBounds);
+      const newTilesWithoutOutofBounds = newTiles.filter((tile) => tile.wrappedID === undefined);
       if (newTilesWithoutOutofBounds.length > 0) style.requestTiles(newTilesWithoutOutofBounds);
       // given the S2CellID, find them in cache and return them
-      this.tilesInView = tileCache.getBatch(tilesInView);
+      this.tilesInView = tileCache.getBatch(tilesInView.map((tile) => tile.id));
     }
     return this.tilesInView;
   }
@@ -650,13 +650,13 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
    * Given a list of S2CellIDs, create the tiles necessary to render those IDs for future requests
    * @param tileIDs - the list of S2CellIDs
    */
-  createFutureTiles(tileIDs: bigint[]): void {
+  createFutureTiles(tileIDs: TileInView[]): void {
     const { tileCache, painter, style } = this;
     const newTiles: Tile[] = [];
     // create the tiles
-    for (const id of tileIDs) {
-      if (!tileCache.has(id)) {
-        const createdTiles = this.#createTiles(id);
+    for (const tile of tileIDs) {
+      if (!tileCache.has(tile.id)) {
+        const createdTiles = this.#createTiles(tile);
         newTiles.push(...createdTiles);
       }
     }
@@ -670,35 +670,46 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
    * Although steriotypical, we only create a single tile from the S2CellID or WMID,
    * if the tile is out of bounds, we may need to create a second tile that
    * it references (the "wrapped" tile). Often times the tile already exists
-   * @param id - the S2CellID
+   * @param tInView - information on tile in view
    * @returns an array of tiles for the given S2CellID
    */
-  #createTiles(id: bigint): Tile[] {
+  #createTiles(tInView: TileInView): Tile[] {
     const res: Tile[] = [];
     const { style, painter, tileCache, projector } = this;
     // create tile
-    const tile = createTile(projector.projection, painter.context, id);
+    const tile = createTile(projector.projection, painter.context, tInView);
     res.push(tile);
     // should our style have mask layers, let's add them
     style.injectMaskLayers(tile);
     // inject parent should one exist
-    if (!idIsFace(id)) {
+    const s2ID = tile.wrappedID ?? tile.id;
+    if (tInView.zoom > 0) {
       // get closest parent S2CellID. If actively zooming, the parent tile will pass along
       // it's parent tile (and so forth) if its own data has not been processed yet.
-      const pID = idParent(id);
+      const pID = idParent(s2ID);
       // check if parent tile exists, if so inject
       const parent = tileCache.get(pID);
       if (parent !== undefined) tile.injectParentTile(parent, style.layers);
     }
-    if (tile.outofBounds) {
+    if (tile.wrappedID !== undefined) {
       // This is a WM only case. Inject "wrapped" tile's featureGuides as a reference
-      const wrappedID: bigint = tileIDWrappedWM(id);
-      if (!tileCache.has(wrappedID)) res.push(...this.#createTiles(wrappedID));
-      const wrappedTile = tileCache.get(wrappedID);
+      if (!tileCache.has(tile.wrappedID)) {
+        const size = 1 << tile.zoom;
+        res.push(
+          ...this.#createTiles({
+            id: tile.wrappedID,
+            face: tile.face,
+            x: mod(tile.i, size),
+            y: mod(tile.j, size),
+            zoom: tile.zoom,
+          }),
+        );
+      }
+      const wrappedTile = tileCache.get(tile.wrappedID);
       if (wrappedTile !== undefined) tile.injectWrappedTile(wrappedTile);
     }
-    // store the tile
-    tileCache.set(id, tile);
+    // store the tile, if an out of bounds tile, store it's own WMID
+    tileCache.set(tInView.id, tile);
 
     return res;
   }

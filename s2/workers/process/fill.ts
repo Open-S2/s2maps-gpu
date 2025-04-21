@@ -15,7 +15,7 @@ import type {
   VTFeature,
 } from './process.spec.js';
 
-import type { VectorMultiPolygon } from 'gis-tools/index.js';
+import type { S2CellId, VectorMultiPolygon } from 'gis-tools/index.js';
 
 const MAX_FEATURE_BATCH_SIZE = 1 << 6; // 64
 
@@ -283,7 +283,7 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
    * @param sourceName - source name the data to belongs to
    * @param tileID - tile id the data to belongs to
    */
-  #flush(mapID: string, sourceName: string, tileID: bigint): void {
+  #flush(mapID: string, sourceName: string, tileID: S2CellId): void {
     const storeID: string = `${mapID}:${tileID}:${sourceName}`;
     const features = this.featureStore.get(storeID) ?? [];
     if (features.length === 0) return;

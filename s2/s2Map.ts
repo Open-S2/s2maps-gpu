@@ -80,8 +80,8 @@ declare global {
  *     <title>Display a map</title>
  *     <meta name="viewport" content="initial-scale=1,width=device-width" />
  *     <!-- import s2maps-gpu. BE SURE TO CHECK AND UPDATE TO LATEST VERSION -->
- *     <script src="https://opens2.com/s2maps-gpu/v0.6.0/s2maps-gpu.min.js" crossorigin="anonymous"></script>
- *     <link rel="stylesheet" href="https://opens2.com/s2maps-gpu/v0.6.0/s2maps-gpu.min.css" />
+ *     <script src="https://opens2.com/s2maps-gpu/v0.18.0/s2maps-gpu.min.js" crossorigin="anonymous"></script>
+ *     <link rel="stylesheet" href="https://opens2.com/s2maps-gpu/v0.18.0/s2maps-gpu.min.css" />
  *   </head>
  *   <body>
  *     <div id="map"></div>
@@ -138,12 +138,17 @@ declare global {
  * - `getBounds` & `setBounds`
  * - `setProjection` & `getProjection`
  * - `getStyle`
- * - `setView`
  *
- * ## Plugins
+ * ## Converters
  * - MapLibre Map Options Converter: See {@link plugins.convertMaplibreOptions}
  * - MapLibre Style Converter: See {@link plugins.convertMaplibreStyle}
+ *
+ * ## Plugins
  * - Sync map movements between multiple maps: See {@link plugins.syncMove}
+ *
+ * ## Frameworks
+ * - React: See {@link plugins.ReactS2MapGPU}
+ * - Vue: See {@link plugins.VueS2MapGPU}
  */
 export default class S2Map extends EventTarget {
   readonly #container?: HTMLElement;

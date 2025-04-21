@@ -1,4 +1,5 @@
 import type { ColorArray } from 'style/color/index.js';
+import type { S2CellId } from 'gis-tools/index.js';
 import type { ImageMetadata, ImageSourceMetadata } from 'workers/source/imageSource.js';
 
 /** A Glyph Container. Tracks all the glyph's properties, shape, size, etc. */
@@ -74,7 +75,7 @@ export default class FamilySource {
   glyphCache = new Map<string, Glyph>(); // glyphs we have built already
   iconCache = new Map<string, Icon>();
   // track missing glyphs for future requests to the source worker
-  glyphRequestList = new Map<bigint, Set<string>>();
+  glyphRequestList = new Map<S2CellId, Set<string>>();
   isIcon = false;
   /**
    * @param name - the name of the family
@@ -184,7 +185,7 @@ export default class FamilySource {
    * @param tileID - the id of the tile that requested the glyph
    * @param code - the code of the glyph/icon
    */
-  addGlyphRequest(tileID: bigint, code: string): void {
+  addGlyphRequest(tileID: S2CellId, code: string): void {
     if (!this.glyphRequestList.has(tileID)) this.glyphRequestList.set(tileID, new Set());
     const requests = this.glyphRequestList.get(tileID);
     requests?.add(code);
@@ -195,7 +196,7 @@ export default class FamilySource {
    * @param tileID - the id of the tile that requested the glyph/icon
    * @returns the list of glyph/icon requests
    */
-  getRequests(tileID: bigint): string[] {
+  getRequests(tileID: S2CellId): string[] {
     const glyphList = this.glyphRequestList.get(tileID) ?? new Set<string>();
     // cleanup requests that we are pulling from the cache
     this.glyphRequestList.delete(tileID);

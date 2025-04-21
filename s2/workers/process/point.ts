@@ -17,8 +17,7 @@ import type {
   PointWorker as PointWorkerSpec,
   VTFeature,
 } from './process.spec.js';
-
-import type { VectorGeometryType, VectorMultiPoint } from 'gis-tools/index.js';
+import type { S2CellId, VectorGeometryType, VectorMultiPoint } from 'gis-tools/index.js';
 
 /** Internal organization to hold specific point features */
 export interface Features {
@@ -198,7 +197,7 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
    * @param tileID - the tile id
    * @param type - the feature type (point or heatmap)
    */
-  #flush(mapID: string, sourceName: string, tileID: bigint, type: 'point' | 'heatmap'): void {
+  #flush(mapID: string, sourceName: string, tileID: S2CellId, type: 'point' | 'heatmap'): void {
     const features = (this.featureStore.get(`${mapID}:${tileID}:${sourceName}`) ?? {
       point: [],
       heatmap: [],

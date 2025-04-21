@@ -1,7 +1,7 @@
 import type { ColorArray } from 'style/color/index.js';
 import type { ColorMode } from 's2/s2Map.js';
 import type Context from '../context/context.js';
-import type Projector from 'ui/camera/projector/index.js';
+import type { Projector } from 'ui/camera/projector/index.js';
 import type S2MapUI from 'ui/s2mapUI.js';
 import type { SensorTextureDefinition } from 'ui/camera/timeCache.js';
 import type { TileGL as Tile } from 'source/tile.spec.js';

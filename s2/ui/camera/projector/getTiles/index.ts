@@ -1,7 +1,19 @@
-import type { VectorPoint } from 'gis-tools/index.js';
+import type { TmpWMID } from './WM.js';
+import type { Face, S2CellId, VectorPoint } from 'gis-tools/index.js';
 
-export { default as getTilesS2 } from './S2.js';
-export { default as getTilesWM } from './WM.js';
+export * from './S2.js';
+export * from './WM.js';
+
+/** Found tile's allow easy access to it's shape and support out of bounds for WM */
+export interface TileInView {
+  id: S2CellId | TmpWMID;
+  face: Face;
+  zoom: number;
+  x: number;
+  y: number;
+  // If the tile is out of bounds, this will point to the "wrapped"/legal ID
+  wrappedID?: S2CellId;
+}
 
 /**
  * check 3D point boundries of a rectangle are within the range of [-1,1]
@@ -91,30 +103,4 @@ export function lineIntersect(
   const lambda = ((y4 - y3) * (x4 - x1) + (x3 - x4) * (y4 - y1)) / denom;
   const gamma = ((y1 - y2) * (x4 - x1) + (x2 - x1) * (y4 - y1)) / denom;
   return lambda > 0 && lambda < 1 && gamma > 0 && gamma < 1;
-}
-
-/**
- * Given a tile ID, find the "wrapped" tile ID.
- * It may resolve to itself. This is useful for maps that have
- * `duplicateHorizontally` set to true. It forces the tile to be
- * within the bounds of the quad tree.
- * @param id - the tile ID
- * @returns the wrapped tile ID
- */
-export function tileIDWrappedWM(id: bigint): bigint {
-  // @ts-expect-error - ignore for now to build docs
-  const [zoom, x, y] = fromID(id);
-  const size = 1 << zoom;
-  // @ts-expect-error - ignore for now to build docs
-  return toID(zoom, mod(x, size), mod(y, size));
-}
-
-/**
- * a modulo function that works with negative numbers
- * @param x - the number
- * @param n - the modulus
- * @returns the result
- */
-export function mod(x: number, n: number): number {
-  return ((x % n) + n) % n;
 }

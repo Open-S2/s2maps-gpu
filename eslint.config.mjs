@@ -1,5 +1,4 @@
 // @ts-check
-
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 import globals from 'globals';
 import jsdoc from 'eslint-plugin-jsdoc';
@@ -7,7 +6,7 @@ import pluginSvelte from 'eslint-plugin-svelte';
 import pluginVue from 'eslint-plugin-vue';
 import prettierConfig from 'eslint-config-prettier';
 // Add tsdoc as a plugin
-import tsdoc from 'eslint-plugin-tsdoc';
+// import tsdoc from 'eslint-plugin-tsdoc';
 import tseslint from 'typescript-eslint';
 
 import svelteConfig from './svelte.config.js';
@@ -33,7 +32,7 @@ export default tseslint.config(
   {
     plugins: {
       'typescript-eslint': tseslint.plugin,
-      tsdoc,
+      // tsdoc,
     },
     languageOptions: {
       globals: {

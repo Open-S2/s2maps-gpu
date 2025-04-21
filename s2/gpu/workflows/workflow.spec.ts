@@ -1,5 +1,5 @@
 import type { BBox } from 'gis-tools/index.js';
-import type Projector from 'ui/camera/projector/index.js';
+import type { Projector } from 'ui/camera/projector/index.js';
 import type S2MapUI from 'ui/s2mapUI.js';
 import type { SensorTextureDefinition } from 'ui/camera/timeCache.js';
 import type { TileGPU as Tile } from 'source/tile.spec.js';

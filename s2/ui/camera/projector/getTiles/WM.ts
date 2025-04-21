@@ -1,9 +1,12 @@
 import { project } from '../mat4.js';
 import { boxIntersects, pointBoundaries } from './index.js';
-import { idFromIJ, isOutOfBoundsWM, llToTile, llToTilePx } from 'gis-tools/index.js';
+import { idFromIJ, llToTile, llToTilePx } from 'gis-tools/index.js';
 
 import type { Point3D } from 'gis-tools/index.js';
-import type Projector from '../index.js';
+import type { Projector, TileInView } from '../index.js';
+
+/** type for temporary WMID. It handles a single quadtree supporting id's that fall outside the range of the tree */
+export type TmpWMID = bigint;
 
 /** Track the face-i-j positions */
 type ZoomXY = [zoom: number, x: number, y: number];
@@ -22,22 +25,24 @@ type ZoomXY = [zoom: number, x: number, y: number];
  * @param projector - the projection object
  * @returns a list of Tile IDs in view
  */
-export default function getTilesInView(
+export function getTilesInViewWM(
   zoom: number,
   lon: number,
   lat: number,
   projector: Projector,
-): bigint[] {
+): TileInView[] {
   const { tileSize, duplicateHorizontally } = projector;
   if (zoom < 1) zoom = 0;
-  const tiles = new Set<bigint>();
+  const tiles = new Map<bigint, TileInView>();
   const checkList: Point3D[] = [];
   const checkedTiles = new Set<string>();
   zoom = zoom << 0; // move to whole number
+  const size = 1 << zoom;
 
   // let's find the current tile and store it
   const { x, y } = llToTile({ x: lon, y: lat }, zoom, tileSize);
-  tiles.add(idFromIJ(0, zoom, x, y));
+  const id = idFromIJ(0, x, y, zoom);
+  tiles.set(id, { id, face: 0, zoom, x, y });
   // add the first set of neighbors
   addNeighbors(zoom, x, y, duplicateHorizontally, checkedTiles, checkList);
 
@@ -45,9 +50,9 @@ export default function getTilesInView(
     // grab a tile to check and get its face and bounds
     const check = checkList.pop();
     if (check === undefined) break;
-    const [zCheck, xCheck, yCheck] = check;
+    const [, xCheck, yCheck] = check;
     // get the tiles matrix
-    const matrix = tileMatrix(projector, zCheck, xCheck, yCheck);
+    const matrix = tileMatrix(projector, zoom, xCheck, yCheck);
     // project the four corners of the tile
     const bl = project(matrix, { x: 0, y: 0, z: 0 });
     const br = project(matrix, { x: 1, y: 0, z: 0 });
@@ -55,27 +60,39 @@ export default function getTilesInView(
     const tr = project(matrix, { x: 1, y: 1, z: 0 });
     // check if the tile is in view
     if (pointBoundaries(bl, br, tl, tr) || boxIntersects(bl, br, tl, tr)) {
+      // ensure S2CellId uses the wrapped x-y values.
+      const s2ID = idFromIJ(0, mod(xCheck, size), mod(yCheck, size), zoom);
       // if the tile is in view, add it to the list
-      tiles.add(idFromIJ(0, zCheck, xCheck, yCheck));
+      const wmID = toWMID(zoom, xCheck, yCheck, duplicateHorizontally);
+      const id = wmID ?? s2ID;
+      // IF the wmID exists, it means it's an out of bounds ID, we we need to store the "wrapped" id which is the s2CellId
+      const wrappedID = wmID !== undefined ? s2ID : undefined;
+      tiles.set(id, { id, face: 0, zoom: zoom, x: xCheck, y: yCheck, wrappedID });
       // add the surounding tiles we have not checked
-      addNeighbors(zCheck, xCheck, yCheck, duplicateHorizontally, checkedTiles, checkList);
+      addNeighbors(zoom, xCheck, yCheck, duplicateHorizontally, checkedTiles, checkList);
     }
   }
 
   return (
-    [...tiles]
+    [...tiles.values()]
       // first we sort by id to avoid text filtering to awkwardly swap back and forth
       .sort((a, b) => {
-        if (a > b) return 1;
-        else if (a < b) return -1;
+        // First sort by x
+        if (a.x < b.x) return -1;
+        else if (a.x > b.x) return 1;
+        // Then sort by y
+        else if (a.y < b.y) return -1;
+        else if (a.y > b.y) return 1;
+        // assume equal enough
         else return 0;
       })
-      // then we sort by real world tiles first and out of bounds tiles last
-      .sort((a, b) => {
-        if (isOutOfBoundsWM(a)) return 1;
-        else if (isOutOfBoundsWM(b)) return -1;
-        else return 0;
-      })
+    // then we sort by real world tiles first and out of bounds tiles last
+    // NOTE: I am commenting this out for now. I am not convinced it is necessary
+    // .sort((a, b) => {
+    //   if (a.wrappedID !== undefined) return 1;
+    //   else if (b.wrappedID !== undefined) return -1;
+    //   else return 0;
+    // })
   );
 }
 
@@ -144,7 +161,6 @@ export function neighborsXY(
   y: number,
   includeOutOfBounds = false,
 ): ZoomXY[] {
-  // TODO: We find neighbors using new S2-ID system, not incrementts
   const size = 1 << zoom;
   const neighbors: ZoomXY[] = [];
   const xOutOfBounds = x < 0 || x >= size;
@@ -153,4 +169,55 @@ export function neighborsXY(
   if (!xOutOfBounds && y - 1 >= 0) neighbors.push([zoom, x, y - 1]);
   if (!xOutOfBounds && y + 1 < size) neighbors.push([zoom, x, y + 1]);
   return neighbors;
+}
+
+/**
+ * Convert zoom-x-y to a singular number
+ * It may resolve to itself. This is useful for maps that have
+ * `duplicateHorizontally` set to true. It forces the tile to be
+ * within the bounds of the quad tree.
+ * @param zoom - the zoom level
+ * @param x - the x tile-coordinate
+ * @param y - the y tile-coordinate
+ * @param duplicateHorizontally - whether to duplicate horizontally
+ * @returns the singular number
+ */
+export function toWMID(
+  zoom: number,
+  x: number,
+  y: number,
+  duplicateHorizontally: boolean,
+): bigint | undefined {
+  if (!duplicateHorizontally) return undefined;
+  const size = 1 << zoom;
+  // skip tiles that are NOT out of bounds
+  if (x >= 0 && x < size && y >= 0 && y < size) return;
+  // otherwise store the out of boudns tile
+  const maxX = 1 << zoom;
+  const adjustedX = mod(x, maxX); // Adjust x to be within [0, maxX)
+  const remainder = zigzag(x - adjustedX);
+  return (
+    (BigInt(1 << zoom) * BigInt(y) + BigInt(adjustedX)) * 32n +
+    BigInt(zoom) +
+    (BigInt(remainder) << 65n)
+  );
+}
+
+/**
+ * encode a number as always positive interweaving negative and postive values
+ * @param n - the number
+ * @returns the encoded number
+ */
+export function zigzag(n: number): number {
+  return (n >> 31) ^ (n << 1);
+}
+
+/**
+ * a modulo function that works with negative numbers
+ * @param x - the number
+ * @param n - the modulus
+ * @returns the result
+ */
+export function mod(x: number, n: number): number {
+  return ((x % n) + n) % n;
 }

@@ -1,6 +1,7 @@
 import Cache from './cache.js';
 
 import type Camera from './index.js';
+import type { S2CellId } from 's2/gis-tools/index.js';
 import type { SensorSource } from 'gl/workflows/workflow.spec.js';
 import type { TileShared as Tile } from 'source/tile.spec.js';
 import type { TileRequest } from 'workers/worker.spec.js';
@@ -83,7 +84,7 @@ export default class TimeCache extends Cache<string, SensorSource> {
    * @param sourceName - the name of the source
    * @param source - the source to add the data to
    */
-  addSourceData(id: bigint, time: number, sourceName: string, source: SensorSource): void {
+  addSourceData(id: S2CellId, time: number, sourceName: string, source: SensorSource): void {
     this.set(`${id}#${time}#${sourceName}`, source);
   }
 
@@ -93,7 +94,7 @@ export default class TimeCache extends Cache<string, SensorSource> {
    * @param sourceName - the name of the source
    * @returns the source texture information and data
    */
-  getTextures(id: bigint, sourceName: string): SensorTextureDefinition {
+  getTextures(id: S2CellId, sourceName: string): SensorTextureDefinition {
     const shortName = sourceName.split(':')[0];
     const { cursor, endTime } = this.timeSeries;
     const timeSource = this.sources[shortName];
@@ -168,7 +169,7 @@ export default class TimeCache extends Cache<string, SensorSource> {
    * @param sourceName - the name of the source
    * @param id - the id of the tile
    */
-  #requestTiles(time: number, shortName: string, sourceName: string, id?: bigint): void {
+  #requestTiles(time: number, shortName: string, sourceName: string, id?: S2CellId): void {
     const { webworker, camera } = this;
     let tiles: Tile[] = [];
     if (id !== undefined) {

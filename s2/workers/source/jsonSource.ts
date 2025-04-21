@@ -45,7 +45,7 @@ export default class JSONSource extends Source {
         minzoom,
         maxzoom,
         faces: [...faces],
-        layers: { default: { minzoom: 0, maxzoom: 30, drawTypes: [], shape: {} } },
+        layers: { default: { minzoom, maxzoom, drawTypes: [], shape: {} } },
         extension: projection === 'S2' ? 's2json' : 'geojson',
         attributions: 'attributions' in json ? json.attributions : {},
       },
