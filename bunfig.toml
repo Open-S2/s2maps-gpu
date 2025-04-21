@@ -1,7 +1,7 @@
 [test]
 
 # preload happydom for all tests
-preload = ["./s2/polyfills"]
+preload = ["./s2/polyfills", "./tests/happyDOM"]
 
 # root directory
 root = "./tests"

@@ -33,7 +33,7 @@ export type Callback<T extends NotNullOrObject, U> = (i: T) => U;
  * @param cb - callback function
  * @returns a generic layer worker function
  */
-export default function parseFeatureFunction<T extends NotNullOrObject, U = T>(
+export default function parseFeature<T extends NotNullOrObject, U = T>(
   input: ValueType<T> | Property<ValueType<T>>,
   cb: Callback<T, U> = (i: T): U => i as unknown as U,
 ): LayerWorkerFunction<U> {
@@ -47,7 +47,7 @@ export default function parseFeatureFunction<T extends NotNullOrObject, U = T>(
     } else if ('inputRange' in input && input.inputRange !== undefined) {
       return inputRangeFunction<T, U>(input.inputRange, cb);
     } else if ('fallback' in input && input.fallback !== undefined) {
-      return parseFeatureFunction(input.fallback, cb);
+      return parseFeature(input.fallback, cb);
     } else {
       throw Error('invalid input');
     }
@@ -94,12 +94,12 @@ function dataConditionFunction<T extends NotNullOrObject, U>(
 ): LayerWorkerFunction<U> {
   const { conditions, fallback } = dataCondition;
   const conditionList: Array<DataConditionList<U>> = [];
-  const fallbackCondition = parseFeatureFunction(fallback);
+  const fallbackCondition = parseFeature(fallback);
   // store conditions
   for (const condition of conditions) {
     conditionList.push({
       condition: parseFilter(condition.filter),
-      result: parseFeatureFunction(condition.input, cb),
+      result: parseFeature(condition.input, cb),
     });
   }
   // build function
@@ -137,7 +137,7 @@ function dataRangeFunction<T extends NotNullOrObject, U>(
   const parsedRanges = ranges.map(({ stop, input }) => {
     return {
       stop,
-      input: parseFeatureFunction(input, cb),
+      input: parseFeature(input, cb),
     };
   });
 
@@ -190,7 +190,7 @@ function inputRangeFunction<T extends NotNullOrObject, U>(
   const parsedRanges = ranges.map(({ stop, input }) => {
     return {
       stop,
-      input: parseFeatureFunction(input, cb),
+      input: parseFeature(input, cb),
     };
   });
 

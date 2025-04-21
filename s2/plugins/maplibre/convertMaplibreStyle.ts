@@ -46,7 +46,7 @@ import type {
 } from '@maplibre/maplibre-gl-style-spec';
 
 /**
- * Convert a MapLibre style to an s2maps style
+ * Convert a MapLibre style to an s2maps {@link StyleDefinition}
  *
  * ex.
  * ```ts

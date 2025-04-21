@@ -98,7 +98,10 @@ export default tseslint.config(
           contexts: ['TSInterfaceDeclaration', 'TSTypeAliasDeclaration', 'TSEnumDeclaration'],
         },
       ],
-      'jsdoc/check-tag-names': ['warn', { definedTags: ['experimental', 'source'] }],
+      'jsdoc/check-tag-names': [
+        'warn',
+        { definedTags: ['experimental', 'source', 'defaultValue'] },
+      ],
       'jsdoc/no-blank-block-descriptions': 'warn',
       // 'jsdoc/no-missing-syntax': 'warn',
       'jsdoc/no-blank-blocks': 'warn',

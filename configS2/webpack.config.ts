@@ -126,6 +126,7 @@ const conifguration: Configuration = {
       minRatio: 1,
     }),
     new WebpackStatsViewerPlugin(),
+    // @ts-expect-error - types are wrong.
     new BundleAnalyzerPlugin({
       analyzerMode: 'static',
       generateStatsFile: true,

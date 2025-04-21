@@ -15,6 +15,32 @@ export type ColorArray = [r: number, g: number, b: number, a: number];
  * ### Description
  * Color class to handle color conversions and adjustments. Supports RGB, HSV, HSL, and LCH.
  *
+ * ### Example Usage
+ *
+ * ex. name string
+ * ```ts
+ * const color = new Color('red');
+ * const rgb = color.getRGB();
+ * ```
+ *
+ * ex. Hex string
+ * ```ts
+ * const color = new Color('#ff0000');
+ * const rgb = color.getRGB();
+ * ```
+ *
+ * ex. String input array
+ * ```ts
+ * const color = new Color('hsv(180, 0.9, 0.7843137254901961)');
+ * const rgb = color.getRGB();
+ * ```
+ *
+ * ex. RGBA array
+ * ```ts
+ * const color = new Color(255, 0, 0, 1, 'rgb');
+ * const rgb = color.getRGB();
+ * ```
+ *
  * ### COLOR INTERPOLATION: we support the use of the LCH color space:
  * - [interpolation guide here.](https://www.alanzucconi.com/2016/01/06/colour-interpolation/4/)
  * - use [chroma.js](https://github.com/gka/chroma.js) as a guide to create best interpolation

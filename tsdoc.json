@@ -12,6 +12,10 @@
         {
             "tagName": "@source",
             "syntaxKind": "block"
+        },
+        {
+            "tagName": "@defaultValue",
+            "syntaxKind": "block"
         }
     ]
 }

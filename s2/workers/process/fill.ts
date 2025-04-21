@@ -1,5 +1,5 @@
 import { earclip } from 'earclip';
-import parseFeatureFunction from 'style/parseFeatureFunction.js';
+import parseFeature from 's2/style/parseFeature.js';
 import parseFilter from 'style/parseFilter.js';
 import VectorWorker, { colorFunc, idToRGB } from './vectorWorker.js';
 import { featureSort, scaleShiftClip } from './util/index.js';
@@ -74,9 +74,9 @@ export default class FillWorker extends VectorWorker implements FillWorkerSpec {
       maxzoom,
       filter: parseFilter(filter),
       getCode: this.buildCode(design),
-      pattern: pattern !== undefined ? parseFeatureFunction<string, string>(pattern) : undefined,
-      patternFamily: parseFeatureFunction<string, string>(patternFamily),
-      patternMovement: parseFeatureFunction<boolean>(patternMovement),
+      pattern: pattern !== undefined ? parseFeature<string, string>(pattern) : undefined,
+      patternFamily: parseFeature<string, string>(patternFamily),
+      patternMovement: parseFeature<boolean>(patternMovement),
       invert,
       interactive,
       cursor,

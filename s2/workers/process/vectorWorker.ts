@@ -1,7 +1,7 @@
 import { Color } from 'style/color/index.js';
-import parseFeatureFunction from 'style/parseFeatureFunction.js';
+import parseFeature from 's2/style/parseFeature.js';
 
-import type { Callback } from 'style/parseFeatureFunction.js';
+import type { Callback } from 's2/style/parseFeature.js';
 import type { ColorArray } from 'style/color/index.js';
 import type { IDGen } from './process.spec.js';
 import type { Properties } from 'gis-tools/index.js';
@@ -110,7 +110,7 @@ export default class VectorWorker {
   buildCode(design: CodeDesign<NotNullOrObject>): BuildCodeFunction {
     const featureFunctions: Array<LayerWorkerFunction<number | ColorArray>> = [];
     for (const [input, cb] of design) {
-      featureFunctions.push(parseFeatureFunction<NotNullOrObject, ColorArray>(input, cb));
+      featureFunctions.push(parseFeature<NotNullOrObject, ColorArray>(input, cb));
     }
 
     return (zoom: number, properties: Properties): [number[], number[]] => {

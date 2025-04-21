@@ -80,14 +80,10 @@ export default defineConfig({
     // { name: 'Google Chrome', use: { ...devices['Desktop Chrome'], channel: 'chrome' } },
     // { name: 'Google Chrome Beta', use: { ...devices['Desktop Chrome'], channel: 'chrome-beta' } },
     // { name: 'Microsoft Edge', use: { ...devices['Desktop Edge'], channel: 'msedge' } },
-    // {
-    //   name: 'Microsoft Edge Developer Edition',
-    //   use: { ...devices['Desktop Edge'], channel: 'msedge-dev' },
-    // },
   ],
 
   webServer: {
-    command: 'bun run ./server.ts',
+    command: 'bun server:playwright',
     url: 'http://localhost:3000',
     timeout: 5 * 1_000,
     reuseExistingServer: true,

@@ -1,7 +1,7 @@
 import CollisionTester from './collisionTester.js';
 import coalesceField from 'style/coalesceField.js';
 import featureSort from '../util/featureSort.js';
-import parseFeatureFunction from 'style/parseFeatureFunction.js';
+import parseFeature from 's2/style/parseFeature.js';
 import parseFilter from 'style/parseFilter.js';
 import { DEFAULT_OPTIONS_WITHOUT_BIDI_SHAPING, shapeString } from 'unicode-shaper';
 import {
@@ -132,25 +132,25 @@ export default class GlyphWorker extends VectorWorker implements GlyphWorkerSpec
       textGetCode: this.buildCode(textDesign),
       iconGetCode: this.buildCode(iconDesign),
       // paint
-      textSize: parseFeatureFunction<number>(textSize),
-      iconSize: parseFeatureFunction<number>(iconSize),
+      textSize: parseFeature<number>(textSize),
+      iconSize: parseFeature<number>(iconSize),
       // layout
-      placement: parseFeatureFunction<Placement>(placement),
-      spacing: parseFeatureFunction<number>(spacing),
-      textFamily: parseFeatureFunction<string | string[]>(textFamily),
-      textField: parseFeatureFunction<string | string[]>(textField),
-      textAnchor: parseFeatureFunction<Anchor>(textAnchor),
-      textOffset: parseFeatureFunction<Point>(textOffset),
-      textPadding: parseFeatureFunction<Point>(textPadding),
-      textWordWrap: parseFeatureFunction<number>(textWordWrap),
-      textAlign: parseFeatureFunction<Alignment>(textAlign),
-      textKerning: parseFeatureFunction<number>(textKerning),
-      textLineHeight: parseFeatureFunction<number>(textLineHeight),
-      iconFamily: parseFeatureFunction<string | string[]>(iconFamily),
-      iconField: parseFeatureFunction<string | string[]>(iconField),
-      iconAnchor: parseFeatureFunction<Anchor>(iconAnchor),
-      iconOffset: parseFeatureFunction<Point>(iconOffset),
-      iconPadding: parseFeatureFunction<Point>(iconPadding),
+      placement: parseFeature<Placement>(placement),
+      spacing: parseFeature<number>(spacing),
+      textFamily: parseFeature<string | string[]>(textFamily),
+      textField: parseFeature<string | string[]>(textField),
+      textAnchor: parseFeature<Anchor>(textAnchor),
+      textOffset: parseFeature<Point>(textOffset),
+      textPadding: parseFeature<Point>(textPadding),
+      textWordWrap: parseFeature<number>(textWordWrap),
+      textAlign: parseFeature<Alignment>(textAlign),
+      textKerning: parseFeature<number>(textKerning),
+      textLineHeight: parseFeature<number>(textLineHeight),
+      iconFamily: parseFeature<string | string[]>(iconFamily),
+      iconField: parseFeature<string | string[]>(iconField),
+      iconAnchor: parseFeature<Anchor>(iconAnchor),
+      iconOffset: parseFeature<Point>(iconOffset),
+      iconPadding: parseFeature<Point>(iconPadding),
       // properties
       geoFilter,
       interactive,

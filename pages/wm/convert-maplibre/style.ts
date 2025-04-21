@@ -452,6 +452,7 @@ const maplibreStyle: StyleSpecification = {
       type: 'geojson',
       data: {
         type: 'Feature',
+        properties: {},
         geometry: {
           type: 'Polygon',
           coordinates: [

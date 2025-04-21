@@ -1,6 +1,6 @@
 import { colorFunc } from 'workers/process/vectorWorker.js';
 import encodeLayerAttribute from 'style/encodeLayerAttribute.js';
-import parseFeatureFunction from 'style/parseFeatureFunction.js';
+import parseFeature from 'style/parseFeature.js';
 import Workflow, { Feature } from './workflow.js';
 
 // WEBGL1
@@ -205,12 +205,8 @@ export default class FillWorkflow extends Workflow implements FillWorkflowSpec {
       opaque,
       interactive,
       pattern: pattern !== undefined,
-      color: isGL1Mask
-        ? parseFeatureFunction<string, ColorArray>(color, colorFunc(lch))
-        : undefined,
-      opacity: isGL1Mask
-        ? parseFeatureFunction<number, number[]>(opacity, (i: number) => [i])
-        : undefined,
+      color: isGL1Mask ? parseFeature<string, ColorArray>(color, colorFunc(lch)) : undefined,
+      opacity: isGL1Mask ? parseFeature<number, number[]>(opacity, (i: number) => [i]) : undefined,
       visible,
     });
 

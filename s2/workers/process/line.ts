@@ -1,4 +1,4 @@
-import parseFeatureFunction from 'style/parseFeatureFunction.js';
+import parseFeature from 's2/style/parseFeature.js';
 import parseFilter from 'style/parseFilter.js';
 import VectorWorker, { colorFunc, idToRGB } from './vectorWorker.js';
 import { drawLine, featureSort, scaleShiftClip } from './util/index.js';
@@ -52,8 +52,8 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
       layer,
       minzoom,
       maxzoom,
-      cap: parseFeatureFunction<Cap, Cap>(cap),
-      join: parseFeatureFunction<Join, Join>(join),
+      cap: parseFeature<Cap, Cap>(cap),
+      join: parseFeature<Join, Join>(join),
       filter: parseFilter(filter),
       getCode: this.buildCode(design),
       dashed,

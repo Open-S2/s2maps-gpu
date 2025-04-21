@@ -46,11 +46,11 @@ declare global {
 }
 
 /**
- * # The S2 Map GPU Engine
+ * # The S2 Map GPU Engine 🌎 🗺️
  *
  * ## Description
  *
- * An S2 and WM WebGL1, WebGL2, and WebGPU powered map engine.
+ * Both an **S2** and **WM** Projection Map Engine Powered by `WebGL1`, `WebGL2`, and `WebGPU`.
  *
  * ### Basic JS/TS example:
  * Note that the most important components to build a map are the {@link MapOptions} and the {@link StyleDefinition}.
@@ -141,21 +141,8 @@ declare global {
  * - `setView`
  *
  * ## Plugins
- *
- * ### MapLibre Style Converter
- * See {@link plugins.convertMaplibreStyle}
- *
- * #### Example
- * ```ts
- * import { convertMaplibreStyle } from 's2maps-gpu/plugins';
- * import type { StyleSpecification } from '@maplibre/maplibre-gl-style-spec';
- * // setup maplibre style
- * const maplibreStyle: StyleSpecification = { ... };
- * // convert to s2maps style
- * const s2mapsStyle = convertMaplibreStyle(maplibreStyle);
- * // create a map with it
- * const map = new S2Map({ ..., style: s2mapsStyle });
- * ```
+ * - MapLibre Map Options Converter: See {@link plugins.convertMaplibreOptions}
+ * - MapLibre Style Converter: See {@link plugins.convertMaplibreStyle}
  */
 export default class S2Map extends EventTarget {
   readonly #container?: HTMLElement;

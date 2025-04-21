@@ -1,10 +1,5 @@
-import { beforeAll, expect, test } from 'bun:test';
+import { expect, test } from 'bun:test';
 import { parseHash, setHash } from 'util/hash';
-
-// inject polyfill for this test case
-beforeAll(async () => {
-  await import('../happyDOM');
-});
 
 test('setHash', () => {
   setHash({ zoom: 1, lon: 2, lat: 3, bearing: 4, pitch: 5 });

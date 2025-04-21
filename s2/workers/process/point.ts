@@ -1,4 +1,4 @@
-import parseFeatureFunction from 'style/parseFeatureFunction.js';
+import parseFeature from 's2/style/parseFeature.js';
 import parseFilter from 'style/parseFilter.js';
 import VectorWorker, { colorFunc, idToRGB } from './vectorWorker.js';
 import { featureSort, scaleShiftClip } from './util/index.js';
@@ -80,7 +80,7 @@ export default class PointWorker extends VectorWorker implements PointWorkerSpec
       const { interactive, cursor } = layerDefinition;
       return { type, geoFilter, interactive, cursor, ...base };
     } else {
-      const weight = parseFeatureFunction<number>(layerDefinition.weight);
+      const weight = parseFeature<number>(layerDefinition.weight);
       return { type, geoFilter, weight, ...base };
     }
   }

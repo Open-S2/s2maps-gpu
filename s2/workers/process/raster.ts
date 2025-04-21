@@ -1,5 +1,5 @@
 import { colorFunc } from './vectorWorker.js';
-import parseFeatureFunction from 'style/parseFeatureFunction.js';
+import parseFeature from 's2/style/parseFeature.js';
 
 import type { CodeDesign } from './vectorWorker.js';
 import type { RasterWorker as RasterWorkerSpec } from './process.spec.js';
@@ -80,7 +80,7 @@ export default class RasterWorker implements RasterWorkerSpec {
 
     const featureFunctions: Array<LayerWorkerFunction<number | ColorArray>> = [];
     for (const [input, cb] of design) {
-      featureFunctions.push(parseFeatureFunction<number, ColorArray>(input, cb));
+      featureFunctions.push(parseFeature<number, ColorArray>(input, cb));
     }
 
     return (zoom: number) => {

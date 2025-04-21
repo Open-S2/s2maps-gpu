@@ -3,15 +3,6 @@ import type { ColorArray } from './index.js';
 /** ColorDefinition - [encoding, colors] */
 export type ColorDefinition = [encoding: string, colors: ColorArray];
 
-// there are three types of strings to parse
-// color names: 'red', 'black', etc
-// Hex: #ededed
-// type encodings:
-// rgb(255, 255, 255)
-// rgba(255, 255, 255, 255)
-// hsv(180, 0.9, 0.7843137254901961)
-// hsva(180, 0.9, 0.7843137254901961, 1)
-
 const COLOR_MAP = {
   aqua: 0x00ffff,
   black: 0x000000,

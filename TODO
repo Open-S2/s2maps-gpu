@@ -2,7 +2,7 @@
 
 Not a replacement for the full tracker. Used on a large PR basis
 
-[ ] - Use modern playwrite for faster testing
+[x] - Use modern playwrite for faster testing
 
 ## Converters
 
@@ -23,6 +23,6 @@ Not a replacement for the full tracker. Used on a large PR basis
 
 ## Frameworks
 
-[ ] - react
-[ ] - vue
+[x] - react
+[x] - vue
 [ ] - svelte

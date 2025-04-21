@@ -259,7 +259,7 @@ export type Sprites = Record<
 //   webgl2 + webgpu: encodeLayerAttribute (stores "code" var)
 //
 // Worker:
-// Definition[paint + layout] -> parseFeatureFunction (updates all paint + layout properties to LayerFunction)
+// Definition[paint + layout] -> parseFeature (updates all paint + layout properties to LayerFunction)
 
 /**
  * # Cursor Options
@@ -1365,7 +1365,9 @@ export type GeoFilter = 'point' | 'line' | 'poly';
 export type GeoFilters = GeoFilter[];
 /** Color Ramp Interpolation guide */
 export interface ColorRampInput {
+  /** A stop position of the color ramp */
   stop: number;
+  /** A color at the stop position. Refer to {@link Color} for a list of valid colors */
   color: string;
 }
 /** Color Ramp options */
@@ -1443,7 +1445,7 @@ export interface FillStyle extends LayerStyleBase {
   // paint
   /**
    * A PAINT `Property`.
-   * @default `"rgba(0, 0, 0, 1)"`
+   * @defaultValue `"rgba(0, 0, 0, 1)"`
    *
    * ex.
    *
@@ -1467,7 +1469,8 @@ export interface FillStyle extends LayerStyleBase {
    */
   color?: string | Property<string>;
   /**
-   * A PAINT `Property`. Default value of `1`
+   * A PAINT `Property`.
+   * @defaultValue `1`
    *
    * ex.
    *
@@ -1493,7 +1496,7 @@ export interface FillStyle extends LayerStyleBase {
   // layout
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @default `undefined`
+   * @defaultValue `undefined`
    *
    * ex.
    *
@@ -1522,7 +1525,7 @@ export interface FillStyle extends LayerStyleBase {
   pattern?: string | PropertyOnlyStep<string>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @default `false`
+   * @defaultValue `false`
    *
    * ex.
    *
@@ -1541,7 +1544,7 @@ export interface FillStyle extends LayerStyleBase {
   patternMovement?: boolean | PropertyOnlyStep<boolean>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @default `"__images"`
+   * @defaultValue `"__images"`
    *
    * If left as the default, the pattern will be searched within any images added to the style. Otherwise,
    * you're most likely using a sprite sheet and you'll need to specify the "family" of the pattern which is the name of the sprite sheet.
@@ -1745,7 +1748,7 @@ export interface GlyphStyle extends LayerStyleBase {
   // paint
   /**
    * A PAINT `Property`.
-   * @default `16`
+   * @defaultValue `16`
    *
    * ex.
    * ```json
@@ -1768,7 +1771,7 @@ export interface GlyphStyle extends LayerStyleBase {
   textSize?: number | Property<number>;
   /**
    * A PAINT `Property`.
-   * @default `"rgba(0, 0, 0, 1)"`
+   * @defaultValue `"rgba(0, 0, 0, 1)"`
    *
    * ex.
    * ```json
@@ -1791,7 +1794,7 @@ export interface GlyphStyle extends LayerStyleBase {
   textFill?: string | Property<string>;
   /**
    * A PAINT `Property`.
-   * @default `"rgba(0, 0, 0, 1)"`
+   * @defaultValue `"rgba(0, 0, 0, 1)"`
    *
    * ex.
    * ```json
@@ -1814,7 +1817,7 @@ export interface GlyphStyle extends LayerStyleBase {
   textStroke?: string | Property<string>;
   /**
    * A PAINT `Property`.
-   * @default `0`
+   * @defaultValue `0`
    *
    * ex.
    * ```json
@@ -1837,7 +1840,7 @@ export interface GlyphStyle extends LayerStyleBase {
   textStrokeWidth?: number | Property<number>;
   /**
    * A PAINT `Property`.
-   * @default `16`
+   * @defaultValue `16`
    *
    * ex.
    * ```json
@@ -1861,7 +1864,7 @@ export interface GlyphStyle extends LayerStyleBase {
   // layout
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @default `"line"`
+   * @defaultValue `"line"`
    *
    * Can be `point`, `line`, `line-center-path` or `line-center-point`.
    * Only relavent if geometry is not a point.
@@ -1905,7 +1908,7 @@ export interface GlyphStyle extends LayerStyleBase {
   placement?: Placement | PropertyOnlyStep<Placement>;
   /**
    * A LAYOUT `Property`.
-   * @default `325`
+   * @defaultValue `325`
    *
    * The distance between glyphs in pixels. Only relavent if geometry is not a point.
    *
@@ -1930,7 +1933,7 @@ export interface GlyphStyle extends LayerStyleBase {
   spacing?: number | Property<number>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @default `""` (empty string)
+   * @defaultValue `""` (empty string)
    *
    * If applying an array, the first value will be used. If the first value is not found, the second value will be used, and so on.
    *
@@ -1966,7 +1969,7 @@ export interface GlyphStyle extends LayerStyleBase {
   textFamily?: string | string[] | PropertyOnlyStep<string | string[]>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @default `""` (empty string)
+   * @defaultValue `""` (empty string)
    *
    * The description of the content to be rendered. Can be the text itself, or can be a transfromation
    * input that uses the features properties to build a text string.
@@ -2023,7 +2026,7 @@ export interface GlyphStyle extends LayerStyleBase {
   textField?: string | string[] | PropertyOnlyStep<string | string[]>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @default `"center"`
+   * @defaultValue `"center"`
    *
    * The anchor position for the text being rendered.
    *
@@ -2052,7 +2055,7 @@ export interface GlyphStyle extends LayerStyleBase {
   textAnchor?: Anchor | PropertyOnlyStep<Anchor>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @default `[0, 0]`
+   * @defaultValue `[0, 0]`
    *
    * ex.
    *
@@ -2077,7 +2080,7 @@ export interface GlyphStyle extends LayerStyleBase {
   textOffset?: Point | PropertyOnlyStep<Point>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @default `[0, 0]`
+   * @defaultValue `[0, 0]`
    *
    * ex.
    *
@@ -2102,7 +2105,7 @@ export interface GlyphStyle extends LayerStyleBase {
   textPadding?: Point | PropertyOnlyStep<Point>;
   /**
    * A LAYOUT `Property`.
-   * @default `0`
+   * @defaultValue `0`
    *
    * ex.
    *
@@ -2127,7 +2130,7 @@ export interface GlyphStyle extends LayerStyleBase {
   textWordWrap?: number | PropertyOnlyStep<number>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @default `"center"`
+   * @defaultValue `"center"`
    *
    * Options are `"center"`, `"left"`, `"right"`, `"auto"`
    *
@@ -2154,7 +2157,7 @@ export interface GlyphStyle extends LayerStyleBase {
   textAlign?: Alignment | PropertyOnlyStep<Alignment>;
   /**
    * A LAYOUT `Property`.
-   * @default `0`
+   * @defaultValue `0`
    *
    * ex.
    *
@@ -2179,7 +2182,7 @@ export interface GlyphStyle extends LayerStyleBase {
   textKerning?: number | PropertyOnlyStep<number>;
   /**
    * A LAYOUT `Property`.
-   * @default `0`
+   * @defaultValue `0`
    *
    * ex.
    *
@@ -2204,7 +2207,7 @@ export interface GlyphStyle extends LayerStyleBase {
   textLineHeight?: number | PropertyOnlyStep<number>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @default `""` (empty string)
+   * @defaultValue `""` (empty string)
    *
    * If applying an array, the first value will be used. If the first value is not found, the second value will be used, and so on.
    *
@@ -2241,7 +2244,7 @@ export interface GlyphStyle extends LayerStyleBase {
   iconFamily?: string | string[] | PropertyOnlyStep<string | string[]>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @default `""` (empty string)
+   * @defaultValue `""` (empty string)
    *
    * ex.
    * ```json
@@ -2293,7 +2296,7 @@ export interface GlyphStyle extends LayerStyleBase {
   iconField?: string | string[] | PropertyOnlyStep<string | string[]>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @default `"center"`
+   * @defaultValue `"center"`
    *
    * Options are `"center"`, `"left"`, `"right"`, `"top"`, `"bottom"`, `"top-left"`, `"top-right"`, `"bottom-left"`, `"bottom-right"`
    *
@@ -2320,7 +2323,7 @@ export interface GlyphStyle extends LayerStyleBase {
   iconAnchor?: Anchor | PropertyOnlyStep<Anchor>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @default `[0, 0]`
+   * @defaultValue `[0, 0]`
    *
    * ex.
    *
@@ -2345,7 +2348,7 @@ export interface GlyphStyle extends LayerStyleBase {
   iconOffset?: Point | PropertyOnlyStep<Point>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @default `[0, 0]`
+   * @defaultValue `[0, 0]`
    *
    * ex.
    *
@@ -2525,7 +2528,8 @@ export interface HeatmapStyle extends LayerStyleBase {
   type: 'heatmap';
   // paint
   /**
-   * A PAINT `Property`. Default value of `1`
+   * A PAINT `Property`.
+   * @defaultValue `1`
    *
    * ex.
    *
@@ -2549,7 +2553,8 @@ export interface HeatmapStyle extends LayerStyleBase {
    */
   radius?: number | Property<number>;
   /**
-   * A PAINT `Property`. Default value of `1`
+   * A PAINT `Property`.
+   * @defaultValue `1`
    *
    * ex.
    *
@@ -2573,7 +2578,8 @@ export interface HeatmapStyle extends LayerStyleBase {
    */
   opacity?: number | Property<number>;
   /**
-   * A PAINT `Property`. Default value of `1`
+   * A PAINT `Property`.
+   * @defaultValue `1`
    *
    * ex.
    *
@@ -2597,7 +2603,8 @@ export interface HeatmapStyle extends LayerStyleBase {
    */
   intensity?: number | Property<number>;
   /**
-   * A PAINT `Property`. Default value of `1`
+   * A PAINT `Property`.
+   * @defaultValue `1`
    *
    * ex.
    *
@@ -2622,7 +2629,8 @@ export interface HeatmapStyle extends LayerStyleBase {
   weight?: number | Property<number>;
   // properties
   /**
-   * Defaults to `sinebow`.
+   * Define a color ramp to be used for a feature
+   * @defaultValue `sinebow`.
    *
    * ex.
    * ```json
@@ -2752,7 +2760,7 @@ export interface LineStyle extends LayerStyleBase {
   // paint
   /**
    * A PAINT `Property`.
-   * @default `"rgba(0, 0, 0, 1)"`
+   * @defaultValue `"rgba(0, 0, 0, 1)"`
    *
    * ex.
    *
@@ -2776,7 +2784,8 @@ export interface LineStyle extends LayerStyleBase {
    */
   color?: string | Property<string>;
   /**
-   * A PAINT `Property`. Default value of `1`
+   * A PAINT `Property`.
+   * @defaultValue `1`
    *
    * ex.
    *
@@ -2800,7 +2809,8 @@ export interface LineStyle extends LayerStyleBase {
    */
   opacity?: number | Property<number>;
   /**
-   * A PAINT `Property`. Default value of `1`
+   * A PAINT `Property`.
+   * @defaultValue `1`
    *
    * ex.
    *
@@ -2824,7 +2834,9 @@ export interface LineStyle extends LayerStyleBase {
    */
   width?: number | Property<number>;
   /**
-   * A PAINT `Property`. Default value of `0`
+   * A PAINT `Property`.
+   * @defaultValue `0`
+   *
    * To improve render performance, you can provide a gap width to not draw a portion inside the line.
    *
    * `NOTE`: This feature is currently not supported.
@@ -2853,7 +2865,7 @@ export interface LineStyle extends LayerStyleBase {
   // layout
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @default `butt`
+   * @defaultValue `butt`
    *
    * can use `butt`, `square`, or `round`
    *
@@ -2881,7 +2893,7 @@ export interface LineStyle extends LayerStyleBase {
   cap?: Cap | PropertyOnlyStep<Cap>;
   /**
    * A LAYOUT `PropertyOnlyStep`.
-   * @default `miter`
+   * @defaultValue `miter`
    *
    * can use `bevel`, `miter`, or `round`
    *
@@ -2908,7 +2920,8 @@ export interface LineStyle extends LayerStyleBase {
   join?: Join | PropertyOnlyStep<Join>;
   // properties
   /**
-   * The line will be dashed between visible and invisible. Defaults to `[]` (empty array)
+   * The line will be dashed between visible and invisible.
+   * @defaultValue `[]` (empty array)
    *
    * ex.
    *
@@ -2919,9 +2932,11 @@ export interface LineStyle extends LayerStyleBase {
   dasharray?: Array<[length: number, color: string]>;
   /**
    * Filter the geometry types that will be drawn.
+   * @defaultValue `[]` (empty array)
+   *
    * An empty array will supports both `line` & `polygon` geometry types.
+   *
    * Ex. `["line"]`: only draw lines
-   * Defaults to empty.
    */
   geoFilter?: Array<'line' | 'poly'>;
   /** if true, when hovering over the line, the property data will be sent to the UI via an Event. Defaults to `false` */
@@ -3036,7 +3051,7 @@ export interface PointStyle extends LayerStyleBase {
   // paint
   /**
    * A PAINT `Property`.
-   * @default `"rgba(0, 0, 0, 0)"`
+   * @defaultValue `"rgba(0, 0, 0, 0)"`
    *
    * ex.
    *
@@ -3061,7 +3076,7 @@ export interface PointStyle extends LayerStyleBase {
   color?: string | Property<string>;
   /**
    * A PAINT `Property`.
-   * @default `1`
+   * @defaultValue `1`
    *
    * ex.
    *
@@ -3086,7 +3101,7 @@ export interface PointStyle extends LayerStyleBase {
   radius?: number | Property<number>;
   /**
    * A PAINT `Property`.
-   * @default `"rgba(0, 0, 0, 0)"`
+   * @defaultValue `"rgba(0, 0, 0, 0)"`
    *
    * ex.
    *
@@ -3111,7 +3126,7 @@ export interface PointStyle extends LayerStyleBase {
   stroke?: string | Property<string>;
   /**
    * A PAINT `Property`.
-   * @default `1`
+   * @defaultValue `1`
    *
    * ex.
    *
@@ -3135,7 +3150,8 @@ export interface PointStyle extends LayerStyleBase {
    */
   strokeWidth?: number | Property<number>;
   /**
-   * A PAINT `Property`. Default value of `1`
+   * A PAINT `Property`.
+   * @defaultValue `1`
    *
    * ex.
    *
@@ -3259,7 +3275,8 @@ export interface RasterStyle extends LayerStyleBase {
   type: 'raster';
   // paint
   /**
-   * A PAINT `Property`. Default value of `1`
+   * A PAINT `Property`.
+   * @defaultValue `1`
    *
    * ex.
    *
@@ -3283,7 +3300,8 @@ export interface RasterStyle extends LayerStyleBase {
    */
   opacity?: number | Property<number>;
   /**
-   * A PAINT `Property`. Default value of `0`
+   * A PAINT `Property`.
+   * @defaultValue `0`
    *
    * ex.
    *
@@ -3307,7 +3325,8 @@ export interface RasterStyle extends LayerStyleBase {
    */
   saturation?: number | Property<number>;
   /**
-   * A PAINT `Property`. Default value of `0`
+   * A PAINT `Property`.
+   * @defaultValue `0`
    *
    * ex.
    *
@@ -3442,7 +3461,8 @@ export interface HillshadeStyle extends LayerStyleBase {
   type: 'hillshade';
   // layout
   /**
-   * A LAYOUT `Property`. Default value of `1`
+   * A LAYOUT `Property`.
+   * @defaultValue `1`
    *
    * ex.
    *
@@ -3466,7 +3486,8 @@ export interface HillshadeStyle extends LayerStyleBase {
    */
   opacity?: number | Property<number>;
   /**
-   * A LAYOUT `Property`. Default value of `315`
+   * A LAYOUT `Property`.
+   * @defaultValue `315`
    *
    * ex.
    *
@@ -3490,7 +3511,8 @@ export interface HillshadeStyle extends LayerStyleBase {
    */
   azimuth?: number | Property<number>;
   /**
-   * A LAYOUT `Property`. Default value of `45`
+   * A LAYOUT `Property`.
+   * @defaultValue `45`
    *
    * ex.
    *
@@ -3515,7 +3537,7 @@ export interface HillshadeStyle extends LayerStyleBase {
   altitude?: number | Property<number>;
   /**
    * A LAYOUT `Property`.
-   * @default `"#000"`
+   * @defaultValue `"#000"`
    *
    * ex.
    *
@@ -3540,7 +3562,7 @@ export interface HillshadeStyle extends LayerStyleBase {
   shadowColor?: string | Property<string>;
   /**
    * A LAYOUT `Property`.
-   * @default `"#fff"`
+   * @defaultValue `"#fff"`
    *
    * ex.
    *
@@ -3565,7 +3587,7 @@ export interface HillshadeStyle extends LayerStyleBase {
   highlightColor?: string | Property<string>;
   /**
    * A LAYOUT `Property`.
-   * @default `"#000"`
+   * @defaultValue `"#000"`
    *
    * ex.
    *
@@ -3601,21 +3623,20 @@ export interface HillshadeStyle extends LayerStyleBase {
    *
    * ```wgsl
    * fn getElevation(
-   *    uv: vec2<f32>,
+   * uv: vec2<f32>,
    * ) -> f32 {
-   *    var color = textureSample(demTexture, imageSampler, uv);
-   *    return (
-   *      (
-   *        color.r * unpack.rMultiplier +
-   *        color.g * unpack.gMultiplier +
-   *        color.b * unpack.bMultiplier +
-   *        color.a * unpack.aMultiplier
-   *      ) * unpack.zFactor
-   *    ) + unpack.offset;
-   *  }
-   *  ```
-   *
-   * Default value (Mapbox encoding):
+   * var color = textureSample(demTexture, imageSampler, uv);
+   * return (
+   * (
+   * color.r * unpack.rMultiplier +
+   * color.g * unpack.gMultiplier +
+   * color.b * unpack.bMultiplier +
+   * color.a * unpack.aMultiplier
+   * ) * unpack.zFactor
+   * ) + unpack.offset;
+   * }
+   * ```
+   * @defaultValue (Mapbox encoding):
    *
    * ```json
    * {
@@ -3849,7 +3870,7 @@ export interface ShadeStyle extends LayerStyleBase {
   // layout
   /**
    * A LAYOUT `Property`.
-   * @default `"rgba(0, 0, 0, 1)"`
+   * @defaultValue `"rgba(0, 0, 0, 1)"`
    *
    * ex.
    * ```json

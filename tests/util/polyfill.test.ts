@@ -1,10 +1,5 @@
 import { isSafari } from 'util/polyfill.js';
-import { beforeAll, describe, expect, test } from 'bun:test';
-
-// inject polyfill for this test case
-beforeAll(async () => {
-  await import('../happyDOM');
-});
+import { describe, expect, test } from 'bun:test';
 
 describe('polyfill', () => {
   test('isSafari', () => {

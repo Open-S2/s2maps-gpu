@@ -56,7 +56,7 @@ export default {
         ...mapOptions,
         container: container.value,
         // TODO: figure out if we want to define this ourselves
-        offscreen: false,
+        // offscreen: false,
       };
       const map = new S2Map(options);
 
