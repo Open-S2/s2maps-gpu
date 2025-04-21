@@ -1,6 +1,5 @@
-import { VectorTile } from 'open-vector-tile';
-// import { parseLayers } style/conditionals'
 import ProcessManager from './process/index.js';
+import { VectorTile } from 'open-vector-tile';
 
 import type { VTTile } from './process/process.spec.js';
 import type { VectorGeometry } from 'gis-tools/index.js';
