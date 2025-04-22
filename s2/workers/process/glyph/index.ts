@@ -1,6 +1,6 @@
 import CollisionTester from './collisionTester.js';
 import coalesceField from 'style/coalesceField.js';
-import featureSort from '../util/featureSort.js';
+import { featureSort } from '../util/featureSort.js';
 import parseFeature from 's2/style/parseFeature.js';
 import parseFilter from 'style/parseFilter.js';
 import { DEFAULT_OPTIONS_WITHOUT_BIDI_SHAPING, shapeString } from 'unicode-shaper';

@@ -1,3 +1,5 @@
+declare const self: DedicatedWorkerGlobalScope;
+
 import { adjustURL } from '../util/index.js';
 import {
   GlyphSource,
@@ -545,4 +547,4 @@ export default class SourceWorker {
 // create the tileworker
 const sourceWorker = new SourceWorker();
 // bind the onmessage function
-onmessage = sourceWorker.onMessage.bind(sourceWorker);
+self.onmessage = sourceWorker.onMessage.bind(sourceWorker);

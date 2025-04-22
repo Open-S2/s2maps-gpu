@@ -1,3 +1,5 @@
+declare const self: DedicatedWorkerGlobalScope;
+
 import S2MapUI from 'ui/s2mapUI.js';
 
 import type { MapOptions } from 'ui/s2mapUI.js';
@@ -73,4 +75,4 @@ export default class MapWorker {
 // create the map worker
 const mapWorker = new MapWorker();
 // bind the onmessage function
-onmessage = mapWorker.onmessage.bind(mapWorker);
+self.onmessage = mapWorker.onmessage.bind(mapWorker);

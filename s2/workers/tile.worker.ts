@@ -1,8 +1,10 @@
+declare const self: DedicatedWorkerGlobalScope;
+
 import ProcessManager from './process/index.js';
 import { VectorTile } from 'open-vector-tile';
+import { rebuildVectorTile } from './process/util/rebuildVectorTile.js';
 
 import type { VTTile } from './process/process.spec.js';
-import type { VectorGeometry } from 'gis-tools/index.js';
 import type { LayerDefinition, StylePackage } from 'style/style.spec.js';
 import type { TileRequest, TileWorkerMessages } from './worker.spec.js';
 
@@ -136,7 +138,7 @@ export default class TileWorker extends ProcessManager {
     // step 1: convert data to a JSON object
     const vectorTile: VTTile = JSON.parse(this.textDecoder.decode(new Uint8Array(data)));
     // step 2: build functions back into the vector tile and its layers & features
-    setupVectorTile(vectorTile);
+    rebuildVectorTile(vectorTile);
     // step 3: process the vector data
     void this.processVector(mapID, tile, sourceName, vectorTile);
   }
@@ -145,71 +147,4 @@ export default class TileWorker extends ProcessManager {
 // create the tileworker
 const tileWorker = new TileWorker();
 // expose and bind the onmessage function
-onmessage = tileWorker.onMessage.bind(tileWorker);
-
-/**
- * TODO: Add in offset data as needed
- * Build functions back into the vector tile and its layers & features
- * @param vectorTile - input vector tile
- */
-function setupVectorTile(vectorTile: VTTile): void {
-  for (const layer of Object.values(vectorTile.layers)) {
-    if (layer.features === undefined) continue;
-    // re-inject length
-    layer.length = layer.features.length;
-    /**
-     * Get the feature at the given index
-     * @param i - the feature index
-     * @returns the feature at the given index
-     */
-    layer.feature = function (i: number) {
-      return this.features![i];
-    };
-    /** loop over features */
-    for (const feature of layer.features) {
-      /** @returns the feature geometry type */
-      feature.geoType = function () {
-        return (this.geometry as VectorGeometry).type;
-      };
-      /** @returns a loader for point geometry */
-      feature.loadPoints = function () {
-        const { type, coordinates } = this.geometry as VectorGeometry;
-        if (type === 'Point') {
-          return [coordinates];
-        } else if (type === 'MultiPoint') {
-          return coordinates;
-        } else if (type === 'LineString') {
-          return coordinates;
-        } else if (type === 'MultiLineString') {
-          return coordinates.flat();
-        } else if (type === 'Polygon') {
-          return coordinates.flat();
-        } else if (type === 'MultiPolygon') {
-          return coordinates.flat(2);
-        }
-      };
-      /** @returns a loader for line geometry */
-      feature.loadLines = function () {
-        const { type, coordinates } = this.geometry as VectorGeometry;
-        if (type === 'LineString') {
-          return [[coordinates], []];
-        } else if (type === 'MultiLineString') {
-          return [coordinates, []];
-        } else if (type === 'Polygon') {
-          return [coordinates, []];
-        } else if (type === 'MultiPolygon') {
-          return [coordinates.flat(), []];
-        }
-      };
-      /** @returns a loader for polygon geometry */
-      feature.loadPolys = function () {
-        const { type, coordinates, offset } = this.geometry as VectorGeometry;
-        if (type === 'Polygon') {
-          return [[coordinates], offset !== undefined ? [offset] : []];
-        } else if (type === 'MultiPolygon') {
-          return [coordinates, offset ?? []];
-        }
-      };
-    }
-  }
-}
+self.onmessage = tileWorker.onMessage.bind(tileWorker);

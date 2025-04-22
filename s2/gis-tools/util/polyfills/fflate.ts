@@ -152,8 +152,8 @@ function inflt(dat: Uint8Array, bf?: Uint8Array, dict?: Uint8Array): Uint8Array 
   let final = 0,
     pos = 0,
     bt = 0,
-    lm = undefined,
-    dm = undefined,
+    lm: Uint16Array | undefined = undefined,
+    dm: Uint16Array | undefined = undefined,
     lbt = 0,
     dbt = 0;
   // total bits
@@ -483,7 +483,6 @@ export interface FlateError extends Error {
 function err(ind: number, msg?: string): never {
   const e: Partial<FlateError> = new Error(msg ?? ec[ind]);
   e.code = ind;
-  if (Error.captureStackTrace !== undefined) Error.captureStackTrace(e, err);
   throw e;
 }
 

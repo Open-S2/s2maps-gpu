@@ -1,4 +1,5 @@
 // @ts-check
+import eslint from '@eslint/js';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 import globals from 'globals';
 import jsdoc from 'eslint-plugin-jsdoc';
@@ -25,6 +26,7 @@ export default tseslint.config(
       '**/buildS2-flat',
     ],
   },
+  eslint.configs.recommended,
   tseslint.configs.recommended,
   ...pluginVue.configs['flat/recommended'],
   ...pluginSvelte.configs['flat/recommended'],

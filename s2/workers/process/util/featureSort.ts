@@ -7,7 +7,7 @@ import type { GlyphObject } from '../glyph/glyph.spec.js';
  * @param b - comparison feature
  * @returns a negative value if a < b, 0 if a === b, and a positive value if a > b
  */
-export default function featureSort(a: Feature | GlyphObject, b: Feature | GlyphObject): number {
+export function featureSort(a: Feature | GlyphObject, b: Feature | GlyphObject): number {
   // layerIndex
   let diff = a.layerIndex - b.layerIndex;
   // glyph -> sort by glyphType (`point` or `path`) then by type (`text` or `icon`)

@@ -1,7 +1,7 @@
-import { convertMaplibreStyle } from './convertMaplibreStyle';
+import { convertMaplibreStyle } from './convertMaplibreStyle.js';
 
 import type { MapOptions as MaplibreMapOptions } from 'maplibre-gl';
-import type { MapOptions, View } from 's2';
+import type { MapOptions, View } from 's2/index.js';
 
 /**
  * Convert Maplibre `MapOptions` to S2 {@link MapOptions}

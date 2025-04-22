@@ -1,5 +1,5 @@
 import type { Style } from 'mapbox-gl';
-import type { StyleDefinition } from 's2/style/style.spec';
+import type { StyleDefinition } from 's2/style/style.spec.js';
 
 /**
  * Convert a Mapbox style to an s2maps style

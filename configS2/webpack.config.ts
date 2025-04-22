@@ -1,6 +1,6 @@
 import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
 import CompressionPlugin from 'compression-webpack-plugin';
-import TerserPlugin from 'terser-webpack-plugin';
+// import TerserPlugin from 'terser-webpack-plugin';
 import TsconfigPathsPlugin from 'tsconfig-paths-webpack-plugin';
 import { WebpackStatsViewerPlugin } from 'webpack-stats-viewer-plugin';
 import { fileURLToPath } from 'url';
@@ -92,7 +92,8 @@ const conifguration: Configuration = {
     usedExports: true,
     sideEffects: false,
     concatenateModules: true,
-    minimizer: ['...', new TerserPlugin({ extractComments: false })],
+    minimize: true,
+    // minimizer: ['...', new TerserPlugin({ extractComments: false })],
     splitChunks: {
       cacheGroups: {
         // Create a separate chunk for shared dependencies used across main and workers

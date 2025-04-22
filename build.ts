@@ -1,16 +1,17 @@
 import GlslPlugin from './config/glsl-loader/bun.js';
 import WgslPlugin from './config/wgsl-loader/bun.js';
-import path from 'node:path';
-import { existsSync, lstatSync, readdirSync, rmdirSync, unlinkSync } from 'node:fs';
+// import inlineWorkerPlugin from './config/inline-worker-plugin/index.ts';
+import { rmSync } from 'node:fs';
+import { version } from './package.json' with { type: 'json' };
 
-const { version } = await Bun.file('./package.json').json();
+import { filesize } from 'filesize';
+import { statSync } from 'fs';
 
-deleteFolder('./buildS2-local');
+rmSync('./buildS2-local', { recursive: true, force: true });
 
 await Bun.build({
   entrypoints: [
     './s2/index.ts',
-    // './s2/ui/s2mapUI.ts',
     './s2/workers/map.worker.ts',
     './s2/workers/source.worker.ts',
     './s2/workers/tile.worker.ts',
@@ -23,25 +24,16 @@ await Bun.build({
   publicPath: `https://opens2.com/s2maps-gpu/v${version}/`,
   // naming: '[name]-[hash].[ext]',
   naming: '[name].[ext]',
-  plugins: [GlslPlugin, WgslPlugin],
+  plugins: [
+    GlslPlugin,
+    WgslPlugin,
+    // // @ts-expect-error - this actually works.
+    // inlineWorkerPlugin({
+    //   target: 'esnext',
+    //   // plugins: [GlslPlugin, WgslPlugin]
+    // }),
+  ],
 });
 
-/**
- * Delete a folder and all its contents
- * @param folderPath - The path to the folder
- */
-function deleteFolder(folderPath: string): void {
-  if (existsSync(folderPath)) {
-    readdirSync(folderPath).forEach((file) => {
-      const curPath: string = path.join(folderPath, file);
-      if (lstatSync(curPath).isDirectory()) {
-        deleteFolder(curPath); // Recursively delete sub-directories
-      } else {
-        unlinkSync(curPath); // Delete files
-      }
-    });
-    rmdirSync(folderPath); // Delete the folder
-  }
-}
-
-export {};
+const fileSize = filesize(statSync('./buildS2-local/index.js').size);
+console.info('FILE SIZE: ', fileSize);

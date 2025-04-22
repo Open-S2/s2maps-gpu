@@ -1,1 +1,1 @@
-export { default as SvelteS2Map } from './S2Map.svelte';
+// export { default as SvelteS2Map } from './S2Map.svelte';
