@@ -1,6 +1,6 @@
-import { BunPlugin } from 'bun';
 import { optimize } from 'svgo';
 
+import type { BunPlugin } from 'bun';
 import type { OnLoadArgs, OnLoadResult, PluginBuilder } from 'bun';
 
 const SvgPlugin: BunPlugin = {

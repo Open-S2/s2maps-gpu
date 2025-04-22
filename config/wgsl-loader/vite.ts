@@ -12,7 +12,9 @@
 
 import { createFilter } from '@rollup/pluginutils';
 import parse from './parse';
-import { Plugin, ResolvedConfig, transformWithEsbuild } from 'vite';
+import { transformWithEsbuild } from 'vite';
+
+import type { Plugin, ResolvedConfig } from 'vite';
 
 // /**
 //  * @constant

@@ -1,4 +1,4 @@
-export * from './react/S2Map';
-// export * from './svelte/S2Map.svelte';
-export * from './vue/index';
+export * from './reactLibrary/S2Map';
+export { default as SvelteS2MapGPU } from './svelteLibrary/S2Map.svelte';
+export * from './vueLibrary/index';
 export * from './preload';

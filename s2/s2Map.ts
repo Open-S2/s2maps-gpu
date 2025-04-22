@@ -147,8 +147,8 @@ declare global {
  * - Sync map movements between multiple maps: See {@link plugins.syncMove}
  *
  * ## Frameworks
- * - React: See {@link plugins.ReactS2MapGPU}
- * - Vue: See {@link plugins.VueS2MapGPU}
+ * - React: See {@link frameworks.ReactS2MapGPU}
+ * - Vue: See {@link frameworks.VueS2MapGPU}
  */
 export default class S2Map extends EventTarget {
   readonly #container?: HTMLElement;

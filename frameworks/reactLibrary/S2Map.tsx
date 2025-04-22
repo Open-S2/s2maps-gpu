@@ -1,6 +1,7 @@
-import { BuildType, preloadMap } from '../preload';
+import { preloadMap } from '../preload';
 import React, { useEffect, useRef, useState } from 'react';
 
+import type { BuildType } from '../preload';
 import type { MapOptions, S2Map } from 's2/index';
 
 /**

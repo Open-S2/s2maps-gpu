@@ -1,5 +1,13 @@
 {
-  "plugins": [],
   "printWidth": 100,
-  "singleQuote": true
+  "singleQuote": true,
+  "plugins": ["prettier-plugin-svelte", "prettier-plugin-vue"],
+	"overrides": [
+		{
+			"files": "*.svelte",
+			"options": {
+				"parser": "svelte"
+			}
+		}
+  ]
 }

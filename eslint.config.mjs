@@ -3,14 +3,14 @@ import eslint from '@eslint/js';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 import globals from 'globals';
 import jsdoc from 'eslint-plugin-jsdoc';
-// import pluginSvelte from 'eslint-plugin-svelte';
 import pluginVue from 'eslint-plugin-vue';
 import prettierConfig from 'eslint-config-prettier';
+import svelte from 'eslint-plugin-svelte';
 // Add tsdoc as a plugin
 // import tsdoc from 'eslint-plugin-tsdoc';
 import tseslint from 'typescript-eslint';
 
-// import svelteConfig from './svelte.config.js';
+import svelteConfig from './frameworks/svelte.config.js';
 // import svelteParser from 'svelte-eslint-parser';
 
 export default tseslint.config(
@@ -29,7 +29,7 @@ export default tseslint.config(
   eslint.configs.recommended,
   tseslint.configs.recommended,
   ...pluginVue.configs['flat/recommended'],
-  // ...pluginSvelte.configs['flat/recommended'],
+  ...svelte.configs.recommended,
   // Typescript, React, Vue, Javascript, etc.
   {
     plugins: {
@@ -44,15 +44,16 @@ export default tseslint.config(
       parserOptions: {
         parser: tseslint.parser,
         project: ['./tsconfig.eslint.json'],
-        extraFileExtensions: ['.vue'],
+        extraFileExtensions: ['.vue', '.svelte'],
         sourceType: 'module',
         tsconfigRootDir: import.meta.dirname,
-        // svelteConfig,
+        svelteConfig,
       },
     },
   },
   eslintPluginPrettierRecommended,
   prettierConfig,
+  ...svelte.configs.prettier,
   jsdoc.configs['flat/recommended-typescript'],
   {
     rules: {

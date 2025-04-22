@@ -20,6 +20,8 @@
     "isolatedModules": true,
     "incremental": true,
     "esModuleInterop": true,
+    "verbatimModuleSyntax": true,
+    "useDefineForClassFields": true,
     "allowSyntheticDefaultImports": true,
     "types": ["@webgpu/types", "vue", "svelte", "react"],
     "baseUrl": "s2", // This must be specified if "paths" is.

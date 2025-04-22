@@ -1,5 +1,4 @@
-import { VTTile } from '../process.spec.js';
-
+import type { VTTile } from '../process.spec.js';
 import type { VectorGeometry } from 'gis-tools/index.js';
 
 /**

@@ -7,7 +7,7 @@ Not a replacement for the full tracker. Used on a large PR basis
 ## Converters
 
 [ ] - Mapbox options -> S2Map options
-[ ] - Maplibre options -> S2Map options
+[x] - Maplibre options -> S2Map options
 [ ] - Maplibre style -> S2Map style
 [ ] - Mapbox style -> S2Map style
 

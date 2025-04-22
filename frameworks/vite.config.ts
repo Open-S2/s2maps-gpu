@@ -3,8 +3,11 @@ import AutoImport from 'unplugin-auto-import/vite';
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
 import eslint from 'vite-plugin-eslint2';
-import { svelte } from 'vite-plugin-svelte';
 import vue from '@vitejs/plugin-vue';
+import { svelte, vitePreprocess } from '@sveltejs/vite-plugin-svelte';
+
+// import sveltePreprocess from 'svelte-preprocess';
+import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
   root: __dirname,
@@ -13,31 +16,37 @@ export default defineConfig({
       imports: ['svelte', 'react', 'svelte/store', 'vue/macros', 'vue'],
       dts: './auto-imports.d.ts', // generates types
     }),
+    tsconfigPaths(),
     eslint(),
     vue(),
-    svelte(),
-    dts(),
+    svelte({ preprocess: vitePreprocess({ script: true }) }),
+    dts({
+      entryRoot: '.',
+      outDir: 'dist',
+    }),
   ],
   resolve: {
-    extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json', '.vue', '.svelte'],
+    extensions: ['.ts', '.jsx', '.tsx', '.json', '.vue', '.svelte'],
   },
   build: {
+    sourcemap: true,
     lib: {
       entry: './index.ts',
-      name: 'MyLib',
+      name: 'lib',
       formats: ['es'],
-      // fileName: (format): string => `out.${format}.js`,
+      fileName: 'index',
     },
     outDir: 'dist',
     rollupOptions: {
-      external: ['vue', 'svelte', 'react'],
-      output: {
-        globals: {
-          react: 'React',
-          vue: 'Vue',
-          svelte: 'Svelte',
-        },
-      },
+      external: [
+        'vue',
+        'vue-class-component',
+        'vue-property-decorator',
+        'vuex',
+        'vuex-class',
+        'svelte',
+        'react',
+      ],
     },
   },
 });

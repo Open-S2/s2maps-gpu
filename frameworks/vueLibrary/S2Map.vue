@@ -1,20 +1,16 @@
 <template>
-  <div id="map" ref="container">
-    <slot />
-  </div>
+
+  <div id="map" ref="container"> <slot /> </div>
+
 </template>
 
 <script lang="ts">
 import { preloadMap } from '../preload';
+import { onMounted, onUnmounted, ref, shallowRef, toRaw } from 'vue';
 
 import type { BuildType } from '../preload';
+import type { PropType } from 'vue';
 import type { MapOptions, S2Map } from 's2/index';
-
-/** The exported container and mapInstance */
-export interface S2MapVueComponent {
-  container: Ref<HTMLElement | undefined>;
-  mapInstance: Ref<S2Map | null>;
-}
 
 /**
  * # The S2MapGPU Vue Component
@@ -53,7 +49,7 @@ export default {
    * @param props - Props passed to the component
    * @returns container and mapInstance
    */
-  setup(props: typeof this.$props): S2MapVueComponent {
+  setup(props) {
     let { mapOptions, mapReady, build, version, testing } = props;
     mapOptions = toRaw(mapOptions);
     const container = ref<HTMLElement>();
@@ -99,3 +95,4 @@ export default {
   height: 100%;
 }
 </style>
+

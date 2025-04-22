@@ -28,7 +28,7 @@
     // "jsxImportSource": "",                            /* Specify module specifier used to import the JSX factory functions when using `jsx: react-jsx*`.` */
     // "reactNamespace": "",                             /* Specify the object invoked for `createElement`. This only applies when targeting `react` JSX emit. */
     // "noLib": true,                                    /* Disable including any library files, including the default lib.d.ts. */
-    // "useDefineForClassFields": true,                  /* Emit ECMAScript-standard-compliant class fields. */
+    "useDefineForClassFields": true,                  /* Emit ECMAScript-standard-compliant class fields. */
 
     /* Modules */
     "module": "preserve" /* Specify what module code is generated. */,
@@ -81,13 +81,13 @@
     // "inlineSources": true,                            /* Include source code in the sourcemaps inside the emitted JavaScript. */
     // "emitBOM": true,                                  /* Emit a UTF-8 Byte Order Mark (BOM) in the beginning of output files. */
     // "newLine": "crlf",                                /* Set the newline character for emitting files. */
-    // "stripInternal": true,                            /* Disable emitting declarations that have `@internal` in their JSDoc comments. */
+    "stripInternal": true,                            /* Disable emitting declarations that have `@internal` in their JSDoc comments. */
     // "noEmitHelpers": true,                            /* Disable generating custom helper functions like `__extends` in compiled output. */
     // "noEmitOnError": true,                            /* Disable emitting files if any type checking errors are reported. */
     // "preserveConstEnums": true,                       /* Disable erasing `const enum` declarations in generated code. */
     "declarationDir": "dist" /* Specify the output directory for generated declaration files. */,
     // "preserveValueImports": true,                     /* Preserve unused imported values in the JavaScript output that would otherwise be removed. */
-    "verbatimModuleSyntax": false,
+    "verbatimModuleSyntax": true,
 
     /* Interop Constraints */
     "isolatedModules": true,                          /* Ensure that each file can be safely transpiled without relying on other imports. */
@@ -129,15 +129,18 @@
     "build.ts",
     "benchmarks/**/*.ts",
     "s2/**/*.ts",
-    "s2/**/*.tsx",
-    "s2/**/*.vue",
-    "s2/**/*.svelte",
     "config/**/*.ts",
     "config/**/*.js",
     "configS2/**/*.ts",
     "tests/**/*.ts",
     "tests-playwright/**/*.ts",
     "tests-playwright/**/*.vue",
+    "frameworks/*.ts",
+    "frameworks/**/*.ts",
+    "frameworks/**/*.tsx",
+    "frameworks/**/*.vue",
+    "frameworks/**/*.svelte",
+    "frameworks/svelte.config.js",
     "server/**/*.ts",
     "pages/**/*.ts",
     "pages/**/*.vue",

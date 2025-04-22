@@ -5,6 +5,8 @@
     "typedoc-plugin-coverage",
     // https://github.com/Gerrit0/typedoc-plugin-vue
     "typedoc-plugin-vue",
+    // https://github.com/Gerrit0/typedoc-plugin-mdn-links
+    "typedoc-plugin-mdn-links"
   ],
   "out": "docs",
   "includeVersion": true,
@@ -28,6 +30,8 @@
     "markdown",
     "yaml",
     "glsl",
-    "wgsl"
+    "wgsl",
+    "vue",
+    "svelte",
   ]
 }

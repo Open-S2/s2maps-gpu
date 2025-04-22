@@ -39,20 +39,33 @@
     "cov:nyc": "nyc report",
     "dev": "DEV=true nuxt dev --host --disable-telemetry",
     "docs": "typedoc",
-    "lint:S2": "eslint s2 --ext .ts,.tsx,.vue",
+    "lint:S2": "eslint s2 --ext .ts,.tsx,.vue,.svelte",
     "loc": "tokei ./s2 # && tokei ./rust",
     "server:playwright": "bun run ./tests-playwright/server.ts",
     "test:S2": "bun test",
     "test:S2:watch": "bun test --watch",
     "test:playwright": "rm -rf .nyc_output && playwright test -c ./tests-playwright/playwright.config.ts",
     "test:playwright:ui": "playwright test --ui -c ./tests-playwright/playwright.config.ts",
-    "prepare:toAdd": "bun run lint:S2 && bun run build:ESM && bun run build:types"
+    "prepare:toAdd": "bun run lint:S2 && bun run build:ESM && bun run build:frameworks"
   },
+  "files": ["dist", "frameworks/dist"],
   "exports": {
-    ".": "./dist/index.js",
-    "./plugins": "./dist/plugins.js",
-    "./frameworks": "./dist/frameworks/dist/s2maps-gpu.js",
-    "./polyfills": "./dist/polyfills.js"
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./frameworks": {
+      "import": "./frameworks/dist/index.js",
+      "types": "./frameworks/dist/index.d.ts"
+    },
+    "./plugins": {
+      "import": "./dist/plugins.js",
+      "types": "./dist/plugins.d.ts"
+    },
+    "./polyfills": {
+      "import": "./dist/polyfills.js",
+      "types": "./dist/polyfills.d.ts"
+    }
   },
   "main": "./dist/index.js",
   "types": "./dist-types/index.d.ts",
@@ -102,6 +115,8 @@
     "nuxt": "^3.16.2",
     "nyc": "^17.1.0",
     "picocolors": "^1.1.1",
+    "prettier-plugin-svelte": "^3.3.3",
+    "prettier-plugin-vue": "^1.1.6",
     "raw-loader": "^4.0.2",
     "react": "^19.1.0",
     "s2-tilejson": "^1.13.0",
@@ -113,6 +128,7 @@
     "tsconfig-paths-webpack-plugin": "^4.2.0",
     "typedoc": "^0.28.3",
     "typedoc-plugin-coverage": "^4.0.1",
+    "typedoc-plugin-mdn-links": "^5.0.1",
     "typedoc-plugin-vue": "^1.5.0",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.30.1",

@@ -1,9 +1,9 @@
 import VueS2MapGPU from './S2Map.vue';
 
-// import type { App } from 'vue';
+import type { App } from 'vue';
 
 export { VueS2MapGPU };
-export * from './S2Map.vue';
+export type * from './S2Map.vue';
 
 /**
  * Install the Vue S2MapGPU Component globally

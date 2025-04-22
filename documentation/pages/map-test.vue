@@ -33,11 +33,11 @@ const style: StyleDefinition = {
     }
   ]
 }
-const mapOptions: MapOptions = { style }
+const mapOptions: MapOptions = { style, offscreen: false }
 </script>
 
 <template>
   <div>
-    <VueS2MapGPU :map-options=mapOptions />
+    <VueS2MapGPU :map-options=mapOptions build="flat" />
   </div>
 </template>
