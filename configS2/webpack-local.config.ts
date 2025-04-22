@@ -1,8 +1,4 @@
-import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
-import CompressionPlugin from 'compression-webpack-plugin';
-// import TerserPlugin from 'terser-webpack-plugin';
 import TsconfigPathsPlugin from 'tsconfig-paths-webpack-plugin';
-import { WebpackStatsViewerPlugin } from 'webpack-stats-viewer-plugin';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import webpack from 'webpack';
@@ -28,9 +24,9 @@ const conifguration: Configuration = {
   // This means they will be the 'root' imports that are included in JS bundle.
   entry: { 's2maps-gpu': path.join(_dirname, '../s2/index.ts') },
   output: {
-    path: path.join(_dirname, '../buildS2'),
+    path: path.join(_dirname, '../buildS2-local'),
     // publicPath: 'http://192.168.0.189:3000/',
-    publicPath: `https://opens2.com/s2maps-gpu/v${version}/`,
+    publicPath: `http://localhost:3000/s2maps-gpu/v${version}-local/`,
     filename: '[name].min.js',
     // this defaults to 'window', but by setting it to 'this' then
     // module chunks which are built will work in web workers as well.
@@ -46,8 +42,8 @@ const conifguration: Configuration = {
       },
       {
         test: /\.wgsl$/i,
-        loader: path.join(_dirname, '/../config/wgsl-loader/index.ts'),
         // use: ['raw-loader'],
+        loader: path.join(_dirname, '/../config/wgsl-loader/index.ts'),
       },
       {
         test: /\.ts?$/,
@@ -94,7 +90,6 @@ const conifguration: Configuration = {
     sideEffects: false,
     concatenateModules: true,
     minimize: true,
-    // minimizer: ['...', new TerserPlugin({ extractComments: false })],
     splitChunks: {
       cacheGroups: {
         // Create a separate chunk for shared dependencies used across main and workers
@@ -111,29 +106,6 @@ const conifguration: Configuration = {
     new webpack.BannerPlugin(
       `s2maps-gpu is Copyright © ${new Date().getFullYear()} Open S2 and subject to the Open S2 Terms of Service (https://www.opens2.com/legal/tos).`,
     ),
-    new webpack.ProgressPlugin(),
-    new CompressionPlugin({
-      filename: '[path][name].js.gz',
-      algorithm: 'gzip',
-      test: /\.js$/,
-      threshold: 0,
-      minRatio: 1,
-    }),
-    new CompressionPlugin({
-      filename: '[path][name].js.br',
-      algorithm: 'brotliCompress',
-      test: /\.js$/,
-      compressionOptions: { level: 11 },
-      threshold: 0,
-      minRatio: 1,
-    }),
-    new WebpackStatsViewerPlugin(),
-    // @ts-expect-error - types are wrong.
-    new BundleAnalyzerPlugin({
-      analyzerMode: 'static',
-      generateStatsFile: true,
-      statsFilename: 'bundle-stat.json',
-    }),
   ],
 };
 

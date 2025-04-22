@@ -1,5 +1,6 @@
 import configuration from './webpack.config.ts';
 import configurationCSS from './webpack.css.config.ts';
+import configurationLocal from './webpack-local.config.ts';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { getFileSizes } from './utils.ts';
@@ -18,12 +19,12 @@ const { version } = JSON.parse(
 const VERSION = `v${version}`;
 
 // CLEAN UP FROM OLD BUILD
-const dirPath = path.join(_dirname, '../buildS2');
-if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath);
-fs.rmSync(dirPath, { recursive: true, force: true });
+fs.rmSync('./buildS2', { recursive: true, force: true });
+fs.rmSync('./buildS2-local', { recursive: true, force: true });
 
 // SETUP COMPILER
 const jsCompiler = webpack(configuration);
+const jsCompilerLocal = webpack(configurationLocal);
 const cssCompiler = webpack(configurationCSS);
 
 // COMPILE
@@ -49,12 +50,14 @@ async function build(compiler: Compiler): Promise<void> {
   });
 }
 
-Promise.all([build(cssCompiler), build(jsCompiler)])
+Promise.all([build(cssCompiler), build(jsCompiler), build(jsCompilerLocal)])
   .catch((err) => {
     console.info('Failed to build', err);
   })
   .finally((): void => {
+    fs.copyFileSync('./buildS2/s2maps-gpu.min.css', './buildS2-local/s2maps-gpu.min.css');
     getFileSizes('./buildS2');
+    store('../opens2.com/public/s2maps-gpu', './buildS2-local', `${VERSION}-local`);
     store('../opens2.com/public/s2maps-gpu', './buildS2', VERSION);
   });
 
