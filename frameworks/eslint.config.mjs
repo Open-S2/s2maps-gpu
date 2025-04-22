@@ -1,35 +1,22 @@
 // @ts-check
-import eslint from '@eslint/js';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 import globals from 'globals';
 import jsdoc from 'eslint-plugin-jsdoc';
-// import pluginSvelte from 'eslint-plugin-svelte';
+import pluginSvelte from 'eslint-plugin-svelte';
 import pluginVue from 'eslint-plugin-vue';
 import prettierConfig from 'eslint-config-prettier';
 // Add tsdoc as a plugin
 // import tsdoc from 'eslint-plugin-tsdoc';
 import tseslint from 'typescript-eslint';
 
-// import svelteConfig from './svelte.config.js';
+import svelteConfig from './svelte.config.js';
 // import svelteParser from 'svelte-eslint-parser';
 
 export default tseslint.config(
   {
-    ignores: [
-      '*.d.ts',
-      '**/coverage',
-      '**/docs',
-      '**/dist',
-      '**/buildS2',
-      '**/buildS2-dev',
-      '**/buildS2-local',
-      '**/buildS2-flat',
-    ],
+    ignores: ['*.d.ts', '**/dist'],
   },
-  eslint.configs.recommended,
   tseslint.configs.recommended,
-  ...pluginVue.configs['flat/recommended'],
-  // ...pluginSvelte.configs['flat/recommended'],
   // Typescript, React, Vue, Javascript, etc.
   {
     plugins: {
@@ -39,18 +26,20 @@ export default tseslint.config(
     languageOptions: {
       globals: {
         ...globals.browser,
-        // svelte: true,
+        svelte: true,
       },
       parserOptions: {
         parser: tseslint.parser,
-        project: ['./tsconfig.eslint.json'],
-        extraFileExtensions: ['.vue'],
+        project: ['./tsconfig.json'],
+        extraFileExtensions: ['.vue', '.svelte'],
         sourceType: 'module',
         tsconfigRootDir: import.meta.dirname,
-        // svelteConfig,
+        svelteConfig,
       },
     },
   },
+  ...pluginSvelte.configs['flat/recommended'],
+  ...pluginVue.configs['flat/recommended'],
   eslintPluginPrettierRecommended,
   prettierConfig,
   jsdoc.configs['flat/recommended-typescript'],

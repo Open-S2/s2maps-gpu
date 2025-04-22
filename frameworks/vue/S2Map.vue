@@ -5,12 +5,10 @@
 </template>
 
 <script lang="ts">
-import { preloadMap } from '../preload.js';
-import { onMounted, onUnmounted, ref, shallowRef, toRaw } from 'vue';
+import { preloadMap } from '../preload';
 
-import { BuildType } from '../preload.js';
-import type { MapOptions, S2Map } from 's2/index.js';
-import type { PropType, Ref } from 'vue';
+import type { BuildType } from '../preload';
+import type { MapOptions, S2Map } from 's2/index';
 
 /** The exported container and mapInstance */
 export interface S2MapVueComponent {
@@ -42,7 +40,7 @@ export default {
     version: {
       type: String as PropType<string>,
       required: false,
-      default: 'latest',
+      default: undefined,
     },
     testing: {
       type: Boolean as PropType<boolean>,
@@ -55,7 +53,7 @@ export default {
    * @param props - Props passed to the component
    * @returns container and mapInstance
    */
-  setup(props): S2MapVueComponent {
+  setup(props: typeof this.$props): S2MapVueComponent {
     let { mapOptions, mapReady, build, version, testing } = props;
     mapOptions = toRaw(mapOptions);
     const container = ref<HTMLElement>();

@@ -1,7 +1,7 @@
-import { BuildType, preloadMap } from '../preload.js';
+import { BuildType, preloadMap } from '../preload';
 import React, { useEffect, useRef, useState } from 'react';
 
-import type { MapOptions, S2Map } from 's2/index.js';
+import type { MapOptions, S2Map } from 's2/index';
 
 /**
  * Props for the S2Map React Component.

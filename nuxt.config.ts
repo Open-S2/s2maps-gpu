@@ -5,14 +5,8 @@ import wgsl from './config/wgsl-loader/vite.js';
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   devtools: { enabled: false },
-  future: {
-    compatibilityVersion: 4,
-  },
-
-  experimental: {
-    watcher: 'parcel', // 'chokidar' or 'parcel' are also options
-  },
-
+  future: { compatibilityVersion: 4 },
+  experimental: { watcher: 'parcel' },
   runtimeConfig: {
     public: {
       state: process.env.STATE ?? 'prod',
@@ -22,10 +16,16 @@ export default defineNuxtConfig({
     },
   },
 
+  // $production: {
+  //   nitro: {
+  //     experimental: {
+  //       wasm: true,
+  //     },
+  //   },
+  // },
+
   watch: ['./s2/**/*', './components/**/*', './pages/**/*', './plugins/**/*', './public/**/*'],
-
   ignore: ['node_modules', 'dist', 'build', 'buildS2', 'buildS2-dev', 'buildS2-local'],
-
   modules: ['@nuxt/eslint'],
   eslint: {
     // checker: true // <---

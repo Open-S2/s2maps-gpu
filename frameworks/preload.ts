@@ -1,3 +1,5 @@
+import { version as packageVersion } from '../package.json' with { type: 'json' };
+
 /**
  * Define how we want to build the map
  * - 'preloaded': the map is already loaded into the window object
@@ -14,10 +16,10 @@ const preloadedAssets = new Set<string>();
  * @param build - the build type
  * @param version - the version
  */
-export async function preloadMap(build: BuildType, version: string = 'latest'): Promise<void> {
+export async function preloadMap(build: BuildType, version?: string): Promise<void> {
+  if (version === undefined) version = packageVersion;
   if (build === 'preloaded') return;
-  const fullVersion = version === 'latest' ? 'latest' : `v${version}`;
-  let startPath = `https://opens2.com/s2maps-gpu/${fullVersion}`;
+  let startPath = `https://opens2.com/s2maps-gpu/v${version}`;
   if (build === 'flat') startPath += '-flat';
   const styleUrl = `${startPath}/s2maps-gpu.min.css`;
   const scriptUrl =

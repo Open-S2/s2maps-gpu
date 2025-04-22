@@ -70,7 +70,7 @@ yarn-error.log*
 *.tsbuildinfo
 
 # typedoc
-docs/
+/docs/
 
 # zig
 zig-cache/
