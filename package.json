@@ -38,7 +38,7 @@
     "build:frameworks": "vite build --config frameworks/vite.config.ts",
     "dev": "DEV=true nuxt dev --host --disable-telemetry",
     "docs": "typedoc --tsconfig tsconfig.typedoc.json",
-    "lint:S2": "eslint s2 --ext .ts,.tsx,.vue,.svelte --cache",
+    "lint:S2": "BUN_JSC_forceRAMSize=\"1073741\" bun --smol run eslint s2 --ext .ts,.tsx,.vue,.svelte --cache",
     "loc": "tokei ./s2 # && tokei ./rust",
     "server:playwright": "bun run ./tests-playwright/server.ts",
     "test:clean": "rm -rf .nyc_output coverage && mkdir .nyc_output && mkdir coverage",

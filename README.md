@@ -7,6 +7,9 @@
   <a href="https://img.shields.io/github/actions/workflow/status/Open-S2/s2maps-gpu/test.yml?logo=github">
     <img src="https://img.shields.io/github/actions/workflow/status/Open-S2/s2maps-gpu/test.yml?logo=github" alt="GitHub Actions Workflow Status">
   </a>
+  <a href="https://npmjs.org/package/s2maps-gpu">
+    <img src="https://img.shields.io/npm/v/s2maps-gpu.svg?logo=npm&logoColor=white" alt="npm">
+  </a>
   <a href="https://www.npmjs.com/package/s2maps-gpu">
     <img src="https://img.shields.io/npm/dm/s2maps-gpu.svg" alt="downloads">
   </a>

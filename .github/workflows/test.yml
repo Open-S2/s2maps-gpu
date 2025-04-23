@@ -33,5 +33,5 @@ jobs:
     - name: Build Dist files working
       run: bun run build:ESM && bun run build:frameworks
 
-    - name: Run TypeScript tests
+    - name: Run basic TypeScript tests
       run: bun run test:S2
