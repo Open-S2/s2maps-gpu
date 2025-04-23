@@ -1,0 +1,37 @@
+name: coveralls
+
+on: push
+
+jobs:
+  test:
+    name: Coveralls Upload
+    runs-on: ubuntu-latest
+
+    # setup
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: latest
+
+    - name: Install dependencies
+      run: bun install
+
+    # Bun tests
+
+    - name: Run JavaScript/TypeScript tests
+      run: bun run test
+
+    # upload to Coveralls
+
+    - name: Upload coverage to Coveralls
+      run: |
+        if [ -f ./coverage/lcov.info ]; then
+          bun run coveralls < ./coverage/lcov.info
+        fi
+      env:
+        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
