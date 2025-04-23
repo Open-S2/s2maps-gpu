@@ -45,7 +45,7 @@ jobs:
         run: bun install
 
       - name: Build the docs
-        run: bunx typedoc
+        run: bun run docs
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
