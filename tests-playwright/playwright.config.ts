@@ -16,15 +16,14 @@ export default defineConfig({
   /* Maximum time one test can run for. */
   timeout: 10 * 1000,
   /* Run tests in files in parallel */
-  fullyParallel: true,
+  fullyParallel: process.env.CI === undefined,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: true,
-  /* Retry on CI only */
-
+  /* Retries if test fails */
   retries: 4,
+  failOnFlakyTests: false,
   /* Opt out of parallel tests on CI. */
-  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI !== undefined ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
