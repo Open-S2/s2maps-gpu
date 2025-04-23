@@ -38,6 +38,6 @@ const mapOptions: MapOptions = { style, offscreen: false }
 
 <template>
   <div>
-    <VueS2MapGPU :map-options=mapOptions build="flat" />
+    <VueS2MapGPU :map-options=mapOptions build="prod" />
   </div>
 </template>

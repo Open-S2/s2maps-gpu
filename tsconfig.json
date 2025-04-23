@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     /* Visit https://aka.ms/tsconfig.json to read more about this file */
-    "allowImportingTsExtensions": true,
+    // "allowImportingTsExtensions": true,
 
     /* Projects */
     // "incremental": true,                              /* Enable incremental compilation */
@@ -140,7 +140,6 @@
     "frameworks/**/*.tsx",
     "frameworks/**/*.vue",
     "frameworks/**/*.svelte",
-    "frameworks/svelte.config.js",
     "server/**/*.ts",
     "pages/**/*.ts",
     "pages/**/*.vue",

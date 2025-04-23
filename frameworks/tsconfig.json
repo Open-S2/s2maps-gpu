@@ -1,4 +1,5 @@
 {
+  "extends": "../tsconfig.json",
   "compilerOptions": {
     "target": "ESNext",
     "lib": [
@@ -43,5 +44,6 @@
     "./**/*.tsx",
     "./**/*.vue",
     "./**/*.svelte",
+    "../package.json",
   ]
 }

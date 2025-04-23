@@ -10,7 +10,7 @@ import { onMounted, onUnmounted, ref, shallowRef, toRaw } from 'vue';
 
 import type { BuildType } from '../preload';
 import type { PropType } from 'vue';
-import type { MapOptions, S2Map } from 's2/index';
+import type { MapOptions, S2Map } from 's2/index.js';
 
 /**
  * # The S2MapGPU Vue Component

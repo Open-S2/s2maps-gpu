@@ -10,7 +10,7 @@ import svelte from 'eslint-plugin-svelte';
 // import tsdoc from 'eslint-plugin-tsdoc';
 import tseslint from 'typescript-eslint';
 
-import svelteConfig from './frameworks/svelte.config.js';
+import svelteConfig from './svelte.config.js';
 // import svelteParser from 'svelte-eslint-parser';
 
 export default tseslint.config(
@@ -127,6 +127,13 @@ export default tseslint.config(
         },
       ],
       'vue/multi-word-component-names': 'off',
+      'vue/html-closing-bracket-newline': [
+        'error',
+        {
+          singleline: 'never',
+          multiline: 'never',
+        },
+      ],
     },
   },
 );

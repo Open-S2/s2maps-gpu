@@ -141,7 +141,6 @@
     "frameworks/**/*.tsx",
     "frameworks/**/*.vue",
     "frameworks/**/*.svelte",
-    "frameworks/svelte.config.js",
     "server/**/*.ts",
     "pages/**/*.ts",
     "pages/**/*.vue",
