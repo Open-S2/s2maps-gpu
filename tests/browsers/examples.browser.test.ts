@@ -3,7 +3,7 @@ import { page } from '@vitest/browser/context';
 import { render } from 'vitest-browser-vue';
 import { waitMap } from './util.js';
 import { expect, test } from 'vitest';
-
+// styles
 import S2BackgroundStyle from '../../pages/s2/background/style.js';
 import S2FillStyle from '../../pages/s2/fill/style.js';
 
@@ -36,40 +36,7 @@ function testRender(snapshotName: string, style: StyleDefinition, contextType: G
   };
 }
 
-// WebGPU //
+// WebGL2 //
 
-test('S2->Background->WebGPU', testRender('S2-Background-WebGPU', S2BackgroundStyle, 2));
-test('S2->Fill->WebGPU', testRender('S2-Fill-WebGPU', S2FillStyle, 2));
-
-// /**
-//  * Render test
-//  * @param snapshotName - name of the snapshot
-//  * @param style - S2 Map Style
-//  * @param contextType - GPU Type (1 = WebGL, 2 = WebGL2, 3 = WebGPU)
-//  * @returns a Vitest test function
-//  */
-// async function testRender(
-//   snapshotName: string,
-//   style: StyleDefinition,
-//   contextType: GPUType,
-// ): Promise<TestFunction<undefined>> {
-//   return await (async () => {
-//     await page.viewport(1920, 1080);
-
-//     render(S2MapGPU, {
-//       props: { mapOptions: { style, contextType } },
-//     });
-
-//     // Wait until the map is available on the window
-//     while (typeof window.testMap === 'undefined') {
-//       await new Promise((r) => setTimeout(r, 50));
-//     }
-
-//     // Wait for the map to be fully rendered
-//     const success = await waitMap();
-//     expect(success).toBe(true);
-
-//     const screen = await page.screenshot();
-//     expect(screen).toMatchSnapshot(snapshotName);
-//   });
-// }
+test('S2->Background->WebGL2', testRender('S2-Background-WebGL2', S2BackgroundStyle, 2));
+test('S2->Fill->WebGL2', testRender('S2-Fill-WebGL2', S2FillStyle, 2));
