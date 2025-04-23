@@ -150,9 +150,6 @@ function testRender(
       // await storeCoverage(coverage);
       await page.evaluate(storeCoverage);
     }
-    await expect(component).toHaveScreenshot(screenshotName, {
-      name: `s2-background-webgpu-${browserName}.png`,
-      timeout: 2_000,
-    });
+    await expect(component).toHaveScreenshot(screenshotName, { timeout: 2_000 });
   };
 }

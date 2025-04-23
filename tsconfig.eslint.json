@@ -1,5 +1,4 @@
 {
-  "extends": "./.nuxt/tsconfig.json",
   "compilerOptions": {
     /* Visit https://aka.ms/tsconfig.json to read more about this file */
 
@@ -124,6 +123,7 @@
     "nuxt.config.ts",
     "eslint.config.mjs",
     "svelte.config.js",
+    "vitest.config.ts",
     "nyc.config.js",
     "build.ts",
     "benchmarks/**/*.ts",
@@ -137,6 +137,9 @@
     "tests/**/*.ts",
     "tests-playwright/**/*.ts",
     "tests-playwright/**/*.vue",
+    "tests-browsers/*.ts",
+    "tests-browsers/**/*.ts",
+    "tests-browsers/**/*.vue",
     "frameworks/*.ts",
     "frameworks/**/*.ts",
     "frameworks/**/*.tsx",

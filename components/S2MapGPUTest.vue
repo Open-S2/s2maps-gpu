@@ -55,7 +55,6 @@ export default {
         controls: false,
         ...mapOptions,
         container: container.value,
-        offscreen: false,
       };
       const map = new S2Map(options);
 
@@ -75,7 +74,7 @@ export default {
 </script>
 
 <style>
-@import url('../../s2/s2maps.css');
+@import url('../s2/s2maps.css');
 #map {
   position: absolute;
   top: 0;

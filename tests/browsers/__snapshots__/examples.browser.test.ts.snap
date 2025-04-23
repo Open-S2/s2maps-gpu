@@ -1,0 +1,5 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`S2->Background->WebGPU > S2-Background-WebGPU 1`] = `"/Users/craigoconnor/Documents/Projects/OpenS2/s2maps-gpu/tests/browsers/__screenshots__/examples.browser.test.ts/S2--Background--WebGPU-1.png"`;
+
+exports[`S2->Fill->WebGPU > S2-Fill-WebGPU 1`] = `"/Users/craigoconnor/Documents/Projects/OpenS2/s2maps-gpu/tests/browsers/__screenshots__/examples.browser.test.ts/S2--Fill--WebGPU-1.png"`;

@@ -30,6 +30,7 @@ export default defineConfig({
   reporter: 'list',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
+    headless: true,
     trace: 'on-first-retry',
     ctPort: 3100,
     baseURL: 'http://localhost:3100',

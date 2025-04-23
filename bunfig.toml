@@ -4,7 +4,7 @@
 preload = ["./s2/polyfills", "./tests/happyDOM"]
 
 # root directory
-root = "./tests"
+root = "./tests/local"
 
 # always enable coverage
 # windows tests fails when using coverage
