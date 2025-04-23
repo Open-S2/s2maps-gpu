@@ -107,7 +107,7 @@ export default defineConfig({
     timeout: 5 * 1_000,
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     reuseExistingServer: !process.env.CI,
-    stdout: 'pipe',
-    stderr: 'pipe',
+    // stdout: 'pipe',
+    // stderr: 'pipe',
   },
 });
