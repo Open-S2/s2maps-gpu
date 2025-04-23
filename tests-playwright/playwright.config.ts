@@ -106,7 +106,8 @@ export default defineConfig({
     command: 'bun server:playwright',
     url: 'http://localhost:3000',
     timeout: 5 * 1_000,
-    reuseExistingServer: true,
+    reuseExistingServer:
+      process.env.CI === null || process.env.CI === undefined || process.env.CI === 'false',
     stdout: 'pipe',
     stderr: 'pipe',
   },

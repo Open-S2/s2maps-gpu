@@ -1,5 +1,6 @@
 {
   "entryPoints": ["s2/index.ts", "s2/plugins.ts"], // Adjust to your main TypeScript file(s)
+  "exclude": ["server/**/*", "node_modules", "nuxt.config.ts"],
   "plugin": [
     // https://github.com/Gerrit0/typedoc-plugin-coverage
     "typedoc-plugin-coverage",

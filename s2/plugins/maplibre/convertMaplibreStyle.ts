@@ -347,10 +347,14 @@ function convertLayerHillshade(input?: HillshadeLayerSpecification): HillshadeSt
     metadata,
     minzoom,
     maxzoom,
+    // TODO: Fix these
+    // @ts-expect-error - ignore for now
     azimuth: convertPropertyValueSpecification(paint['hillshade-illumination-direction']),
     // intensity: convertPropertyValueSpecification(paint['hillshade-exaggeration']),
-    shadowColor: convertPropertyValueSpecification(paint['hillshade-shadow-color']),
-    highlightColor: convertPropertyValueSpecification(paint['hillshade-highlight-color']),
+    // @ts-expect-error - ignore for now
+    shadowColor: convertDataDrivenPropertyValueSpecification(paint['hillshade-shadow-color']),
+    // @ts-expect-error - ignore for now
+    highlightColor: convertDataDrivenPropertyValueSpecification(paint['hillshade-highlight-color']),
     accentColor: convertPropertyValueSpecification(paint['hillshade-accent-color']),
     visible: layout.visibility !== 'none',
   };

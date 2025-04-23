@@ -26,9 +26,12 @@ jobs:
 
     - name: Install dependencies
       run: bun install
+
+    - name: lint
+      run: node --max-old-space-size=4096 ./node_modules/.bin/eslint s2 --ext .ts,.tsx,.vue,.svelte
     
-    - name: Run TypeScript linting & ensure building distribution files working
-      run: bun run lint:S2 && bun run build:ESM && bun run build:frameworks
+    - name: Build Dist files working
+      run: bun run build:ESM && bun run build:frameworks
 
     - name: Run TypeScript tests
       run: bun run test:S2
