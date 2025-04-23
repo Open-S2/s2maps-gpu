@@ -4,7 +4,6 @@
 <h1 align="center">S2 Maps GPU</h1>
 
 <p align="center">
-  <img src="https://img.shields.io/github/stars/Open-S2/s2maps-gpu" alt="stars">
   <a href="https://img.shields.io/github/actions/workflow/status/Open-S2/s2maps-gpu/test.yml?logo=github">
     <img src="https://img.shields.io/github/actions/workflow/status/Open-S2/s2maps-gpu/test.yml?logo=github" alt="GitHub Actions Workflow Status">
   </a>

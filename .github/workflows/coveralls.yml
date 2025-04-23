@@ -24,7 +24,7 @@ jobs:
     # Bun tests
 
     - name: Run JavaScript/TypeScript tests
-      run: bun run test
+      run: bun run test:S2
 
     # upload to Coveralls
 

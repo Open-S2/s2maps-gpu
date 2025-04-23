@@ -26,6 +26,9 @@ jobs:
 
     - name: Install dependencies
       run: bun install
+    
+    - name: Run TypeScript linting & ensure building distribution files working
+      run: bun run lint:S2 && bun run build:ESM && bun run build:frameworks
 
-    - name: Run JavaScript/TypeScript tests
-      run: bun run test
+    - name: Run TypeScript tests
+      run: bun run test:S2
