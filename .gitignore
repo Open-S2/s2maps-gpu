@@ -94,3 +94,6 @@ playwright/.cache/
 
 # experiment data
 public/geojson/utah.geojson
+
+# lints
+.eslintcache
