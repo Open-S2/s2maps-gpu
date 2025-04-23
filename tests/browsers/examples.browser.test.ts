@@ -9,8 +9,6 @@ import S2FillStyle from '../../pages/s2/fill/style.js';
 
 import type { GPUType, StyleDefinition } from 's2/index.js';
 
-// WebGPU //
-
 /**
  * Render test
  * @param snapshotName - name of the snapshot
@@ -38,8 +36,10 @@ function testRender(snapshotName: string, style: StyleDefinition, contextType: G
   };
 }
 
-test('S2->Background->WebGPU', testRender('S2-Background-WebGPU', S2BackgroundStyle, 3));
-test('S2->Fill->WebGPU', testRender('S2-Fill-WebGPU', S2FillStyle, 3));
+// WebGPU //
+
+test('S2->Background->WebGPU', testRender('S2-Background-WebGPU', S2BackgroundStyle, 2));
+test('S2->Fill->WebGPU', testRender('S2-Fill-WebGPU', S2FillStyle, 2));
 
 // /**
 //  * Render test

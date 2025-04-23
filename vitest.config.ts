@@ -9,6 +9,9 @@ import wgsl from './config/wgsl-loader/vite.js';
 
 export default defineConfig({
   root: __dirname,
+  optimizeDeps: {
+    include: ['open-vector-tile', 'earclip', 'unicode-shaper'],
+  },
   plugins: [
     svelte(),
     vue(),

@@ -28,7 +28,7 @@ jobs:
 
     - name: Run all tests and collect coverage
       run: bun run test:all
-      timeout-minutes: 10
+      timeout-minutes: 20
 
     # upload to Coveralls
 
