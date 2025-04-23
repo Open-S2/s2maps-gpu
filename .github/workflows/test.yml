@@ -28,7 +28,7 @@ jobs:
       run: bun install
 
     - name: lint
-      run: node --max-old-space-size=4096 ./node_modules/.bin/eslint s2 --ext .ts,.tsx,.vue,.svelte
+      run: bun run lint:S2
     
     - name: Build Dist files working
       run: bun run build:ESM && bun run build:frameworks
