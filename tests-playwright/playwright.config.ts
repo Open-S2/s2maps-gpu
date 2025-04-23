@@ -102,7 +102,7 @@ export default defineConfig({
 
   webServer: {
     command: 'bun server:playwright',
-    url: 'http://localhost:3000',
+    url: 'http://localhost:3030',
     timeout: 5 * 1_000,
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     reuseExistingServer: !process.env.CI,

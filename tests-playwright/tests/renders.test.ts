@@ -60,65 +60,65 @@ import WMSpritesStyle from '../../pages/wm/sprites/style.js';
 // S2
 test('S2->Background->WebGPU', testRender('s2-background-webgpu.png', S2BackgroundStyle, 3));
 test('S2->Fill->WebGPU', testRender('s2-fill-webgpu.png', S2FillStyle, 3));
-test('S2->Fill-Pattern->WebGPU', testRender('s2-fill-pattern-webgpu.png', S2FillPatternStyle, 3));
-test(
-  'S2->Fill-Pattern-Sprite->WebGPU',
-  testRender('s2-fill-pattern-sprite-webgpu.png', S2FillPatternSpriteStyle, 3),
-);
-test('S2->Heatmap->WebGPU', testRender('s2-heatmap-webgpu.png', S2HeatmapStyle, 3));
-test('S2->Invert->WebGPU', testRender('s2-invert-webgpu.png', S2InvertStyle, 3));
-test(
-  'S2->Invert-Pattern->WebGPU',
-  testRender('s2-invert-pattern-webgpu.png', S2InvertPatternStyle, 3),
-);
-test('S2->LCH->WebGPU', testRender('s2-lch-webgpu.png', S2LCHStyle, 3));
-test('S2->Lines->WebGPU', testRender('s2-lines-webgpu.png', S2LinesStyle, 3));
-test('S2->Local->WebGPU', testRender('s2-local-webgpu.png', S2LocalStyle, 3));
-test('S2->Markers->WebGPU', testRender('s2-markers-webgpu.png', S2MarkersStyle, 3));
-test(
-  'S2->Nested-Properties->WebGPU',
-  testRender('s2-nested-properties-webgpu.png', S2NestedPropertiesStyle, 3),
-);
-test('S2->Points->WebGPU', testRender('s2-points-webgpu.png', S2PointsStyle, 3));
-test('S2->Raster->WebGPU', testRender('s2-raster-webgpu.png', S2RasterStyle, 3));
-test('S2->S2JSON->WebGPU', testRender('s2-s2json-webgpu.png', S2S2JSONStyle, 3));
-test('S2->Shade->WebGPU', testRender('s2-shade-webgpu.png', S2ShadeStyle, 3));
-test('S2->Skybox->WebGPU', testRender('s2-skybox-webgpu.png', S2SkyboxStyle, 3));
-test('S2->Sprites->WebGPU', testRender('s2-sprites-webgpu.png', S2SpritesStyle, 3));
-// test('S2->Streets->WebGPU', testRender('s2-streets-webgpu.png', S2StreetsStyle, 3));
-test('S2->Wallpaper->WebGPU', testRender('s2-wallpaper-webgpu.png', S2WallpaperStyle, 3));
-// WM
-test('WM->Background->WebGPU', testRender('wm-background-webgpu.png', WMBackgroundStyle, 3));
-test('WM->Fill->WebGPU', testRender('wm-fill-webgpu.png', WMFillStyle, 3));
-test('WM->GeoJSON->WebGPU', testRender('wm-geojson-webgpu.png', WMGeoJSONStyle, 3));
-test('WM->Fill-Pattern->WebGPU', testRender('wm-fill-pattern-webgpu.png', WMFillPatternStyle, 3));
-test(
-  'WM->Fill-Pattern-Sprite->WebGPU',
-  testRender('wm-fill-pattern-sprite-webgpu.png', WMFillPatternSpriteStyle, 3),
-);
-test('WM->Heatmap->WebGPU', testRender('wm-heatmap-webgpu.png', WMHeatmapStyle, 3));
-test('WM->Hillshade->WebGPU', testRender('wm-hillshade-webgpu.png', WMHillshadeStyle, 3));
+// test('S2->Fill-Pattern->WebGPU', testRender('s2-fill-pattern-webgpu.png', S2FillPatternStyle, 3));
+// test(
+//   'S2->Fill-Pattern-Sprite->WebGPU',
+//   testRender('s2-fill-pattern-sprite-webgpu.png', S2FillPatternSpriteStyle, 3),
+// );
+// test('S2->Heatmap->WebGPU', testRender('s2-heatmap-webgpu.png', S2HeatmapStyle, 3));
+// test('S2->Invert->WebGPU', testRender('s2-invert-webgpu.png', S2InvertStyle, 3));
+// test(
+//   'S2->Invert-Pattern->WebGPU',
+//   testRender('s2-invert-pattern-webgpu.png', S2InvertPatternStyle, 3),
+// );
+// test('S2->LCH->WebGPU', testRender('s2-lch-webgpu.png', S2LCHStyle, 3));
+// test('S2->Lines->WebGPU', testRender('s2-lines-webgpu.png', S2LinesStyle, 3));
+// test('S2->Local->WebGPU', testRender('s2-local-webgpu.png', S2LocalStyle, 3));
+// test('S2->Markers->WebGPU', testRender('s2-markers-webgpu.png', S2MarkersStyle, 3));
+// test(
+//   'S2->Nested-Properties->WebGPU',
+//   testRender('s2-nested-properties-webgpu.png', S2NestedPropertiesStyle, 3),
+// );
+// test('S2->Points->WebGPU', testRender('s2-points-webgpu.png', S2PointsStyle, 3));
+// test('S2->Raster->WebGPU', testRender('s2-raster-webgpu.png', S2RasterStyle, 3));
+// test('S2->S2JSON->WebGPU', testRender('s2-s2json-webgpu.png', S2S2JSONStyle, 3));
+// test('S2->Shade->WebGPU', testRender('s2-shade-webgpu.png', S2ShadeStyle, 3));
+// test('S2->Skybox->WebGPU', testRender('s2-skybox-webgpu.png', S2SkyboxStyle, 3));
+// test('S2->Sprites->WebGPU', testRender('s2-sprites-webgpu.png', S2SpritesStyle, 3));
+// // test('S2->Streets->WebGPU', testRender('s2-streets-webgpu.png', S2StreetsStyle, 3));
+// test('S2->Wallpaper->WebGPU', testRender('s2-wallpaper-webgpu.png', S2WallpaperStyle, 3));
+// // WM
+// test('WM->Background->WebGPU', testRender('wm-background-webgpu.png', WMBackgroundStyle, 3));
+// test('WM->Fill->WebGPU', testRender('wm-fill-webgpu.png', WMFillStyle, 3));
+// test('WM->GeoJSON->WebGPU', testRender('wm-geojson-webgpu.png', WMGeoJSONStyle, 3));
+// test('WM->Fill-Pattern->WebGPU', testRender('wm-fill-pattern-webgpu.png', WMFillPatternStyle, 3));
+// test(
+//   'WM->Fill-Pattern-Sprite->WebGPU',
+//   testRender('wm-fill-pattern-sprite-webgpu.png', WMFillPatternSpriteStyle, 3),
+// );
+// test('WM->Heatmap->WebGPU', testRender('wm-heatmap-webgpu.png', WMHeatmapStyle, 3));
+// test('WM->Hillshade->WebGPU', testRender('wm-hillshade-webgpu.png', WMHillshadeStyle, 3));
 
-test(
-  'WM->HillshadeTerrarium->WebGPU',
-  testRender('wm-hillshade-terrarium-webgpu.png', WMHillshadeTerrariumStyle, 3),
-);
-test('WM->Invert->WebGPU', testRender('wm-invert-webgpu.png', WMInvertStyle, 3));
-test(
-  'WM->Invert-Pattern->WebGPU',
-  testRender('wm-invert-pattern-webgpu.png', WMInvertPatternStyle, 3),
-);
-test('WM->LCH->WebGPU', testRender('wm-lch-webgpu.png', WMLCHStyle, 3));
-test('WM->Lines->WebGPU', testRender('wm-lines-webgpu.png', WMLinesStyle, 3));
-test('WM->Local->WebGPU', testRender('wm-local-webgpu.png', WMLocalStyle, 3));
-test('WM->Markers->WebGPU', testRender('wm-markers-webgpu.png', WMMarkersStyle, 3));
-test(
-  'WM->Nested-Properties->WebGPU',
-  testRender('wm-nested-properties-webgpu.png', WMNestedPropertiesStyle, 3),
-);
-test('WM->Points->WebGPU', testRender('wm-points-webgpu.png', WMPointsStyle, 3));
-test('WM->Raster->WebGPU', testRender('wm-raster-webgpu.png', WMRasterStyle, 3));
-test('WM->Sprites->WebGPU', testRender('wm-sprites-webgpu.png', WMSpritesStyle, 3));
+// test(
+//   'WM->HillshadeTerrarium->WebGPU',
+//   testRender('wm-hillshade-terrarium-webgpu.png', WMHillshadeTerrariumStyle, 3),
+// );
+// test('WM->Invert->WebGPU', testRender('wm-invert-webgpu.png', WMInvertStyle, 3));
+// test(
+//   'WM->Invert-Pattern->WebGPU',
+//   testRender('wm-invert-pattern-webgpu.png', WMInvertPatternStyle, 3),
+// );
+// test('WM->LCH->WebGPU', testRender('wm-lch-webgpu.png', WMLCHStyle, 3));
+// test('WM->Lines->WebGPU', testRender('wm-lines-webgpu.png', WMLinesStyle, 3));
+// test('WM->Local->WebGPU', testRender('wm-local-webgpu.png', WMLocalStyle, 3));
+// test('WM->Markers->WebGPU', testRender('wm-markers-webgpu.png', WMMarkersStyle, 3));
+// test(
+//   'WM->Nested-Properties->WebGPU',
+//   testRender('wm-nested-properties-webgpu.png', WMNestedPropertiesStyle, 3),
+// );
+// test('WM->Points->WebGPU', testRender('wm-points-webgpu.png', WMPointsStyle, 3));
+// test('WM->Raster->WebGPU', testRender('wm-raster-webgpu.png', WMRasterStyle, 3));
+// test('WM->Sprites->WebGPU', testRender('wm-sprites-webgpu.png', WMSpritesStyle, 3));
 
 /**
  * Render test

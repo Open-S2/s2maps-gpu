@@ -47,8 +47,8 @@ export default {
     onMounted((): void => {
       const options: MapOptions = {
         urlMap: {
-          baseURL: 'http://localhost:3000',
-          dataURL: 'http://localhost:3000',
+          baseURL: 'http://localhost:3030',
+          dataURL: 'http://localhost:3030',
         },
         attributionOff: true,
         watermarkOff: true,
