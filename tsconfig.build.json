@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "esnext",
+    "target": "ESNext",
     "lib": [
       "DOM",
       "DOM.Iterable",
@@ -14,18 +14,21 @@
     "declaration": true,
     "skipLibCheck": true,
     "noEmit": false,
-    "module": "esnext",
-    "moduleResolution": "Bundler",
+    "module": "Preserve",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "incremental": true,
     "esModuleInterop": true,
+    "verbatimModuleSyntax": true,
+    "useDefineForClassFields": true,
     "allowSyntheticDefaultImports": true,
     "types": ["@webgpu/types"],
     "baseUrl": "s2", // This must be specified if "paths" is.
-    "paths": {    
-      "*" : ["./*"],
-      "geometry/*": ["./geometry/*"],
+    "paths": {
+      "*" : ["./*", "../*"],
+      "s2/*": ["./*"],
+      "gis-tools/*": ["./gis-tools/*"],
       "gl/*": ["./gl/*"],
       "gpu/*": ["./gpu/*"],
       "plugins/*": ["./plugins/*"],
@@ -34,7 +37,6 @@
       "ui/*": ["./ui/*"],
       "util/*": ["./util/*"],
       "workers/*": ["./workers/*"],
-      "s2-pmtiles/browser": ["./node_modules/s2-pmtiles/dist/browser.d.ts"]
     }
   },
   "ts-node": {

@@ -1,14 +1,20 @@
 <template>
-  <div id='map' ref='container'>
-    <slot />
-  </div>
+
+  <div id="map" ref="container"> <slot /> </div>
+
 </template>
 
-<script lang='ts'>
-import type { MapOptions, S2Map } from 's2'
+<script lang="ts">
+import { useRuntimeConfig } from 'nuxt/app';
+import { onMounted, onUnmounted, ref, toRaw } from 'vue';
 
-declare global {
-  interface Window { testMap: S2Map }
+import type { MapOptions, S2Map } from 's2';
+import type { PropType, Ref } from 'vue';
+
+/** The exported container and mapInstance */
+export interface S2MapComponent {
+  container: Ref<HTMLElement | undefined>;
+  mapInstance: Ref<S2Map | null>;
 }
 
 export default {
@@ -16,51 +22,68 @@ export default {
   props: {
     mapOptions: {
       type: Object as PropType<MapOptions>,
-      required: true
+      required: true,
     },
-    mapReady: Function as PropType<(s2map: S2Map) => void>
+    mapReady: {
+      type: Function as PropType<(s2map: S2Map) => void>,
+      required: false,
+      default: undefined,
+    },
   },
-  setup ({ mapOptions, mapReady }) {
-    mapOptions = toRaw(mapOptions)
-    const container = ref<HTMLElement>()
-    const mapInstance = ref<S2Map | null>(null)
+  /**
+   * Setup the component, map instance, and mounting/unmounting config
+   * @param props - Props passed to the component
+   * @returns container and mapInstance
+   */
+  setup(props): S2MapComponent {
+    let { mapOptions, mapReady } = props;
+    mapOptions = toRaw(mapOptions);
+    const container = ref<HTMLElement>();
+    const mapInstance = ref<S2Map | null>(null) as Ref<S2Map | null>;
 
     onMounted(async () => {
-      const { S2Map } = await import('s2')
-      const config = useRuntimeConfig()
+      const { S2Map } = await import('s2');
+      const config = useRuntimeConfig();
       const options: MapOptions = {
         urlMap: {
-          apiURL: config.public.dataURL,
-          dataURL: config.public.dataURL,
-          baseURL: config.public.baseURL
+          apiURL: config.public.dataURL as string,
+          dataURL: config.public.dataURL as string,
+          baseURL: config.public.baseURL as string,
         },
         attributionOff: true,
         watermarkOff: true,
         controls: false,
         ...mapOptions,
-        container: container.value
-      }
-      const map = new S2Map(options)
+        container: container.value,
+      };
+      const map = new S2Map(options);
 
       /** Used by playwright to ensure the map is ready to render */
-      window.testMap = toRaw(map)
+      window.testMap = toRaw(map);
 
-      if (typeof mapReady === 'function') map.addEventListener('ready', () => { mapReady(map) }, { once: true })
+      if (typeof mapReady === 'function')
+        map.addEventListener(
+          'ready',
+          () => {
+            mapReady(map);
+          },
+          { once: true },
+        );
 
-      mapInstance.value = map
-    })
+      mapInstance.value = map;
+    });
 
     onUnmounted(() => {
-      if (mapInstance.value !== null) mapInstance.value.delete()
-    })
+      if (mapInstance.value !== null) mapInstance.value.delete();
+    });
 
-    return { container, mapInstance }
-  }
-}
+    return { container, mapInstance };
+  },
+};
 </script>
 
 <style>
-@import url('../assets/styles/s2maps.css');
+@import url('../s2/s2maps.css');
 #map {
   position: absolute;
   top: 0;
@@ -69,3 +92,4 @@ export default {
   height: 100%;
 }
 </style>
+

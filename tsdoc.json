@@ -1,0 +1,22 @@
+{
+    "$schema": "https://developer.microsoft.com/json-schemas/tsdoc/v0/tsdoc.schema.json",
+    "extends": ["typedoc/tsdoc.json"],
+    "tagDefinitions": [
+        {
+            "tagName": "@CraigglesO",
+            "syntaxKind": "block"
+        },
+        {
+            "tagName": "@default",
+            "syntaxKind": "block"
+        },
+        {
+            "tagName": "@source",
+            "syntaxKind": "block"
+        },
+        {
+            "tagName": "@defaultValue",
+            "syntaxKind": "block"
+        }
+    ]
+}

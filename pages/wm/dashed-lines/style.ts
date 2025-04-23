@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 'style/style.spec'
+import type { StyleDefinition } from 'style/style.spec.js';
 
 const style: StyleDefinition = {
   version: 1,
@@ -7,13 +7,13 @@ const style: StyleDefinition = {
   view: {
     lon: 0,
     lat: 0,
-    zoom: 0.95
+    zoom: 0.95,
   },
   minzoom: 0,
   maxzoom: 6.9,
   sources: {
-    land: '/geojson/land.geojson',
-    boundaries: '/geojson/boundaries.geojson'
+    land: 'http://localhost:3000/geojson/land.geojson',
+    boundaries: 'http://localhost:3000/geojson/boundaries.geojson',
   },
   fonts: {},
   layers: [
@@ -23,7 +23,7 @@ const style: StyleDefinition = {
       type: 'fill',
       invert: false,
       opaque: false,
-      color: '#b4c1c6'
+      color: '#b4c1c6',
     },
     {
       name: 'country-line',
@@ -33,10 +33,10 @@ const style: StyleDefinition = {
       width: 2.75,
       dasharray: [
         [30, '#bbd3de'],
-        [12, 'rgba(255, 255, 255, 0)']
-      ]
-    }
-  ]
-}
+        [12, 'rgba(255, 255, 255, 0)'],
+      ],
+    },
+  ],
+};
 
-export default style
+export default style;

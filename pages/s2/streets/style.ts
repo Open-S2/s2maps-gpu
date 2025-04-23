@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 's2'
+import type { StyleDefinition } from 's2/index.js';
 
 const style: StyleDefinition = {
   version: 1,
@@ -7,25 +7,25 @@ const style: StyleDefinition = {
   view: {
     lon: -111.88683599228256,
     lat: 40.76645913667518,
-    zoom: 0
+    zoom: 0,
   },
   minzoom: -0.5,
   maxzoom: 18.99,
   sources: {
     streets: 'apiURL://s2tiles/s2maps/streets-v1.s2tiles',
-    terrain: 'apiURL://s2tiles/s2maps/terrain-v1.s2tiles'
+    terrain: 'apiURL://s2tiles/s2maps/terrain-v1.s2tiles',
   },
   fonts: {
     robotoRegular: 'apiURL://glyphs-v2/RobotoRegular',
     robotoMedium: 'apiURL://glyphs-v2/RobotoMedium',
     notoRegular: 'apiURL://glyphs-v2/NotoRegular',
-    notoMedium: 'apiURL://glyphs-v2/NotoMedium'
+    notoMedium: 'apiURL://glyphs-v2/NotoMedium',
   },
   wallpaper: {
     background: '#030a2d',
     fade1: 'rgb(138, 204, 255)',
     fade2: 'rgb(217, 255, 255)',
-    halo: 'rgb(230, 255, 255)'
+    halo: 'rgb(230, 255, 255)',
   },
   layers: [
     {
@@ -44,10 +44,10 @@ const style: StyleDefinition = {
             { stop: 6.5, input: '#f0e9d7' },
             { stop: 9, input: '#f0e9d7' },
             { stop: 13, input: '#e8e8e8' },
-            { stop: 14, input: '#f8f9fa' }
-          ]
-        }
-      }
+            { stop: 14, input: '#f8f9fa' },
+          ],
+        },
+      },
     },
     {
       name: 'landcover',
@@ -61,31 +61,31 @@ const style: StyleDefinition = {
           conditions: [
             {
               filter: { key: 'class', comparator: '==', value: 'snow' },
-              input: '#ffffff'
+              input: '#ffffff',
             },
             {
               filter: { key: 'class', comparator: '==', value: 'wood' },
-              input: '#93d2a5'
+              input: '#93d2a5',
             },
             {
               filter: { key: 'class', comparator: '==', value: 'tree' },
-              input: '#a8dab5'
+              input: '#a8dab5',
             },
             {
               filter: { key: 'class', comparator: '==', value: 'crop' },
-              input: '#bbe2c6'
+              input: '#bbe2c6',
             },
             {
               filter: { key: 'class', comparator: '==', value: 'shrub' },
-              input: '#f1e9d7'
+              input: '#f1e9d7',
             },
             {
               filter: { key: 'class', comparator: '==', value: 'wasteland' },
-              input: '#e8e8e1'
-            }
+              input: '#e8e8e1',
+            },
           ],
-          fallback: '#93d2a5'
-        }
+          fallback: '#93d2a5',
+        },
       },
       opacity: {
         inputRange: {
@@ -94,10 +94,10 @@ const style: StyleDefinition = {
           base: 1.75,
           ranges: [
             { stop: 4.5, input: 1 },
-            { stop: 5, input: 0 }
-          ]
-        }
-      }
+            { stop: 5, input: 0 },
+          ],
+        },
+      },
     },
     {
       name: 'landuse',
@@ -112,13 +112,33 @@ const style: StyleDefinition = {
             key: 'type',
             comparator: 'has',
             value: [
-              'park', 'national_park', 'protected_area', 'grass', 'grassland',
-              'garden', 'meadow', 'farmland', 'heath', 'swamp', 'wetland', 'zoo', 'cemetery',
-              'sand', 'beach', 'desert', 'hospital', 'school', 'parking', 'glacier',
-              'quarry', 'retail', 'urban', 'pitch'
-            ]
-          }
-        ]
+              'park',
+              'national_park',
+              'protected_area',
+              'grass',
+              'grassland',
+              'garden',
+              'meadow',
+              'farmland',
+              'heath',
+              'swamp',
+              'wetland',
+              'zoo',
+              'cemetery',
+              'sand',
+              'beach',
+              'desert',
+              'hospital',
+              'school',
+              'parking',
+              'glacier',
+              'quarry',
+              'retail',
+              'urban',
+              'pitch',
+            ],
+          },
+        ],
       },
       minzoom: 4,
       color: {
@@ -126,67 +146,75 @@ const style: StyleDefinition = {
           conditions: [
             {
               filter: { key: 'type', comparator: '==', value: 'parking' },
-              input: 'rgb(241, 243, 244)'
+              input: 'rgb(241, 243, 244)',
             },
             {
               filter: { key: 'type', comparator: '==', value: 'wetland' },
-              input: 'rgb(210, 233, 255)'
+              input: 'rgb(210, 233, 255)',
             },
             {
               filter: { key: 'type', comparator: '==', value: 'quarry' },
-              input: 'rgb(206, 208, 211)'
+              input: 'rgb(206, 208, 211)',
             },
             {
               filter: { key: 'type', comparator: '==', value: 'glacier' },
-              input: 'rgb(249, 249, 249)'
+              input: 'rgb(249, 249, 249)',
             },
             {
               filter: { key: 'type', comparator: '==', value: 'beach' },
-              input: 'rgb(255, 239, 195)'
+              input: 'rgb(255, 239, 195)',
             },
             {
               filter: { key: 'type', comparator: '==', value: 'cemetery' },
-              input: 'rgb(208, 236, 208)'
+              input: 'rgb(208, 236, 208)',
             },
             {
               filter: { key: 'type', comparator: '==', value: 'pitch' },
-              input: '#9dd2ac'
+              input: '#9dd2ac',
             },
             {
-              filter: { key: 'type', comparator: 'has', value: ['grass', 'grassland', 'garden', 'meadow', 'swamp', 'zoo'] },
-              input: '#a8dab5'
+              filter: {
+                key: 'type',
+                comparator: 'has',
+                value: ['grass', 'grassland', 'garden', 'meadow', 'swamp', 'zoo'],
+              },
+              input: '#a8dab5',
             },
             {
-              filter: { key: 'type', comparator: 'has', value: ['park', 'national_park', 'protected_area'] },
-              input: '#aee0bc'
+              filter: {
+                key: 'type',
+                comparator: 'has',
+                value: ['park', 'national_park', 'protected_area'],
+              },
+              input: '#aee0bc',
             },
             {
               filter: { key: 'type', comparator: 'has', value: ['apron', 'airstrip'] },
-              input: '#d4d8ea'
+              input: '#d4d8ea',
             },
             {
               filter: { key: 'class', comparator: '==', value: 'aeroway' },
-              input: 'rgb(219, 222, 235)'
+              input: 'rgb(219, 222, 235)',
             },
             {
               filter: { key: 'type', comparator: 'has', value: ['farmland', 'heath'] },
-              input: 'rgb(228, 234, 210)'
+              input: 'rgb(228, 234, 210)',
             },
             {
               filter: { key: 'type', comparator: '==', value: 'hospital' },
-              input: 'rgb(252, 228, 228)'
+              input: 'rgb(252, 228, 228)',
             },
             {
               filter: { key: 'type', comparator: '==', value: 'school' },
-              input: 'rgb(226, 233, 238)'
+              input: 'rgb(226, 233, 238)',
             },
             {
               filter: { key: 'type', comparator: '==', value: 'retail' },
-              input: 'rgb(254, 245, 220)'
+              input: 'rgb(254, 245, 220)',
             },
             {
               filter: { key: 'type', comparator: 'has', value: ['desert', 'sand'] },
-              input: 'rgb(241, 233, 195)'
+              input: 'rgb(241, 233, 195)',
             },
             {
               filter: { key: 'type', comparator: '==', value: 'urban' },
@@ -197,20 +225,20 @@ const style: StyleDefinition = {
                   ranges: [
                     {
                       stop: 13,
-                      input: '#e9eaed'
+                      input: '#e9eaed',
                     },
                     {
                       stop: 14,
-                      input: '#f8f9fa'
-                    }
-                  ]
-                }
-              }
-            }
+                      input: '#f8f9fa',
+                    },
+                  ],
+                },
+              },
+            },
           ],
-          fallback: 'rgba(0, 0, 0, 0)'
-        }
-      }
+          fallback: 'rgba(0, 0, 0, 0)',
+        },
+      },
     },
     {
       name: 'landuse_transparent',
@@ -220,22 +248,22 @@ const style: StyleDefinition = {
       filter: {
         key: 'type',
         comparator: 'has',
-        value: ['aboriginal_lands', 'military']
+        value: ['aboriginal_lands', 'military'],
       },
       color: {
         dataCondition: {
           conditions: [
             {
               filter: { key: 'type', comparator: '==', value: 'aboriginal_lands' },
-              input: 'rgba(240, 242, 240, 0.5)'
+              input: 'rgba(240, 242, 240, 0.5)',
             },
             {
               filter: { key: 'type', comparator: '==', value: 'military' },
-              input: 'rgba(226, 226, 224, 0.5)'
-            }
+              input: 'rgba(226, 226, 224, 0.5)',
+            },
           ],
-          fallback: 'rgba(0, 0, 0, 0)'
-        }
+          fallback: 'rgba(0, 0, 0, 0)',
+        },
       },
       opacity: {
         inputRange: {
@@ -245,15 +273,15 @@ const style: StyleDefinition = {
           ranges: [
             {
               stop: 9,
-              input: 1
+              input: 1,
             },
             {
               stop: 10,
-              input: 0
-            }
-          ]
-        }
-      }
+              input: 0,
+            },
+          ],
+        },
+      },
     },
     {
       name: 'golf',
@@ -267,9 +295,9 @@ const style: StyleDefinition = {
           {
             key: 'type',
             comparator: 'has',
-            value: ['course', 'rough', 'fairway', 'green', 'bunker']
-          }
-        ]
+            value: ['course', 'rough', 'fairway', 'green', 'bunker'],
+          },
+        ],
       },
       minzoom: 0,
       color: {
@@ -277,24 +305,24 @@ const style: StyleDefinition = {
           conditions: [
             {
               filter: { key: 'type', comparator: '==', value: 'bunker' },
-              input: 'rgb(255, 239, 195)'
+              input: 'rgb(255, 239, 195)',
             },
             {
               filter: { key: 'type', comparator: '==', value: 'green' },
-              input: 'rgb(233, 251, 217)'
+              input: 'rgb(233, 251, 217)',
             },
             {
               filter: { key: 'type', comparator: '==', value: 'fairway' },
-              input: 'rgb(218, 245, 205)'
+              input: 'rgb(218, 245, 205)',
             },
             {
               filter: { key: 'type', comparator: 'has', value: ['course', 'rough'] },
-              input: 'rgb(201, 238, 201)'
-            }
+              input: 'rgb(201, 238, 201)',
+            },
           ],
-          fallback: 'rgba(0, 0, 0, 0)'
-        }
-      }
+          fallback: 'rgba(0, 0, 0, 0)',
+        },
+      },
     },
     {
       name: 'water',
@@ -302,13 +330,13 @@ const style: StyleDefinition = {
       filter: {
         key: 'class',
         comparator: '!has',
-        value: ['bay', 'reef', 'shoal']
+        value: ['bay', 'reef', 'shoal'],
       },
       layer: 'water',
       type: 'fill',
       opaque: true,
       minzoom: 0,
-      color: '#86bff2'
+      color: '#86bff2',
     },
     {
       name: 'reef_shoal',
@@ -316,13 +344,13 @@ const style: StyleDefinition = {
       filter: {
         key: 'class',
         comparator: 'has',
-        value: ['reef', 'shoal']
+        value: ['reef', 'shoal'],
       },
       layer: 'water',
       type: 'fill',
       opaque: true,
       minzoom: 0,
-      color: 'rgb(185, 225, 255)'
+      color: 'rgb(185, 225, 255)',
     },
     {
       name: 'hillshade',
@@ -338,59 +366,59 @@ const style: StyleDefinition = {
               filter: {
                 and: [
                   { key: 'class', comparator: '==', value: 'shade' },
-                  { key: 'level', comparator: '==', value: 3 }
-                ]
+                  { key: 'level', comparator: '==', value: 3 },
+                ],
               },
-              input: 'rgba(31, 81, 56, 0.25)'
+              input: 'rgba(31, 81, 56, 0.25)',
             },
             {
               filter: {
                 and: [
                   { key: 'class', comparator: '==', value: 'shade' },
-                  { key: 'level', comparator: '==', value: 2 }
-                ]
+                  { key: 'level', comparator: '==', value: 2 },
+                ],
               },
-              input: 'rgba(31, 81, 56, 0.2)'
+              input: 'rgba(31, 81, 56, 0.2)',
             },
             {
               filter: {
                 and: [
                   { key: 'class', comparator: '==', value: 'shade' },
-                  { key: 'level', comparator: '==', value: 1 }
-                ]
+                  { key: 'level', comparator: '==', value: 1 },
+                ],
               },
-              input: 'rgba(31, 81, 56, 0.15)'
+              input: 'rgba(31, 81, 56, 0.15)',
             },
             {
               filter: {
                 and: [
                   { key: 'class', comparator: '==', value: 'shade' },
-                  { key: 'level', comparator: '==', value: 0 }
-                ]
+                  { key: 'level', comparator: '==', value: 0 },
+                ],
               },
-              input: 'rgba(31, 81, 56, 0.1)'
+              input: 'rgba(31, 81, 56, 0.1)',
             },
             {
               filter: {
                 and: [
                   { key: 'class', comparator: '==', value: 'highlight' },
-                  { key: 'level', comparator: '==', value: 1 }
-                ]
+                  { key: 'level', comparator: '==', value: 1 },
+                ],
               },
-              input: 'rgba(255, 254, 250, 0.4)'
+              input: 'rgba(255, 254, 250, 0.4)',
             },
             {
               filter: {
                 and: [
                   { key: 'class', comparator: '==', value: 'highlight' },
-                  { key: 'level', comparator: '==', value: 0 }
-                ]
+                  { key: 'level', comparator: '==', value: 0 },
+                ],
               },
-              input: 'rgba(255, 254, 250, 0.2)'
-            }
+              input: 'rgba(255, 254, 250, 0.2)',
+            },
           ],
-          fallback: 'rgba(0, 0, 0, 0)'
-        }
+          fallback: 'rgba(0, 0, 0, 0)',
+        },
       },
       opacity: {
         inputRange: {
@@ -400,15 +428,15 @@ const style: StyleDefinition = {
           ranges: [
             {
               stop: 10.5,
-              input: 1
+              input: 1,
             },
             {
               stop: 11,
-              input: 0
-            }
-          ]
-        }
-      }
+              input: 0,
+            },
+          ],
+        },
+      },
     },
     {
       name: 'parcel-lines',
@@ -426,15 +454,15 @@ const style: StyleDefinition = {
           ranges: [
             {
               stop: 15,
-              input: 'rgba(219, 222, 227, 0)'
+              input: 'rgba(219, 222, 227, 0)',
             },
             {
               stop: 16,
-              input: '#dbdee3'
-            }
-          ]
-        }
-      }
+              input: '#dbdee3',
+            },
+          ],
+        },
+      },
     },
     {
       name: 'water_lines',
@@ -445,7 +473,7 @@ const style: StyleDefinition = {
       filter: {
         key: 'class',
         comparator: 'has',
-        value: ['river', 'riverbank', 'stream', 'canal', 'drain', 'ditch']
+        value: ['river', 'riverbank', 'stream', 'canal', 'drain', 'ditch'],
       },
       type: 'line',
       cap: 'butt',
@@ -459,15 +487,15 @@ const style: StyleDefinition = {
           ranges: [
             {
               stop: 9,
-              input: 1
+              input: 1,
             },
             {
               stop: 12,
-              input: 2.5
-            }
-          ]
-        }
-      }
+              input: 2.5,
+            },
+          ],
+        },
+      },
     },
     {
       name: 'aboriginal_border',
@@ -476,7 +504,7 @@ const style: StyleDefinition = {
       filter: {
         key: 'type',
         comparator: '==',
-        value: 'aboriginal_lands'
+        value: 'aboriginal_lands',
       },
       minzoom: 3,
       type: 'line',
@@ -488,17 +516,17 @@ const style: StyleDefinition = {
           ranges: [
             {
               stop: 0,
-              input: 'butt'
+              input: 'butt',
             },
             {
               stop: 12,
-              input: 'round'
-            }
-          ]
-        }
+              input: 'round',
+            },
+          ],
+        },
       },
       color: 'rgb(198, 212, 205)',
-      width: 1.5
+      width: 1.5,
     },
     {
       name: 'motor_trunk_borders_tunnel',
@@ -511,9 +539,9 @@ const style: StyleDefinition = {
           {
             key: 'type',
             comparator: 'has',
-            value: ['motorway', 'motorway_link', 'trunk', 'trunk_link']
-          }
-        ]
+            value: ['motorway', 'motorway_link', 'trunk', 'trunk_link'],
+          },
+        ],
       },
       type: 'line',
       minzoom: 2,
@@ -533,28 +561,28 @@ const style: StyleDefinition = {
                   ranges: [
                     {
                       stop: 2,
-                      input: 1.33
+                      input: 1.33,
                     },
                     {
                       stop: 7,
-                      input: 1.66
+                      input: 1.66,
                     },
                     {
                       stop: 10,
-                      input: 2.66
+                      input: 2.66,
                     },
                     {
                       stop: 13,
-                      input: 8.66
+                      input: 8.66,
                     },
                     {
                       stop: 18,
-                      input: 40
-                    }
-                  ]
-                }
-              }
-            }
+                      input: 40,
+                    },
+                  ],
+                },
+              },
+            },
           ],
           fallback: {
             inputRange: {
@@ -564,29 +592,29 @@ const style: StyleDefinition = {
               ranges: [
                 {
                   stop: 2,
-                  input: 2
+                  input: 2,
                 },
                 {
                   stop: 7,
-                  input: 2.5
+                  input: 2.5,
                 },
                 {
                   stop: 10,
-                  input: 4
+                  input: 4,
                 },
                 {
                   stop: 13,
-                  input: 13
+                  input: 13,
                 },
                 {
                   stop: 18,
-                  input: 60
-                }
-              ]
-            }
-          }
-        }
-      }
+                  input: 60,
+                },
+              ],
+            },
+          },
+        },
+      },
     },
     {
       name: 'motor_trunk_tunnel',
@@ -599,9 +627,9 @@ const style: StyleDefinition = {
           {
             key: 'type',
             comparator: 'has',
-            value: ['motorway', 'motorway_link', 'trunk', 'trunk_link']
-          }
-        ]
+            value: ['motorway', 'motorway_link', 'trunk', 'trunk_link'],
+          },
+        ],
       },
       type: 'line',
       minzoom: 4,
@@ -621,28 +649,28 @@ const style: StyleDefinition = {
                   ranges: [
                     {
                       stop: 2,
-                      input: 0.66
+                      input: 0.66,
                     },
                     {
                       stop: 7,
-                      input: 0.833
+                      input: 0.833,
                     },
                     {
                       stop: 10,
-                      input: 1
+                      input: 1,
                     },
                     {
                       stop: 13,
-                      input: 6.66
+                      input: 6.66,
                     },
                     {
                       stop: 18,
-                      input: 36.75
-                    }
-                  ]
-                }
-              }
-            }
+                      input: 36.75,
+                    },
+                  ],
+                },
+              },
+            },
           ],
           fallback: {
             inputRange: {
@@ -652,29 +680,29 @@ const style: StyleDefinition = {
               ranges: [
                 {
                   stop: 2,
-                  input: 1
+                  input: 1,
                 },
                 {
                   stop: 7,
-                  input: 1.25
+                  input: 1.25,
                 },
                 {
                   stop: 10,
-                  input: 1.5
+                  input: 1.5,
                 },
                 {
                   stop: 13,
-                  input: 10
+                  input: 10,
                 },
                 {
                   stop: 18,
-                  input: 56
-                }
-              ]
-            }
-          }
-        }
-      }
+                  input: 56,
+                },
+              ],
+            },
+          },
+        },
+      },
     },
     {
       name: 'transport_borders',
@@ -686,9 +714,18 @@ const style: StyleDefinition = {
           {
             key: 'type',
             comparator: 'has',
-            value: ['unclassified', 'tertiary', 'tertiary_link', 'street', 'street_limited', 'residential', 'pedestrian', 'road']
-          }
-        ]
+            value: [
+              'unclassified',
+              'tertiary',
+              'tertiary_link',
+              'street',
+              'street_limited',
+              'residential',
+              'pedestrian',
+              'road',
+            ],
+          },
+        ],
       },
       type: 'line',
       minzoom: 7,
@@ -699,14 +736,14 @@ const style: StyleDefinition = {
           ranges: [
             {
               stop: 0,
-              input: 'butt'
+              input: 'butt',
             },
             {
               stop: 12,
-              input: 'round'
-            }
-          ]
-        }
+              input: 'round',
+            },
+          ],
+        },
       },
       join: 'bevel',
       color: 'rgb(218, 220, 224)',
@@ -722,26 +759,30 @@ const style: StyleDefinition = {
                   ranges: [
                     {
                       stop: 7,
-                      input: 1
+                      input: 1,
                     },
                     {
                       stop: 12,
-                      input: 7
+                      input: 7,
                     },
                     {
                       stop: 15,
-                      input: 19
+                      input: 19,
                     },
                     {
                       stop: 18,
-                      input: 40
-                    }
-                  ]
-                }
-              }
+                      input: 40,
+                    },
+                  ],
+                },
+              },
             },
             {
-              filter: { key: 'type', comparator: 'has', value: ['road', 'street', 'street_limited', 'residential'] },
+              filter: {
+                key: 'type',
+                comparator: 'has',
+                value: ['road', 'street', 'street_limited', 'residential'],
+              },
               input: {
                 inputRange: {
                   type: 'zoom',
@@ -749,28 +790,28 @@ const style: StyleDefinition = {
                   ranges: [
                     {
                       stop: 10,
-                      input: 1
+                      input: 1,
                     },
                     {
                       stop: 13,
-                      input: 5.5
+                      input: 5.5,
                     },
                     {
                       stop: 15,
-                      input: 14
+                      input: 14,
                     },
                     {
                       stop: 18,
-                      input: 36
-                    }
-                  ]
-                }
-              }
-            }
+                      input: 36,
+                    },
+                  ],
+                },
+              },
+            },
           ],
-          fallback: 3.5
-        }
-      }
+          fallback: 3.5,
+        },
+      },
     },
     {
       name: 'transport_primary_secondary_borders',
@@ -782,9 +823,9 @@ const style: StyleDefinition = {
           {
             key: 'type',
             comparator: 'has',
-            value: ['primary', 'primary_link', 'secondary', 'secondary_link']
-          }
-        ]
+            value: ['primary', 'primary_link', 'secondary', 'secondary_link'],
+          },
+        ],
       },
       type: 'line',
       minzoom: 5,
@@ -795,14 +836,14 @@ const style: StyleDefinition = {
           ranges: [
             {
               stop: 0,
-              input: 'butt'
+              input: 'butt',
             },
             {
               stop: 11,
-              input: 'round'
-            }
-          ]
-        }
+              input: 'round',
+            },
+          ],
+        },
       },
       join: 'bevel',
       color: {
@@ -810,15 +851,15 @@ const style: StyleDefinition = {
           conditions: [
             {
               filter: { key: 'tunnel', comparator: '==', value: true },
-              input: '#afafaf'
+              input: '#afafaf',
             },
             {
               filter: { key: 'type', comparator: 'has', value: ['primary', 'primary_link'] },
-              input: '#f9ca4a'
-            }
+              input: '#f9ca4a',
+            },
           ],
-          fallback: '#dadce0'
-        }
+          fallback: '#dadce0',
+        },
       },
       width: {
         dataCondition: {
@@ -833,28 +874,28 @@ const style: StyleDefinition = {
                   ranges: [
                     {
                       stop: 2,
-                      input: 2
+                      input: 2,
                     },
                     {
                       stop: 7,
-                      input: 2.5
+                      input: 2.5,
                     },
                     {
                       stop: 10,
-                      input: 4
+                      input: 4,
                     },
                     {
                       stop: 13,
-                      input: 13
+                      input: 13,
                     },
                     {
                       stop: 18,
-                      input: 60
-                    }
-                  ]
-                }
-              }
-            }
+                      input: 60,
+                    },
+                  ],
+                },
+              },
+            },
           ],
           fallback: {
             inputRange: {
@@ -864,29 +905,29 @@ const style: StyleDefinition = {
               ranges: [
                 {
                   stop: 2,
-                  input: 2
+                  input: 2,
                 },
                 {
                   stop: 7,
-                  input: 2.5
+                  input: 2.5,
                 },
                 {
                   stop: 10,
-                  input: 4
+                  input: 4,
                 },
                 {
                   stop: 13,
-                  input: 13
+                  input: 13,
                 },
                 {
                   stop: 18,
-                  input: 32.75
-                }
-              ]
-            }
-          }
-        }
-      }
+                  input: 32.75,
+                },
+              ],
+            },
+          },
+        },
+      },
     },
     {
       name: 'transport_aeroway',
@@ -898,9 +939,9 @@ const style: StyleDefinition = {
           {
             key: 'type',
             comparator: 'has',
-            value: ['taxiway', 'runway']
-          }
-        ]
+            value: ['taxiway', 'runway'],
+          },
+        ],
       },
       type: 'line',
       minzoom: 9,
@@ -919,16 +960,16 @@ const style: StyleDefinition = {
                   ranges: [
                     {
                       stop: 9,
-                      input: 2
+                      input: 2,
                     },
                     {
                       stop: 12,
-                      input: 18
-                    }
-                  ]
-                }
-              }
-            }
+                      input: 18,
+                    },
+                  ],
+                },
+              },
+            },
           ],
           fallback: {
             inputRange: {
@@ -938,17 +979,17 @@ const style: StyleDefinition = {
               ranges: [
                 {
                   stop: 9,
-                  input: 1.5
+                  input: 1.5,
                 },
                 {
                   stop: 13,
-                  input: 4.5
-                }
-              ]
-            }
-          }
-        }
-      }
+                  input: 4.5,
+                },
+              ],
+            },
+          },
+        },
+      },
     },
     {
       name: 'transport_piste_aerialway',
@@ -957,8 +998,8 @@ const style: StyleDefinition = {
       filter: {
         or: [
           { key: 'class', comparator: '==', value: 'piste' },
-          { key: 'class', comparator: '==', value: 'aerialway' }
-        ]
+          { key: 'class', comparator: '==', value: 'aerialway' },
+        ],
       },
       type: 'line',
       minzoom: 9,
@@ -969,14 +1010,14 @@ const style: StyleDefinition = {
           ranges: [
             {
               stop: 0,
-              input: 'butt'
+              input: 'butt',
             },
             {
               stop: 12,
-              input: 'round'
-            }
-          ]
-        }
+              input: 'round',
+            },
+          ],
+        },
       },
       join: 'bevel',
       color: {
@@ -984,23 +1025,23 @@ const style: StyleDefinition = {
           conditions: [
             {
               filter: { key: 'piste:difficulty', comparator: 'has', value: ['novice', 'easy'] },
-              input: '#67b346'
+              input: '#67b346',
             },
             {
               filter: { key: 'piste:difficulty', comparator: '==', value: 'intermediate' },
-              input: '#507bee'
+              input: '#507bee',
             },
             {
               filter: { key: 'piste:difficulty', comparator: '==', value: 'freeride' },
-              input: '#ffa500'
+              input: '#ffa500',
             },
             {
               filter: { key: 'class', comparator: '==', value: 'aerialway' },
-              input: '#fe0252'
-            }
+              input: '#fe0252',
+            },
           ],
-          fallback: '#585753'
-        }
+          fallback: '#585753',
+        },
       },
       width: {
         inputRange: {
@@ -1009,15 +1050,15 @@ const style: StyleDefinition = {
           ranges: [
             {
               stop: 9,
-              input: 1
+              input: 1,
             },
             {
               stop: 12,
-              input: 2
-            }
-          ]
-        }
-      }
+              input: 2,
+            },
+          ],
+        },
+      },
     },
     {
       name: 'transport_low_zoom',
@@ -1030,8 +1071,8 @@ const style: StyleDefinition = {
           {
             and: [
               { key: 'class', comparator: '==', value: 'man_made' },
-              { key: 'type', comparator: '==', value: 'pier' }
-            ]
+              { key: 'type', comparator: '==', value: 'pier' },
+            ],
           },
           {
             and: [
@@ -1039,11 +1080,23 @@ const style: StyleDefinition = {
               {
                 key: 'type',
                 comparator: 'has',
-                value: ['track', 'tertiary', 'tertiary_link', 'street', 'road', 'service', 'unclassified', 'street_limited', 'residential', 'pedestrian', 'path']
-              }
-            ]
-          }
-        ]
+                value: [
+                  'track',
+                  'tertiary',
+                  'tertiary_link',
+                  'street',
+                  'road',
+                  'service',
+                  'unclassified',
+                  'street_limited',
+                  'residential',
+                  'pedestrian',
+                  'path',
+                ],
+              },
+            ],
+          },
+        ],
       },
       type: 'line',
       minzoom: 7,
@@ -1054,14 +1107,14 @@ const style: StyleDefinition = {
           ranges: [
             {
               stop: 0,
-              input: 'butt'
+              input: 'butt',
             },
             {
               stop: 12,
-              input: 'round'
-            }
-          ]
-        }
+              input: 'round',
+            },
+          ],
+        },
       },
       join: 'bevel',
       color: {
@@ -1069,23 +1122,23 @@ const style: StyleDefinition = {
           conditions: [
             {
               filter: { key: 'class', comparator: '==', value: 'water' },
-              input: '#6296ce'
+              input: '#6296ce',
             },
             {
               filter: { key: 'type', comparator: '==', value: 'path' },
-              input: 'rgb(91, 185, 116)'
+              input: 'rgb(91, 185, 116)',
             },
             {
               filter: { key: 'type', comparator: 'has', value: ['road', 'unclassified'] },
-              input: '#f6f3ee'
+              input: '#f6f3ee',
             },
             {
               filter: { key: 'class', comparator: '==', value: 'railway' },
-              input: 'rgb(199, 202, 205)'
-            }
+              input: 'rgb(199, 202, 205)',
+            },
           ],
-          fallback: 'rgb(255, 255, 255)'
-        }
+          fallback: 'rgb(255, 255, 255)',
+        },
       },
       width: {
         dataCondition: {
@@ -1099,26 +1152,30 @@ const style: StyleDefinition = {
                   ranges: [
                     {
                       stop: 7,
-                      input: 1
+                      input: 1,
                     },
                     {
                       stop: 12,
-                      input: 4
+                      input: 4,
                     },
                     {
                       stop: 15,
-                      input: 15
+                      input: 15,
                     },
                     {
                       stop: 18,
-                      input: 36.75
-                    }
-                  ]
-                }
-              }
+                      input: 36.75,
+                    },
+                  ],
+                },
+              },
             },
             {
-              filter: { key: 'type', comparator: 'has', value: ['road', 'street', 'street_limited', 'residential'] },
+              filter: {
+                key: 'type',
+                comparator: 'has',
+                value: ['road', 'street', 'street_limited', 'residential'],
+              },
               input: {
                 inputRange: {
                   type: 'zoom',
@@ -1126,32 +1183,32 @@ const style: StyleDefinition = {
                   ranges: [
                     {
                       stop: 10,
-                      input: 1.1
+                      input: 1.1,
                     },
                     {
                       stop: 13,
-                      input: 4
+                      input: 4,
                     },
                     {
                       stop: 15,
-                      input: 10
+                      input: 10,
                     },
                     {
                       stop: 18,
-                      input: 33.25
-                    }
-                  ]
-                }
-              }
+                      input: 33.25,
+                    },
+                  ],
+                },
+              },
             },
             {
               filter: { key: 'type', comparator: 'has', value: ['track', 'railway'] },
-              input: 1.5
+              input: 1.5,
             },
             {
               filter: { key: 'type', comparator: '==', value: 'path' },
-              input: 1.5
-            }
+              input: 1.5,
+            },
           ],
           fallback: {
             inputRange: {
@@ -1160,17 +1217,17 @@ const style: StyleDefinition = {
               ranges: [
                 {
                   stop: 12,
-                  input: 2
+                  input: 2,
                 },
                 {
                   stop: 15,
-                  input: 6
-                }
-              ]
-            }
-          }
-        }
-      }
+                  input: 6,
+                },
+              ],
+            },
+          },
+        },
+      },
     },
     {
       name: 'transport-primary',
@@ -1182,9 +1239,9 @@ const style: StyleDefinition = {
           {
             key: 'type',
             comparator: 'has',
-            value: ['primary', 'primary_link', 'secondary', 'secondary_link']
-          }
-        ]
+            value: ['primary', 'primary_link', 'secondary', 'secondary_link'],
+          },
+        ],
       },
       type: 'line',
       minzoom: 5,
@@ -1195,14 +1252,14 @@ const style: StyleDefinition = {
           ranges: [
             {
               stop: 0,
-              input: 'butt'
+              input: 'butt',
             },
             {
               stop: 11,
-              input: 'round'
-            }
-          ]
-        }
+              input: 'round',
+            },
+          ],
+        },
       },
       join: 'bevel',
       color: {
@@ -1210,15 +1267,15 @@ const style: StyleDefinition = {
           conditions: [
             {
               filter: { key: 'tunnel', comparator: '==', value: true },
-              input: '#e3e3e3'
+              input: '#e3e3e3',
             },
             {
               filter: { key: 'type', comparator: 'has', value: ['primary', 'primary_link'] },
-              input: '#fbefb2'
-            }
+              input: '#fbefb2',
+            },
           ],
-          fallback: '#ffffff'
-        }
+          fallback: '#ffffff',
+        },
       },
       width: {
         dataCondition: {
@@ -1233,24 +1290,24 @@ const style: StyleDefinition = {
                   ranges: [
                     {
                       stop: 7,
-                      input: 1
+                      input: 1,
                     },
                     {
                       stop: 10,
-                      input: 1.5
+                      input: 1.5,
                     },
                     {
                       stop: 13,
-                      input: 10
+                      input: 10,
                     },
                     {
                       stop: 18,
-                      input: 36.75
-                    }
-                  ]
-                }
-              }
-            }
+                      input: 36.75,
+                    },
+                  ],
+                },
+              },
+            },
           ],
           fallback: {
             inputRange: {
@@ -1260,25 +1317,25 @@ const style: StyleDefinition = {
               ranges: [
                 {
                   stop: 7,
-                  input: 1
+                  input: 1,
                 },
                 {
                   stop: 10,
-                  input: 1.5
+                  input: 1.5,
                 },
                 {
                   stop: 13,
-                  input: 10
+                  input: 10,
                 },
                 {
                   stop: 18,
-                  input: 30
-                }
-              ]
-            }
-          }
-        }
-      }
+                  input: 30,
+                },
+              ],
+            },
+          },
+        },
+      },
     },
     {
       name: 'motor_trunk_borders',
@@ -1289,17 +1346,17 @@ const style: StyleDefinition = {
           {
             or: [
               { key: 'layer', comparator: '==', value: undefined },
-              { key: 'layer', comparator: '<=', value: 0 }
-            ]
+              { key: 'layer', comparator: '<=', value: 0 },
+            ],
           },
           { key: 'tunnel', comparator: '!=', value: true },
           { key: 'class', comparator: '==', value: 'highway' },
           {
             key: 'type',
             comparator: 'has',
-            value: ['motorway', 'motorway_link', 'trunk', 'trunk_link']
-          }
-        ]
+            value: ['motorway', 'motorway_link', 'trunk', 'trunk_link'],
+          },
+        ],
       },
       type: 'line',
       minzoom: 2,
@@ -1310,14 +1367,14 @@ const style: StyleDefinition = {
           ranges: [
             {
               stop: 0,
-              input: 'butt'
+              input: 'butt',
             },
             {
               stop: 10,
-              input: 'round'
-            }
-          ]
-        }
+              input: 'round',
+            },
+          ],
+        },
       },
       join: 'bevel',
       color: {
@@ -1327,14 +1384,14 @@ const style: StyleDefinition = {
           ranges: [
             {
               stop: 10,
-              input: '#f9ca4a'
+              input: '#f9ca4a',
             },
             {
               stop: 12,
-              input: '#f1b743'
-            }
-          ]
-        }
+              input: '#f1b743',
+            },
+          ],
+        },
       },
       width: {
         dataCondition: {
@@ -1351,11 +1408,11 @@ const style: StyleDefinition = {
                     { stop: 7, input: 1.66 },
                     { stop: 10, input: 2.66 },
                     { stop: 13, input: 8.66 },
-                    { stop: 18, input: 40 }
-                  ]
-                }
-              }
-            }
+                    { stop: 18, input: 40 },
+                  ],
+                },
+              },
+            },
           ],
           fallback: {
             inputRange: {
@@ -1367,12 +1424,12 @@ const style: StyleDefinition = {
                 { stop: 7, input: 2.5 },
                 { stop: 10, input: 4 },
                 { stop: 13, input: 13 },
-                { stop: 18, input: 60 }
-              ]
-            }
-          }
-        }
-      }
+                { stop: 18, input: 60 },
+              ],
+            },
+          },
+        },
+      },
     },
     {
       name: 'motor_trunk',
@@ -1383,17 +1440,17 @@ const style: StyleDefinition = {
           {
             or: [
               { key: 'layer', comparator: '==', value: undefined },
-              { key: 'layer', comparator: '<=', value: 0 }
-            ]
+              { key: 'layer', comparator: '<=', value: 0 },
+            ],
           },
           { key: 'tunnel', comparator: '!=', value: true },
           { key: 'class', comparator: '==', value: 'highway' },
           {
             key: 'type',
             comparator: 'has',
-            value: ['motorway', 'motorway_link', 'trunk', 'trunk_link']
-          }
-        ]
+            value: ['motorway', 'motorway_link', 'trunk', 'trunk_link'],
+          },
+        ],
       },
       type: 'line',
       minzoom: 5,
@@ -1404,14 +1461,14 @@ const style: StyleDefinition = {
           ranges: [
             {
               stop: 0,
-              input: 'butt'
+              input: 'butt',
             },
             {
               stop: 10,
-              input: 'round'
-            }
-          ]
-        }
+              input: 'round',
+            },
+          ],
+        },
       },
       join: 'bevel',
       color: {
@@ -1421,14 +1478,14 @@ const style: StyleDefinition = {
           ranges: [
             {
               stop: 2,
-              input: '#f9ca4a'
+              input: '#f9ca4a',
             },
             {
               stop: 7,
-              input: '#fde293'
-            }
-          ]
-        }
+              input: '#fde293',
+            },
+          ],
+        },
       },
       width: {
         dataCondition: {
@@ -1445,11 +1502,11 @@ const style: StyleDefinition = {
                     { stop: 7, input: 0.833 },
                     { stop: 10, input: 1 },
                     { stop: 13, input: 6.66 },
-                    { stop: 18, input: 36.75 }
-                  ]
-                }
-              }
-            }
+                    { stop: 18, input: 36.75 },
+                  ],
+                },
+              },
+            },
           ],
           fallback: {
             inputRange: {
@@ -1461,12 +1518,12 @@ const style: StyleDefinition = {
                 { stop: 7, input: 1.25 },
                 { stop: 10, input: 1.5 },
                 { stop: 13, input: 10 },
-                { stop: 18, input: 56 }
-              ]
-            }
-          }
-        }
-      }
+                { stop: 18, input: 56 },
+              ],
+            },
+          },
+        },
+      },
     },
     {
       name: 'motor_trunk_borders_1',
@@ -1480,9 +1537,9 @@ const style: StyleDefinition = {
           {
             key: 'type',
             comparator: 'has',
-            value: ['motorway', 'motorway_link', 'trunk', 'trunk_link']
-          }
-        ]
+            value: ['motorway', 'motorway_link', 'trunk', 'trunk_link'],
+          },
+        ],
       },
       type: 'line',
       minzoom: 2,
@@ -1494,9 +1551,9 @@ const style: StyleDefinition = {
           ease: 'lin',
           ranges: [
             { stop: 10, input: '#f9ca4a' },
-            { stop: 12, input: '#f1b743' }
-          ]
-        }
+            { stop: 12, input: '#f1b743' },
+          ],
+        },
       },
       width: {
         dataCondition: {
@@ -1513,11 +1570,11 @@ const style: StyleDefinition = {
                     { stop: 7, input: 1.66 },
                     { stop: 10, input: 2.66 },
                     { stop: 13, input: 8.66 },
-                    { stop: 18, input: 40 }
-                  ]
-                }
-              }
-            }
+                    { stop: 18, input: 40 },
+                  ],
+                },
+              },
+            },
           ],
           fallback: {
             inputRange: {
@@ -1529,12 +1586,12 @@ const style: StyleDefinition = {
                 { stop: 7, input: 2.5 },
                 { stop: 10, input: 4 },
                 { stop: 13, input: 13 },
-                { stop: 18, input: 60 }
-              ]
-            }
-          }
-        }
-      }
+                { stop: 18, input: 60 },
+              ],
+            },
+          },
+        },
+      },
     },
     {
       name: 'motor_trunk_1',
@@ -1548,9 +1605,9 @@ const style: StyleDefinition = {
           {
             key: 'type',
             comparator: 'has',
-            value: ['motorway', 'motorway_link', 'trunk', 'trunk_link']
-          }
-        ]
+            value: ['motorway', 'motorway_link', 'trunk', 'trunk_link'],
+          },
+        ],
       },
       type: 'line',
       minzoom: 4,
@@ -1561,14 +1618,14 @@ const style: StyleDefinition = {
           ranges: [
             {
               stop: 0,
-              input: 'butt'
+              input: 'butt',
             },
             {
               stop: 10,
-              input: 'round'
-            }
-          ]
-        }
+              input: 'round',
+            },
+          ],
+        },
       },
       join: 'bevel',
       color: {
@@ -1577,9 +1634,9 @@ const style: StyleDefinition = {
           ease: 'lin',
           ranges: [
             { stop: 2, input: '#f9ca4a' },
-            { stop: 7, input: '#fde293' }
-          ]
-        }
+            { stop: 7, input: '#fde293' },
+          ],
+        },
       },
       width: {
         dataCondition: {
@@ -1596,11 +1653,11 @@ const style: StyleDefinition = {
                     { stop: 7, input: 0.833 },
                     { stop: 10, input: 1 },
                     { stop: 13, input: 6.66 },
-                    { stop: 18, input: 36.75 }
-                  ]
-                }
-              }
-            }
+                    { stop: 18, input: 36.75 },
+                  ],
+                },
+              },
+            },
           ],
           fallback: {
             inputRange: {
@@ -1612,12 +1669,12 @@ const style: StyleDefinition = {
                 { stop: 7, input: 1.25 },
                 { stop: 10, input: 1.5 },
                 { stop: 13, input: 10 },
-                { stop: 18, input: 56 }
-              ]
-            }
-          }
-        }
-      }
+                { stop: 18, input: 56 },
+              ],
+            },
+          },
+        },
+      },
     },
     {
       name: 'motor_trunk_borders_2',
@@ -1631,9 +1688,9 @@ const style: StyleDefinition = {
           {
             key: 'type',
             comparator: 'has',
-            value: ['motorway', 'motorway_link', 'trunk', 'trunk_link']
-          }
-        ]
+            value: ['motorway', 'motorway_link', 'trunk', 'trunk_link'],
+          },
+        ],
       },
       type: 'line',
       minzoom: 2,
@@ -1645,9 +1702,9 @@ const style: StyleDefinition = {
           ease: 'lin',
           ranges: [
             { stop: 10, input: '#f9ca4a' },
-            { stop: 12, input: '#f1b743' }
-          ]
-        }
+            { stop: 12, input: '#f1b743' },
+          ],
+        },
       },
       width: {
         dataCondition: {
@@ -1664,11 +1721,11 @@ const style: StyleDefinition = {
                     { stop: 7, input: 1.66 },
                     { stop: 10, input: 2.66 },
                     { stop: 13, input: 8.66 },
-                    { stop: 18, input: 40 }
-                  ]
-                }
-              }
-            }
+                    { stop: 18, input: 40 },
+                  ],
+                },
+              },
+            },
           ],
           fallback: {
             inputRange: {
@@ -1680,12 +1737,12 @@ const style: StyleDefinition = {
                 { stop: 7, input: 2.5 },
                 { stop: 10, input: 4 },
                 { stop: 13, input: 13 },
-                { stop: 18, input: 60 }
-              ]
-            }
-          }
-        }
-      }
+                { stop: 18, input: 60 },
+              ],
+            },
+          },
+        },
+      },
     },
     {
       name: 'motor_trunk_2',
@@ -1699,9 +1756,9 @@ const style: StyleDefinition = {
           {
             key: 'type',
             comparator: 'has',
-            value: ['motorway', 'motorway_link', 'trunk', 'trunk_link']
-          }
-        ]
+            value: ['motorway', 'motorway_link', 'trunk', 'trunk_link'],
+          },
+        ],
       },
       type: 'line',
       minzoom: 4,
@@ -1712,14 +1769,14 @@ const style: StyleDefinition = {
           ranges: [
             {
               stop: 0,
-              input: 'butt'
+              input: 'butt',
             },
             {
               stop: 10,
-              input: 'round'
-            }
-          ]
-        }
+              input: 'round',
+            },
+          ],
+        },
       },
       join: 'bevel',
       color: {
@@ -1728,9 +1785,9 @@ const style: StyleDefinition = {
           ease: 'lin',
           ranges: [
             { stop: 2, input: '#f9ca4a' },
-            { stop: 7, input: '#fde293' }
-          ]
-        }
+            { stop: 7, input: '#fde293' },
+          ],
+        },
       },
       width: {
         dataCondition: {
@@ -1747,11 +1804,11 @@ const style: StyleDefinition = {
                     { stop: 7, input: 0.833 },
                     { stop: 10, input: 1 },
                     { stop: 13, input: 6.66 },
-                    { stop: 18, input: 36.75 }
-                  ]
-                }
-              }
-            }
+                    { stop: 18, input: 36.75 },
+                  ],
+                },
+              },
+            },
           ],
           fallback: {
             inputRange: {
@@ -1763,12 +1820,12 @@ const style: StyleDefinition = {
                 { stop: 7, input: 1.25 },
                 { stop: 10, input: 1.5 },
                 { stop: 13, input: 10 },
-                { stop: 18, input: 56 }
-              ]
-            }
-          }
-        }
-      }
+                { stop: 18, input: 56 },
+              ],
+            },
+          },
+        },
+      },
     },
     {
       name: 'motor_trunk_borders_3',
@@ -1782,9 +1839,9 @@ const style: StyleDefinition = {
           {
             key: 'type',
             comparator: 'has',
-            value: ['motorway', 'motorway_link', 'trunk', 'trunk_link']
-          }
-        ]
+            value: ['motorway', 'motorway_link', 'trunk', 'trunk_link'],
+          },
+        ],
       },
       type: 'line',
       minzoom: 2,
@@ -1796,9 +1853,9 @@ const style: StyleDefinition = {
           ease: 'lin',
           ranges: [
             { stop: 10, input: '#f9ca4a' },
-            { stop: 12, input: '#f1b743' }
-          ]
-        }
+            { stop: 12, input: '#f1b743' },
+          ],
+        },
       },
       width: {
         dataCondition: {
@@ -1815,11 +1872,11 @@ const style: StyleDefinition = {
                     { stop: 7, input: 1.66 },
                     { stop: 10, input: 2.66 },
                     { stop: 13, input: 8.66 },
-                    { stop: 18, input: 40 }
-                  ]
-                }
-              }
-            }
+                    { stop: 18, input: 40 },
+                  ],
+                },
+              },
+            },
           ],
           fallback: {
             inputRange: {
@@ -1831,12 +1888,12 @@ const style: StyleDefinition = {
                 { stop: 7, input: 2.5 },
                 { stop: 10, input: 4 },
                 { stop: 13, input: 13 },
-                { stop: 18, input: 60 }
-              ]
-            }
-          }
-        }
-      }
+                { stop: 18, input: 60 },
+              ],
+            },
+          },
+        },
+      },
     },
     {
       name: 'motor_trunk_3',
@@ -1850,9 +1907,9 @@ const style: StyleDefinition = {
           {
             key: 'type',
             comparator: 'has',
-            value: ['motorway', 'motorway_link', 'trunk', 'trunk_link']
-          }
-        ]
+            value: ['motorway', 'motorway_link', 'trunk', 'trunk_link'],
+          },
+        ],
       },
       type: 'line',
       minzoom: 4,
@@ -1862,9 +1919,9 @@ const style: StyleDefinition = {
           ease: 'step',
           ranges: [
             { stop: 0, input: 'butt' },
-            { stop: 10, input: 'round' }
-          ]
-        }
+            { stop: 10, input: 'round' },
+          ],
+        },
       },
       join: 'bevel',
       color: {
@@ -1873,9 +1930,9 @@ const style: StyleDefinition = {
           ease: 'lin',
           ranges: [
             { stop: 2, input: '#f9ca4a' },
-            { stop: 7, input: '#fde293' }
-          ]
-        }
+            { stop: 7, input: '#fde293' },
+          ],
+        },
       },
       width: {
         dataCondition: {
@@ -1892,11 +1949,11 @@ const style: StyleDefinition = {
                     { stop: 7, input: 0.833 },
                     { stop: 10, input: 1 },
                     { stop: 13, input: 6.66 },
-                    { stop: 18, input: 36.75 }
-                  ]
-                }
-              }
-            }
+                    { stop: 18, input: 36.75 },
+                  ],
+                },
+              },
+            },
           ],
           fallback: {
             inputRange: {
@@ -1908,12 +1965,12 @@ const style: StyleDefinition = {
                 { stop: 7, input: 1.25 },
                 { stop: 10, input: 1.5 },
                 { stop: 13, input: 10 },
-                { stop: 18, input: 56 }
-              ]
-            }
-          }
-        }
-      }
+                { stop: 18, input: 56 },
+              ],
+            },
+          },
+        },
+      },
     },
     {
       name: 'boundaries',
@@ -1922,8 +1979,8 @@ const style: StyleDefinition = {
       filter: {
         and: [
           { key: 'adminLevel', comparator: 'has', value: [2, 4] },
-          { key: 'maritime', comparator: '==', value: false }
-        ]
+          { key: 'maritime', comparator: '==', value: false },
+        ],
       },
       type: 'line',
       minzoom: 0,
@@ -1934,19 +1991,19 @@ const style: StyleDefinition = {
           conditions: [
             {
               filter: { key: 'adminLevel', comparator: '==', value: 2 },
-              input: 'rgb(120, 120, 120)'
-            }
+              input: 'rgb(120, 120, 120)',
+            },
           ],
-          fallback: 'rgb(160, 160, 160)'
-        }
+          fallback: 'rgb(160, 160, 160)',
+        },
       },
       width: {
         dataCondition: {
           conditions: [
             {
               filter: { key: 'adminLevel', comparator: '==', value: 4 },
-              input: 1.25
-            }
+              input: 1.25,
+            },
           ],
           fallback: {
             inputRange: {
@@ -1955,17 +2012,17 @@ const style: StyleDefinition = {
               ranges: [
                 {
                   stop: 1.25,
-                  input: 1
+                  input: 1,
                 },
                 {
                   stop: 2,
-                  input: 1.75
-                }
-              ]
-            }
-          }
-        }
-      }
+                  input: 1.75,
+                },
+              ],
+            },
+          },
+        },
+      },
     },
     {
       name: 'equator',
@@ -1979,9 +2036,9 @@ const style: StyleDefinition = {
       color: 'rgba(125, 102, 97, 0.8)',
       dasharray: [
         [20, 'rgba(125, 102, 97, 0.8)'],
-        [20, 'rgba(255, 255, 255, 0)']
+        [20, 'rgba(255, 255, 255, 0)'],
       ],
-      width: 1.5
+      width: 1.5,
     },
     {
       name: 'buildings',
@@ -1993,21 +2050,39 @@ const style: StyleDefinition = {
         dataCondition: {
           conditions: [
             {
-              filter: { key: 'class', comparator: 'has', value: ['aeroway', 'office', 'hotel', 'hospital', 'shop', 'retail', 'industrial', 'school', 'commercial', 'public', 'warehouse', 'service', 'stadium'] },
-              input: '#fdf9e9'
+              filter: {
+                key: 'class',
+                comparator: 'has',
+                value: [
+                  'aeroway',
+                  'office',
+                  'hotel',
+                  'hospital',
+                  'shop',
+                  'retail',
+                  'industrial',
+                  'school',
+                  'commercial',
+                  'public',
+                  'warehouse',
+                  'service',
+                  'stadium',
+                ],
+              },
+              input: '#fdf9e9',
             },
             {
               filter: { key: 'class', comparator: '==', value: 'police' },
-              input: '#9bc1ef'
+              input: '#9bc1ef',
             },
             {
               filter: { key: 'class', comparator: '==', value: 'fire_station' },
-              input: '#fba69e'
-            }
+              input: '#fba69e',
+            },
           ],
-          fallback: '#f2f3f4'
-        }
-      }
+          fallback: '#f2f3f4',
+        },
+      },
     },
     {
       name: 'buildings_highlight',
@@ -2020,22 +2095,40 @@ const style: StyleDefinition = {
         dataCondition: {
           conditions: [
             {
-              filter: { key: 'class', comparator: 'has', value: ['aeroway', 'office', 'hotel', 'hospital', 'shop', 'retail', 'industrial', 'school', 'commercial', 'public', 'warehouse', 'service', 'stadium'] },
-              input: '#f5e0a4'
+              filter: {
+                key: 'class',
+                comparator: 'has',
+                value: [
+                  'aeroway',
+                  'office',
+                  'hotel',
+                  'hospital',
+                  'shop',
+                  'retail',
+                  'industrial',
+                  'school',
+                  'commercial',
+                  'public',
+                  'warehouse',
+                  'service',
+                  'stadium',
+                ],
+              },
+              input: '#f5e0a4',
             },
             {
               filter: { key: 'class', comparator: '==', value: 'police' },
-              input: '#648dbf'
+              input: '#648dbf',
             },
             {
               filter: { key: 'class', comparator: '==', value: 'fire_station' },
-              input: '#d07870'
-            }
+              input: '#d07870',
+            },
           ],
-          fallback: '#d8dade'
-        }
+          fallback: '#d8dade',
+        },
       },
-      width: 1.5
+      width: 1.5,
     },
     {
       name: 'info-fill',
@@ -2043,7 +2136,7 @@ const style: StyleDefinition = {
       type: 'fill',
       invert: true,
       minzoom: 0,
-      color: 'rgba(64, 64, 64, 0.15)'
+      color: 'rgba(64, 64, 64, 0.15)',
     },
     {
       name: 'info-border',
@@ -2060,21 +2153,21 @@ const style: StyleDefinition = {
           ranges: [
             {
               stop: 0,
-              input: 2
+              input: 2,
             },
             {
               stop: 3,
-              input: 2.5
-            }
-          ]
-        }
-      }
+              input: 2.5,
+            },
+          ],
+        },
+      },
     },
     {
       name: 'shade',
       source: 'mask',
       type: 'shade',
-      maxzoom: 2
+      maxzoom: 2,
     },
     {
       name: 'address',
@@ -2093,7 +2186,7 @@ const style: StyleDefinition = {
       textStroke: 'rgba(255, 255, 255, 0.65)',
       textStrokeWidth: 0.7,
       noShaping: true,
-      viewCollisions: false
+      viewCollisions: false,
     },
     {
       name: 'country_state',
@@ -2103,11 +2196,11 @@ const style: StyleDefinition = {
           {
             and: [
               { key: 'class', comparator: '==', value: 'continent' },
-              { key: '?name', comparator: '==', value: 'Antarctica' }
-            ]
+              { key: '?name', comparator: '==', value: 'Antarctica' },
+            ],
           },
-          { key: 'class', comparator: 'has', value: ['country', 'state', 'province', 'territory'] }
-        ]
+          { key: 'class', comparator: 'has', value: ['country', 'state', 'province', 'territory'] },
+        ],
       },
       layer: 'place',
       type: 'glyph',
@@ -2118,8 +2211,8 @@ const style: StyleDefinition = {
           conditions: [
             {
               filter: { key: 'class', comparator: '==', value: 'continent' },
-              input: '?!P!Uname_XX'
-            }
+              input: '?!P!Uname_XX',
+            },
           ],
           fallback: {
             inputRange: {
@@ -2128,7 +2221,7 @@ const style: StyleDefinition = {
               ranges: [
                 {
                   stop: 0,
-                  input: '?abbr,?name'
+                  input: '?abbr,?name',
                 },
                 {
                   stop: 3,
@@ -2139,20 +2232,20 @@ const style: StyleDefinition = {
                           filter: {
                             and: [
                               { key: '?!Pname_XX', comparator: '!=', value: '' },
-                              { key: '?!Pname_XX', comparator: 'has', value: '?name' }
-                            ]
+                              { key: '?!Pname_XX', comparator: 'has', value: '?name' },
+                            ],
                           },
-                          input: '?name'
-                        }
+                          input: '?name',
+                        },
                       ],
-                      fallback: ['?name', '\n', '?!Pname_XX']
-                    }
-                  }
-                }
-              ]
-            }
-          }
-        }
+                      fallback: ['?name', '\n', '?!Pname_XX'],
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
       },
       textAnchor: 'center',
       textLineHeight: 0.02,
@@ -2170,66 +2263,78 @@ const style: StyleDefinition = {
                   base: 1.5,
                   ranges: [
                     { stop: 0, input: 14 },
-                    { stop: 4, input: 28 }
-                  ]
-                }
-              }
+                    { stop: 4, input: 28 },
+                  ],
+                },
+              },
             },
             {
-              filter: { key: 'class', comparator: 'has', value: ['state', 'province', 'territory'] },
+              filter: {
+                key: 'class',
+                comparator: 'has',
+                value: ['state', 'province', 'territory'],
+              },
               input: {
                 inputRange: {
                   type: 'zoom',
                   ease: 'lin',
                   ranges: [
                     { stop: 0, input: 10 },
-                    { stop: 6, input: 20 }
-                  ]
-                }
-              }
-            }
+                    { stop: 6, input: 20 },
+                  ],
+                },
+              },
+            },
           ],
-          fallback: 15.3
-        }
+          fallback: 15.3,
+        },
       },
       textFill: {
         dataCondition: {
           conditions: [
             {
               filter: { key: 'class', comparator: '==', value: 'country' },
-              input: 'rgb(42, 42, 42)'
+              input: 'rgb(42, 42, 42)',
             },
             {
               filter: { key: 'class', comparator: '==', value: 'continent' },
-              input: 'rgb(65, 65, 65)'
+              input: 'rgb(65, 65, 65)',
             },
             {
-              filter: { key: 'class', comparator: 'has', value: ['state', 'province', 'territory'] },
-              input: 'rgb(90, 90, 90)'
-            }
+              filter: {
+                key: 'class',
+                comparator: 'has',
+                value: ['state', 'province', 'territory'],
+              },
+              input: 'rgb(90, 90, 90)',
+            },
           ],
-          fallback: 'rgba(0, 0, 0, 0)'
-        }
+          fallback: 'rgba(0, 0, 0, 0)',
+        },
       },
       textStroke: 'rgba(255, 255, 255, 0.65)',
       textStrokeWidth: {
         dataCondition: {
           conditions: [
             {
-              filter: { key: 'class', comparator: 'has', value: ['state', 'province', 'territory'] },
-              input: 0.7
+              filter: {
+                key: 'class',
+                comparator: 'has',
+                value: ['state', 'province', 'territory'],
+              },
+              input: 0.7,
             },
             {
               filter: { key: 'class', comparator: '==', value: 'continent' },
-              input: 0.5
-            }
+              input: 0.5,
+            },
           ],
-          fallback: 0
-        }
+          fallback: 0,
+        },
       },
       textWordWrap: 8,
       noShaping: true,
-      viewCollisions: false
+      viewCollisions: false,
     },
     {
       name: 'places',
@@ -2239,7 +2344,16 @@ const style: StyleDefinition = {
       filter: {
         key: 'class',
         comparator: 'has',
-        value: ['city', 'town', 'village', 'hamlet', 'locality', 'neighbourhood', 'island', 'suburb']
+        value: [
+          'city',
+          'town',
+          'village',
+          'hamlet',
+          'locality',
+          'neighbourhood',
+          'island',
+          'suburb',
+        ],
       },
       layer: 'place',
       type: 'glyph',
@@ -2248,42 +2362,46 @@ const style: StyleDefinition = {
           conditions: [
             {
               filter: { key: 'class', comparator: 'has', value: ['town', 'hamlet'] },
-              input: ['robotoRegular']
-            }
+              input: ['robotoRegular'],
+            },
           ],
-          fallback: ['robotoMedium']
-        }
+          fallback: ['robotoMedium'],
+        },
       },
       textField: {
         dataCondition: {
           conditions: [
             {
-              filter: { key: 'class', comparator: 'has', value: ['hamlet', 'village', 'neighbourhood', 'suburb', 'island'] },
+              filter: {
+                key: 'class',
+                comparator: 'has',
+                value: ['hamlet', 'village', 'neighbourhood', 'suburb', 'island'],
+              },
               input: {
                 dataCondition: {
                   conditions: [
                     {
                       filter: { key: '?!Pname_en', comparator: '!=', value: '' },
-                      input: '?!Uname_en'
-                    }
+                      input: '?!Uname_en',
+                    },
                   ],
-                  fallback: '?!Uname'
-                }
-              }
-            }
+                  fallback: '?!Uname',
+                },
+              },
+            },
           ],
           fallback: {
             dataCondition: {
               conditions: [
                 {
                   filter: { key: '?!Pname_en', comparator: '!=', value: '' },
-                  input: '?name_en'
-                }
+                  input: '?name_en',
+                },
               ],
-              fallback: '?name'
-            }
-          }
-        }
+              fallback: '?name',
+            },
+          },
+        },
       },
       textAnchor: 'center',
       textOffset: [0, 0],
@@ -2300,19 +2418,19 @@ const style: StyleDefinition = {
                   ranges: [
                     {
                       stop: 5,
-                      input: 12
+                      input: 12,
                     },
                     {
                       stop: 9,
-                      input: 17
+                      input: 17,
                     },
                     {
                       stop: 13,
-                      input: 32.3
-                    }
-                  ]
-                }
-              }
+                      input: 32.3,
+                    },
+                  ],
+                },
+              },
             },
             {
               filter: { key: 'class', comparator: '==', value: 'town' },
@@ -2323,19 +2441,19 @@ const style: StyleDefinition = {
                   ranges: [
                     {
                       stop: 8,
-                      input: 12
+                      input: 12,
                     },
                     {
                       stop: 10,
-                      input: 15.3
+                      input: 15.3,
                     },
                     {
                       stop: 13,
-                      input: 21.25
-                    }
-                  ]
-                }
-              }
+                      input: 21.25,
+                    },
+                  ],
+                },
+              },
             },
             {
               filter: { key: 'class', comparator: 'has', value: ['neighbourhood', 'suburb'] },
@@ -2346,15 +2464,15 @@ const style: StyleDefinition = {
                   ranges: [
                     {
                       stop: 10,
-                      input: 13.6
+                      input: 13.6,
                     },
                     {
                       stop: 15,
-                      input: 15.3
-                    }
-                  ]
-                }
-              }
+                      input: 15.3,
+                    },
+                  ],
+                },
+              },
             },
             {
               filter: { key: 'class', comparator: 'has', value: ['hamlet', 'village', 'locality'] },
@@ -2365,31 +2483,35 @@ const style: StyleDefinition = {
                   ranges: [
                     {
                       stop: 10.5,
-                      input: 12
+                      input: 12,
                     },
                     {
                       stop: 12,
-                      input: 15.3
-                    }
-                  ]
-                }
-              }
-            }
+                      input: 15.3,
+                    },
+                  ],
+                },
+              },
+            },
           ],
-          fallback: 14.45
-        }
+          fallback: 14.45,
+        },
       },
       textFill: {
         dataCondition: {
           conditions: [
             {
               filter: { key: 'class', comparator: 'has', value: ['village', 'island'] },
-              input: 'rgb(98, 114, 138)'
+              input: 'rgb(98, 114, 138)',
             },
             {
-              filter: { key: 'class', comparator: 'has', value: ['hamlet', 'neighbourhood', 'locality'] },
-              input: '#7d8ca2'
-            }
+              filter: {
+                key: 'class',
+                comparator: 'has',
+                value: ['hamlet', 'neighbourhood', 'locality'],
+              },
+              input: '#7d8ca2',
+            },
           ],
           fallback: {
             inputRange: {
@@ -2398,21 +2520,21 @@ const style: StyleDefinition = {
               ranges: [
                 {
                   stop: 9,
-                  input: 'rgb(75, 75, 75)'
+                  input: 'rgb(75, 75, 75)',
                 },
                 {
                   stop: 12,
-                  input: 'rgb(100, 100, 100)'
-                }
-              ]
-            }
-          }
-        }
+                  input: 'rgb(100, 100, 100)',
+                },
+              ],
+            },
+          },
+        },
       },
       textStroke: 'rgba(255, 255, 255, 0.75)',
       textStrokeWidth: 0.65,
       noShaping: true,
-      viewCollisions: false
+      viewCollisions: false,
     },
     {
       name: 'water_label',
@@ -2423,12 +2545,14 @@ const style: StyleDefinition = {
       textFamily: ['robotoMedium', 'notoMedium'],
       textField: {
         dataCondition: {
-          conditions: [{
-            filter: { key: 'name_en', comparator: '!=', value: '' },
-            input: '?name_en'
-          }],
-          fallback: '?name'
-        }
+          conditions: [
+            {
+              filter: { key: 'name_en', comparator: '!=', value: '' },
+              input: '?name_en',
+            },
+          ],
+          fallback: '?name',
+        },
       },
       textAnchor: 'center',
       textOffset: [0, 0],
@@ -2445,10 +2569,10 @@ const style: StyleDefinition = {
                   base: 1.5,
                   ranges: [
                     { stop: 0, input: 14 },
-                    { stop: 3, input: 22 }
-                  ]
-                }
-              }
+                    { stop: 3, input: 22 },
+                  ],
+                },
+              },
             },
             {
               filter: { key: 'type', comparator: '==', value: 'sea' },
@@ -2460,22 +2584,22 @@ const style: StyleDefinition = {
                   ranges: [
                     { stop: 0, input: 10 },
                     { stop: 4, input: 16 },
-                    { stop: 7, input: 22 }
-                  ]
-                }
-              }
-            }
+                    { stop: 7, input: 22 },
+                  ],
+                },
+              },
+            },
           ],
-          fallback: 13.6
-        }
+          fallback: 13.6,
+        },
       },
       textFill: '#00669E',
       textStroke: '#00669E',
       textStrokeWidth: 0,
       noShaping: true,
-      viewCollisions: false
-    }
-  ]
-}
+      viewCollisions: false,
+    },
+  ],
+};
 
-export default style
+export default style;

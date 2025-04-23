@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 'style/style.spec'
+import type { StyleDefinition } from 'style/style.spec.js';
 
 const style: StyleDefinition = {
   version: 1,
@@ -7,16 +7,16 @@ const style: StyleDefinition = {
   view: {
     zoom: 2.5,
     lon: -100,
-    lat: 37.778443127730476
+    lat: 37.778443127730476,
   },
   minzoom: -0.5,
   maxzoom: 5,
   sources: {
-    countries: '/s2json/countriesHD.s2json',
-    lineGlyphs: '/s2json/lineGlyphs.s2json'
+    countries: 'http://localhost:3000/s2json/countriesHD.s2json',
+    lineGlyphs: 'http://localhost:3000/s2json/lineGlyphs.s2json',
   },
   fonts: {
-    robotoMedium: '/api/glyphs-v2/RobotoMedium'
+    robotoMedium: 'http://localhost:3000/api/glyphs-v2/RobotoMedium',
   },
   layers: [
     {
@@ -24,7 +24,7 @@ const style: StyleDefinition = {
       type: 'fill',
       source: 'mask',
       opaque: true,
-      color: '#fff'
+      color: '#fff',
     },
     {
       name: 'country-fill',
@@ -32,7 +32,7 @@ const style: StyleDefinition = {
       type: 'fill',
       invert: true,
       opaque: false,
-      color: '#b4c1c6'
+      color: '#b4c1c6',
     },
     {
       name: 'line-glyphs',
@@ -40,7 +40,7 @@ const style: StyleDefinition = {
       type: 'line',
       color: '#4a4a4a',
       width: 1.75,
-      interactive: false
+      interactive: false,
     },
     {
       name: 'poi-labels',
@@ -61,9 +61,9 @@ const style: StyleDefinition = {
           ranges: [
             { stop: 0, input: 14 },
             { stop: 3, input: 22 },
-            { stop: 4, input: 24 }
-          ]
-        }
+            { stop: 4, input: 24 },
+          ],
+        },
       },
       // textSize: 14,
       textFill: '#1a73e7',
@@ -71,9 +71,9 @@ const style: StyleDefinition = {
       textStrokeWidth: 0.5,
       textWordWrap: 8,
       overdraw: true,
-      viewCollisions: true
-    }
-  ]
-}
+      viewCollisions: true,
+    },
+  ],
+};
 
-export default style
+export default style;

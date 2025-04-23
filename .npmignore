@@ -4,16 +4,8 @@
 # Include README.md
 !README.md
 
-# Include dist-types directory
-!dist-types/
-
 # Exclude all contents of dist folder except plugins
 !/dist/
 
-# playwright
-playwright-report/
-playwright-backup/
-.eslintrc-auto-import.json
-test-results/
-blob-report/
-playwright/.cache/
+# ensure frameworks is added as well
+!/frameworks/

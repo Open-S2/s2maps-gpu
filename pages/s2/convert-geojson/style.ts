@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 'style/style.spec'
+import type { StyleDefinition } from 'style/style.spec.js';
 
 const style: StyleDefinition = {
   version: 1,
@@ -6,12 +6,12 @@ const style: StyleDefinition = {
   view: {
     zoom: -0.5,
     lon: 0,
-    lat: 0
+    lat: 0,
   },
   minzoom: -1,
   maxzoom: 2.5,
   sources: {
-    countries: '/s2json/countriesHD.s2json',
+    countries: 'http://localhost:3000/s2json/countriesHD.s2json',
     hilbert: {
       type: 'json',
       data: {
@@ -22,16 +22,16 @@ const style: StyleDefinition = {
             properties: {
               class: 'hilbert',
               level: 4,
-              levels: [0, 1, 2, 3]
+              levels: [0, 1, 2, 3],
             },
             geometry: {
               type: 'Point',
-              coordinates: [0, 0]
-            }
-          }
-        ]
-      }
-    }
+              coordinates: [0, 0],
+            },
+          },
+        ],
+      },
+    },
   },
   fonts: {},
   layers: [
@@ -41,16 +41,16 @@ const style: StyleDefinition = {
       type: 'fill',
       opaque: false,
       color: '#b4c1c6',
-      interactive: false
+      interactive: false,
     },
     {
       name: 'hilbert_point',
       source: 'hilbert',
       type: 'point',
       color: '#475569',
-      radius: 20
-    }
-  ]
-}
+      radius: 20,
+    },
+  ],
+};
 
-export default style
+export default style;

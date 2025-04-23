@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 'style/style.spec'
+import type { StyleDefinition } from 'style/style.spec.js';
 
 const style: StyleDefinition = {
   version: 1,
@@ -7,15 +7,15 @@ const style: StyleDefinition = {
   view: {
     lon: 0,
     lat: 0,
-    zoom: 0.5
+    zoom: 0.5,
   },
   minzoom: -0.5,
   maxzoom: 5,
   sources: {
-    land: '/geojson/land.geojson'
+    land: 'http://localhost:3000/geojson/land.geojson',
   },
   sprites: {
-    streets: '/sprites/streets/sprite@2x'
+    streets: 'http://localhost:3000/sprites/streets/sprite@2x',
   },
   layers: [
     {
@@ -25,9 +25,9 @@ const style: StyleDefinition = {
       pattern: 'star_15',
       patternFamily: 'streets',
       patternMovement: true,
-      color: '#b4c1c6'
-    }
-  ]
-}
+      color: '#b4c1c6',
+    },
+  ],
+};
 
-export default style
+export default style;

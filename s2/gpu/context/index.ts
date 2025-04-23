@@ -1,1 +1,1 @@
-export { default as WebGPUContext } from './context'
+export { default as WebGPUContext } from './context.js';

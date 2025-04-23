@@ -1,0 +1,37 @@
+{
+  "entryPoints": ["s2/index.ts", "s2/plugins.ts"], // Adjust to your main TypeScript file(s)
+  "plugin": [
+    // https://github.com/Gerrit0/typedoc-plugin-coverage
+    "typedoc-plugin-coverage",
+    // https://github.com/Gerrit0/typedoc-plugin-vue
+    "typedoc-plugin-vue",
+    // https://github.com/Gerrit0/typedoc-plugin-mdn-links
+    "typedoc-plugin-mdn-links"
+  ],
+  "out": "docs",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeExternals": true,
+  "excludeVueProperties": true,
+  "excludeNotDocumented": true,
+  "hideGenerator": true,
+  "disableSources": true,
+  "coverageOutputPath": "assets/doc-coverage.svg",
+  "highlightLanguages": [
+    "typescript",
+    "csv",
+    "rust",
+    "json",
+    "toml",
+    "bash",
+    "html",
+    "css",
+    "markdown",
+    "yaml",
+    "glsl",
+    "wgsl",
+    "vue",
+    "svelte",
+  ]
+}

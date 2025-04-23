@@ -1,159 +1,219 @@
 {
-  "type":"S2FeatureCollection",
-  "faces": [0, 1, 4],
-  "features":[
+  "type": "S2FeatureCollection",
+  "faces": [
+    0,
+    1,
+    4
+  ],
+  "features": [
     {
-      "type":"S2Feature",
-      "face":0,
-      "properties":{
-        "name":"བོད་རང་སྐྱོང་ལྗོངས།"
+      "type": "S2Feature",
+      "face": 0,
+      "properties": {
+        "name": "བོད་རང་སྐྱོང་ལྗོངས།"
       },
-      "geometry":{
-        "type":"Point",
-        "coordinates":[0.5, 0.5]
+      "geometry": {
+        "type": "Point",
+        "coordinates": {
+          "x": 0.5,
+          "y": 0.5
+        },
+        "is3D": false
       }
     },
     {
-      "type":"S2Feature",
-      "face":0,
-      "properties":{
-        "name":"السودان"
+      "type": "S2Feature",
+      "face": 0,
+      "properties": {
+        "name": "السودان"
       },
-      "geometry":{
-        "type":"Point",
-        "coordinates":[0.5, 1]
+      "geometry": {
+        "type": "Point",
+        "coordinates": {
+          "x": 0.5,
+          "y": 1
+        },
+        "is3D": false
       }
     },
     {
-      "type":"S2Feature",
-      "face":0,
-      "properties":{
-        "name":"ישראל"
+      "type": "S2Feature",
+      "face": 0,
+      "properties": {
+        "name": "ישראל"
       },
-      "geometry":{
-        "type":"Point",
-        "coordinates":[0.5, 0]
+      "geometry": {
+        "type": "Point",
+        "coordinates": {
+          "x": 0.5,
+          "y": 0
+        },
+        "is3D": false
       }
     },
     {
-      "type":"S2Feature",
-      "face":0,
-      "properties":{
-        "name":"中国"
+      "type": "S2Feature",
+      "face": 0,
+      "properties": {
+        "name": "中国"
       },
-      "geometry":{
-        "type":"Point",
-        "coordinates":[1, 0.5]
+      "geometry": {
+        "type": "Point",
+        "coordinates": {
+          "x": 1,
+          "y": 0.5
+        },
+        "is3D": false
       }
     },
     {
-      "type":"S2Feature",
-      "face":0,
-      "properties":{
-        "name":"မြန်မာ"
+      "type": "S2Feature",
+      "face": 0,
+      "properties": {
+        "name": "မြန်မာ"
       },
-      "geometry":{
-        "type":"Point",
-        "coordinates":[0, 0.5]
+      "geometry": {
+        "type": "Point",
+        "coordinates": {
+          "x": 0,
+          "y": 0.5
+        },
+        "is3D": false
       }
     },
     {
-      "type":"S2Feature",
-      "face":0,
-      "properties":{
-        "name":"대한민국"
+      "type": "S2Feature",
+      "face": 0,
+      "properties": {
+        "name": "대한민국"
       },
-      "geometry":{
-        "type":"Point",
-        "coordinates":[1, 1]
+      "geometry": {
+        "type": "Point",
+        "coordinates": {
+          "x": 1,
+          "y": 1
+        },
+        "is3D": false
       }
     },
     {
-      "type":"S2Feature",
-      "face":0,
-      "properties":{
-        "name":"বাংলাদেশ"
+      "type": "S2Feature",
+      "face": 0,
+      "properties": {
+        "name": "বাংলাদেশ"
       },
-      "geometry":{
-        "type":"Point",
-        "coordinates":[0, 0]
+      "geometry": {
+        "type": "Point",
+        "coordinates": {
+          "x": 0,
+          "y": 0
+        },
+        "is3D": false
       }
     },
     {
-      "type":"S2Feature",
-      "face":0,
-      "properties":{
-        "name":"ประเทศไทย"
+      "type": "S2Feature",
+      "face": 0,
+      "properties": {
+        "name": "ประเทศไทย"
       },
-      "geometry":{
-        "type":"Point",
-        "coordinates":[0, 1]
+      "geometry": {
+        "type": "Point",
+        "coordinates": {
+          "x": 0,
+          "y": 1
+        },
+        "is3D": false
       }
     },
     {
-      "type":"S2Feature",
-      "face":0,
-      "properties":{
-        "name":"រាជធានីភ្នំពេញ"
+      "type": "S2Feature",
+      "face": 0,
+      "properties": {
+        "name": "រាជធានីភ្នំពេញ"
       },
-      "geometry":{
-        "type":"Point",
-        "coordinates":[1, 0]
+      "geometry": {
+        "type": "Point",
+        "coordinates": {
+          "x": 1,
+          "y": 0
+        },
+        "is3D": false
       }
     },
     {
-      "type":"S2Feature",
-      "face":1,
-      "properties":{
-        "name":"ᑭᙵᐃᓚᒃ"
+      "type": "S2Feature",
+      "face": 1,
+      "properties": {
+        "name": "ᑭᙵᐃᓚᒃ"
       },
-      "geometry":{
-        "type":"Point",
-        "coordinates":[0.5, 0.5]
+      "geometry": {
+        "type": "Point",
+        "coordinates": {
+          "x": 0.5,
+          "y": 0.5
+        },
+        "is3D": false
       }
     },
     {
-      "type":"S2Feature",
-      "face":1,
-      "properties":{
-        "name":"ශ්‍රී ලංකාව இலங்கை"
+      "type": "S2Feature",
+      "face": 1,
+      "properties": {
+        "name": "ශ්‍රී ලංකාව இலங்கை"
       },
-      "geometry":{
-        "type":"Point",
-        "coordinates":[0.5, 1]
+      "geometry": {
+        "type": "Point",
+        "coordinates": {
+          "x": 0.5,
+          "y": 1
+        },
+        "is3D": false
       }
     },
     {
-      "type":"S2Feature",
-      "face":1,
-      "properties":{
-        "name":"ދިވެހިރާއްޖެ"
+      "type": "S2Feature",
+      "face": 1,
+      "properties": {
+        "name": "ދިވެހިރާއްޖެ"
       },
-      "geometry":{
-        "type":"Point",
-        "coordinates":[0.5, 0]
+      "geometry": {
+        "type": "Point",
+        "coordinates": {
+          "x": 0.5,
+          "y": 0
+        },
+        "is3D": false
       }
     },
     {
-      "type":"S2Feature",
-      "face":1,
-      "properties":{
-        "name":"ኢትዮጵያ"
+      "type": "S2Feature",
+      "face": 1,
+      "properties": {
+        "name": "ኢትዮጵያ"
       },
-      "geometry":{
-        "type":"Point",
-        "coordinates":[1, 1]
+      "geometry": {
+        "type": "Point",
+        "coordinates": {
+          "x": 1,
+          "y": 1
+        },
+        "is3D": false
       }
     },
     {
-      "type":"S2Feature",
-      "face":4,
-      "properties":{
-        "name":"ഇന്ത്യ"
+      "type": "S2Feature",
+      "face": 4,
+      "properties": {
+        "name": "ഇന്ത്യ"
       },
-      "geometry":{
-        "type":"Point",
-        "coordinates":[0.5, 0.5]
+      "geometry": {
+        "type": "Point",
+        "coordinates": {
+          "x": 0.5,
+          "y": 0.5
+        },
+        "is3D": false
       }
     }
   ]

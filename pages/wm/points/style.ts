@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 'style/style.spec'
+import type { StyleDefinition } from 'style/style.spec.js';
 
 const style: StyleDefinition = {
   version: 1,
@@ -7,20 +7,20 @@ const style: StyleDefinition = {
   view: {
     lon: 0,
     lat: 0,
-    zoom: -0.5
+    zoom: -0.5,
   },
   minzoom: -0.5,
   maxzoom: 5.5,
   sources: {
-    land: '/geojson/land.geojson',
-    ports: '/geojson/ports.geojson'
+    land: 'http://localhost:3000/geojson/land.geojson',
+    ports: 'http://localhost:3000/geojson/ports.geojson',
   },
   layers: [
     {
       name: 'water-fill',
       source: 'land',
       type: 'fill',
-      color: '#b4c1c6'
+      color: '#b4c1c6',
     },
     {
       name: 'country-points',
@@ -33,12 +33,12 @@ const style: StyleDefinition = {
           ease: 'lin',
           ranges: [
             { stop: 0, input: 3.5 },
-            { stop: 2, input: 9 }
-          ]
-        }
-      }
-    }
-  ]
-}
+            { stop: 2, input: 9 },
+          ],
+        },
+      },
+    },
+  ],
+};
 
-export default style
+export default style;

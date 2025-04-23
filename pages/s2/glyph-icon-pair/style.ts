@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 'style/style.spec'
+import type { StyleDefinition } from 'style/style.spec.js';
 
 const style: StyleDefinition = {
   version: 1,
@@ -7,12 +7,12 @@ const style: StyleDefinition = {
   view: {
     zoom: -0.5,
     lon: 0,
-    lat: 0
+    lat: 0,
   },
   minzoom: -0.5,
   maxzoom: 5,
   sources: {
-    countries: '/s2json/countriesHD.s2json',
+    countries: 'http://localhost:3000/s2json/countriesHD.s2json',
     iconFeatures: {
       type: 'json',
       data: {
@@ -23,41 +23,41 @@ const style: StyleDefinition = {
             type: 'S2Feature',
             properties: { name: 'Planet Zoo', icon: 'zoo' },
             face: 0,
-            geometry: { type: 'Point', coordinates: [0, 0] }
+            geometry: { type: 'Point', is3D: false, coordinates: { x: 0, y: 0 } },
           },
           {
             type: 'S2Feature',
             properties: { name: 'Police Station', icon: 'police' },
             face: 0,
-            geometry: { type: 'Point', coordinates: [0.5, 0.5] }
+            geometry: { type: 'Point', is3D: false, coordinates: { x: 0.5, y: 0.5 } },
           },
           {
             type: 'S2Feature',
             properties: { name: 'SLC Airport', icon: 'aerodrome' },
             face: 0,
-            geometry: { type: 'Point', coordinates: [1, 0] }
+            geometry: { type: 'Point', is3D: false, coordinates: { x: 1, y: 0 } },
           },
           {
             type: 'S2Feature',
             properties: { name: 'CVS Pharmacy', icon: 'pharmacy' },
             face: 0,
-            geometry: { type: 'Point', coordinates: [0, 1] }
+            geometry: { type: 'Point', is3D: false, coordinates: { x: 0, y: 1 } },
           },
           {
             type: 'S2Feature',
             properties: { name: 'Library', icon: 'library' },
             face: 0,
-            geometry: { type: 'Point', coordinates: [1, 1] }
-          }
-        ]
-      }
-    }
+            geometry: { type: 'Point', is3D: false, coordinates: { x: 1, y: 1 } },
+          },
+        ],
+      },
+    },
   },
   fonts: {
-    robotoMedium: '/api/glyphs-v2/RobotoMedium'
+    robotoMedium: '/api/glyphs-v2/RobotoMedium',
   },
   icons: {
-    streets: '/api/glyphs/streets'
+    streets: '/api/glyphs/streets',
   },
   layers: [
     {
@@ -65,7 +65,7 @@ const style: StyleDefinition = {
       type: 'fill',
       source: 'mask',
       opaque: true,
-      color: '#fff'
+      color: '#fff',
     },
     {
       name: 'country-fill',
@@ -73,7 +73,7 @@ const style: StyleDefinition = {
       type: 'fill',
       invert: true,
       opaque: false,
-      color: '#b4c1c6'
+      color: '#b4c1c6',
     },
     {
       name: 'icon-examples',
@@ -97,9 +97,9 @@ const style: StyleDefinition = {
       iconPadding: [2, 2],
       iconSize: 42,
       overdraw: false,
-      viewCollisions: true
-    }
-  ]
-}
+      viewCollisions: true,
+    },
+  ],
+};
 
-export default style
+export default style;

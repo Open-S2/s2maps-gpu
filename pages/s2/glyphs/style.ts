@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 'style/style.spec'
+import type { StyleDefinition } from 'style/style.spec.js';
 
 const style: StyleDefinition = {
   version: 1,
@@ -7,15 +7,15 @@ const style: StyleDefinition = {
   view: {
     zoom: -0.5,
     lon: -122.4585607773497,
-    lat: 37.778443127730476
+    lat: 37.778443127730476,
   },
   minzoom: -0.5,
   maxzoom: 5,
   sources: {
-    countries: '/s2json/countriesHD.s2json'
+    countries: 'http://localhost:3000/s2json/countriesHD.s2json',
   },
   fonts: {
-    robotoMedium: '/api/glyphs-v2/RobotoMedium'
+    robotoMedium: 'http://localhost:3000/api/glyphs-v2/RobotoMedium',
   },
   layers: [
     {
@@ -23,7 +23,7 @@ const style: StyleDefinition = {
       type: 'fill',
       source: 'mask',
       opaque: true,
-      color: '#fff'
+      color: '#fff',
     },
     {
       name: 'country-fill',
@@ -31,7 +31,7 @@ const style: StyleDefinition = {
       type: 'fill',
       invert: true,
       opaque: false,
-      color: '#b4c1c6'
+      color: '#b4c1c6',
     },
     {
       name: 'poi-labels',
@@ -52,9 +52,9 @@ const style: StyleDefinition = {
           ranges: [
             { stop: 0, input: 14 },
             { stop: 3, input: 22 },
-            { stop: 4, input: 24 }
-          ]
-        }
+            { stop: 4, input: 24 },
+          ],
+        },
       },
       // textSize: 14,
       textFill: '#1a73e7',
@@ -63,9 +63,9 @@ const style: StyleDefinition = {
       textWordWrap: 8,
       overdraw: false,
       viewCollisions: true,
-      geoFilter: ['line', 'poly']
-    }
-  ]
-}
+      geoFilter: ['line', 'poly'],
+    },
+  ],
+};
 
-export default style
+export default style;

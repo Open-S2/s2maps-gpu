@@ -1,4 +1,5 @@
-export { default as featureSort } from './featureSort'
-export * from './lineTools'
-export * from './pointTools'
-export { default as scaleShiftClip } from './scaleShiftClip'
+export * from './featureSort.js';
+export * from './lineTools.js';
+export * from './pointTools.js';
+export * from './rebuildVectorTile.js';
+export * from './scaleShiftClip.js';

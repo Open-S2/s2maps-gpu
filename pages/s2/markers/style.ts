@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 'style/style.spec'
+import type { StyleDefinition } from 'style/style.spec.js';
 
 const style: StyleDefinition = {
   version: 1,
@@ -6,12 +6,12 @@ const style: StyleDefinition = {
   view: {
     zoom: -0.65,
     lon: 0,
-    lat: 0
+    lat: 0,
   },
   minzoom: -1,
   maxzoom: 2.5,
   sources: {
-    countries: '/s2json/countriesHD.s2json',
+    countries: 'http://localhost:3000/s2json/countriesHD.s2json',
     markers: {
       type: 'markers',
       path: '_markers',
@@ -23,12 +23,20 @@ const style: StyleDefinition = {
             properties: {},
             geometry: {
               type: 'Point',
-              coordinates: [0, 0]
-            }
-          }
-        ]
-      }
-    }
+              coordinates: [0, 0],
+            },
+          },
+          {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'Point',
+              coordinates: [20, 40],
+            },
+          },
+        ],
+      },
+    },
   },
   fonts: {},
   layers: [
@@ -38,7 +46,7 @@ const style: StyleDefinition = {
       type: 'fill',
       opaque: false,
       color: '#b4c1c6',
-      interactive: false
+      interactive: false,
     },
     {
       name: 'markers',
@@ -48,9 +56,9 @@ const style: StyleDefinition = {
       radius: 20,
       stroke: 'rgb(220, 83, 83)',
       strokeWidth: 1,
-      opacity: 1
-    }
-  ]
-}
+      opacity: 1,
+    },
+  ],
+};
 
-export default style
+export default style;

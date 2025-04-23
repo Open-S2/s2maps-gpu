@@ -1,16 +1,17 @@
-export { default as PointIndex } from './pointIndex'
+export { default as PointIndex } from './pointIndex.js';
 // export { default as S2PointCluster } from './s2'
-export { default as WMPointCluster } from './wm'
+export { default as WMPointCluster } from './wm.js';
 
+/** Options for point clustering */
 export interface ClusterOptions {
   /** min zoom to generate clusters on */
-  minzoom?: number
+  minzoom?: number;
   /** max zoom level to cluster the points on */
-  maxzoom?: number
+  maxzoom?: number;
   /** cluster radius in pixels */
-  radius?: number
+  radius?: number;
   /** tile extent (radius is calculated relative to it) */
-  extent?: number
+  extent?: number;
   /** size of the KD-tree leaf node, effects performance */
-  nodeSize?: number
+  nodeSize?: number;
 }

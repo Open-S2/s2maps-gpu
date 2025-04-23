@@ -1,0 +1,49 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ESNext",
+      "WebWorker"
+    ],
+    "checkJs": false,
+    "strictNullChecks": true,
+    "outDir": "dist",
+    "declarationDir": "dist",
+    "declaration": true,
+    "skipLibCheck": true,
+    "noEmit": false,
+    "module": "Preserve",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "useDefineForClassFields": true,
+    "incremental": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "jsx": "preserve",
+    // "jsxImportSource": "vue",
+    "types": ["@webgpu/types", "vue", "svelte", "react"],
+    "baseUrl": ".", // This must be specified if "paths" is.
+    "paths": {
+      "s2/*": ["../dist/*"],
+    }
+  },
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
+  },
+  "include": [
+    "../types/*.d.ts",
+    "./*.d.ts",
+    "./*.ts",
+    "./**/*.ts",
+    "./**/*.tsx",
+    "./**/*.vue",
+    "./**/*.svelte",
+    "../package.json",
+  ]
+}

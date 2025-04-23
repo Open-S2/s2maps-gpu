@@ -1,0 +1,53 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ESNext",
+      "WebWorker"
+    ],
+    "checkJs": false,
+    "strictNullChecks": true,
+    "outDir": "dist",
+    "declarationDir": "dist",
+    "declaration": true,
+    "skipLibCheck": true,
+    "noEmit": false,
+    "module": "NodeNext",
+    "moduleResolution": "nodenext",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "incremental": true,
+    "esModuleInterop": true,
+    "verbatimModuleSyntax": true,
+    "useDefineForClassFields": true,
+    "allowSyntheticDefaultImports": true,
+    "types": ["@webgpu/types", "vue", "svelte", "react"],
+    "baseUrl": "s2", // This must be specified if "paths" is.
+    "paths": {
+      "*" : ["./*", "../*"],
+      "s2/*": ["./*"],
+      "gis-tools/*": ["./gis-tools/*"],
+      "gl/*": ["./gl/*"],
+      "gpu/*": ["./gpu/*"],
+      "plugins/*": ["./plugins/*"],
+      "source/*": ["./source/*"],
+      "style/*": ["./style/*"],
+      "ui/*": ["./ui/*"],
+      "util/*": ["./util/*"],
+      "workers/*": ["./workers/*"],
+    }
+  },
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
+  },
+  "include": [
+    "types/*.d.ts",
+    "s2/**/*.ts",
+    "s2/**/*.tsx",
+    "s2/**/*.vue",
+    "s2/**/*.svelte",
+  ]
+}

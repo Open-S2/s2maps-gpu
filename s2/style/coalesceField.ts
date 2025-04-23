@@ -1,9 +1,10 @@
-import type { Properties } from 'geometry'
-import type { NestedKey } from './style.spec'
+import type { NestedKey } from './style.spec.js';
+import type { Properties } from 'gis-tools/index.js';
 
-const language = navigator.language.split('-')[0] ?? 'en'
+const language = navigator.language.split('-')[0] ?? 'en';
 
-/** Coalesce text layout property "field"
+/**
+ * Coalesce text layout property "field"
  *
  * examples:
  *
@@ -18,64 +19,87 @@ const language = navigator.language.split('-')[0] ?? 'en'
  * const field = ["?type", "-16"]
  * cooalesceField(field) // 'airplane-16'
  * ```
+ * @param field - string field, array of string fields, or nested key
+ * @param properties - properties to coalesce
+ * @param fieldIsKey - whether the field is the key in properties or a value to coalesce
+ * @returns the coalesced field
  */
-export default function coalesceField (
+export default function coalesceField(
   field: string | string[] | NestedKey,
   properties: Properties,
-  fieldIsKey = false
+  fieldIsKey = false,
 ): string {
   // first dive into nested properties
   while (typeof field === 'object' && 'key' in field) {
-    properties = (properties[field.nestedKey ?? ''] ?? {}) as Properties
-    field = field.key
+    properties = (properties[field.nestedKey ?? ''] ?? {}) as Properties;
+    field = field.key;
   }
   // now coalesce the field
   if (Array.isArray(field)) {
-    return field.reduce((acc, cur) => { return acc + coalesceText(cur, properties, fieldIsKey) }, '')
-  } else { return coalesceText(field, properties, fieldIsKey) }
+    return field.reduce((acc, cur) => {
+      return acc + coalesceText(cur, properties, fieldIsKey);
+    }, '');
+  } else {
+    return coalesceText(field, properties, fieldIsKey);
+  }
 }
 
-/** Parse unique strings that start with:
- * "?" - coalesce from properties
- *
- * "!" - transform the result
- *
- * "U" - uppercase
- *
- * "L" - lowercase
- *
- * "C" - capitalize
- *
- * "P" - language aquisition (e.g. "XX" -> "en"). Defined by navigator.language (browser)
+/**
+ * Parse unique strings that start with:
+ * - "?": coalesce from properties
+ * - "!": transform the result
+ * - - "U": uppercase
+ * - - "L": lowercase
+ * - - "C": capitalize
+ * - "P": language aquisition (e.g. "XX" -> "en"). Defined by navigator.language (browser)
+ * @param field - field string to parse
+ * @param properties - properties to coalesce
+ * @param fieldIsKey - whether the field is the key in properties or a value to coalesce
+ * @returns the coalesced field
  */
-function coalesceText (field: string, properties: Properties, fieldIsKey: boolean): string {
+function coalesceText(field: string, properties: Properties, fieldIsKey: boolean): string {
   if (field[0] === '?') {
     // corner case - use defined that they needed to start with a ?
-    if (field[1] === '?') return field.slice(1)
-    const pieces = field.split(',')
+    if (field[1] === '?') return field.slice(1);
+    const pieces = field.split(',');
     for (let piece of pieces) {
       // prep variables
-      let charIndex = 1
-      let nextChar
-      const transforms: Array<(input: string) => string> = []
+      let charIndex = 1;
+      let nextChar;
+      const transforms: Array<(input: string) => string> = [];
       while (piece[charIndex] === '!') {
-        charIndex++
-        nextChar = piece[charIndex]
-        charIndex++
-        if (nextChar === 'U') transforms.push((input: string): string => { return input.toUpperCase() }) // all uppercase
-        else if (nextChar === 'L') transforms.push((input: string): string => { return input.toLowerCase() }) // all lowercase
-        else if (nextChar === 'C') transforms.push((input: string): string => { return input.split(' ').map(i => i[0].toUpperCase() + i.slice(1).toLowerCase()).join(' ') }) // first letter capitalized, rest lower
-        else if (nextChar === 'P') piece = piece.replaceAll('XX', language)
+        charIndex++;
+        nextChar = piece[charIndex];
+        charIndex++;
+        if (nextChar === 'U')
+          transforms.push((input: string): string => {
+            return input.toUpperCase();
+          });
+        // all uppercase
+        else if (nextChar === 'L')
+          transforms.push((input: string): string => {
+            return input.toLowerCase();
+          });
+        // all lowercase
+        else if (nextChar === 'C')
+          transforms.push((input: string): string => {
+            return input
+              .split(' ')
+              .map((i) => i[0].toUpperCase() + i.slice(1).toLowerCase())
+              .join(' ');
+          });
+        // first letter capitalized, rest lower
+        else if (nextChar === 'P') piece = piece.replaceAll('XX', language);
       }
-      const key = piece.slice(charIndex)
+      const key = piece.slice(charIndex);
       if (properties[key] !== undefined) {
-        let res = String(properties[key])
-        for (const transform of transforms) res = transform(res)
-        return res
+        let res = String(properties[key]);
+        for (const transform of transforms) res = transform(res);
+        return res;
       }
     }
-    return ''
+    return '';
   } else {
-    return (fieldIsKey ? properties[field] : field) as string
+    return (fieldIsKey ? properties[field] : field) as string;
   }
 }

@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 'style/style.spec'
+import type { StyleDefinition } from 'style/style.spec.js';
 
 const style: StyleDefinition = {
   version: 1,
@@ -6,12 +6,12 @@ const style: StyleDefinition = {
   view: {
     zoom: -0.5,
     lon: -122.4585607773497,
-    lat: 37.778443127730476
+    lat: 37.778443127730476,
   },
   minzoom: -0.5,
   maxzoom: 5,
   sources: {
-    countries: '/s2json/countriesHD.s2json'
+    countries: 'http://localhost:3000/s2json/countriesHD.s2json',
   },
   fonts: {},
   layers: [
@@ -20,9 +20,9 @@ const style: StyleDefinition = {
       source: 'countries',
       type: 'line',
       color: '#bbd3de',
-      width: 5
-    }
-  ]
-}
+      width: 5,
+    },
+  ],
+};
 
-export default style
+export default style;

@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 'style/style.spec'
+import type { StyleDefinition } from 'style/style.spec.js';
 
 const style: StyleDefinition = {
   version: 1,
@@ -6,15 +6,15 @@ const style: StyleDefinition = {
   view: {
     zoom: -0.5,
     lon: -122.4585607773497,
-    lat: 37.778443127730476
+    lat: 37.778443127730476,
   },
   minzoom: -0.5,
   maxzoom: 5,
   sources: {
-    countries: '/s2json/countriesHD.s2json'
+    countries: 'http://localhost:3000/s2json/countriesHD.s2json',
   },
   sprites: {
-    streets: '/sprites/streets/sprite@2x'
+    streets: 'http://localhost:3000/sprites/streets/sprite@2x',
   },
   layers: [
     {
@@ -22,7 +22,7 @@ const style: StyleDefinition = {
       type: 'fill',
       source: 'mask',
       opaque: true,
-      color: '#fff'
+      color: '#fff',
     },
     {
       name: 'country-fill',
@@ -30,7 +30,7 @@ const style: StyleDefinition = {
       type: 'fill',
       invert: true,
       opaque: false,
-      color: '#b4c1c6'
+      color: '#b4c1c6',
     },
     {
       name: 'poi-labels',
@@ -44,9 +44,9 @@ const style: StyleDefinition = {
       iconPadding: [0, 0],
       viewCollisions: true,
       overdraw: false,
-      geoFilter: ['line', 'poly']
-    }
-  ]
-}
+      geoFilter: ['line', 'poly'],
+    },
+  ],
+};
 
-export default style
+export default style;

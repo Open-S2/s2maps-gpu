@@ -1,26 +1,57 @@
-import coalesceField from './coalesceField'
+import coalesceField from './coalesceField.js';
 
-import type { Comparator, NestedKey, NotNullOrObject } from './style.spec'
-import type { Properties } from 'geometry'
+import type { Properties } from 'gis-tools/index.js';
+import type { Comparator, NestedKey, NotNullOrObject } from './style.spec.js';
 
 // examples:
 // filter: { key: 'class', comparator: '==', value: 'ocean' }
 // filter: { or: [{ key: 'class', comparator: '==', value: 'ocean' }, { key: 'class', comparator: '==', value: 'river' }] }
 // filter: { and: [{ key: 'class', comparator: '==', value: 'ocean' }, { key: 'class', comparator: '==', value: 'lake' }, { key: 'class', comparator: '!=', value: 'river' }] }
 
-export type InputCondition = string | number | string[] | number[]
-export type ConditionFunction = (input: InputCondition, properties: Properties) => boolean
-
-export type FilterFunction = (properties: Properties) => boolean
-
+/** Input condition could be a string, number, string[], or number[] */
+export type InputCondition = string | number | string[] | number[];
+/** Conditional function build for filtering */
+export type ConditionFunction = (input: InputCondition, properties: Properties) => boolean;
+/** Filter function */
+export type FilterFunction = (properties: Properties) => boolean;
+/** Conditional manager */
 export interface Conditional {
   keyCondition?: {
-    key: string
-    keyFunction: ConditionFunction
-  }
-  filterCondition?: FilterFunction
+    key: string;
+    keyFunction: ConditionFunction;
+  };
+  filterCondition?: FilterFunction;
 }
 
+/**
+ * Condition object.
+ *
+ * ### Properties
+ * - `key`: [See {@link NestedKey}] The key to pull the value from the properties to compare
+ * - `comparator`: [See {@link Comparator}] Used by the filter function to determine if a feature should be included in the render.
+ * - `value`: [See {@link NotNullOrObject}] optional value to compare against
+ *
+ * When creating conditionals, you have two ways to do it:
+ *
+ * ## 1. keyCondition
+ *
+ * ```json
+ * { "filter": { "key": "type", "comparator": "in", "value": ["ocean", "lake"] } }
+ *
+ * ## 2. filterCondition
+ *
+ * ```json
+ * { "filter": { "and": [{ "key": "class", "comparator": "==", "value": "ocean" }, { "key": "size", "comparator": "==", "value": "large" }, { "key": "type", "comparator": "!=", "value": "pacific" }] } }
+ * ```
+ *
+ * ## Nesting
+ *
+ * Sometimes vector data's properties are complex objects. To access nested fields, you can use dot notation.
+ *
+ * ```json
+ * { "filter": { "nestedKey": "class", "key": { "key": "type", "comparator": "==", "value": "ocean" } } }
+ * ```
+ */
 export interface Condition extends NestedKey {
   /**
    * One of `"==" | "!=" | ">" | ">=" | "<" | "<=" | "in" | "!in" | "has" | "!has"`
@@ -40,16 +71,30 @@ export interface Condition extends NestedKey {
    * ```
    * this would be used to filter features where `feature.properties.type` is an array that has the key "ocean"
    */
-  comparator: Comparator
+  comparator: Comparator;
   /**
    * A non null object.
    *
    * Must be an array for "in" or "!in"
    */
-  value?: NotNullOrObject
+  value?: NotNullOrObject;
 }
 
 /**
+ * Filter Definition
+ *
+ * A filter is a set of conditions that are used to filter out features.
+ *
+ * ### Forms
+ * - And Gate Filter: {@link AndFilter}
+ * - Or Gate Filter: {@link OrFilter}
+ * - Condition: {@link Condition}
+ *
+ * ### Condition Parameters
+ * - `key`: The key to filter on
+ * - `comparator`: [See {@link Comparator}] The comparator to use
+ * - `value`: The value to compare
+ *
  * example:
  *
  * ```json
@@ -79,69 +124,126 @@ export interface Condition extends NestedKey {
  * }
  * ```
  */
-export type Filter = { and: Filter[] } | { or: Filter[] } | Condition
+export type Filter = AndFilter | OrFilter | Condition;
+/** And Gate Filter */
+export interface AndFilter {
+  and: Filter[];
+}
+/** Or Gate Filter */
+export interface OrFilter {
+  or: Filter[];
+}
 
-export default function parseFilter (filter?: Filter): FilterFunction {
-  if (filter === undefined) return () => true
+/**
+ * Parse a filter into a filter function
+ * @param filter - input user defined filter
+ * @returns a filter function that represents the user defined filter
+ */
+export default function parseFilter(filter?: Filter): FilterFunction {
+  if (filter === undefined) return () => true;
 
   // case 1: AND
   if ('and' in filter) {
-    const { and } = filter
-    const filterLambdas = and.map(parseFilter)
+    const { and } = filter;
+    const filterLambdas = and.map(parseFilter);
     return (properties: Properties = {}) => {
       for (const filterLambda of filterLambdas) {
-        if (!filterLambda(properties)) return false
+        if (!filterLambda(properties)) return false;
       }
-      return true
-    }
-  } else if ('or' in filter) { // case 2: OR
-    const { or } = filter
-    const filterLambdas = or.map(parseFilter)
+      return true;
+    };
+  } else if ('or' in filter) {
+    // case 2: OR
+    const { or } = filter;
+    const filterLambdas = or.map(parseFilter);
     return (properties: Properties = {}) => {
       for (const filterLambda of filterLambdas) {
-        if (filterLambda(properties)) return true
+        if (filterLambda(properties)) return true;
       }
-      return false
-    }
-  } else { // case 3: Condition
-    const { key, comparator, value } = filter
-    const filterLambda = parseFilterCondition(comparator, value)
+      return false;
+    };
+  } else {
+    // case 3: Condition
+    const { key, comparator, value } = filter;
+    const filterLambda = parseFilterCondition(comparator, value);
     return (properties: Properties = {}): boolean => {
-      return filterLambda(coalesceField(key, properties, true), properties)
-    }
+      return filterLambda(coalesceField(key, properties, true), properties);
+    };
   }
 }
 
-// NOTE: We disable the eslint rule here because we want to allow the use of
-//      `==` and `!=` instead of `===` and `!==` because we want to allow
-//      comparasons between strings and numbers.
-function parseFilterCondition (
-  comparator: Comparator,
-  value?: NotNullOrObject
-): ConditionFunction {
+/**
+ * Parse a filter condition
+ * Note: We disable the eslint rule here because we want to allow the use of
+ *      `==` and `!=` instead of `===` and `!==` because we want to allow
+ *      comparasons between strings and numbers.
+ * @param comparator - comparator operator
+ * @param value - input value
+ * @returns Condition function result
+ */
+function parseFilterCondition(comparator: Comparator, value?: NotNullOrObject): ConditionFunction {
   // manage multiple comparators
-  // eslint-disable-next-line
-  if (comparator === '==') return (input: InputCondition, properties: Properties) => input == buildValue(value, properties) // ['class', '==', 'ocean'] OR ['elev', '==', 50]
-  // eslint-disable-next-line
-  else if (comparator === '!=') return (input: InputCondition, properties: Properties): boolean => input != buildValue(value, properties) // ['class', '!=', 'ocean'] OR ['elev', '!=', 50]
-  else if (comparator === '>') return (input: InputCondition, properties: Properties): boolean => input > buildValue(value, properties) // ['elev', '>', 50]
-  else if (comparator === '>=') return (input: InputCondition, properties: Properties): boolean => input >= buildValue(value, properties) // ['elev', '>=', 50]
-  else if (comparator === '<') return (input: InputCondition, properties: Properties): boolean => input < buildValue(value, properties) // ['elev', '<', 50]
-  else if (comparator === '<=') return (input: InputCondition, properties: Properties): boolean => input <= buildValue(value, properties) // ['elev', '<=', 50]
-  else if (comparator === 'has') return (input: InputCondition, properties: Properties): boolean => Array.isArray(value) || typeof value === 'string' ? (buildValue(value, properties) as string | number[]).includes(input as never) : false // ['class', 'has', ['ocean', 'river']] OR ['elev', 'in', [2, 3, 4, 5]]
-  else if (comparator === '!has') return (input: InputCondition, properties: Properties): boolean => Array.isArray(value) || typeof value === 'string' ? !(buildValue(value, properties) as string | number[]).includes(input as never) : true // ['class', '!has', ['ocean', 'river']] OR ['elev', '!in', [2, 3, 4, 5]]
-  else if (comparator === 'in') return (input: InputCondition): boolean => Array.isArray(input) && typeof value === typeof input[0] ? input.includes(value as never) : false // ['elev', 'in', 50]
-  else if (comparator === '!in') return (input: InputCondition): boolean => Array.isArray(input) && typeof value === typeof input[0] ? !input.includes(value as never) : true // ['class', '!in', 'ocean'] OR ['elev', '!in', 50]
-  else return () => false
+  if (comparator === '==')
+    return (input: InputCondition, properties: Properties) =>
+      // eslint-disable-next-line eqeqeq
+      input == buildValue(value, properties);
+  // ['class', '==', 'ocean'] OR ['elev', '==', 50]
+  else if (comparator === '!=')
+    return (input: InputCondition, properties: Properties): boolean =>
+      // eslint-disable-next-line eqeqeq
+      input != buildValue(value, properties);
+  // ['class', '!=', 'ocean'] OR ['elev', '!=', 50]
+  else if (comparator === '>')
+    return (input: InputCondition, properties: Properties): boolean =>
+      input > buildValue(value, properties);
+  // ['elev', '>', 50]
+  else if (comparator === '>=')
+    return (input: InputCondition, properties: Properties): boolean =>
+      input >= buildValue(value, properties);
+  // ['elev', '>=', 50]
+  else if (comparator === '<')
+    return (input: InputCondition, properties: Properties): boolean =>
+      input < buildValue(value, properties);
+  // ['elev', '<', 50]
+  else if (comparator === '<=')
+    return (input: InputCondition, properties: Properties): boolean =>
+      input <= buildValue(value, properties);
+  // ['elev', '<=', 50]
+  else if (comparator === 'has')
+    return (input: InputCondition, properties: Properties): boolean =>
+      Array.isArray(value) || typeof value === 'string'
+        ? (buildValue(value, properties) as string | number[]).includes(input as never)
+        : false;
+  // ['class', 'has', ['ocean', 'river']] OR ['elev', 'in', [2, 3, 4, 5]]
+  else if (comparator === '!has')
+    return (input: InputCondition, properties: Properties): boolean =>
+      Array.isArray(value) || typeof value === 'string'
+        ? !(buildValue(value, properties) as string | number[]).includes(input as never)
+        : true;
+  // ['class', '!has', ['ocean', 'river']] OR ['elev', '!in', [2, 3, 4, 5]]
+  else if (comparator === 'in')
+    return (input: InputCondition): boolean =>
+      Array.isArray(input) && typeof value === typeof input[0]
+        ? input.includes(value as never)
+        : false;
+  // ['elev', 'in', 50]
+  else if (comparator === '!in')
+    return (input: InputCondition): boolean =>
+      Array.isArray(input) && typeof value === typeof input[0]
+        ? !input.includes(value as never)
+        : true;
+  // ['class', '!in', 'ocean'] OR ['elev', '!in', 50]
+  else return () => false;
 }
 
-function buildValue (
-  value?: NotNullOrObject,
-  properties: Properties = {}
-): NotNullOrObject {
-  if (
-    typeof value === 'string' ||
-    (Array.isArray(value) && typeof value[0] === 'string')
-  ) return coalesceField(value as string | string[], properties)
-  return value as NotNullOrObject
+/**
+ * Build a value from a string or an array of strings
+ * @param value - input value
+ * @param properties - properties to coalesce
+ * @returns the built value
+ */
+function buildValue(value?: NotNullOrObject, properties: Properties = {}): NotNullOrObject {
+  if (typeof value === 'string' || (Array.isArray(value) && typeof value[0] === 'string'))
+    return coalesceField(value as string | string[], properties);
+  return value as NotNullOrObject;
 }

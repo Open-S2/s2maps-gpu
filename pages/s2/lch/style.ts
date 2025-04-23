@@ -1,4 +1,4 @@
-import type { StyleDefinition } from 'style/style.spec'
+import type { StyleDefinition } from 'style/style.spec.js';
 
 const style: StyleDefinition = {
   version: 1,
@@ -6,12 +6,12 @@ const style: StyleDefinition = {
   view: {
     zoom: 1.5,
     lon: -122.4585607773497,
-    lat: 37.778443127730476
+    lat: 37.778443127730476,
   },
   minzoom: -0.5,
   maxzoom: 7,
   sources: {
-    countries: '/s2json/countriesHD.s2json'
+    countries: 'http://localhost:3000/s2json/countriesHD.s2json',
   },
   layers: [
     {
@@ -19,7 +19,7 @@ const style: StyleDefinition = {
       type: 'fill',
       source: 'mask',
       opaque: true,
-      color: '#fff'
+      color: '#fff',
     },
     {
       name: 'country-fill',
@@ -34,13 +34,13 @@ const style: StyleDefinition = {
           base: 1.5,
           ranges: [
             { stop: 1, input: 'rgb(33, 49, 62)' },
-            { stop: 6, input: 'rgb(239, 238, 105)' }
-          ]
-        }
+            { stop: 6, input: 'rgb(239, 238, 105)' },
+          ],
+        },
       },
-      lch: true
-    }
-  ]
-}
+      lch: true,
+    },
+  ],
+};
 
-export default style
+export default style;

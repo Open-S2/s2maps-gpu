@@ -1,55 +1,92 @@
-import { VectorTile } from 'open-vector-tile'
-// import { parseLayers } style/conditionals'
-import ProcessManager from './process'
+declare const self: DedicatedWorkerGlobalScope;
 
-import type { LayerDefinition, StylePackage } from 'style/style.spec'
-import type { TileRequest, TileWorkerMessages } from './worker.spec'
-import type { JSONVectorTile } from './source/jsonVT/tile'
+import ProcessManager from './process/index.js';
+import { VectorTile } from 'open-vector-tile';
+import { rebuildVectorTile } from './process/util/rebuildVectorTile.js';
 
-// A TileWorker has one job: prebuild tile data for the WebGL / WebGPU instance
-// During construction, the tileworker is given the map's id to send the data to the correct recepient
-// and also the style sheet to build the proper source data
+import type { VTTile } from './process/process.spec.js';
+import type { LayerDefinition, StylePackage } from 'style/style.spec.js';
+import type { TileRequest, TileWorkerMessages } from './worker.spec.js';
 
-// A TileWorker maintains map references
-
+/**
+ * # Tile Worker
+ *
+ * A TileWorker has one job: prebuild tile data for the WebGL / WebGPU instance
+ * During construction, the tileworker is given the map's id to send the data to the correct recepient
+ * and also the style sheet to build the proper source data
+ *
+ * A TileWorker maintains map references to know how and who to send data back to
+ */
 export default class TileWorker extends ProcessManager {
-  onMessage ({ data, ports }: MessageEvent<TileWorkerMessages>): void {
-    const { type } = data
-    if (type === 'port') this.#loadWorkerPort(ports[0], ports[1], data.id, data.totalWorkers)
+  /**
+   * Given a tile message, process it according to its type
+   * @param tileMessage - the tile message
+   */
+  onMessage(tileMessage: MessageEvent<TileWorkerMessages>): void {
+    const { data, ports } = tileMessage;
+    const { type } = data;
+    if (type === 'port') this.#loadWorkerPort(ports[0], ports[1], data.id, data.totalWorkers);
     else {
-      const { mapID } = data
-      if (type === 'style') this.#loadStyle(mapID, data.style)
-      else if (type === 'vector') void this.processVector(mapID, data.tile, data.sourceName, new VectorTile(new Uint8Array(data.data)))
-      else if (type === 'raster') this.processRaster(mapID, data.tile, data.sourceName, data.data, data.size)
-      else if (type === 'jsondata') this.#processJSONData(mapID, data.tile, data.sourceName, data.data)
-      else if (type === 'glyphmetadata') this.processMetadata(mapID, data.glyphMetadata, data.imageMetadata)
-      else if (type === 'glyphresponse') this.processGlyphResponse(mapID, data.reqID, data.glyphMetadata, data.familyName)
-      else if (type === 'addLayer') this.#addLayer(mapID, data.layer, data.index)
-      else if (type === 'deleteLayer') this.#deleteLayer(mapID, data.index)
-      else if (type === 'reorderLayers') this.#reorderLayers(mapID, data.layerChanges)
+      const { mapID } = data;
+      if (type === 'style') this.#loadStyle(mapID, data.style);
+      else if (type === 'vector')
+        void this.processVector(
+          mapID,
+          data.tile,
+          data.sourceName,
+          new VectorTile(new Uint8Array(data.data)),
+        );
+      else if (type === 'raster')
+        this.processRaster(mapID, data.tile, data.sourceName, data.data, data.size);
+      else if (type === 'jsondata')
+        this.#processJSONData(mapID, data.tile, data.sourceName, data.data);
+      else if (type === 'glyphmetadata')
+        this.processMetadata(mapID, data.glyphMetadata, data.imageMetadata);
+      else if (type === 'glyphresponse')
+        this.processGlyphResponse(mapID, data.reqID, data.glyphMetadata, data.familyName);
+      else if (type === 'addLayer') this.#addLayer(mapID, data.layer, data.index);
+      else if (type === 'deleteLayer') this.#deleteLayer(mapID, data.index);
+      else if (type === 'reorderLayers') this.#reorderLayers(mapID, data.layerChanges);
     }
   }
 
-  #loadWorkerPort (
+  /**
+   * Load a message channel with the source worker
+   * @param messagePort - the message port to recieve messages from the source worker
+   * @param postPort - the post port to talk to the source worker
+   * @param id - the worker id
+   * @param totalWorkers - the total number of tile workers
+   */
+  #loadWorkerPort(
     messagePort: MessageChannel['port1'],
     postPort: MessageChannel['port2'],
     id: number,
-    totalWorkers: number
+    totalWorkers: number,
   ): void {
     // maintain communication channel with source worker
-    messagePort.onmessage = this.onMessage.bind(this)
-    this.sourceWorker = postPort // Source Worker
-    this.messagePort = messagePort // WorkerPool
-    this.id = id
-    this._buildIDGen(totalWorkers)
+    messagePort.onmessage = this.onMessage.bind(this);
+    this.sourceWorker = postPort; // Source Worker
+    this.messagePort = messagePort; // WorkerPool
+    this.id = id;
+    this._buildIDGen(totalWorkers);
   }
 
-  // pull in the layers and preprocess them
-  #loadStyle (mapID: string, style: StylePackage): void {
-    this.setupStyle(mapID, style)
+  /**
+   * pull in the layers and preprocess them
+   * @param mapID - the map id to build data for
+   * @param style - the style package associated with the map
+   */
+  #loadStyle(mapID: string, style: StylePackage): void {
+    this.setupStyle(mapID, style);
   }
 
-  #addLayer (mapID: string, layer: LayerDefinition, index: number): void {
+  /**
+   * Add a new style layer to a map
+   * @param _mapID - the map id to add the layer to
+   * @param _layer - the layer to add
+   * @param _index - the index to add it at
+   */
+  #addLayer(_mapID: string, _layer: LayerDefinition, _index: number): void {
     // const layers = this.maps[mapID]
     // layers.splice(index, 0, layer)
     // for (let i = index + 1, ll = layers.length; i < ll; i++) {
@@ -58,7 +95,12 @@ export default class TileWorker extends ProcessManager {
     // }
   }
 
-  #deleteLayer (mapID: string, index: number): void {
+  /**
+   * Delete a style layer from a map
+   * @param _mapID - the map id to delete the layer from
+   * @param _index - the index to delete
+   */
+  #deleteLayer(_mapID: string, _index: number): void {
     // const layers = this.maps[mapID]
     // layers.splice(index, 1)
     // for (let i = index, ll = layers.length; i < ll; i++) {
@@ -67,7 +109,12 @@ export default class TileWorker extends ProcessManager {
     // }
   }
 
-  #reorderLayers (mapID: string, layerChanges: Record<number, number>): void {
+  /**
+   * Reorder style layers
+   * @param _mapID - the map id to reorder
+   * @param _layerChanges - the layer changes
+   */
+  #reorderLayers(_mapID: string, _layerChanges: Record<number, number>): void {
     // const layers = this.maps[mapID]
     // const newLayers: LayerDefinition[] = []
     // // move the layer to its new position
@@ -80,25 +127,24 @@ export default class TileWorker extends ProcessManager {
     // for (let i = 0; i < layers.length; i++) layers[i] = newLayers[i]
   }
 
-  #processJSONData (
-    mapID: string,
-    tile: TileRequest,
-    sourceName: string,
-    data: ArrayBuffer
-  ): void {
+  /**
+   * Process vector data
+   * @param mapID - the map id to build data for
+   * @param tile - the tile request associated with the data
+   * @param sourceName - the name of the source the data to belongs to
+   * @param data - the tile vector data
+   */
+  #processJSONData(mapID: string, tile: TileRequest, sourceName: string, data: ArrayBuffer): void {
     // step 1: convert data to a JSON object
-    const vectorTile: JSONVectorTile = JSON.parse(this.textDecoder.decode(new Uint8Array(data)))
-    // step 2: parse functions
-    for (const layer of Object.values(vectorTile.layers)) {
-      layer.feature = function (i: number) { return this.features[i] }
-      for (const feature of layer.features) feature.loadGeometry = function () { return this.geometry }
-    }
+    const vectorTile: VTTile = JSON.parse(this.textDecoder.decode(new Uint8Array(data)));
+    // step 2: build functions back into the vector tile and its layers & features
+    rebuildVectorTile(vectorTile);
     // step 3: process the vector data
-    void this.processVector(mapID, tile, sourceName, vectorTile)
+    void this.processVector(mapID, tile, sourceName, vectorTile);
   }
 }
 
 // create the tileworker
-const tileWorker = new TileWorker()
+const tileWorker = new TileWorker();
 // expose and bind the onmessage function
-onmessage = tileWorker.onMessage.bind(tileWorker)
+self.onmessage = tileWorker.onMessage.bind(tileWorker);

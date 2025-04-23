@@ -1,150 +1,210 @@
-import { fromLonLat, toST } from 'geometry/s2/s2Point'
-import { toProjection } from 'geometry' // GeoJSON conversion and preprocessing
-import { transformPoint } from './jsonVT/transform'
-import { projectX, projectY } from './jsonVT/convert'
+import { convert, transformPoint } from 'gis-tools/index.js';
 
-import type { Session } from '.'
-import type { SourceFlushMessage, TileRequest } from '../worker.spec'
-import type { Face, JSONFeatures, Point, Properties } from 'geometry'
-import type { JSONVectorPointsFeature } from './jsonVT/tile'
-import type { LayerDefinition, Projection, SourceMetadata } from 'style/style.spec'
+import type { Session } from './index.js';
+import type {
+  Face,
+  JSONCollection,
+  Properties,
+  VectorPoint,
+  VectorPointFeature,
+} from 'gis-tools/index.js';
+import type { LayerDefinition, Projection, SourceMetadata } from 'style/style.spec.js';
+import type { SourceFlushMessage, TileRequest } from '../worker.spec.js';
 
+/** Marker metadata */
+export interface MarkerMetadata {
+  html?: string; // HTMLElement as a string
+}
+
+/** Marker definition tracking lon/lat, html, and properties associated with it */
 export interface MarkerDefinition {
-  id?: number
-  lon: number
-  lat: number
-  html?: string // HTMLElement
-  properties?: Record<string, unknown>
-  geometry?: Point
+  id?: number;
+  face?: Face;
+  properties: Properties;
+  point: VectorPoint;
+  metadata?: MarkerMetadata;
 }
 
+/** Properties associated with markers */
 interface MarkerProperties extends Properties {
-  __markerID: number
+  __markerID: number;
 }
 
+/** A storage container for Marker */
 export interface Marker {
-  id?: number
-  html?: string // HTMLElement
-  properties: MarkerProperties
-  geometry: Point
+  id: number;
+  metadata?: MarkerMetadata;
+  properties: MarkerProperties;
+  geometry: VectorPoint;
 }
 
+/**
+ * # Marker Source
+ *
+ * Store, process, and render markers. Handles both WM and S2 projections
+ */
 export default class MarkerSource {
-  name: string
-  projection: Projection = 'S2'
-  isTimeFormat = false
-  styleLayers: LayerDefinition[]
-  idGen = 0
-  0 = new Map<number, Marker>()
-  1 = new Map<number, Marker>()
-  2 = new Map<number, Marker>()
-  3 = new Map<number, Marker>()
-  4 = new Map<number, Marker>()
-  5 = new Map<number, Marker>()
-  session: Session
-  textEncoder: TextEncoder = new TextEncoder()
-  constructor (name: string, session: Session, projection: Projection, layers: LayerDefinition[]) {
-    this.name = name
-    this.session = session
-    this.projection = projection
-    this.styleLayers = layers
+  name: string;
+  projection: Projection = 'S2';
+  isTimeFormat = false;
+  styleLayers: LayerDefinition[];
+  idGen = 0;
+  0 = new Map<number, Marker>();
+  1 = new Map<number, Marker>();
+  2 = new Map<number, Marker>();
+  3 = new Map<number, Marker>();
+  4 = new Map<number, Marker>();
+  5 = new Map<number, Marker>();
+  session: Session;
+  textEncoder: TextEncoder = new TextEncoder();
+  /**
+   * @param name - name of the source
+   * @param session - the session associated with the source data
+   * @param projection - the projection to use (WM or S2)
+   * @param layers - the style layers associated with this source
+   */
+  constructor(name: string, session: Session, projection: Projection, layers: LayerDefinition[]) {
+    this.name = name;
+    this.session = session;
+    this.projection = projection;
+    this.styleLayers = layers;
   }
 
-  async build (_mapID: string, metadata?: SourceMetadata): Promise<void> {
-    const json: JSONFeatures | undefined = metadata?.data
-    const markers: MarkerDefinition[] = []
+  /**
+   * Build the source
+   * @param _mapID - the id of the map (unused)
+   * @param metadata - the metadata associated with the source
+   */
+  build(_mapID: string, metadata?: SourceMetadata): void {
+    const { projection } = this;
+    const json: JSONCollection<MarkerMetadata> | undefined = metadata?.data;
     if (json !== undefined) {
-      const geojson = toProjection(json, 'WM')
-      for (const feature of geojson.features) {
-        if (feature.type === 'Feature' && feature.geometry.type === 'Point') {
-          const marker: MarkerDefinition = {
-            id: feature.id,
-            lon: feature.geometry.coordinates[0],
-            lat: feature.geometry.coordinates[1],
-            properties: feature.properties
+      const features = convert(projection === 'WM' ? 'WG' : 'S2', json, true, true);
+      for (const feature of features) {
+        const { id, face, properties, metadata } = feature;
+        if (feature.geometry.type === 'Point') {
+          this.addMarker({ point: feature.geometry.coordinates, face, properties, id, metadata });
+        } else if (feature.geometry.type === 'MultiPoint') {
+          for (const point of feature.geometry.coordinates) {
+            this.addMarker({ point, face, properties, id, metadata });
           }
-          markers.push(marker)
         }
       }
     }
-    this.addMarkers(markers)
   }
 
-  addMarkers (markers: MarkerDefinition[]): void {
-    const { projection } = this
-    for (const marker of markers) {
-      let { id, properties, lon, lat } = marker
-      if (properties === undefined) properties = {}
-      // build face, s, t
-      const [face, x, y] = projection === 'S2'
-        ? toST(fromLonLat(lon, lat))
-        : [0 as Face, projectX(lon, 'WM'), projectY(lat, 'WM')]
-      // if no id, let's create one
-      if (id === undefined) {
-        id = this.idGen++
-        if (this.idGen >= Number.MAX_SAFE_INTEGER) this.idGen = 0
-      }
-      // store
-      properties.__markerID = id
-      this[face].set(id, { properties: properties as MarkerProperties, geometry: { x, y } })
+  /**
+   * Add marker to the source
+   * @param marker - the marker to add
+   */
+  addMarker(marker: MarkerDefinition): void {
+    let { point, face, properties, id, metadata } = marker;
+    // if no id, let's create one
+    if (id === undefined) {
+      id = this.idGen++;
+      if (this.idGen >= Number.MAX_SAFE_INTEGER) this.idGen = 0;
     }
+    // store
+    properties.__markerID = id;
+    this[face ?? 0].set(id, {
+      id,
+      metadata,
+      properties: { __markerID: id, ...properties },
+      geometry: point,
+    });
   }
 
-  deleteMarkers (ids: number[]): void {
+  /**
+   * Delete marker(s)
+   * @param ids - the id(s) of the marker(s) to delete
+   */
+  deleteMarkers(ids: number[]): void {
     for (const id of ids) {
-      if (this[0].has(id)) this[0].delete(id)
-      else if (this[1].has(id)) this[1].delete(id)
-      else if (this[2].has(id)) this[2].delete(id)
-      else if (this[3].has(id)) this[3].delete(id)
-      else if (this[4].has(id)) this[4].delete(id)
-      else if (this[5].has(id)) this[5].delete(id)
+      this[0].delete(id);
+      this[1].delete(id);
+      this[2].delete(id);
+      this[3].delete(id);
+      this[4].delete(id);
+      this[5].delete(id);
     }
   }
 
-  tileRequest (mapID: string, tile: TileRequest, flushMessage: SourceFlushMessage): void {
-    const { name } = this
-    const { face, zoom, bbox, i, j } = tile
-    const tileZoom = 1 << zoom
-    const features: JSONVectorPointsFeature[] = []
+  /**
+   * Process a tile request
+   * @param mapID - the id of the map that is requesting data
+   * @param tile - the tile request
+   * @param flushMessage - the flush message function to call on completion
+   */
+  tileRequest(mapID: string, tile: TileRequest, flushMessage: SourceFlushMessage): void {
+    const { name } = this;
+    const { face, zoom, bbox, i, j } = tile;
+    const tileZoom = 1 << zoom;
+    const features: VectorPointFeature[] = [];
     // get bounds of tile
-    const [minS, minT, maxS, maxT] = bbox
+    const [minS, minT, maxS, maxT] = bbox;
     // find all markers in st bounds
     for (const [, marker] of this[face]) {
-      const { properties, geometry } = marker
-      const { x, y } = geometry
+      const { properties, geometry } = marker;
+      const { x, y } = geometry;
       if (x >= minS && x < maxS && y >= minT && y < maxT) {
-        features.push({ type: 1, properties, extent: 8_192, geometry: [transformPoint(x, y, 8_192, tileZoom, i, j)] })
+        const geometry: VectorPoint = { x, y };
+        transformPoint(geometry, tileZoom, i, j);
+        features.push({
+          type: 'VectorFeature',
+          properties,
+          geometry: { type: 'Point', is3D: false, coordinates: geometry },
+        });
       }
     }
     // if markers fit within bounds, create a tile
-    const length = features.length
+    const length = features.length;
     // Flush and return
-    if (length === 0) { this._flush(mapID, tile); return }
+    if (length === 0) {
+      this._flush(mapID, tile);
+      return;
+    }
     // build data object
-    const data = { extent: 8_192, face, zoom, i, j, layers: { default: { extent: 8_192, features, length: features.length } } }
+    const data = {
+      extent: 1,
+      face,
+      zoom,
+      i,
+      j,
+      layers: { default: { extent: 1, features, length: features.length } },
+    };
     // encode for transfer
-    const uint8data = (this.textEncoder.encode(JSON.stringify(data))).buffer as ArrayBuffer
+    const uint8data = this.textEncoder.encode(JSON.stringify(data)).buffer;
     // request a worker and post
-    const worker = this.session.requestWorker()
-    worker.postMessage({ mapID, type: 'jsondata', tile, sourceName: name, data: uint8data }, [uint8data])
+    const worker = this.session.requestWorker();
+    worker.postMessage({ mapID, type: 'jsondata', tile, sourceName: name, data: uint8data }, [
+      uint8data,
+    ]);
     // let the source know we are loading a layer
-    this.#sourceFlush(flushMessage)
+    this.#sourceFlush(flushMessage);
   }
 
-  // If no data, we still have to let the tile worker know so it can prepare a proper flush
-  // as well as manage cases like "invert" type data.
-  _flush (mapID: string, tile: TileRequest): void {
-    const { textEncoder, session, name } = this
+  /**
+   * If no data, we still have to let the tile worker know so it can prepare a proper flush
+   * as well as manage cases like "invert" type data.
+   * @param mapID - the id of the map that is requesting data
+   * @param tile - the tile request
+   */
+  _flush(mapID: string, tile: TileRequest): void {
+    const { textEncoder, session, name } = this;
     // compress
-    const data = textEncoder.encode('{"layers":{}}').buffer as ArrayBuffer
+    const data = textEncoder.encode('{"layers":{}}').buffer;
     // send off
-    const worker = session.requestWorker()
-    worker.postMessage({ mapID, type: 'jsondata', tile, sourceName: name, data }, [data])
+    const worker = session.requestWorker();
+    worker.postMessage({ mapID, type: 'jsondata', tile, sourceName: name, data }, [data]);
   }
 
-  #sourceFlush (flushMessage: SourceFlushMessage): void {
-    const { name } = this
-    const layers = this.styleLayers.filter(layer => layer.source === name)
-    for (const { layerIndex } of layers) flushMessage.layersToBeLoaded.add(layerIndex)
+  /**
+   * Flush protocol for the source
+   * @param flushMessage - the flush message function
+   */
+  #sourceFlush(flushMessage: SourceFlushMessage): void {
+    const { name } = this;
+    const layers = this.styleLayers.filter((layer) => layer.source === name);
+    for (const { layerIndex } of layers) flushMessage.layersToBeLoaded.add(layerIndex);
   }
 }
