@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { randomBytes } from 'crypto';
-import v8toIstanbul from 'v8-to-istanbul';
+// import v8toIstanbul from 'v8-to-istanbul';
 
 import type { S2Map } from 's2/index.ts';
 
@@ -9,34 +9,45 @@ const istanbulCLIOutput = path.join(process.cwd(), '.nyc_output');
 
 // https://playwright.dev/docs/api/class-coverage
 
+/** Store the coverage in the .nyc_output folder */
+export function storeCoverage(): void {
+  // coverage: Array<{
+  //   url: string;
+  //   scriptId: string;
+  //   source?: string;
+  //   functions: Array<{
+  //     functionName: string;
+  //     isBlockCoverage: boolean;
+  //     ranges: Array<{ count: number; startOffset: number; endOffset: number }>;
+  //   }>;
+  // }>,
+  const codeCoverageAsJson = JSON.stringify(window.__coverage__ as Record<string, unknown>);
+  (window as unknown as { collectCoverage: typeof collectCoverage }).collectCoverage(
+    codeCoverageAsJson,
+  );
+  // await fs.promises.mkdir(istanbulCLIOutput, { recursive: true });
+  // for (const { source, functions } of coverage) {
+  //   const converter = v8toIstanbul('./tests-playwright/playwright/.cache/assets/assets/', 0, {
+  //     source: source ?? '',
+  //   });
+  //   await converter.load();
+  //   converter.applyCoverage(functions);
+  //   const coverageJSON = JSON.stringify(converter.toIstanbul());
+  //   fs.writeFileSync(
+  //     path.join(istanbulCLIOutput, `playwright_coverage_${generateUUID()}.json`),
+  //     coverageJSON,
+  //   );
+  // }
+}
+
 /**
- * Store the coverage in the .nyc_output folder
- * @param coverage - The coverage to store
+ * Collect the coverage
+ * @param coverageJson - The coverage to collect as a json string
  */
-export async function storeCoverage(
-  coverage: Array<{
-    url: string;
-    scriptId: string;
-    source?: string;
-    functions: Array<{
-      functionName: string;
-      isBlockCoverage: boolean;
-      ranges: Array<{ count: number; startOffset: number; endOffset: number }>;
-    }>;
-  }>,
-): Promise<void> {
-  await fs.promises.mkdir(istanbulCLIOutput, { recursive: true });
-  for (const { source, functions } of coverage) {
-    const converter = v8toIstanbul('./tests-playwright/playwright/.cache/assets/assets/', 0, {
-      source: source ?? '',
-    });
-    await converter.load();
-    converter.applyCoverage(functions);
-    const coverageJSON = JSON.stringify(converter.toIstanbul());
-    fs.writeFileSync(
-      path.join(istanbulCLIOutput, `playwright_coverage_${generateUUID()}.json`),
-      coverageJSON,
-    );
+export function collectCoverage(coverageJson: string): void {
+  if (coverageJson !== undefined) {
+    const codeCoverageFilePath = path.join(istanbulCLIOutput, `coverage_${generateUUID()}.json`);
+    fs.writeFileSync(codeCoverageFilePath, coverageJson);
   }
 }
 

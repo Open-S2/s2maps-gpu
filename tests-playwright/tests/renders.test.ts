@@ -1,6 +1,7 @@
 import S2MapGPU from '../components/S2MapGPU.vue';
 import { expect, test } from '@playwright/experimental-ct-vue';
-import { storeCoverage, waitMap } from './util.js';
+
+import { collectCoverage, storeCoverage, waitMap } from './util.js';
 
 import type { Page } from '@playwright/test';
 import type { GPUType, StyleDefinition } from 's2/index.js';
@@ -130,21 +131,24 @@ function testRender(
   screenshotName: string,
   style: StyleDefinition,
   contextType: GPUType,
-): (context: ComponentFixtures) => Promise<void> {
-  return async ({ page, mount, browserName }): Promise<void> => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): (context: ComponentFixtures & { context: any }) => Promise<void> {
+  return async ({ page, mount, browserName, context }): Promise<void> => {
     const isChromium = browserName === 'chromium';
     test.skip(!isChromium && contextType === 3, 'WebGPU not supported outside of Chromium');
     const offscreen = browserName !== 'webkit';
+    if (isChromium) await context.exposeFunction('collectCoverage', collectCoverage);
     const component = await mount(S2MapGPU, {
       props: { mapOptions: { style, contextType, offscreen } },
     });
-    if (isChromium) await page.coverage.startJSCoverage();
+    // if (isChromium) await page.coverage.startJSCoverage();
     await page.waitForFunction(() => window.testMap !== undefined, { timeout: 5_000 });
     const success = await page.evaluate(waitMap);
     if (!success) throw new Error('waitMap failed');
     if (isChromium) {
-      const coverage = await page.coverage.stopJSCoverage();
-      await storeCoverage(coverage);
+      // const coverage = await page.coverage.stopJSCoverage();
+      // await storeCoverage(coverage);
+      await page.evaluate(storeCoverage);
     }
     await expect(component).toHaveScreenshot(screenshotName, { timeout: 2_000 });
   };

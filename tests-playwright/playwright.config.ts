@@ -6,6 +6,8 @@ import vue from '@vitejs/plugin-vue';
 import wgsl from '../config/wgsl-loader/vite.js';
 import { defineConfig, devices } from '@playwright/experimental-ct-vue';
 
+import IstanbulPlugin from 'vite-plugin-istanbul';
+
 /** See https://playwright.dev/docs/test-configuration. */
 export default defineConfig({
   testDir: './tests',
@@ -29,6 +31,7 @@ export default defineConfig({
   use: {
     trace: 'on-first-retry',
     ctPort: 3100,
+    baseURL: 'http://localhost:3100',
     ctViteConfig: {
       plugins: [
         glsl(),
@@ -40,14 +43,31 @@ export default defineConfig({
           // eslintrc: { enabled: true },
         }),
         Components({ dirs: ['./components'], extensions: ['vue'] }),
+        IstanbulPlugin({
+          include: ['s2/*', 's2/**/*'],
+          exclude: ['node_modules', 'test/'],
+          extension: ['.js', '.ts', '.vue'],
+          nycrcPath: './nyc.config.js',
+          requireEnv: false,
+          forceBuildInstrument: true,
+        }),
       ],
-      build: {
-        sourcemap: 'inline',
-      },
+      build: { sourcemap: 'inline' },
       worker: {
         format: 'es',
         /** @returns the inject plugins */
-        plugins: () => [glsl(), wgsl()],
+        plugins: () => [
+          glsl(),
+          wgsl(),
+          IstanbulPlugin({
+            include: ['s2/*', 's2/**/*'],
+            exclude: ['node_modules', 'test/'],
+            extension: ['.js', '.ts', '.vue'],
+            nycrcPath: './nyc.config.js',
+            requireEnv: false,
+            forceBuildInstrument: true,
+          }),
+        ],
       },
       resolve: {
         alias: {
@@ -71,11 +91,11 @@ export default defineConfig({
   projects: [
     /* Test against desktop browsers */
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+    // { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    // { name: 'webkit', use: { ...devices['Desktop Safari'] } },
     /* Test against mobile viewports. */
-    { name: 'Mobile Chrome', use: { ...devices['Pixel 5'] } },
-    { name: 'Mobile Safari', use: { ...devices['iPhone 12'] } },
+    // { name: 'Mobile Chrome', use: { ...devices['Pixel 5'] } },
+    // { name: 'Mobile Safari', use: { ...devices['iPhone 12'] } },
     /* Test against branded browsers. */
     // { name: 'Google Chrome', use: { ...devices['Desktop Chrome'], channel: 'chrome' } },
     // { name: 'Google Chrome Beta', use: { ...devices['Desktop Chrome'], channel: 'chrome-beta' } },

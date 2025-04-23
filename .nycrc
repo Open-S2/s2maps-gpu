@@ -1,6 +1,0 @@
-{
-  "reporter": ["html", "lcov"],
-  "include": ["s2/**/*.ts"],
-  "report-dir": "./coverage",
-  "temp-dir": "./.nyc_output"
-}

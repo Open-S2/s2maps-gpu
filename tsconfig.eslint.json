@@ -124,6 +124,7 @@
     "nuxt.config.ts",
     "eslint.config.mjs",
     "svelte.config.js",
+    "nyc.config.js",
     "build.ts",
     "benchmarks/**/*.ts",
     "s2/**/*.ts",
