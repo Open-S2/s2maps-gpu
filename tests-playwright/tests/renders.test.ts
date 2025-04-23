@@ -143,13 +143,16 @@ function testRender(
     });
     // if (isChromium) await page.coverage.startJSCoverage();
     await page.waitForFunction(() => window.testMap !== undefined, { timeout: 5_000 });
-    // const success = await page.evaluate(waitMap);
+    const _success = await page.evaluate(waitMap);
     // if (!success) throw new Error('waitMap failed');
     if (isChromium) {
       // const coverage = await page.coverage.stopJSCoverage();
       // await storeCoverage(coverage);
       await page.evaluate(storeCoverage);
     }
-    await expect(component).toHaveScreenshot(screenshotName, { timeout: 2_000 });
+    await expect(component).toHaveScreenshot(screenshotName, {
+      name: `s2-background-webgpu-${browserName}.png`,
+      timeout: 2_000,
+    });
   };
 }

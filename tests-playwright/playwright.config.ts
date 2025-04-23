@@ -12,7 +12,9 @@ import IstanbulPlugin from 'vite-plugin-istanbul';
 export default defineConfig({
   testDir: './tests',
   /* The base directory, relative to the config file, for snapshot files created with toMatchSnapshot and toHaveScreenshot. */
-  snapshotDir: './__snapshots__',
+  // snapshotDir: './__snapshots__',
+  /* define snapshot naming */
+  snapshotPathTemplate: 'snapshots/{arg}-{projectName}{ext}',
   /* Maximum time one test can run for. */
   timeout: 10 * 1000,
   /* Run tests in files in parallel */
