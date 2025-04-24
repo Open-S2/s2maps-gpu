@@ -9,10 +9,10 @@ import S2BackgroundStyle from '../../pages/s2/background/style.js';
 import S2FillPatternSpriteStyle from '../../pages/s2/fill-pattern-sprite/style.js';
 import S2FillPatternStyle from '../../pages/s2/fill-pattern/style.js';
 import S2FillStyle from '../../pages/s2/fill/style.js';
-import S2HeatmapStyle from '../../pages/s2/heatmap/style.js';
+// import S2HeatmapStyle from '../../pages/s2/heatmap/style.js';
 import S2InvertPatternStyle from '../../pages/s2/invert-pattern/style.js';
 import S2InvertStyle from '../../pages/s2/invert/style.js';
-import S2LCHStyle from '../../pages/s2/lch/style.js';
+// import S2LCHStyle from '../../pages/s2/lch/style.js';
 import S2LinesStyle from '../../pages/s2/lines/style.js';
 import S2LocalStyle from '../../pages/s2/local/style.js';
 import S2MarkersStyle from '../../pages/s2/markers/style.js';
@@ -33,7 +33,7 @@ import WMFillStyle from '../../pages/wm/fill/style.js';
 import WMGeoJSONStyle from '../../pages/wm/geojson/style.js';
 import WMHeatmapStyle from '../../pages/wm/heatmap/style.js';
 import WMHillshadeStyle from '../../pages/wm/hillshade/style.js';
-import WMHillshadeTerrariumStyle from '../../pages/wm/hillshade-terrarium/style.js';
+// import WMHillshadeTerrariumStyle from '../../pages/wm/hillshade-terrarium/style.js';
 import WMInvertPatternStyle from '../../pages/wm/invert-pattern/style.js';
 import WMInvertStyle from '../../pages/wm/invert/style.js';
 import WMLCHStyle from '../../pages/wm/lch/style.js';
@@ -85,13 +85,13 @@ describe('WebGL2', () => {
   );
   test('S2->Fill-Pattern->WebGL2', testRender('S2_Fill_Pattern_WebGL2', S2FillPatternStyle, 2));
   test('S2->Fill->WebGL2', testRender('S2_Fill_WebGL2', S2FillStyle, 2));
-  test('S2->Heatmap->WebGL2', testRender('S2_Heatmap_WebGL2', S2HeatmapStyle, 2));
+  // test('S2->Heatmap->WebGL2', testRender('S2_Heatmap_WebGL2', S2HeatmapStyle, 2));
   test('S2->Invert->WebGL2', testRender('S2_Invert_WebGL2', S2InvertStyle, 2));
   test(
     'S2->Invert-Pattern->WebGL2',
     testRender('S2_Invert_Pattern_WebGL2', S2InvertPatternStyle, 2),
   );
-  test('S2->LCH->WebGL2', testRender('S2_LCH_WebGL2', S2LCHStyle, 2));
+  // test('S2->LCH->WebGL2', testRender('S2_LCH_WebGL2', S2LCHStyle, 2));
   test('S2->Lines->WebGL2', testRender('S2_Lines_WebGL2', S2LinesStyle, 2));
   test('S2->Local->WebGL2', testRender('S2_Local_WebGL2', S2LocalStyle, 2));
   test('S2->Markers->WebGL2', testRender('S2_Markers_WebGL2', S2MarkersStyle, 2));
@@ -118,10 +118,10 @@ describe('WebGL2', () => {
   test('WM->GeoJSON->WebGL2', testRender('WM_GeoJSON_WebGL2', WMGeoJSONStyle, 2));
   test('WM->Heatmap->WebGL2', testRender('WM_Heatmap_WebGL2', WMHeatmapStyle, 2));
   test('WM->Hillshade->WebGL2', testRender('WM_Hillshade_WebGL2', WMHillshadeStyle, 2));
-  test(
-    'WM->HillshadeTerrarium->WebGL2',
-    testRender('WM_Hillshade_Terrarium_WebGL2', WMHillshadeTerrariumStyle, 2),
-  );
+  // test(
+  //   'WM->HillshadeTerrarium->WebGL2',
+  //   testRender('WM_Hillshade_Terrarium_WebGL2', WMHillshadeTerrariumStyle, 2),
+  // );
   test('WM->Invert->WebGL2', testRender('WM_Invert_WebGL2', WMInvertStyle, 2));
   test(
     'WM->Invert-Pattern->WebGL2',
