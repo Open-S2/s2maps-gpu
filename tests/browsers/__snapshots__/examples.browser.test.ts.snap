@@ -1,5 +1,71 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`WebGL2 > S2->Background->WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--Background--WebGL2-1.png"`;
+exports[`WebGL2 > S2->Background->WebGL2 > S2_Background_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--Background--WebGL2-1.png"`;
 
-exports[`WebGL2 > S2->Fill->WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--Fill--WebGL2-1.png"`;
+exports[`WebGL2 > S2->Fill->WebGL2 > S2_Fill_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--Fill--WebGL2-1.png"`;
+
+exports[`WebGL2 > S2->Fill-Pattern->WebGL2 > S2_Fill_Pattern_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--Fill-Pattern--WebGL2-1.png"`;
+
+exports[`WebGL2 > S2->Fill-Pattern-Sprite->WebGL2 > S2_Fill_Pattern_Sprite_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--Fill-Pattern-Sprite--WebGL2-1.png"`;
+
+exports[`WebGL2 > S2->Heatmap->WebGL2 > S2_Heatmap_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--Heatmap--WebGL2-1.png"`;
+
+exports[`WebGL2 > S2->Invert->WebGL2 > S2_Invert_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--Invert--WebGL2-1.png"`;
+
+exports[`WebGL2 > S2->Invert-Pattern->WebGL2 > S2_Invert_Pattern_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--Invert-Pattern--WebGL2-1.png"`;
+
+exports[`WebGL2 > S2->LCH->WebGL2 > S2_LCH_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--LCH--WebGL2-1.png"`;
+
+exports[`WebGL2 > S2->Lines->WebGL2 > S2_Lines_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--Lines--WebGL2-1.png"`;
+
+exports[`WebGL2 > S2->Local->WebGL2 > S2_Local_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--Local--WebGL2-1.png"`;
+
+exports[`WebGL2 > S2->Markers->WebGL2 > S2_Markers_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--Markers--WebGL2-1.png"`;
+
+exports[`WebGL2 > S2->Nested-Properties->WebGL2 > S2_Nested_Properties_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--Nested-Properties--WebGL2-1.png"`;
+
+exports[`WebGL2 > S2->Points->WebGL2 > S2_Points_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--Points--WebGL2-1.png"`;
+
+exports[`WebGL2 > S2->Raster->WebGL2 > S2_Raster_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--Raster--WebGL2-1.png"`;
+
+exports[`WebGL2 > S2->S2JSON->WebGL2 > S2_S2JSON_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--S2JSON--WebGL2-1.png"`;
+
+exports[`WebGL2 > S2->Shade->WebGL2 > S2_Shade_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--Shade--WebGL2-1.png"`;
+
+exports[`WebGL2 > S2->Skybox->WebGL2 > S2_Skybox_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--Skybox--WebGL2-1.png"`;
+
+exports[`WebGL2 > S2->Wallpaper->WebGL2 > S2_Wallpaper_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--Wallpaper--WebGL2-1.png"`;
+
+exports[`WebGL2 > WM->Background->WebGL2 > WM_Background_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-WM--Background--WebGL2-1.png"`;
+
+exports[`WebGL2 > WM->Fill->WebGL2 > WM_Fill_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-WM--Fill--WebGL2-1.png"`;
+
+exports[`WebGL2 > WM->Fill-Pattern->WebGL2 > WM_Fill_Pattern_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-WM--Fill-Pattern--WebGL2-1.png"`;
+
+exports[`WebGL2 > WM->Fill-Pattern-Sprite->WebGL2 > WM_Fill_Pattern_Sprite_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-WM--Fill-Pattern-Sprite--WebGL2-1.png"`;
+
+exports[`WebGL2 > WM->GeoJSON->WebGL2 > WM_GeoJSON_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-WM--GeoJSON--WebGL2-1.png"`;
+
+exports[`WebGL2 > WM->Heatmap->WebGL2 > WM_Heatmap_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-WM--Heatmap--WebGL2-1.png"`;
+
+exports[`WebGL2 > WM->Hillshade->WebGL2 > WM_Hillshade_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-WM--Hillshade--WebGL2-1.png"`;
+
+exports[`WebGL2 > WM->HillshadeTerrarium->WebGL2 > WM_Hillshade_Terrarium_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-WM--HillshadeTerrarium--WebGL2-1.png"`;
+
+exports[`WebGL2 > WM->Invert->WebGL2 > WM_Invert_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-WM--Invert--WebGL2-1.png"`;
+
+exports[`WebGL2 > WM->Invert-Pattern->WebGL2 > WM_Invert_Pattern_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-WM--Invert-Pattern--WebGL2-1.png"`;
+
+exports[`WebGL2 > WM->LCH->WebGL2 > WM_LCH_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-WM--LCH--WebGL2-1.png"`;
+
+exports[`WebGL2 > WM->Lines->WebGL2 > WM_Lines_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-WM--Lines--WebGL2-1.png"`;
+
+exports[`WebGL2 > WM->Local->WebGL2 > WM_Local_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-WM--Local--WebGL2-1.png"`;
+
+exports[`WebGL2 > WM->Markers->WebGL2 > WM_Markers_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-WM--Markers--WebGL2-1.png"`;
+
+exports[`WebGL2 > WM->Nested-Properties->WebGL2 > WM_Nested_Properties_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-WM--Nested-Properties--WebGL2-1.png"`;
+
+exports[`WebGL2 > WM->Points->WebGL2 > WM_Points_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-WM--Points--WebGL2-1.png"`;
+
+exports[`WebGL2 > WM->Raster->WebGL2 > WM_Raster_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-WM--Raster--WebGL2-1.png"`;

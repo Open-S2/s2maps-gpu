@@ -267,15 +267,15 @@ const style: StyleDefinition = {
   minzoom: -0.5,
   maxzoom: 5,
   sources: {
-    countries: 'http://localhost:3000/s2json/countriesHD.s2json',
+    countries: 'dataURL://s2json/countriesHD.s2json',
     textTest: {
       type: 'json',
       data,
     },
   },
   fonts: {
-    robotoMedium: 'http://localhost:3000/api/glyphs-v2/RobotoMedium',
-    NotoMedium: 'http://localhost:3000/api/glyphs-v2/NotoMedium',
+    robotoMedium: 'dataURL://api/glyphs-v2/RobotoMedium',
+    NotoMedium: 'dataURL://api/glyphs-v2/NotoMedium',
   },
   layers: [
     {

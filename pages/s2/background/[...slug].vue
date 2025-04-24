@@ -1,6 +1,4 @@
-<template>
-  <S2MapGPU :map-options="mapOptions" :map-ready="ready" />
-</template>
+<template> <S2MapGPU :map-options="mapOptions" :map-ready="ready" /> </template>
 
 <script setup lang="ts">
 import style from './style';
@@ -32,3 +30,4 @@ function ready(s2map: S2Map): void {
 
 const mapOptions: MapOptions = { style, contextType };
 </script>
+

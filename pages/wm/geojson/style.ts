@@ -12,8 +12,8 @@ const style: StyleDefinition = {
   minzoom: 0,
   maxzoom: 6.9,
   sources: {
-    land: 'http://localhost:3000/geojson/land.geojson',
-    usa: 'http://localhost:3000/geojson/usa.geojson',
+    land: 'dataURL://geojson/land.geojson',
+    usa: 'dataURL://geojson/usa.geojson',
   },
   fonts: {},
   layers: [

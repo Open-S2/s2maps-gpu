@@ -11,7 +11,7 @@ const style: StyleDefinition = {
   minzoom: -1,
   maxzoom: 2.5,
   sources: {
-    countries: 'http://localhost:3000/s2json/countriesHD.s2json',
+    countries: 'dataURL://s2json/countriesHD.s2json',
     markers: {
       type: 'markers',
       path: '_markers',

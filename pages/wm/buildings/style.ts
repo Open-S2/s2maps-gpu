@@ -13,8 +13,8 @@ const style: StyleDefinition = {
   minzoom: 0,
   maxzoom: 14,
   sources: {
-    land: 'http://localhost:3000/geojson/land.geojson',
-    utah: 'http://localhost:3000/geojson/utah.geojson',
+    land: 'dataURL://geojson/land.geojson',
+    utah: 'dataURL://geojson/utah.geojson',
   },
   fonts: {},
   layers: [

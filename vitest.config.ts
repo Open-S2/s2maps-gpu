@@ -8,7 +8,7 @@ import vue from '@vitejs/plugin-vue';
 import wgsl from './config/wgsl-loader/vite.js';
 
 export default defineConfig({
-  root: __dirname,
+  root: '.',
   optimizeDeps: {
     include: [
       'open-vector-tile',
@@ -37,15 +37,14 @@ export default defineConfig({
     plugins: () => [glsl(), wgsl()],
   },
   test: {
+    // poolOptions: {
+    //   threads: {
+    //     singleThread: true,
+    //   },
+    // },
     slowTestThreshold: 5_000,
     include: ['tests/**/*.browser.{test,spec}.ts'],
     name: 'browser',
-    environment: 'jsdom',
-    environmentOptions: {
-      jsdom: {
-        url: 'http://localhost/',
-      },
-    },
     setupFiles: ['./tests/browsers/setup.ts'],
     expandSnapshotDiff: true,
     browser: {

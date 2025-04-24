@@ -13,7 +13,7 @@ const style: StyleDefinition = {
   minzoom: -0.5,
   maxzoom: 5,
   sources: {
-    land: 'http://localhost:3000/geojson/land.geojson',
+    land: 'dataURL://geojson/land.geojson',
     iconFeatures: {
       type: 'json',
       data: {

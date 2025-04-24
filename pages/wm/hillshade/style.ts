@@ -13,8 +13,8 @@ const style: StyleDefinition = {
   maxzoom: 6.9,
   zoomOffset: 0.5,
   sources: {
-    land: 'http://localhost:3000/geojson/land.geojson',
-    terrain: 'http://localhost:3000/tiles/wm/terrain-v2',
+    land: 'dataURL://geojson/land.geojson',
+    terrain: 'dataURL://tiles/wm/terrain-v2',
   },
   layers: [
     {

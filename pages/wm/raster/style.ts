@@ -12,7 +12,7 @@ const style: StyleDefinition = {
   minzoom: -0.5,
   maxzoom: 5.5,
   sources: {
-    satellite: 'http://localhost:3000/tiles/wm/satellite',
+    satellite: 'dataURL://tiles/wm/satellite',
   },
   layers: [
     {

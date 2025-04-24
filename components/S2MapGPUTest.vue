@@ -56,6 +56,7 @@ export default {
         ...mapOptions,
         container: container.value,
         canvasMultiplier: 2,
+        offscreen: false,
       };
       const map = new S2Map(options);
 

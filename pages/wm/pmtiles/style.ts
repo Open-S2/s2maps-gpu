@@ -12,8 +12,8 @@ const style: StyleDefinition = {
   minzoom: -0.5,
   maxzoom: 12,
   sources: {
-    land: 'http://localhost:3000/geojson/land.geojson',
-    zipcodes: 'http://localhost:3000/pmtiles/cb_2018_us_zcta510_500k_nolimit.pmtiles',
+    land: 'dataURL://geojson/land.geojson',
+    zipcodes: 'dataURL://pmtiles/cb_2018_us_zcta510_500k_nolimit.pmtiles',
   },
   fonts: {},
   layers: [

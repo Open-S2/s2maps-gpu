@@ -11,10 +11,10 @@ const style: StyleDefinition = {
   minzoom: -0.5,
   maxzoom: 5,
   sources: {
-    countries: 'http://localhost:3000/s2json/countriesHD.s2json',
+    countries: 'dataURL://s2json/countriesHD.s2json',
   },
   images: {
-    pattern: 'http://localhost:3000/images/pattern.jpg',
+    pattern: 'dataURL://images/pattern.jpg',
   },
   layers: [
     {

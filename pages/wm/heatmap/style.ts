@@ -12,8 +12,8 @@ const style: StyleDefinition = {
   minzoom: 0,
   maxzoom: 7,
   sources: {
-    land: 'http://localhost:3000/geojson/land.geojson',
-    earthquakes: 'http://localhost:3000/geojson/earthquakes.geojson',
+    land: 'dataURL://geojson/land.geojson',
+    earthquakes: 'dataURL://geojson/earthquakes.geojson',
   },
   fonts: {},
   layers: [
