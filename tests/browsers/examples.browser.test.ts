@@ -2,7 +2,7 @@ import S2MapGPU from '../../components/S2MapGPUTest.vue';
 import { page } from '@vitest/browser/context';
 import { render } from 'vitest-browser-vue';
 import { waitMap } from './util.js';
-import { expect, test } from 'vitest';
+import { describe, expect, it } from 'vitest';
 // styles
 import S2BackgroundStyle from '../../pages/s2/background/style.js';
 import S2FillStyle from '../../pages/s2/fill/style.js';
@@ -32,7 +32,7 @@ function testRender(snapshotName: string, style: StyleDefinition, contextType: G
     expect(success).toBe(true);
 
     const content = await page.screenshot();
-    await expect(content).toMatchFileSnapshot(`./tests/browsers/__snapshots__/${snapshotName}.png`);
+    await expect(content).toMatchFileSnapshot(snapshotName);
 
     comp.unmount();
   };
@@ -40,5 +40,7 @@ function testRender(snapshotName: string, style: StyleDefinition, contextType: G
 
 // WebGL2 //
 
-test('S2->Background->WebGL2', testRender('S2_Background_WebGL2', S2BackgroundStyle, 2));
-test('S2->Fill->WebGL2', testRender('S2_Fill_WebGL2', S2FillStyle, 2));
+describe('WebGL2', () => {
+  it('S2->Background->WebGL2', testRender('S2_Background_WebGL2', S2BackgroundStyle, 2));
+  it('S2->Fill->WebGL2', testRender('S2_Fill_WebGL2', S2FillStyle, 2));
+});
