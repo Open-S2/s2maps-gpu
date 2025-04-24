@@ -1,3 +1,5 @@
+import path from 'path';
+
 import type { S2Map } from 's2';
 
 /**

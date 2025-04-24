@@ -46,6 +46,8 @@
     "test:server": "bun run ./tests/server.ts",
     "test:vitest": "vitest run --coverage",
     "test:vitest:server": "concurrently -k -r -i --success=first \"bun test:server\" \"bun test:vitest\" && mv coverage/lcov.info coverage/lcov-playwright.info",
+    "test:vitest:update": "vitest run --update --coverage",
+    "test:vitest:server:update": "concurrently -k -r -i --success=first \"bun test:server\" \"bun test:vitest:update\"",
     "test:merge": "lcov-result-merger 'coverage/lcov-*.info' > coverage/lcov.info",
     "test:all": "bun run test:clean && bun run test:S2 && bun run test:vitest:server && bun run test:merge",
     "prepare:toAdd": "bun run lint:S2 && bun run build:ESM && bun run build:frameworks"
@@ -119,6 +121,7 @@
     "filesize": "^10.1.6",
     "find-cache-directory": "^6.0.0",
     "globals": "^16.0.0",
+    "jsdom": "^26.1.0",
     "lcov-result-merger": "^5.0.1",
     "mini-css-extract-plugin": "^2.9.2",
     "nuxt": "^3.16.2",

@@ -38,5 +38,5 @@ function testRender(snapshotName: string, style: StyleDefinition, contextType: G
 
 // WebGL2 //
 
-test('S2->Background->WebGL2', testRender('S2-Background-WebGL2', S2BackgroundStyle, 2));
-test('S2->Fill->WebGL2', testRender('S2-Fill-WebGL2', S2FillStyle, 2));
+test('S2->Background->WebGL2', testRender('S2_Background_WebGL2', S2BackgroundStyle, 2));
+test('S2->Fill->WebGL2', testRender('S2_Fill_WebGL2', S2FillStyle, 2));

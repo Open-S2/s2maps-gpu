@@ -10,7 +10,7 @@ import wgsl from './config/wgsl-loader/vite.js';
 export default defineConfig({
   root: __dirname,
   optimizeDeps: {
-    include: ['open-vector-tile', 'earclip', 'unicode-shaper'],
+    include: ['open-vector-tile', 'earclip', 'unicode-shaper', 'react', 'react-dom', 'vue', 'svelte'],
   },
   plugins: [
     svelte(),
@@ -29,8 +29,19 @@ export default defineConfig({
     plugins: () => [glsl(), wgsl()],
   },
   test: {
+    slowTestThreshold: 5_000,
     include: ['tests/**/*.browser.{test,spec}.ts'],
     name: 'browser',
+    environment: 'jsdom',
+    environmentOptions: {
+      jsdom: {
+        url: 'http://localhost/',
+      },
+    },
+    // snapshotEnvironment
+    // snapshotEnvironment
+    // resolveSnapshotPath: (testPath, snapExtension) => './tests/browsers/__snapshots__/' + snapExtension,
+    // snapshotDir: './tests/browsers/__snapshots__',
     browser: {
       headless: true,
       provider: 'playwright', // or 'webdriverio'
@@ -57,14 +68,13 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       // extends: '@istanbuljs/nyc-config-typescript',
-      // 'temp-dir': './.nyc_output',
-      // 'report-dir': './coverage',
       include: ['s2'],
-      // include: ['../s2/**/*.ts', '../s2/*.ts'],
-      // exclude: ['**/*.test.ts'],
       all: true,
       reporter: ['html-spa', 'lcovonly', 'cobertura', 'text-summary'],
     },
+  },
+  server: {
+    hmr: false,
   },
   resolve: {
     alias: {
