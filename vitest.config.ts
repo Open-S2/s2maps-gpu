@@ -10,15 +10,7 @@ import wgsl from './config/wgsl-loader/vite.js';
 export default defineConfig({
   root: '.',
   optimizeDeps: {
-    include: [
-      'open-vector-tile',
-      'earclip',
-      'unicode-shaper',
-      'react',
-      'react-dom',
-      'vue',
-      'svelte',
-    ],
+    include: ['open-vector-tile', 'earclip', 'unicode-shaper', 'react', 'vue', 'svelte'],
   },
   plugins: [
     svelte(),
@@ -37,13 +29,9 @@ export default defineConfig({
     plugins: () => [glsl(), wgsl()],
   },
   test: {
-    // poolOptions: {
-    //   threads: {
-    //     singleThread: true,
-    //   },
-    // },
     retry: 3,
-    slowTestThreshold: 5_000,
+    slowTestThreshold: 15_000,
+    testTimeout: 10_000,
     include: ['tests/**/*.browser.{test,spec}.ts'],
     name: 'browser',
     setupFiles: ['./tests/browsers/setup.ts'],
