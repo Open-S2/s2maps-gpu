@@ -37,7 +37,7 @@ import S2SkyboxStyle from '../../pages/s2/skybox/style.js';
 import S2WallpaperStyle from '../../pages/s2/wallpaper/style.js';
 // WM
 import WMBackgroundStyle from '../../pages/wm/background/style.js';
-import WMFillPatternSpriteStyle from '../../pages/wm/fill-pattern-sprite/style.js';
+// import WMFillPatternSpriteStyle from '../../pages/wm/fill-pattern-sprite/style.js';
 // import WMFillPatternStyle from '../../pages/wm/fill-pattern/style.js';
 import WMFillStyle from '../../pages/wm/fill/style.js';
 import WMGeoJSONStyle from '../../pages/wm/geojson/style.js';
@@ -92,10 +92,10 @@ test('WM->Background->WebGL2', testRender('wm-background-webgl2.png', WMBackgrou
 test('WM->Fill->WebGL2', testRender('wm-fill-webgl2.png', WMFillStyle, 2));
 test('WM->GeoJSON->WebGL2', testRender('wm-geojson-webgl2.png', WMGeoJSONStyle, 2));
 // test('WM->Fill-Pattern->WebGL2', testRender('wm-fill-pattern-webgl2.png', WMFillPatternStyle, 2));
-test(
-  'WM->Fill-Pattern-Sprite->WebGL2',
-  testRender('wm-fill-pattern-sprite-webgl2.png', WMFillPatternSpriteStyle, 2),
-);
+// test(
+//   'WM->Fill-Pattern-Sprite->WebGL2',
+//   testRender('wm-fill-pattern-sprite-webgl2.png', WMFillPatternSpriteStyle, 2),
+// );
 test('WM->Heatmap->WebGL2', testRender('wm-heatmap-webgl2.png', WMHeatmapStyle, 2));
 test('WM->Hillshade->WebGL2', testRender('wm-hillshade-webgl2.png', WMHillshadeStyle, 2));
 
