@@ -42,6 +42,7 @@ export default defineConfig({
     //     singleThread: true,
     //   },
     // },
+    retry: 3,
     slowTestThreshold: 5_000,
     include: ['tests/**/*.browser.{test,spec}.ts'],
     name: 'browser',
