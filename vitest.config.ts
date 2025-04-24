@@ -10,7 +10,15 @@ import wgsl from './config/wgsl-loader/vite.js';
 export default defineConfig({
   root: __dirname,
   optimizeDeps: {
-    include: ['open-vector-tile', 'earclip', 'unicode-shaper', 'react', 'react-dom', 'vue', 'svelte'],
+    include: [
+      'open-vector-tile',
+      'earclip',
+      'unicode-shaper',
+      'react',
+      'react-dom',
+      'vue',
+      'svelte',
+    ],
   },
   plugins: [
     svelte(),
@@ -38,10 +46,6 @@ export default defineConfig({
         url: 'http://localhost/',
       },
     },
-    // snapshotEnvironment
-    // snapshotEnvironment
-    // resolveSnapshotPath: (testPath, snapExtension) => './tests/browsers/__snapshots__/' + snapExtension,
-    // snapshotDir: './tests/browsers/__snapshots__',
     browser: {
       headless: true,
       provider: 'playwright', // or 'webdriverio'

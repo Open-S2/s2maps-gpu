@@ -20,7 +20,7 @@ function testRender(snapshotName: string, style: StyleDefinition, contextType: G
   return async () => {
     await page.viewport(1920, 1080);
 
-    render(S2MapGPU, {
+    const comp = render(S2MapGPU, {
       props: { mapOptions: { style, contextType } },
     });
 
@@ -31,8 +31,10 @@ function testRender(snapshotName: string, style: StyleDefinition, contextType: G
     const success = await waitMap();
     expect(success).toBe(true);
 
-    const screen = await page.screenshot();
-    expect(screen).toMatchSnapshot(snapshotName);
+    const content = await page.screenshot();
+    await expect(content).toMatchFileSnapshot(`./tests/browsers/__snapshots__/${snapshotName}.png`);
+
+    comp.unmount();
   };
 }
 
