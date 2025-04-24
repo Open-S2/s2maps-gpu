@@ -1,0 +1,5 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`WebGL2 > S2->Background->WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--Background--WebGL2-1.png"`;
+
+exports[`WebGL2 > S2->Fill->WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--Fill--WebGL2-1.png"`;

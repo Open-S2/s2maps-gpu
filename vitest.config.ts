@@ -46,6 +46,8 @@ export default defineConfig({
         url: 'http://localhost/',
       },
     },
+    setupFiles: ['./tests/browsers/setup.ts'],
+    expandSnapshotDiff: true,
     browser: {
       headless: true,
       provider: 'playwright', // or 'webdriverio'
