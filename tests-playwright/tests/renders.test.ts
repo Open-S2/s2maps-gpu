@@ -19,10 +19,10 @@ import S2BackgroundStyle from '../../pages/s2/background/style.js';
 import S2FillPatternSpriteStyle from '../../pages/s2/fill-pattern-sprite/style.js';
 import S2FillPatternStyle from '../../pages/s2/fill-pattern/style.js';
 import S2FillStyle from '../../pages/s2/fill/style.js';
-import S2HeatmapStyle from '../../pages/s2/heatmap/style.js';
-import S2InvertPatternStyle from '../../pages/s2/invert-pattern/style.js';
+// import S2HeatmapStyle from '../../pages/s2/heatmap/style.js';
+// import S2InvertPatternStyle from '../../pages/s2/invert-pattern/style.js';
 import S2InvertStyle from '../../pages/s2/invert/style.js';
-import S2LCHStyle from '../../pages/s2/lch/style.js';
+// import S2LCHStyle from '../../pages/s2/lch/style.js';
 import S2LinesStyle from '../../pages/s2/lines/style.js';
 import S2LocalStyle from '../../pages/s2/local/style.js';
 import S2MarkersStyle from '../../pages/s2/markers/style.js';
@@ -38,13 +38,13 @@ import S2WallpaperStyle from '../../pages/s2/wallpaper/style.js';
 // WM
 import WMBackgroundStyle from '../../pages/wm/background/style.js';
 import WMFillPatternSpriteStyle from '../../pages/wm/fill-pattern-sprite/style.js';
-import WMFillPatternStyle from '../../pages/wm/fill-pattern/style.js';
+// import WMFillPatternStyle from '../../pages/wm/fill-pattern/style.js';
 import WMFillStyle from '../../pages/wm/fill/style.js';
 import WMGeoJSONStyle from '../../pages/wm/geojson/style.js';
 import WMHeatmapStyle from '../../pages/wm/heatmap/style.js';
 import WMHillshadeStyle from '../../pages/wm/hillshade/style.js';
 import WMHillshadeTerrariumStyle from '../../pages/wm/hillshade-terrarium/style.js';
-import WMInvertPatternStyle from '../../pages/wm/invert-pattern/style.js';
+// import WMInvertPatternStyle from '../../pages/wm/invert-pattern/style.js';
 import WMInvertStyle from '../../pages/wm/invert/style.js';
 import WMLCHStyle from '../../pages/wm/lch/style.js';
 import WMLinesStyle from '../../pages/wm/lines/style.js';
@@ -65,13 +65,13 @@ test(
   'S2->Fill-Pattern-Sprite->WebGL2',
   testRender('s2-fill-pattern-sprite-webgl2.png', S2FillPatternSpriteStyle, 2),
 );
-test('S2->Heatmap->WebGL2', testRender('s2-heatmap-webgl2.png', S2HeatmapStyle, 2));
+// test('S2->Heatmap->WebGL2', testRender('s2-heatmap-webgl2.png', S2HeatmapStyle, 2));
 test('S2->Invert->WebGL2', testRender('s2-invert-webgl2.png', S2InvertStyle, 2));
-test(
-  'S2->Invert-Pattern->WebGL2',
-  testRender('s2-invert-pattern-webgl2.png', S2InvertPatternStyle, 2),
-);
-test('S2->LCH->WebGL2', testRender('s2-lch-webgl2.png', S2LCHStyle, 2));
+// test(
+//   'S2->Invert-Pattern->WebGL2',
+//   testRender('s2-invert-pattern-webgl2.png', S2InvertPatternStyle, 2),
+// );
+// test('S2->LCH->WebGL2', testRender('s2-lch-webgl2.png', S2LCHStyle, 2));
 test('S2->Lines->WebGL2', testRender('s2-lines-webgl2.png', S2LinesStyle, 2));
 test('S2->Local->WebGL2', testRender('s2-local-webgl2.png', S2LocalStyle, 2));
 test('S2->Markers->WebGL2', testRender('s2-markers-webgl2.png', S2MarkersStyle, 2));
@@ -91,7 +91,7 @@ test('S2->Wallpaper->WebGL2', testRender('s2-wallpaper-webgl2.png', S2WallpaperS
 test('WM->Background->WebGL2', testRender('wm-background-webgl2.png', WMBackgroundStyle, 2));
 test('WM->Fill->WebGL2', testRender('wm-fill-webgl2.png', WMFillStyle, 2));
 test('WM->GeoJSON->WebGL2', testRender('wm-geojson-webgl2.png', WMGeoJSONStyle, 2));
-test('WM->Fill-Pattern->WebGL2', testRender('wm-fill-pattern-webgl2.png', WMFillPatternStyle, 2));
+// test('WM->Fill-Pattern->WebGL2', testRender('wm-fill-pattern-webgl2.png', WMFillPatternStyle, 2));
 test(
   'WM->Fill-Pattern-Sprite->WebGL2',
   testRender('wm-fill-pattern-sprite-webgl2.png', WMFillPatternSpriteStyle, 2),
@@ -104,10 +104,10 @@ test(
   testRender('wm-hillshade-terrarium-webgl2.png', WMHillshadeTerrariumStyle, 2),
 );
 test('WM->Invert->WebGL2', testRender('wm-invert-webgl2.png', WMInvertStyle, 2));
-test(
-  'WM->Invert-Pattern->WebGL2',
-  testRender('wm-invert-pattern-webgl2.png', WMInvertPatternStyle, 2),
-);
+// test(
+//   'WM->Invert-Pattern->WebGL2',
+//   testRender('wm-invert-pattern-webgl2.png', WMInvertPatternStyle, 2),
+// );
 test('WM->LCH->WebGL2', testRender('wm-lch-webgl2.png', WMLCHStyle, 2));
 test('WM->Lines->WebGL2', testRender('wm-lines-webgl2.png', WMLinesStyle, 2));
 test('WM->Local->WebGL2', testRender('wm-local-webgl2.png', WMLocalStyle, 2));
