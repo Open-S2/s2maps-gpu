@@ -34,6 +34,10 @@ exports[`WebGL2 > S2->Shade->WebGL2 > S2_Shade_WebGL2 1`] = `"tests/browsers/__s
 
 exports[`WebGL2 > S2->Skybox->WebGL2 > S2_Skybox_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--Skybox--WebGL2-1.png"`;
 
+exports[`WebGL2 > S2->Sprites->WebGL2 > S2_Sprites_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--Sprites--WebGL2-1.png"`;
+
+exports[`WebGL2 > S2->Streets->WebGL2 > S2_Streets_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--Streets--WebGL2-3.png"`;
+
 exports[`WebGL2 > S2->Wallpaper->WebGL2 > S2_Wallpaper_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-S2--Wallpaper--WebGL2-1.png"`;
 
 exports[`WebGL2 > WM->Background->WebGL2 > WM_Background_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-WM--Background--WebGL2-1.png"`;
@@ -69,3 +73,75 @@ exports[`WebGL2 > WM->Nested-Properties->WebGL2 > WM_Nested_Properties_WebGL2 1`
 exports[`WebGL2 > WM->Points->WebGL2 > WM_Points_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-WM--Points--WebGL2-1.png"`;
 
 exports[`WebGL2 > WM->Raster->WebGL2 > WM_Raster_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-WM--Raster--WebGL2-1.png"`;
+
+exports[`WebGL2 > WM->Sprites->WebGL2 > WM_Sprites_WebGL2 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGL2-WM--Sprites--WebGL2-1.png"`;
+
+exports[`WebGPU > S2->Background->WebGPU > S2_Background_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-S2--Background--WebGPU-1.png"`;
+
+exports[`WebGPU > S2->Fill->WebGPU > S2_Fill_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-S2--Fill--WebGPU-1.png"`;
+
+exports[`WebGPU > S2->Fill-Pattern->WebGPU > S2_Fill_Pattern_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-S2--Fill-Pattern--WebGPU-1.png"`;
+
+exports[`WebGPU > S2->Fill-Pattern-Sprite->WebGPU > S2_Fill_Pattern_Sprite_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-S2--Fill-Pattern-Sprite--WebGPU-1.png"`;
+
+exports[`WebGPU > S2->Heatmap->WebGPU > S2_Heatmap_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-S2--Heatmap--WebGPU-1.png"`;
+
+exports[`WebGPU > S2->Invert->WebGPU > S2_Invert_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-S2--Invert--WebGPU-1.png"`;
+
+exports[`WebGPU > S2->Invert-Pattern->WebGPU > S2_Invert_Pattern_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-S2--Invert-Pattern--WebGPU-1.png"`;
+
+exports[`WebGPU > S2->LCH->WebGPU > S2_LCH_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-S2--LCH--WebGPU-1.png"`;
+
+exports[`WebGPU > S2->Lines->WebGPU > S2_Lines_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-S2--Lines--WebGPU-1.png"`;
+
+exports[`WebGPU > S2->Local->WebGPU > S2_Local_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-S2--Local--WebGPU-1.png"`;
+
+exports[`WebGPU > S2->Markers->WebGPU > S2_Markers_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-S2--Markers--WebGPU-1.png"`;
+
+exports[`WebGPU > S2->Nested-Properties->WebGPU > S2_Nested_Properties_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-S2--Nested-Properties--WebGPU-1.png"`;
+
+exports[`WebGPU > S2->Points->WebGPU > S2_Points_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-S2--Points--WebGPU-1.png"`;
+
+exports[`WebGPU > S2->Raster->WebGPU > S2_Raster_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-S2--Raster--WebGPU-1.png"`;
+
+exports[`WebGPU > S2->S2JSON->WebGPU > S2_S2JSON_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-S2--S2JSON--WebGPU-1.png"`;
+
+exports[`WebGPU > S2->Shade->WebGPU > S2_Shade_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-S2--Shade--WebGPU-1.png"`;
+
+exports[`WebGPU > S2->Skybox->WebGPU > S2_Skybox_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-S2--Skybox--WebGPU-1.png"`;
+
+exports[`WebGPU > S2->Wallpaper->WebGPU > S2_Wallpaper_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-S2--Wallpaper--WebGPU-1.png"`;
+
+exports[`WebGPU > WM->Background->WebGPU > WM_Background_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-WM--Background--WebGPU-1.png"`;
+
+exports[`WebGPU > WM->Fill->WebGPU > WM_Fill_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-WM--Fill--WebGPU-1.png"`;
+
+exports[`WebGPU > WM->Fill-Pattern->WebGPU > WM_Fill_Pattern_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-WM--Fill-Pattern--WebGPU-1.png"`;
+
+exports[`WebGPU > WM->Fill-Pattern-Sprite->WebGPU > WM_Fill_Pattern_Sprite_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-WM--Fill-Pattern-Sprite--WebGPU-1.png"`;
+
+exports[`WebGPU > WM->GeoJSON->WebGPU > WM_GeoJSON_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-WM--GeoJSON--WebGPU-1.png"`;
+
+exports[`WebGPU > WM->Heatmap->WebGPU > WM_Heatmap_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-WM--Heatmap--WebGPU-1.png"`;
+
+exports[`WebGPU > WM->Hillshade->WebGPU > WM_Hillshade_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-WM--Hillshade--WebGPU-1.png"`;
+
+exports[`WebGPU > WM->HillshadeTerrarium->WebGPU > WM_Hillshade_Terrarium_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-WM--HillshadeTerrarium--WebGPU-1.png"`;
+
+exports[`WebGPU > WM->Invert->WebGPU > WM_Invert_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-WM--Invert--WebGPU-1.png"`;
+
+exports[`WebGPU > WM->Invert-Pattern->WebGPU > WM_Invert_Pattern_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-WM--Invert-Pattern--WebGPU-1.png"`;
+
+exports[`WebGPU > WM->LCH->WebGPU > WM_LCH_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-WM--LCH--WebGPU-1.png"`;
+
+exports[`WebGPU > WM->Lines->WebGPU > WM_Lines_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-WM--Lines--WebGPU-1.png"`;
+
+exports[`WebGPU > WM->Local->WebGPU > WM_Local_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-WM--Local--WebGPU-1.png"`;
+
+exports[`WebGPU > WM->Markers->WebGPU > WM_Markers_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-WM--Markers--WebGPU-1.png"`;
+
+exports[`WebGPU > WM->Nested-Properties->WebGPU > WM_Nested_Properties_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-WM--Nested-Properties--WebGPU-1.png"`;
+
+exports[`WebGPU > WM->Points->WebGPU > WM_Points_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-WM--Points--WebGPU-1.png"`;
+
+exports[`WebGPU > WM->Raster->WebGPU > WM_Raster_WebGPU 1`] = `"tests/browsers/__screenshots__/examples.browser.test.ts/WebGPU-WM--Raster--WebGPU-1.png"`;
