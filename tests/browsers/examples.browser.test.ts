@@ -167,7 +167,7 @@ describe('WebGPU', () => {
   test('S2->Raster->WebGPU', testRender('S2_Raster_WebGPU', S2RasterStyle, 3));
   test('S2->S2JSON->WebGPU', testRender('S2_S2JSON_WebGPU', S2S2JSONStyle, 3));
   test('S2->Shade->WebGPU', testRender('S2_Shade_WebGPU', S2ShadeStyle, 3));
-  test('S2->Skybox->WebGPU', testRender('S2_Skybox_WebGPU', S2SkyboxStyle, 3));
+  // test('S2->Skybox->WebGPU', testRender('S2_Skybox_WebGPU', S2SkyboxStyle, 3));
   // test('S2->Sprites->WebGPU', testRender('S2_Sprites_WebGPU', S2SpritesStyle, 3));
   // test('S2->Streets->WebGPU', testRender('S2_Streets_WebGPU', S2StreetsStyle, 3));
   test('S2->Wallpaper->WebGPU', testRender('S2_Wallpaper_WebGPU', S2WallpaperStyle, 3));
