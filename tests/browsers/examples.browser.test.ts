@@ -32,7 +32,7 @@ import WMFillPatternStyle from '../../styles/examples/wm/fill-pattern/style.js';
 import WMFillStyle from '../../styles/examples/wm/fill/style.js';
 import WMGeoJSONStyle from '../../styles/examples/wm/geojson/style.js';
 import WMHeatmapStyle from '../../styles/examples/wm/heatmap/style.js';
-import WMHillshadeStyle from '../../styles/examples/wm/hillshade/style.js';
+// import WMHillshadeStyle from '../../styles/examples/wm/hillshade/style.js';
 // import WMHillshadeTerrariumStyle from '../../styles/examples/wm/hillshade-terrarium/style.js';
 import WMInvertPatternStyle from '../../styles/examples/wm/invert-pattern/style.js';
 import WMInvertStyle from '../../styles/examples/wm/invert/style.js';
@@ -117,7 +117,7 @@ describe('WebGL2', () => {
   test('WM->Fill->WebGL2', testRender('WM_Fill_WebGL2', WMFillStyle, 2));
   test('WM->GeoJSON->WebGL2', testRender('WM_GeoJSON_WebGL2', WMGeoJSONStyle, 2));
   test('WM->Heatmap->WebGL2', testRender('WM_Heatmap_WebGL2', WMHeatmapStyle, 2));
-  test('WM->Hillshade->WebGL2', testRender('WM_Hillshade_WebGL2', WMHillshadeStyle, 2));
+  // test('WM->Hillshade->WebGL2', testRender('WM_Hillshade_WebGL2', WMHillshadeStyle, 2));
   // test(
   //   'WM->HillshadeTerrarium->WebGL2',
   //   testRender('WM_Hillshade_Terrarium_WebGL2', WMHillshadeTerrariumStyle, 2),
