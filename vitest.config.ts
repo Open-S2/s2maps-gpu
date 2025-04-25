@@ -20,6 +20,12 @@ export default defineConfig({
           browser: 'chromium',
           launch: {
             headless: true,
+            args: [
+              // '--use-angle=vulkan',
+              // '--enable-features=Vulkan',
+              // '--disable-vulkan-surface',
+              '--enable-unsafe-webgpu',
+            ],
           },
           context: {
             viewport: {
