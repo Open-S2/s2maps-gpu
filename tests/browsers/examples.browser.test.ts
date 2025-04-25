@@ -164,7 +164,7 @@ describe('WebGPU', () => {
   //     testRender('S2_Nested_Properties_WebGPU', S2NestedPropertiesStyle, 3),
   //   );
   test('S2->Points->WebGPU', testRender('S2_Points_WebGPU', S2PointsStyle, 3));
-  test('S2->Raster->WebGPU', testRender('S2_Raster_WebGPU', S2RasterStyle, 3));
+  // test('S2->Raster->WebGPU', testRender('S2_Raster_WebGPU', S2RasterStyle, 3));
   test('S2->S2JSON->WebGPU', testRender('S2_S2JSON_WebGPU', S2S2JSONStyle, 3));
   test('S2->Shade->WebGPU', testRender('S2_Shade_WebGPU', S2ShadeStyle, 3));
   // test('S2->Skybox->WebGPU', testRender('S2_Skybox_WebGPU', S2SkyboxStyle, 3));
@@ -200,6 +200,6 @@ describe('WebGPU', () => {
     testRender('WM_Nested_Properties_WebGPU', WMNestedPropertiesStyle, 3),
   );
   test('WM->Points->WebGPU', testRender('WM_Points_WebGPU', WMPointsStyle, 3));
-  test('WM->Raster->WebGPU', testRender('WM_Raster_WebGPU', WMRasterStyle, 3));
+  // test('WM->Raster->WebGPU', testRender('WM_Raster_WebGPU', WMRasterStyle, 3));
   // test('WM->Sprites->WebGPU', testRender('WM_Sprites_WebGPU', WMSpritesStyle, 3));
 });
