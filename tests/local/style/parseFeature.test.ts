@@ -1,5 +1,5 @@
 import parseFeature from 'style/parseFeature.js';
-import { expect, test } from 'bun:test';
+import { expect, test } from 'vitest';
 
 import type { LayerWorkerFunction, Properties } from 'style/style.spec.js';
 

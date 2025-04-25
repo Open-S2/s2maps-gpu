@@ -2,12 +2,8 @@
 import AutoImport from 'unplugin-auto-import/vite';
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
-import eslint from 'vite-plugin-eslint2';
 import vue from '@vitejs/plugin-vue';
 import { svelte, vitePreprocess } from '@sveltejs/vite-plugin-svelte';
-
-// import sveltePreprocess from 'svelte-preprocess';
-import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
   root: __dirname,
@@ -16,19 +12,25 @@ export default defineConfig({
       imports: ['svelte', 'react', 'svelte/store', 'vue/macros', 'vue'],
       dts: './auto-imports.d.ts', // generates types
     }),
-    tsconfigPaths(),
-    eslint(),
-    vue(),
-    svelte({ preprocess: vitePreprocess({ script: true }) }),
-    dts({
-      entryRoot: '.',
-      outDir: 'dist',
+    vue({ customElement: true }),
+    svelte({
+      preprocess: vitePreprocess(),
+      compilerOptions: {
+        css: 'injected', // inline CSS instead of extracting
+        // generate: 'dom', // or 'ssr' if targeting server
+        dev: false,
+        runes: true,
+      },
+      emitCss: false, // disable CSS extraction
+      exclude: undefined,
     }),
+    dts({ entryRoot: '.', outDir: 'dist' }),
   ],
   resolve: {
     extensions: ['.ts', '.jsx', '.tsx', '.json', '.vue', '.svelte'],
   },
   build: {
+    cssCodeSplit: false,
     sourcemap: true,
     lib: {
       entry: './index.ts',
@@ -45,6 +47,8 @@ export default defineConfig({
         'vuex',
         'vuex-class',
         'svelte',
+        'svelte/internal',
+        'svelte/store',
         'react',
       ],
     },

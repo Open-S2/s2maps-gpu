@@ -1,6 +1,6 @@
 import { toLL, toS2, toUnitScale, toVector } from '../../../../../s2/gis-tools/geometry/wm/convert';
 
-import { expect, test } from 'bun:test';
+import { expect, test } from 'vitest';
 
 import type { Feature, VectorFeature } from '../../../../../s2/gis-tools/geometry';
 

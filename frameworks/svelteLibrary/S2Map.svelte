@@ -28,36 +28,29 @@
 
     /** Initialize the map */
     async function initializeMap() {
-      try {
-        // Preload map assets - ensure this is idempotent or safe if deps cause re-run
-        await preloadMap(build, version);
-        if (aborted || containerEl === undefined) return; // Abort if component destroyed/re-rendering after await
+      // Preload map assets - ensure this is idempotent or safe if deps cause re-run
+      await preloadMap(build, version);
+      if (aborted || containerEl === undefined) return; // Abort if component destroyed/re-rendering after await
 
-        const S2MapConstructor = window.S2Map;
-        if (S2MapConstructor === undefined) {
-          console.error('S2Map constructor not found on window object.');
-          return;
-        }
+      const S2MapConstructor = window.S2Map;
+      if (S2MapConstructor === undefined) {
+        console.error('S2Map constructor not found on window object.');
+        return;
+      }
+      // Create map instance
+      map = new S2MapConstructor({ ...mapOptions, container: containerEl });
+      mapInstance = map;
 
-        // Create map instance
-        map = new S2MapConstructor({ ...mapOptions, container: containerEl });
-        mapInstance = map; // Assign to state
-
-        // Attach the ready listener if callback prop provided
-        if (mapReady !== undefined) {
-          map.addEventListener(
-            'ready',
-            () => {
-              // Only call back if map instance is still valid and effect hasn't been aborted
-              if (!aborted && mapInstance === map) {
-                mapReady(map);
-              }
-            },
-            { once: true },
-          );
-        }
-      } catch (error) {
-        console.error('Failed to initialize S2Map:', error);
+      if (mapReady !== undefined) {
+        map.addEventListener(
+          'ready',
+          () => {
+            if (!aborted && mapInstance === map) {
+              mapReady(map);
+            }
+          },
+          { once: true },
+        );
       }
     }
 
@@ -83,7 +76,6 @@
 
 <style>
   #map {
-    /* Condensed style */
     position: absolute;
     top: 0;
     bottom: 0;

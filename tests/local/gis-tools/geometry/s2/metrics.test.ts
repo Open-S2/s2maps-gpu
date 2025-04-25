@@ -15,7 +15,7 @@ import {
   K_MIN_EDGE,
   K_MIN_WIDTH,
 } from '../../../../../s2/gis-tools/geometry/s2/metrics';
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it } from 'vitest';
 
 // ANGLE SPAN
 

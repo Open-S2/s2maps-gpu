@@ -3,7 +3,7 @@ import {
   base64ToArrayBuffer,
   encodingToCompression,
 } from '../../../../s2/gis-tools/util/index.js';
-import { expect, test } from 'bun:test';
+import { expect, test } from 'vitest';
 
 test('base64ToArrayBuffer', () => {
   expect(base64ToArrayBuffer('')).toEqual(new ArrayBuffer(0));

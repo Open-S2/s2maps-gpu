@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, test } from 'vitest';
 import {
   pointAdd,
   pointAddMut,
@@ -91,7 +91,7 @@ describe('pointDivMutScalar', (): void => {
   });
 });
 
-describe('pointCross', (): void => {
+test('pointCross', (): void => {
   const a: VectorPoint = { x: 1, y: 2, z: 3 };
   const b: VectorPoint = { x: 1, y: 2, z: 3 };
   const c: VectorPoint = { x: 5, y: 6, z: 7 };

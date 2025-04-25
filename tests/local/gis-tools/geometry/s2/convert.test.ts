@@ -1,5 +1,7 @@
 import { toWM } from '../../../../../s2/gis-tools/geometry/s2/convert';
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it } from 'vitest';
+
+import { deepEqualWithTolerance } from '../../../../deepEqual';
 
 import type { S2Feature } from '../../../../../s2/gis-tools/geometry';
 
@@ -18,7 +20,7 @@ describe('toWM', () => {
       },
       metadata: { name2: 'test2' },
     };
-    expect(toWM(s2Feature)).toEqual({
+    const expected = {
       type: 'VectorFeature',
       id: 2,
       properties: { name: 'test' },
@@ -29,7 +31,8 @@ describe('toWM', () => {
         bbox: [0, 0, 0.5, 1],
       },
       metadata: { name2: 'test2' },
-    });
+    };
+    expect(deepEqualWithTolerance(toWM(s2Feature), expected)).toBe(true);
   });
 
   it('should throw an error if the conversion is not yet supported or Invalid S2Geometry type', () => {
@@ -68,7 +71,7 @@ describe('toWM', () => {
       },
       metadata: { name2: 'test2' },
     };
-    expect(toWM(s2Feature)).toEqual({
+    const expected = {
       type: 'VectorFeature',
       id: 2,
       properties: { name: 'test' },
@@ -82,7 +85,8 @@ describe('toWM', () => {
         bbox: [0, 0, 0.5, 1],
       },
       metadata: { name2: 'test2' },
-    });
+    };
+    expect(deepEqualWithTolerance(toWM(s2Feature), expected)).toBe(true);
   });
 
   it('should convert an S2Feature LineString to a GeoJSON Feature', () => {
@@ -103,7 +107,7 @@ describe('toWM', () => {
       },
       metadata: { name2: 'test2' },
     };
-    expect(toWM(s2Feature)).toEqual({
+    const expected = {
       type: 'VectorFeature',
       id: 2,
       properties: { name: 'test' },
@@ -118,7 +122,8 @@ describe('toWM', () => {
         offset: 1,
       },
       metadata: { name2: 'test2' },
-    });
+    };
+    expect(deepEqualWithTolerance(toWM(s2Feature), expected)).toBe(true);
   });
 
   it('should convert an S2Feature MultiLineString to a GeoJSON Feature', () => {
@@ -145,7 +150,7 @@ describe('toWM', () => {
       },
       metadata: { name2: 'test2' },
     };
-    expect(toWM(s2Feature)).toEqual({
+    const expected = {
       type: 'VectorFeature',
       id: 2,
       properties: { name: 'test' },
@@ -166,7 +171,9 @@ describe('toWM', () => {
         offset: [0, 1],
       },
       metadata: { name2: 'test2' },
-    });
+    };
+
+    expect(deepEqualWithTolerance(toWM(s2Feature), expected)).toBe(true);
   });
 
   it('should convert an S2Feature Polygon to a GeoJSON Feature', () => {
@@ -193,7 +200,7 @@ describe('toWM', () => {
       },
       metadata: { name2: 'test2' },
     };
-    expect(toWM(s2Feature)).toEqual({
+    const expected = {
       type: 'VectorFeature',
       id: 2,
       properties: { name: 'test' },
@@ -214,7 +221,9 @@ describe('toWM', () => {
         offset: [0.123, 0.456],
       },
       metadata: { name2: 'test2' },
-    });
+    };
+
+    expect(deepEqualWithTolerance(toWM(s2Feature), expected)).toBe(true);
   });
 
   it('should convert an S2Feature MultiPolygon to a GeoJSON Feature', () => {
@@ -243,7 +252,7 @@ describe('toWM', () => {
       },
       metadata: { name2: 'test2' },
     };
-    expect(toWM(s2Feature)).toEqual({
+    const expected = {
       type: 'VectorFeature',
       id: 2,
       properties: { name: 'test' },
@@ -266,6 +275,8 @@ describe('toWM', () => {
         offset: [[0.123, 0.456]],
       },
       metadata: { name2: 'test2' },
-    });
+    };
+
+    expect(deepEqualWithTolerance(toWM(s2Feature), expected)).toBe(true);
   });
 });

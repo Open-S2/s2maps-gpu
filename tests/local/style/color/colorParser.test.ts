@@ -1,5 +1,5 @@
 import { colorParser } from 'style/color';
-import { expect, test } from 'bun:test';
+import { expect, test } from 'vitest';
 
 test('colorParser - color name', () => {
   expect(colorParser('red')).toEqual(['rgb', [255, 0, 0, 1]]);

@@ -46,7 +46,7 @@ import {
   idVertexNeighbors,
 } from '../../../../s2/gis-tools/geometry/id';
 
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, test } from 'vitest';
 
 // Helpers
 import { pointFromLonLat } from '../../../../s2/gis-tools/geometry/s2/point';
@@ -421,12 +421,12 @@ describe('idVertexNeighbors', () => {
   });
 });
 
-describe('idToFaceIJ', () => {
+test('idToFaceIJ', () => {
   const id = idToFaceIJ(0n);
   expect(id).toEqual([0, 0, 0, 0]);
 });
 
-describe('idContainsS2Point', () => {
+test('idContainsS2Point', () => {
   const face0 = idFromFace(0);
   const point = pointFromLonLat({ x: 0, y: 0 });
   const point2 = pointFromLonLat({ x: -160, y: 70 });
@@ -434,7 +434,7 @@ describe('idContainsS2Point', () => {
   expect(idContainsS2Point(face0, point2)).toEqual(false);
 });
 
-describe('idGetBoundUV', () => {
+test('idGetBoundUV', () => {
   expect(idGetBoundUV(idFromFace(0))).toEqual([-1, 1, -1, 1]);
   expect(idGetBoundUV(idFromFace(1))).toEqual([-1, 1, -1, 1]);
 
@@ -445,7 +445,7 @@ describe('idGetBoundUV', () => {
   expect(idGetBoundUV(d)).toEqual([0, 1, -1, 0]);
 });
 
-describe('idGetEdgesRaw', () => {
+test('idGetEdgesRaw', () => {
   expect(idGetEdgesRaw(idFromFace(0))).toEqual([
     { x: 1, y: 0, z: 1 },
     { x: 1, y: -1, z: 0 },
@@ -462,7 +462,7 @@ describe('idGetEdgesRaw', () => {
   ]);
 });
 
-describe('idGetEdges', () => {
+test('idGetEdges', () => {
   expect(idGetEdges(idFromFace(0))).toEqual([
     { x: 0.7071067811865475, y: 0, z: 0.7071067811865475 },
     { x: 0.7071067811865475, y: -0.7071067811865475, z: 0 },
@@ -479,7 +479,7 @@ describe('idGetEdges', () => {
   ]);
 });
 
-describe('idGetVerticesRaw', () => {
+test('idGetVerticesRaw', () => {
   expect(idGetVerticesRaw(idFromFace(0))).toEqual([
     { x: 1, y: -1, z: -1 },
     { x: 1, y: 1, z: -1 },
@@ -496,7 +496,7 @@ describe('idGetVerticesRaw', () => {
   ]);
 });
 
-describe('idGetVertices', () => {
+test('idGetVertices', () => {
   expect(idGetVertices(idFromFace(0))).toEqual([
     { x: 0.5773502691896258, y: -0.5773502691896258, z: -0.5773502691896258 },
     { x: 0.5773502691896258, y: 0.5773502691896258, z: -0.5773502691896258 },
@@ -513,7 +513,7 @@ describe('idGetVertices', () => {
   ]);
 });
 
-describe('compareIDs', () => {
+test('compareIDs', () => {
   expect(compareIDs(idFromFace(0), idFromFace(0))).toEqual(0);
   expect(compareIDs(idFromFace(0), idFromFace(1))).toEqual(-1);
   expect(compareIDs(idFromFace(1), idFromFace(0))).toEqual(1);

@@ -1,5 +1,5 @@
 import coalesceField from 'style/coalesceField.js';
-import { expect, test } from 'bun:test';
+import { expect, test } from 'vitest';
 
 import type { Properties } from 's2';
 

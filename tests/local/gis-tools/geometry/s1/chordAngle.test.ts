@@ -17,7 +17,7 @@ import {
   chordAngToKM,
   chordAngToMeters,
 } from '../../../../../s2/gis-tools/geometry/s1/chordAngle';
-import { expect, test } from 'bun:test';
+import { expect, test } from 'vitest';
 
 test('chordAngCos', () => {
   expect(chordAngCos(0)).toEqual(1);

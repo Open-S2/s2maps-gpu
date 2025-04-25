@@ -15,45 +15,45 @@ interface ComponentFixtures {
 }
 
 // S2
-import S2BackgroundStyle from '../../pages/s2/background/style.js';
-import S2FillPatternSpriteStyle from '../../pages/s2/fill-pattern-sprite/style.js';
-import S2FillPatternStyle from '../../pages/s2/fill-pattern/style.js';
-import S2FillStyle from '../../pages/s2/fill/style.js';
-// import S2HeatmapStyle from '../../pages/s2/heatmap/style.js';
-// import S2InvertPatternStyle from '../../pages/s2/invert-pattern/style.js';
-import S2InvertStyle from '../../pages/s2/invert/style.js';
-// import S2LCHStyle from '../../pages/s2/lch/style.js';
-import S2LinesStyle from '../../pages/s2/lines/style.js';
-import S2LocalStyle from '../../pages/s2/local/style.js';
-import S2MarkersStyle from '../../pages/s2/markers/style.js';
-import S2NestedPropertiesStyle from '../../pages/s2/nested-properties/style.js';
-import S2PointsStyle from '../../pages/s2/points/style.js';
-import S2RasterStyle from '../../pages/s2/raster/style.js';
-import S2S2JSONStyle from '../../pages/s2/s2json/style.js';
-import S2ShadeStyle from '../../pages/s2/shade/style.js';
-import S2SkyboxStyle from '../../pages/s2/skybox/style.js';
-// import S2SpritesStyle from '../../pages/s2/sprites/style.js';
-// import S2StreetsStyle from '../../pages/s2/streets/style.js';
-import S2WallpaperStyle from '../../pages/s2/wallpaper/style.js';
+import S2BackgroundStyle from '../../styles/examples/s2/background/style.js';
+import S2FillPatternSpriteStyle from '../../styles/examples/s2/fill-pattern-sprite/style.js';
+import S2FillPatternStyle from '../../styles/examples/s2/fill-pattern/style.js';
+import S2FillStyle from '../../styles/examples/s2/fill/style.js';
+// import S2HeatmapStyle from '../../styles/examples/s2/heatmap/style.js';
+// import S2InvertPatternStyle from '../../styles/examples/s2/invert-pattern/style.js';
+import S2InvertStyle from '../../styles/examples/s2/invert/style.js';
+// import S2LCHStyle from '../../styles/examples/s2/lch/style.js';
+import S2LinesStyle from '../../styles/examples/s2/lines/style.js';
+import S2LocalStyle from '../../styles/examples/s2/local/style.js';
+import S2MarkersStyle from '../../styles/examples/s2/markers/style.js';
+import S2NestedPropertiesStyle from '../../styles/examples/s2/nested-properties/style.js';
+import S2PointsStyle from '../../styles/examples/s2/points/style.js';
+import S2RasterStyle from '../../styles/examples/s2/raster/style.js';
+import S2S2JSONStyle from '../../styles/examples/s2/s2json/style.js';
+import S2ShadeStyle from '../../styles/examples/s2/shade/style.js';
+import S2SkyboxStyle from '../../styles/examples/s2/skybox/style.js';
+// import S2SpritesStyle from '../../styles/examples/s2/sprites/style.js';
+// import S2StreetsStyle from '../../styles/examples/s2/streets/style.js';
+import S2WallpaperStyle from '../../styles/examples/s2/wallpaper/style.js';
 // WM
-import WMBackgroundStyle from '../../pages/wm/background/style.js';
-// import WMFillPatternSpriteStyle from '../../pages/wm/fill-pattern-sprite/style.js';
-// import WMFillPatternStyle from '../../pages/wm/fill-pattern/style.js';
-import WMFillStyle from '../../pages/wm/fill/style.js';
-import WMGeoJSONStyle from '../../pages/wm/geojson/style.js';
-import WMHeatmapStyle from '../../pages/wm/heatmap/style.js';
-import WMHillshadeStyle from '../../pages/wm/hillshade/style.js';
-import WMHillshadeTerrariumStyle from '../../pages/wm/hillshade-terrarium/style.js';
-// import WMInvertPatternStyle from '../../pages/wm/invert-pattern/style.js';
-import WMInvertStyle from '../../pages/wm/invert/style.js';
-import WMLCHStyle from '../../pages/wm/lch/style.js';
-import WMLinesStyle from '../../pages/wm/lines/style.js';
-import WMLocalStyle from '../../pages/wm/local/style.js';
-import WMMarkersStyle from '../../pages/wm/markers/style.js';
-import WMNestedPropertiesStyle from '../../pages/wm/nested-properties/style.js';
-import WMPointsStyle from '../../pages/wm/points/style.js';
-import WMRasterStyle from '../../pages/wm/raster/style.js';
-// import WMSpritesStyle from '../../pages/wm/sprites/style.js';
+import WMBackgroundStyle from '../../styles/examples/wm/background/style.js';
+// import WMFillPatternSpriteStyle from '../../styles/examples/wm/fill-pattern-sprite/style.js';
+// import WMFillPatternStyle from '../../styles/examples/wm/fill-pattern/style.js';
+import WMFillStyle from '../../styles/examples/wm/fill/style.js';
+import WMGeoJSONStyle from '../../styles/examples/wm/geojson/style.js';
+import WMHeatmapStyle from '../../styles/examples/wm/heatmap/style.js';
+import WMHillshadeStyle from '../../styles/examples/wm/hillshade/style.js';
+import WMHillshadeTerrariumStyle from '../../styles/examples/wm/hillshade-terrarium/style.js';
+// import WMInvertPatternStyle from '../../styles/examples/wm/invert-pattern/style.js';
+import WMInvertStyle from '../../styles/examples/wm/invert/style.js';
+import WMLCHStyle from '../../styles/examples/wm/lch/style.js';
+import WMLinesStyle from '../../styles/examples/wm/lines/style.js';
+import WMLocalStyle from '../../styles/examples/wm/local/style.js';
+import WMMarkersStyle from '../../styles/examples/wm/markers/style.js';
+import WMNestedPropertiesStyle from '../../styles/examples/wm/nested-properties/style.js';
+import WMPointsStyle from '../../styles/examples/wm/points/style.js';
+import WMRasterStyle from '../../styles/examples/wm/raster/style.js';
+// import WMSpritesStyle from '../../styles/examples/wm/sprites/style.js';
 
 // WebGL2 //
 

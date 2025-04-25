@@ -1,5 +1,5 @@
 import { adjustURL } from 'util/index.js';
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'vitest';
 
 describe('adjustURL', () => {
   test('should replace s2maps:// with opens2 api url', () => {

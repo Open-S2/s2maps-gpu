@@ -15,7 +15,7 @@ import {
   angleToKM,
   angleToMeters,
 } from '../../../../../s2/gis-tools/geometry/s1/angle';
-import { expect, test } from 'bun:test';
+import { expect, test } from 'vitest';
 
 import { pointFromLonLat } from '../../../../../s2/gis-tools/geometry/s2/point';
 

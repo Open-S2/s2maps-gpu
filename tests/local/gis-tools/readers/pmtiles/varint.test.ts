@@ -1,5 +1,5 @@
 import { readVarint } from '../../../../../s2/gis-tools/readers/pmtiles';
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'vitest';
 
 describe('varint', () => {
   const resBuffer = {

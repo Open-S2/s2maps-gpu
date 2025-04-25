@@ -1,6 +1,6 @@
 import { Color } from 'style/color/index.js';
 import getEasingFunction from 'style/easingFunctions.js';
-import { expect, test } from 'bun:test';
+import { expect, test } from 'vitest';
 
 test('getEasingFunction - linear', () => {
   const easingFunction = getEasingFunction<number>('lin', 1);

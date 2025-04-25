@@ -1,12 +1,11 @@
 import AutoImport from 'unplugin-auto-import/vite';
 import Components from 'unplugin-vue-components/vite';
+import IstanbulPlugin from 'vite-plugin-istanbul';
 import { fileURLToPath } from 'url';
 import glsl from '../config/glsl-loader/vite.js';
 import vue from '@vitejs/plugin-vue';
 import wgsl from '../config/wgsl-loader/vite.js';
 import { defineConfig, devices } from '@playwright/experimental-ct-vue';
-
-import IstanbulPlugin from 'vite-plugin-istanbul';
 
 /** See https://playwright.dev/docs/test-configuration. */
 export default defineConfig({
@@ -46,8 +45,7 @@ export default defineConfig({
         }),
         Components({ dirs: ['./components'], extensions: ['vue'] }),
         IstanbulPlugin({
-          include: ['s2/*', 's2/**/*'],
-          exclude: ['node_modules', 'test/'],
+          include: ['s2'],
           extension: ['.js', '.ts', '.vue'],
           nycrcPath: './nyc.config.js',
           requireEnv: false,
@@ -61,8 +59,7 @@ export default defineConfig({
           glsl(),
           wgsl(),
           IstanbulPlugin({
-            include: ['s2/*', 's2/**/*'],
-            exclude: ['node_modules', 'test/'],
+            include: ['s2'],
             extension: ['.js', '.ts', '.vue'],
             nycrcPath: './nyc.config.js',
             requireEnv: false,

@@ -18,7 +18,7 @@ import {
   tilePxBounds,
   xyzToBBOX,
 } from '../../../../../s2/gis-tools/geometry/wm/coords';
-import { describe, expect, it, test } from 'bun:test';
+import { describe, expect, it, test } from 'vitest';
 
 import type { BBox } from '../../../../../s2/gis-tools/geometry';
 

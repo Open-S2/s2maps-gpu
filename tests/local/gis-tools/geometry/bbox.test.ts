@@ -9,16 +9,16 @@ import {
   mergeBBoxes,
   pointOverlap,
 } from '../../../../s2/gis-tools/geometry/bbox';
-import { describe, expect, it, test } from 'bun:test';
+import { describe, expect, it, test } from 'vitest';
 
 import type { BBox, BBox3D } from '../../../../s2/gis-tools/geometry';
 
 describe('pointOverlap', () => {
   it('check if point is within bbox', () => {
-    expect(pointOverlap([0, 0, 1, 1], { x: 0.5, y: 0.5 })).toBeTrue();
+    expect(pointOverlap([0, 0, 1, 1], { x: 0.5, y: 0.5 })).toBe(true);
   });
   it('check if point is not within bbox', () => {
-    expect(pointOverlap([0, 0, 1, 1], { x: 2, y: 2 })).toBeFalse();
+    expect(pointOverlap([0, 0, 1, 1], { x: 2, y: 2 })).toBe(false);
   });
 });
 

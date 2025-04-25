@@ -3,7 +3,7 @@ import {
   centerOfPoints,
   equalPoints,
 } from '../../../../../s2/gis-tools/geometry/tools/points';
-import { expect, test } from 'bun:test';
+import { expect, test } from 'vitest';
 
 test('equalPoints', () => {
   expect(equalPoints({ x: 0, y: 0 }, { x: 0, y: 0 })).toEqual(true);

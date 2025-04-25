@@ -1,5 +1,5 @@
 import { FetchReader } from '../../../../s2/gis-tools';
-import { expect, test } from 'bun:test';
+import { expect, test } from 'vitest';
 
 test('FetchReader - ensure 0s', () => {
   const reader = new FetchReader('https://example.com/test.pmtiles', true);

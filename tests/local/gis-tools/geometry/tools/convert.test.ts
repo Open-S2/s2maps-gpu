@@ -1,5 +1,5 @@
 import { convert } from '../../../../../s2/gis-tools';
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it } from 'vitest';
 
 import type {
   Feature,

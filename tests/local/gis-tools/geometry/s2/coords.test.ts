@@ -26,7 +26,7 @@ import {
   tileXYFromUVZoom,
   xyzToLonLat,
 } from '../../../../../s2/gis-tools/geometry/s2/coords';
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, test } from 'vitest';
 
 describe('IJtoST', () => {
   it('should convert any whole number to between [0, 1]', () => {
@@ -297,7 +297,7 @@ describe('xyzToLonLat', () => {
   });
 });
 
-describe('getUNorm', () => {
+test('getUNorm', () => {
   expect(getUNorm(0, -1)).toEqual({ x: -1, y: -1, z: 0 });
   expect(getUNorm(0, 1)).toEqual({ x: 1, y: -1, z: 0 });
   // just test faces now
@@ -308,7 +308,7 @@ describe('getUNorm', () => {
   expect(getUNorm(5, 0)).toEqual({ x: 0, y: -1, z: -0 });
 });
 
-describe('getVNorm', () => {
+test('getVNorm', () => {
   expect(getVNorm(0, -1)).toEqual({ x: 1, y: 0, z: 1 });
   expect(getVNorm(0, 1)).toEqual({ x: -1, y: 0, z: 1 });
   // just test faces now

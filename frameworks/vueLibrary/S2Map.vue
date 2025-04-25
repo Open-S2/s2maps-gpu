@@ -1,7 +1,5 @@
 <template>
-
-  <div id="map" ref="container"> <slot /> </div>
-
+  <div id="map" ref="container"><slot /></div>
 </template>
 
 <script lang="ts">
@@ -95,4 +93,3 @@ export default {
   height: 100%;
 }
 </style>
-

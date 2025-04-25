@@ -1,5 +1,5 @@
 import { Cache } from '../../../../s2/gis-tools/dataStructures';
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'vitest';
 
 describe('dirCache', () => {
   const dirCache = new Cache<number, number>(5);

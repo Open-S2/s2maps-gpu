@@ -1,5 +1,5 @@
 import { Color, interpolate } from 'style/color';
-import { expect, test } from 'bun:test';
+import { expect, test } from 'vitest';
 
 test('Color', () => {
   const color = new Color(255, 0, 0, 1, 'rgb');

@@ -38,14 +38,14 @@ async function getPublicData(req: Request): Promise<Response> {
 
 console.info('Server running on http://localhost:3030');
 
-process.once('SIGTERM', async () => {
-  console.log('Gracefully shutting down...');
-  await server.stop();
+process.once('SIGTERM', () => {
+  console.info('Gracefully shutting down...');
+  void server.stop();
   process.exit(0);
 });
 
-process.once('SIGINT', async () => {
-  console.log('Interrupted, cleaning up...');
-  await server.stop();
+process.once('SIGINT', () => {
+  console.info('Interrupted, cleaning up...');
+  void server.stop();
   process.exit(0);
 });

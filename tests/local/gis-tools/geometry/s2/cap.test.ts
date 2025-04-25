@@ -15,7 +15,7 @@ import {
   capIsFull,
   capRadius,
 } from '../../../../../s2/gis-tools/geometry/s2/cap';
-import { expect, test } from 'bun:test';
+import { expect, test } from 'vitest';
 
 import { idFromFace, idFromIJ, idToS2Point } from '../../../../../s2/gis-tools/geometry/id';
 

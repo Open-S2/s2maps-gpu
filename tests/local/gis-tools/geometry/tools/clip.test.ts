@@ -1,7 +1,7 @@
 import { Tile } from '../../../../../s2/gis-tools/dataStructures';
 import { idFromFace } from '../../../../../s2/gis-tools/geometry/id';
 import { clipLine, clipPoint, splitTile } from '../../../../../s2/gis-tools/geometry/tools/clip';
-import { describe, expect, it, test } from 'bun:test';
+import { describe, expect, it, test } from 'vitest';
 
 import type {
   BBox,

@@ -1,5 +1,5 @@
 import { buildColorRamp, buildDashImage } from 'style/color';
-import { expect, test } from 'bun:test';
+import { expect, test } from 'vitest';
 
 test('buildColorRamp', () => {
   const length = 4 * 5 * 256;
