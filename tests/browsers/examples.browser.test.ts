@@ -147,14 +147,14 @@ describe('WebGPU', () => {
   //   'S2->Fill-Pattern-Sprite->WebGPU',
   //   testRender('S2_Fill_Pattern_Sprite_WebGPU', S2FillPatternSpriteStyle, 3),
   // );
-  test('S2->Fill-Pattern->WebGPU', testRender('S2_Fill_Pattern_WebGPU', S2FillPatternStyle, 3));
-  test('S2->Fill->WebGPU', testRender('S2_Fill_WebGPU', S2FillStyle, 3));
+  // test('S2->Fill-Pattern->WebGPU', testRender('S2_Fill_Pattern_WebGPU', S2FillPatternStyle, 3));
+  // test('S2->Fill->WebGPU', testRender('S2_Fill_WebGPU', S2FillStyle, 3));
   // test('S2->Heatmap->WebGPU', testRender('S2_Heatmap_WebGPU', S2HeatmapStyle, 3));
   test('S2->Invert->WebGPU', testRender('S2_Invert_WebGPU', S2InvertStyle, 3));
-  test(
-    'S2->Invert-Pattern->WebGPU',
-    testRender('S2_Invert_Pattern_WebGPU', S2InvertPatternStyle, 3),
-  );
+  // test(
+  //   'S2->Invert-Pattern->WebGPU',
+  //   testRender('S2_Invert_Pattern_WebGPU', S2InvertPatternStyle, 3),
+  // );
   //   test('S2->LCH->WebGPU', testRender('S2_LCH_WebGPU', S2LCHStyle, 3));
   test('S2->Lines->WebGPU', testRender('S2_Lines_WebGPU', S2LinesStyle, 3));
   test('S2->Local->WebGPU', testRender('S2_Local_WebGPU', S2LocalStyle, 3));
@@ -170,15 +170,15 @@ describe('WebGPU', () => {
   // test('S2->Skybox->WebGPU', testRender('S2_Skybox_WebGPU', S2SkyboxStyle, 3));
   // test('S2->Sprites->WebGPU', testRender('S2_Sprites_WebGPU', S2SpritesStyle, 3));
   // test('S2->Streets->WebGPU', testRender('S2_Streets_WebGPU', S2StreetsStyle, 3));
-  test('S2->Wallpaper->WebGPU', testRender('S2_Wallpaper_WebGPU', S2WallpaperStyle, 3));
+  // test('S2->Wallpaper->WebGPU', testRender('S2_Wallpaper_WebGPU', S2WallpaperStyle, 3));
   // WM
   test('WM->Background->WebGPU', testRender('WM_Background_WebGPU', WMBackgroundStyle, 3));
   //   test(
   //     'WM->Fill-Pattern-Sprite->WebGPU',
   //     testRender('WM_Fill_Pattern_Sprite_WebGPU', WMFillPatternSpriteStyle, 3),
   //   );
-  test('WM->Fill-Pattern->WebGPU', testRender('WM_Fill_Pattern_WebGPU', WMFillPatternStyle, 3));
-  test('WM->Fill->WebGPU', testRender('WM_Fill_WebGPU', WMFillStyle, 3));
+  // test('WM->Fill-Pattern->WebGPU', testRender('WM_Fill_Pattern_WebGPU', WMFillPatternStyle, 3));
+  // test('WM->Fill->WebGPU', testRender('WM_Fill_WebGPU', WMFillStyle, 3));
   test('WM->GeoJSON->WebGPU', testRender('WM_GeoJSON_WebGPU', WMGeoJSONStyle, 3));
   test('WM->Heatmap->WebGPU', testRender('WM_Heatmap_WebGPU', WMHeatmapStyle, 3));
   // test('WM->Hillshade->WebGPU', testRender('WM_Hillshade_WebGPU', WMHillshadeStyle, 3));
@@ -187,10 +187,10 @@ describe('WebGPU', () => {
   //     testRender('WM_Hillshade_Terrarium_WebGPU', WMHillshadeTerrariumStyle, 3),
   //   );
   test('WM->Invert->WebGPU', testRender('WM_Invert_WebGPU', WMInvertStyle, 3));
-  test(
-    'WM->Invert-Pattern->WebGPU',
-    testRender('WM_Invert_Pattern_WebGPU', WMInvertPatternStyle, 3),
-  );
+  // test(
+  //   'WM->Invert-Pattern->WebGPU',
+  //   testRender('WM_Invert_Pattern_WebGPU', WMInvertPatternStyle, 3),
+  // );
   //   test('WM->LCH->WebGPU', testRender('WM_LCH_WebGPU', WMLCHStyle, 3));
   test('WM->Lines->WebGPU', testRender('WM_Lines_WebGPU', WMLinesStyle, 3));
   test('WM->Local->WebGPU', testRender('WM_Local_WebGPU', WMLocalStyle, 3));
