@@ -12,8 +12,8 @@ import type { TileRequest, TileWorkerMessages } from './worker.spec.js';
  * # Tile Worker
  *
  * A TileWorker has one job: prebuild tile data for the WebGL / WebGPU instance
- * During construction, the tileworker is given the map's id to send the data to the correct recepient
- * and also the style sheet to build the proper source data
+ * During construction, the tileworker is given the map's id to send the data to the correct
+ * recepient and also the style sheet to build the proper source data
  *
  * A TileWorker maintains map references to know how and who to send data back to
  */

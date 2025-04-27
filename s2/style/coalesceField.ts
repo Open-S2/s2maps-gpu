@@ -29,10 +29,14 @@ export default function coalesceField(
   properties: Properties,
   fieldIsKey = false,
 ): string {
-  // first dive into nested properties
-  while (typeof field === 'object' && 'key' in field) {
-    properties = (properties[field.nestedKey ?? ''] ?? {}) as Properties;
-    field = field.key;
+  // first dive into nested properties if field is an object
+  while (typeof field === 'object' && 'nestedKey' in field) {
+    const nestedKey = [...field.nestedKey];
+    while (nestedKey.length > 1) {
+      properties = (properties[nestedKey[0]] ?? {}) as Properties;
+      nestedKey.shift();
+    }
+    field = nestedKey[0];
   }
   // now coalesce the field
   if (Array.isArray(field)) {

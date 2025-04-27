@@ -67,14 +67,21 @@ function inputValueFunction<T extends NotNullOrObject, U>(
   cb: Callback<ValueType<T>, U>,
 ): LayerWorkerFunction<U> {
   return (code: number[], properties: Properties): U => {
-    let endKey: string | NestedKey = inputValue.key;
+    const { key, fallback } = inputValue;
     // dive into nested properties if needed
-    while (typeof endKey === 'object' && 'key' in endKey) {
-      properties = (properties[endKey.nestedKey ?? ''] ?? {}) as Properties;
-      endKey = endKey.key;
+    let endKey: string;
+    if (typeof key === 'object') {
+      const nestedKey = [...key.nestedKey];
+      while (nestedKey.length > 1) {
+        properties = (properties[nestedKey[0]] ?? {}) as Properties;
+        nestedKey.shift();
+      }
+      endKey = nestedKey[0];
+    } else {
+      endKey = key;
     }
     // return the input if it exists, otherwise fallback
-    const res = (properties[endKey] ?? inputValue.fallback) as ValueType<T>;
+    const res = (properties[endKey] ?? fallback) as ValueType<T>;
     const cbValue = cb(res);
     if (typeof cbValue === 'number') code.push(1, cbValue);
     else if (Array.isArray(cbValue)) code.push(cbValue.length, ...cbValue);
@@ -144,9 +151,13 @@ function dataRangeFunction<T extends NotNullOrObject, U>(
   return (code: number[], properties: Properties, _zoom: number): U => {
     let endKey: string | NestedKey = key;
     // dive into nested properties if needed
-    while (typeof endKey === 'object' && 'key' in endKey) {
-      properties = (properties[endKey.nestedKey ?? ''] ?? {}) as Properties;
-      endKey = endKey.key;
+    while (typeof endKey === 'object' && 'nestedKey' in endKey) {
+      const nestedKey = [...endKey.nestedKey];
+      while (nestedKey.length > 1) {
+        properties = (properties[nestedKey[0]] ?? {}) as Properties;
+        nestedKey.shift();
+      }
+      endKey = nestedKey[0];
     }
     const dataInput =
       properties[endKey] !== undefined && !isNaN(properties[endKey] as number)

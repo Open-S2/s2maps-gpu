@@ -67,17 +67,16 @@ const style: StyleDefinition = {
       //   comparator: '==',
       //   value: 'hil'
       // },
+      filter: {
+        key: { nestedKey: ['subClass', 'subSubClass', 'type'] },
+        comparator: '==',
+        value: 'hil',
+      },
       type: 'point',
       color: '#475569',
       radius: {
         inputValue: {
-          key: {
-            nestedKey: 'subClass',
-            key: {
-              nestedKey: 'subSubClass',
-              key: 'radius',
-            },
-          },
+          key: { nestedKey: ['subClass', 'subSubClass', 'radius'] },
           fallback: 5,
         },
       },

@@ -334,7 +334,7 @@ export type Comparator = '==' | '!=' | '>' | '>=' | '<' | '<=' | 'in' | '!in' | 
  *
  * ex.
  * ```json
- * { "filter": { "nestedKey": "class", "key": { "key": "type", "comparator": "==", "value": "ocean" } } }
+ * { "filter": { "key": { "nestedKey": ["class", "type"] }, "comparator": "==", "value": "ocean" } }
  * ```
  * ex.
  */
@@ -344,14 +344,12 @@ export interface NestedKey {
    *
    * ex.
    * ```json
-   * { "filter": { "nestedKey": "class", "key": { "key": "type", "comparator": "==", "value": "ocean" } } }
+   * { "filter": { "key": { "nestedKey": ["class", "type"] }, "comparator": "==", "value": "ocean" } }
    * ```
    *
    * this would be used to filter features where `feature.properties.class.type === 'ocean'`
    */
-  nestedKey?: string;
-  /** If the key is `class` for example, this would be used to filter feature's values where `feature.properties.class === 'ocean'` */
-  key: string | NestedKey;
+  nestedKey: string[];
 }
 
 /**
@@ -378,8 +376,7 @@ export interface NestedKey {
  *   "color": {
  *      "inputValue": {
  *         "key": {
- *            "nestedKey": "class",
- *            "key": "type"
+ *            "nestedKey": ["class", "type"],
  *         },
  *         "fallback": "blue"
  *      }
@@ -401,7 +398,7 @@ export interface InputValue<T extends NotNullOrObject> {
    *
    * ex.
    * ```json
-   * { "filter": { "nestedKey": "class", "key": { "key": "type", "comparator": "==", "value": "ocean" } } }
+   * { "filter": { "key": { "nestedKey": ["class", "type"] }, "comparator": "==", "value": "ocean" } }
    * ```
    * this would be used to filter features where `feature.properties.class.type === 'ocean'`
    */
@@ -537,7 +534,7 @@ export interface DataRangeEase<T extends number | string> {
    * nested conditions are used to dive into nested properties
    * ex.
    * ```json
-   * { "filter": { "nestedKey": "class", "key": { "key": "type", "comparator": "==", "value": "ocean" } } }
+   * { "filter": { "key": { "nestedKey": ["class", "type"] }, "comparator": "==", "value": "ocean" } }
    * ```
    * this would be used to filter features where `feature.properties.class.type === 'ocean'`
    */
@@ -606,11 +603,16 @@ export interface DataRangeStep<T extends NotNullOrObject> {
    *
    * If the key is `class` for example, this would be used to filter feature's values where `feature.properties.class === 'ocean'`
    *
-   * nested conditions are used to dive into nested properties
+   * ex.
+   * ```json
+   * { "filter": { "key": "class", "comparator": "==", "value": "ocean" } }
+   * ```
+   *
+   * nested conditions are used to dive into nested properties, for example if we want our feature properties comparsion to look like: `feature.properties.class.type === 'ocean'`
    *
    * ex.
    * ```json
-   * { "filter": { "nestedKey": "class", "key": { "key": "type", "comparator": "==", "value": "ocean" } } }
+   * { "filter": { "key": { "nestedKey": ["class", "type"] }, "comparator": "==", "value": "ocean" } }
    * ```
    * this would be used to filter features where `feature.properties.class.type === 'ocean'`
    */
@@ -835,8 +837,7 @@ export interface Property<T extends NotNullOrObject> {
    *   "color": {
    *      "inputValue": {
    *         "key": {
-   *            "nestedKey": "class",
-   *            "key": "type"
+   *            "nestedKey": ["class", "type"],
    *         },
    *         "fallback": "blue"
    *      }
@@ -864,11 +865,7 @@ export interface Property<T extends NotNullOrObject> {
    *   "color": {
    *      "inputValue": {
    *         "key": {
-   *            "nestedKey": "a",
-   *            "key": {
-   *               "nestedKey": "b",
-   *               "key": "c"
-   *            }
+   *            "nestedKey": ["a", "b", "c"],
    *         },
    *         "fallback": "blue"
    *       }
@@ -1066,7 +1063,7 @@ export interface PropertyOnlyStep<T extends NotNullOrObject> {
    * You can utilize/access the `type` property with the following:
    *
    * ```json
-   * { "color": { "inputValue": { "nestedKey": "class", "key": "type", "fallback": "blue" } } }
+   * { "color": { "inputValue": { "key": { "nestedKey": ["class", "type"] }, "fallback": "blue" } } }
    * ```
    *
    * another ex. to get a better understanding of the `nestedKey`: (this is a contrived example)
@@ -1085,7 +1082,7 @@ export interface PropertyOnlyStep<T extends NotNullOrObject> {
    * You can utilize/access the `type` property with the following:
    *
    * ```json
-   * { "color": { "inputValue": { "nestedKey": "a", "key": { "nestedKey": "b", "key": "c" }, "fallback": "blue" } } }
+   * { "color": { "inputValue": { "key": { "nestedKey": ["a", "b", "c"] }, "fallback": "blue" } } }
    * ```
    */
   inputValue?: InputValue<ValueType<T>>;

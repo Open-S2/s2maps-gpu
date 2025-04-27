@@ -20,22 +20,11 @@ export default defineConfig({
           browser: 'chromium',
           launch: {
             headless: true,
-            args: [
-              // '--use-angle=vulkan',
-              // '--enable-features=Vulkan',
-              // '--disable-vulkan-surface',
-              '--enable-unsafe-webgpu',
-            ],
+            args: ['--enable-unsafe-webgpu'],
           },
           context: {
-            viewport: {
-              width: 1920,
-              height: 1080,
-            },
-            screen: {
-              width: 1920,
-              height: 1080,
-            },
+            viewport: { width: 1920, height: 1080 },
+            screen: { width: 1920, height: 1080 },
           },
         },
       ], // { browser: 'firefox' }

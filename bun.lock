@@ -9,7 +9,6 @@
         "unicode-shaper": "0.7.0",
       },
       "devDependencies": {
-        "@happy-dom/global-registrator": "^17.4.4",
         "@istanbuljs/nyc-config-typescript": "^1.0.2",
         "@maplibre/maplibre-gl-style-spec": "^23.2.0",
         "@playwright/experimental-ct-vue": "1.52.0",
@@ -30,6 +29,7 @@
         "@vitejs/plugin-vue": "^5.2.3",
         "@vitest/browser": "^3.1.2",
         "@vitest/coverage-v8": "3.1.2",
+        "@vitest/web-worker": "^3.1.2",
         "@webgpu/types": "^0.1.60",
         "ajv": "^8.17.1",
         "better-sqlite3": "^11.9.1",
@@ -224,8 +224,6 @@
     "@eslint/plugin-kit": ["@eslint/plugin-kit@0.2.8", "", { "dependencies": { "@eslint/core": "^0.13.0", "levn": "^0.4.1" } }, "sha512-ZAoA40rNMPwSm+AeHpCq8STiNAwzWLJuP8Xv4CHIc9wv/PSuExjMrmjfYNj682vW0OOiZ1HKxzvjQr9XZIisQA=="],
 
     "@gerrit0/mini-shiki": ["@gerrit0/mini-shiki@3.2.2", "", { "dependencies": { "@shikijs/engine-oniguruma": "^3.2.1", "@shikijs/langs": "^3.2.1", "@shikijs/themes": "^3.2.1", "@shikijs/types": "^3.2.1", "@shikijs/vscode-textmate": "^10.0.2" } }, "sha512-vaZNGhGLKMY14HbF53xxHNgFO9Wz+t5lTlGNpl2N9xFiKQ0I5oIe0vKjU9dh7Nb3Dw6lZ7wqUE0ri+zcdpnK+Q=="],
-
-    "@happy-dom/global-registrator": ["@happy-dom/global-registrator@17.4.4", "", { "dependencies": { "happy-dom": "^17.4.4" } }, "sha512-njrU74GrYVHO43upIJr96f7pEmUG7YLZbHCGiHALBECeVnDKpepzL9kVc7KIl8S2nQOkPA0rAA1EyC3xASb54w=="],
 
     "@humanfs/core": ["@humanfs/core@0.19.1", "", {}, "sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA=="],
 
@@ -506,6 +504,8 @@
     "@vitest/spy": ["@vitest/spy@3.1.2", "", { "dependencies": { "tinyspy": "^3.0.2" } }, "sha512-OEc5fSXMws6sHVe4kOFyDSj/+4MSwst0ib4un0DlcYgQvRuYQ0+M2HyqGaauUMnjq87tmUaMNDxKQx7wNfVqPA=="],
 
     "@vitest/utils": ["@vitest/utils@3.1.2", "", { "dependencies": { "@vitest/pretty-format": "3.1.2", "loupe": "^3.1.3", "tinyrainbow": "^2.0.0" } }, "sha512-5GGd0ytZ7BH3H6JTj9Kw7Prn1Nbg0wZVrIvou+UWxm54d+WoXXgAgjFJ8wn3LdagWLFSEfpPeyYrByZaGEZHLg=="],
+
+    "@vitest/web-worker": ["@vitest/web-worker@3.1.2", "", { "dependencies": { "debug": "^4.4.0" }, "peerDependencies": { "vitest": "3.1.2" } }, "sha512-4k+YlnfM0OPRv3UNURKFe98FYc1fzVsiZKVIhcwln/fwxHdagXirRPv56wu7AjVirXIhJQp3IjoCimQKvEviug=="],
 
     "@volar/language-core": ["@volar/language-core@2.4.12", "", { "dependencies": { "@volar/source-map": "2.4.12" } }, "sha512-RLrFdXEaQBWfSnYGVxvR2WrO6Bub0unkdHYIdC31HzIEqATIuuhRRzYu76iGPZ6OtA4Au1SnW0ZwIqPP217YhA=="],
 

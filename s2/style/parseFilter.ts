@@ -46,13 +46,14 @@ export interface Conditional {
  *
  * ## Nesting
  *
- * Sometimes vector data's properties are complex objects. To access nested fields, you can use dot notation.
+ * Sometimes vector data's properties are complex objects. To access nested fields, you can simulate dot notation:
  *
  * ```json
- * { "filter": { "nestedKey": "class", "key": { "key": "type", "comparator": "==", "value": "ocean" } } }
+ * { "filter": { "key": { "nestedKey": ["class", "type"] }, "comparator": "==", "value": "ocean" } }
  * ```
  */
-export interface Condition extends NestedKey {
+export interface Condition {
+  key: string | NestedKey;
   /**
    * One of `"==" | "!=" | ">" | ">=" | "<" | "<=" | "in" | "!in" | "has" | "!has"`
    * Used by the filter function to determine if a feature should be included in the render.
