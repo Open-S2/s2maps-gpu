@@ -37,6 +37,7 @@ export const S2MapGPU: React.FC<S2MapReactComponentProps> = (props: S2MapReactCo
           urlMap: {
             baseURL: 'http://localhost:3000',
             dataURL: 'http://localhost:3000',
+            apiURL: 'http://localhost:3000/api',
           },
           attributionOff: true,
           watermarkOff: true,

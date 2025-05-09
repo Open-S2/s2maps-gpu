@@ -149,11 +149,7 @@
     "playground/**/*.tsx",
     "playground/**/*.vue",
     "playground/**/*.svelte",
-    "server/**/*.ts",
-    "pages/**/*.ts",
-    "pages/**/*.vue",
     "types/*.d.ts",
-    "components/*.vue",
     ".nuxt/**/*.d.ts"
   ],
   "exclude": [

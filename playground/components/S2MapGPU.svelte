@@ -23,6 +23,7 @@
         urlMap: {
           baseURL: 'http://localhost:3000',
           dataURL: 'http://localhost:3000',
+          apiURL: 'http://localhost:3000/api',
         },
         attributionOff: true,
         watermarkOff: true,

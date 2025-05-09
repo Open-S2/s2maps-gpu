@@ -34,9 +34,9 @@ const style: StyleDefinition = {
       color: '#b4c1c6',
     },
     {
+      type: 'glyph',
       name: 'poi-labels',
       source: 'countries',
-      type: 'glyph',
       interactive: true,
       cursor: 'pointer',
       textFamily: ['robotoMedium'],

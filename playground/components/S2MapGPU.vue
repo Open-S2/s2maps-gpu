@@ -46,8 +46,7 @@ export default {
         urlMap: {
           baseURL: 'http://localhost:3000',
           dataURL: 'http://localhost:3000',
-          // TODO: Setup apiURL for pulling glyphs
-          // apiURL: config.public.dataURL as string,
+          apiURL: 'http://localhost:3000/api',
         },
         attributionOff: true,
         watermarkOff: true,

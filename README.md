@@ -55,6 +55,29 @@ S2 Maps GPU is currently in **alpha**. We are actively working on it and would l
 
 Although it's still a young product, we are using [playwright](https://playwright.dev/) to ensure features that do exist work as intended across all major browsers. Feel free to [open an issue](https://github.com/Open-S2/s2maps-gpu/issues/new) if you find a bug or have a feature request.
 
+
+## Development
+
+This project is developed using [bun](https://bun.sh/).
+
+### Usage
+
+To test locally, run `bun i` and then `bun dev`
+
+You can test using the following URL system:
+
+```bash
+http://localhost:3000/{react|vue|svelte}.html?projection={s2|wm}&context={webgl|webgl2|webgpu}&style={background|fill|etc.}
+```
+
+For example:
+
+```bash
+http://localhost:3000/vue.html?projection=s2&context=webgpu&style=fill
+```
+
+List of styles you can try are found in `/styles/examples/{s2|wm}/*`. The name of the folder is the name of the style.
+
 ---
 
 <div align="center">
