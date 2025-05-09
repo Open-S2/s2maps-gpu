@@ -31,8 +31,7 @@ test('coalesceField - simple field', () => {
 test('coalesceField - nested key', () => {
   const properties: Properties = { name: { abbr: 'U.S.' } };
   const field = {
-    nestedKey: 'name',
-    key: '?abbr',
+    nestedKey: ['name', '?abbr'],
   };
 
   expect(coalesceField(field, properties)).toEqual('U.S.');
