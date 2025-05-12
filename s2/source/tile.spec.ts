@@ -1,7 +1,12 @@
+import type { DOMContext } from 'dom/context.js';
 import type { LayerDefinition } from 'style/style.spec.js';
 import type WebGLContext from 'gl/context/context.js';
 import type WebGPUContext from 'gpu/context/context.js';
 import type { BBox, Face, S2CellId, VectorPoint } from 'gis-tools/index.js';
+import type {
+  Features as FeaturesDOM,
+  TileMaskSource as MaskSourceDOM,
+} from 'dom/workflows/workflow.spec.js';
 import type {
   Features as FeaturesGL,
   TileMaskSource as MaskSourceGL,
@@ -38,11 +43,11 @@ export type Get<T, K extends keyof any, Fallback = undefined> =
 export type Combine<T> = { [K in AllKeysOf<T>]: Get<T, K> };
 
 /** Shared Context found in both WebGLContext and WebGPUContext. */
-export type SharedContext = Combine<WebGLContext | WebGPUContext>;
+export type SharedContext = Combine<WebGLContext | WebGPUContext | DOMContext>;
 /** Shared Features found in both WebGLContext and WebGPUContext. */
-export type SharedFeatures = Combine<FeaturesGL | FeaturesGPU>;
+export type SharedFeatures = Combine<FeaturesGL | FeaturesGPU | FeaturesDOM>;
 /** Shared MaskSource found in both WebGLContext and WebGPUContext. */
-export type SharedMaskSource = Combine<MaskSourceGL | MaskSourceGPU>;
+export type SharedMaskSource = Combine<MaskSourceGL | MaskSourceGPU | MaskSourceDOM>;
 
 /** A FaceST that will be encoded into the GPU */
 export type FaceST = [
@@ -113,9 +118,11 @@ export interface TileBase<C, F, M> {
 
 /** TileBase with shared context. */
 export type Tile = TileBase<SharedContext, SharedFeatures, SharedMaskSource>;
+/** TileDOM context */
+export type TileDOM = TileBase<DOMContext, FeaturesDOM, MaskSourceDOM>;
 /** TileGL context */
 export type TileGL = TileBase<WebGLContext, FeaturesGL, MaskSourceGL>;
 /** TileGPU context */
 export type TileGPU = TileBase<WebGPUContext, FeaturesGPU, MaskSourceGPU>;
 /** Shared context found in both WebGLContext and WebGPUContext. */
-export type TileShared = TileGL & TileGPU;
+export type TileShared = TileGL & TileGPU & TileDOM;

@@ -8,6 +8,7 @@ import {
   pointSub,
 } from 'gis-tools/index.js';
 
+import type { DOMContext } from 's2/dom/context.js';
 import type { Context as WebGLContext } from 'gl/context/index.js';
 import type { WebGPUContext } from 'gpu/context/index.js';
 import type { BBox, Face, S2CellId } from 'gis-tools/index.js';
@@ -17,8 +18,7 @@ import type {
   SharedContext,
   SharedFeatures,
   SharedMaskSource,
-  TileGL,
-  TileGPU,
+  TileShared,
   TileBase as TileSpec,
 } from './tile.spec.js';
 import type {
@@ -38,11 +38,11 @@ import type { Projector, TileInView, TmpWMID } from 'ui/camera/projector/index.j
  */
 export function createTile(
   projection: Projection,
-  context: WebGPUContext | WebGLContext,
+  context: WebGPUContext | WebGLContext | DOMContext,
   tileInfo: TileInView,
-): TileGL & TileGPU {
+): TileShared {
   const Tile = projection === 'S2' ? S2Tile : WMTile;
-  return new Tile(context as unknown as SharedContext, tileInfo) as unknown as TileGL & TileGPU;
+  return new Tile(context as unknown as SharedContext, tileInfo) as unknown as TileShared;
 }
 
 /** Base Tile Class that all Tiles inherit from. */

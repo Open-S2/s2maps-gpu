@@ -4,11 +4,11 @@ import type Context from '../context/context.js';
 import type { Projector } from 'ui/camera/projector/index.js';
 import type S2MapUI from 'ui/s2mapUI.js';
 import type { SensorTextureDefinition } from 'ui/camera/timeCache.js';
-import type { TileGL as Tile } from 'source/tile.spec.js';
 import type TimeCache from 'ui/camera/timeCache.js';
 import type { UrlMap } from 'util/index.js';
-import type { WallpaperScheme } from './wallpaperWorkflow.js';
+import type { WallpaperScheme } from './wallpaper.js';
 import type { BBox, VectorPoint } from 'gis-tools/index.js';
+import type { FaceST, TileGL as Tile } from 'source/tile.spec.js';
 import type {
   FillData,
   GlyphData,
@@ -406,7 +406,7 @@ export interface WorkflowSpec {
   setMatrix: (matrix: Float32Array) => void;
   setInputs: (inputs: Float32Array) => void;
   setAspect: (aspect: VectorPoint) => void;
-  setFaceST: (faceST: number[]) => void;
+  setFaceST: (faceST: FaceST) => void;
   setTilePos: (bottomTop: Float32Array) => void;
   setLayerCode: (layerIndex: number, layerCode: number[], lch: boolean) => void;
   setInteractive: (interactive: boolean) => void;

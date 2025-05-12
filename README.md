@@ -67,7 +67,7 @@ To test locally, run `bun i` and then `bun dev`
 You can test using the following URL system:
 
 ```bash
-http://localhost:3000/{react|vue|svelte}.html?projection={s2|wm}&context={webgl|webgl2|webgpu}&style={background|fill|etc.}
+http://localhost:3000/{react|vue|svelte}.html?projection={s2|wm}&context={dom|webgl|webgl2|webgpu}&style={background|fill|etc.}
 ```
 
 For example:

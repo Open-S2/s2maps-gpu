@@ -19,38 +19,38 @@ import type {
  * The code will be placed into "LayerCode" for the GPU shader to utiilize as necessary.
  *
  * CONDITION ENCODINGS: 128 positions possible
- * 0 -> null
- * 1 -> value
- * 2 -> data-condition
- * 3 -> input-condition
- * 4 -> data-range
- * 5 -> input-range
- * 6 -> feature-state (this updates for each draw assuming the feature has a "feature-state")
- * 7 -> animation-state (this updates for each draw assuming the feature has a "animation-state")
- * 8 -> input-value (this is a constant value pulled from properties)
+ * - 0 -> null
+ * - 1 -> value
+ * - 2 -> data-condition
+ * - 3 -> input-condition
+ * - 4 -> data-range
+ * - 5 -> input-range
+ * - 6 -> feature-state (this updates for each draw assuming the feature has a "feature-state")
+ * - 7 -> animation-state (this updates for each draw assuming the feature has a "animation-state")
+ * - 8 -> input-value (this is a constant value pulled from properties)
  *
  * FEATURE-STATE ENCODINGS:
- * 0 -> default (inactive)
- * 1 -> hover
- * 2 -> active
- * 3 -> selected
- * 4 -> disabled
+ * - 0 -> default (inactive)
+ * - 1 -> hover
+ * - 2 -> active
+ * - 3 -> selected
+ * - 4 -> disabled
  *
  * INPUT RANGE/CONDITION ENCODINGS:
- * 0 -> zoom
- * 1 -> lon
- * 2 -> lat
- * 3 -> angle
- * 4 -> pitch
- * 5 -> time
+ * - 0 -> zoom
+ * - 1 -> lon
+ * - 2 -> lat
+ * - 3 -> angle
+ * - 4 -> pitch
+ * - 5 -> time
  *
  * INTERPOLATION ENCODINGS: data-ranges or input-ranges have either linear or exponential interpolations
  * if exponential the base must also be encoded, after the type
- * 0 -> linear
- * 1 -> exponential
- * 2 -> quad-bezier
- * 3 -> cubic-bezier
- * 4 -> step
+ * - 0 -> linear
+ * - 1 -> exponential
+ * - 2 -> quad-bezier
+ * - 3 -> cubic-bezier
+ * - 4 -> step
  * @param input - the value to encode
  * @param lch - whether to encode in lch
  * @returns an array of numbers encoded for the GPU to utilize

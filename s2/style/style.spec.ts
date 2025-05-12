@@ -3955,11 +3955,12 @@ export type InteractiveWorkerLayer =
 
 /**
  * GPU Context Type
+ * - `0` -> DOM
  * - `1` -> WebGL1
  * - `2` -> WebGL2
  * - `3` -> WebGPU
  */
-export type GPUType = 1 | 2 | 3;
+export type GPUType = 0 | 1 | 2 | 3;
 
 /** Basic analytics information sent to servers */
 export interface Analytics {

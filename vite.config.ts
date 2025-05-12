@@ -41,6 +41,7 @@ export default defineConfig({
       vue: 'vue/dist/vue.esm-bundler.js',
       s2: fileURLToPath(new URL('./s2', import.meta.url)),
       'gis-tools': fileURLToPath(new URL('./s2/gis-tools', import.meta.url)),
+      dom: fileURLToPath(new URL('./s2/dom', import.meta.url)),
       gl: fileURLToPath(new URL('./s2/gl', import.meta.url)),
       gpu: fileURLToPath(new URL('./s2/gpu', import.meta.url)),
       plugins: fileURLToPath(new URL('./s2/plugins', import.meta.url)),

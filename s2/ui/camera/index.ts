@@ -10,6 +10,7 @@ import DragPan from './dragPan.js';
 import TimeCache from './timeCache.js';
 import { createTile } from 'source/index.js';
 /** PAINT */
+import type { Painter as DOMPainter } from 'dom/painter.spec.js';
 import type { Painter as GLPainter } from 'gl/painter.spec.js';
 import type { Painter as GPUPainter } from 'gpu/painter.spec.js';
 import type { MapOptions } from '../s2mapUI.js';
@@ -40,7 +41,7 @@ export interface ResizeDimensions {
   height: number;
 }
 /** A Shared painter helps with type inference. We essentially don't care which painter we are using for most calls in Camera */
-export type SharedPainter = Combine<GLPainter | GPUPainter>;
+export type SharedPainter = Combine<DOMPainter | GLPainter | GPUPainter>;
 
 /**
  * # Camera
@@ -230,7 +231,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
       const Painter = await import('gpu/index.js').then((m) => m.Painter);
       this.painter = new Painter(context, options) as unknown as P;
       await this.painter.prepare();
-    } else {
+    } else if (contextType === 2 || contextType === 1) {
       let type: 1 | 2 = 1;
       // prep webgl style options
       const webglOptions = {
@@ -245,14 +246,17 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
         context = this.#canvas.getContext('webgl2', webglOptions) as WebGL2RenderingContext;
         type = 2;
       }
+      // last effort, webgl1
       if (context === null) {
-        // last effort, webgl1
         webglOptions.premultipliedAlpha = true;
         context = this.#canvas.getContext('webgl', webglOptions) as WebGLRenderingContext;
       }
       if (context === null) return false;
       const Painter = await import('gl/index.js').then((m) => m.Painter);
       this.painter = new Painter(context, type, options) as unknown as P;
+    } else {
+      const Painter = await import('dom/index.js').then((m) => m.Painter);
+      this.painter = new Painter(this.#canvas, options) as unknown as P;
     }
 
     return true;

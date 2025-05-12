@@ -41,6 +41,7 @@
       "s2/*": ["./s2/*"],
       "config/*": ["./config/*"],
       "gis-tools/*": ["./s2/gis-tools/*"],
+      "dom/*": ["./s2/dom/*"],
       "gl/*": ["./s2/gl/*"],
       "gpu/*": ["./s2/gpu/*"],
       "plugins/*": ["./s2/plugins/*"],
@@ -124,6 +125,11 @@
   "include": [
     "eslint.config.mjs",
     "s2/**/*.ts",
+    "frameworks/*.ts",
+    "frameworks/**/*.ts",
+    "frameworks/**/*.tsx",
+    "frameworks/**/*.vue",
+    "frameworks/**/*.svelte",
     "types/*.d.ts",
   ],
   "exclude": [

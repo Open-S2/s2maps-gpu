@@ -292,6 +292,7 @@ export default class S2Map extends EventTarget {
     // TODO: Safari offscreenCanvas sucks currently. It's so janky. Leave this here for when it's fixed.
     if (
       options.offscreen !== false &&
+      options.contextType !== 0 &&
       !isSafari(window) &&
       typeof canvas.transferControlToOffscreen === 'function'
     ) {
@@ -1413,7 +1414,7 @@ export default class S2Map extends EventTarget {
 
 /**
  * Figure out the best canvas we have access to
- * @returns 1 for WebGL, 2 for WebGL2, 3 for WebGPU
+ * @returns 0 for DOM, 1 for WebGL, 2 for WebGL2, 3 for WebGPU
  */
 function getContext(): GPUType {
   let tmpContext = document.createElement('canvas').getContext('webgpu');
@@ -1424,9 +1425,11 @@ function getContext(): GPUType {
     if (tmpContext !== null) {
       tmpContext.getExtension('WEBGL_lose_context')?.loseContext();
       return 2;
+    } else if (document.createElement('canvas').getContext('webgl') !== null) {
+      return 1;
     }
   }
-  return 1;
+  return 0;
 }
 
 /** Internal function returns layer coordinates */

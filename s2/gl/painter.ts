@@ -103,7 +103,7 @@ export default class Painter implements PainterSpec {
       /** @returns a raster rendering tool */
       raster: async () => await new RasterWorkflow(context),
       /** @returns a sensor rendering tool */
-      sensor: async () => await import('./workflows/sensorWorkflow.js'),
+      sensor: async () => await import('./workflows/sensor.js'),
       /** @returns a shade rendering tool */
       shade: async () => await new ShadeWorkflow(context),
       /** @returns a skybox rendering tool */

@@ -121,10 +121,7 @@ export default class RasterWorker implements RasterWorkerSpec {
     for (const { type, getCode, layerIndex } of layers) {
       const guide =
         type === 'raster' ? rasterFeatures : type === 'sensor' ? sensorFeatures : HillshadeFeatures;
-      guide.push({
-        code: getCode(zoom),
-        layerIndex,
-      });
+      guide.push({ code: getCode(zoom), layerIndex });
     }
 
     // https://bugzilla.mozilla.org/show_bug.cgi?id=1335594 - saved for posterity

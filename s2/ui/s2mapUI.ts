@@ -1,7 +1,5 @@
-/** CAMERA */
-import Camera from './camera/index.js';
-/** SOURCES */
 import Animator from './camera/animator.js';
+import Camera from './camera/index.js';
 
 import type { ColorMode } from 's2/s2Map.js';
 import type { UrlMap } from 'util/index.js';

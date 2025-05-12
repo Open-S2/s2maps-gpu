@@ -30,7 +30,7 @@ function ready(s2map: S2Map): void {
 
 const mapOptions: MapOptions = {
   style: mapStyle,
-  contextType: context === 'webgl' ? 1 : context === 'webgl2' ? 2 : 3,
+  contextType: context === 'dom' ? 0 : context === 'webgl' ? 1 : context === 'webgl2' ? 2 : 3,
 };
 </script>
 
