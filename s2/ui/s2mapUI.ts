@@ -72,7 +72,7 @@ import type {
  * - `urlMap`: [See {@link UrlMap}] An API URL that remaps any source strings that start with "example://" to whatever example is
  *    - example: `{ "apiURL": "https://api.opens2.com" }`
  * - `attributions`: Set additional attributions to be displayed on the map.
-      - example: `{ "OpenS2": "https://opens2.com/data" }`
+ *    - example: `{ "OpenS2": "https://opens2.com/data" }`
  * - `attributionOff`: boolean flag. Disable attribution display. [default: false]
  * - `watermarkOff`: boolean flag. Disable watermark display. [default: false]
  */

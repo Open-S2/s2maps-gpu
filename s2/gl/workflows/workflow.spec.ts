@@ -249,7 +249,7 @@ export interface LineFeature extends FeatureBase {
   color?: ColorArray; // webgl1
   opacity?: number; // webgl1
   width?: number; // webgl1
-  gapwidth?: number; // webgl1
+  gapWidth?: number; // webgl1
 }
 
 // ** POINT **

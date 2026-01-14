@@ -23,9 +23,7 @@ export type IncrementResponse = [
   [lon: number, lat: number, zoom: number, bearing: number, pitch: number],
 ];
 
-/**
- * Animator class handles user defined animations of the camera.
- */
+/** Animator class handles user defined animations of the camera. */
 export default class Animator {
   startTime?: number;
   startLon: number;
@@ -45,11 +43,10 @@ export default class Animator {
   deltaPitch: number;
   speed = 0;
   duration = 2.5;
-  velocity = 0;
   futureOffset = 0;
   futureTiles = new Map<number, TileInView[]>(); // { timeKey: [tileID] }
   futureKeys: number[] = [];
-  ease: (time: number, start: number, delta: number, duration: number) => number;
+  ease?: (time: number, start: number, delta: number, duration: number) => number;
   #increment?: (time: number) => IncrementResponse;
   projector: Projector;
   /**
@@ -479,9 +476,7 @@ export default class Animator {
     this.futureKeys = this.futureKeys.sort((a, b) => a - b);
     this.futureOffset = this.futureKeys[0];
     // pre-request the first three tile sets
-    this.#requestFutureTiles();
-    this.#requestFutureTiles();
-    this.#requestFutureTiles();
+    for (let i = 0; i < 3; i++) this.#requestFutureTiles();
   }
 
   /** Request future tiles */

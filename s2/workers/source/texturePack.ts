@@ -1,5 +1,3 @@
-/** Local Texture Pack bounding box */
-type BBox = [x: number, y: number, width: number, height: number]; // x, y, width, height
 /** Local Texture Pack area tracker */
 interface Space {
   widthOffset: number;
@@ -25,9 +23,6 @@ export default class TexturePack {
    * @returns the position of the glyph in the texture
    */
   addGlyph(width: number, height: number): [offsetX: number, offsetY: number] {
-    // create a box object
-    const bbox: BBox = [0, 0, width, height];
-
     // if spaces doesn't have the height OR the width of the space is maxed out, create new
     if (
       this.spaces[height] === undefined ||
@@ -40,12 +35,10 @@ export default class TexturePack {
 
     // add to the space
     const { widthOffset, heightOffset } = this.spaces[height];
-    bbox[0] = widthOffset;
-    bbox[1] = heightOffset;
     // update width offset of row
     this.spaces[height].widthOffset += width + 1;
 
     // return the textures position
-    return [bbox[0], bbox[1]];
+    return [widthOffset, heightOffset];
   }
 }

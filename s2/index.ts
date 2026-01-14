@@ -9,7 +9,7 @@ export type * from './workers/worker.spec.js';
 
 /**
  * Creator of the library:
- * Github handle - @CraigglesO
+ * Github handle - `@CraigglesO`
  * LinkedIn - https://www.linkedin.com/in/craig-oconnor/
  * Alias - Mr. Martian
  */

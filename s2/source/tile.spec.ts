@@ -1,5 +1,7 @@
 import type { DOMContext } from 'dom/context.js';
+import type { Features as FeaturesGPU } from 'gpu/workflows/workflow.spec.js';
 import type { LayerDefinition } from 'style/style.spec.js';
+import type { TileMaskSource as MaskSourceGPU } from 'gpu/workflows/index.js';
 import type WebGLContext from 'gl/context/context.js';
 import type WebGPUContext from 'gpu/context/context.js';
 import type { BBox, Face, S2CellId, VectorPoint } from 'gis-tools/index.js';
@@ -11,10 +13,6 @@ import type {
   Features as FeaturesGL,
   TileMaskSource as MaskSourceGL,
 } from 'gl/workflows/workflow.spec.js';
-import type {
-  Features as FeaturesGPU,
-  TileMaskSource as MaskSourceGPU,
-} from 'gpu/workflows/workflow.spec.js';
 import type {
   InteractiveObject,
   SourceFlushMessage,

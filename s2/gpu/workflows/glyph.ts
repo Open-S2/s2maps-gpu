@@ -1,3 +1,4 @@
+import { DEFAULT_BLEND } from '../context/context.js';
 import encodeLayerAttribute from 'style/encodeLayerAttribute.js';
 import shaderCode from '../shaders/glyph.wgsl';
 
@@ -364,7 +365,7 @@ export class GlyphFeature implements GlyphFeatureSpec {
 }
 
 /** Glyph Workflow */
-export default class GlyphWorkflow implements GlyphWorkflowSpec {
+export class GlyphWorkflow implements GlyphWorkflowSpec {
   context: WebGPUContext;
   module!: GPUShaderModule;
   layerGuides = new Map<number, GlyphWorkflowLayerGuideGPU>();
@@ -762,7 +763,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
    */
   #getPipeline(isTest = false, isPath = false): GPURenderPipeline {
     const { context, module } = this;
-    const { device, format, defaultBlend, sampleCount } = context;
+    const { device, format, sampleCount } = context;
 
     const stencilState: GPUStencilFaceState = {
       compare: 'always',
@@ -792,7 +793,7 @@ export default class GlyphWorkflow implements GlyphWorkflowSpec {
       fragment: {
         module,
         entryPoint: isTest ? 'fTest' : 'fMain',
-        targets: [{ format, blend: defaultBlend }],
+        targets: [{ format, blend: DEFAULT_BLEND }],
       },
       primitive: {
         topology: isTest ? 'line-list' : 'triangle-list',

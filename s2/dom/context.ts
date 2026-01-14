@@ -160,7 +160,7 @@ export class DOMContext {
    * @returns the image element
    */
   buildTexture(
-    imageData: null | ArrayBufferView | ImageBitmap,
+    imageData: null | ArrayBufferView<ArrayBuffer> | ImageBitmap,
     width: number,
     height: number = width,
   ): HTMLImageElement {

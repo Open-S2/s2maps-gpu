@@ -1,3 +1,4 @@
+import { DEFAULT_BLEND } from '../context/context.js';
 import encodeLayerAttribute from 'style/encodeLayerAttribute.js';
 import shaderCode from '../shaders/point.wgsl';
 
@@ -175,7 +176,7 @@ export class PointFeature implements PointFeatureSpec {
 }
 
 /** Point Workflow */
-export default class PointWorkflow implements PointWorkflowSpec {
+export class PointWorkflow implements PointWorkflowSpec {
   context: WebGPUContext;
   layerGuides = new Map<number, PointWorkflowLayerGuideGPU>();
   pipeline!: GPURenderPipeline;
@@ -370,14 +371,7 @@ export default class PointWorkflow implements PointWorkflowSpec {
    */
   async #getPipeline(): Promise<GPURenderPipeline> {
     const { module, context } = this;
-    const {
-      device,
-      format,
-      defaultBlend,
-      sampleCount,
-      frameBindGroupLayout,
-      featureBindGroupLayout,
-    } = context;
+    const { device, format, sampleCount, frameBindGroupLayout, featureBindGroupLayout } = context;
 
     this.pointBindGroupLayout = context.buildLayout('Point', ['uniform'], GPUShaderStage.VERTEX);
 
@@ -398,7 +392,7 @@ export default class PointWorkflow implements PointWorkflowSpec {
       fragment: {
         module,
         entryPoint: 'fMain',
-        targets: [{ format, blend: defaultBlend }],
+        targets: [{ format, blend: DEFAULT_BLEND }],
       },
       primitive: { topology: 'triangle-list', cullMode: 'none' },
       multisample: { count: sampleCount },

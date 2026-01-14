@@ -351,6 +351,14 @@ export interface NestedKey {
    */
   nestedKey: string[];
 }
+/**
+ * # Input Key
+ *
+ * Either the key itself, or path towards a nested key
+ *
+ * See {@link NestedKey}
+ */
+export type InputKey = string | NestedKey;
 
 /**
  * # Input Value
@@ -402,7 +410,7 @@ export interface InputValue<T extends NotNullOrObject> {
    * ```
    * this would be used to filter features where `feature.properties.class.type === 'ocean'`
    */
-  key: string | NestedKey;
+  key: InputKey;
   /** If the property search for a key turns up no value, the fallback is used. */
   fallback: T;
 }
@@ -428,7 +436,7 @@ export interface InputValue<T extends NotNullOrObject> {
  */
 export interface ConditionFilter<T extends NotNullOrObject> {
   filter: Filter;
-  input: T | Property<T>;
+  input: Input<T>;
 }
 
 /**
@@ -440,7 +448,7 @@ export interface ConditionFilter<T extends NotNullOrObject> {
  * - Input value must be at a minimum a {@link NotNullOrObject}
  *
  * ### Properties:
- * - `conditions`: [See {@link ConditionFilter}] array of `{ filter: Filter, input: T | Property<T> }`. If Filter passes, the input is used
+ * - `conditions`: [See {@link ConditionFilter}] array of `{ filter: Filter, input: Input<T> }`. If Filter passes, the input is used
  * - `fallback`: if all else fails, use this value. A value of `T` itself or pull from feature properties using {@link Property}
  *
  * ex.
@@ -461,12 +469,12 @@ export interface ConditionFilter<T extends NotNullOrObject> {
  */
 export interface DataCondition<T extends NotNullOrObject> {
   /**
-   * conditions is an array of `{ filter: Filter, input: T | Property<T> }`
+   * conditions is an array of `{ filter: Filter, input: Input<T> }`
    * If the filter passes, the input is used.
    */
   conditions: ConditionFilter<T>[];
   /** If the conditional search fails, the fallback is used. */
-  fallback: T | Property<T>;
+  fallback: Input<T>;
 }
 
 /** One of {@link DataRangeEase} or {@link DataRangeStep} */
@@ -495,7 +503,7 @@ export type InputRange<T> = InputRangeEase<NumberColor<T>> | InputRangeStep<Valu
  */
 export interface Range<T extends NotNullOrObject> {
   stop: number;
-  input: T | Property<T>;
+  input: Input<T>;
 }
 
 /**
@@ -525,7 +533,7 @@ export interface Range<T extends NotNullOrObject> {
  * - `base`: Used by `expo`, `quad`, or `cubic` ease functions. Ranges from 0 -> 2 where 1 is linear, 0 is slow start, 2 is slow finish. [default: 1]
  * - `ranges`: [See {@link Range}] Set the range stops and the input values to apply at those stops.
  */
-export interface DataRangeEase<T extends number | string> {
+export interface DataRangeEase<T extends NotNullOrObject, E extends EaseType = EaseType> {
   /**
    * Access value in feature properties by either its key or a nested key.
    *
@@ -538,11 +546,11 @@ export interface DataRangeEase<T extends number | string> {
    * ```
    * this would be used to filter features where `feature.properties.class.type === 'ocean'`
    */
-  key: string | NestedKey; // the objects[key] -> value used as position on range
+  key: InputKey; // the objects[key] -> value used as position on range
   /**
    * `lin` | `expo` | `quad` | `cubic` | `step` [default: `lin`]
    */
-  ease?: EaseType;
+  ease?: E;
   /**
    * Used by `expo`, `quad`, or `cubic` ease functions
    *
@@ -596,44 +604,10 @@ export interface DataRangeEase<T extends number | string> {
  * - `key`: [See {@link NestedKey}] Access value in feature properties by either its key or a nested key.
  * - `ranges`: [See {@link Range}] Set the range stops and the input values to apply at those stops.
  */
-export interface DataRangeStep<T extends NotNullOrObject> {
-  ease?: 'step';
-  /**
-   * Access value in feature properties by either its key or a nested key.
-   *
-   * If the key is `class` for example, this would be used to filter feature's values where `feature.properties.class === 'ocean'`
-   *
-   * ex.
-   * ```json
-   * { "filter": { "key": "class", "comparator": "==", "value": "ocean" } }
-   * ```
-   *
-   * nested conditions are used to dive into nested properties, for example if we want our feature properties comparsion to look like: `feature.properties.class.type === 'ocean'`
-   *
-   * ex.
-   * ```json
-   * { "filter": { "key": { "nestedKey": ["class", "type"] }, "comparator": "==", "value": "ocean" } }
-   * ```
-   * this would be used to filter features where `feature.properties.class.type === 'ocean'`
-   */
-  key: string | NestedKey; // the objects[key] -> value used as position on range
-  /** Unused by "step" ease functions. Kept to avoid errors in Typescript */
-  base?: number; // 0 -> 2
-  /**
-   * Set the range stops and the input values to apply at those stops.
-   * See {@link Range}
-   *
-   * ex.
-   * ```json
-   * "ranges": [
-   *   { "stop": 0, "input": 0 },
-   *   { "stop": 5, "input": 0.5 },
-   *   { "stop": 8, "input": 1 }
-   * ]
-   * ```
-   */
-  ranges: Range<T>[];
-}
+export type DataRangeStep<T extends NotNullOrObject> = DataRangeEase<T, 'step'>;
+
+/** Input Range Variable to apply as the input */
+export type InputRangeType = 'zoom' | 'lon' | 'lat' | 'angle' | 'pitch';
 
 /**
  * # Input Range Ease
@@ -662,13 +636,13 @@ export interface DataRangeStep<T extends NotNullOrObject> {
  * - `base`: Used by `expo`, `quad`, or `cubic` ease functions. Ranges from 0 -> 2 where 1 is linear, 0 is slow start, 2 is slow finish. [default: 1]
  * - `ranges`: [See {@link Range}] Set the range stops and the input values to apply at those stops.
  */
-export interface InputRangeEase<T extends number | string> {
+export interface InputRangeEase<T extends NotNullOrObject, E extends EaseType = EaseType> {
   /** `zoom` | `lon` | `lat` | `angle` | `pitch` */
-  type: 'zoom' | 'lon' | 'lat' | 'angle' | 'pitch';
+  type: InputRangeType;
   /**
    * `lin` | `expo` | `quad` | `cubic` | `step` [default: `lin`]
    */
-  ease?: EaseType;
+  ease?: E;
   /**
    * Used by `expo`, `quad`, or `cubic` ease functions
    *
@@ -723,26 +697,7 @@ export interface InputRangeEase<T extends number | string> {
  * - `type`: The type of input to use. Options are `zoom` | `lon` | `lat` | `angle` | `pitch`
  * - `ranges`: [See {@link Range}] Set the range stops and the input values to apply at those stops.
  */
-export interface InputRangeStep<T extends NotNullOrObject> {
-  ease: 'step';
-  /** "zoom" | "lon" | "lat" | "angle" | "pitch" */
-  type: 'zoom' | 'lon' | 'lat' | 'angle' | 'pitch';
-  /** Unused by "step" ease functions. Kept to avoid errors in Typescript */
-  base?: number; // 0 -> 2
-  /**
-   * Set the range stops and the input values to apply at those stops.
-   *
-   * ex.
-   * ```json
-   * "ranges": [
-   *   { "stop": 0, "input": "#f28cb1" },
-   *   { "stop": 100, "input": "#f1f075" },
-   *   { "stop": 750, "input": "#51bbd6" }
-   * ]
-   * ```
-   */
-  ranges: Range<T>[];
-}
+export type InputRangeStep<T extends NotNullOrObject> = InputRangeEase<T, 'step'>;
 
 /**
  * # Feature State
@@ -751,9 +706,9 @@ export interface InputRangeStep<T extends NotNullOrObject> {
  */
 export interface FeatureState<T extends NotNullOrObject> {
   condition: 'default' /* (inactive) */ | 'active' | 'hover' | 'selected' | 'disabled';
-  key: string | NestedKey;
+  key: InputKey;
   value: T;
-  input: T | Property<T>;
+  input: Input<T>;
 }
 
 /**
@@ -775,6 +730,8 @@ export type NotNullOrObject =
 export type ValueType<T> = T extends NotNullOrObject ? T : never;
 /** The input must be either a number or a color */
 export type NumberColor<T> = T extends number | string ? T : never;
+/** Either the value type itself or a property object wrapping the value type */
+export type Input<T extends NotNullOrObject> = T | Property<T>;
 
 /**
  * # Property
@@ -951,7 +908,7 @@ export interface Property<T extends NotNullOrObject> {
    * }
    * ```
    */
-  dataRange?: DataRangeEase<NumberColor<T>> | DataRangeStep<ValueType<T>>;
+  dataRange?: DataRange<T>;
   /**
    * Input Range is used to group features based on a range of values based upon a `type` provided and apply specific design attributes for those groups.
    * If the feature's value falls within the range, the fallback is used.
@@ -993,14 +950,14 @@ export interface Property<T extends NotNullOrObject> {
    * }
    * ```
    */
-  inputRange?: InputRangeEase<NumberColor<T>> | InputRangeStep<ValueType<T>>;
+  inputRange?: InputRange<T>;
   /** Feature State is still under construction and incomplete */
   featureState?: FeatureState<ValueType<T>>;
   /**
    * Used in conjunction with one of the other types ("inputValue" | "dataCondition" | "dataRange" | "inputRange" | "featureState").
    * You will never directly call this at the top level but as an internal fallback for the other types.
    */
-  fallback?: T | Property<T>;
+  fallback?: Input<T>;
 }
 
 /**
@@ -1212,7 +1169,7 @@ export interface PropertyOnlyStep<T extends NotNullOrObject> {
    * Used in conjunction with one of the other types ("inputValue" | "dataCondition" | "dataRange" | "inputRange" | "featureState").
    * You will never directly call this at the top level but as an internal fallback for the other types.
    */
-  fallback?: T | Property<T>;
+  fallback?: Input<T>;
 }
 
 /** The layer type's that can be used. */
@@ -1226,16 +1183,6 @@ export type LayerType =
   | 'hillshade'
   | 'sensor'
   | 'shade';
-/** Layer types that require data to render */
-export type LayerDataType =
-  | 'fill'
-  | 'glyph'
-  | 'heatmap'
-  | 'line'
-  | 'point'
-  | 'raster'
-  | 'hillshade'
-  | 'sensor';
 
 /**
  * # Base Layer
@@ -2708,7 +2655,7 @@ export type Join = 'bevel' | 'miter' | 'round';
  * - `color`: {@link Color} of the line. Input either a `string` pull out the value using a {@link Property}.
  * - `opacity`: the opacity of the line. Choose between [0, 1], or pull out the value using a {@link Property}.
  * - `width`: the width of the line in pixels
- * - `gapwidth`: split the line into two segments to reduce rendering artifacts
+ * - `gapWidth`: split the line into two segments to reduce rendering artifacts
  *
  * ### Optional layout properties:
  * - `cap`: [See {@link Cap}] the cap of the line. Either `butt`, `square`, or `round`
@@ -2740,7 +2687,7 @@ export interface LineStyle extends LayerStyleBase {
    * - `color`: {@link Color} of the line. Input either a `string` pull out the value using a {@link Property}.
    * - `opacity`: the opacity of the line. Choose between [0, 1], or pull out the value using a {@link Property}.
    * - `width`: the width of the line in pixels
-   * - `gapwidth`: split the line into two segments to reduce rendering artifacts
+   * - `gapWidth`: split the line into two segments to reduce rendering artifacts
    *
    * ### Optional layout properties:
    * - `cap`: [See {@link Cap}] the cap of the line. Either `butt`, `square`, or `round`
@@ -2857,7 +2804,7 @@ export interface LineStyle extends LayerStyleBase {
    * - `featureState`: [See {@link FeatureState}] filter based on feature state
    * - `fallback`: if all else fails, use this value. A value of `number` itself or pull from feature properties using {@link Property}
    */
-  gapwidth?: number | Property<number>;
+  gapWidth?: number | Property<number>;
   // layout
   /**
    * A LAYOUT `PropertyOnlyStep`.
@@ -2947,7 +2894,7 @@ export interface LineDefinition extends LayerDefinitionBase {
   color: string | Property<string>;
   opacity: number | Property<number>;
   width: number | Property<number>;
-  gapwidth: number | Property<number>;
+  gapWidth: number | Property<number>;
   // layout
   cap: Cap | PropertyOnlyStep<Cap>;
   join: Join | PropertyOnlyStep<Join>;
@@ -3817,7 +3764,7 @@ export interface SensorWorkflowLayerGuide extends LayerWorkflowGuideBase {
 }
 /** An extension to the sensor workflow layer guide for WebGPU */
 export interface SensorWorkflowLayerGuideGPU extends SensorWorkflowLayerGuide {
-  colorRame: GPUTexture;
+  colorRampTexture: GPUTexture;
 }
 /** A worker layer guide parsed from a user defined layer guide for the Tile Sensor Workers to prepare data for rendering */
 export interface SensorWorkerLayer extends LayerWorkerBaseRaster {
@@ -4220,9 +4167,9 @@ export interface StyleDefinition {
    * ex.
    * ```json
    * "sources": {
-        "countries": "/s2json/countriesHD.s2json",
-        "earthquakes": "/s2json/earthquakes.s2json"
-      }
+   *   "countries": "/s2json/countriesHD.s2json",
+   *   "earthquakes": "/s2json/earthquakes.s2json"
+   * }
    * ```
    */
   sources?: Sources;

@@ -48,38 +48,9 @@ import type {
   ShadeWorkflowLayerGuideGPU,
   StyleDefinition,
 } from 'style/style.spec.js';
+import type { FillSource, MaskSource, TileMaskSource } from './index.js';
 
 // SOURCES
-
-/** Mask Source */
-export interface MaskSource {
-  type: 'mask';
-  vertexBuffer: GPUBuffer;
-  indexBuffer: GPUBuffer;
-  codeTypeBuffer: GPUBuffer;
-  count: number;
-  offset: number;
-}
-
-/** Tile Mask Source */
-export interface TileMaskSource extends MaskSource {
-  bindGroup: GPUBindGroup;
-  fillPatternBindGroup: GPUBindGroup;
-  uniformBuffer: GPUBuffer;
-  positionBuffer: GPUBuffer;
-  draw: () => void;
-  destroy: () => void;
-}
-
-/** Fill Source */
-export interface FillSource {
-  type: 'fill';
-  vertexBuffer: GPUBuffer;
-  indexBuffer: GPUBuffer;
-  idBuffer: GPUBuffer;
-  codeTypeBuffer: GPUBuffer;
-  destroy: () => void;
-}
 
 /** Glyph Source */
 export interface GlyphSource {

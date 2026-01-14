@@ -97,3 +97,6 @@ public/geojson/utah.geojson
 
 # lints
 .eslintcache
+
+# rust
+target/

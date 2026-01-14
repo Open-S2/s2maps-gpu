@@ -1,4 +1,4 @@
-import buildMask from './buildMask.js';
+import { buildMaskSource } from '../workflows/mask.js';
 
 import type { ColorArray } from 'style/color/index.js';
 import type { ColorMode } from 's2/s2Map.js';
@@ -8,7 +8,7 @@ import type { Painter } from 'gpu/painter.spec.js';
 import type { SpriteImageMessage } from 'workers/worker.spec.js';
 import type { Tile } from 'source/tile.spec.js';
 import type { GPUType, Projection } from 'style/style.spec.js';
-import type { MaskSource, TileMaskSource } from 'gpu/workflows/workflow.spec.js';
+import type { MaskSource, TileMaskSource } from 'gpu/workflows/index.js';
 
 const DEPTH_ESPILON = 1 / Math.pow(2, 20);
 
@@ -24,6 +24,12 @@ export interface PaddedBuffer {
   width: number;
   height: number;
 }
+
+// common modes
+export const DEFAULT_BLEND: GPUBlendState = {
+  color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+  alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+};
 
 /**
  * # WebGPU Context
@@ -77,11 +83,6 @@ export default class WebGPUContext {
   stencilRef = -1;
   currPipeline: undefined | GPURenderPipeline | GPUComputePipeline;
   findingFeature = false;
-  // common modes
-  defaultBlend: GPUBlendState = {
-    color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-    alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-  };
 
   /**
    * @param context - The WebGPU context
@@ -131,8 +132,12 @@ export default class WebGPUContext {
     this.passEncoder = this.commandEncoder.beginRenderPass(this.#renderPassDescriptor);
 
     // setup view and matrix uniforms immediately
-    this.device.queue.writeBuffer(this.#matrixUniformBuffer, 0, matrix);
-    this.device.queue.writeBuffer(this.#viewUniformBuffer, 4, view);
+    this.device.queue.writeBuffer(
+      this.#matrixUniformBuffer,
+      0,
+      matrix as Float32Array<ArrayBuffer>,
+    );
+    this.device.queue.writeBuffer(this.#viewUniformBuffer, 4, view as Float32Array<ArrayBuffer>);
 
     // setup bind groups
     this.passEncoder.setBindGroup(0, this.frameBufferBindGroup);
@@ -385,80 +390,7 @@ export default class WebGPUContext {
    * @returns the mask
    */
   getMask(division: number, tile: Tile): TileMaskSource {
-    const { masks, nullTexture } = this;
-    // check if we have a mask for this level
-    let mask = masks.get(division);
-    if (mask === undefined) {
-      mask = buildMask(division, this);
-      masks.set(division, mask);
-    }
-
-    // tile binding
-    const uniformBuffer = this.buildGPUBuffer(
-      'Tile Uniform Buffer',
-      new Float32Array(tile.uniforms),
-      GPUBufferUsage.UNIFORM,
-    );
-    const positionBuffer = this.buildGPUBuffer(
-      'Tile Position Buffer',
-      tile.bottomTop,
-      GPUBufferUsage.UNIFORM,
-    );
-    // layer binding
-    const layerBuffer = this.buildGPUBuffer(
-      'Layer Uniform Buffer',
-      new Float32Array([1, 0]),
-      GPUBufferUsage.UNIFORM,
-    );
-    const layerCodeBuffer = this.buildGPUBuffer(
-      'Layer Code Buffer',
-      new Float32Array([0]),
-      GPUBufferUsage.STORAGE,
-    );
-    // feature binding
-    const featureCodeBuffer = this.buildGPUBuffer(
-      'Feature Code Buffer',
-      new Float32Array([0]),
-      GPUBufferUsage.STORAGE,
-    );
-    // store the group
-    const bindGroup = this.buildGroup('Feature BindGroup', this.featureBindGroupLayout, [
-      uniformBuffer,
-      positionBuffer,
-      layerBuffer,
-      layerCodeBuffer,
-      featureCodeBuffer,
-    ]);
-    // pattern binding
-    const fillTexturePositions = this.buildGPUBuffer(
-      'Fill Texture Positions',
-      new Float32Array([0, 0, 0, 0, 0]),
-      GPUBufferUsage.UNIFORM,
-    );
-    // create the mask, copying the shape of other draw/workflow structures
-    const tileMaskSource: TileMaskSource = {
-      ...mask,
-      bindGroup,
-      uniformBuffer,
-      positionBuffer,
-      fillPatternBindGroup: this.createPatternBindGroup(fillTexturePositions, nullTexture),
-      /** Draw the mask */
-      draw: (): void => {
-        this.setStencilReference(tile.tmpMaskID);
-        this.painter.workflows.fill?.drawMask(tileMaskSource);
-      },
-      /** Destroy the mask */
-      destroy: () => {
-        uniformBuffer.destroy();
-        positionBuffer.destroy();
-        layerBuffer.destroy();
-        layerCodeBuffer.destroy();
-        featureCodeBuffer.destroy();
-        fillTexturePositions.destroy();
-      },
-    };
-
-    return tileMaskSource;
+    return buildMaskSource(division, tile, this);
   }
 
   /**
@@ -823,7 +755,7 @@ export default class WebGPUContext {
       const paddedData = this.buildPaddedBuffer(data, width, height);
       this.uploadTextureData(
         this.sharedTexture,
-        paddedData.data,
+        paddedData.data as Uint8Array<ArrayBuffer>,
         width,
         height,
         undefined,

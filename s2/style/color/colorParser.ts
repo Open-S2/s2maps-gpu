@@ -4,23 +4,23 @@ import type { ColorArray } from './index.js';
 export type ColorDefinition = [encoding: string, colors: ColorArray];
 
 const COLOR_MAP = {
-  aqua: 0x00ffff,
-  black: 0x000000,
-  blue: 0x0000ff,
-  fuchsia: 0xff00ff,
-  gray: 0x808080,
-  green: 0x008000,
-  lime: 0x00ff00,
-  maroon: 0x800000,
-  navy: 0x000080,
-  olive: 0x808000,
-  orange: 0xffa500,
-  purple: 0x800080,
-  red: 0xff0000,
-  silver: 0xc0c0c0,
-  teal: 0x008080,
-  white: 0xffffff,
-  yellow: 0xffff00,
+  aqua: '#00ffff',
+  black: '#000000',
+  blue: '#0000ff',
+  fuchsia: '#ff00ff',
+  gray: '#808080',
+  green: '#008000',
+  lime: '#00ff00',
+  maroon: '#800000',
+  navy: '#000080',
+  olive: '#808000',
+  orange: '#ffa500',
+  purple: '#800080',
+  red: '#ff0000',
+  silver: '#c0c0c0',
+  teal: '#008080',
+  white: '#ffffff',
+  yellow: '#ffff00',
 };
 
 /**
@@ -36,18 +36,8 @@ const COLOR_MAP = {
  * @returns the parsed color
  */
 export function colorParser(input: string): ColorDefinition {
-  if (COLOR_MAP[input as keyof typeof COLOR_MAP] !== undefined) {
-    const u = COLOR_MAP[input as keyof typeof COLOR_MAP];
-    const r = u >> 16;
-    const g = (u >> 8) & 0xff;
-    const b = u & 0xff;
-    return ['rgb', [r, g, b, 1]];
-  } else if (input[0] === '#') {
-    // hex encoding
-    return parseHex(input);
-  } else {
-    return parseString(input);
-  }
+  input = COLOR_MAP[input as keyof typeof COLOR_MAP] ?? input;
+  return input[0] === '#' ? parseHex(input) : parseString(input);
 }
 
 /**

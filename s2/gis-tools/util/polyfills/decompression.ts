@@ -4,7 +4,6 @@ import type { Format } from '../index.js';
 
 declare global {
   /** Expose a decompressionPolyfill */
-  // eslint-disable-next-line no-var
   var decompressionPolyfill: undefined | ((data: Uint8Array, format?: Format) => Uint8Array);
 }
 

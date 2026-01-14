@@ -1,6 +1,7 @@
 import encodeLayerAttribute from 'style/encodeLayerAttribute.js';
 import shaderCode from '../shaders/shade.wgsl';
 
+import type { MaskSource } from './index.js';
 import type { TileGPU as Tile } from 'source/tile.spec.js';
 import type { WebGPUContext } from '../context/index.js';
 import type {
@@ -10,7 +11,6 @@ import type {
   ShadeWorkflowLayerGuideGPU,
 } from 'style/style.spec.js';
 import type {
-  MaskSource,
   ShadeFeature as ShadeFeatureSpec,
   ShadeWorkflow as ShadeWorkflowSpec,
 } from './workflow.spec.js';
@@ -85,7 +85,7 @@ export class ShadeFeature implements ShadeFeatureSpec {
 }
 
 /** Shade Workflow */
-export default class ShadeWorkflow implements ShadeWorkflowSpec {
+export class ShadeWorkflow implements ShadeWorkflowSpec {
   context: WebGPUContext;
   layerGuide?: ShadeWorkflowLayerGuideGPU;
   pipeline!: GPURenderPipeline;

@@ -37,12 +37,12 @@ export default class LineWorker extends VectorWorker implements LineWorkerSpec {
       color,
       opacity,
       width,
-      gapwidth,
+      gapWidth,
     } = lineLayer;
 
     // build feature code design
-    // color -> opacity -> width -> gapwidth
-    const design: CodeDesign = [[color, colorFunc(lch)], [opacity], [width], [gapwidth]];
+    // color -> opacity -> width -> gapWidth
+    const design: CodeDesign = [[color, colorFunc(lch)], [opacity], [width], [gapWidth]];
 
     return {
       type: 'line',

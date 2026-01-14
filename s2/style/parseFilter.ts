@@ -1,7 +1,7 @@
 import coalesceField from './coalesceField.js';
 
 import type { Properties } from 'gis-tools/index.js';
-import type { Comparator, NestedKey, NotNullOrObject } from './style.spec.js';
+import type { Comparator, InputKey, NotNullOrObject } from './style.spec.js';
 
 // examples:
 // filter: { key: 'class', comparator: '==', value: 'ocean' }
@@ -53,7 +53,7 @@ export interface Conditional {
  * ```
  */
 export interface Condition {
-  key: string | NestedKey;
+  key: InputKey;
   /**
    * One of `"==" | "!=" | ">" | ">=" | "<" | "<=" | "in" | "!in" | "has" | "!has"`
    * Used by the filter function to determine if a feature should be included in the render.

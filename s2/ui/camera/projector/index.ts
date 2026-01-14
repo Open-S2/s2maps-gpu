@@ -516,12 +516,8 @@ export class Projector {
    * @returns clamped longitude
    */
   #clampDeg(input: number): number {
-    while (input >= 180) {
-      input -= 360;
-    }
-    while (input < -180) {
-      input += 360;
-    }
+    while (input >= 180) input -= 360;
+    while (input < -180) input += 360;
     return input;
   }
 

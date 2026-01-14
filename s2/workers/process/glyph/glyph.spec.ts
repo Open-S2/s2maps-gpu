@@ -28,8 +28,8 @@ export interface RoundNodes {
 /** a node is a collection of square or round nodes */
 export type Node = SquareNode | RoundNodes;
 
-/** a glyph descriptor. */
-export type GlyphData = [family: string, char: string];
+// /** a glyph descriptor. */
+// export type GlyphDescription = [family: string, char: string];
 
 /**
  * Glyph Base properties found in all glyph types

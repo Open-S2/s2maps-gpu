@@ -4,7 +4,6 @@ import type { Format } from './index.js';
 
 declare global {
   /** Expose a decompressionPolyfill */
-  // eslint-disable-next-line no-var
   var decompressionPolyfill: undefined | ((data: Uint8Array, format?: Format) => Uint8Array);
 }
 
@@ -22,7 +21,7 @@ export async function decompressStream(bytes: Uint8Array, format?: Format): Prom
 
   if (format === undefined) format = bytes[0] === 0x1f && bytes[1] === 0x8b ? 'gzip' : 'deflate';
   // Convert the bytes to a stream.
-  const stream = new Blob([bytes]).stream();
+  const stream = new Blob([bytes as Uint8Array<ArrayBuffer>]).stream();
 
   // Create a decompressed stream.
   const decompressedStream = stream.pipeThrough(new DecompressionStream(format as 'gzip'));

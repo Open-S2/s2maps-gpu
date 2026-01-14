@@ -7,11 +7,11 @@ import type {
   DataCondition,
   DataRangeEase,
   DataRangeStep,
+  InputKey,
   InputRangeEase,
   InputRangeStep,
   InputValue,
   LayerWorkerFunction,
-  NestedKey,
   NotNullOrObject,
   NumberColor,
   Property,
@@ -149,7 +149,7 @@ function dataRangeFunction<T extends NotNullOrObject, U>(
   });
 
   return (code: number[], properties: Properties, _zoom: number): U => {
-    let endKey: string | NestedKey = key;
+    let endKey: InputKey = key;
     // dive into nested properties if needed
     while (typeof endKey === 'object' && 'nestedKey' in endKey) {
       const nestedKey = [...endKey.nestedKey];

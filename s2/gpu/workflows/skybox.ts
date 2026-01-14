@@ -12,13 +12,13 @@ import type { UrlMap } from 'util/index.js';
 import type { WebGPUContext } from '../context/index.js';
 
 /** Skybox Workflow renders a user styled skybox to the GPU */
-export default class SkyboxWorkflow implements SkyboxWorkflowSpec {
+export class SkyboxWorkflow implements SkyboxWorkflowSpec {
   context: WebGPUContext;
   facesReady = 0;
   ready = false;
   fov: number = degToRad(80);
   angle: number = degToRad(40);
-  matrix: Float32Array = new Float32Array(16);
+  matrix: Float32Array<ArrayBuffer> = new Float32Array(16);
   pipeline!: GPURenderPipeline;
   #matrixBuffer!: GPUBuffer;
   #cubeMap!: GPUTexture;

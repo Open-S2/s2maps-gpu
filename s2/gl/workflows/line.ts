@@ -32,7 +32,7 @@ export class LineFeature extends Feature implements LineFeatureSpec {
   color?: ColorArray; // webgl1
   opacity?: number; // webgl1
   width?: number; // webgl1
-  gapwidth?: number; // webgl1
+  gapWidth?: number; // webgl1
   /**
    * @param workflow - the line workflow
    * @param layerGuide - layer guide for this feature
@@ -85,7 +85,7 @@ export class LineFeature extends Feature implements LineFeatureSpec {
       color,
       opacity,
       width,
-      gapwidth,
+      gapWidth,
     } = this;
     const newFeature = new LineFeature(
       workflow,
@@ -98,7 +98,7 @@ export class LineFeature extends Feature implements LineFeatureSpec {
       cap,
       parent,
     );
-    newFeature.setWebGL1Attributes(color, opacity, width, gapwidth);
+    newFeature.setWebGL1Attributes(color, opacity, width, gapWidth);
     return newFeature;
   }
 
@@ -107,18 +107,18 @@ export class LineFeature extends Feature implements LineFeatureSpec {
    * @param color - the color
    * @param opacity - the opacity
    * @param width - the width
-   * @param gapwidth - the gapwidth
+   * @param gapWidth - the gapWidth
    */
   setWebGL1Attributes(
     color?: ColorArray,
     opacity?: number,
     width?: number,
-    gapwidth?: number,
+    gapWidth?: number,
   ): void {
     this.color = color;
     this.opacity = opacity;
     this.width = width;
-    this.gapwidth = gapwidth;
+    this.gapWidth = gapWidth;
   }
 }
 
@@ -187,7 +187,7 @@ export default class LineWorkflow extends Workflow implements LineWorkflowSpec {
       color,
       opacity,
       width,
-      gapwidth,
+      gapWidth,
       // layout
       cap,
       join,
@@ -196,7 +196,7 @@ export default class LineWorkflow extends Workflow implements LineWorkflowSpec {
     color = color ?? 'rgba(0, 0, 0, 0)';
     opacity = opacity ?? 1;
     width = width ?? 1;
-    gapwidth = gapwidth ?? 0;
+    gapWidth = gapWidth ?? 0;
     geoFilter = geoFilter ?? [];
     // 1) build definition
     const dashed = Array.isArray(dasharray) && dasharray.length > 0;
@@ -209,7 +209,7 @@ export default class LineWorkflow extends Workflow implements LineWorkflowSpec {
       color,
       opacity,
       width,
-      gapwidth,
+      gapWidth,
       cap: cap ?? 'butt',
       join: join ?? 'miter',
       dasharray,
@@ -221,7 +221,7 @@ export default class LineWorkflow extends Workflow implements LineWorkflowSpec {
     // 2) Store layer workflow, building code if webgl2
     const layerCode: number[] = [];
     if (type === 2) {
-      for (const paint of [color, opacity, width, gapwidth]) {
+      for (const paint of [color, opacity, width, gapWidth]) {
         layerCode.push(...encodeLayerAttribute(paint, lch));
       }
     }

@@ -1,3 +1,4 @@
+import { DEFAULT_BLEND } from '../context/context.js';
 import { buildColorRamp } from 'style/color/index.js';
 import encodeLayerAttribute from 'style/encodeLayerAttribute.js';
 import shaderCode from '../shaders/heatmap.wgsl';
@@ -158,7 +159,7 @@ export class HeatmapFeature implements HeatmapFeatureSpec {
 // TODO: The texture target should just have a single float channel?
 
 /** Heatmap Workflow */
-export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
+export class HeatmapWorkflow implements HeatmapWorkflowSpec {
   context: WebGPUContext;
   layerGuides = new Map<number, HeatmapWorkflowLayerGuideGPU>();
   pipeline!: GPURenderPipeline;
@@ -448,14 +449,7 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
    */
   async #getPipeline(type: 'texture' | 'screen'): Promise<GPURenderPipeline> {
     const { context, module } = this;
-    const {
-      device,
-      format,
-      defaultBlend,
-      sampleCount,
-      frameBindGroupLayout,
-      featureBindGroupLayout,
-    } = context;
+    const { device, format, sampleCount, frameBindGroupLayout, featureBindGroupLayout } = context;
     const isScreen = type === 'screen';
 
     const layout = isScreen
@@ -496,7 +490,7 @@ export default class HeatmapWorkflow implements HeatmapWorkflowSpec {
           {
             format,
             blend: isScreen
-              ? defaultBlend
+              ? DEFAULT_BLEND
               : {
                   color: { srcFactor: 'one', dstFactor: 'one' },
                   alpha: { srcFactor: 'one', dstFactor: 'one' },

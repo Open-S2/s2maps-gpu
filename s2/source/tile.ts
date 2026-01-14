@@ -386,7 +386,7 @@ export class S2Tile<
     // build division
     this.division = 16 / (1 << max(min(floor(zoom / 2), 4), 0));
     // grab mask
-    this.mask = context.getMask(this.division, this as never) as M;
+    this.mask = context.getMask(this.division, this as never) as unknown as M;
   }
 
   /** Build the corners for the tile. Luckily only needs to be built once */
@@ -466,7 +466,7 @@ export class WMTile<
       1, // deltaT
     ]);
     // grab mask
-    this.mask = context.getMask(1, this as never) as M;
+    this.mask = context.getMask(1, this as never) as unknown as M;
   }
 
   /**

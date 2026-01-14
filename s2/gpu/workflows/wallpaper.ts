@@ -15,7 +15,7 @@ export interface WallpaperScheme {
 }
 
 /** Wallpaper Workflow renders a user styled wallpaper to the GPU */
-export default class WallpaperWorkflow implements WallpaperWorkflowSpec {
+export class WallpaperWorkflow implements WallpaperWorkflowSpec {
   context: WebGPUContext;
   scheme: WallpaperScheme;
   tileSize = 512;

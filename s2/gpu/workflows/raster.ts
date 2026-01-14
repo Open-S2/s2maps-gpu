@@ -1,3 +1,4 @@
+import { DEFAULT_BLEND } from '../context/context.js';
 import encodeLayerAttribute from 'style/encodeLayerAttribute.js';
 import shaderCode from '../shaders/raster.wgsl';
 
@@ -143,7 +144,7 @@ export class RasterFeature implements RasterFeatureSpec {
 }
 
 /** Raster Workflow */
-export default class RasterWorkflow implements RasterWorkflowSpec {
+export class RasterWorkflow implements RasterWorkflowSpec {
   context: WebGPUContext;
   layerGuides = new Map<number, RasterWorkflowLayerGuideGPU>();
   pipeline!: GPURenderPipeline;
@@ -304,7 +305,6 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
     const {
       device,
       format,
-      defaultBlend,
       projection,
       sampleCount,
       frameBindGroupLayout,
@@ -342,7 +342,7 @@ export default class RasterWorkflow implements RasterWorkflowSpec {
       fragment: {
         module,
         entryPoint: 'fMain',
-        targets: [{ format, blend: defaultBlend }],
+        targets: [{ format, blend: DEFAULT_BLEND }],
       },
       primitive: {
         topology: 'triangle-strip',

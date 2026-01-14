@@ -1,3 +1,4 @@
+import { DEFAULT_BLEND } from '../context/context.js';
 import encodeLayerAttribute from 'style/encodeLayerAttribute.js';
 import shaderCode from '../shaders/hillshade.wgsl';
 
@@ -148,7 +149,7 @@ export class HilllshadeFeature implements HillshadeFeatureSpec {
 }
 
 /** Hillshade Workflow */
-export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
+export class HillshadeWorkflow implements HillshadeWorkflowSpec {
   context: WebGPUContext;
   layerGuides = new Map<number, HillshadeWorkflowLayerGuideGPU>();
   pipeline!: GPURenderPipeline;
@@ -351,7 +352,6 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
     const {
       device,
       format,
-      defaultBlend,
       projection,
       sampleCount,
       frameBindGroupLayout,
@@ -393,7 +393,7 @@ export default class HillshadeWorkflow implements HillshadeWorkflowSpec {
       label: 'Hillshade Pipeline',
       layout,
       vertex: { module, entryPoint: 'vMain', buffers: SHADER_BUFFER_LAYOUT },
-      fragment: { module, entryPoint: 'fMain', targets: [{ format, blend: defaultBlend }] },
+      fragment: { module, entryPoint: 'fMain', targets: [{ format, blend: DEFAULT_BLEND }] },
       primitive: { topology: 'triangle-strip', cullMode, stripIndexFormat: 'uint32' },
       multisample: { count: sampleCount },
       depthStencil: {

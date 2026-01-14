@@ -192,8 +192,8 @@ export const K_AVG_ANGLE_SPAN = () => new LengthMetric(Math.PI / 2); // 1.571
  * angles of an S2Cell range from 60 to 120 degrees.)
  *
  * Linear -> sqrt(2.0 / 3.0)            (0.816)
- * Tan ->  pi / (2.0 * @sqrt(2.0))      (1.111)
- * Quadratic -> 2.0 * @sqrt(2.0) / 3.0  (0.943) [Default]
+ * Tan ->  pi / (2.0 * sqrt(2.0))      (1.111)
+ * Quadratic -> 2.0 * sqrt(2.0) / 3.0  (0.943) [Default]
  * @returns - `new LengthMetric((2 * Math.sqrt(2)) / 3.0)`
  */
 export const K_MIN_WIDTH = () => new LengthMetric((2 * Math.sqrt(2)) / 3.0);
@@ -239,15 +239,15 @@ export const K_AVG_EDGE = () => new LengthMetric(1.459213746386106);
  * example, the distance from an arbitrary point to the closest cell center
  * at a given level is at most half the maximum diagonal length.
  *
- * Linear -> 2.0 * @sqrt(2.0) / 3.0     (0.943)
- * Tan -> pi * @sqrt(2.0) / 3.0         (1.481)
- * Quadratic -> 8.0 * @sqrt(2.0) / 9.0  (1.257) [Default]
+ * Linear -> 2.0 * sqrt(2.0) / 3.0     (0.943)
+ * Tan -> pi * sqrt(2.0) / 3.0         (1.481)
+ * Quadratic -> 8.0 * sqrt(2.0) / 9.0  (1.257) [Default]
  * @returns - `new LengthMetric((8 * Math.sqrt(2)) / 9)`
  */
 export const K_MIN_DIAG = () => new LengthMetric((8 * Math.sqrt(2)) / 9);
 /**
- * Linear -> 2.0 * @sqrt(2.0)        (2.828)
- * Tan -> pi * @sqrt(2.0 / 3.0)      (2.565)
+ * Linear -> 2.0 * sqrt(2.0)        (2.828)
+ * Tan -> pi * sqrt(2.0 / 3.0)      (2.565)
  * Quadratic -> 2.438654594434021032 [Default]
  * @returns - `new LengthMetric(2.438654594434021)`
  */
@@ -265,9 +265,9 @@ export const K_AVG_DIAG = () => new LengthMetric(2.060422738998471);
  * and the maximum is at most kMaxArea.getValue(k).  The average area of all
  * cells at level k is exactly kAvgArea.getValue(k).
  *
- * Linear -> 4.0 / (3.0 * @sqrt(3.0))   (0.770)
- * Tan -> pi * pi / (4.0 * @sqrt(2.0))  (1.745)
- * Quadratic -> 8.0 * @sqrt(2.0) / 9.0  (1.257) [Default]
+ * Linear -> 4.0 / (3.0 * sqrt(3.0))   (0.770)
+ * Tan -> pi * pi / (4.0 * sqrt(2.0))  (1.745)
+ * Quadratic -> 8.0 * sqrt(2.0) / 9.0  (1.257) [Default]
  * @returns - `new AreaMetric((8 * Math.sqrt(2)) / 9)`
  */
 export const K_MIN_AREA = () => new AreaMetric((8 * Math.sqrt(2)) / 9);

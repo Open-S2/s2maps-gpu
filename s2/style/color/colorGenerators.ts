@@ -10,7 +10,7 @@ import type { ColorRamp } from 'style/style.spec.js';
  * @param lch - whether or not to use lch
  * @returns Uint8ClampedArray
  */
-export function buildColorRamp(ramp: ColorRamp, lch = false): Uint8ClampedArray {
+export function buildColorRamp(ramp: ColorRamp, lch = false): Uint8ClampedArray<ArrayBuffer> {
   const { round } = Math;
   // create ramp image
   // (4) RGBA * (5) height (base color, protanopia, deuteranopia, tritanopia, greyscale) * (255) width
@@ -90,7 +90,7 @@ export function buildColorRamp(ramp: ColorRamp, lch = false): Uint8ClampedArray 
 export interface DashImage {
   length: number;
   dashCount: number;
-  image: Uint8ClampedArray;
+  image: Uint8ClampedArray<ArrayBuffer>;
 }
 
 /**

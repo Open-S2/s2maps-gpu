@@ -1,0 +1,20 @@
+max_width = 100
+# width_heuristics = "Max"
+use_small_heuristics = "Max"
+single_line_if_else_max_width = 100
+single_line_let_else_max_width = 100
+# Indentation settings
+tab_spaces = 4
+format_strings = true
+# Prevents rustfmt from forcing multi-line formatting for match arms, if-let expressions, etc.
+struct_lit_single_line = true
+# Indentation settings to control how nested blocks are handled
+indent_style = "Block"
+# Controls how rustfmt treats single-line blocks
+empty_item_single_line = true
+newline_style = "Unix"  # Ensure using UNIX-style newlines
+control_brace_style = "AlwaysSameLine"
+# Manage import guidelines
+imports_granularity = "Crate"
+# Manage commenting
+normalize_comments = true

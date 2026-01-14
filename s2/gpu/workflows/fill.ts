@@ -1,3 +1,4 @@
+import { DEFAULT_BLEND } from '../context/context.js';
 import encodeLayerAttribute from 'style/encodeLayerAttribute.js';
 import shaderCode from '../shaders/fill.wgsl';
 
@@ -12,11 +13,19 @@ import type {
 } from 'style/style.spec.js';
 import type {
   FillFeature as FillFeatureSpec,
-  FillSource,
   FillWorkflow as FillWorkflowSpec,
-  MaskSource,
-  TileMaskSource,
 } from './workflow.spec.js';
+import type { MaskSource, TileMaskSource } from './index.js';
+
+/** Fill Source */
+export interface FillSource {
+  type: 'fill';
+  vertexBuffer: GPUBuffer;
+  indexBuffer: GPUBuffer;
+  idBuffer: GPUBuffer;
+  codeTypeBuffer: GPUBuffer;
+  destroy: () => void;
+}
 
 const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
   {
@@ -178,7 +187,7 @@ export class FillFeature implements FillFeatureSpec {
 }
 
 /** Fill Workflow */
-export default class FillWorkflow implements FillWorkflowSpec {
+export class FillWorkflow implements FillWorkflowSpec {
   layerGuides = new Map<number, FillWorkflowLayerGuideGPU>();
   interactivePipeline!: GPUComputePipeline;
   maskPipeline!: GPURenderPipeline;
@@ -444,7 +453,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
    */
   async #getPipeline(type: 'fill' | 'mask' | 'invert' | 'mask-fill'): Promise<GPURenderPipeline> {
     const { context } = this;
-    const { device, format, defaultBlend, sampleCount, projection } = context;
+    const { device, format, sampleCount, projection } = context;
     const invert = type === 'invert';
     const mask = type === 'mask';
     const maskFill = type === 'mask-fill';
@@ -471,7 +480,7 @@ export default class FillWorkflow implements FillWorkflowSpec {
           {
             format,
             writeMask: mask || invert ? 0 : GPUColorWrite.ALL,
-            blend: defaultBlend,
+            blend: DEFAULT_BLEND,
           },
         ],
       },

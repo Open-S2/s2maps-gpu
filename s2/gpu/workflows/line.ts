@@ -1,3 +1,4 @@
+import { DEFAULT_BLEND } from '../context/context.js';
 import { buildDashImage } from 'style/color/index.js';
 import encodeLayerAttribute from 'style/encodeLayerAttribute.js';
 import shaderCode from '../shaders/line.wgsl';
@@ -180,7 +181,7 @@ export class LineFeature implements LineFeatureSpec {
 }
 
 /** Line Workflow */
-export default class LineWorkflow implements LineWorkflowSpec {
+export class LineWorkflow implements LineWorkflowSpec {
   context: WebGPUContext;
   layerGuides = new Map<number, LineWorkflowLayerGuideGPU>();
   pipeline!: GPURenderPipeline;
@@ -227,14 +228,14 @@ export default class LineWorkflow implements LineWorkflowSpec {
       color,
       opacity,
       width,
-      gapwidth,
+      gapWidth,
       // layout
       dasharray,
     } = layer;
     color = color ?? 'rgba(0, 0, 0, 0)';
     opacity = opacity ?? 1;
     width = width ?? 1;
-    gapwidth = gapwidth ?? 0;
+    gapWidth = gapWidth ?? 0;
     geoFilter = geoFilter ?? [];
     // 1) build definition
     const dashed = Array.isArray(dasharray) && dasharray.length > 0;
@@ -247,7 +248,7 @@ export default class LineWorkflow implements LineWorkflowSpec {
       color,
       opacity,
       width,
-      gapwidth,
+      gapWidth,
       cap: cap ?? 'butt',
       join: join ?? 'miter',
       dasharray,
@@ -258,7 +259,7 @@ export default class LineWorkflow implements LineWorkflowSpec {
     };
     // 2) build the layerCode
     const layerCode: number[] = [];
-    for (const paint of [color, opacity, width, gapwidth]) {
+    for (const paint of [color, opacity, width, gapWidth]) {
       layerCode.push(...encodeLayerAttribute(paint, lch));
     }
     // 3) Setup layer buffers in GPU
@@ -391,14 +392,7 @@ export default class LineWorkflow implements LineWorkflowSpec {
    */
   async #getPipeline(): Promise<GPURenderPipeline> {
     const { context } = this;
-    const {
-      device,
-      format,
-      defaultBlend,
-      sampleCount,
-      frameBindGroupLayout,
-      featureBindGroupLayout,
-    } = context;
+    const { device, format, sampleCount, frameBindGroupLayout, featureBindGroupLayout } = context;
 
     // prep line uniforms
     this.lineBindGroupLayout = context.device.createBindGroupLayout({
@@ -432,7 +426,7 @@ export default class LineWorkflow implements LineWorkflowSpec {
       label: 'Line Pipeline',
       layout,
       vertex: { module, entryPoint: 'vMain', buffers: SHADER_BUFFER_LAYOUT },
-      fragment: { module, entryPoint: 'fMain', targets: [{ format, blend: defaultBlend }] },
+      fragment: { module, entryPoint: 'fMain', targets: [{ format, blend: DEFAULT_BLEND }] },
       primitive: { topology: 'triangle-list', cullMode: 'none' },
       multisample: { count: sampleCount },
       depthStencil: {
