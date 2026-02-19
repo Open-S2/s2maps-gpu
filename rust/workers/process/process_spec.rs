@@ -24,11 +24,8 @@ impl IDGen {
      * @param id - the thread id
      * @param total_workers - the total number of threads
      */
-    pub fn new(&mut self, id: usize, total_workers: usize) {
-        self.worker_id = id;
-        self.num = id + 1;
-        self.start_num = id + 1;
-        self.incr_size = total_workers;
+    pub fn new(id: usize, total_workers: usize) -> Self {
+        Self { worker_id: id, num: id + 1, start_num: id + 1, incr_size: total_workers }
     }
 
     /** @returns the next id */

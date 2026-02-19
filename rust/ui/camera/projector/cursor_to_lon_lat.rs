@@ -85,22 +85,18 @@ pub fn cursor_to_lon_lat_wm(
     lat: f64,
     x_offset: f64,
     y_offset: f64,
-    zoom: u8,
-    tile_size: u16,
+    zoom: f64,
+    tile_size: u64,
 ) -> Option<Point> {
     // grab the px position of lon lat
-    let mut px = ll_to_px((lon, lat), zoom, Some(false), Some(tile_size));
+    let mut px = ll_to_px(&Point(lon, lat), zoom, Some(false), Some(tile_size));
     // if px + offset is outside of min and max, return None
     // adjust by the offset
     px.0 += x_offset;
     px.1 -= y_offset;
     // convert back to lon lat
-    let ll = px_to_ll(px, zoom, Some(tile_size));
-    if ll.0 > 180. || ll.0 < -180. || ll.1 > MAXLAT || ll.1 < -MAXLAT {
-        None
-    } else {
-        Some(Point(ll.0, ll.1))
-    }
+    let ll = px_to_ll(&px, zoom, Some(tile_size));
+    if ll.0 > 180. || ll.0 < -180. || ll.1 > MAXLAT || ll.1 < -MAXLAT { None } else { Some(ll) }
 }
 
 /**

@@ -1,4 +1,6 @@
 use bytemuck::{Pod, Zeroable};
+use core::ops::{Mul, Sub};
+use gistools::geometry::S2Point;
 use libm::{cos, fabs, fmax, sin, sqrt, tan};
 
 /// 4 dimensional vector
@@ -19,9 +21,17 @@ impl Vec4 {
     pub fn x(self) -> f32 {
         self.0[0]
     }
+    /// Set X
+    pub fn set_x(&mut self, x: f32) {
+        self.0[0] = x;
+    }
     /// Get y
     pub fn y(self) -> f32 {
         self.0[1]
+    }
+    /// Set y
+    pub fn set_y(&mut self, y: f32) {
+        self.0[1] = y;
     }
     /// Get z
     pub fn z(self) -> f32 {
@@ -30,6 +40,30 @@ impl Vec4 {
     /// Get t
     pub fn t(self) -> f32 {
         self.0[3]
+    }
+}
+impl From<&S2Point> for Vec4 {
+    fn from(value: &S2Point) -> Self {
+        Vec4([value.x as f32, value.y as f32, value.z as f32, 0.])
+    }
+}
+impl Sub for Vec4 {
+    type Output = Vec4;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Vec4([
+            self.0[0] - rhs.0[0],
+            self.0[1] - rhs.0[1],
+            self.0[2] - rhs.0[2],
+            self.0[3] - rhs.0[3],
+        ])
+    }
+}
+impl Mul<f32> for Vec4 {
+    type Output = Vec4;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Vec4([self.0[0] * rhs, self.0[1] * rhs, self.0[2] * rhs, self.0[3] * rhs])
     }
 }
 
@@ -82,7 +116,7 @@ impl Mat4 {
      * @param far - far plane
      * @returns the orthographic matrix
      */
-    pub fn ortho(&self, width: f32, height: f32, far: f32) -> Mat4 {
+    pub fn ortho(width: f32, height: f32, far: f32) -> Mat4 {
         let mut res = Mat4([0.; 16]);
         res.0[0] = 1. / width;
         res.0[5] = 1. / height;

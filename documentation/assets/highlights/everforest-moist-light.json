@@ -13,7 +13,7 @@
       "settings": {
         "fontStyle": "bold"
       }
-    },  
+    },
     {
       "scope": "header",
       "settings": {
@@ -305,11 +305,7 @@
     },
     {
       "name": "Function declarations",
-      "scope": [
-        "storage.type.function",
-        "entity.function",
-        "entity.name.function.static"
-      ],
+      "scope": ["storage.type.function", "entity.function", "entity.name.function.static"],
       "settings": {
         "foreground": "#118ae2"
       }
@@ -458,10 +454,7 @@
       }
     },
     {
-      "scope": [
-        "string.interpolated.dollar.shell",
-        "string.interpolated.backtick.shell"
-      ],
+      "scope": ["string.interpolated.dollar.shell", "string.interpolated.backtick.shell"],
       "settings": {
         "foreground": "#3A4958"
       }
@@ -480,11 +473,7 @@
     },
     {
       "name": "C# functions & namespace",
-      "scope": [
-        "meta.function.cs",
-        "entity.name.function.cs",
-        "entity.name.type.namespace.cs"
-      ],
+      "scope": ["meta.function.cs", "entity.name.function.cs", "entity.name.type.namespace.cs"],
       "settings": {
         "foreground": "#229973"
       }
@@ -523,10 +512,7 @@
     },
     {
       "name": "coloring of the Java import and package identifiers",
-      "scope": [
-        "storage.modifier.import.java",
-        "storage.modifier.package.java"
-      ],
+      "scope": ["storage.modifier.import.java", "storage.modifier.package.java"],
       "settings": {
         "foreground": "#bdae93"
       }
@@ -564,10 +550,7 @@
       }
     },
     {
-      "scope": [
-        "source.java variable.other.object",
-        "source.java variable.other.definition.java"
-      ],
+      "scope": ["source.java variable.other.object", "source.java variable.other.definition.java"],
       "settings": {
         "foreground": "#54749C"
       }
@@ -662,9 +645,7 @@
     },
     {
       "name": "JSON Level 0",
-      "scope": [
-        "source.json meta.structure.dictionary.json support.type.property-name.json"
-      ],
+      "scope": ["source.json meta.structure.dictionary.json support.type.property-name.json"],
       "settings": {
         "foreground": "#229973"
       }
@@ -838,10 +819,7 @@
     },
     {
       "name": "ReasonML property",
-      "scope": [
-        "source.reason support.property-value",
-        "source.reason entity.name.filename"
-      ],
+      "scope": ["source.reason support.property-value", "source.reason entity.name.filename"],
       "settings": {
         "foreground": "#C35172"
       }

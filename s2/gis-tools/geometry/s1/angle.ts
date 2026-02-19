@@ -204,6 +204,7 @@ export function angleE7(angle: S1Angle): number {
  * @param angle - input angle in radians
  * @returns - normalized angle in radians
  */
+// oxlint-disable-next-line jsdoc/require-returns jsdoc/require-param - false positive
 export function angleNormalize(angle: S1Angle): S1Angle {
   return angle % (2 * Math.PI);
 }

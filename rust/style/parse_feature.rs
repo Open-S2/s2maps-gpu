@@ -1,11 +1,12 @@
 // import getEasingFunction from './easingFunctions.js';
 // import parseFilter from './parseFilter.js';
 use crate::style::{
-    Alignment, Anchor, Cap, DataCondition, DataRange, FilterFunction, Input, InputKey, InputRange,
-    InputValue, InputValueType, Join, LayerWorkerFunction, NestedKey, Placement, TextField,
+    Alignment, Anchor, Cap, DataCondition, DataRange, Easing, FilterFunction, Input, InputKey,
+    InputRange, InputValue, InputValueType, Join, LayerWorkerFunction, NestedKey, Placement,
+    Property, TextField,
 };
 use alloc::{string::String, vec::Vec};
-use s2json::{PrimitiveValue, Properties, ValueType};
+use s2json::{Point, PrimitiveValue, Properties, ValuePrimitiveType, ValueType};
 
 /// Data Condition wrapper
 #[derive(Debug, Clone)]
@@ -49,83 +50,51 @@ pub trait ParseFeature<T: InputValueType> {
 /// to manipulate input values into output values on the GPU.
 ///
 /// ## Parameters
-/// - `input`: input value or property
-/// - `cb`: callback function
+/// - `code` - The code to store the input in
+/// - `properties` - The properties to check
+/// - `zoom` - The zoom level
 ///
 /// ## Returns
-/// a generic layer worker function
+/// The parsed value
 impl<T: InputValueType> ParseFeature<T> for Input<T> {
     fn parse_feature(&self, code: &mut Vec<f32>, properties: Properties, zoom: u8) -> T {
-        //         match self {
-        //             Input::Property(property) => match property {
-        //                 Property::InputCondition => parse_default_case<T, U>(cb),
-        //                 Property::InputValue(input_value) => input_value.parse_feature(cb),
-        //                 Property::DataCondition(data_condition) => data_condition.parse_feature(cb),
-        //                 Property::DataRange(data_range) => data_range.parse_feature(cb),
-        //                 Property::InputRange(input_range) => input_range.parse_feature(cb),
-        //                 Property::FeatureState(feature_state) => {
-        //                     |code: &mut Vec<f32>, properties: &Properties, zoom: u8| -> U { cb(T::default()) }
-        //                 }
-        //                 Property::Fallback(fallback) => fallback.as_ref().parse_feature(cb),
-        //             },
-        //             Input::Value(value) => {
-        //                 |code: &mut Vec<f32>, properties: &Properties, zoom: u8| -> U { cb(value) }
-        //             }
-        //         }
-        todo!()
+        match self {
+            Input::Property(property) => match property {
+                Property::InputValue(input_value) => {
+                    input_value.parse_feature(code, properties, zoom)
+                }
+                Property::DataCondition(data_condition) => {
+                    data_condition.parse_feature(code, properties, zoom)
+                }
+                Property::DataRange(data_range) => data_range.parse_feature(code, properties, zoom),
+                Property::InputRange(input_range) => {
+                    input_range.parse_feature(code, properties, zoom)
+                }
+                Property::Fallback(fallback) => {
+                    fallback.as_ref().parse_feature(code, properties, zoom)
+                }
+                _ => panic!("Invalid input"),
+            },
+            Input::Value(value) => value.clone(),
+        }
     }
 }
 
-/**
- * Input value function parser
- * @param input_value - input value
- * @param cb - callback function
- * @returns a generic layer worker function designed for input values
- */
-fn input_value_function<T: InputValueType, U>(
-    input_value: InputValue<T>,
-    cb: Callback<T, U>,
-) -> LayerWorkerFunction<U> {
-    //   return (code: number[], properties: Properties): U => {
-    //     const { key, fallback } = input_value;
-    //     // dive into nested properties if needed
-    //     let end_key: string;
-    //     if (typeof key === 'object') {
-    //       const nested_key = [...key.nested_key];
-    //       while (nested_key.length > 1) {
-    //         properties = (properties[nested_key[0]] ?? {}) as Properties;
-    //         nested_key.shift();
-    //       }
-    //       end_key = nested_key[0];
-    //     } else {
-    //       end_key = key;
-    //     }
-    //     // return the input if it exists, otherwise fallback
-    //     const res = (properties[end_key] ?? fallback) as T;
-    //     const cbValue = cb(res);
-    //     if (typeof cbValue === 'number') code.push(1, cbValue);
-    //     else if (Array.isArray(cbValue)) code.push(cbValue.length, ...cbValue);
-    //     return cbValue;
-    //   };
-    todo!()
-}
-
+/// Parse an input value itself into an [`InputValueType`]
+///
+/// ## Parameters
+/// - `code` - The code to store the input in
+/// - `properties` - The properties to check
+/// - `zoom` - The zoom level
+///
+/// ## Returns
+/// The parsed value
 impl<T: InputValueType> ParseFeature<T> for InputValue<T> {
     fn parse_feature(&self, code: &mut Vec<f32>, properties: Properties, _zoom: u8) -> T {
         let mut properties = properties;
         let Self { key, fallback } = self;
         // dive into nested properties if needed
-        let mut end_key: String;
-        // if (typeof key === 'object') {
-        //   const nested_key = [...key.nested_key];
-        //   while (nested_key.length > 1) {
-        //     properties = (properties[nested_key[0]] ?? {}) as Properties;
-        //     nested_key.shift();
-        //   }
-        //   end_key = nested_key[0];
-        // } else {
-        //   end_key = key;
-        // }
+        let end_key: String;
         match key {
             InputKey::Key(in_key) => end_key = in_key.clone(),
             InputKey::Nested(in_key) => {
@@ -139,154 +108,152 @@ impl<T: InputValueType> ParseFeature<T> for InputValue<T> {
             }
         }
         // return the input if it exists, otherwise fallback
-        // let res = (properties[end_key] ?? fallback) as T;
         let res = properties.get(&end_key).map(|v| v.into()).unwrap_or(fallback.clone());
-        // const cbValue = cb(res);
-        // if (typeof cbValue === 'number') code.push(1, cbValue);
-        // else if (Array.isArray(cbValue)) code.push(cbValue.length, ...cbValue);
-        // return cbValue;
+        code.extend(res.to_gpu_code());
 
-        todo!()
+        res
     }
 }
 
-/**
- * Data condition function parser
- * @param data_condition - data condition input
- * @param cb - callback function
- * @returns a generic layer worker function designed for data conditions
- */
-fn data_condition_function<T: InputValueType, U>(
-    data_condition: DataCondition<T>,
-    cb: Callback<T, U>,
-) -> LayerWorkerFunction<U> {
-    //   const { conditions, fallback } = data_condition;
-    //   const conditionList: Array<DataConditionList<U>> = [];
-    //   const fallbackCondition = parseFeature(fallback);
-    //   // store conditions
-    //   for (const condition of conditions) {
-    //     conditionList.push({
-    //       condition: parseFilter(condition.filter),
-    //       result: parseFeature(condition.input, cb),
-    //     });
-    //   }
-    //   // build function
-    //   return (code: number[], properties: Properties, zoom = 0): U => {
-    //     if (properties !== undefined) {
-    //       for (let i = 0, cl = conditionList.length; i < cl; i++) {
-    //         // run through the conditionList
-    //         const { condition, result } = conditionList[i];
-    //         if (condition(properties)) {
-    //           code.push(i + 1);
-    //           return result(code, properties, zoom);
-    //         }
-    //       }
-    //     }
-    //     // if we made it here, just run the fallback
-    //     code.push(0);
-    //     const fallback = fallbackCondition?.(code, properties, zoom) as T;
-    //     return cb(fallback);
-    //   };
-    todo!()
+/// Data condition function parser
+///
+/// ## Parameters
+/// - `code` - The code to store the input in
+/// - `properties` - The properties to check
+/// - `zoom` - The zoom level
+///
+/// ## Returns
+/// The parsed value
+impl<T: InputValueType> ParseFeature<T> for DataCondition<T> {
+    fn parse_feature(&self, code: &mut Vec<f32>, properties: Properties, zoom: u8) -> T {
+        let conditions = &self.conditions;
+        let fallback = self.fallback.as_ref();
+        // test each condition, if one passes, store it as the answer
+        for (i, condition) in conditions.iter().enumerate() {
+            if condition.filter.filter(Some(&properties)) {
+                code.push((i as f32) + 1.);
+                return condition.input.parse_feature(code, properties, zoom);
+            }
+        }
+        // if we made it here, just run the fallback
+        code.push(0.);
+        fallback.parse_feature(code, properties, zoom)
+    }
 }
 
-/**
- * Data range function parser
- * @param data_range - data range
- * @param cb - callback function
- * @returns a generic layer worker function for data ranges
- */
-fn data_range_function<T: InputValueType, U>(
-    data_range: DataRange<T>,
-    cb: Callback<T, U>,
-) -> LayerWorkerFunction<U> {
-    //   const { key, ranges, ease, base } = data_range;
-    //   const easeFunction = getEasingFunction<U>(ease, base);
+/// Data range function parser
+///
+/// ## Parameters
+/// - `code` - The code to store the input in
+/// - `properties` - The properties to check
+/// - `zoom` - The zoom level
+///
+/// ## Returns
+/// The parsed value
+impl<T: InputValueType> ParseFeature<T> for DataRange<T> {
+    fn parse_feature(&self, code: &mut Vec<f32>, mut properties: Properties, zoom: u8) -> T {
+        let key = self.key();
+        let ranges = self.ranges();
+        let ease = self.ease();
+        let base = self.base();
 
-    //   const parsed_ranges = ranges.map(({ stop, input }) => {
-    //     return {
-    //       stop,
-    //       input: parseFeature(input, cb),
-    //     };
-    //   });
+        let mut end_key: InputKey = key;
+        // dive into nested properties if needed
+        while let InputKey::Nested(nk) = end_key {
+            let mut nested_key = nk.nested_key.clone();
+            while nested_key.len() > 1 {
+                let prop_value: Option<Properties> =
+                    properties.get(&nested_key[0]).map(|v| v.into());
+                properties = prop_value.unwrap_or(properties.clone());
+                nested_key.remove(0);
+            }
+            end_key = nested_key[0].clone().into();
+        }
+        let InputKey::Key(end_key) = end_key else {
+            panic!("end_key is not a key");
+        };
 
-    //   return (code: number[], properties: Properties, _zoom: number): U => {
-    //     let end_key: InputKey = key;
-    //     // dive into nested properties if needed
-    //     while (typeof end_key === 'object' && 'nested_key' in end_key) {
-    //       const nested_key = [...end_key.nested_key];
-    //       while (nested_key.length > 1) {
-    //         properties = (properties[nested_key[0]] ?? {}) as Properties;
-    //         nested_key.shift();
-    //       }
-    //       end_key = nested_key[0];
-    //     }
-    //     const dataInput =
-    //       properties[end_key] !== undefined && !isNaN(properties[end_key] as number)
-    //         ? Number(properties[end_key])
-    //         : 0;
-    //     if (dataInput <= parsed_ranges[0].stop) {
-    //       // less then or equal to first stop
-    //       return parsed_ranges[0].input(code, properties, dataInput);
-    //     } else if (dataInput >= parsed_ranges[parsed_ranges.length - 1].stop) {
-    //       // greater then or equal to last stop
-    //       return parsed_ranges[parsed_ranges.length - 1].input(code, properties, dataInput);
-    //     } else {
-    //       // somewhere inbetween two stops. lets interpolate
-    //       let i = 0;
-    //       while (parsed_ranges[i] !== undefined && parsed_ranges[i].stop <= dataInput) i++;
-    //       if (parsed_ranges.length === i) i--;
-    //       const startValue = parsed_ranges[i - 1].input(code, properties, dataInput);
-    //       const startStop: number = parsed_ranges[i - 1].stop;
-    //       const endValue = parsed_ranges[i].input(code, properties, dataInput);
-    //       const endStop: number = parsed_ranges[i].stop;
-    //       return easeFunction(dataInput, startStop, endStop, startValue, endValue);
-    //     }
-    //   };
-    todo!()
+        let data_input = properties
+            .get(&end_key)
+            .and_then(|v| v.to_prim().cloned().unwrap_or_default().to_f32())
+            .unwrap_or(0.0);
+
+        if data_input <= ranges[0].stop {
+            // less then or equal to first stop
+            return ranges[0].input.parse_feature(code, properties, zoom);
+        } else if data_input >= ranges[ranges.len() - 1].stop {
+            // greater then or equal to last stop
+            return ranges[ranges.len() - 1].input.parse_feature(code, properties, zoom);
+        } else {
+            // somewhere inbetween two stops. lets interpolate
+            let mut i = 0;
+            while i < ranges.len() && ranges[i].stop <= data_input {
+                i += 1;
+            }
+            if i == ranges.len() {
+                i -= 1;
+            }
+            let start_value = ranges[i - 1].input.parse_feature(code, properties.clone(), zoom);
+            let start_stop = ranges[i - 1].stop;
+            let end_value = ranges[i].input.parse_feature(code, properties, zoom);
+            let end_stop = ranges[i].stop;
+            Easing::ease(
+                data_input as f64,
+                start_stop as f64,
+                end_stop as f64,
+                &start_value,
+                &end_value,
+                Some(ease),
+                base,
+            )
+        }
+    }
 }
 
 // TODO: Support type property (defaults to 'zoom')
 /// Input range function parser
 ///
 /// ## Parameters
-/// - `input_range`: input range
-/// - `cb`: callback function
+/// - `code` - The code to store the input in
+/// - `properties` - The properties to check
+/// - `zoom` - The zoom level
 ///
 /// ## Returns
-/// a generic layer worker function for input ranges
-fn input_range_function<T: InputValueType, U>(
-    input_range: InputRange<T>,
-    cb: Callback<T, U>,
-) -> LayerWorkerFunction<U> {
-    //   const { ranges, ease, base } = input_range;
-    //   const easeFunction = getEasingFunction<U>(ease, base);
+/// The parsed value
+impl<T: InputValueType> ParseFeature<T> for InputRange<T> {
+    fn parse_feature(&self, code: &mut Vec<f32>, properties: Properties, zoom: u8) -> T {
+        let ease = self.ease();
+        let base = self.base();
+        let ranges = self.ranges();
 
-    //   // first ensure each result property is parsed:
-    //   const parsed_ranges = ranges.map(({ stop, input }) => {
-    //     return {
-    //       stop,
-    //       input: parseFeature(input, cb),
-    //     };
-    //   });
-
-    //   return (code: number[], properties: Properties, zoom: number): U => {
-    //     if (zoom <= parsed_ranges[0].stop) {
-    //       return parsed_ranges[0].input(code, properties, zoom);
-    //     } else if (zoom >= parsed_ranges[parsed_ranges.length - 1].stop) {
-    //       return parsed_ranges[parsed_ranges.length - 1].input(code, properties, zoom);
-    //     } else {
-    //       let i = 0;
-    //       while (parsed_ranges[i] !== undefined && parsed_ranges[i].stop <= zoom) i++;
-    //       if (parsed_ranges.length === i) i--;
-    //       const startValue = parsed_ranges[i - 1].input(code, properties, zoom);
-    //       const startStop: number = parsed_ranges[i - 1].stop;
-    //       const endValue = parsed_ranges[i].input(code, properties, zoom);
-    //       const endStop: number = parsed_ranges[i].stop;
-    //       return easeFunction(zoom, startStop, endStop, startValue, endValue);
-    //     }
-    //   };
-    todo!()
+        let zoom_f32 = zoom as f32;
+        if zoom_f32 <= ranges[0].stop {
+            ranges[0].input.parse_feature(code, properties, zoom)
+        } else if zoom_f32 >= ranges[ranges.len() - 1].stop {
+            ranges[ranges.len() - 1].input.parse_feature(code, properties, zoom)
+        } else {
+            let mut i = 0;
+            while ranges[i].stop <= zoom_f32 {
+                i += 1;
+            }
+            if i == ranges.len() {
+                i -= 1;
+            }
+            let start_value = ranges[i - 1].input.parse_feature(code, properties.clone(), zoom);
+            let start_stop = ranges[i - 1].stop;
+            let end_value = ranges[i].input.parse_feature(code, properties, zoom);
+            let end_stop = ranges[i].stop;
+            Easing::ease(
+                zoom_f32 as f64,
+                start_stop as f64,
+                end_stop as f64,
+                &start_value,
+                &end_value,
+                Some(ease),
+                base,
+            )
+        }
+    }
 }
 
 // Needed conversions from JSON objects
@@ -339,6 +306,67 @@ impl From<&ValueType> for NestedKey {
                     .collect(),
             },
             _ => NestedKey::default(),
+        }
+    }
+}
+
+/// Convert the data to a f32 array for the GPU to utilze the data
+pub trait ToGPUReadable {
+    /// Convert the data to a f32 array
+    fn to_gpu_code(&self) -> Vec<f32>;
+}
+macro_rules! impl_to_gpu_code {
+    ($($t:ty),*) => {
+        $(
+            impl ToGPUReadable for $t {
+                fn to_gpu_code(&self) -> Vec<f32> {
+                    // We cast to u64 first to handle enums safely,
+                    // then to f32 as per your requirement.
+                    vec![1.0, *self as u64 as f32]
+                }
+            }
+        )*
+    };
+}
+macro_rules! impl_to_f32_empty {
+    ($($t:ty),*) => {
+        $(
+            impl ToGPUReadable for $t {
+                fn to_gpu_code(&self) -> Vec<f32> {
+                    vec![]
+                }
+            }
+        )*
+    };
+}
+impl_to_gpu_code!(
+    Placement, Alignment, Anchor, Cap, Join, bool, f32, f64, u32, u64, i32, i64, usize
+);
+impl_to_f32_empty!(String, TextField, NestedKey);
+impl ToGPUReadable for Point {
+    fn to_gpu_code(&self) -> Vec<f32> {
+        vec![2., self.0 as f32, self.1 as f32]
+    }
+}
+impl ToGPUReadable for PrimitiveValue {
+    fn to_gpu_code(&self) -> Vec<f32> {
+        if let Some(num) = self.to_f32() { vec![1., num] } else { vec![] }
+    }
+}
+impl ToGPUReadable for ValuePrimitiveType {
+    fn to_gpu_code(&self) -> Vec<f32> {
+        match self {
+            ValuePrimitiveType::Primitive(p) => p.to_gpu_code(),
+            _ => vec![],
+        }
+    }
+}
+impl ToGPUReadable for ValueType {
+    fn to_gpu_code(&self) -> Vec<f32> {
+        match self {
+            ValueType::Primitive(p) => p.to_gpu_code(),
+            ValueType::Array(arr) => arr.iter().flat_map(|v| v.to_gpu_code()).collect(),
+            _ => vec![],
         }
     }
 }

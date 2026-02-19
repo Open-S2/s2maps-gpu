@@ -26,6 +26,7 @@ interface ScaleShiftParams {
  * @param tile - the tile request
  * @returns the scale, shift, and clip parameters
  */
+// oxlint-disable-next-line jsdoc/require-returns jsdoc/require-param - false positive
 export function scaleShiftParams(extent: number, tile: TileRequest): ScaleShiftParams | undefined {
   const { parent } = tile;
   if (parent === undefined) return;

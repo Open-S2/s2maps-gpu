@@ -1,8 +1,9 @@
 use crate::{
     s2map::ColorMode,
+    source::Tile,
     style::{LayerDefinition, Projection, S2MapsAnalytics, Source, StyleDefinition, StylePackage},
     ui::{AnimationDirections, MapOptions, UserTouchEvent, View},
-    util::UrlMap,
+    util::{ImageBitmap, UrlMap},
     workers::{Glyph, GlyphImages, GlyphMetadata, ImageSourceMetadata, MarkerDefinition},
 };
 use alloc::{
@@ -13,8 +14,9 @@ use alloc::{
 };
 use bytemuck::{Pod, Zeroable};
 use core::sync::atomic::{AtomicU64, Ordering};
-use gistools::{data_structures::Tile, geometry::S2CellId};
+use gistools::geometry::S2CellId;
 use s2json::{Attributions, BBox, Face, MValue, Properties};
+use serde::{Deserialize, Serialize};
 
 static SEED_COUNTER: AtomicU64 = AtomicU64::new(1);
 
@@ -35,16 +37,33 @@ pub enum NameIndex {
     Name(String),
     Index(usize),
 }
+impl From<String> for NameIndex {
+    fn from(name: String) -> Self {
+        NameIndex::Name(name)
+    }
+}
+impl From<usize> for NameIndex {
+    fn from(index: usize) -> Self {
+        NameIndex::Index(index)
+    }
+}
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[allow(missing_docs)]
 pub struct SourceName {
     pub name: String,
     pub href: Option<String>,
 }
+impl SourceName {
+    /// Create a new SourceName
+    pub fn new(name: String, href: Option<String>) -> Self {
+        SourceName { name, href }
+    }
+}
 
-// /* GENERIC WORKER TYPES */
-/** S2CellIDs of tiles e.g. ['204n', '1003n', '1245n', ...] */
+// GENERIC WORKER TYPES //
+
+/// S2CellIDs of tiles e.g. ['204n', '1003n', '1245n', ...]
 pub type CancelTileRequest = Vec<S2CellId>;
 
 /// Tracks the map who made the request
@@ -82,14 +101,14 @@ pub struct TileLayer {
     pub i: u32,
     pub j: u32,
     pub id: S2CellId,
-    pub layer_indexes: Vec<usize>, // number[];
+    pub layer_indexes: Vec<u32>,
     pub time: Option<f64>,
 }
 
-/** Parent Layer Information. Layer indexes effected by this parent tile */
+/// Parent Layer Information. Layer indexes effected by this parent tile
 pub type ParentLayers = BTreeMap<usize, TileLayer>;
 
-/** Tile Request */
+/// Tile Request
 #[derive(Debug, Default, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct TileRequest {
@@ -99,8 +118,27 @@ pub struct TileRequest {
     pub division: f64,
     pub parent: Option<TileLayer>,
 }
+impl From<&Tile> for TileRequest {
+    fn from(tile: &Tile) -> Self {
+        TileRequest {
+            r#type: tile.r#type,
+            bbox: tile.bbox,
+            division: tile.division as f64,
+            layer: TileLayer {
+                face: tile.face.into(),
+                zoom: tile.zoom,
+                i: tile.i as u32,
+                j: tile.j as u32,
+                id: tile.id.id,
+                layer_indexes: vec![],
+                time: None,
+            },
+            parent: None,
+        }
+    }
+}
 
-/** Interactive Object sub properties */
+/// Interactive Object sub properties
 #[derive(Debug, Default, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct InteractiveObject {
@@ -112,9 +150,9 @@ pub struct InteractiveObject {
     pub __layer: String,
 }
 
-/* FRONT END TO MAP WORKER MESSAGES */
+// FRONT END TO MAP WORKER MESSAGES
 
-/** Canvas message shipping the canvas element from the front end to the map worker */
+/// Canvas message shipping the canvas element from the front end to the map worker
 #[derive(Debug, Default, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct CanvasMessage {
@@ -123,15 +161,15 @@ pub struct CanvasMessage {
     //   pub canvas: HTMLCanvasElement;
 }
 
-/** Resize message sent from the front end to the map worker */
+/// Resize message sent from the front end to the map worker
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 #[allow(missing_docs)]
 pub struct ResizeMessage {
-    pub width: usize,
-    pub height: usize,
+    pub width: u32,
+    pub height: u32,
 }
 
-/** Scroll message sent from the front end to the map worker */
+/// Scroll message sent from the front end to the map worker
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 #[allow(missing_docs)]
 pub struct ScrollMessage {
@@ -145,7 +183,7 @@ pub struct ScrollMessage {
     pub height: f64,
 }
 
-/** Mouse up message sent from the front end to the map worker */
+/// Mouse up message sent from the front end to the map worker
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 #[allow(missing_docs)]
 pub struct MouseupMessage {
@@ -158,7 +196,7 @@ pub struct MouseupMessage {
     pub height: f64,
 }
 
-/** Mouse move message sent from the front end to the map worker */
+/// Mouse move message sent from the front end to the map worker
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 #[allow(missing_docs)]
 pub struct MousemoveMessage {
@@ -166,7 +204,7 @@ pub struct MousemoveMessage {
     pub movement_y: f64,
 }
 
-/** Canvas mouse move message sent from the front end to the map worker */
+/// Canvas mouse move message sent from the front end to the map worker
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 #[allow(missing_docs)]
 pub struct CanvasMousemoveMessage {
@@ -174,21 +212,21 @@ pub struct CanvasMousemoveMessage {
     pub y: f64,
 }
 
-/** Touch start message sent from the front end to the map worker */
+/// Touch start message sent from the front end to the map worker
 #[derive(Debug, Default, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct TouchstartMessage {
     pub touch_event: UserTouchEvent,
 }
 
-/** Touch end message sent from the front end to the map worker */
+/// Touch end message sent from the front end to the map worker
 #[derive(Debug, Default, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct TouchendMessage {
     pub touch_event: UserTouchEvent,
 }
 
-/** Touch move message sent from the front end to the map worker */
+/// Touch move message sent from the front end to the map worker
 #[derive(Debug, Default, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct TouchmoveMessage {
@@ -204,7 +242,7 @@ pub enum NavControl {
     ZoomOut,
 }
 
-/** Navigation message sent from the front end to the map worker */
+/// Navigation message sent from the front end to the map worker
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 #[allow(missing_docs)]
 pub struct NavMessage {
@@ -213,14 +251,14 @@ pub struct NavMessage {
     pub lat: Option<f64>,
 }
 
-/** Color mode message sent from the front end to the map worker */
+/// Color mode message sent from the front end to the map worker
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 #[allow(missing_docs)]
 pub struct ColorModeMessage {
     pub mode: ColorMode,
 }
 
-/** Set style message sent from the front end to the map worker */
+/// Set style message sent from the front end to the map worker
 #[derive(Debug, Default, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct SetStyleMessage {
@@ -228,49 +266,49 @@ pub struct SetStyleMessage {
     pub ignore_position: bool,
 }
 
-/** Update style message sent from the front end to the map worker */
+/// Update style message sent from the front end to the map worker
 #[derive(Debug, Default, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct UpdateStyleMessage {
     pub style: StyleDefinition,
 }
 
-/** Jump to message sent from the front end to the map worker */
+/// Jump to message sent from the front end to the map worker
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 #[allow(missing_docs)]
 pub struct JumpToMessage {
     pub view: View,
 }
 
-/** Ease to message sent from the front end to the map worker */
+/// Ease to message sent from the front end to the map worker
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 #[allow(missing_docs)]
 pub struct EaseToMessage {
     pub directions: Option<AnimationDirections>,
 }
 
-/** Fly to message sent from the front end to the map worker */
+/// Fly to message sent from the front end to the map worker
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 #[allow(missing_docs)]
 pub struct FlyToMessage {
     pub directions: Option<AnimationDirections>,
 }
 
-/** Move state message sent from the front end to the map worker */
+/// Move state message sent from the front end to the map worker
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 #[allow(missing_docs)]
 pub struct MoveStateMessage {
     pub state: bool,
 }
 
-/** Zoom state message sent from the front end to the map worker */
+/// Zoom state message sent from the front end to the map worker
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 #[allow(missing_docs)]
 pub struct ZoomStateMessage {
     pub state: bool,
 }
 
-/** Reset source message sent from the front end to the map worker */
+/// Reset source message sent from the front end to the map worker
 #[derive(Debug, Default, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct ResetSourceMessage {
@@ -279,14 +317,14 @@ pub struct ResetSourceMessage {
     pub await_replace: bool,
 }
 
-/** Clear source message sent from the front end to the map worker */
+/// Clear source message sent from the front end to the map worker
 #[derive(Debug, Default, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct ClearSourceMessage {
     pub source_names: Vec<String>,
 }
 
-/** Add layer message sent from the front end to the map worker */
+/// Add layer message sent from the front end to the map worker
 #[derive(Debug, Default, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct AddLayerMessage {
@@ -294,7 +332,7 @@ pub struct AddLayerMessage {
     pub name_index: Option<NameIndex>,
 }
 
-/** Update layer message sent from the front end to the map worker */
+/// Update layer message sent from the front end to the map worker
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct UpdateLayerMessage {
@@ -303,21 +341,21 @@ pub struct UpdateLayerMessage {
     pub full_update: bool,
 }
 
-/** Delete layer message sent from the front end to the map worker */
+/// Delete layer message sent from the front end to the map worker
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct DeleteLayerMessage {
     pub name_index: NameIndex,
 }
 
-/** Reorder layers message sent from the front end to the map worker */
+/// Reorder layers message sent from the front end to the map worker
 #[derive(Debug, Default, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct ReorderLayersMessage {
     pub layer_changes: BTreeMap<usize, usize>,
 }
 
-/** Update compass message sent from the map worker to the front end */
+/// Update compass message sent from the map worker to the front end
 #[derive(Debug, Default, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct UpdateCompassMessage {
@@ -325,7 +363,7 @@ pub struct UpdateCompassMessage {
     pub pitch: f64,
 }
 
-/** Message sent from the front end to the map worker */
+/// Message sent from the front end to the map worker
 #[derive(Debug, Clone, PartialEq)]
 pub enum S2MapMessage {
     /// Canvas message shipping the canvas element from the front end to the map worker
@@ -392,9 +430,9 @@ pub enum S2MapMessage {
     Delete,
 }
 
-/* FRONT END TO SOURCE WORKER MESSAGES */
+// FRONT END TO SOURCE WORKER MESSAGES //
 
-/** Add markers message sent from the front end to the source worker */
+/// Add markers message sent from the front end to the source worker
 #[derive(Debug, Default, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct AddMarkersMessage {
@@ -402,7 +440,7 @@ pub struct AddMarkersMessage {
     pub source_name: String,
 }
 
-/** Delete markers message sent from the front end to the source worker */
+/// Delete markers message sent from the front end to the source worker
 #[derive(Debug, Default, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct DeleteMarkersMessage {
@@ -410,7 +448,7 @@ pub struct DeleteMarkersMessage {
     pub source_name: String,
 }
 
-/** Add source message sent from the front end to the source worker */
+/// Add source message sent from the front end to the source worker
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct AddSourceMessage<M = (), P: Clone + Default = Properties, D: Clone + Default = MValue> {
@@ -419,7 +457,7 @@ pub struct AddSourceMessage<M = (), P: Clone + Default = Properties, D: Clone + 
     pub tile_request: Vec<TileRequest>,
 }
 
-/** Delete source message sent from the front end to the source worker */
+/// Delete source message sent from the front end to the source worker
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct DeleteSourceMessage {
@@ -437,9 +475,9 @@ pub enum S2MapToSourceMessage {
     DeleteSource(Box<DeleteSourceMessage>),
 }
 
-/* UI GL REQUESTS -> S2Map or Worker Pool */
+// UI GL REQUESTS -> S2Map or Worker Pool //
 
-/** Tile request message sent from the map worker to the source worker */
+/// Tile request message sent from the map worker to the source worker
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct TileRequestMessage {
@@ -447,7 +485,7 @@ pub struct TileRequestMessage {
     pub sources: Vec<SourceName>,
 }
 
-/** Time request message sent from the map worker to the source worker */
+/// Time request message sent from the map worker to the source worker
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct TimeRequestMessage {
@@ -455,7 +493,7 @@ pub struct TimeRequestMessage {
     pub source_names: Vec<String>,
 }
 
-/** Messages sent from the map worker to the source worker */
+/// Messages sent from the map worker to the source worker
 #[derive(Debug, Clone, PartialEq)]
 pub struct MouseEnterMessage {
     /// The map id
@@ -465,17 +503,17 @@ pub struct MouseEnterMessage {
     pub current_features: Vec<InteractiveObject>,
 }
 
-/** Messages sent from the map worker to the source worker */
+/// Messages sent from the map worker to the source worker
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct MouseLeaveMessage {
-    /** The features that the mouse just "left" */
+    /// The features that the mouse just "left"
     pub features: Vec<InteractiveObject>,
-    /** All features including features "left" in previous frames */
+    /// All features including features "left" in previous frames
     pub current_features: Vec<InteractiveObject>,
 }
 
-/** Messages sent from the map worker to the source worker */
+/// Messages sent from the map worker to the source worker
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct MouseClickMessage {
@@ -484,14 +522,14 @@ pub struct MouseClickMessage {
     pub lat: f64,
 }
 
-/** View message sent from the map worker to the front end */
+/// View message sent from the map worker to the front end
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct ViewMessage {
     pub view: View,
 }
 
-/** Requesting a style from the map worker to the source worker */
+/// Requesting a style from the map worker to the source worker
 #[derive(Debug, Default, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct RequestStyleMessage {
@@ -501,14 +539,14 @@ pub struct RequestStyleMessage {
     pub url_map: Option<UrlMap>,
 }
 
-/** Style request message sent from the map worker to the front end */
+/// Style request message sent from the map worker to the front end
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct StyleMessage {
     pub style: StylePackage,
 }
 
-/** Add layer message sent from the map worker to the source worker */
+/// Add layer message sent from the map worker to the source worker
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct AddLayerMessageGL {
@@ -517,28 +555,28 @@ pub struct AddLayerMessageGL {
     pub tile_request: Vec<TileRequest>,
 }
 
-/** Delete layer message sent from the map worker to the source worker */
+/// Delete layer message sent from the map worker to the source worker
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct DeleteLayerMessageGL {
     pub index: usize,
 }
 
-/** Reorder layers message sent from the map worker to the source worker */
+/// Reorder layers message sent from the map worker to the source worker
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct ReorderLayersMessageGL {
     pub layer_changes: BTreeMap<usize, usize>,
 }
 
-/** Screenshot message sent from the map worker to the front end */
+/// Screenshot message sent from the map worker to the front end
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct ScreenshotMessageGL {
     pub screen: ArrayBuffer,
 }
 
-/** Collection of messages that can be sent from the map worker to the front end */
+/// Collection of messages that can be sent from the map worker to the front end
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub enum MapGLMessage {
@@ -561,7 +599,7 @@ pub enum MapGLMessage {
     ReadyMessageGL,
 }
 
-/** Collection of messages that can be sent from the map worker to the source worker */
+/// Collection of messages that can be sent from the map worker to the source worker
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub enum MapGLToSourceMessage {
@@ -574,16 +612,23 @@ pub enum MapGLToSourceMessage {
     ReorderLayersGL(ReorderLayersMessageGL),
 }
 
-/* SOURCE WORKER MESSAGES */
+#[derive(Debug, Clone, PartialEq)]
+#[allow(missing_docs)]
+pub struct MapGLToSourceMessages {
+    pub map_id: MapID,
+    pub message: MapGLToSourceMessage,
+}
 
-/** Attribution message sent from the source worker to the front-end */
+// SOURCE WORKER MESSAGES //
+
+/// Attribution message sent from the source worker to the front-end
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct AttributionsMessage {
     pub attributions: Attributions,
 }
 
-/** Style message sent from the source worker to the front-end */
+/// Style message sent from the source worker to the front-end
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct SourceSetStyleMessage {
@@ -591,20 +636,20 @@ pub struct SourceSetStyleMessage {
     pub ignore_position: bool,
 }
 
-/** Sprite image message sent from the source worker to the front-end */
+/// Sprite image message sent from the source worker to the front-end
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct SpriteImageMessage {
     pub name: String,
-    pub offset_x: f32,
-    pub offset_y: f32,
-    pub width: f32,
-    pub height: f32,
-    pub max_height: f32,
-    pub image: Vec<u8>,
+    pub offset_x: u32,
+    pub offset_y: u32,
+    pub width: u32,
+    pub height: u32,
+    pub max_height: u32,
+    pub image: ImageBitmap,
 }
 
-/** Flush message sent from the source worker to the front-end */
+/// Flush message sent from the source worker to the front-end
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct SourceFlushMessage {
@@ -612,7 +657,14 @@ pub struct SourceFlushMessage {
     pub layers_to_be_loaded: BTreeSet<u32>,
 }
 
-/** Collection of messages that can be sent from the source worker to the front-end */
+#[derive(Debug, Clone, PartialEq)]
+#[allow(missing_docs)]
+pub struct TimeSourceMessage {
+    pub source_name: String,
+    pub interval: i64,
+}
+
+/// Collection of messages that can be sent from the source worker to the front-end
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub enum SourceWorkerMessage {
@@ -620,10 +672,19 @@ pub enum SourceWorkerMessage {
     SourceSetStyle(SourceSetStyleMessage),
     SpriteImage(SpriteImageMessage),
     SourceFlush(SourceFlushMessage),
+    TimeSource(TimeSourceMessage),
 }
 
-// /* TILE WORKER MESSAGES */
-/** Worker message base. Used in most messages from the tile worker to the source worker or front-end */
+#[derive(Debug, Clone, PartialEq)]
+#[allow(missing_docs)]
+pub struct SourceWorkerMessageOutput {
+    pub map_id: MapID,
+    pub message: SourceWorkerMessage,
+}
+
+// TILE WORKER MESSAGES //
+
+/// Worker message base. Used in most messages from the tile worker to the source worker or front-end
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct WorkerMessageBase {
@@ -631,7 +692,7 @@ pub struct WorkerMessageBase {
     pub source_name: String,
 }
 
-/** Fill render data from the Tile Worker to the front-end */
+/// Fill render data from the Tile Worker to the front-end
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct FillData {
@@ -643,7 +704,7 @@ pub struct FillData {
     pub feature_guide_buffer: Vec<f32>,
 }
 
-/** Line render data from the Tile Worker to the front-end */
+/// Line render data from the Tile Worker to the front-end
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct LineData {
@@ -653,7 +714,7 @@ pub struct LineData {
     pub feature_guide_buffer: ArrayBuffer,
 }
 
-/** Glyph render data from the Tile Worker to the front-end */
+/// Glyph render data from the Tile Worker to the front-end
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct GlyphData {
@@ -666,7 +727,7 @@ pub struct GlyphData {
     pub feature_guide_buffer: ArrayBuffer,
 }
 
-/** Glyph image data from the Tile Worker to the front-end */
+/// Glyph image data from the Tile Worker to the front-end
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct GlyphImageData {
@@ -674,7 +735,7 @@ pub struct GlyphImageData {
     pub images: GlyphImages,
 }
 
-/** Raster data guide shipped from the Tile Worker to the front-end */
+/// Raster data guide shipped from the Tile Worker to the front-end
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct RasterDataGuide {
@@ -682,7 +743,7 @@ pub struct RasterDataGuide {
     pub layer_index: usize,
 }
 
-/** Raster data shipped from the Tile Worker to the front-end */
+/// Raster data shipped from the Tile Worker to the front-end
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct RasterData {
@@ -692,7 +753,7 @@ pub struct RasterData {
     pub feature_guides: Vec<RasterDataGuide>,
 }
 
-/** Hillshade data shipped from the Tile Worker to the front-end */
+/// Hillshade data shipped from the Tile Worker to the front-end
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct HillshadeData {
@@ -702,7 +763,7 @@ pub struct HillshadeData {
     pub feature_guides: Vec<RasterDataGuide>,
 }
 
-/** Sensor data shipped from the Tile Worker to the front-end */
+/// Sensor data shipped from the Tile Worker to the front-end
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct SensorData {
@@ -713,7 +774,7 @@ pub struct SensorData {
     pub time: f64,
 }
 
-/** Point data shipped from the Tile Worker to the front-end */
+/// Point data shipped from the Tile Worker to the front-end
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct PointData {
@@ -723,7 +784,7 @@ pub struct PointData {
     pub feature_guide_buffer: ArrayBuffer,
 }
 
-/** Heatmap data shipped from the Tile Worker to the front-end */
+/// Heatmap data shipped from the Tile Worker to the front-end
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct HeatmapData {
@@ -734,7 +795,7 @@ pub struct HeatmapData {
     pub feature_guide_buffer: ArrayBuffer,
 }
 
-/** Interactive data shipped from the Tile Worker to the front-end */
+/// Interactive data shipped from the Tile Worker to the front-end
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct InteractiveData {
@@ -743,16 +804,16 @@ pub struct InteractiveData {
     pub interactive_data_buffer: ArrayBuffer,
 }
 
-/** Tile Flush message shipped from the Tile Worker to the front-end */
+/// Tile Flush message shipped from the Tile Worker to the front-end
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct TileFlushMessage {
     pub tile_id: S2CellId,
     pub source_name: String,
-    pub dead_layers: Vec<usize>,
+    pub dead_layers: Vec<u32>,
 }
 
-/** Temporal source data shipped from the Tile Worker to the front-end */
+/// Temporal source data shipped from the Tile Worker to the front-end
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct TimeSourceData {
@@ -760,7 +821,7 @@ pub struct TimeSourceData {
     pub interval: f64,
 }
 
-/** All rendering type data grouped */
+/// All rendering type data grouped
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub enum PainterData {
@@ -774,7 +835,24 @@ pub enum PainterData {
     Glyph(GlyphData),
 }
 
-/** Tile worker messages that are shipped from a Tile Worker to the front end */
+#[derive(Debug, Clone, PartialEq)]
+#[allow(missing_docs)]
+pub enum FlushMessage {
+    Tile(TileFlushMessage),
+    Source(SourceFlushMessage),
+}
+impl From<TileFlushMessage> for FlushMessage {
+    fn from(msg: TileFlushMessage) -> FlushMessage {
+        FlushMessage::Tile(msg)
+    }
+}
+impl From<SourceFlushMessage> for FlushMessage {
+    fn from(msg: SourceFlushMessage) -> FlushMessage {
+        FlushMessage::Source(msg)
+    }
+}
+
+/// Tile worker messages that are shipped from a Tile Worker to the front end
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub enum TileWorkerMessageOutput {
@@ -793,9 +871,9 @@ pub enum TileWorkerMessageOutput {
     TimeSource(TimeSourceData),
 }
 
-/** TILE WORKER TO SOURCE WORKER MESSAGES */
+/// TILE WORKER TO SOURCE WORKER MESSAGES
 
-/** Glyph Request asked by the Tile Worker to the Source Worker */
+/// Glyph Request asked by the Tile Worker to the Source Worker
 #[derive(Debug, Default, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct GlyphRequestMessage {
@@ -804,18 +882,19 @@ pub struct GlyphRequestMessage {
     pub glyph_list: BTreeMap<String, Vec<String>>,
 }
 
-/** Messages the Tile Worker's ship to the Source Worker */
+/// Messages the Tile Worker's ship to the Source Worker
 pub type TileWorkerToSourceWorkerMessage = GlyphRequestMessage;
 
-// /* SOURCE WORKER TO TILE WORKER MESSAGES */
-/** Add layer message sent from the Source Worker to the Tile Worker */
+// SOURCE WORKER TO TILE WORKER MESSAGES //
+
+/// Add layer message sent from the Source Worker to the Tile Worker
 #[derive(Debug, Default, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct AddLayerMessageTileWorker {
     pub layer: LayerDefinition,
     pub index: usize,
 }
-/** Vector tile message sent from the Source Worker to the Tile Worker */
+/// Vector tile message sent from the Source Worker to the Tile Worker
 #[derive(Debug, Default, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct VectorMessage {
@@ -824,26 +903,26 @@ pub struct VectorMessage {
     pub data: Vec<u8>,
 }
 
-/** Raster tile message sent from the Source Worker to the Tile Worker */
+/// Raster tile message sent from the Source Worker to the Tile Worker
 #[derive(Debug, Default, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct RasterMessage {
     pub tile: TileRequest,
     pub source_name: String,
-    pub data: ArrayBuffer,
+    pub data: Vec<u8>,
     pub size: u32,
 }
 
-/** JSON data message sent from the Source Worker to the Tile Worker */
+/// JSON data message sent from the Source Worker to the Tile Worker
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct JSONDataMessage {
     pub tile: TileRequest,
     pub source_name: String,
-    pub vector_tile: Tile,
+    pub vector_tile: gistools::data_structures::Tile,
 }
 
-/** Glyph metadata message sent from the Source Worker to the Tile Worker */
+/// Glyph metadata message sent from the Source Worker to the Tile Worker
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct GlyphMetadataMessage {
@@ -851,7 +930,7 @@ pub struct GlyphMetadataMessage {
     pub image_metadata: Vec<ImageSourceMetadata>,
 }
 
-/** Glyph response message sent from the Source Worker to the Tile Worker */
+/// Glyph response message sent from the Source Worker to the Tile Worker
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct GlyphResponseMessage {
@@ -860,8 +939,9 @@ pub struct GlyphResponseMessage {
     pub family_name: String,
 }
 
-// /* WORKER POOL MESSAGE */
-/** Message from the worker pool to the tile workers so they can track their own id and total tile worker count */
+// WORKER POOL MESSAGE //
+
+/// Message from the worker pool to the tile workers so they can track their own id and total tile worker count
 #[derive(Debug, Default, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct WorkerPoolPortMessage {
@@ -869,11 +949,12 @@ pub struct WorkerPoolPortMessage {
     pub total_workers: usize,
 }
 
-// /* LISTED MESSAGES */
-/** List of messages that are sent from the WorkerPool */
+// LISTED MESSAGES //
+
+/// List of messages that are sent from the WorkerPool
 pub type WorkerPoolMessage = WorkerPoolPortMessage;
 
-/** List of messages that are sent from the SourceWorker */
+/// List of messages that are sent from the SourceWorker
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub enum SourceWorkerMessages {
@@ -883,7 +964,7 @@ pub enum SourceWorkerMessages {
     MapGLToSource(Box<MapGLToSourceMessage>),
 }
 
-/** List of messages that are sent to the TileWorker */
+/// List of messages that are sent to the TileWorker
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub enum TileWorkerMessages {

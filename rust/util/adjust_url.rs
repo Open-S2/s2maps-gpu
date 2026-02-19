@@ -67,7 +67,7 @@ impl UrlMap {
     ///
     /// ## Returns
     /// the adjusted URL
-    pub fn adjust_url(&mut self, mut input: String) -> String {
+    pub fn adjust_url(&self, mut input: String) -> String {
         // replace all URL_MAP instances
         for (key, value) in &self.map {
             input = input.replace(&format!("{}://", key), &format!("{}:", value));

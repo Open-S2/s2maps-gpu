@@ -33,6 +33,6 @@
     "glsl",
     "wgsl",
     "vue",
-    "svelte",
+    "svelte"
   ]
 }

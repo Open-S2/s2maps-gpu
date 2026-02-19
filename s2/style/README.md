@@ -29,7 +29,7 @@ that makes it past the filter phase, the preprocessed layout/paint properties ar
 individually run in proper order (read `orderLayer.js` for their order) like so:
 
 ```js
-layer.layout[l](feature.properties, featureCode)
+layer.layout[l](feature.properties, featureCode);
 ```
 
 `featureCode` will store all the necessary data for the GPU to decode the proper

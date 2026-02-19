@@ -228,7 +228,9 @@ export class Color {
   /** Convert hsv to rgb */
   HSV2RGB(): void {
     this.type = 'rgb';
-    let [h, s, v, a] = this.val;
+    const [_h, s, _v, a] = this.val;
+    let h = _h;
+    let v = _v;
     v *= 255;
     if (s === 0) {
       this.val = [v, v, v, a];

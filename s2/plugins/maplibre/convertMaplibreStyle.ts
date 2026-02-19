@@ -43,7 +43,7 @@ import type {
   SpriteSpecification,
   StyleSpecification,
   SymbolLayerSpecification,
-} from '@maplibre/maplibre-gl-style-spec';
+} from 'maplibre-gl';
 
 /**
  * Convert a MapLibre style to an s2maps {@link StyleDefinition}
@@ -347,13 +347,9 @@ function convertLayerHillshade(input?: HillshadeLayerSpecification): HillshadeSt
     metadata,
     minzoom,
     maxzoom,
-    // TODO: Fix these
-    // @ts-expect-error - ignore for now
     azimuth: convertPropertyValueSpecification(paint['hillshade-illumination-direction']),
     // intensity: convertPropertyValueSpecification(paint['hillshade-exaggeration']),
-    // @ts-expect-error - ignore for now
     shadowColor: convertDataDrivenPropertyValueSpecification(paint['hillshade-shadow-color']),
-    // @ts-expect-error - ignore for now
     highlightColor: convertDataDrivenPropertyValueSpecification(paint['hillshade-highlight-color']),
     accentColor: convertPropertyValueSpecification(paint['hillshade-accent-color']),
     visible: layout.visibility !== 'none',

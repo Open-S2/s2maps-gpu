@@ -5,36 +5,25 @@ pub mod get_tiles;
 /// Matrix math
 pub mod mat4;
 
-use crate::{style::Projection, ui::Camera};
+use crate::{
+    style::{Projection, StyleDefinition},
+    ui::{Camera, MapOptions},
+    util::MsgSender,
+    workers::MapGLToSourceMessages,
+};
 use alloc::{rc::Rc, vec::Vec};
 use bytemuck::{Pod, Zeroable};
-use core::cell::RefCell;
+use core::{cell::RefCell, f64::consts::PI};
 pub use cursor_to_lon_lat::*;
 pub use get_tiles::*;
-use libm::pow;
+use gistools::{
+    geometry::{S2Point, mercator_lat_scale, px_to_ll},
+    space::{EARTH_RADIUS, EARTH_RADIUS_EQUATORIAL, EARTH_RADIUS_POLAR},
+};
+use libm::{cos, fabs, floor, fmax, fmin, log2, pow, sin};
 pub use mat4::*;
+use s2json::{Point, Point3D};
 use serde::{Deserialize, Serialize};
-
-// import {
-//   EARTH_RADIUS,
-//   EARTH_RADIUS_EQUATORIAL,
-//   EARTH_RADIUS_POLAR,
-//   degToRad,
-//   mercatorLatScale,
-//   pointFromLonLatGL,
-//   pointMulScalar,
-//   pointNormalize,
-//   pxToLL,
-// } from 'gis-tools/index.js';
-// import { getTilesInViewS2, getTilesInViewWM } from './getTiles/index.js';
-
-// import type Camera from '../index.js';
-// import type { MapOptions } from 'ui/s2mapUI.js';
-// import type { TileInView } from './getTiles/index.js';
-// import type { Point3D, VectorPoint } from 'gis-tools/index.js';
-// import type { Projection, StyleDefinition } from 'style/style.spec.js';
-
-// export * from './getTiles/index.js';
 
 /// # Optional View
 ///
@@ -47,7 +36,7 @@ use serde::{Deserialize, Serialize};
 /// - `bearing`: the bearing/compass of the map camera
 /// - `pitch`: the pitch/vertical-angle of the map camera
 #[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct OptionalView {
+pub struct View {
     /// the longitude of the map
     #[serde(skip_serializing_if = "Option::is_none")]
     pub lon: Option<f64>,
@@ -75,7 +64,7 @@ pub struct OptionalView {
 /// - `bearing`: the bearing/compass of the map camera
 /// - `pitch`: the pitch/vertical-angle of the map camera
 #[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct View {
+pub struct RequiredView {
     /// the longitude of the map
     pub lon: f64,
     /// the latitude of the map
@@ -87,8 +76,8 @@ pub struct View {
     /// pitch/vertical-angle of the map camera
     pub pitch: f64,
 }
-impl From<View> for OptionalView {
-    fn from(view: View) -> Self {
+impl From<RequiredView> for View {
+    fn from(view: RequiredView) -> Self {
         Self {
             lon: Some(view.lon),
             lat: Some(view.lat),
@@ -97,14 +86,6 @@ impl From<View> for OptionalView {
             pitch: Some(view.pitch),
         }
     }
-}
-
-/** The type of matrix. Either `m` (meters) or `km` (kilometers) */
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[allow(missing_docs)]
-pub enum MatrixType {
-    Meters,
-    Kilometers,
 }
 
 /// The current state of the map's view that is passed to the GPU
@@ -128,22 +109,44 @@ pub struct ProjectorView {
     pub curr_feature: f32,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[allow(missing_docs)]
+pub enum MatrixType {
+    Meters,
+    Kilometers,
+}
+
 /// The current state of the map's matrices that is passed to the GPU
 ///
 /// (meters, kilometers)
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Matrices(pub Mat4, pub Mat4);
+pub struct Matrices(pub Option<Mat4>, pub Option<Mat4>);
 impl Matrices {
     /// Create a new set of matrices
     pub fn new() -> Matrices {
-        Matrices(Mat4::new(), Mat4::new())
+        Matrices(None, None)
     }
-    /// Get the matrix for the given type
-    pub fn get_mut(&mut self, matrix_type: MatrixType) -> &mut Mat4 {
+    /// Get with matrix type
+    pub fn get(&self, matrix_type: MatrixType) -> Option<&Mat4> {
         match matrix_type {
-            MatrixType::Meters => &mut self.0,
-            MatrixType::Kilometers => &mut self.1,
+            MatrixType::Meters => self.0.as_ref(),
+            MatrixType::Kilometers => self.1.as_ref(),
         }
+    }
+    /// Set with matrix type
+    pub fn set(&mut self, matrix_type: MatrixType, matrix: Mat4) {
+        match matrix_type {
+            MatrixType::Meters => self.0 = Some(matrix),
+            MatrixType::Kilometers => self.1 = Some(matrix),
+        }
+    }
+    /// Get the meters matrix
+    pub fn meters(&self) -> Option<&Mat4> {
+        self.0.as_ref()
+    }
+    /// Get the kilometers matrix
+    pub fn kilometers(&self) -> Option<&Mat4> {
+        self.1.as_ref()
     }
 }
 
@@ -151,49 +154,50 @@ impl Matrices {
 ///
 /// Maintain state of the camera, view, zoom, and other parameters that control how we see the map.
 /// Also used as a tool to find the tiles that are currently visible.
-/// @see {@link Camera}
+///
+/// See [`Camera`]
 #[derive(Debug, Clone)]
 #[allow(missing_docs)]
 pub struct Projector {
     pub camera: Rc<RefCell<Camera>>,
-    pub projection: Projection, // = 'S2';
-    pub webworker: bool,        // = false;
-    pub no_clamp: bool,         // = false;
+    pub projection: Projection,
+    pub worker: Option<MsgSender<MapGLToSourceMessages>>,
+    pub no_clamp: bool,
     // radius is the radius of the earth in kilometers
-    pub radius: f64, // = EARTH_RADIUS / 1_000;
+    pub radius: f64,
     // radii is the radius of the earth in meters for each axis
-    pub radii: Vec4, // = [EARTH_RADIUS_EQUATORIAL, EARTH_RADIUS_POLAR, EARTH_RADIUS_EQUATORIAL];
-    pub z_translate_start: f64, // = 5;
-    pub z_translate_end: f64, // = 1.001;
-    pub zoom_end: f64, // = 5;
-    pub positional_zoom: bool, // = true;
+    pub radii: Vec4,
+    pub z_translate_start: f64,
+    pub z_translate_end: f64,
+    pub zoom_end: f64,
+    pub positional_zoom: bool,
     // [zoom, lon, lat, bearing, pitch, time, aspect_x, aspect_y, mouse_x, mouse_y, delta_mouse_x, delta_mouse_y, feature_state, curr_feature]
     pub view: ProjectorView,
-    pub aspect: Vec4,       // = { x: 400, y: 300 }; // default canvas width x height
-    pub matrices: Matrices, // { [key in MatrixType]?: Float32Array } = {};
-    pub eye: Vec4, // VectorPoint = { x: 0, y: 0, z: 0 }; // [x, y, z] only z should change for visual effects
-    pub constrain_zoom_to_fill: bool, // = true;
-    pub duplicate_horizontally: bool, // = true;
-    pub min_lat_position: f64, // = 70;
-    pub max_lat_position: f64, // = 89.99999; // deg
-    pub prev_zoom: f64, // = 0;
-    pub zoom: f64, // = -1;
-    pub minzoom: f64, // = 0;
-    pub maxzoom: f64, // = 20;
-    pub zoom_offset: f64, // = 0;
-    pub lon: f64,  // = -1;
-    pub lat: f64,  // = -1;
-    pub bearing: f64, // = 0;
-    pub pitch: f64, // = 0;
-    pub z_near: f64, // = 0.5; // static; just for draw calls
-    pub z_far: f64, // = 100_000_000; // static; just for draw calls
-    pub tile_size: f64, // = 768;
-    pub multiplier: f64, // = 1;
-    pub dirty: bool, // = true;
+    pub aspect: Vec4, // default canvas width x height
+    pub matrices: Matrices,
+    pub eye: Vec4, // [x, y, z] only z should change for visual effects
+    pub constrain_zoom_to_fill: bool,
+    pub duplicate_horizontally: bool,
+    pub min_lat_position: f64, // deg
+    pub max_lat_position: f64, // deg
+    pub prev_zoom: f64,
+    pub zoom: f64,
+    pub minzoom: f64,
+    pub maxzoom: f64,
+    pub zoom_offset: f64,
+    pub lon: f64, // deg
+    pub lat: f64, // deg
+    pub bearing: f64,
+    pub pitch: f64,
+    pub z_near: f64, // static; just for draw calls
+    pub z_far: f64,  // static; just for draw calls
+    pub tile_size: u64,
+    pub multiplier: f64,
+    pub dirty: bool,
 }
-impl From<&Projector> for View {
-    fn from(proj: &Projector) -> View {
-        View {
+impl From<&Projector> for RequiredView {
+    fn from(proj: &Projector) -> RequiredView {
+        RequiredView {
             lon: proj.lon,
             lat: proj.lat,
             zoom: proj.zoom,
@@ -203,22 +207,57 @@ impl From<&Projector> for View {
     }
 }
 impl Projector {
-    //   /**
-    //    * @param config - Map Options
-    //    * @param camera - Camera
-    //    */
-    //   constructor(config: MapOptions, camera: Camera) {
-    //     const { canvasMultiplier, positional_zoom, no_clamp, style } = config;
-    //     if (typeof style === 'object' && style.projection === 'WM') this.projection = 'WM';
-    //     if (canvasMultiplier !== undefined) this.multiplier = canvasMultiplier;
-    //     if (positional_zoom === false) this.positional_zoom = false;
-    //     this.webworker = camera.webworker;
-    //     if (no_clamp === true) this.no_clamp = true;
-    //     this.camera = camera;
-    //     // setup deltaMouse positions to middle of 0 and 2^32
-    //     this.view[10] = 2 ** 11;
-    //     this.view[11] = 2 ** 11;
-    //   }
+    /**
+     * @param config - Map Options
+     * @param camera - Camera
+     */
+    pub fn new(config: &MapOptions, camera: Rc<RefCell<Camera>>) -> Self {
+        let projection = config.style.projection();
+        let worker = camera.borrow().worker.clone();
+        // setup deltaMouse positions to middle of 0 and 2^32
+        let mut view = ProjectorView::default();
+        view.delta_mouse_x = pow(2., 11.) as f32;
+        view.delta_mouse_y = pow(2., 11.) as f32;
+        Self {
+            camera,
+            projection: projection.unwrap_or(Projection::S2),
+            worker,
+            no_clamp: config.no_clamp.unwrap_or(false),
+            radius: EARTH_RADIUS / 1_000.,
+            radii: Vec4([
+                EARTH_RADIUS_EQUATORIAL as f32,
+                EARTH_RADIUS_POLAR as f32,
+                EARTH_RADIUS_EQUATORIAL as f32,
+                0.,
+            ]),
+            z_translate_start: 5.,
+            z_translate_end: 1.001,
+            zoom_end: 5.,
+            positional_zoom: config.positional_zoom.unwrap_or(true),
+            view,
+            aspect: Vec4([400., 300., 0., 0.]),
+            matrices: Matrices::new(),
+            eye: Vec4([0., 0., 0., 0.]),
+            constrain_zoom_to_fill: true,
+            duplicate_horizontally: true,
+            min_lat_position: 70.,
+            max_lat_position: 89.99999, // deg
+            prev_zoom: 0.,
+            zoom: -1.,
+            minzoom: 0.,
+            maxzoom: 20.,
+            zoom_offset: 0.,
+            lon: -1.,
+            lat: -1.,
+            bearing: 0.,
+            pitch: 0.,
+            z_near: 0.5,         // static; just for draw calls
+            z_far: 100_000_000., // static; just for draw calls
+            tile_size: 768,
+            multiplier: config.canvas_multiplier.unwrap_or(1.),
+            dirty: true,
+        }
+    }
 
     // API
 
@@ -230,104 +269,127 @@ impl Projector {
         }
     }
 
-    //   /**
-    //    * Set the mouse position on the canvas for potential interactions
-    //    * Input is the pixel position (0->width, 0->height). Convert to -1->1 for the GPU
-    //    * @param x - x mouse position
-    //    * @param y - y mouse position
-    //    */
-    //   setMousePosition(x: number, y: number): void {
-    //     const { x: width, y: height } = this.aspect;
-    //     this.view[8] = (x / width) * 2 - 1;
-    //     this.view[9] = (y / height) * -2 + 1;
-    //   }
+    /**
+     * Set the mouse position on the canvas for potential interactions
+     * Input is the pixel position (0->width, 0->height). Convert to -1->1 for the GPU
+     * @param x - x mouse position
+     * @param y - y mouse position
+     */
+    pub fn set_mouse_position(&mut self, x: f32, y: f32) {
+        let width = self.aspect.x();
+        let height = self.aspect.y();
+        self.view.mouse_x = (x / width) * 2. - 1.;
+        self.view.mouse_y = (y / height) * -2. + 1.;
+    }
 
-    //   /**
-    //    * Set the state of the current feature
-    //    * @param state - 0: none, 1: hover, 2: click
-    //    */
-    //   setFeatureState(state: 0 | 1 | 2): void {
-    //     this.view[12] = state;
-    //     this.dirty = true;
-    //   }
+    /**
+     * Set the state of the current feature
+     * @param state - 0: none, 1: hover, 2: click
+     */
+    pub fn set_feature_state(&mut self, state: f32) {
+        self.view.feature_state = state;
+        self.dirty = true;
+    }
 
-    //   /**
-    //    * Set the current feature that's under the mouse
-    //    * @param id - the id of the feature
-    //    */
-    //   setCurrentFeature(id: number): void {
-    //     this.view[13] = id;
-    //     this.dirty = true;
-    //   }
+    /**
+     * Set the current feature that's under the mouse
+     * @param id - the id of the feature
+     */
+    pub fn set_current_feature(&mut self, id: f32) {
+        self.view.curr_feature = id;
+        self.dirty = true;
+    }
 
-    //   /**
-    //    * Set the style parameters
-    //    * @param style - user defined style params
-    //    * @param ignorePosition - if set, do not update the view
-    //    */
-    //   setStyleParameters(style: StyleDefinition, ignorePosition: boolean): void {
-    //     const { min, max } = Math;
-    //     const {
-    //       constrain_zoom_to_fill,
-    //       duplicate_horizontally,
-    //       no_clamp,
-    //       min_lat_position,
-    //       max_lat_position,
-    //       zoom_offset,
-    //       z_near,
-    //       z_far,
-    //       view,
-    //     } = style;
-    //     const { lon, lat, zoom, bearing, pitch } = view ?? {};
-    //     const maxzoom = style.maxzoom ?? this.maxzoom;
-    //     const minzoom = style.minzoom ?? this.minzoom;
-    //     // setup wm properties if needed
-    //     if (constrain_zoom_to_fill !== undefined) this.constrain_zoom_to_fill = constrain_zoom_to_fill;
-    //     if (duplicate_horizontally !== undefined) this.duplicate_horizontally = duplicate_horizontally;
-    //     if (!this.constrain_zoom_to_fill && this.duplicate_horizontally) {
-    //       console.warn(
-    //         'duplicate_horizontally may only be used if constrain_zoom_to_fill is true. Setting duplicate_horizontally to false.',
-    //       );
-    //       this.duplicate_horizontally = false;
-    //     }
-    //     // clamp values and ensure minzoom is less than maxzoom
-    //     this.minzoom =
-    //       minzoom < -2 ? -2 : minzoom > maxzoom ? maxzoom - 1 : minzoom > 19 ? 19 : minzoom;
-    //     this.maxzoom = maxzoom > 20 ? 20 : maxzoom < this.minzoom ? this.minzoom + 1 : maxzoom;
-    //     if (zoom_offset !== undefined) this.zoom_offset = zoom_offset;
-    //     if (max_lat_position !== undefined)
-    //       this.max_lat_position = min(max_lat_position, this.max_lat_position);
-    //     if (min_lat_position !== undefined)
-    //       this.min_lat_position = max(min_lat_position, this.min_lat_position);
-    //     if (no_clamp === true) this.no_clamp = true;
-    //     if (z_near !== undefined) this.z_near = z_near;
-    //     if (z_far !== undefined) this.z_far = z_far;
-    //     // set position
-    //     if (!ignorePosition) this.set_view({ lon, lat, zoom, bearing, pitch });
-    //   }
+    /**
+     * Set the style parameters
+     * @param style - user defined style params
+     * @param ignore_position - if set, do not update the view
+     */
+    pub fn set_style_parameters(&mut self, style: &StyleDefinition, ignore_position: bool) {
+        let StyleDefinition {
+            constrain_zoom_to_fill,
+            duplicate_horizontally,
+            no_clamp,
+            min_lat_position,
+            max_lat_position,
+            zoom_offset,
+            z_near,
+            z_far,
+            view,
+            ..
+        } = style;
+        let maxzoom = style.maxzoom.unwrap_or(self.maxzoom);
+        let minzoom = style.minzoom.unwrap_or(self.minzoom);
+        // setup wm properties if needed
+        if let Some(constrain_zoom_to_fill) = constrain_zoom_to_fill {
+            self.constrain_zoom_to_fill = *constrain_zoom_to_fill;
+        }
+        if let Some(duplicate_horizontally) = duplicate_horizontally {
+            self.duplicate_horizontally = *duplicate_horizontally;
+        }
+        if !self.constrain_zoom_to_fill && self.duplicate_horizontally {
+            // panic!(
+            //     "duplicate_horizontally may only be used if constrain_zoom_to_fill is true. Setting duplicate_horizontally to false.",
+            // );
+            self.duplicate_horizontally = false;
+        }
+        // clamp values and ensure minzoom is less than maxzoom
+        self.minzoom = if minzoom < -2. {
+            -2.
+        } else {
+            if minzoom > maxzoom { maxzoom - 1. } else { if minzoom > 19. { 19. } else { minzoom } }
+        };
+        self.maxzoom = if maxzoom > 20. {
+            20.
+        } else {
+            if maxzoom < self.minzoom { self.minzoom + 1. } else { maxzoom }
+        };
+        if let Some(zoom_offset) = zoom_offset {
+            self.zoom_offset = *zoom_offset;
+        }
+        if let Some(max_lat_position) = max_lat_position {
+            self.max_lat_position = fmin(*max_lat_position, self.max_lat_position)
+        }
+        if let Some(min_lat_position) = min_lat_position {
+            self.min_lat_position = fmax(*min_lat_position, self.min_lat_position);
+        }
+        if let Some(no_clamp) = no_clamp
+            && *no_clamp
+        {
+            self.no_clamp = true;
+        }
+        if let Some(z_near) = z_near {
+            self.z_near = *z_near;
+        }
+        if let Some(z_far) = z_far {
+            self.z_far = *z_far;
+        }
+        // set position
+        if !ignore_position {
+            self.set_view(view.unwrap_or_default());
+        }
+    }
 
     /**
      * Update the view
      * @param view - the new view
      */
-    pub fn set_view(&mut self, view: OptionalView) {
-        // const { zoom, lon, lat, bearing, pitch } = view;
-        // this.#set_view({
-        //   zoom: zoom ?? this.zoom,
-        //   lon: lon ?? this.lon,
-        //   lat: lat ?? this.lat,
-        //   bearing: bearing ?? this.bearing,
-        //   pitch: pitch ?? this.pitch,
-        // });
-        todo!()
+    pub fn set_view(&mut self, view: View) {
+        let View { zoom, lon, lat, bearing, pitch } = view;
+        self._set_view(&mut RequiredView {
+            zoom: zoom.unwrap_or(self.zoom),
+            lon: lon.unwrap_or(self.lon),
+            lat: lat.unwrap_or(self.lat),
+            bearing: bearing.unwrap_or(self.bearing),
+            pitch: pitch.unwrap_or(self.pitch),
+        });
     }
 
-    //   /** @returns the amount the zoom has changed since the last update */
-    //   zoomChange(): number {
-    //     const { zoom, prev_zoom } = this;
-    //     const { floor } = Math;
-    //     return floor(zoom) - floor(prev_zoom);
-    //   }
+    /** @returns the amount the zoom has changed since the last update */
+    pub fn zoom_change(&self) -> f64 {
+        let Self { zoom, prev_zoom, .. } = self;
+        floor(*zoom) - floor(*prev_zoom)
+    }
 
     /**
      * Get a zoom scale, if no zoom is provided, use the current zoom
@@ -339,51 +401,61 @@ impl Projector {
         pow(2., zoom)
     }
 
-    //   /**
-    //    * Resize the canvas. So we need to update our view's aspect
-    //    * @param width - new width
-    //    * @param height - new height
-    //    */
-    //   resize(width: number, height: number): void {
-    //     this.view[6] = this.aspect.x = width;
-    //     this.view[7] = this.aspect.y = height;
-    //     // update view
-    //     this.set_view({});
-    //     // cleanup
-    //     this.reset();
-    //   }
+    /**
+     * Resize the canvas. So we need to update our view's aspect
+     * @param width - new width
+     * @param height - new height
+     */
+    pub fn resize(&mut self, width: f64, height: f64) {
+        let width_f32 = width as f32;
+        let height_f32 = height as f32;
+        self.aspect.set_x(width_f32);
+        self.aspect.set_y(height_f32);
+        self.view.aspect_x = width_f32;
+        self.view.aspect_y = height_f32;
+        // update view
+        self.set_view(View::default());
+        // cleanup
+        self.reset();
+    }
 
-    //   /**
-    //    * The user has scrolled or two finger pinched
-    //    * @param zoomInput - the amount the user scrolled
-    //    * @param canvasX - the x position on the canvas
-    //    * @param canvasY - the y position on the canvas
-    //    */
-    //   onZoom(zoomInput: number, canvasX: number, canvasY: number): void {
-    //     const { positional_zoom, multiplier, aspect } = this;
-    //     // set zoom
-    //     this.set_view({ zoom: this.zoom - 0.003 * zoomInput });
-    //     if (this.prev_zoom === this.zoom) return;
-    //     // if positional_zoom, we adjust the lon and lat according to the mouse position.
-    //     // consider the distance between the lon-lat of our current "center" position and
-    //     // the lon-lat of the cursor position PRE-zoom adjustment. After zooming, we
-    //     // want to readjust our lon-lat position to compensate for that delta.
-    //     if (positional_zoom) {
-    //       // STEP 1: Get the distance from the center in pixels (up is +y, right is +x)
-    //       // this value is considered our "previous" distance metric.
-    //       const { x: width, y: height } = aspect;
-    //       const posX = canvasX - width / multiplier / 2;
-    //       const posY = height / multiplier / 2 - canvasY;
-    //       // STEP 2: find the distance POST-zoom adjustment. In other words,
-    //       // multiply the previous position by the scale change
-    //       const zoomAdjust = 1 + (this.zoom - this.prev_zoom);
-    //       const posDeltaX = posX * zoomAdjust - posX;
-    //       const posDeltaY = posY * zoomAdjust - posY;
-    //       // STEP 3: The deltas need to be converted to deg change
-    //       if (this.projection === 'S2') this.on_move(-posDeltaX, posDeltaY, 3072, 1536);
-    //       else this.on_move(-posDeltaX, posDeltaY, 1, 1);
-    //     }
-    //   }
+    /**
+     * The user has scrolled or two finger pinched
+     * @param zoom_input - the amount the user scrolled
+     * @param canvas_x - the x position on the canvas
+     * @param canvas_y - the y position on the canvas
+     */
+    pub fn on_zoom(&mut self, zoom_input: f64, canvas_x: f64, canvas_y: f64) {
+        let Self { positional_zoom, multiplier, aspect, .. } = *self;
+        // set zoom
+        self.set_view(View { zoom: Some(self.zoom - 0.003 * zoom_input), ..View::default() });
+        if self.prev_zoom == self.zoom {
+            return;
+        }
+        // if positional_zoom, we adjust the lon and lat according to the mouse position.
+        // consider the distance between the lon-lat of our current "center" position and
+        // the lon-lat of the cursor position PRE-zoom adjustment. After zooming, we
+        // want to readjust our lon-lat position to compensate for that delta.
+        if positional_zoom {
+            // STEP 1: Get the distance from the center in pixels (up is +y, right is +x)
+            // self value is considered our "previous" distance metric.
+            let width = aspect.x() as f64;
+            let height = aspect.y() as f64;
+            let pos_x = canvas_x - width / multiplier / 2.;
+            let pos_y = height / multiplier / 2. - canvas_y;
+            // STEP 2: find the distance POST-zoom adjustment. In other words,
+            // multiply the previous position by the scale change
+            let zoom_adjust = 1. + (self.zoom - self.prev_zoom);
+            let pos_delta_x = pos_x * zoom_adjust - pos_x;
+            let pos_delta_y = pos_y * zoom_adjust - pos_y;
+            // STEP 3: The deltas need to be converted to deg change
+            if self.projection == Projection::S2 {
+                self.on_move(Some(-pos_delta_x), Some(pos_delta_y), Some(3072.), Some(1536.));
+            } else {
+                self.on_move(Some(-pos_delta_x), Some(pos_delta_y), Some(1.), Some(1.));
+            }
+        }
+    }
 
     /**
      * User mouse/touch input (or swipe animation)
@@ -399,93 +471,109 @@ impl Projector {
         multiplier_x: Option<f64>,
         multiplier_y: Option<f64>,
     ) {
-        let movement_x = movement_x.unwrap_or(0.0);
-        let movement_y = movement_y.unwrap_or(0.0);
-        //     this.#setMove(movement_x, movement_y);
-        //     const { lon, lat, tile_size, projection, multiplier } = this;
-        //     let { bearing } = this;
-        //     const { abs, max, min, PI, sin, cos } = Math;
-        //     const zScale = max(this.zoom_scale(), 1);
-        //     const tileScale = tile_size / 512;
-        //     const isS2 = projection === 'S2';
-        //     // setup multipliers
-        //     if (multiplier_x === undefined) multiplier_x = multiplier * (isS2 ? 6.5 * 360 : 0.75);
-        //     if (multiplier_y === undefined) multiplier_y = multiplier * (isS2 ? 6.5 * 180 : 0.75);
-        //     if (!isS2) {
-        //       multiplier_x *= tileScale;
-        //       multiplier_y *= tileScale;
-        //     }
-        //     // adjust movement vector if bearing
-        //     if (bearing !== 0) {
-        //       bearing = degToRad(bearing); // adjust to radians
-        //       const tmpY = movement_x * sin(bearing) + movement_y * cos(bearing);
-        //       movement_x = movement_x * cos(bearing) - movement_y * sin(bearing);
-        //       movement_y = tmpY;
-        //     }
+        let mut movement_x = movement_x.unwrap_or(0.0);
+        let mut movement_y = movement_y.unwrap_or(0.0);
+        self._set_move(movement_x as f32, movement_y as f32);
+        let Self { lon, lat, tile_size, projection, multiplier, mut bearing, .. } = *self;
+        let z_scale = fmax(self.zoom_scale(None), 1.);
+        let tile_scale = (tile_size / 512) as f64;
+        let is_s2 = projection == Projection::S2;
+        // setup multipliers
+        let mut multiplier_x =
+            multiplier_x.unwrap_or(multiplier * (if is_s2 { 6.5 * 360. } else { 0.75 }));
+        let mut multiplier_y =
+            multiplier_y.unwrap_or(multiplier * (if is_s2 { 6.5 * 180. } else { 0.75 }));
+        if !is_s2 {
+            multiplier_x *= tile_scale;
+            multiplier_y *= tile_scale;
+        }
+        // adjust movement vector if bearing
+        if bearing != 0. {
+            bearing = bearing.to_radians(); // adjust to radians
+            let tmp_y = movement_x * sin(bearing) + movement_y * cos(bearing);
+            movement_x = movement_x * cos(bearing) - movement_y * sin(bearing);
+            movement_y = tmp_y;
+        }
 
-        //     // set the new lon-lat
-        //     if (isS2) {
-        //       // https://math.stackexchange.com/questions/377445/given-a-latitude-how-many-miles-is-the-corresponding-longitude
-        //       const lonMultiplier = min(30, 1 / cos((abs(lat) * PI) / 180));
-        //       this.set_view({
-        //         lon: lon - (movement_x / (multiplier_x * zScale)) * 360 * lonMultiplier,
-        //         lat: lat + (movement_y / (multiplier_y * zScale)) * 180,
-        //       });
-        //     } else {
-        //       this.set_view({
-        //         lon: lon - movement_x / (multiplier_x * zScale),
-        //         lat: lat + movement_y / (multiplier_y * zScale * mercatorLatScale(lat)),
-        //       });
-        //     }
-        todo!()
+        // set the new lon-lat
+        if is_s2 {
+            // https://math.stackexchange.com/questions/377445/given-a-latitude-how-many-miles-is-the-corresponding-longitude
+            let lon_multiplier = fmin(30., 1. / cos((fabs(lat) * PI) / 180.));
+            self.set_view(View {
+                lon: Some(lon - (movement_x / (multiplier_x * z_scale)) * 360. * lon_multiplier),
+                lat: Some(lat + (movement_y / (multiplier_y * z_scale)) * 180.),
+                ..Default::default()
+            });
+        } else {
+            self.set_view(View {
+                lon: Some(lon - movement_x / (multiplier_x * z_scale)),
+                lat: Some(lat + movement_y / (multiplier_y * z_scale * mercator_lat_scale(lat))),
+                ..Default::default()
+            });
+        }
     }
 
-    //   /**
-    //    * Get the lon-lat based on the mouse position
-    //    * x and y are the distances from the center of the screen
-    //    * @param xOffset - x offset
-    //    * @param yOffset - y offset
-    //    * @returns longitude and latitude at the mouse position
-    //    */
-    //   cursorToLonLat(xOffset: number, yOffset: number): undefined | VectorPoint {
-    //     const { projection, lon, lat, zoom, tile_size, multiplier } = this;
-    //     if (projection === 'S2')
-    //       return cursorToLonLatS2(lon, lat, xOffset, yOffset, (tile_size * Math.pow(2, zoom)) / 2);
-    //     return cursorToLonLatWM(lon, lat, xOffset, yOffset, zoom, tile_size / multiplier);
-    //   }
+    /**
+     * Get the lon-lat based on the mouse position
+     * x and y are the distances from the center of the screen
+     * @param x_offset - x offset
+     * @param y_offset - y offset
+     * @returns longitude and latitude at the mouse position
+     */
+    pub fn cursor_to_lon_lat(&self, x_offset: f64, y_offset: f64) -> Option<Point> {
+        let Self { projection, lon, lat, zoom, tile_size, multiplier, .. } = *self;
+        if projection == Projection::S2 {
+            let radius = ((tile_size as f64) * pow(2., zoom)) / 2.;
+            cursor_to_lon_lat_s2(lon, lat, x_offset, y_offset, radius)
+        } else {
+            let tile_size = ((tile_size as f64) / multiplier) as u64;
+            cursor_to_lon_lat_wm(lon, lat, x_offset, y_offset, zoom, tile_size)
+        }
+    }
 
-    //   /**
-    //    * Get the matrix for either a global state (S2) or a specific tile (WM)
-    //    * - S2 -> type of meters or kilometers
-    //    * - WM -> scale and offset
-    //    * @param typeOrScale - type or scale
-    //    * @param offset - offset in pixels
-    //    * @returns the matrix
-    //    */
-    //   getMatrix(typeOrScale: number | MatrixType, offset: VectorPoint = { x: 0, y: 0 }): Float32Array {
-    //     if (typeof typeOrScale === 'number') {
-    //       // WM case
-    //       const matrix = this.#getMatrixWM(typeOrScale, offset);
-    //       return mat4.clone(matrix);
-    //     }
-    //     // S2
-    //     let matrix = this.matrices[typeOrScale];
-    //     if (matrix !== undefined) return mat4.clone(matrix);
-    //     // updated matrix
-    //     matrix = this.matrices[typeOrScale] = this.#getMatrixS2(typeOrScale);
+    /**
+     * Get the matrix for either a global state (S2) or a specific tile (WM)
+     * - S2 -> type of meters or kilometers
+     * - WM -> scale and offset
+     * @param type_or_scale - type or scale
+     * @param offset - offset in pixels
+     * @returns the matrix
+     */
+    pub fn get_matrix_wm(&mut self, scale: f64, offset: Option<Point>) -> Mat4 {
+        let offset = offset.unwrap_or(Point(0., 0.));
+        self._get_matrix_wm(scale, offset, None, None)
+    }
 
-    //     return mat4.clone(matrix);
-    //   }
+    /**
+     * Get the matrix for either a global state (S2) or a specific tile (WM)
+     * - S2 -> type of meters or kilometers
+     * - WM -> scale and offset
+     * @param type_or_scale - type or scale
+     * @param offset - offset in pixels
+     * @returns the matrix
+     */
+    pub fn get_matrix(&mut self, type_or_scale: MatrixType) -> Mat4 {
+        let matrix = self.matrices.get(type_or_scale);
+        if let Some(matrix) = matrix {
+            return matrix.clone();
+        }
+        // updated matrix
+        let matrix = self._get_matrix_s2(type_or_scale, None, View::default());
+        self.matrices.set(type_or_scale, matrix);
 
-    //   /** @returns the tiles in this projector's current view */
-    //   getTilesInView(): TileInView[] {
-    //     const { projection, radius, zoom, zoom_offset, lon, lat } = this;
-    //     if (projection === 'S2') {
-    //       const matrix = this.getMatrix('m');
-    //       return getTilesInViewS2(zoom + zoom_offset, lon, lat, matrix, radius);
-    //     }
-    //     return getTilesInViewWM(zoom + zoom_offset, lon, lat, this);
-    //   }
+        matrix
+    }
+
+    /** @returns the tiles in this projector's current view */
+    pub fn get_tiles_in_view(&mut self) -> Vec<TileInView> {
+        let Self { projection, radius, zoom, zoom_offset, lon, lat, .. } = *self;
+        if projection == Projection::S2 {
+            let matrix = self.get_matrix(MatrixType::Meters);
+            get_tiles_in_view_s2(zoom + zoom_offset, lon, lat, &matrix, Some(radius))
+        } else {
+            get_tiles_in_view_wm(zoom + zoom_offset, lon, lat, self)
+        }
+    }
 
     /**
      * Get the tiles at a specific position
@@ -497,282 +585,306 @@ impl Projector {
      * @returns the tiles in view
      */
     pub fn get_tiles_at_position(&mut self, view: View) -> Vec<TileInView> {
-        // const { projection, radius, zoom_offset } = this;
-        // if (projection === 'S2') {
-        //   const matrix = this.#getMatrixS2('m', false, lon, lat, zoom, bearing, pitch);
-        //   return getTilesInViewS2(zoom + zoom_offset, lon, lat, matrix, radius);
-        // }
-        // // TODO: bearing and pitch without editing the projection?
-        // return getTilesInViewWM(zoom + zoom_offset, lon, lat, this);
-        todo!()
+        let Self { projection, radius, zoom_offset, .. } = *self;
+        let zoom = view.zoom.unwrap_or(self.zoom);
+        let lon = view.lon.unwrap_or(self.lon);
+        let lat = view.lat.unwrap_or(self.lat);
+        if projection == Projection::S2 {
+            let matrix = self._get_matrix_s2(MatrixType::Meters, Some(false), view);
+            get_tiles_in_view_s2(zoom + zoom_offset, lon, lat, &matrix, Some(radius))
+        } else {
+            // TODO: bearing and pitch without editing the projection?
+            get_tiles_in_view_wm(zoom + zoom_offset, lon, lat, self)
+        }
     }
 
-    //   /* INTERNAL FUNCTIONS */
-    //   /**
-    //    * Handles moving the camera. Update state for the GPU
-    //    * @param movement_x - the change in x position
-    //    * @param movement_y - the change in y position
-    //    */
-    //   #setMove(movement_x: number, movement_y: number): void {
-    //     const { view, aspect } = this;
-    //     const maxValue = 2 ** 11;
-    //     const midValue = 2 ** 10;
-    //     view[10] -= movement_x / aspect.x;
-    //     view[11] += movement_y / aspect.y;
-    //     // if we ever hit the min-max values, we reset to the middle
-    //     if (view[10] < 0 || view[10] > maxValue) view[10] = midValue;
-    //     if (view[11] < 0 || view[11] > maxValue) view[11] = midValue;
-    //   }
+    // INTERNAL FUNCTIONS //
 
-    //   /**
-    //    * Update the view
-    //    * @param view - the new view
-    //    */
-    //   #set_view(view: Required<View>): void {
-    //     // clamp the view based upon the current settings
-    //     this.#clampView(view);
-    //     // update if any changes found:
-    //     const { zoom, lon, lat, bearing, pitch } = view;
-    //     const bearingPitchChange = this.bearing !== bearing || this.pitch !== pitch;
-    //     if (
-    //       // zoom change?
-    //       this.zoom !== zoom ||
-    //       this.prev_zoom !== zoom ||
-    //       // lon-lat change?
-    //       this.lon !== lon ||
-    //       this.lat !== lat ||
-    //       // bearing or pitch change?
-    //       bearingPitchChange
-    //     ) {
-    //       // keep track of the old zoom and adjust the zoom
-    //       this.prev_zoom = this.zoom;
-    //       this.zoom = zoom;
-    //       // adjust the lon-lat
-    //       this.lon = lon;
-    //       this.lat = lat;
-    //       // adjust the bearing and pitch
-    //       this.bearing = bearing;
-    //       this.pitch = pitch;
-    //       // update view
-    //       this.view[0] = this.zoom;
-    //       this.view[1] = this.lon;
-    //       this.view[2] = this.lat;
-    //       this.view[3] = this.bearing;
-    //       this.view[4] = this.pitch;
-    //       // if bearing or pitch change we let the map know
-    //       if (bearingPitchChange) this.camera._updateCompass(this.bearing, this.pitch);
-    //       // cleanup for next render
-    //       this.reset();
-    //     }
-    //   }
+    /**
+     * Handles moving the camera. Update state for the GPU
+     * @param movement_x - the change in x position
+     * @param movement_y - the change in y position
+     */
+    fn _set_move(&mut self, movement_x: f32, movement_y: f32) {
+        let Self { view, aspect, .. } = self;
+        let max_value = pow(2., 11.) as f32;
+        let mid_value = pow(2., 10.) as f32;
+        view.delta_mouse_x -= movement_x / aspect.x();
+        view.delta_mouse_y += movement_y / aspect.y();
+        // if we ever hit the min-max values, we reset to the middle
+        if view.delta_mouse_x < 0. || view.delta_mouse_x > max_value {
+            view.delta_mouse_x = mid_value;
+        }
+        if view.delta_mouse_y < 0. || view.delta_mouse_y > max_value {
+            view.delta_mouse_y = mid_value;
+        }
+    }
 
-    //   /**
-    //    * Clamp the view
-    //    * @param view - the new view
-    //    */
-    //   #clampView(view: Required<View>): void {
-    //     const { no_clamp, constrain_zoom_to_fill, projection } = this;
-    //     // adjust zoom
-    //     this.#clampZoom(view);
-    //     // adjust lon-lat
-    //     if (!no_clamp) {
-    //       view.lon = this.#clampDeg(view.lon);
-    //       this.#clampLat(view);
-    //     }
-    //     // adjust bearing
-    //     view.bearing = this.#clampDeg(view.bearing);
-    //     // adjust view if constrained to fill
-    //     if (projection === 'WM' && constrain_zoom_to_fill) this.#clampConstraint(view);
-    //   }
+    /**
+     * Update the view
+     * @param view - the new view
+     */
+    fn _set_view(&mut self, view: &mut RequiredView) {
+        // clamp the view based upon the current settings
+        self._clamp_view(view);
+        // update if any changes found:
+        let RequiredView { zoom, lon, lat, bearing, pitch } = *view;
+        let bearing_pitch_change = self.bearing != bearing || self.pitch != pitch;
+        if
+        // zoom change?
+        self.zoom != zoom ||
+          self.prev_zoom != zoom ||
+          // lon-lat change?
+          self.lon != lon ||
+          self.lat != lat ||
+          // bearing or pitch change?
+          bearing_pitch_change
+        {
+            // keep track of the old zoom and adjust the zoom
+            self.prev_zoom = self.zoom;
+            self.zoom = zoom;
+            // adjust the lon-lat
+            self.lon = lon;
+            self.lat = lat;
+            // adjust the bearing and pitch
+            self.bearing = bearing;
+            self.pitch = pitch;
+            // update view
+            self.view.zoom = self.zoom as f32;
+            self.view.lon = self.lon as f32;
+            self.view.lat = self.lat as f32;
+            self.view.bearing = self.bearing as f32;
+            self.view.pitch = self.pitch as f32;
+            // if bearing or pitch change we let the map know
+            if bearing_pitch_change {
+                self.camera.borrow_mut()._update_compass(self.bearing, self.pitch);
+            }
+            // cleanup for next render
+            self.reset();
+        }
+    }
 
-    //   /**
-    //    * Clamp the zoom
-    //    * @param view - the new view
-    //    */
-    //   #clampZoom(view: Required<View>): void {
-    //     const { minzoom, maxzoom } = this;
-    //     view.zoom = Math.max(Math.min(view.zoom, maxzoom), minzoom);
-    //   }
+    /**
+     * Clamp the view
+     * @param view - the new view
+     */
+    fn _clamp_view(&self, view: &mut RequiredView) {
+        let Self { no_clamp, constrain_zoom_to_fill, projection, .. } = self;
+        // adjust zoom
+        self._clamp_zoom(view);
+        // adjust lon-lat
+        if !no_clamp {
+            view.lon = Projector::_clamp_deg(view.lon);
+            self._clamp_lat(view);
+        }
+        // adjust bearing
+        view.bearing = Projector::_clamp_deg(view.bearing);
+        // adjust view if constrained to fill
+        if *projection == Projection::WM && *constrain_zoom_to_fill {
+            self._clamp_constraint(view);
+        }
+    }
 
-    //   /**
-    //    * Clamp the latitude
-    //    * @param view - the new view
-    //    */
-    //   #clampLat(view: Required<View>): void {
-    //     const { max_lat_position, min_lat_position, zoom } = this;
-    //     const { min, max } = Math;
-    //     // prep current boundaries
-    //     const latPosDiff = max_lat_position - min_lat_position;
-    //     const curMaxLat = min(
-    //       min_lat_position + min(latPosDiff, (latPosDiff / 3) * zoom),
-    //       max_lat_position,
-    //     );
-    //     // clamp
-    //     view.lat = max(min(curMaxLat, view.lat), -curMaxLat);
-    //   }
+    /**
+     * Clamp the zoom
+     * @param view - the new view
+     */
+    fn _clamp_zoom(&self, view: &mut RequiredView) {
+        view.zoom = fmax(fmin(view.zoom, self.maxzoom), self.minzoom);
+    }
 
-    //   /**
-    //    * Clamp the view by the constraints provided by the projection and/or user style settings
-    //    * @param view - the new view
-    //    */
-    //   #clampConstraint(view: Required<View>): void {
-    //     const { aspect, tile_size } = this;
-    //     // if tile_size relative to zoom is smaller than aspect, we adjust zoom
-    //     if (tile_size * Math.pow(2, view.zoom) < aspect.y) view.zoom = Math.log2(aspect.y / tile_size);
-    //     // now that we have the min zoom, we can adjust the latitude to ensure the view is within bounds
-    //     const worldSize = tile_size * Math.pow(2, view.zoom);
-    //     const center = worldSize / 2;
-    //     const worldMinusAspectHalfed = (worldSize - aspect.y) / 2;
-    //     const { y: maxLat } = pxToLL({ x: 0, y: center - worldMinusAspectHalfed }, view.zoom, tile_size);
-    //     const { y: minLat } = pxToLL({ x: 0, y: center + worldMinusAspectHalfed }, view.zoom, tile_size);
-    //     view.lat = Math.min(maxLat, Math.max(minLat, view.lat));
-    //   }
+    /**
+     * Clamp the latitude
+     * @param view - the new view
+     */
+    fn _clamp_lat(&self, view: &mut RequiredView) {
+        let Self { max_lat_position, min_lat_position, zoom, .. } = self;
+        // prep current boundaries
+        let lat_pos_diff = max_lat_position - min_lat_position;
+        let cur_max_lat = fmin(
+            min_lat_position + fmin(lat_pos_diff, (lat_pos_diff / 3.) * zoom),
+            *max_lat_position,
+        );
+        // clamp
+        view.lat = fmax(fmin(cur_max_lat, view.lat), -cur_max_lat);
+    }
 
-    //   /**
-    //    * Clamp longitude and bearing between [-180,180]
-    //    * @param input - the longitude
-    //    * @returns clamped longitude
-    //    */
-    //   #clampDeg(input: number): number {
-    //     while (input >= 180) input -= 360;
-    //     while (input < -180) input += 360;
-    //     return input;
-    //   }
+    /**
+     * Clamp the view by the constraints provided by the projection and/or user style settings
+     * @param view - the new view
+     */
+    fn _clamp_constraint(&self, view: &mut RequiredView) {
+        let Self { aspect, tile_size, .. } = self;
+        // if tile_size relative to zoom is smaller than aspect, we adjust zoom
+        let tile_size_f = *tile_size as f64;
+        let aspect_y = aspect.y() as f64;
+        if tile_size_f * pow(2., view.zoom) < aspect_y {
+            view.zoom = log2(aspect_y / tile_size_f);
+        }
+        // now that we have the min zoom, we can adjust the latitude to ensure the view is within bounds
+        let world_size = tile_size_f * pow(2., view.zoom);
+        let center = world_size / 2.;
+        let world_minus_aspect_halfed = (world_size - aspect_y) / 2.;
+        let (_, max_lat) =
+            px_to_ll(&(0., center - world_minus_aspect_halfed), view.zoom, Some(*tile_size));
+        let (_, min_lat) =
+            px_to_ll(&(0., center - world_minus_aspect_halfed), view.zoom, Some(*tile_size));
+        view.lat = fmin(max_lat, fmax(min_lat, view.lat));
+    }
 
-    //   /* S2 */
-    //   /**
-    //    * Get the matrix for the S2 projection
-    //    * @param type - the matrix type (meters or kilometers)
-    //    * @param updateEye - whether to update the eye
-    //    * @param lon - longitude
-    //    * @param lat - latitude
-    //    * @param zoom - zoom
-    //    * @param bearing - bearing
-    //    * @param _pitch - pitch
-    //    * @returns S2 matrix
-    //    */
-    //   #getMatrixS2(
-    //     type: MatrixType,
-    //     updateEye = true,
-    //     lon: number = this.lon,
-    //     lat: number = this.lat,
-    //     zoom: number = this.zoom,
-    //     bearing: number = this.bearing,
-    //     _pitch: number = this.pitch,
-    //   ): Float32Array {
-    //     // update eye
-    //     const eye = this.#updateEyeS2(lon, lat, zoom, updateEye);
-    //     // get projection matrix
-    //     let matrix = this.#getProjectionMatrixS2(type, zoom);
-    //     // create view matrix
-    //     const view = mat4.lookAt(eye, { x: 0, y: lat > 90 || lat < -90 ? -1 : 1, z: 0 });
-    //     // adjust by bearing
-    //     if (bearing !== 0) mat4.rotateZ(matrix, degToRad(bearing));
-    //     // if km we "remove" the eye
-    //     if (type === 'km') {
-    //       view[12] = 0;
-    //       view[13] = 0;
-    //       view[14] = 0;
-    //     }
-    //     // multiply projection matrix by view matrix
-    //     matrix = mat4.multiply(matrix, view);
+    /**
+     * Clamp longitude and bearing between [-180,180]
+     * @param input - the longitude
+     * @returns clamped longitude
+     */
+    fn _clamp_deg(mut input: f64) -> f64 {
+        while input >= 180. {
+            input -= 360.;
+        }
+        while input < -180. {
+            input += 360.;
+        }
+        input
+    }
 
-    //     return matrix;
-    //   }
+    // S2 //
 
-    //   /**
-    //    * Update the eye position given a longitude, latitude and zoom
-    //    * @param lon - longitude
-    //    * @param lat - latitude
-    //    * @param zoom - zoom
-    //    * @param update - whether to update the eye. If false, we only needed the resultant eye for other computations
-    //    * @returns new eye
-    //    */
-    //   #updateEyeS2(lon: number, lat: number, zoom: number, update = true): VectorPoint {
-    //     const { radius, z_translate_end, z_translate_start, zoom_end } = this;
-    //     // find radial distance from core of ellipsoid
-    //     const radialMultiplier =
-    //       Math.max(
-    //         ((z_translate_end - z_translate_start) / zoom_end) * zoom + z_translate_start,
-    //         z_translate_end,
-    //       ) * radius;
-    //     // create xyz point for eye
-    //     const eye = pointMulScalar(
-    //       pointNormalize(pointFromLonLatGL({ x: lon, y: lat })),
-    //       radialMultiplier,
-    //     );
-    //     if (update) this.eye = eye;
+    /**
+     * Get the matrix for the S2 projection
+     * @param type - the matrix type (meters or kilometers)
+     * @param update_eye - whether to update the eye
+     * @param lon - longitude
+     * @param lat - latitude
+     * @param zoom - zoom
+     * @param bearing - bearing
+     * @param _pitch - pitch
+     * @returns S2 matrix
+     */
+    fn _get_matrix_s2(&mut self, r#type: MatrixType, update_eye: Option<bool>, view: View) -> Mat4 {
+        let update_eye = update_eye.unwrap_or(true);
+        let lon = view.lon.unwrap_or(self.lon);
+        let lat = view.lat.unwrap_or(self.lat);
+        let zoom = view.zoom.unwrap_or(self.zoom);
+        let bearing = view.bearing.unwrap_or(self.bearing);
+        // update eye
+        let eye = self._update_eye_s2(lon, lat, zoom, Some(update_eye));
+        // get projection matrix
+        let mut matrix = self._get_projection_matrix_s2(r#type, Some(zoom));
+        // create view matrix
+        let mut view = Mat4::look_at(
+            &eye,
+            &Vec4([0., if lat > 90. || lat < -90. { -1. } else { 1. }, 0., 0.]),
+        );
+        // adjust by bearing
+        if bearing != 0. {
+            matrix.rotate_z(bearing.to_radians() as f32);
+        }
+        // if km we "remove" the eye
+        if r#type == MatrixType::Kilometers {
+            view.0[12] = 0.;
+            view.0[13] = 0.;
+            view.0[14] = 0.;
+        }
+        // multiply projection matrix by view matrix
+        matrix.multiply(&view);
 
-    //     return eye;
-    //   }
+        matrix
+    }
 
-    //   /**
-    //    * Get the S2 projection matrix
-    //    * @param type - the matrix type (meters or kilometers)
-    //    * @param zoom - zoom
-    //    * @returns S2 projection matrix
-    //    */
-    //   #getProjectionMatrixS2(type: MatrixType, zoom: number = this.zoom): Float32Array {
-    //     const { aspect, tile_size, multiplier } = this;
-    //     let radius = this.radius;
-    //     // prep a matrix
-    //     const matrix = mat4.create();
+    /**
+     * Update the eye position given a longitude, latitude and zoom
+     * @param lon - longitude
+     * @param lat - latitude
+     * @param zoom - zoom
+     * @param update - whether to update the eye. If false, we only needed the resultant eye for other computations
+     * @returns new eye
+     */
+    fn _update_eye_s2(&mut self, lon: f64, lat: f64, zoom: f64, update: Option<bool>) -> Vec4 {
+        let update = update.unwrap_or(true);
+        let Self { radius, z_translate_end, z_translate_start, zoom_end, .. } = self;
+        // find radial distance from core of ellipsoid
+        let radial_multiplier = fmax(
+            ((*z_translate_end - *z_translate_start) / *zoom_end) * zoom + *z_translate_start,
+            *z_translate_end,
+        ) * (*radius);
+        // create xyz point for eye
+        let mut eye_point: S2Point = S2Point::from_lon_lat_gl(&Point3D(lon, lat, 0.));
+        eye_point.normalize();
+        eye_point *= radial_multiplier;
+        let eye = (&eye_point).into();
+        if update {
+            self.eye = eye;
+        }
 
-    //     // BLEND LOOKS A BIT DIFF const multpl = -radius / multiplier / (tile_size * scale * radius * 5)
-    //     if (type === 'km') radius *= 1000;
-    //     const multpl = radius / multiplier / (tile_size * Math.pow(2, zoom));
+        eye
+    }
 
-    //     // create projection
-    //     mat4.ortho(matrix, aspect.x * multpl, aspect.y * multpl, 100_000);
+    /**
+     * Get the S2 projection matrix
+     * @param type - the matrix type (meters or kilometers)
+     * @param zoom - zoom
+     * @returns S2 projection matrix
+     */
+    fn _get_projection_matrix_s2(&self, r#type: MatrixType, zoom: Option<f64>) -> Mat4 {
+        let zoom = zoom.unwrap_or(self.zoom);
+        let Self { aspect, tile_size, multiplier, .. } = self;
+        let mut radius = self.radius;
 
-    //     return matrix;
-    //   }
+        // BLEND LOOKS A BIT DIFF const multpl = -radius / multiplier / (tile_size * scale * radius * 5)
+        if r#type == MatrixType::Kilometers {
+            radius *= 1000.;
+        }
+        let multpl = (radius / multiplier / ((*tile_size as f64) * pow(2., zoom))) as f32;
 
-    //   /* WM */
-    //   /**
-    //    * Get the matrix for the WM projection
-    //    * @param scale - scale shift
-    //    * @param offset - offset
-    //    * @param bearing - bearing
-    //    * @param _pitch - pitch
-    //    * @returns WM matrix
-    //    */
-    //   #getMatrixWM(
-    //     scale: number,
-    //     offset: VectorPoint,
-    //     bearing: number = this.bearing,
-    //     _pitch: number = this.pitch,
-    //   ): Float32Array {
-    //     const { x: offsetX, y: offsetY } = offset;
-    //     // get projection matrix
-    //     let matrix = this.#getProjectionMatrixWM(scale);
-    //     // create view matrix
-    //     const view = mat4.lookAt({ x: 0, y: 0, z: -1 }, { x: 0, y: -1, z: 0 });
-    //     // adjust by bearing
-    //     if (bearing !== 0) mat4.rotateZ(matrix, degToRad(bearing));
-    //     // multiply projection matrix by view matrix
-    //     matrix = mat4.multiply(matrix, view);
+        // create projection
+        Mat4::ortho(aspect.x() * multpl, aspect.y() * multpl, 100_000.)
+    }
 
-    //     // adjust by position
-    //     mat4.translate(matrix, [-offsetX, -offsetY, 0]);
+    // WM //
 
-    //     return matrix;
-    //   }
+    /**
+     * Get the matrix for the WM projection
+     * @param scale - scale shift
+     * @param offset - offset
+     * @param bearing - bearing
+     * @param _pitch - pitch
+     * @returns WM matrix
+     */
+    fn _get_matrix_wm(
+        &self,
+        scale: f64,
+        offset: Point,
+        bearing: Option<f64>,
+        _pitch: Option<f64>,
+    ) -> Mat4 {
+        let bearing = bearing.unwrap_or(self.bearing);
+        let Point(offset_x, offset_y) = offset;
+        // get projection matrix
+        let mut matrix = self._get_projection_matrix_wm(scale);
+        // create view matrix
+        let view = Mat4::look_at(&Vec4([0., 0., -1., 0.]), &Vec4([0., -1., 0., 0.]));
+        // adjust by bearing
+        if bearing != 0. {
+            matrix.rotate_z(bearing.to_radians() as f32);
+        }
+        // multiply projection matrix by view matrix
+        matrix.multiply(&view);
+        // adjust by position
+        matrix.translate(&Vec4([-(offset_x as f32), -(offset_y as f32), 0., 0.]));
 
-    //   /**
-    //    * Get the WM projection matrix
-    //    * @param scale - scale shift
-    //    * @returns WM projection matrix
-    //    */
-    //   #getProjectionMatrixWM(scale: number): Float32Array {
-    //     const { aspect, tile_size, multiplier } = this;
-    //     // prep a matrix
-    //     const matrix = mat4.create();
-    //     // adjust aspect ratio by zoom
-    //     const multpl = 1 / multiplier / (tile_size * scale);
-    //     // create projection
-    //     mat4.ortho(matrix, aspect.x * multpl, aspect.y * multpl, 1_000);
+        matrix
+    }
 
-    //     return matrix;
-    //   }
+    /**
+     * Get the WM projection matrix
+     * @param scale - scale shift
+     * @returns WM projection matrix
+     */
+    fn _get_projection_matrix_wm(&self, scale: f64) -> Mat4 {
+        let Self { aspect, tile_size, multiplier, .. } = self;
+        // adjust aspect ratio by zoom
+        let multpl = (1. / multiplier / ((*tile_size as f64) * scale)) as f32;
+        // create projection
+        Mat4::ortho(aspect.x() * multpl, aspect.y() * multpl, 1_000.)
+    }
 }

@@ -151,6 +151,7 @@ export default class Style {
    * - 2) ensure the order is correct for when WebGL eventually parses the encodings
    * @param layers - layers to build
    */
+  // oxlint-disable-next-line jsdoc/require-param
   #buildLayers(layers: LayerStyle[] = []): void {
     const layerDefinitions: LayerDefinition[] = [];
     let layerIndex = 0;

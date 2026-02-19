@@ -1,14 +1,18 @@
 use crate::{
-    style::SourceMetadata,
+    style::{LayerDefinition, SourceActualMetadata, SourceMetadata},
     workers::{
-        BaseSource, JSONDataMessage, MapID, Source, TileRequest, TileWorkerMessage,
+        BaseSource, JSONDataMessage, MapID, Session, SourceSpec, TileRequest, TileWorkerMessage,
         TileWorkerMessages,
     },
 };
+use alloc::rc::Rc;
+use core::cell::RefCell;
 use gistools::{
     data_structures::{LocalClusterStore, Tile, TileStore},
     geometry::CellId,
 };
+use s2_tilejson::Metadata;
+use s2json::{Face, JSONCollection, Projection};
 
 #[derive(Debug)]
 #[allow(missing_docs)]
@@ -27,16 +31,48 @@ impl JSONData {
             JSONData::None => None,
         }
     }
+    /// Grab the faces that are active
+    pub fn faces(&self) -> Vec<Face> {
+        match self {
+            JSONData::TileStore(tile_store) => tile_store.faces.clone().into_iter().collect(),
+            JSONData::PointCluster(_) => {
+                vec![Face::Face0, Face::Face1, Face::Face2, Face::Face3, Face::Face4, Face::Face5]
+            }
+            JSONData::None => vec![],
+        }
+    }
+    /// Grab the Projections
+    pub fn projection(&self) -> Projection {
+        match self {
+            JSONData::TileStore(tile_store) => tile_store.projection,
+            JSONData::PointCluster(point_cluster) => point_cluster.projection,
+            JSONData::None => Projection::S2,
+        }
+    }
+    /// Grab the minzoom
+    pub fn minzoom(&self) -> u8 {
+        match self {
+            JSONData::TileStore(tile_store) => tile_store.minzoom,
+            JSONData::PointCluster(point_cluster) => point_cluster.minzoom,
+            JSONData::None => 0,
+        }
+    }
+    /// Grab the maxzoom
+    pub fn maxzoom(&self) -> u8 {
+        match self {
+            JSONData::TileStore(tile_store) => tile_store.maxzoom,
+            JSONData::PointCluster(point_cluster) => point_cluster.maxzoom,
+            JSONData::None => 0,
+        }
+    }
 }
 
-/**
- * # JSON Source
- *
- * ## Description
- * A source that is a json file that contains geojson or s2json data.
- *
- * The json can be stored as a tile store or a point cluster.
- */
+/// # JSON Source
+///
+/// ## Description
+/// A source that is a json file that contains geojson or s2json data.
+///
+/// The json can be stored as a tile store or a point cluster.
 #[derive(Debug)]
 #[allow(missing_docs)]
 pub struct JSONSource {
@@ -45,50 +81,72 @@ pub struct JSONSource {
 }
 impl JSONSource {
     /// Create a new JSONSource
-    pub fn new() -> Self {
-        Self { base: BaseSource::default(), json: JSONData::None }
+    pub fn new(
+        name: String,
+        projection: crate::style::Projection,
+        style_layers: Vec<LayerDefinition>,
+        path: String,
+        needs_token: Option<bool>,
+        session: Rc<RefCell<Session>>,
+    ) -> Self {
+        Self {
+            base: BaseSource::new(name, projection, style_layers, path, needs_token, session),
+            json: JSONData::None,
+        }
     }
 }
-impl Source for JSONSource {
+impl SourceSpec for JSONSource {
     fn base(&mut self) -> &mut BaseSource {
         &mut self.base
     }
 
-    async fn build(&mut self, map_id: MapID, metadata: Option<SourceMetadata>) {
+    async fn build(&mut self, map_id: MapID, metadata: Option<SourceMetadata<()>>) {
         if metadata.is_none() {
             return;
         }
-        //     const json = metadata?.data ?? (await this._fetch<JSONCollection>(`${this.path}`, mapID, true));
-        //     if (json === undefined) {
-        //       this.active = false;
-        //       console.error(`FAILED TO extrapolate ${this.path} json data`);
-        //       return;
-        //     }
-        //     if (metadata?.cluster === true) {
-        //       this.json = new WMPointCluster(metadata);
-        //       this.json.addManyPoints(json);
-        //       this.json.cluster();
-        //     } else {
-        //       // use the projection from the style
-        //       this.json = new TileStore(json, {
-        //         ...metadata,
-        //         projection: this.projection === 'S2' ? 'S2' : 'WG',
-        //       });
-        //     }
-        //     const { projection, minzoom, maxzoom, faces } = this.json;
-        //     this._build_metadata(
-        //       {
-        //         type: 'vector',
-        //         minzoom,
-        //         maxzoom,
-        //         faces: [...faces],
-        //         layers: { default: { minzoom, maxzoom, drawTypes: [], shape: {} } },
-        //         extension: projection === 'S2' ? 's2json' : 'geojson',
-        //         attributions: 'attributions' in json ? json.attributions : {},
-        //       },
-        //       mapID,
-        //     );
-        todo!()
+        let metadata = metadata.unwrap();
+        let mut json = metadata.data;
+        if json.is_none() {
+            let path = self.base().path.clone();
+            json = self._fetch::<JSONCollection>(path, map_id).await;
+        }
+        if json.is_none() {
+            self.base().active = false;
+            // panic!("FAILED TO extrapolate {path} json data");
+            return;
+        }
+        if let SourceActualMetadata::ClusterOptions(cluster_options) = metadata.metadata {
+            let mut cluster = LocalClusterStore::new(Some(cluster_options.as_ref().clone()), None);
+            cluster.insert_feature(json.unwrap());
+            self.json = JSONData::PointCluster(cluster);
+        } else {
+            let json_options = metadata.metadata.tile_options();
+            self.json = JSONData::TileStore(TileStore::new(
+                json.unwrap(),
+                json_options.unwrap_or_default(),
+            ));
+        }
+        let attributions = self.base().attributions.clone();
+        self._build_metadata(
+            SourceMetadata::<()> {
+                metadata: SourceActualMetadata::Metadata(Box::new(Metadata {
+                    r#type: s2_tilejson::SourceType::Vector,
+                    extension: if self.json.projection() == Projection::S2 {
+                        "s2json".into()
+                    } else {
+                        "geojson".into()
+                    },
+                    minzoom: self.json.minzoom(),
+                    maxzoom: self.json.maxzoom(),
+                    faces: self.json.faces(),
+                    attributions,
+                    ..Default::default()
+                })),
+                ..Default::default()
+            },
+            map_id,
+        )
+        .await;
     }
 
     async fn _tile_request(&mut self, map_id: MapID, tile: TileRequest, _source_name: String) {
@@ -97,7 +155,8 @@ impl Source for JSONSource {
         if let Some(vector_tile) = self.json.get_tile(tile.layer.id)
             && vector_tile.len() == 0
         {
-            let worker = self.base().session.request_worker();
+            let sesion = &mut self.base().session.borrow_mut();
+            let worker = sesion.request_worker();
             worker
                 .send(TileWorkerMessage {
                     map_id,
@@ -109,7 +168,7 @@ impl Source for JSONSource {
                 })
                 .await;
         } else {
-            self.flush(map_id, tile, name);
+            self.flush(map_id, tile, name).await;
         }
     }
 }

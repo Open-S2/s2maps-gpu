@@ -58,7 +58,7 @@ export type SharedPainter = Combine<DOMPainter | GLPainter | GPUPainter>;
 export default class Camera<P extends SharedPainter = SharedPainter> {
   readonly parent?: S2Map;
   id: string;
-  readonly #canvas: HTMLCanvasElement;
+  readonly #canvas: HTMLCanvasElement | HTMLDivElement | OffscreenCanvas;
   _canDraw = false; // let the render sequence know if the painter is ready to paint
   _interactive = false; // allow the user to make visual changes to the map, whether that be zooming, panning, or dragging
   readonly #scrollZoom: boolean; // allow the user to scroll over the canvas and cause a zoom change
@@ -88,7 +88,12 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
    * @param id - Unique identifier for the mapUI
    * @param parent - Parent mapUI means this is running on the main thread so we can make direct calls to the parent
    */
-  constructor(options: MapOptions, canvas: HTMLCanvasElement, id: string, parent?: S2Map) {
+  constructor(
+    options: MapOptions,
+    canvas: HTMLCanvasElement | HTMLDivElement | OffscreenCanvas,
+    id: string,
+    parent?: S2Map,
+  ) {
     this.#canvas = canvas;
     // setup options
     const { style, interactive, scrollZoom, canMove, canZoom } = options;
@@ -198,7 +203,11 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
       }) as EventListener);
     }
     // setup camera
-    this.#resizeCamera(this.#canvas.width, this.#canvas.height);
+    const { width, height } =
+      'getBoundingClientRect' in this.#canvas
+        ? this.#canvas.getBoundingClientRect()
+        : { width: this.#canvas.width, height: this.#canvas.height };
+    this.#resizeCamera(width, height);
   }
 
   /**
@@ -225,13 +234,14 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
     const { contextType } = options;
     let context: null | GPUCanvasContext | WebGL2RenderingContext | WebGLRenderingContext = null;
     // first try webGPU
-    if (contextType === 3) {
+    const render_context = 'getContext' in this.#canvas;
+    if (render_context && contextType === 3) {
       context = this.#canvas.getContext('webgpu') as unknown as GPUCanvasContext; // GPUCanvasContext
       if (context === null) return false;
       const Painter = await import('gpu/index.js').then((m) => m.Painter);
       this.painter = new Painter(context, options) as unknown as P;
       await this.painter.prepare();
-    } else if (contextType === 2 || contextType === 1) {
+    } else if (render_context && (contextType === 2 || contextType === 1)) {
       let type: 1 | 2 = 1;
       // prep webgl style options
       const webglOptions = {
@@ -254,7 +264,7 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
       if (context === null) return false;
       const Painter = await import('gl/index.js').then((m) => m.Painter);
       this.painter = new Painter(context, type, options) as unknown as P;
-    } else {
+    } else if (!render_context && contextType === 0) {
       const Painter = await import('dom/index.js').then((m) => m.Painter);
       this.painter = new Painter(this.#canvas, options) as unknown as P;
     }
@@ -324,8 +334,8 @@ export default class Camera<P extends SharedPainter = SharedPainter> {
       this.currAnimFunction = undefined;
       // grab width and height
       const { width, height } = resizeQueued;
-      this.#canvas.width = width;
-      this.#canvas.height = height;
+      if ('width' in this.#canvas) this.#canvas.width = width;
+      if ('height' in this.#canvas) this.#canvas.height = height;
       this.#resizeCamera(width, height);
       this.resizeQueued = undefined;
     }

@@ -1,8 +1,11 @@
 use crate::{
-    gpu::WebGPUBuffer,
-    style::{ColorArray, EaseType, Easing, EncodeLayerAttribute, Filter, FilterFunction},
+    render::WebGPUBuffer,
+    style::{
+        ColorArray, EaseType, Easing, EncodeLayerAttribute, Filter, FilterFunction, ToGPUReadable,
+    },
     ui::View,
     util::UrlMap,
+    workers::MarkerMetadata,
 };
 use alloc::{boxed::Box, collections::btree_map::BTreeMap, string::String, vec::Vec};
 use bytemuck::{Pod, Zeroable};
@@ -39,11 +42,23 @@ must_be_str!(must_be_shade, "shade");
 /// Input Values that are used by the style enging all follow these rules to ensure they can
 /// be serialized, deserialized, then used by the style engine in various ways including interpolation
 pub trait InputValueType:
-    Clone + Default + Easing + EncodeLayerAttribute + for<'a> From<&'a ValueType> + PartialEq
+    Clone
+    + Default
+    + Easing
+    + EncodeLayerAttribute
+    + for<'a> From<&'a ValueType>
+    + ToGPUReadable
+    + PartialEq
 {
 }
 impl<T> InputValueType for T where
-    T: Clone + Default + Easing + EncodeLayerAttribute + for<'a> From<&'a ValueType> + PartialEq
+    T: Clone
+        + Default
+        + Easing
+        + EncodeLayerAttribute
+        + for<'a> From<&'a ValueType>
+        + ToGPUReadable
+        + PartialEq
 {
 }
 
@@ -55,6 +70,14 @@ pub enum Projection {
     S2,
     /// WM
     WM,
+}
+impl From<Projection> for s2json::Projection {
+    fn from(p: Projection) -> Self {
+        match p {
+            Projection::S2 => s2json::Projection::S2,
+            Projection::WM => s2json::Projection::WG,
+        }
+    }
 }
 
 /// All source input objects contain these shapes
@@ -75,9 +98,18 @@ impl Default for SourceActualMetadata {
         SourceActualMetadata::Metadata(Box::new(Metadata::default()))
     }
 }
+impl SourceActualMetadata {
+    /// Get the TileStoreOptions
+    pub fn tile_options(&self) -> Option<TileStoreOptions> {
+        match self {
+            SourceActualMetadata::TileStoreOptions(options) => Some(options.as_ref().clone()),
+            _ => None,
+        }
+    }
+}
 /// User Defined Inputs
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
-pub struct SourceMetadata {
+pub struct SourceMetadata<M = ()> {
     /// Sometimes provided for to have easier access to fetch the source data
     pub path: Option<String>,
     /// The size of the tile in pixels if some form of raster data
@@ -90,7 +122,7 @@ pub struct SourceMetadata {
     /// This is useful if you want to make requests without first having to request the metadata
     pub source_name: Option<String>,
     /// If you want to directly inject the geojson or s2json data
-    pub data: Option<JSONCollection>,
+    pub data: Option<JSONCollection<M>>,
     /// Other build engines place layer data inside a json string
     pub json: Option<String>,
     /// Flattens the actual metadata. Can be any number of metadata types. Previous top level
@@ -98,7 +130,7 @@ pub struct SourceMetadata {
     #[serde(flatten)]
     pub metadata: SourceActualMetadata,
 }
-impl SourceMetadata {
+impl<M> SourceMetadata<M> {
     /// Get the minimum zoom level
     pub fn minzoom(&self) -> u8 {
         match &self.metadata {
@@ -117,13 +149,20 @@ impl SourceMetadata {
             SourceActualMetadata::TileStoreOptions(m) => m.minzoom.unwrap_or(0),
         }
     }
+    /// Get the metadata
+    pub fn meta(&self) -> Option<&Metadata> {
+        match &self.metadata {
+            SourceActualMetadata::Metadata(m) => Some(m),
+            _ => None,
+        }
+    }
 }
-impl From<Metadata> for SourceMetadata {
+impl<M: Default> From<Metadata> for SourceMetadata<M> {
     fn from(meta: Metadata) -> Self {
         Self { metadata: SourceActualMetadata::Metadata(Box::new(meta)), ..Default::default() }
     }
 }
-impl From<UnknownMetadata> for SourceMetadata {
+impl<M: Default> From<UnknownMetadata> for SourceMetadata<M> {
     fn from(unknown: UnknownMetadata) -> Self {
         Self {
             metadata: SourceActualMetadata::Metadata(Box::new(unknown.to_metadata())),
@@ -144,12 +183,12 @@ pub struct JSONSource<M = (), P: Clone + Default = Properties, D: Clone + Defaul
 
 /// A Marker source is a local cache that specifically tracks and maintains markers
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct MarkerSource<M = (), P: Clone + Default = Properties, D: Clone + Default = MValue> {
+pub struct MarkerSource<P: Clone + Default = Properties, D: Clone + Default = MValue> {
     /// The type of the source. Must be "markers"
     #[serde(deserialize_with = "must_be_markers")]
     pub r#type: String,
     /// The JSON data
-    pub data: JSONCollection<M, P, D>,
+    pub data: JSONCollection<MarkerMetadata, P, D>,
 }
 /// List of all source inputs. A String is just a href to SourceMetadata
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -158,22 +197,22 @@ pub enum Source<M = (), P: Clone + Default = Properties, D: Clone + Default = MV
     /// String input, should be an href
     Href(String),
     /// Input metadata pointing to an external source and it's attributes
-    SourceMetadata(SourceMetadata),
+    SourceMetadata(SourceMetadata<M>),
     /// JSON data source
     JSONSource(JSONSource<M, P, D>),
     /// Local Source has predefined geometry in this library you can use
     LocalSource,
     /// Marker Source are a collection of points with predefined data
-    MarkerSource(MarkerSource),
+    MarkerSource(MarkerSource<P, D>),
 }
 impl From<String> for Source {
     fn from(value: String) -> Self {
         Source::Href(value)
     }
 }
-impl From<SourceMetadata> for Source {
-    fn from(value: SourceMetadata) -> Self {
-        Source::SourceMetadata(value)
+impl<M> From<SourceMetadata<M>> for Source<M> {
+    fn from(value: SourceMetadata<M>) -> Self {
+        Source::<M>::SourceMetadata(value)
     }
 }
 impl<M, P: Clone + Default, D: Clone + Default> From<JSONCollection<M, P, D>> for Source<M, P, D> {
@@ -181,8 +220,10 @@ impl<M, P: Clone + Default, D: Clone + Default> From<JSONCollection<M, P, D>> fo
         Source::JSONSource(JSONSource { r#type: "json".into(), data: value })
     }
 }
-impl From<MarkerSource> for Source {
-    fn from(value: MarkerSource) -> Self {
+impl<P: Clone + Default, D: Clone + Default> From<MarkerSource<P, D>>
+    for Source<MarkerMetadata, P, D>
+{
+    fn from(value: MarkerSource<P, D>) -> Self {
         Source::MarkerSource(value)
     }
 }
@@ -429,6 +470,11 @@ impl Default for InputKey {
         InputKey::Key(String::default())
     }
 }
+impl From<String> for InputKey {
+    fn from(value: String) -> Self {
+        InputKey::Key(value)
+    }
+}
 impl From<&InputKey> for TextField {
     fn from(value: &InputKey) -> Self {
         match value {
@@ -563,6 +609,36 @@ impl<T: InputValueType> Default for DataRange<T> {
         DataRange::Ease(Default::default())
     }
 }
+impl<T: InputValueType> DataRange<T> {
+    /// Get the Base Value
+    pub fn base(&self) -> Option<f64> {
+        match self {
+            DataRange::Ease(ease) => ease.base,
+            DataRange::Step(_) => None,
+        }
+    }
+    /// Get the Ease Type
+    pub fn ease(&self) -> EaseType {
+        match self {
+            DataRange::Ease(ease) => ease.ease.clone().unwrap_or_default(),
+            DataRange::Step(_) => EaseType::Step,
+        }
+    }
+    /// Get the collection of ranges
+    pub fn ranges(&self) -> &Vec<Range<T>> {
+        match self {
+            DataRange::Ease(ease) => &ease.ranges,
+            DataRange::Step(step) => &step.ranges,
+        }
+    }
+    /// Get the key
+    pub fn key(&self) -> InputKey {
+        match self {
+            DataRange::Ease(ease) => ease.key.clone(),
+            DataRange::Step(step) => step.key.clone(),
+        }
+    }
+}
 
 /// One of [`InputRangeEase`] or [`InputRangeStep`]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -598,6 +674,13 @@ impl<T: InputValueType> InputRange<T> {
         match self {
             InputRange::Ease(ease) => ease.r#type,
             InputRange::Step(step) => step.r#type,
+        }
+    }
+    /// Get the collection of ranges
+    pub fn ranges(&self) -> &Vec<Range<T>> {
+        match self {
+            InputRange::Ease(ease) => &ease.ranges,
+            InputRange::Step(step) => &step.ranges,
         }
     }
 }
@@ -1446,7 +1529,8 @@ pub enum LayerType {
 /// - `metadata`: additional metadata. Used by style generators
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LayerStyleBase<M: Default + Clone = ()> {
-    // pub r#type: Option<LayerType>,
+    /// The type of layer
+    pub r#type: Option<LayerType>,
     /// The name of the layer - useful for sorting a layer on insert or for removal
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
@@ -1509,7 +1593,7 @@ pub struct LayerStyleBase<M: Default + Clone = ()> {
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 #[allow(missing_docs)]
 pub struct LayerDefinitionBase {
-    // pub r#type: LayerType,
+    pub r#type: LayerType,
     pub name: String,
     #[serde(rename = "layerIndex")]
     pub layer_index: u32,
@@ -1525,6 +1609,25 @@ pub struct LayerDefinitionBase {
     pub interactive: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub opaque: Option<bool>,
+}
+impl LayerDefinitionBase {
+    /// build a LayerDefinitionBase from a LayerStyleBase
+    pub fn from_layer<M: Clone + Default>(layer: &LayerStyleBase<M>, layer_index: u32) -> Self {
+        LayerDefinitionBase {
+            r#type: layer.r#type.unwrap_or_default(),
+            name: layer.name.clone().unwrap_or_default(),
+            layer_index,
+            source: layer.source.clone().unwrap_or_default(),
+            layer: layer.layer.clone().unwrap_or("default".into()),
+            minzoom: layer.minzoom.unwrap_or(0),
+            maxzoom: layer.maxzoom.unwrap_or(20),
+            lch: layer.lch.unwrap_or(false),
+            visible: layer.visible.unwrap_or(true),
+            filter: layer.filter.clone(),
+            interactive: None,
+            opaque: None,
+        }
+    }
 }
 /// uses definition to create a guide for the workflow (program/pipeline)
 #[derive(Debug, Clone, PartialEq)]
@@ -4525,6 +4628,23 @@ impl<M: Clone + Default> Default for LayerStyle<M> {
         LayerStyle::Unknown(UnknownLayerStyle::default())
     }
 }
+impl<M: Clone + Default> LayerStyle<M> {
+    /// Get the base layer style
+    pub fn base(&self) -> &LayerStyleBase<M> {
+        match self {
+            LayerStyle::Fill(layer) => &layer.base,
+            LayerStyle::Glyph(layer) => &layer.base,
+            LayerStyle::Heatmap(layer) => &layer.base,
+            LayerStyle::Hillshade(layer) => &layer.base,
+            LayerStyle::Line(layer) => &layer.base,
+            LayerStyle::Point(layer) => &layer.base,
+            LayerStyle::Raster(layer) => &layer.base,
+            LayerStyle::Sensor(layer) => &layer.base,
+            LayerStyle::Shade(layer) => &layer.base,
+            LayerStyle::Unknown(layer) => &layer,
+        }
+    }
+}
 /// All layer definitions that are used by the painter workflows
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum LayerDefinition {
@@ -4547,34 +4667,37 @@ pub enum LayerDefinition {
     /// Shade
     Shade(ShadeDefinition),
 }
+impl From<FillDefinition> for LayerDefinition {
+    fn from(f: FillDefinition) -> Self {
+        LayerDefinition::Fill(f)
+    }
+}
 impl LayerDefinition {
+    /// Get the base layer definition
+    pub fn base(&self) -> &LayerDefinitionBase {
+        match self {
+            LayerDefinition::Fill(layer) => &layer.base,
+            LayerDefinition::Glyph(layer) => &layer.base,
+            LayerDefinition::Heatmap(layer) => &layer.base,
+            LayerDefinition::Hillshade(layer) => &layer.base,
+            LayerDefinition::Line(layer) => &layer.base,
+            LayerDefinition::Point(layer) => &layer.base,
+            LayerDefinition::Raster(layer) => &layer.base,
+            LayerDefinition::Sensor(layer) => &layer.base,
+            LayerDefinition::Shade(layer) => &layer.base,
+        }
+    }
+    /// Get the layer name
+    pub fn layer(&self) -> String {
+        self.base().name.clone()
+    }
     /// Get the source name
     pub fn source(&self) -> String {
-        match self {
-            LayerDefinition::Fill(layer) => layer.base.source.clone(),
-            LayerDefinition::Glyph(layer) => layer.base.source.clone(),
-            LayerDefinition::Heatmap(layer) => layer.base.source.clone(),
-            LayerDefinition::Hillshade(layer) => layer.base.source.clone(),
-            LayerDefinition::Line(layer) => layer.base.source.clone(),
-            LayerDefinition::Point(layer) => layer.base.source.clone(),
-            LayerDefinition::Raster(layer) => layer.base.source.clone(),
-            LayerDefinition::Sensor(layer) => layer.base.source.clone(),
-            LayerDefinition::Shade(layer) => layer.base.source.clone(),
-        }
+        self.base().source.clone()
     }
     /// Get the layer index
     pub fn layer_index(&self) -> u32 {
-        match self {
-            LayerDefinition::Fill(layer) => layer.base.layer_index,
-            LayerDefinition::Glyph(layer) => layer.base.layer_index,
-            LayerDefinition::Heatmap(layer) => layer.base.layer_index,
-            LayerDefinition::Hillshade(layer) => layer.base.layer_index,
-            LayerDefinition::Line(layer) => layer.base.layer_index,
-            LayerDefinition::Point(layer) => layer.base.layer_index,
-            LayerDefinition::Raster(layer) => layer.base.layer_index,
-            LayerDefinition::Sensor(layer) => layer.base.layer_index,
-            LayerDefinition::Shade(layer) => layer.base.layer_index,
-        }
+        self.base().layer_index
     }
 }
 impl Default for LayerDefinition {
@@ -4688,7 +4811,7 @@ pub enum GPUType {
 #[allow(missing_docs)]
 pub struct S2MapsAnalytics {
     pub gpu: String,
-    pub context: u8,
+    pub context: GPUType,
     pub language: String,
     pub width: u32,
     pub height: u32,
@@ -4708,10 +4831,10 @@ pub struct StylePackage {
     pub sprites: Sprites,
     pub images: BTreeMap<String, String>,
     pub layers: Vec<LayerDefinition>,
-    pub minzoom: u8,
-    pub maxzoom: u8,
+    pub minzoom: f64,
+    pub maxzoom: f64,
     #[serde(rename = "tileSize")]
-    pub tile_size: u32,
+    pub tile_size: u64,
     pub analytics: S2MapsAnalytics,
     pub experimental: bool,
     #[serde(rename = "apiKey", skip_serializing_if = "Option::is_none")]
@@ -4864,6 +4987,41 @@ pub struct TimeSeriesStyle {
 
 // STYLE DEFINITION //
 
+/// # MapOptions Style Input
+///
+/// Either an href pointing to the Style object or the style object itself
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum MapStyleInput {
+    /// href
+    Href(String),
+    /// Style Definition
+    Style(StyleDefinition),
+}
+impl From<String> for MapStyleInput {
+    fn from(href: String) -> Self {
+        MapStyleInput::Href(href)
+    }
+}
+impl From<StyleDefinition> for MapStyleInput {
+    fn from(style: StyleDefinition) -> Self {
+        MapStyleInput::Style(style)
+    }
+}
+impl MapStyleInput {
+    /// Get the projection of the style. If it's still in href form return nothing
+    pub fn projection(&self) -> Option<Projection> {
+        match self {
+            MapStyleInput::Href(_) => None,
+            MapStyleInput::Style(style) => style.projection,
+        }
+    }
+}
+impl Default for MapStyleInput {
+    fn default() -> Self {
+        MapStyleInput::Href(String::default())
+    }
+}
+
 /// # STYLE DEFINITION
 ///
 /// ### Description
@@ -4935,10 +5093,10 @@ pub struct StyleDefinition {
     pub z_far: Option<f64>,
     /// The furthest away from the planet you allow
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub minzoom: Option<u8>,
+    pub minzoom: Option<f64>,
     /// The closest you allow the camera to get to the planet
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub maxzoom: Option<u8>,
+    pub maxzoom: Option<f64>,
     /// Strictly a WM Projection property. Force the view to fill.
     /// Defaults to `false`.
     #[serde(rename = "constrainZoomToFill", skip_serializing_if = "Option::is_none")]

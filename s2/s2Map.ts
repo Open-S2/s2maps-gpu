@@ -168,7 +168,7 @@ export default class S2Map extends EventTarget {
   #canvasContainer!: HTMLElement;
   // #navigationContainer!: HTMLElement;
   readonly #canvasMultiplier: number;
-  readonly #canvas: HTMLCanvasElement;
+  readonly #canvas: HTMLCanvasElement | HTMLDivElement;
   #attributionPopup?: HTMLDivElement;
   // #watermark?: HTMLAnchorElement;
   #compass?: HTMLElement;
@@ -256,7 +256,7 @@ export default class S2Map extends EventTarget {
    * @param options - MapOptions
    * @returns the canvas container element
    */
-  #setupContainer(options: MapOptions): HTMLCanvasElement {
+  #setupContainer(options: MapOptions): HTMLCanvasElement | HTMLDivElement {
     if (this.#container === undefined) throw new Error('Container not found.');
     // prep container
     const container = this.#container;
@@ -266,13 +266,22 @@ export default class S2Map extends EventTarget {
     const canvasContainer = (this.#canvasContainer = window.document.createElement('div'));
     canvasContainer.className = 's2-canvas-container';
     container.prepend(canvasContainer);
-    // build canvas
-    const canvas = window.document.createElement('canvas');
+    // build canvas if not using DOM
+    const canvas =
+      options.contextType === 0
+        ? window.document.createElement('div')
+        : window.document.createElement('canvas');
+
     canvas.className = 's2-canvas';
     canvas.setAttribute('tabindex', '0');
     canvas.setAttribute('aria-label', 'S2Map');
-    canvas.width = container.clientWidth * this.#canvasMultiplier;
-    canvas.height = container.clientHeight * this.#canvasMultiplier;
+    canvas.style.position = 'absolute';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    if (canvas instanceof HTMLCanvasElement) {
+      canvas.width = container.clientWidth * this.#canvasMultiplier;
+      canvas.height = container.clientHeight * this.#canvasMultiplier;
+    }
     canvasContainer.appendChild(canvas);
 
     return canvas;
@@ -283,7 +292,10 @@ export default class S2Map extends EventTarget {
    * @param canvas - HTMLCanvasElement
    * @param options - MapOptions
    */
-  async #setupCanvas(canvas: HTMLCanvasElement, options: MapOptions): Promise<void> {
+  async #setupCanvas(
+    canvas: HTMLCanvasElement | HTMLDivElement,
+    options: MapOptions,
+  ): Promise<void> {
     const isBrowser = options.canvas === undefined;
     // prep the ready function should it exist
     // prep webgpu/webgl type
@@ -294,7 +306,7 @@ export default class S2Map extends EventTarget {
       options.offscreen !== false &&
       options.contextType !== 0 &&
       !isSafari(window) &&
-      typeof canvas.transferControlToOffscreen === 'function'
+      'transferControlToOffscreen' in canvas
     ) {
       const offscreenCanvas = canvas.transferControlToOffscreen();
       const mapWorker = (this.offscreen = new Worker(
@@ -351,7 +363,7 @@ export default class S2Map extends EventTarget {
 
   /** If mouse leaves the canvas, clear out any features considered "active" */
   #onCanvasMouseLeave(): void {
-    this.#canvas.style.cursor = 'default';
+    this.#canvasContainer.style.cursor = 'default';
     this.dispatchEvent(new CustomEvent('mouseleave', { detail: null }));
   }
 
@@ -558,11 +570,11 @@ export default class S2Map extends EventTarget {
       window.S2WorkerPool.timeRequest(mapID, data.tiles, data.sourceNames);
     } else if (type === 'mouseenter') {
       const { features } = data;
-      this.#canvas.style.cursor = features[0]?.__cursor ?? 'default';
+      this.#canvasContainer.style.cursor = features[0]?.__cursor ?? 'default';
       this.dispatchEvent(new CustomEvent('mouseenter', { detail: data as MouseEnterMessage }));
     } else if (type === 'mouseleave') {
       const { currentFeatures } = data;
-      if (currentFeatures.length === 0) this.#canvas.style.cursor = 'default';
+      if (currentFeatures.length === 0) this.#canvasContainer.style.cursor = 'default';
       this.dispatchEvent(new CustomEvent('mouseleave', { detail: data as MouseLeaveMessage }));
     } else if (type === 'click') {
       this.dispatchEvent(new CustomEvent('click', { detail: data as MouseClickMessage }));
@@ -657,7 +669,7 @@ export default class S2Map extends EventTarget {
     event.preventDefault();
     const { map, offscreen } = this;
     const { clientX, clientY, deltaY } = event;
-    const rect = this.#canvas.getBoundingClientRect();
+    const rect = this.#canvasContainer.getBoundingClientRect();
     offscreen?.postMessage({ type: 'scroll', rect, clientX, clientY, deltaY });
     map?.onZoom(deltaY, clientX - rect.left, clientY - rect.top);
   }
@@ -679,7 +691,7 @@ export default class S2Map extends EventTarget {
     window.addEventListener(
       'mouseup',
       (e) => {
-        const rect = this.#canvas.getBoundingClientRect();
+        const rect = this.#canvasContainer.getBoundingClientRect();
         const { clientX, clientY } = e;
         window.removeEventListener('mousemove', mouseMoveFunc);
         offscreen?.postMessage({ type: 'mouseup', clientX, clientY, rect });

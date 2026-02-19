@@ -2486,13 +2486,13 @@ export interface HeatmapStyle extends LayerStyleBase {
    * { "radius": { "inputValue": { "key": "size", "fallback": 3.5 } } }
    * ```
    *
-   * ### Your list of {@link Property} options are:
+   * ### Your list of [{@link Property}] options are:
    * - `inputValue`: [See {@link InputValue}] access value in feature properties
    * - `dataCondition`: [See {@link DataCondition}] filter based on feature property conditions
    * - `dataRange`: [See {@link DataRange}] filter based on feature property ranges
    * - `inputRange`: [See {@link InputRange}] filter based on map conditions like "zoom", "lon", "lat", "angle", or "pitch"
    * - `featureState`: [See {@link FeatureState}] filter based on feature state
-   * - `fallback`: if all else fails, use this value. A value of `number` itself or pull from feature properties using {@link Property}
+   * - `fallback`: if all else fails, use this value. A value of `number` itself or pull from feature properties using [{@link Property}]
    */
   radius?: number | Property<number>;
   /**
@@ -3626,8 +3626,10 @@ export interface HillshadeWorkflowLayerGuide extends LayerWorkflowGuideBase {
   unpack: UnpackData;
 }
 /** An extension to the hillshade workflow layer guide for WebGPU */
-export interface HillshadeWorkflowLayerGuideGPU
-  extends Omit<HillshadeWorkflowLayerGuide, 'unpack'> {
+export interface HillshadeWorkflowLayerGuideGPU extends Omit<
+  HillshadeWorkflowLayerGuide,
+  'unpack'
+> {
   layerBuffer: GPUBuffer;
   layerCodeBuffer: GPUBuffer;
   unpackBuffer: GPUBuffer;

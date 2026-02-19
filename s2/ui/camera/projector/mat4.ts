@@ -146,8 +146,6 @@ export function perspective(
  */
 export function lookAt(eye: VectorPoint, up: VectorPoint): Float32Array {
   const m = new Float32Array(16);
-  let x0: number, x1: number, x2: number, y0: number, y1: number;
-  let y2: number, z0: number, z1: number, z2: number, len: number;
   const eyex = eye.x;
   const eyey = eye.y;
   const eyez = eye.z!;
@@ -155,16 +153,16 @@ export function lookAt(eye: VectorPoint, up: VectorPoint): Float32Array {
   const upy = up.y;
   const upz = up.z!;
 
-  z0 = eyex;
-  z1 = eyey;
-  z2 = eyez;
-  len = 1 / Math.hypot(z0, z1, z2);
+  let z0 = eyex;
+  let z1 = eyey;
+  let z2 = eyez;
+  let len = 1 / Math.hypot(z0, z1, z2);
   z0 *= len;
   z1 *= len;
   z2 *= len;
-  x0 = upy * z2 - upz * z1;
-  x1 = upz * z0 - upx * z2;
-  x2 = upx * z1 - upy * z0;
+  let x0 = upy * z2 - upz * z1;
+  let x1 = upz * z0 - upx * z2;
+  let x2 = upx * z1 - upy * z0;
   len = Math.hypot(x0, x1, x2);
 
   if (len === 0) {
@@ -178,9 +176,9 @@ export function lookAt(eye: VectorPoint, up: VectorPoint): Float32Array {
     x2 *= len;
   }
 
-  y0 = z1 * x2 - z2 * x1;
-  y1 = z2 * x0 - z0 * x2;
-  y2 = z0 * x1 - z1 * x0;
+  let y0 = z1 * x2 - z2 * x1;
+  let y1 = z2 * x0 - z0 * x2;
+  let y2 = z0 * x1 - z1 * x0;
   len = Math.hypot(y0, y1, y2);
 
   if (len === 0) {

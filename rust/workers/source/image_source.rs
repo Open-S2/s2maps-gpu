@@ -1,14 +1,19 @@
-// import type { Glyph } from 'workers/process/glyph/familySource.js';
-// import type { ImageExtensions } from 'style/style.spec.js';
-// import type Session from './session.js';
-// import type { SpriteImageMessage } from 'workers/worker.spec.js';
-// import type TexturePack from './texturePack.js';
-use crate::workers::Glyph;
-use alloc::{collections::btree_map::BTreeMap, string::String};
+use crate::{
+    util::{
+        ImageBitmapOptions, ImageOrientation, MsgSender, PremultiplyAlpha, create_image_bitmap,
+    },
+    workers::{
+        Glyph, MapID, Session, SourceWorkerMessage, SourceWorkerMessageOutput, SpriteImageMessage,
+        TexturePack,
+    },
+};
+use alloc::{collections::btree_map::BTreeMap, rc::Rc, string::String};
+use core::cell::RefCell;
+use gistools::util::fetch_url;
 
-/** Metadata for an image source */
+/// Metadata for an image source
 pub type ImageMetadata = BTreeMap<String, Glyph>;
-/** Full metadata for an image source including name */
+/// Full metadata for an image source including name
 #[derive(Debug, Clone, PartialEq)]
 pub struct ImageSourceMetadata {
     /// The name of the source
@@ -17,140 +22,148 @@ pub struct ImageSourceMetadata {
     pub metadata: ImageMetadata,
 }
 
-// /**
-//  * # ImageSource
-//  *
-//  * ## Description
-//  * A collection of images relating to a single source
-//  */
-// export default class ImageSource {
-//   active = true;
-//   name: String,
-//   path: String,
-//   fileType: ImageExtensions = 'png';
-//   metadata: ImageMetadata = {};
-//   session: Session;
-//   texturePack: TexturePack;
+/// # ImageSource
+///
+/// ## Description
+/// A collection of images relating to a single source
+#[derive(Debug)]
+#[allow(missing_docs)]
+pub struct ImageSource {
+    pub active: bool,
+    pub name: String,
+    pub path: String,
+    pub file_type: String,
+    pub metadata: ImageMetadata,
+    pub session: Rc<RefCell<Session>>,
+    pub texture_pack: Rc<TexturePack>,
+    pub source_worker: MsgSender<SourceWorkerMessageOutput>,
+}
+impl ImageSource {
+    /// Create a new image source
+    ///
+    /// ## Parameters
+    /// - `name`: the name of the source
+    /// - `path`: the path to the source
+    /// - `texture_pack`: the texture pack to store the glyphs/images into
+    /// - `session`: the session
+    /// - `file_type`: the file type
+    pub fn new(
+        name: String,
+        path: String,
+        texture_pack: Rc<TexturePack>,
+        session: Rc<RefCell<Session>>,
+        file_type: Option<String>,
+        source_worker: MsgSender<SourceWorkerMessageOutput>,
+    ) -> Self {
+        Self {
+            active: true,
+            name,
+            path,
+            file_type: file_type.unwrap_or("png".into()),
+            metadata: BTreeMap::new(),
+            session,
+            texture_pack,
+            source_worker,
+        }
+    }
 
-//   /**
-//    * @param name - the name of the source
-//    * @param path - the path to the source
-//    * @param texturePack - the texture pack to store the glyphs/images into
-//    * @param session - the session
-//    * @param fileType - the file type
-//    */
-//   constructor(
-//     name: string,
-//     path: string,
-//     texturePack: TexturePack,
-//     session: Session,
-//     fileType?: ImageExtensions,
-//   ) {
-//     this.name = name;
-//     this.path = path;
-//     this.texturePack = texturePack;
-//     this.session = session;
-//     if (fileType !== undefined) this.fileType = fileType;
-//   }
+    /// Add an image to the source collection
+    ///
+    /// ## Parameters
+    /// - `map_id`: the id of the map to build for
+    /// - `name`: the name of the image
+    /// - `path`: the path to the image
+    ///
+    /// ## Returns
+    /// The image metadata if successful
+    pub async fn add_image(
+        &mut self,
+        map_id: MapID,
+        name: String,
+        path: String,
+    ) -> Option<ImageSourceMetadata> {
+        // grab the metadata and sprites
+        let data = self._fetch(path, map_id).await;
+        // if either failed, stop their
+        if data.is_none() {
+            self.active = false;
+            // panic!("Failed to fetch sprite source {name}");
+            return None;
+        }
+        let data = data.unwrap();
+        let mut image_metadata = Glyph {
+            code: name.clone(),
+            tex_x: 0.,
+            tex_y: 0.,
+            tex_w: 0.,
+            tex_h: 0.,
+            x_offset: 0.,
+            y_offset: 0.,
+            width: 0.,
+            height: 0.,
+            advance_width: 0.,
+        };
+        // prebuild the sprite sheet if possible
+        let image = create_image_bitmap(
+            data,
+            Some(ImageBitmapOptions {
+                premultiply_alpha: PremultiplyAlpha::None,
+                image_orientation: ImageOrientation::FlipY,
+            }),
+        )
+        .await
+        .ok()
+        .unwrap();
+        // update metadata width and height
+        image_metadata.width = image.width as f32;
+        image_metadata.height = image.height as f32;
+        image_metadata.tex_w = image.width as f32;
+        image_metadata.tex_h = image.height as f32;
+        // get offsets from texture_pack
+        let (offset_x, offset_y) = self.texture_pack.add_glyph(image.width, image.height);
+        // update image_metadata x and y
+        image_metadata.tex_x = offset_x as f32;
+        image_metadata.tex_y = offset_y as f32;
+        // store the metadata
+        self.metadata.insert(name, image_metadata);
 
-//   /**
-//    * Build the source
-//    * @param _mapID - the id of the map to build for
-//    * @returns the image metadata (we don't need to early ship this)
-//    */
-//   async build(_mapID: string): Promise<undefined | ImageSourceMetadata> {
-//     return await undefined;
-//   }
+        // ship the sprites to the map
+        self.source_worker
+            .send(SourceWorkerMessageOutput {
+                map_id,
+                message: SourceWorkerMessage::SpriteImage(SpriteImageMessage {
+                    name: self.name.clone(),
+                    offset_x,
+                    offset_y,
+                    width: image.width,
+                    height: image.height,
+                    max_height: self.texture_pack.height(),
+                    image,
+                }),
+            })
+            .await;
+        Some(ImageSourceMetadata { name: self.name.clone(), metadata: self.metadata.clone() })
+    }
 
-//   /**
-//    * Add an image to the source collection
-//    * @param mapID - the id of the map to build for
-//    * @param name - the name of the image
-//    * @param path - the path to the image
-//    * @returns the image metadata if successful
-//    */
-//   async addImage(
-//     mapID: string,
-//     name: string,
-//     path: string,
-//   ): Promise<undefined | ImageSourceMetadata> {
-//     const { metadata, texturePack } = this;
-//     // grab the metadata and sprites
-//     const data = await this._fetch<ArrayBuffer>(path, mapID).catch((err) => {
-//       console.error(err);
-//       return undefined;
-//     });
-//     // if either failed, stop their
-//     if (data === undefined) {
-//       this.active = false;
-//       console.error(`Failed to fetch sprite source ${name}`);
-//     } else {
-//       const imageMetadata: Glyph = {
-//         code: name,
-//         texX: 0,
-//         texY: 0,
-//         texW: 0,
-//         texH: 0,
-//         xOffset: 0,
-//         yOffset: 0,
-//         width: 0,
-//         height: 0,
-//         advanceWidth: 0,
-//       };
-//       // prebuild the sprite sheet if possible
-//       const image = await createImageBitmap(new Blob([data]), {
-//         premultiplyAlpha: 'none',
-//         imageOrientation: 'flipY',
-//       });
-//       // update metadata width and height
-//       imageMetadata.width = image.width;
-//       imageMetadata.height = image.height;
-//       imageMetadata.texW = image.width;
-//       imageMetadata.texH = image.height;
-//       // get offsets from texturePack
-//       const [offsetX, offsetY] = texturePack.addGlyph(imageMetadata.width, imageMetadata.height);
-//       // update imageMetadata x and y
-//       imageMetadata.texX = offsetX;
-//       imageMetadata.texY = offsetY;
-//       // store the metadata
-//       metadata[name] = imageMetadata;
-
-//       // ship the sprites to the map
-//       const spriteImageMessage: SpriteImageMessage = {
-//         type: 'spriteimage',
-//         mapID,
-//         name: this.name,
-//         offsetX,
-//         offsetY,
-//         width: imageMetadata.width,
-//         height: imageMetadata.height,
-//         maxHeight: texturePack.height,
-//         image,
-//       };
-//       postMessage(spriteImageMessage, [image]);
-//     }
-//     return { name: this.name, metadata };
-//   }
-
-//   /**
-//    * Fetch an image
-//    * @param path - the path to the image or metadata
-//    * @param mapID - the id of the map
-//    * @returns the image or metadata
-//    */
-//   async _fetch<T>(path: string, mapID: string): Promise<undefined | T> {
-//     const { session } = this;
-//     const headers: { Authorization?: string } = {};
-//     if (session.hasAPIKey(mapID)) {
-//       const Authorization = await session.requestSessionToken(mapID);
-//       if (Authorization === 'failed') return;
-//       if (Authorization !== undefined) headers.Authorization = Authorization;
-//     }
-//     const res = await fetch(path, { headers });
-//     if (res.status !== 200 && res.status !== 206) return;
-//     if (path.endsWith('json') || res.headers.get('content-type') === 'application/json') {
-//       return await res.json();
-//     }
-//     return (await res.arrayBuffer()) as unknown as Promise<T>;
-//   }
-// }
+    /// Fetch an image
+    ///
+    /// ## Parameters
+    /// - `path`: the path to the image or metadata
+    /// - `map_id`: the id of the map
+    ///
+    /// ## Returns
+    /// The image or metadata
+    async fn _fetch(&mut self, path: String, map_id: MapID) -> Option<Vec<u8>> {
+        let mut headers: Vec<(&str, &str)> = vec![];
+        let authorization: Option<String>;
+        let session = &mut self.session.borrow_mut();
+        if session.has_api_key(&map_id) {
+            authorization = session.request_session_token(map_id).await;
+            if authorization.is_none() || authorization == Some("failed".into()) {
+                return None;
+            }
+            headers.push(("Authorization", authorization.as_ref().unwrap().as_str()));
+        }
+        fetch_url::<Vec<u8>>(&path, &headers, None, None).await.ok()
+    }
+}

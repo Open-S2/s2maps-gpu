@@ -314,7 +314,7 @@ interface FrebRes {
  * get base, reverse index map from extra bits
  * @param eb - extra bits
  * @param start - start
- * @returns - {b, r}
+ * @returns `{b, r}`
  */
 function freb(eb: Uint8Array, start: number): FrebRes {
   const b = new Uint16Array(31);

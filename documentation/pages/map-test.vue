@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { VueS2MapGPU } from 's2maps-gpu/frameworks'
-import type { MapOptions, StyleDefinition } from 's2maps-gpu'
+import { VueS2MapGPU } from 's2maps-gpu/frameworks';
+import type { MapOptions, StyleDefinition } from 's2maps-gpu';
 // setup map style
 const style: StyleDefinition = {
   version: 1,
@@ -8,12 +8,12 @@ const style: StyleDefinition = {
   view: {
     lon: -90,
     lat: 0,
-    zoom: -0.4
+    zoom: -0.4,
   },
   minzoom: -1,
   maxzoom: 2.5,
   sources: {
-    hilbert: '/s2json/hilbert.s2json'
+    hilbert: '/s2json/hilbert.s2json',
   },
   layers: [
     {
@@ -22,22 +22,22 @@ const style: StyleDefinition = {
       filter: {
         and: [
           { key: 'class', value: 'hilbert', comparator: '==' },
-          { key: 'level', value: 4, comparator: '==' }
-        ]
+          { key: 'level', value: 4, comparator: '==' },
+        ],
       },
       type: 'line',
       cap: 'butt',
       join: 'bevel',
       color: '#475569',
-      width: 3
-    }
-  ]
-}
-const mapOptions: MapOptions = { style, offscreen: false }
+      width: 3,
+    },
+  ],
+};
+const mapOptions: MapOptions = { style, offscreen: false };
 </script>
 
 <template>
   <div>
-    <VueS2MapGPU :map-options=mapOptions build="prod" />
+    <VueS2MapGPU :map-options="mapOptions" build="prod" />
   </div>
 </template>

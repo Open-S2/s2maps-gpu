@@ -81,7 +81,8 @@ function parseHex(input: string): ColorDefinition {
  */
 function parseString(input: string): ColorDefinition {
   // seperate type and values
-  let [type, values] = input.split('(');
+  const [_type, values] = input.split('(');
+  let type = _type;
   // cleanup values & parse numbers
   const nums = values.split(')')[0].split(',').map(Number);
   // if no alpha type present, add alpha number

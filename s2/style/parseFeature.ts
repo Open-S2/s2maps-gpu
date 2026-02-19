@@ -35,6 +35,7 @@ export type Callback<T extends NotNullOrObject, U> = (i: T) => U;
  */
 export default function parseFeature<T extends NotNullOrObject, U = T>(
   input: ValueType<T> | Property<ValueType<T>>,
+  // oxlint-disable-next-line jsdoc/require-param
   cb: Callback<T, U> = (i: T): U => i as unknown as U,
 ): LayerWorkerFunction<U> {
   if (typeof input === 'object' && !Array.isArray(input)) {

@@ -87,7 +87,6 @@ export interface TileBase<C, F, M> {
   dependents: Array<TileBase<C, F, M>>;
   matrix: Float32Array;
 
-  context: C;
   featureGuides: F[];
   mask: M;
 
@@ -106,7 +105,7 @@ export interface TileBase<C, F, M> {
   injectParentTile: (parent: TileBase<C, F, M>, layers: LayerDefinition[]) => void;
   injectWrappedTile: (wrapped: TileBase<C, F, M>) => void;
   // given a matrix, compute the corners screen positions
-  setScreenPositions: (projector: Projector) => void;
+  setScreenPositions: (projector: Projector, context: C) => void;
   addFeatures: (features: F[]) => void;
 
   // cleanup after itself. When a tile is deleted, it's adventageous to cleanup GPU cache.

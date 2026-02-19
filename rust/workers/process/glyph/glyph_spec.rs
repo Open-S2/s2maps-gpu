@@ -132,7 +132,8 @@ pub struct GlyphBase {
     // paint
     pub size: f32,
     /// grouped sets of: [s, t, xOffset, yOffset, xPos, yPos, width, height, texX, texY, texWidth, texHeight]
-    pub quads: Vec<GlyphQuad>,
+    // pub quads: Vec<GlyphQuad>,
+    pub quads: Vec<f32>,
     /// if icon add to color
     /// grouped sets of: [r, g, b, a]
     pub color: Vec<f32>,

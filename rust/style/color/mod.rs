@@ -23,6 +23,16 @@ impl From<ColorArray> for u32 {
         ((r * 255.0) as u32) << 16 | ((g * 255.0) as u32) << 8 | (b * 255.0) as u32
     }
 }
+impl From<(u8, u8, u8, u8)> for ColorArray {
+    fn from(color: (u8, u8, u8, u8)) -> ColorArray {
+        ColorArray(
+            color.0 as f64 / 255.0,
+            color.1 as f64 / 255.0,
+            color.2 as f64 / 255.0,
+            color.3 as f64 / 255.0,
+        )
+    }
+}
 impl From<u32> for ColorArray {
     /// Create a ColorArray from u32
     fn from(color: u32) -> ColorArray {

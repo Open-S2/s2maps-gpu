@@ -1,7 +1,4 @@
 {
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=827846
-    "recommendations": [
-      "ms-playwright.playwright",
-      "esbenp.prettier-vscode"
-    ]
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=827846
+  "recommendations": ["ms-playwright.playwright", "esbenp.prettier-vscode"]
 }

@@ -32,7 +32,7 @@
 extern crate alloc;
 
 /// Rendering Tools
-pub mod gpu;
+pub mod render;
 /// The S2 Map GPU Engine
 pub mod s2map;
 /// Source Data

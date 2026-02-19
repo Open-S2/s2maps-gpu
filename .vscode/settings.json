@@ -1,18 +1,25 @@
 {
-    "typescript.tsdk": "node_modules/typescript/lib",
-    "eslint.useFlatConfig": true,
-    "files.associations": {
-        "*.css": "tailwindcss"
-    },
-    "editor.quickSuggestions": {
-        "strings": "on"
-    },
-    "tailwindCSS.classAttributes": ["class", "ui"],
-    "tailwindCSS.experimental.classRegex": [
-        ["ui:\\s*{([^)]*)\\s*}", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
-    ],
-    "editor.tokenColorCustomizations": {
-        "comments": "",
-        "textMateRules": []
-    }
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "eslint.useFlatConfig": true,
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  "editor.quickSuggestions": {
+    "strings": "on"
+  },
+  "tailwindCSS.classAttributes": ["class", "ui"],
+  "tailwindCSS.experimental.classRegex": [["ui:\\s*{([^)]*)\\s*}", "(?:'|\"|`)([^']*)(?:'|\"|`)"]],
+  // "editor.tokenColorCustomizations": {
+  //   "comments": "",
+  //   "textMateRules": []
+  // },
+  "editor.defaultFormatter": "oxc.oxc-vscode",
+  "editor.formatOnSave": true,
+  "oxc.fmt.configPath": ".oxfmtrc.json",
+  "[javascript]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode"
+  }
 }

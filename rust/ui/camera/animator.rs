@@ -1,12 +1,11 @@
-use core::f64::consts::LN_2;
-
-use crate::ui::{Camera, Projector, TileInView, Vec4, View};
+use crate::ui::{Camera, Projector, RequiredView, TileID, TileInView, Vec4};
 use alloc::{
     collections::{btree_map::BTreeMap, btree_set::BTreeSet, vec_deque::VecDeque},
     vec,
     vec::Vec,
 };
-use gistools::{geometry::CellId, tools::Orthodrome};
+use core::f64::consts::LN_2;
+use gistools::tools::Orthodrome;
 use libm::{cosh, exp, fabs, fmax, log, pow, round, sinh, sqrt, tanh};
 use s2json::Point;
 use serde::{Deserialize, Serialize};
@@ -83,7 +82,7 @@ pub enum AnimationType {
 #[allow(missing_docs)]
 pub struct IncrementResponse {
     pub finished: bool,
-    pub position: View,
+    pub position: RequiredView,
 }
 
 /// Animation Increment tool
@@ -286,7 +285,7 @@ impl Animator {
     /// Internal function to early request tiles we know we will need
     fn build_future_tile_list(&mut self, camera: &mut Camera) {
         let Self { end_lon, end_lat, end_zoom, end_bearing, end_pitch, duration, .. } = *self;
-        let mut tile_set: BTreeSet<CellId> =
+        let mut tile_set: BTreeSet<TileID> =
             camera.get_tiles().iter().map(|tile| tile.id).collect();
         let mut new_tiles = BTreeMap::new();
         let mut tiles_found;
@@ -297,19 +296,22 @@ impl Animator {
                 low: 0.,
                 high: duration,
                 pos: duration,
-                tiles: camera.projector.get_tiles_at_position(View {
-                    lon: end_lon,
-                    lat: end_lat,
-                    zoom: end_zoom,
-                    bearing: end_bearing,
-                    pitch: end_pitch,
-                }),
+                tiles: camera.projector.get_tiles_at_position(
+                    (RequiredView {
+                        lon: end_lon,
+                        lat: end_lat,
+                        zoom: end_zoom,
+                        bearing: end_bearing,
+                        pitch: end_pitch,
+                    })
+                    .into(),
+                ),
             },
             TileBatch {
                 low: 0.,
                 high: duration,
                 pos: duration / 2.,
-                tiles: camera.projector.get_tiles_at_position(mid_pos),
+                tiles: camera.projector.get_tiles_at_position(mid_pos.into()),
             },
         ]);
         // keep diving / spliting while tested tiles are not equal to
@@ -339,13 +341,13 @@ impl Animator {
                     low,
                     high: pos,
                     pos: low_pos_half,
-                    tiles: camera.projector.get_tiles_at_position(low_pos),
+                    tiles: camera.projector.get_tiles_at_position(low_pos.into()),
                 });
                 batch.push_back(TileBatch {
                     low: pos,
                     high,
                     pos: pos_high_half,
-                    tiles: camera.projector.get_tiles_at_position(pos_high),
+                    tiles: camera.projector.get_tiles_at_position(pos_high.into()),
                 });
             }
         }
@@ -403,7 +405,7 @@ impl AnimationIncrementor for ZoomTo {
         if time >= duration {
             IncrementResponse {
                 finished: true,
-                position: View {
+                position: RequiredView {
                     lon: end_lon,
                     lat: end_lat,
                     zoom: end_zoom,
@@ -414,7 +416,7 @@ impl AnimationIncrementor for ZoomTo {
         } else {
             IncrementResponse {
                 finished: false,
-                position: View {
+                position: RequiredView {
                     lon: ease_out_expo(time, start_lon, delta_lon, duration),
                     lat: ease_out_expo(time, start_lat, delta_lat, duration),
                     zoom: ease_out_expo(time, start_zoom, delta_zoom, duration),
@@ -461,7 +463,7 @@ impl AnimationIncrementor for EaseTo {
         if time >= duration {
             IncrementResponse {
                 finished: true,
-                position: View {
+                position: RequiredView {
                     lon: end_lon,
                     lat: end_lat,
                     zoom: end_zoom,
@@ -474,7 +476,7 @@ impl AnimationIncrementor for EaseTo {
                 self.orthodrome.intermediate_point((self.ease)(time, 0., 1., duration));
             IncrementResponse {
                 finished: false,
-                position: View {
+                position: RequiredView {
                     lon,
                     lat,
                     zoom: (self.ease)(time, start_zoom, delta_zoom, duration),
@@ -507,7 +509,7 @@ impl AnimationIncrementor for CompassTo {
         if time >= duration {
             IncrementResponse {
                 finished: true,
-                position: View {
+                position: RequiredView {
                     lon: end_lon,
                     lat: end_lat,
                     zoom: end_zoom,
@@ -518,7 +520,7 @@ impl AnimationIncrementor for CompassTo {
         } else {
             IncrementResponse {
                 finished: false,
-                position: View {
+                position: RequiredView {
                     lon: end_lon,
                     lat: end_lat,
                     zoom: end_zoom,
@@ -642,7 +644,7 @@ impl AnimationIncrementor for FlyTo {
         if time >= duration {
             IncrementResponse {
                 finished: true,
-                position: View {
+                position: RequiredView {
                     lon: end_lon,
                     lat: end_lat,
                     zoom: end_zoom,
@@ -657,7 +659,7 @@ impl AnimationIncrementor for FlyTo {
             let Point(lon, lat) = self.orthodrome.intermediate_point(u_s);
             IncrementResponse {
                 finished: false,
-                position: View {
+                position: RequiredView {
                     lon,
                     lat,
                     zoom: start_zoom + log(cur_scale) / LN_2,

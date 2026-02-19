@@ -49,16 +49,6 @@ impl From<&[Point]> for Path {
         Path { first: value[0], second: value[1], third: value[2], fourth: value[3] }
     }
 }
-// impl From<&[VectorPoint]> for Path {
-//     fn from(value: &[VectorPoint]) -> Self {
-//         Path {
-//             first: (&value[0]).into(),
-//             second: (&value[1]).into(),
-//             third: (&value[2]).into(),
-//             fourth: (&value[3]).into(),
-//         }
-//     }
-// }
 
 /** An output of getPointsAndPaths */
 #[derive(Debug, Clone, PartialEq)]

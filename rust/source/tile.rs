@@ -1,529 +1,580 @@
-// import { project } from 'ui/camera/projector/mat4.js';
-// import {
-//   bboxST,
-//   llToTilePx,
-//   pointFromSTGL,
-//   pointMulScalar,
-//   pointNormalize,
-//   pointSub,
-// } from 'gis-tools/index.js';
-
-// import type { DOMContext } from 's2/dom/context.js';
-// import type { Context as WebGLContext } from 'gl/context/index.js';
-// import type { WebGPUContext } from 'gpu/context/index.js';
-// import type { BBox, Face, CellId } from 'gis-tools/index.js';
-// import type {
-//   Corners,
-//   FaceST,
-//   SharedContext,
-//   SharedFeatures,
-//   SharedMaskSource,
-//   TileShared,
-//   TileBase as TileSpec,
-// } from './tile.spec.js';
-// import type {
-//   InteractiveObject,
-//   SourceFlushMessage,
-//   TileFlushMessage,
-// } from 'workers/worker.spec.js';
-// import type { LayerDefinition, Projection } from 'style/style.spec.js';
-// import type { Projector, TileInView, TmpWMID } from 'ui/camera/projector/index.js';
-
-// /**
-//  * Create a new Tile given the approprate projection, context and ID.
-//  * @param projection - the projection type (WM or S2)
-//  * @param context - the GPU or WebGL context
-//  * @param tileInfo - the tile identifier
-//  * @returns the new Tile object
-//  */
-// export function createTile(
-//   projection: Projection,
-//   context: WebGPUContext | WebGLContext | DOMContext,
-//   tileInfo: TileInView,
-// ): TileShared {
-//   const Tile = projection === 'S2' ? S2Tile : WMTile;
-//   return new Tile(context as unknown as SharedContext, tileInfo) as unknown as TileShared;
-// }
-
-use crate::gpu::{Features, FillOrMaskSource};
-use alloc::rc::Rc;
+use crate::{
+    render::{FeatureSpec, Features, RenderContext, TileMaskSource},
+    style::{LayerDefinition, Projection},
+    ui::{Mat4, MatrixType, Projector, TileID, TileInView, Vec4},
+    workers::{FlushMessage, InteractiveObject, SourceFlushMessage, TileFlushMessage},
+};
+use alloc::{
+    collections::{BTreeMap, BTreeSet},
+    rc::Rc,
+};
+use bytemuck::{Pod, Zeroable};
 use core::cell::RefCell;
-use gistools::geometry::CellId;
-use s2json::Face;
+use gistools::geometry::{S2CellId, S2Point, ll_to_tile_px};
+use libm::pow;
+use s2json::{BBox, Point};
+
+/// A tile's 4 corners.
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Pod, Zeroable)]
+#[allow(missing_docs)]
+pub struct Corners {
+    pub top_left: Vec4,
+    pub top_right: Vec4,
+    pub bottom_left: Vec4,
+    pub bottom_right: Vec4,
+}
+impl Corners {
+    /// create a new set of corners
+    pub fn new(face: u8, bbox: &BBox) -> Self {
+        let BBox { left, top, right, bottom } = *bbox;
+        let mut tl_point = S2Point::from_face_st_gl(face, left, top);
+        tl_point.normalize();
+        tl_point *= 6371008.8;
+        let mut tr_point = S2Point::from_face_st_gl(face, right, top);
+        tr_point.normalize();
+        tr_point *= 6371008.8;
+        let mut bl_point = S2Point::from_face_st_gl(face, left, bottom);
+        bl_point.normalize();
+        bl_point *= 6371008.8;
+        let mut br_point = S2Point::from_face_st_gl(face, right, bottom);
+        br_point.normalize();
+        br_point *= 6371008.8;
+        Self {
+            top_left: (&tl_point).into(),
+            top_right: (&tr_point).into(),
+            bottom_left: (&bl_point).into(),
+            bottom_right: (&br_point).into(),
+        }
+    }
+}
+
+/// A FaceST that will be encoded into the GPU
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Pod, Zeroable)]
+#[allow(missing_docs)]
+pub struct FaceST {
+    pub face: f64,
+    pub zoom: f64,
+    pub s_low: f64,
+    pub delta_s: f64,
+    pub t_low: f64,
+    pub delta_t: f64,
+}
+impl FaceST {
+    /// Create a new FaceST
+    pub fn new(face: u8, zoom: u8, bbox: BBox) -> Self {
+        Self {
+            face: face as f64,
+            zoom: zoom as f64,
+            s_low: bbox.left,
+            delta_s: bbox.right - bbox.left,
+            t_low: bbox.bottom,
+            delta_t: bbox.top - bbox.bottom,
+        }
+    }
+}
+
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[allow(missing_docs)]
+pub enum TileState {
+    #[default]
+    Loading,
+    Loaded,
+    Deleted,
+}
+
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Pod, Zeroable)]
+#[allow(missing_docs)]
+pub struct TileUniforms {
+    pub is_s2: f32,
+    pub face: f32,
+    pub zoom: f32,
+    pub s_low: f32,
+    pub t_low: f32,
+    pub delta_s: f32,
+    pub delta_t: f32,
+}
+impl TileUniforms {
+    /// Create a new tile uniforms
+    pub fn new(projection: Projection, face_st: &FaceST) -> Self {
+        if projection == Projection::S2 {
+            Self {
+                is_s2: 1.0,
+                face: face_st.face as f32,
+                zoom: face_st.zoom as f32,
+                s_low: face_st.s_low as f32,
+                t_low: face_st.t_low as f32,
+                delta_s: face_st.delta_s as f32,
+                delta_t: face_st.delta_t as f32,
+            }
+        } else {
+            Self {
+                is_s2: 0.0,
+                face: 0.0,
+                zoom: face_st.zoom as f32,
+                s_low: 0.0,
+                t_low: 0.0,
+                delta_s: 1.0,
+                delta_t: 1.0,
+            }
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Pod, Zeroable)]
+#[allow(missing_docs)]
+pub struct TileBounds {
+    pub bot_left_x: f32,
+    pub bot_left_y: f32,
+    pub bot_right_x: f32,
+    pub bot_right_y: f32,
+    pub top_left_x: f32,
+    pub top_left_y: f32,
+    pub top_right_x: f32,
+    pub top_right_y: f32,
+}
 
 /// Base Tile Class that all Tiles inherit from.
 #[derive(Debug, Clone)]
 #[allow(missing_docs)]
 pub struct Tile {
-    // class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMaskSource>
-    //   implements TileSpec<C, F, M>
-    // {
-    pub id: CellId,
-    pub face: Face, // = 0;
-    // i = 0;
-    pub i: u32,
-    // j = 0;
-    pub j: u32,
-    // zoom = 0;
+    pub id: TileID,
+    pub face: u8,
+    pub i: i64,
+    pub j: i64,
     pub zoom: u8,
-    // division = 1;
-    // tmpMaskID = 0;
+    pub division: u32,
     pub tmp_mask_id: u32,
-    pub mask: Rc<FillOrMaskSource>,
-    // bbox: BBox = [0, 0, 0, 0];
-    // readonly feature_guides: F[] = [];
-    // TODO: Should be F not WebGPU case
-    pub feature_guides: Vec<Features>,
-    // context: C;
-    // interactiveGuide = new Map<number, InteractiveObject>();
-    // uniforms = new Float32Array(7); // [isS2, face, zoom, sLow, tLow, deltaS, deltaT]
-    // bottomTop = new Float32Array(8);
-    // state: 'loading' | 'loaded' | 'deleted' = 'loading';
-    // type: 'S2' | 'WM' = 'S2';
-    // faceST!: FaceST;
-    // matrix!: Float32Array;
-    // layersLoaded = new Set<number>();
-    // layersToBeLoaded?: Set<number>;
-    // // WM only feature: if the tile is "out of bounds", it references a real world tile
-    // // by copying the parents feature_guides.
-    // wrappedID?: TmpWMID;
-    // dependents: Array<Tile<C, F, M>> = [];
+    pub mask: Rc<TileMaskSource>,
+    pub bbox: BBox,
+    pub feature_guides: Vec<Rc<RefCell<Features>>>,
+    pub interactive_guide: BTreeMap<u32, InteractiveObject>,
+    pub uniforms: TileUniforms,
+    pub bottom_top: TileBounds,
+    pub state: TileState,
+    pub r#type: Projection,
+    pub face_st: FaceST,
+    pub matrix: Mat4,
+    pub layers_loaded: BTreeSet<u32>,
+    pub layers_to_be_loaded: BTreeSet<u32>,
+    // WM only feature: if the tile is "out of bounds", it references a real world tile
+    // by copying the parents feature_guides.
+    pub wrapped_id: Option<S2CellId>,
+    pub dependents: Vec<Rc<RefCell<Tile>>>,
+    pub corners: Option<Corners>,
 }
 impl Tile {
-    //   /**
-    //    * @param context - the GPU or WebGL context
-    //    * @param id - the tile ID
-    //    */
-    //   constructor(context: C, id: CellId) {
-    //     this.context = context;
-    //     this.id = id;
-    //   }
+    /// Create a new Tile
+    pub fn new(r#type: Projection, context: &mut RenderContext, tile_info: TileInView) -> Self {
+        let division = if r#type == Projection::S2 {
+            16 / (1 << u32::max(u32::min((tile_info.zoom as u32).div_ceil(2), 4), 0))
+        } else {
+            1
+        };
+        let bbox = BBox::from_st_zoom(tile_info.x as f64, tile_info.y as f64, tile_info.zoom);
+        let face_st = FaceST::new(tile_info.face, tile_info.zoom, bbox);
+        let uniforms = TileUniforms::new(r#type, &face_st);
+        let bottom_top = TileBounds::default();
+        let mask = TileMaskSource::new(division, context, &uniforms, &bottom_top);
+        let corners =
+            if tile_info.zoom >= 12 { Some(Corners::new(tile_info.face, &bbox)) } else { None };
+        Self {
+            id: tile_info.id,
+            face: tile_info.face,
+            i: tile_info.x,
+            j: tile_info.y,
+            zoom: tile_info.zoom,
+            division,
+            tmp_mask_id: 0,
+            mask: Rc::new(mask),
+            bbox,
+            feature_guides: vec![],
+            interactive_guide: BTreeMap::new(),
+            uniforms,
+            bottom_top,
+            state: TileState::Loading,
+            r#type,
+            face_st: FaceST::new(tile_info.face, tile_info.zoom, bbox),
+            matrix: Mat4::new(),
+            layers_loaded: BTreeSet::default(),
+            layers_to_be_loaded: BTreeSet::default(),
+            wrapped_id: tile_info.wrapped_id,
+            dependents: vec![],
+            corners,
+        }
+    }
 
-    //   /**
-    //    * inject references to featureGuide from each parentTile. Sometimes if we zoom really fast, we inject
-    //    * a parents' parent or deeper, so we need to reflect that in the tile property.
-    //    * @param parent - parent tile to inject
-    //    * @param layers - the effected layers to modify
-    //    */
-    //   injectParentTile(parent: TileSpec<C, F, M>, layers: LayerDefinition[]): void {
-    //     // feature guides
-    //     for (const feature of parent.feature_guides) {
-    //       if (feature.maskLayer ?? false) continue; // ignore mask features
-    //       const { maxzoom } = layers[feature.layerGuide.layerIndex];
-    //       const actualParent = feature.parent ?? parent;
-    //       if (this.zoom <= maxzoom) {
-    //         const bounds = this.#buildBounds(actualParent);
-    //         // @ts-expect-error - we need fix this one day
-    //         this.feature_guides.push(feature.duplicate(this, actualParent, bounds));
-    //       }
-    //     }
-    //     // interactive guides
-    //     for (const [id, interactive] of parent.interactiveGuide)
-    //       this.interactiveGuide.set(id, interactive);
-    //   }
+    /**
+     * inject references to featureGuide from each parentTile. Sometimes if we zoom really fast, we inject
+     * a parents' parent or deeper, so we need to reflect that in the tile property.
+     * @param parent - parent tile to inject
+     * @param layers - the effected layers to modify
+     */
+    pub fn inject_parent_tile(
+        this: Rc<RefCell<Tile>>,
+        parent: Rc<RefCell<Tile>>,
+        layers: &[LayerDefinition],
+    ) {
+        for feature in &parent.borrow().feature_guides {
+            let feature = &feature.borrow();
+            // ignore mask features
+            if feature.mask_layer() {
+                continue;
+            }
+            let maxzoom = layers[feature.layer_index() as usize].base().maxzoom;
+            let actual_parent = feature.parent().clone().unwrap_or(parent.clone());
+            if this.borrow().zoom <= maxzoom {
+                let bounds = this.borrow()._build_bounds(&actual_parent.borrow());
+                let new_feature = feature.duplicate(this.clone(), Some(actual_parent), bounds);
+                this.borrow_mut().feature_guides.push(Rc::new(RefCell::new(new_feature)));
+            }
+        }
+        for (id, interactive) in &parent.borrow().interactive_guide {
+            this.borrow_mut().interactive_guide.insert(*id, interactive.clone());
+        }
+    }
 
-    //   /**
-    //    * inject references to featureGuide from a wrapped tile
-    //    * @param wrapped - the wrapped tile
-    //    */
-    //   injectWrappedTile(wrapped: TileSpec<C, F, M>): void {
-    //     // add existing features to the wrapped tile
-    //     this.#addFeaturesToDependents(this, wrapped.feature_guides);
-    //     // let the wrapped tile know that it has a dependent
-    //     wrapped.dependents.push(this);
-    //   }
+    /**
+     * inject references to featureGuide from a wrapped tile
+     * @param wrapped - the wrapped tile
+     */
+    pub fn inject_wrapped_tile(this: Rc<RefCell<Tile>>, wrapped: Rc<RefCell<Tile>>) {
+        // add existing features to the wrapped tile
+        Tile::_add_features_to_dependents(this.clone(), &wrapped.borrow().feature_guides);
+        // let the wrapped tile know that it has a dependent
+        wrapped.borrow_mut().dependents.push(this.clone());
+    }
 
-    //   /**
-    //    * set the screen positions of the mask
-    //    * @param _ - the projector (not needed here)
-    //    */
-    //   setScreenPositions(_: Projector): void {
-    //     const { context, mask, bottomTop } = this;
-    //     // if WebGPU mask, we need to update the position buffer
-    //     if (mask.positionBuffer !== undefined) {
-    //       context.device?.queue.writeBuffer(mask.positionBuffer, 0, bottomTop);
-    //     }
-    //   }
+    /**
+     * set the screen positions of the mask
+     * @param _ - the projector (not needed here)
+     */
+    pub fn set_screen_positions(&mut self, proj: &mut Projector, context: &RenderContext) {
+        if self.r#type != Projection::S2 {
+            self._set_screen_positions_s2(proj);
+        } else {
+            self._set_screen_positions_wm(proj);
+        }
+        // if WebGPU mask, we need to update the position buffer
+        self.mask.update_screen_positions(context, &self.bottom_top);
+    }
 
-    //   /**
-    //    * get an interactive feature's properties if it exists
-    //    * @param id - the id of the feature
-    //    * @returns the interactive object
-    //    */
-    //   getInteractiveFeature(id: number): undefined | InteractiveObject {
-    //     return this.interactiveGuide.get(id);
-    //   }
+    /**
+     * get an interactive feature's properties if it exists
+     * @param id - the id of the feature
+     * @returns the interactive object
+     */
+    pub fn get_interactive_feature(&self, id: u32) -> Option<&InteractiveObject> {
+        self.interactive_guide.get(&id)
+    }
 
     /**
      * add features to the tile
      * @param features - the features to add
      */
-    //   pub fn add_features(features: F[]): void {
     pub fn add_features(&mut self, features: &[Rc<RefCell<Features>>]) {
-        //     const { feature_guides, layersLoaded } = this;
-        //     // filter parent tiles that were added
-        //     const layerIndexes = new Set<number>(features.map((f) => f.layerGuide.layerIndex));
-        //     for (let i = feature_guides.length - 1; i >= 0; i--) {
-        //       const feature = feature_guides[i];
-        //       if (feature.parent !== undefined && layerIndexes.has(feature.layerGuide.layerIndex))
-        //         feature_guides.splice(i, 1);
-        //     }
-        //     // add features
-        //     this.feature_guides.push(...features);
-        //     // clear from sourceCheck then check if all sources are loaded
-        //     for (const layerIndex of layerIndexes) layersLoaded.add(layerIndex);
+        // filter parent tiles that were added
+        let mut layer_indexes: BTreeSet<u32> =
+            features.iter().map(|f| f.borrow().layer_index()).collect();
+        self.feature_guides = self
+            .feature_guides
+            .iter()
+            .filter(|f| {
+                let feature = f.borrow();
+                !feature.parent().is_some() && !layer_indexes.contains(&feature.layer_index())
+            })
+            .cloned()
+            .collect();
+        // add features
+        self.feature_guides.extend_from_slice(features);
+        // clear from sourceCheck then check if all sources are loaded
+        self.layers_loaded.append(&mut layer_indexes);
 
-        //     // if this tile has dependents, we need to also add these features to those tiles
-        //     for (const dependent of this.dependents) {
-        //       this.#addFeaturesToDependents(dependent, features);
-        //     }
+        // if this tile has dependents, we need to also add these features to those tiles
+        for dependent in &self.dependents {
+            Tile::_add_features_to_dependents(dependent.clone(), features);
+        }
 
-        //     this.#checkState();
-        todo!()
+        self._check_state();
     }
 
-    //   /**
-    //    * Flush message that was sent from the Source or Tile Workers letting this tile know the source and layer's state
-    //    * @param msg - input flush messge
-    //    */
-    //   flush(msg: SourceFlushMessage | TileFlushMessage): void {
-    //     if (msg.from === 'source') this.#sourceFlush({ ...msg });
-    //     else this.#tileFlush({ ...msg });
-    //     for (const dependent of this.dependents) dependent.flush(msg);
-    //     this.#checkState();
-    //   }
+    /**
+     * Flush message that was sent from the Source or Tile Workers letting this tile know the source and layer's state
+     * @param msg - input flush messge
+     */
+    pub fn flush(&mut self, msg: FlushMessage) {
+        for dependent in &self.dependents {
+            let dependent = &mut dependent.borrow_mut();
+            dependent.flush(msg.clone());
+        }
+        match msg {
+            FlushMessage::Source(m) => self._source_flush(&m),
+            FlushMessage::Tile(m) => self._tile_flush(m),
+        }
+        self._check_state();
+    }
 
-    //   /** cleanup after itself. When a tile is deleted, it's adventageous to cleanup GPU cache. */
-    //   delete(): void {
-    //     this.state = 'deleted';
-    //     // remove all features
-    //     for (const feature of this.feature_guides) feature.destroy?.();
-    //     // @ts-expect-error - we need to clear the array
-    //     this.feature_guides = [];
-    //     this.interactiveGuide = new Map();
-    //     // TODO: WebGPU needs the data past it's lifetime...
-    //     // IDEA: Copy the parent mask so that any data used is always isolated to the tile in question
-    //     // this.mask.destroy?.()
-    //   }
+    /// cleanup after itself. When a tile is deleted, it's adventageous to cleanup GPU cache.
+    pub fn delete(&mut self) {
+        self.state = TileState::Deleted;
+        self.feature_guides = vec![];
+    }
 
-    //   /* STYLE CHANGES */
-    //   /**
-    //    * Delete a layer
-    //    * @param index - the index of the layer
-    //    */
-    //   deleteLayer(index: number): void {
-    //     const { feature_guides } = this;
-    //     // remove any references to layerIndex
-    //     for (let i = feature_guides.length - 1; i >= 0; i--) {
-    //       const f = feature_guides[i];
-    //       if (f.layerGuide.layerIndex === index) feature_guides.splice(i, 1);
-    //     }
-    //     // all layerIndexes greater than index should be decremented once
-    //     for (const { layerGuide } of this.feature_guides) {
-    //       if (layerGuide.layerIndex > index) layerGuide.layerIndex--;
-    //     }
-    //     for (const dependent of this.dependents) dependent.deleteLayer(index);
-    //   }
+    // STYLE CHANGES //
 
-    //   /**
-    //    * Reorder layers
-    //    * @param layerChanges - a map of layerIndex to new layerIndex
-    //    */
-    //   reorderLayers(layerChanges: Record<number, number>): void {
-    //     for (const { layerGuide } of this.feature_guides) {
-    //       const change = layerChanges[layerGuide.layerIndex];
-    //       if (change !== undefined) layerGuide.layerIndex = change;
-    //     }
-    //     for (const dependent of this.dependents) dependent.reorderLayers(layerChanges);
-    //   }
+    /**
+     * Delete a layer
+     * @param index - the index of the layer
+     */
+    pub fn delete_layer(&mut self, index: u32) {
+        // remove any references to layer_index
+        self.feature_guides = self
+            .feature_guides
+            .iter()
+            .filter(|f| f.borrow().layer_index() != index)
+            .cloned()
+            .collect();
+        // all layer_indexes greater than index should be decremented once
+        for feature in &mut self.feature_guides {
+            let feature = &mut feature.borrow_mut();
+            let index = feature.layer_index();
+            if index > index {
+                feature.set_layer_index(index - 1);
+            }
+        }
+        // remove layer from dependents
+        for dependent in &self.dependents {
+            let dependent = &mut dependent.borrow_mut();
+            dependent.delete_layer(index);
+        }
+    }
 
-    //   /**
-    //    * remove all sources that match the input sourceNames
-    //    * @param sourceNames - the names of the sources
-    //    */
-    //   deleteSources(sourceNames: string[]): void {
-    //     const { feature_guides } = this;
-    //     for (let i = feature_guides.length - 1; i >= 0; i--) {
-    //       const fg = feature_guides[i];
-    //       const fgSourceName: string = fg.layerGuide.sourceName.split(':')[0];
-    //       const keep = !sourceNames.includes(fgSourceName);
-    //       if (!keep) {
-    //         fg.destroy?.();
-    //         feature_guides.splice(i, 1);
-    //       }
-    //     }
-    //     for (const dependent of this.dependents) dependent.deleteSources(sourceNames);
-    //   }
+    /**
+     * Reorder layers
+     * @param layer_changes - a map of layer_index to new layer_index
+     */
+    pub fn reorder_layers(&mut self, layer_changes: BTreeMap<u32, u32>) {
+        for feature in &mut self.feature_guides {
+            let feature = &mut feature.borrow_mut();
+            let change = layer_changes.get(&feature.layer_index());
+            if let Some(change) = change {
+                feature.set_layer_index(*change);
+            }
+        }
+        for dependent in &self.dependents {
+            let dependent = &mut dependent.borrow_mut();
+            dependent.reorder_layers(layer_changes.clone());
+        }
+    }
 
-    //   /* DATA */
-    //   /**
-    //    * Inject interactive data. we don't parse the interactiveData immediately to save time
-    //    * @param interactiveGuide - the interactive guide
-    //    * @param interactiveData - the interactive data
-    //    */
-    //   injectInteractiveData(interactiveGuide: Uint32Array, interactiveData: Uint8Array): void {
-    //     // setup variables
-    //     let id: number, start: number, end: number;
-    //     const textDecoder = new TextDecoder('utf-8');
-    //     // build interactive guide
-    //     for (let i = 0, gl = interactiveGuide.length; i < gl; i += 3) {
-    //       id = interactiveGuide[i];
-    //       start = interactiveGuide[i + 1];
-    //       end = interactiveGuide[i + 2];
-    //       // parse feature and add properties
-    //       const interactiveObject: InteractiveObject = JSON.parse(
-    //         textDecoder.decode(interactiveData.slice(start, end)),
-    //       );
-    //       this.interactiveGuide.set(id, interactiveObject);
-    //     }
-    //   }
+    /**
+     * remove all sources that match the input source_names
+     * @param source_names - the names of the sources
+     */
+    pub fn delete_sources(&mut self, source_names: &[String]) {
+        self.feature_guides = self
+            .feature_guides
+            .iter()
+            .filter(|f| {
+                let feature = f.borrow();
+                !source_names.contains(&feature.source_name())
+            })
+            .cloned()
+            .collect();
+        for dependent in &self.dependents {
+            let dependent = &mut dependent.borrow_mut();
+            dependent.delete_sources(source_names);
+        }
+    }
 
-    //   /* INTERNAL */
-    //   /**
-    //    * currently this is for glyphs, points, and heatmaps. By sharing glyph data with children,
-    //    * the glyphs will be rendered 4 or even more times. To alleviate this, we can set boundaries
-    //    * of what points will be considered
-    //    * @param parent - the parent tile
-    //    * @returns the bounds
-    //    */
-    //   #buildBounds(parent: TileSpec<C, F, M>): BBox {
-    //     let { i, j, zoom } = this;
-    //     const parentZoom = parent.zoom;
-    //     // get the scale
-    //     const scale = 1 << (zoom - parentZoom);
-    //     // get i and j shift
-    //     let iShift = 0;
-    //     let jShift = 0;
-    //     while (zoom > parentZoom) {
-    //       const div = 1 << (zoom - parentZoom);
-    //       if (i % 2 !== 0) iShift += 1 / div;
-    //       if (j % 2 !== 0) jShift += 1 / div;
-    //       // decrement
-    //       i = i >> 1;
-    //       j = j >> 1;
-    //       zoom--;
-    //     }
+    // DATA //
 
-    //     // build the bounds bbox
-    //     return [0 + iShift, 0 + jShift, 1 / scale + iShift, 1 / scale + jShift];
-    //   }
+    /**
+     * Inject interactive data. we don't parse the interactive_data immediately to save time
+     * @param interactive_guide - the interactive guide
+     * @param interactive_data - the interactive data
+     */
+    pub fn inject_interactive_data(
+        &mut self,
+        interactive_guide: &[u32],
+        interactive_data: Vec<InteractiveObject>,
+    ) {
+        // TODO: TS code has `interactive_guide` with a step size of 3 including a start-end to parse interactive_data
+        // but we need to simplify on the worker side to make this simpler Rust method to work
+        for i in 0..interactive_guide.len() {
+            let id = interactive_guide[i];
+            self.interactive_guide.insert(id, interactive_data[i].clone());
+        }
+    }
 
-    //   /** Checks the state of the layers. Updates the tiles state if all layers are loaded */
-    //   #checkState(): void {
-    //     const { layersLoaded, layersToBeLoaded } = this;
-    //     if (this.state === 'deleted' || layersToBeLoaded === undefined) return;
-    //     // if all layers are loaded, set state to loaded
-    //     if (setBContainsA(layersToBeLoaded, layersLoaded)) this.state = 'loaded';
-    //   }
+    // INTERNAL //
 
-    //   /**
-    //    * Add features to list of dependents we need to update
-    //    * @param dependent - the dependent
-    //    * @param features - the features to add
-    //    */
-    //   #addFeaturesToDependents(dependent: Tile<C, F, M>, features: F[]): void {
-    //     // @ts-expect-error - no reason this should be failing buit it is
-    //     const dFeatures: F[] = features
-    //       .filter((f) => f.parent === undefined)
-    //       // @ts-expect-error - no reason this should be failing buit it is
-    //       .map((f: F) => f.duplicate(dependent, f.parent, f.bounds));
+    /**
+     * currently this is for glyphs, points, and heatmaps. By sharing glyph data with children,
+     * the glyphs will be rendered 4 or even more times. To alleviate this, we can set boundaries
+     * of what points will be considered
+     * @param parent - the parent tile
+     * @returns the bounds
+     */
+    fn _build_bounds(&self, parent: &Tile) -> BBox {
+        let mut i = self.i;
+        let mut j = self.j;
+        let mut zoom = self.zoom;
+        let parent_zoom = parent.zoom;
+        // get the scale
+        let scale = (1 << (zoom - parent_zoom) as u64) as f64;
+        // get i and j shift
+        let mut i_shift = 0.;
+        let mut j_shift = 0.;
+        while zoom > parent_zoom {
+            let div = (1 << (zoom - parent_zoom) as u64) as f64;
+            if i % 2 != 0 {
+                i_shift += 1. / div;
+            }
+            if j % 2 != 0 {
+                j_shift += 1. / div;
+            }
+            // decrement
+            i = i >> 1;
+            j = j >> 1;
+            zoom -= 1;
+        }
 
-    //     dependent.addFeatures(dFeatures);
-    //   }
+        // build the bounds bbox
+        BBox::new(i_shift, j_shift, 1. / scale + i_shift, 1. / scale + j_shift)
+    }
 
-    //   /**
-    //    * Flush the source data
-    //    * @param msg - the message
-    //    */
-    //   #sourceFlush(msg: SourceFlushMessage): void {
-    //     this.layersToBeLoaded = msg.layersToBeLoaded;
-    //     for (const dependent of this.dependents) dependent.#sourceFlush(msg);
-    //     this.#checkState();
-    //   }
+    /**
+     * given a matrix, compute the corners screen positions
+     * @param projector - the camera's current view
+     */
+    fn _set_screen_positions_s2(&mut self, projector: &mut Projector) {
+        if let Some(corners) = self.corners {
+            let eye = projector.eye;
+            let eye_km = eye * 1000.0;
+            let matrix = &projector.get_matrix(MatrixType::Kilometers);
+            // pull out the S2Points
+            let Corners { bottom_left, bottom_right, top_left, top_right } = corners;
+            // project points and grab their x-y positions
+            let Vec4([bl_x, bl_y, _, _]) = matrix.project(&(bottom_left - eye_km));
+            let Vec4([br_x, br_y, _, _]) = matrix.project(&(bottom_right - eye_km));
+            let Vec4([tl_x, tl_y, _, _]) = matrix.project(&(top_left - eye_km));
+            let Vec4([tr_x, tr_y, _, _]) = matrix.project(&(top_right - eye_km));
+            // store for eventual uniform "upload"
+            self.bottom_top.bot_left_x = bl_x;
+            self.bottom_top.bot_left_y = bl_y;
+            self.bottom_top.bot_right_x = br_x;
+            self.bottom_top.bot_right_y = br_y;
+            self.bottom_top.top_left_x = tl_x;
+            self.bottom_top.top_left_y = tl_y;
+            self.bottom_top.top_right_x = tr_x;
+            self.bottom_top.top_right_y = tr_y;
+        }
+    }
 
-    //   /**
-    //    * Flush the tile data
-    //    * @param msg - the message
-    //    */
-    //   #tileFlush(msg: TileFlushMessage): void {
-    //     const { feature_guides, layersLoaded } = this;
-    //     const { deadLayers } = msg;
-    //     // otherwise remove "left over" feature guide data from parent injection
-    //     // or old data that wont be replaced in the future
-    //     // NOTE: Eventually the count will be used to know what features need to be tracked (before screenshots for instance)
-    //     for (let i = feature_guides.length - 1; i >= 0; i--) {
-    //       const { layerGuide, parent } = feature_guides[i];
-    //       if (
-    //         deadLayers.includes(layerGuide.layerIndex) &&
-    //         parent !== undefined &&
-    //         // corner-case: empty data/missing tile -> flushes ALL layers,
-    //         // but that layer MAY BE inverted so we don't kill it.
-    //         !(('invert' in layerGuide && layerGuide.invert) ?? false)
-    //       )
-    //         feature_guides.splice(i, 1);
-    //     }
-    //     // remove dead layers from layersToBeLoaded
-    //     for (const deadLayer of deadLayers) layersLoaded.add(deadLayer);
-    //   }
+    /**
+     * given a basic ortho matrix, adjust by the tile's offset and scale
+     * @param projector - the camera's current view
+     */
+    fn _set_screen_positions_wm(&mut self, projector: &mut Projector) {
+        let scale = pow(2., projector.zoom - self.zoom as f64);
+        let offset = ll_to_tile_px(
+            &Point(projector.lon, projector.lat),
+            (self.zoom, self.i, self.j),
+            Some(1),
+        );
+
+        self.matrix = projector.get_matrix_wm(scale, Some(offset));
+
+        // build bottom_top
+        let bl = self.matrix.project(&Vec4([0., 0., 0., 0.]));
+        let br = self.matrix.project(&Vec4([1., 0., 0., 0.]));
+        let tl = self.matrix.project(&Vec4([0., 1., 0., 0.]));
+        let tr = self.matrix.project(&Vec4([1., 1., 0., 0.]));
+        // store for eventual uniform "upload"
+        self.bottom_top.bot_left_x = bl.x();
+        self.bottom_top.bot_left_y = bl.y();
+        self.bottom_top.bot_right_x = br.x();
+        self.bottom_top.bot_right_y = br.y();
+        self.bottom_top.top_left_x = tl.x();
+        self.bottom_top.top_left_y = tl.y();
+        self.bottom_top.top_right_x = tr.x();
+        self.bottom_top.top_right_y = tr.y();
+    }
+
+    /// Checks the state of the layers. Updates the tiles state if all layers are loaded
+    fn _check_state(&mut self) {
+        if self.state == TileState::Deleted {
+            return;
+        }
+        // if all layers are loaded, set state to loaded
+        if self.layers_loaded.is_superset(&self.layers_to_be_loaded) {
+            self.state = TileState::Loaded;
+        }
+    }
+
+    /**
+     * Add features to list of dependents we need to update
+     * @param dependent - the dependent
+     * @param features - the features to add
+     */
+    fn _add_features_to_dependents(
+        dependent: Rc<RefCell<Tile>>,
+        features: &[Rc<RefCell<Features>>],
+    ) {
+        let d_features: Vec<Rc<RefCell<Features>>> = features
+            .iter()
+            .filter(|f| f.borrow().parent().is_none())
+            .map(|f| {
+                let dup_f = f.borrow().duplicate(
+                    dependent.clone(),
+                    f.borrow().parent().clone(),
+                    f.borrow().bounds(),
+                );
+                Rc::new(RefCell::new(dup_f))
+            })
+            .collect();
+        dependent.borrow_mut().add_features(&d_features);
+    }
+
+    /**
+     * Flush the source data
+     * @param msg - the message
+     */
+    fn _source_flush(&mut self, msg: &SourceFlushMessage) {
+        self.layers_to_be_loaded = msg.layers_to_be_loaded.clone();
+        for dependent in self.dependents.iter_mut() {
+            dependent.borrow_mut()._source_flush(msg);
+        }
+        self._check_state();
+    }
+
+    /**
+     * Flush the tile data
+     * @param msg - the message
+     */
+    fn _tile_flush(&mut self, msg: TileFlushMessage) {
+        self.feature_guides = self
+            .feature_guides
+            .iter()
+            .filter(|f| {
+                let feature = f.borrow();
+                let is_dead = msg.dead_layers.contains(&feature.layer_index());
+                let has_parent = feature.parent().is_some();
+                // corner-case: empty data/missing tile -> flushes ALL layers,
+                // but that layer MAY BE inverted so we don't kill it.
+                let is_inverted = feature.inverted();
+                !(is_dead && has_parent && !is_inverted)
+            })
+            .cloned()
+            .collect();
+        // remove dead layers from layers_to_be_loaded
+        for dead_layer in &msg.dead_layers {
+            self.layers_loaded.remove(dead_layer);
+        }
+    }
 }
-
-// /** S2 Geometry Projection Tile */
-// export class S2Tile<
-//   C extends SharedContext,
-//   F extends SharedFeatures,
-//   M extends SharedMaskSource,
-// > extends Tile<C, F, M> {
-//   override type = 'S2' as const;
-//   corners?: Corners;
-//   /**
-//    * @param context - the context to use (GPU or WebGL)
-//    * @param tileInfo - Information about the tile
-//    */
-//   constructor(context: C, tileInfo: TileInView) {
-//     const { id, face, zoom, x, y } = tileInfo;
-//     super(context, id);
-//     const { max, min, floor } = Math;
-//     this.face = face;
-//     this.i = x;
-//     this.j = y;
-//     const bbox = (this.bbox = bboxST(x, y, zoom));
-//     this.faceST = [face, zoom, bbox[2] - bbox[0], bbox[0], bbox[3] - bbox[1], bbox[1]];
-//     if (zoom >= 12) this.#buildCorners();
-//     // setup uniforms
-//     this.uniforms = new Float32Array([
-//       1, // isS2
-//       face,
-//       zoom,
-//       bbox[0], // sLow
-//       bbox[1], // tLow
-//       bbox[2] - bbox[0], // deltaS
-//       bbox[3] - bbox[1], // deltaT
-//     ]);
-//     // build division
-//     this.division = 16 / (1 << max(min(floor(zoom / 2), 4), 0));
-//     // grab mask
-//     this.mask = context.getMask(this.division, this as never) as M;
-//   }
-
-//   /** Build the corners for the tile. Luckily only needs to be built once */
-//   #buildCorners(): void {
-//     const { face, bbox } = this;
-
-//     this.corners = {
-//       topLeft: pointMulScalar(pointNormalize(pointFromSTGL(face, bbox[0], bbox[3])), 6371008.8),
-//       topRight: pointMulScalar(pointNormalize(pointFromSTGL(face, bbox[2], bbox[3])), 6371008.8),
-//       bottomLeft: pointMulScalar(pointNormalize(pointFromSTGL(face, bbox[0], bbox[1])), 6371008.8),
-//       bottomRight: pointMulScalar(pointNormalize(pointFromSTGL(face, bbox[2], bbox[1])), 6371008.8),
-//     };
-//   }
-
-//   /**
-//    * given a matrix, compute the corners screen positions
-//    * @param projector - the camera's current view
-//    */
-//   override setScreenPositions(projector: Projector): void {
-//     if (this.corners !== undefined) {
-//       const { eye } = projector;
-//       const eyeKM = pointMulScalar(eye, 1000);
-//       const matrix = projector.getMatrix('km');
-//       // pull out the S2Points
-//       const { bottomLeft, bottomRight, topLeft, topRight } = this.corners;
-//       // project points and grab their x-y positions
-//       const { x: blX, y: blY } = project(matrix, pointSub(bottomLeft, eyeKM));
-//       const { x: brX, y: brY } = project(matrix, pointSub(bottomRight, eyeKM));
-//       const { x: tlX, y: tlY } = project(matrix, pointSub(topLeft, eyeKM));
-//       const { x: trX, y: trY } = project(matrix, pointSub(topRight, eyeKM));
-//       // store for eventual uniform "upload"
-//       this.bottomTop[0] = blX;
-//       this.bottomTop[1] = blY;
-//       this.bottomTop[2] = brX;
-//       this.bottomTop[3] = brY;
-//       this.bottomTop[4] = tlX;
-//       this.bottomTop[5] = tlY;
-//       this.bottomTop[6] = trX;
-//       this.bottomTop[7] = trY;
-//       // if WebGPU mask, we need to update the position buffer
-//       super.setScreenPositions(projector);
-//     }
-//   }
-// }
-
-// /** Web Mercator Projection Tile */
-// export class WMTile<
-//   C extends SharedContext,
-//   F extends SharedFeatures,
-//   M extends SharedMaskSource,
-// > extends Tile<C, F, M> {
-//   override type = 'WM' as const;
-//   override matrix: Float32Array = new Float32Array(16);
-//   /**
-//    * @param context - a GPU context or WebGL context
-//    * @param tileInfo - Information about the tile
-//    */
-//   constructor(context: C, tileInfo: TileInView) {
-//     const { id, x, y, zoom, wrappedID } = tileInfo;
-//     super(context, id);
-//     this.i = x;
-//     this.j = y;
-//     this.zoom = zoom;
-//     this.wrappedID = wrappedID;
-//     // TODO: bboxWM? And do I apply it to the uniforms?
-//     // const bbox = this.bbox = bboxST(i, j, zoom)
-//     this.bbox = bboxST(x, y, zoom);
-//     // setup uniforms
-//     this.uniforms = new Float32Array([
-//       0, // isS2
-//       0, // face
-//       zoom, // zoom
-//       // padding (unused by WM tiles)
-//       0, // sLow
-//       0, // tLow
-//       1, // deltaS
-//       1, // deltaT
-//     ]);
-//     // grab mask
-//     this.mask = context.getMask(1, this as never) as M;
-//   }
-
-//   /**
-//    * given a basic ortho matrix, adjust by the tile's offset and scale
-//    * @param projector - the camera's current view
-//    */
-//   override setScreenPositions(projector: Projector): void {
-//     const { zoom, lon, lat } = projector;
-//     const scale = Math.pow(2, zoom - this.zoom);
-//     const offset = llToTilePx({ x: lon, y: lat }, [this.zoom, this.i, this.j], 1);
-
-//     this.matrix = projector.getMatrix(scale, offset);
-
-//     // build bottomTop
-//     const { matrix } = this;
-//     const bl = project(matrix, { x: 0, y: 0, z: 0 });
-//     const br = project(matrix, { x: 1, y: 0, z: 0 });
-//     const tl = project(matrix, { x: 0, y: 1, z: 0 });
-//     const tr = project(matrix, { x: 1, y: 1, z: 0 });
-//     // store for eventual uniform "upload"
-//     this.bottomTop[0] = bl.x;
-//     this.bottomTop[1] = bl.y;
-//     this.bottomTop[2] = br.x;
-//     this.bottomTop[3] = br.y;
-//     this.bottomTop[4] = tl.x;
-//     this.bottomTop[5] = tl.y;
-//     this.bottomTop[6] = tr.x;
-//     this.bottomTop[7] = tr.y;
-
-//     super.setScreenPositions(projector);
-//   }
-// }
-
-// /**
-//  * Check if setA is a subset of set2
-//  * @param setA - set to check
-//  * @param set2 - set to check against
-//  * @returns true if setA is a subset of set2
-//  */
-// function setBContainsA(setA: Set<number>, set2: Set<number>): boolean {
-//   // TODO: Remove this function to favor: setA.isSupersetOf(set2); (check it works live first)
-//   for (const item of setA) if (!set2.has(item)) return false;
-//   return true;
-// }
+// https://www.youtube.com/shorts/mWf6bWi-MjA

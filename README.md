@@ -55,7 +55,6 @@ S2 Maps GPU is currently in **alpha**. We are actively working on it and would l
 
 Although it's still a young product, we are using [playwright](https://playwright.dev/) to ensure features that do exist work as intended across all major browsers. Feel free to [open an issue](https://github.com/Open-S2/s2maps-gpu/issues/new) if you find a bug or have a feature request.
 
-
 ## Development
 
 This project is developed using [bun](https://bun.sh/).

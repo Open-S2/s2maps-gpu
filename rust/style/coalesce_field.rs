@@ -6,8 +6,9 @@ use alloc::{
 };
 use s2json::{Properties, ValueType};
 
+/// Get the current language from the environment
 #[cfg(feature = "std")]
-fn language() -> String {
+pub fn language() -> String {
     std::env::var("LANG")
         .ok()
         .and_then(|v| v.split('.').next().map(|s| s.to_string()))
@@ -15,8 +16,9 @@ fn language() -> String {
         .unwrap_or_else(|| "en".into())
 }
 
+/// Get the current language from the environment
 #[cfg(not(feature = "std"))]
-fn language() -> String {
+pub fn language() -> String {
     "en".into()
 }
 

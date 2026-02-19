@@ -31,7 +31,7 @@ impl<U: Ord + Clone, T> Cache<U, T> {
         // Push to front
         self.order.insert(0, key.clone());
         // Insert into map
-        self.map.insert(key.clone(), RefCell::new(value));
+        self.map.insert(key, RefCell::new(value));
         // Evict excess items
         while self.order.len() > self.max_cache_size {
             if let Some(evicted_key) = self.order.pop_back() {

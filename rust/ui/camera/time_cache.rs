@@ -1,25 +1,21 @@
-// import Cache from './cache.js';
-
-// import type Camera from './index.js';
-// import type { S2CellId } from 's2/gis-tools/index.js';
-// import type { SensorSource } from 'gl/workflows/workflow.spec.js';
-// import type { TileShared as Tile } from 'source/tile.spec.js';
-// import type { TileRequest } from 'workers/worker.spec.js';
-// import type { TimeSeriesStyle } from 'style/style.spec.js';
 use crate::{
+    render::SensorSource,
     style::TimeSeriesStyle,
     ui::{Cache, Camera},
+    util::MsgSender,
+    workers::MapGLMessage,
 };
 use alloc::{collections::BTreeMap, rc::Rc};
 use core::cell::RefCell;
-use gistools::util::Date;
+use gistools::{geometry::S2CellId, util::Date};
+use libm::floor;
 
 /// Tracker for time sources
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[allow(missing_docs)]
 pub struct TimeSource {
-    pub step: f32,
-    pub interval: f32,
+    pub step: f64,
+    pub interval: f64,
 }
 /**
  * Animation states
@@ -47,14 +43,14 @@ impl From<&str> for TimeLayerState {
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[allow(missing_docs)]
 pub struct TimeSeries {
-    pub start_time: i64,
-    pub end_time: i64,
+    pub start_time: f64,
+    pub end_time: f64,
     /// seconds traveled per second
     pub speed: f64,
     pub pause_duration: f64, // in seconds
     pub auto_play: bool,
     pub r#loop: bool,
-    pub cursor: i64,
+    pub cursor: f64,
     pub state: TimeLayerState,
 }
 impl From<&TimeSeriesStyle> for TimeSeries {
@@ -66,10 +62,10 @@ impl From<&TimeSeriesStyle> for TimeSeries {
         // date.set
         let date_num = date.get_time();
         // tell the map about the time series
-        let start_time = parse_date(start_date.unwrap_or(date_num));
+        let start_time = parse_date(start_date.unwrap_or(date_num)) as f64;
         TimeSeries {
             start_time,
-            end_time: parse_date(end_date.unwrap_or(date_num + 162000)), // 45 hour sequence (basically 2 tiles per face)
+            end_time: parse_date(end_date.unwrap_or(date_num + 162000) as i64) as f64, // 45 hour sequence (basically 2 tiles per face)
             speed: speed.unwrap_or(1.), // 1 hour per second (0 -> no animation)
             pause_duration: pause_duration.unwrap_or(0.),
             r#loop: r#loop.unwrap_or(false),       // ?? false,
@@ -80,12 +76,20 @@ impl From<&TimeSeriesStyle> for TimeSeries {
     }
 }
 /** An input texture to a specific time stamp that also points to the next texture if it exists */
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct SensorTextureDefinition {
     pub time: Option<f64>,
     pub texture: Option<wgpu::Texture>,
     pub texture_next: Option<wgpu::Texture>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[allow(missing_docs)]
+pub struct SourceKey {
+    pub id: S2CellId,
+    pub time: i64,
+    pub source_name: String,
 }
 
 /// # Time Cache
@@ -94,26 +98,27 @@ pub struct SensorTextureDefinition {
 #[derive(Debug, Clone)]
 #[allow(missing_docs)]
 pub struct TimeCache {
-    // TODO: Bring back
-    // cache: Cache<String, SensorSource>,
-    camera: Rc<RefCell<Camera>>,
-    sources: BTreeMap<String, TimeSource>, // [sourceName]: { interval: number }
-    last_frame: Option<f64>,
-    webworker: bool,
-    time_series: TimeSeries,
+    pub cache: Cache<SourceKey, SensorSource>,
+    pub camera: Rc<RefCell<Camera>>,
+    pub sources: BTreeMap<String, TimeSource>, // [source_name]: { interval: number }
+    pub last_frame: Option<f64>,
+    pub webworker: Option<MsgSender<MapGLMessage>>,
+    pub time_series: TimeSeries,
 }
 impl TimeCache {
-    /**
-     * @param camera - parent camera
-     * @param webworker - true if running in a webworker
-     * @param time_series - user defined time series style object
-     */
+    /// Create a new TimeCache
+    ///
+    /// ## Parameters
+    /// - `camera`: parent camera
+    /// - `webworker`: true if running in a webworker
+    /// - `time_series`: user defined time series style object
     pub fn new(
         camera: Rc<RefCell<Camera>>,
-        webworker: bool,
+        webworker: Option<MsgSender<MapGLMessage>>,
         time_series: &TimeSeriesStyle,
     ) -> Self {
         Self {
+            cache: Cache::new(None),
             camera,
             sources: BTreeMap::new(),
             last_frame: None,
@@ -122,151 +127,185 @@ impl TimeCache {
         }
     }
 
-    //   /**
-    //    * Add a time source
-    //    * @param sourceName - the name of the source
-    //    * @param interval - the interval of the source relative to the starting point of the source
-    //    */
-    //   add_source(sourceName: string, interval: number): void {
-    //     const step = interval / 4;
-    //     this.sources[sourceName] = { interval, step };
-    //     // grab timeseries variables
-    //     const { start_time, auto_play, state } = this.time_series;
-    //     // source data is always added at the beginning of the animation. The first source added triggers the animation
-    //     if (auto_play && state === 'stop') this.time_series.state = 'play';
-    //     // build a request for the first frame
-    //     const sourceTime = start_time - (start_time % interval);
-    //     this.#requestTiles(sourceTime, sourceName, sourceName);
-    //   }
+    ///  Add a time source
+    ///
+    /// ## Parameters
+    /// - `source_name`: the name of the source
+    /// - `interval`: the interval of the source relative to the starting point of the source
+    pub fn add_source(&mut self, source_name: String, interval: f64) {
+        let step = interval / 4.;
+        self.sources.insert(source_name.clone(), TimeSource { interval, step });
+        // grab timeseries variables
+        let TimeSeries { start_time, auto_play, state, .. } = self.time_series;
+        // source data is always added at the beginning of the animation. The first source added triggers the animation
+        if auto_play && state == TimeLayerState::Stop {
+            self.time_series.state = TimeLayerState::Play;
+        }
+        // build a request for the first frame
+        let source_time = start_time - (start_time % interval);
+        self._request_tiles(source_time, source_name.clone(), source_name, None);
+    }
 
-    //   /**
-    //    * Add source data to the cache and update the time series
-    //    * @param id - the id of the tile
-    //    * @param time - the time of the source
-    //    * @param sourceName - the name of the source
-    //    * @param source - the source to add the data to
-    //    */
-    //   add_source_data(id: S2CellId, time: number, sourceName: string, source: SensorSource): void {
-    //     this.set(`${id}#${time}#${sourceName}`, source);
-    //   }
+    /// Add source data to the cache and update the time series
+    ///
+    /// ## Parameters
+    /// - `id`: the id of the tile
+    /// - `time`: the time of the source
+    /// - `source_name`: the name of the source
+    /// - `source`: the source to add the data to
+    pub fn add_source_data(
+        &mut self,
+        id: S2CellId,
+        time: i64,
+        source_name: String,
+        source: SensorSource,
+    ) {
+        self.cache.set(SourceKey { id, time, source_name }, source);
+    }
 
-    //   /**
-    //    * Get source data
-    //    * @param id - the id of the tile
-    //    * @param sourceName - the name of the source
-    //    * @returns the source texture information and data
-    //    */
-    //   get_textures(id: S2CellId, sourceName: string): SensorTextureDefinition {
-    //     const shortName = sourceName.split(':')[0];
-    //     const { cursor, end_time } = this.time_series;
-    //     const timeSource = this.sources[shortName];
-    //     if (timeSource === undefined) return {};
-    //     const { step, interval } = timeSource;
-    //     // build keys
-    //     const curTime = cursor - (cursor % interval);
-    //     const nextTime = curTime + interval;
-    //     // find source data
-    //     const curSource = this.get(`${id}#${curTime}#${sourceName}`);
-    //     const nextSource = this.get(`${id}#${nextTime}#${sourceName}`);
-    //     // if nextSource is not found, request it
-    //     if (curSource === undefined) this.#requestTiles(curTime, shortName, sourceName, id);
-    //     if (nextSource === undefined && nextTime <= end_time)
-    //       this.#requestTiles(nextTime, shortName, sourceName, id);
-    //     // grab data (if raster its a texture, if vector its a pointer to buffer)
-    //     // if no source data, return
-    //     const { texture } = curSource ?? {};
-    //     if (texture === undefined) return {};
-    //     const { texture: texture_next } = nextSource ?? {};
+    /// Get source data
+    ///
+    /// ## Parameters
+    /// - `id`: the id of the tile
+    /// - `source_name`: the name of the source
+    ///
+    /// ## Returns
+    /// The source texture information and data
+    pub fn get_textures(&mut self, id: S2CellId, source_name: String) -> SensorTextureDefinition {
+        // const short_name = source_name.split(':')[0];
+        let short_name: String = source_name.split(':').next().unwrap_or_default().into();
+        let TimeSeries { cursor, end_time, .. } = self.time_series;
+        let Some(time_source) = self.sources.get(&short_name) else {
+            return SensorTextureDefinition::default();
+        };
+        let TimeSource { step, interval, .. } = *time_source;
+        // build keys
+        let cur_time = cursor - (cursor % interval);
+        let next_time = cur_time + interval;
+        // find source data
+        let cur_source = self
+            .cache
+            .get(&SourceKey { id, time: floor(cur_time) as i64, source_name: source_name.clone() })
+            .map(|s| s.texture.clone())
+            .unwrap();
+        let next_source = self
+            .cache
+            .get(&SourceKey { id, time: floor(next_time) as i64, source_name: source_name.clone() })
+            .map(|s| s.texture.clone())
+            .unwrap();
+        // if next_source is not found, request it
+        if cur_source.is_none() {
+            self._request_tiles(cur_time, short_name.clone(), source_name.clone(), Some(id));
+        }
+        if next_source.is_none() && next_time <= end_time {
+            self._request_tiles(next_time, short_name, source_name, Some(id));
+        }
 
-    //     // build time. Range of 0->4 : 0->1 red; 1->2 green; 2->3 blue; 3->4 alpha
-    //     // time increments of source interval
-    //     const time = (cursor - curTime) / step;
-    //     return { time, texture, texture_next };
-    //   }
+        // build time. Range of 0->4 : 0->1 red; 1->2 green; 2->3 blue; 3->4 alpha
+        // time increments of source interval
+        let time = (cursor - cur_time) / step;
+        SensorTextureDefinition { time: Some(time), texture: cur_source, texture_next: next_source }
+    }
 
-    //   /**
-    //    * update layer positions.
-    //    * play state: increment cursor by speed * deltaTime. If cursor >= end_time, set cursor to pause state or start_time.
-    //    * pause state: increment cursor by deltaTime. If cursor > pause_duration, set state to play
-    //    * @param now - current time
-    //    * @param render - render function to call after animation state is updated
-    //    */
-    //   animate(now: number, render: () => void): void {
-    //     const { time_series } = this;
-    //     if (time_series.state === 'stop') return;
-    //     // if no last frame, set last frame to begin animation and return
-    //     if (this.last_frame === undefined) this.last_frame = now;
-    //     // find delta
-    //     const delta = (now - this.last_frame) / 1000; // convert to seconds
-    //     this.last_frame = now;
-    //     // grab time series variables
-    //     const { start_time, end_time, speed, loop } = time_series;
-    //     // if cursor is exactly end_time, if pause_duration is set, set to pause, otherwise set to start_time if loop
-    //     if (time_series.cursor === end_time) {
-    //       if (loop) time_series.cursor = start_time;
-    //       else time_series.state = 'stop';
-    //     } else {
-    //       // increment cursor
-    //       time_series.cursor += delta * speed;
-    //       // if cursor is past end_time, set to end_time to finish animation
-    //       if (time_series.cursor > end_time) time_series.cursor = end_time;
-    //     }
-    //     // send off a render
-    //     render();
-    //   }
+    /// update layer positions.
+    /// play state: increment cursor by speed * deltaTime. If cursor >= end_time, set cursor to pause state or start_time.
+    /// pause state: increment cursor by deltaTime. If cursor > pause_duration, set state to play
+    ///
+    /// ## Parameters
+    /// - `now`: current time
+    /// - `render`: render function to call after animation state is updated
+    pub fn animate(&mut self, now: f64, render: fn()) {
+        let Self { time_series, .. } = self;
+        if time_series.state == TimeLayerState::Stop {
+            return;
+        }
+        // if no last frame, set last frame to begin animation and return
+        if self.last_frame.is_none() {
+            self.last_frame = Some(now);
+        }
+        // find delta
+        let delta = (now - self.last_frame.unwrap_or_default()) / 1000.; // convert to seconds
+        self.last_frame = Some(now);
+        // grab time series variables
+        let TimeSeries { start_time, end_time, speed, r#loop, .. } = *time_series;
+        // if cursor is exactly end_time, if pause_duration is set, set to pause, otherwise set to start_time if loop
+        if time_series.cursor == end_time {
+            if r#loop {
+                time_series.cursor = start_time;
+            } else {
+                time_series.state = TimeLayerState::Stop;
+            }
+        } else {
+            // increment cursor
+            time_series.cursor += delta * speed;
+            // if cursor is past end_time, set to end_time to finish animation
+            if time_series.cursor > end_time {
+                time_series.cursor = end_time;
+            }
+        }
+        // send off a render
+        render();
+    }
 
-    /**
-     * rather than animate, the user can specify a time, and this will update to current time
-     * @param time - the time to set
-     */
-    pub fn set_time(&mut self, time: i64) {
+    /// rather than animate, the user can specify a time, and this will update to current time
+    ///
+    /// ## Parameters
+    /// - `time`: the time to set
+    pub fn set_time(&mut self, time: f64) {
         self.time_series.cursor = time;
     }
 
-    //   /**
-    //    * Request source data
-    //    * @param time - the time of the source
-    //    * @param shortName - the short name of the source
-    //    * @param sourceName - the name of the source
-    //    * @param id - the id of the tile
-    //    */
-    //   #requestTiles(time: number, shortName: string, sourceName: string, id?: S2CellId): void {
-    //     const { webworker, camera } = this;
-    //     let tiles: Tile[] = [];
-    //     if (id !== undefined) {
-    //       const tile = camera.getTile(id);
-    //       if (tile !== undefined) tiles = [tile];
-    //       else tiles = [];
-    //     } else {
-    //       tiles = camera.getTiles();
-    //     }
-    //     const tileRequests: TileRequest[] = [];
-    //     // build tile requests
-    //     for (const tile of tiles) {
-    //       // build time id
-    //       const timeID = `${tile.id}#${time}#${sourceName}`;
-    //       // if source data is already in cache, return
-    //       if (this.has(timeID)) continue;
-    //       // place a temporary source in the cache
-    //       // this will be replaced by the source data when it arrives
-    //       this.set(timeID, {});
-    //       const { id, face, i, j, zoom, bbox, type, division } = tile;
-    //       tileRequests.push({ id, face, i, j, zoom, bbox, type, division, time });
-    //     }
-    //     // get list of current tiles in view
-    //     if (tileRequests.length > 0) {
-    //       if (webworker) {
-    //         postMessage({
-    //           mapID: camera.id,
-    //           type: 'timerequest',
-    //           tiles: tileRequests,
-    //           sourceNames: [shortName],
-    //         });
-    //       } else {
-    //         window.S2WorkerPool.timeRequest(camera.id, tileRequests, [shortName]);
-    //       }
-    //     }
-    //   }
+    /**
+     * Request source data
+     * @param time - the time of the source
+     * @param short_name - the short name of the source
+     * @param source_name - the name of the source
+     * @param id - the id of the tile
+     */
+    fn _request_tiles(
+        &mut self,
+        time: f64,
+        short_name: String,
+        source_name: String,
+        id: Option<S2CellId>,
+    ) {
+        //     const { webworker, camera } = this;
+        //     let tiles: Tile[] = vec![];
+        //     if (id !== undefined) {
+        //       const tile = camera.getTile(id);
+        //       if (tile !== undefined) tiles = [tile];
+        //       else tiles = [];
+        //     } else {
+        //       tiles = camera.get_tiles();
+        //     }
+        //     let tile_requests: Vec<TileRequest> = vec![];
+        //     // build tile requests
+        //     for tile in &tiles {
+        //       // build time id
+        //       let timeID = `${tile.id}#${time}#${source_name}`;
+        //       // if source data is already in cache, return
+        //       if (this.has(timeID)) continue;
+        //       // place a temporary source in the cache
+        //       // this will be replaced by the source data when it arrives
+        //       this.set(timeID, {});
+        //       let { id, face, i, j, zoom, bbox, type, division } = tile;
+        //       tile_requests.push({ id, face, i, j, zoom, bbox, type, division, time });
+        //     }
+        //     // get list of current tiles in view
+        //     if (tile_requests.len() > 0) {
+        //       if (webworker) {
+        //         postMessage({
+        //           mapID: camera.id,
+        //           type: 'timerequest',
+        //           tiles: tile_requests,
+        //           source_names: [short_name],
+        //         });
+        //       } else {
+        //         window.S2WorkerPool.timeRequest(camera.id, tile_requests, [short_name]);
+        //       }
+        //     }
+        todo!()
+    }
 }
 
 /**

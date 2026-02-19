@@ -1,8 +1,8 @@
 use crate::{
     style::{Projection, SourceMetadata},
     workers::{
-        BaseSource, MapID, Source, TileLayer, TileRequest, TileWorkerMessage, TileWorkerMessages,
-        VectorMessage,
+        BaseSource, MapID, SourceSpec, TileLayer, TileRequest, TileWorkerMessage,
+        TileWorkerMessages, VectorMessage,
     },
 };
 use gistools::{parsers::FetchReader, readers::PMTilesReader};
@@ -26,16 +26,16 @@ impl S2PMTilesSource {
         Self { base, version: 1, reader }
     }
 }
-impl Source for S2PMTilesSource {
+impl SourceSpec for S2PMTilesSource {
     fn base(&mut self) -> &mut BaseSource {
         &mut self.base
     }
 
-    async fn build(&mut self, map_id: MapID, _metadata: Option<SourceMetadata>) {
+    async fn build(&mut self, map_id: MapID, _metadata: Option<SourceMetadata<()>>) {
         let mut metadata = self.reader.get_metadata().clone();
         // modify the type to ensure we are using a vector
         metadata.r#type = s2_tilejson::SourceType::Vector;
-        self._build_metadata(metadata.into(), map_id);
+        self._build_metadata(metadata.into(), map_id).await;
     }
 
     /// Here, we use the memory mapped file directory tree system to find our data
@@ -47,12 +47,12 @@ impl Source for S2PMTilesSource {
     async fn _tile_request(&mut self, map_id: MapID, tile: TileRequest, source_name: String) {
         let TileLayer { face, zoom, i, j, .. } = tile.parent.clone().unwrap_or(tile.layer.clone());
         let bytes = match tile.r#type {
-            Projection::S2 => self.reader.get_tile_s2(face, zoom, i.into(), j.into()).await,
-            Projection::WM => self.reader.get_tile_wm(zoom, i.into(), j.into()).await,
+            Projection::S2 => self.reader.get_tile_s2(face, zoom, i as u64, j as u64).await,
+            Projection::WM => self.reader.get_tile_wm(zoom, i as u64, j as u64).await,
         };
-        let BaseSource { session, .. } = self.base();
 
         if let Some(data) = bytes {
+            let session = &mut self.base().session.borrow_mut();
             let worker = session.request_worker();
             worker
                 .send(TileWorkerMessage {
@@ -65,7 +65,7 @@ impl Source for S2PMTilesSource {
                 })
                 .await;
         } else {
-            self.flush(map_id, tile, source_name);
+            self.flush(map_id, tile, source_name).await;
         }
     }
 }

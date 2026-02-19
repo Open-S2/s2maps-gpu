@@ -9,30 +9,22 @@ documentation = "https://docs.rs/s2maps-gpu"
 homepage = "https://github.com/Open-S2/s2maps-gpu"
 repository = "https://github.com/Open-S2/s2maps-gpu"
 readme = "README.md"
-categories = ["no-std", "algorithms", "computer-vision", "embedded", "graphics", "rendering", "wasm"]
-keywords = [
-    "tools",
-    "s2",
-    "gis",
-    "maps",
-    "cartography",
-    "gpu",
-    "webgpu",
-    "digital",
-    "mapping",
+categories = [
+  "no-std",
+  "algorithms",
+  "computer-vision",
+  "embedded",
+  "graphics",
+  "rendering",
+  "wasm",
 ]
+keywords = ["tools", "s2", "gis", "maps", "cartography", "gpu", "webgpu", "digital", "mapping"]
 # license = "SEE LICENSE"
 license-file = "LICENSE"
-include = [
-    "rust/**",
-    "/Cargo.toml",
-    "/katex-header.html",
-    "/README.md",
-    "/LICENSE",
-]
+include = ["rust/**", "/Cargo.toml", "/katex-header.html", "/README.md", "/LICENSE"]
 
 [package.metadata.docs.rs]
-rustdoc-args = [ "--html-in-header", "katex-header.html" ]
+rustdoc-args = ["--html-in-header", "katex-header.html"]
 
 [lib]
 name = "s2maps_gpu"
@@ -47,11 +39,11 @@ path = "rust/lib.rs"
 [dependencies]
 # Open S2 dependencies
 earclip = "1.8"
-open-vector-tile = "1.10"
+open-vector-tile = "1.11"
 pbf = "1.22"
 s2json = "1"
-s2-tilejson = "1.11"
-gis-tools = { version = "1.6", default-features = false, features = ["quadratic"] }
+s2-tilejson = "1"
+gis-tools = { version = "1.13", default-features = false, features = ["quadratic"] }
 # External shared dependencies
 libm = "0.2" # NOTE: Rust Core is working on a replacement for libm
 half = "2.7" # NOTE: Rust Core is working on a replacement for half
@@ -61,13 +53,13 @@ serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 # Rendering dependencies
 winit = "0.30"
 wgpu = { version = "28.0", default-features = false, features = [
-    "serde",
-    "wgsl",
-    "vulkan",
-    "gles",
-    "dx12",
-    "metal",
-    "static-dxc",
+  "serde",
+  "wgsl",
+  "vulkan",
+  "gles",
+  "dx12",
+  "metal",
+  "static-dxc",
 ] }
 bytemuck = { version = "1.22", features = ["extern_crate_alloc", "min_const_generics"] }
 # Optional std dependencies
@@ -93,7 +85,15 @@ nightly = [] # Nightly system for improving coverage accuracy reporting
 webgl = ["wgpu/webgl"]
 webgpu = ["wgpu/webgpu"]
 # Conditional std feature enabling quadratic or other projection features
-std = ["image", "image/rayon", "image/default-formats", "surf/h1-client", "gis-tools/std"]
+std = [
+  "image",
+  "image/rayon",
+  "image/default-formats",
+  "surf/h1-client",
+  "gis-tools/std",
+  "embassy-sync",
+  "embassy-sync/std",
+]
 # Conditional wasm feature for browser tools like fetching
 wasm = ["surf/wasm-client"]
 # Conditional Embassy features

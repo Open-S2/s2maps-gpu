@@ -1,8 +1,8 @@
-@import "tailwindcss";
-@import "@nuxt/ui";
+@import 'tailwindcss';
+@import '@nuxt/ui';
 
 @theme static {
-  --font-sans: 'Public Sans',-apple-system,BlinkMacSystemFont,sans-serif;
+  --font-sans: 'Public Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 
   --ui-color-neutral-900: #222830;
 }

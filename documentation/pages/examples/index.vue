@@ -2,15 +2,14 @@
   <UnderConstruction />
 </template>
 
-<script lang='ts'>
+<script lang="ts">
 export default {
-  setup (): void {
+  setup(): void {
     definePageMeta({
-      layout: 'default'
-    })
-  }
-}
+      layout: 'default',
+    });
+  },
+};
 </script>
 
-<style>
-</style>
+<style></style>

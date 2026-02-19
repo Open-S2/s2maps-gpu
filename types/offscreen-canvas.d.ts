@@ -19,7 +19,8 @@ interface HTMLCanvasElement {
  *
  */
 interface OffscreenCanvasRenderingContext2D
-  extends CanvasState,
+  extends
+    CanvasState,
     CanvasTransform,
     CanvasCompositing,
     CanvasImageSmoothing,

@@ -67,7 +67,7 @@ export default class MapWorker {
    * @param canvas - the canvas to prep
    * @param id - the id of the map
    */
-  #prepCanvas(options: MapOptions, canvas: HTMLCanvasElement, id: string): void {
+  #prepCanvas(options: MapOptions, canvas: OffscreenCanvas, id: string): void {
     this.s2mapUI = new S2MapUI(options, canvas, id);
   }
 }

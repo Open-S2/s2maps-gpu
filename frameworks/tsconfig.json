@@ -3,12 +3,7 @@
   "compilerOptions": {
     "allowImportingTsExtensions": false,
     "target": "ESNext",
-    "lib": [
-      "DOM",
-      "DOM.Iterable",
-      "ESNext",
-      "WebWorker"
-    ],
+    "lib": ["DOM", "DOM.Iterable", "ESNext", "WebWorker"],
     "checkJs": false,
     "strictNullChecks": true,
     "outDir": "dist",
@@ -30,7 +25,7 @@
     "types": ["@webgpu/types", "vue", "svelte", "react"],
     "baseUrl": ".", // This must be specified if "paths" is.
     "paths": {
-      "s2/*": ["../dist/*"],
+      "s2/*": ["../dist/*"]
     }
   },
   "ts-node": {
@@ -45,6 +40,6 @@
     "./**/*.tsx",
     "./**/*.vue",
     "./**/*.svelte",
-    "../package.json",
+    "../package.json"
   ]
 }

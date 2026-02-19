@@ -17,11 +17,12 @@
 // import type { Properties, S2CellId } from 'gis-tools/index.js';
 
 use crate::{
-    style::{Color, GPUType, Input, InputValueType, InteractiveWorkerLayer},
-    workers::{IDGen, InteractiveObject},
+    style::{BuildCodeFunction, Color, GPUType, Input, InputValueType, InteractiveWorkerLayer},
+    workers::{IDGen, InteractiveObject, TileRequest},
 };
 use alloc::{collections::BTreeMap, rc::Rc};
 use core::cell::RefCell;
+use gistools::geometry::S2CellId;
 use libm::{fmax, fmin};
 use s2json::Properties;
 
@@ -66,7 +67,7 @@ pub fn color_func(lch: bool) -> impl Fn(String) -> Vec<f32> {
  * @returns clamped number
  */
 pub fn clamp(i: f64) -> f64 {
-    fmax(-1., fmin(1., i))
+    i.clamp(-1., 1.)
 }
 
 /**
@@ -116,91 +117,88 @@ impl VectorWorker {
         );
     }
 
-    //   /**
-    //    * Flush a tile-request to the render thread
-    //    * @param mapID - id of the map to ship the data back to
-    //    * @param tile - tile request
-    //    * @param sourceName - name of the source the data belongs to
-    //    * @param _wait - wait function. Not needed at this flush level.
-    //    */
-    //   async flush(
-    //     mapID: string,
-    //     tile: TileRequest,
-    //     sourceName: string,
-    //     _wait: Promise<void>,
-    //   ): Promise<void> {
-    //     await this.postInteractive(mapID, sourceName, tile.id);
-    //   }
+    /**
+     * Flush a tile-request to the render thread
+     * @param map_id - id of the map to ship the data back to
+     * @param tile - tile request
+     * @param source_name - name of the source the data belongs to
+     * @param _wait - wait function. Not needed at this flush level.
+     */
+    async fn flush(
+        &self,
+        map_id: String,
+        tile: TileRequest,
+        source_name: String,
+        // _wait: Promise<void>,
+    ) {
+        //     await this.post_interactive(map_id, source_name, tile.id);
+        todo!()
+    }
 
-    //   /**
-    //    * Build code for a vector layer
-    //    * @param design - the design to modify
-    //    * @returns the build function
-    //    */
-    //   build_code(design: CodeDesign<NotNullOrObject>): BuildCodeFunction {
-    //     const featureFunctions: Array<LayerWorkerFunction<number | ColorArray>> = [];
-    //     for (const [input, cb] of design) {
-    //       featureFunctions.push(parseFeature<NotNullOrObject, ColorArray>(input, cb));
-    //     }
+    /**
+     * Build code for a vector layer
+     * @param design - the design to modify
+     * @returns the build function
+     */
+    pub fn build_code<T: InputValueType, F: Fn(T) -> Vec<f32>>(
+        &self,
+        design: CodeDesign<T, F>,
+    ) -> BuildCodeFunction {
+        //     const featureFunctions: Array<LayerWorkerFunction<number | ColorArray>> = [];
+        //     for (const [input, cb] of design) {
+        //       featureFunctions.push(parseFeature<NotNullOrObject, ColorArray>(input, cb));
+        //     }
 
-    //     return (zoom: number, properties: Properties): [number[], number[]] => {
-    //       // prep codes
-    //       const webgl2Code: number[] = [];
-    //       const webgl1Code: number[] = featureFunctions.flatMap((func) =>
-    //         func(webgl2Code, properties, zoom),
-    //       );
+        //     return (zoom: number, properties: Properties): [number[], number[]] => {
+        //       // prep codes
+        //       const webgl2Code: number[] = [];
+        //       const webgl1Code: number[] = featureFunctions.flatMap((func) =>
+        //         func(webgl2Code, properties, zoom),
+        //       );
 
-    //       return [webgl1Code, webgl2Code];
-    //     };
-    //   }
+        //       return [webgl1Code, webgl2Code];
+        //     };
+        todo!()
+    }
 
-    //   /**
-    //    * Post an interactive feature set to the render thread
-    //    * @param mapID - id of the map to ship the data back to
-    //    * @param sourceName - name of the source the data belongs to
-    //    * @param tileID - tile id the features belong to
-    //    */
-    //   postInteractive(mapID: string, sourceName: string, tileID: S2CellId): void {
-    //     if (this.interactive_map.size === 0) return;
-    //     const interactiveGuide: number[] = [];
-    //     const interactiveData: number[] = [];
+    /**
+     * Post an interactive feature set to the render thread
+     * @param map_id - id of the map to ship the data back to
+     * @param source_name - name of the source the data belongs to
+     * @param tile_id - tile id the features belong to
+     */
+    pub fn post_interactive(&self, map_id: String, source_name: String, tile_id: S2CellId) {
+        //     if (this.interactive_map.size === 0) return;
+        //     const interactiveGuide: number[] = [];
+        //     const interactiveData: number[] = [];
 
-    //     const textEncoder = new TextEncoder();
+        //     const textEncoder = new TextEncoder();
 
-    //     let offset = 0;
-    //     for (const [id, properties] of this.interactive_map) {
-    //       const uint8Array = textEncoder.encode(JSON.stringify(properties));
-    //       const length = uint8Array.length;
-    //       interactiveGuide.push(id, offset, offset + length);
-    //       for (const byte of uint8Array) interactiveData.push(byte);
-    //       offset += length;
-    //     }
-    //     this.interactive_map.clear();
+        //     let offset = 0;
+        //     for (const [id, properties] of this.interactive_map) {
+        //       const uint8Array = textEncoder.encode(JSON.stringify(properties));
+        //       const length = uint8Array.length;
+        //       interactiveGuide.push(id, offset, offset + length);
+        //       for (const byte of uint8Array) interactiveData.push(byte);
+        //       offset += length;
+        //     }
+        //     this.interactive_map.clear();
 
-    //     // Upon building the batches, convert to buffers and ship.
-    //     const interactiveGuideBuffer = new Uint32Array(interactiveGuide).buffer;
-    //     const interactiveDataBuffer = new Uint8ClampedArray(interactiveData).buffer;
-    //     // ship the vector data.
-    //     postMessage(
-    //       {
-    //         mapID,
-    //         type: 'interactive',
-    //         sourceName,
-    //         tileID,
-    //         interactiveGuideBuffer,
-    //         interactiveDataBuffer,
-    //       },
-    //       [interactiveGuideBuffer, interactiveDataBuffer],
-    //     );
-    //   }
+        //     // Upon building the batches, convert to buffers and ship.
+        //     const interactiveGuideBuffer = new Uint32Array(interactiveGuide).buffer;
+        //     const interactiveDataBuffer = new Uint8ClampedArray(interactiveData).buffer;
+        //     // ship the vector data.
+        //     postMessage(
+        //       {
+        //         map_id,
+        //         type: 'interactive',
+        //         source_name,
+        //         tile_id,
+        //         interactiveGuideBuffer,
+        //         interactiveDataBuffer,
+        //       },
+        //       [interactiveGuideBuffer, interactiveDataBuffer],
+        //     );
+        todo!()
+    }
 }
-
-// /**
-//  * A convenience function to convert an ID to an RGBA encoded color
-//  * @param id - the id to convert
-//  * @returns an RGBA encoded color
-//  */
-// pub fn id_to_rgb(id: number) -> ColorArray {
-//   return [id & 255, (id >> 8) & 255, (id >> 16) & 255, 0];
-//   // ((color & 0xFF) as f64, ((color >> 8) & 0xFF) as f64, ((color >> 16) & 0xFF) as f64, 0.0)
-// }

@@ -10,7 +10,7 @@ export default defineNuxtConfig({
     '@nuxt/fonts',
     '@nuxt/icon',
     '@nuxt/image',
-    '@nuxt/ui'
+    '@nuxt/ui',
   ],
   css: ['~/assets/css/main.css'],
 
@@ -27,15 +27,7 @@ export default defineNuxtConfig({
 
   ui: {
     theme: {
-      colors: [
-        'primary',
-        'secondary',
-        'tertiary',
-        'info',
-        'success',
-        'warning',
-        'error'
-      ]
+      colors: ['primary', 'secondary', 'tertiary', 'info', 'success', 'warning', 'error'],
     },
     // icons: ['heroicons', 'simple-icons', 'ph'],
   },
@@ -55,10 +47,23 @@ export default defineNuxtConfig({
           //   // Theme used if `html.sepia`
           //   sepia: 'monokai'
           // }
-          langs: ['javascript', 'html', 'typescript', 'svelte', 'vue', 'vue-html', 'tsx', 'json', 'json5', 'markdown', 'css', 'rust']
+          langs: [
+            'javascript',
+            'html',
+            'typescript',
+            'svelte',
+            'vue',
+            'vue-html',
+            'tsx',
+            'json',
+            'json5',
+            'markdown',
+            'css',
+            'rust',
+          ],
           // 'javascript', 'typescript', 'markdown', 'vue', 'vue-html', 'zig', 'tsx', 'html', 'svelte', 'css', 'text'
-        }
-      }
-    }
-  }
-})
+        },
+      },
+    },
+  },
+});

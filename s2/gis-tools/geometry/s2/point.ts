@@ -419,6 +419,7 @@ export function pointAngle(a: VectorPoint, b: VectorPoint): S1Angle {
  * @param xyz - The XYZ Point
  * @returns - The S2 Hilbert Face
  */
+// oxlint-disable-next-line jsdoc/require-returns jsdoc/require-param - false positive
 export function pointGetFace(xyz: VectorPoint): number {
   return XYZtoFace(xyz);
 }

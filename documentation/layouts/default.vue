@@ -1,6 +1,6 @@
 <template>
   <UApp>
-    <div id='cover'>
+    <div id="cover">
       <!-- <NavigationHome />
   
       <div id='contentContainer'>
@@ -31,19 +31,18 @@
     </div>
   </UApp>
 </template>
-  
+
 <style scoped>
-  #cover {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    width: 100vw;
-    min-height: 750px;
-    /* background-color: #171c22;
+#cover {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  min-height: 750px;
+  /* background-color: #171c22;
     color: #c2cdd8; */
-    /* overflow-y: hidden;
+  /* overflow-y: hidden;
     z-index: 1;
     overflow: hidden; */
-  }
+}
 </style>
-  

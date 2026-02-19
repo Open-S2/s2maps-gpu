@@ -193,13 +193,10 @@ export function toWMID(
   // skip tiles that are NOT out of bounds
   if (x >= 0 && x < size && y >= 0 && y < size) return;
   // otherwise store the out of boudns tile
-  const maxX = 1 << zoom;
-  const adjustedX = mod(x, maxX); // Adjust x to be within [0, maxX)
+  const adjustedX = mod(x, size); // Adjust x to be within [0, maxX)
   const remainder = zigzag(x - adjustedX);
   return (
-    (BigInt(1 << zoom) * BigInt(y) + BigInt(adjustedX)) * 32n +
-    BigInt(zoom) +
-    (BigInt(remainder) << 65n)
+    (BigInt(size) * BigInt(y) + BigInt(adjustedX)) * 32n + BigInt(zoom) + (BigInt(remainder) << 65n)
   );
 }
 

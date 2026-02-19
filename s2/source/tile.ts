@@ -8,7 +8,7 @@ import {
   pointSub,
 } from 'gis-tools/index.js';
 
-import type { DOMContext } from 's2/dom/context.js';
+import type { DOMContext } from 'dom/context.js';
 import type { Context as WebGLContext } from 'gl/context/index.js';
 import type { WebGPUContext } from 'gpu/context/index.js';
 import type { BBox, Face, S2CellId } from 'gis-tools/index.js';
@@ -46,9 +46,11 @@ export function createTile(
 }
 
 /** Base Tile Class that all Tiles inherit from. */
-class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMaskSource>
-  implements TileSpec<C, F, M>
-{
+class Tile<
+  C extends SharedContext,
+  F extends SharedFeatures,
+  M extends SharedMaskSource,
+> implements TileSpec<C, F, M> {
   id: S2CellId;
   face: Face = 0;
   i = 0;
@@ -59,7 +61,6 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
   mask!: M;
   bbox: BBox = [0, 0, 0, 0];
   readonly featureGuides: F[] = [];
-  context: C;
   interactiveGuide = new Map<number, InteractiveObject>();
   uniforms = new Float32Array(7); // [isS2, face, zoom, sLow, tLow, deltaS, deltaT]
   bottomTop = new Float32Array(8);
@@ -73,12 +74,8 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
   // by copying the parents featureGuides.
   wrappedID?: TmpWMID;
   dependents: Array<Tile<C, F, M>> = [];
-  /**
-   * @param context - the GPU or WebGL context
-   * @param id - the tile ID
-   */
-  constructor(context: C, id: S2CellId) {
-    this.context = context;
+  /** @param id - the tile ID */
+  constructor(id: S2CellId) {
     this.id = id;
   }
 
@@ -91,7 +88,7 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
   injectParentTile(parent: TileSpec<C, F, M>, layers: LayerDefinition[]): void {
     // feature guides
     for (const feature of parent.featureGuides) {
-      if (feature.maskLayer ?? false) continue; // ignore mask features
+      if ((feature.maskLayer ?? false) as boolean) continue; // ignore mask features
       const { maxzoom } = layers[feature.layerGuide.layerIndex];
       const actualParent = feature.parent ?? parent;
       if (this.zoom <= maxzoom) {
@@ -119,9 +116,10 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
   /**
    * set the screen positions of the mask
    * @param _ - the projector (not needed here)
+   * @param context - the GPU or WebGL context
    */
-  setScreenPositions(_: Projector): void {
-    const { context, mask, bottomTop } = this;
+  setScreenPositions(_: Projector, context: C): void {
+    const { mask, bottomTop } = this;
     // if WebGPU mask, we need to update the position buffer
     if (mask.positionBuffer !== undefined) {
       context.device?.queue.writeBuffer(mask.positionBuffer, 0, bottomTop);
@@ -338,11 +336,13 @@ class Tile<C extends SharedContext, F extends SharedFeatures, M extends SharedMa
     for (let i = featureGuides.length - 1; i >= 0; i--) {
       const { layerGuide, parent } = featureGuides[i];
       if (
+        // is dead
         deadLayers.includes(layerGuide.layerIndex) &&
+        // not a parent
         parent !== undefined &&
         // corner-case: empty data/missing tile -> flushes ALL layers,
         // but that layer MAY BE inverted so we don't kill it.
-        !(('invert' in layerGuide && layerGuide.invert) ?? false)
+        !((('invert' in layerGuide && layerGuide.invert) ?? false) as boolean)
       )
         featureGuides.splice(i, 1);
     }
@@ -365,7 +365,7 @@ export class S2Tile<
    */
   constructor(context: C, tileInfo: TileInView) {
     const { id, face, zoom, x, y } = tileInfo;
-    super(context, id);
+    super(id);
     const { max, min, floor } = Math;
     this.face = face;
     this.i = x;
@@ -404,8 +404,9 @@ export class S2Tile<
   /**
    * given a matrix, compute the corners screen positions
    * @param projector - the camera's current view
+   * @param context - the GPU or WebGL context
    */
-  override setScreenPositions(projector: Projector): void {
+  override setScreenPositions(projector: Projector, context: C): void {
     if (this.corners !== undefined) {
       const { eye } = projector;
       const eyeKM = pointMulScalar(eye, 1000);
@@ -427,7 +428,7 @@ export class S2Tile<
       this.bottomTop[6] = trX;
       this.bottomTop[7] = trY;
       // if WebGPU mask, we need to update the position buffer
-      super.setScreenPositions(projector);
+      super.setScreenPositions(projector, context);
     }
   }
 }
@@ -446,7 +447,7 @@ export class WMTile<
    */
   constructor(context: C, tileInfo: TileInView) {
     const { id, x, y, zoom, wrappedID } = tileInfo;
-    super(context, id);
+    super(id);
     this.i = x;
     this.j = y;
     this.zoom = zoom;
@@ -472,8 +473,9 @@ export class WMTile<
   /**
    * given a basic ortho matrix, adjust by the tile's offset and scale
    * @param projector - the camera's current view
+   * @param context - the GPU or WebGL context
    */
-  override setScreenPositions(projector: Projector): void {
+  override setScreenPositions(projector: Projector, context: C): void {
     const { zoom, lon, lat } = projector;
     const scale = Math.pow(2, zoom - this.zoom);
     const offset = llToTilePx({ x: lon, y: lat }, [this.zoom, this.i, this.j], 1);
@@ -496,7 +498,7 @@ export class WMTile<
     this.bottomTop[6] = tr.x;
     this.bottomTop[7] = tr.y;
 
-    super.setScreenPositions(projector);
+    super.setScreenPositions(projector, context);
   }
 }
 
@@ -507,7 +509,8 @@ export class WMTile<
  * @returns true if setA is a subset of set2
  */
 function setBContainsA(setA: Set<number>, set2: Set<number>): boolean {
-  // TODO: Remove this function to favor: setA.isSupersetOf(set2); (check it works live first)
-  for (const item of setA) if (!set2.has(item)) return false;
-  return true;
+  return set2.isSupersetOf(setA);
+  // // TODO: Remove this function to favor: setA.isSupersetOf(set2); (check it works live first)
+  // for (const item of setA) if (!set2.has(item)) return false;
+  // return true;
 }

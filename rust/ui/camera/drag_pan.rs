@@ -18,6 +18,17 @@ pub struct TouchEvent {
     pub y: f64,
 }
 
+/// An interface that models the touch event items we are interested in
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum TouchType {
+    /// User has just touched the screen
+    TouchStart,
+    /// User has let go
+    TouchEnd,
+    /// User is dragging
+    TouchMove,
+}
+
 /// An interface that models the user touch event items we are interested in
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct UserTouchEvent(Vec<TouchEvent>);

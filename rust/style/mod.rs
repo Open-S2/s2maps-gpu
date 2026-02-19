@@ -13,15 +13,44 @@ pub mod parse_filter;
 /// Style Specification
 pub mod style_spec;
 
-use crate::util::UrlMap;
-use alloc::{string::String, vec::Vec};
+use crate::{
+    render::{PainterSpec, Presentation, Workflow, WorkflowSpec, WorkflowType},
+    source::Tile,
+    ui::{Camera, MapOptions},
+    util::UrlMap,
+    workers::{
+        MapGLToSourceMessage, MapGLToSourceMessages, RequestStyleMessage, StyleMessage,
+        TileRequest, TileRequestMessage, WorkerPool,
+    },
+};
+use alloc::{collections::BTreeSet, rc::Rc, string::String, vec::Vec};
 pub use coalesce_field::*;
 pub use color::*;
+use core::cell::RefCell;
 pub use easing_functions::*;
 pub use encode_layer_attribute::*;
 pub use parse_feature::*;
 pub use parse_filter::*;
 pub use style_spec::*;
+
+/// # Style Mask Layer
+#[derive(Debug, Clone)]
+pub enum StyleMaskLayer {
+    /// Fill Definition
+    Fill(FillDefinition),
+    /// Shade Definition
+    Shade(ShadeDefinition),
+}
+impl From<FillDefinition> for StyleMaskLayer {
+    fn from(f: FillDefinition) -> Self {
+        StyleMaskLayer::Fill(f)
+    }
+}
+impl From<ShadeDefinition> for StyleMaskLayer {
+    fn from(f: ShadeDefinition) -> Self {
+        StyleMaskLayer::Shade(f)
+    }
+}
 
 /// # Style Engine
 ///
@@ -31,365 +60,317 @@ pub use style_spec::*;
 /// - 2) Build out the layers
 /// - 3) Ship off appropriate style params to Tile Workers so they know how to build the tiles
 /// - 4) Build the layers for the painter
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
+#[allow(missing_docs)]
 pub struct Style {
-    // camera: Rc<RefCell<Camera>>,
-    api_key: Option<String>,
-    url_map: Option<UrlMap>,
-    //   maskLayers: Vec<FillDefinition | ShadeDefinition>, // = [];
-    layers: Vec<LayerDefinition>, // = [];
-    interactive: bool,            // = false;
-    dirty: bool,                  // = true;
+    pub camera: Rc<RefCell<Camera>>,
+    pub api_key: Option<String>,
+    pub url_map: UrlMap,
+    pub mask_layers: Vec<StyleMaskLayer>,
+    pub layers: Vec<LayerDefinition>,
+    pub interactive: bool,
+    pub dirty: bool,
 }
-//   /**
-//    * @param camera - render camera
-//    * @param options - map options
-//    */
-//   constructor(camera: Camera, options: &MapOptions) {
-//     const { api_key, url_map } = options;
-//     this.camera = camera;
-//     this.api_key = api_key;
-//     this.url_map = url_map;
-//   }
+impl Style {
+    /// Setup a new Style manager
+    pub fn new(camera: Rc<RefCell<Camera>>, options: &MapOptions) -> Self {
+        Self {
+            camera,
+            api_key: options.api_key.clone(),
+            url_map: options.url_map.clone().unwrap_or_default(),
+            mask_layers: vec![],
+            layers: vec![],
+            interactive: false,
+            dirty: true,
+        }
+    }
 
-//   /**
-//    * Build the style, preparing it for rendering and tile/source processing
-//    * @param style - style definition
-//    * @param ignorePosition - if true, we want to leave the position of the camera unchanged.
-//    * @returns true if we can start rendering
-//    */
-//   async buildStyle(style: string | StyleDefinition, ignorePosition = false): Promise<boolean> {
-//     const { camera } = this;
-//     const { painter, projector } = camera;
-//     if (typeof style === 'string') {
-//       this.#requestStyle(style);
-//       return false;
-//     }
-//     if (typeof style !== 'object') throw Error('style must be an object');
-//     this.dirty = true;
-//     // inform the projection
-//     painter.context.setProjection(style.projection ?? 'S2');
-//     // set the clear color if present
-//     if (style.clearColor !== undefined) {
-//       painter.context.setClearColor(style.clearColor);
-//     }
-//     // build workflows that don't exist yet (depends on projection)
-//     await this.#buildWorkflows(style);
-//     // build layer definitions
-//     this.#buildLayers(style.layers);
-//     // built layers let us know if we have an interactive layer or not (depends on layers)
-//     painter.context.setInteractive(this.interactive);
-//     // build time series if exists
-//     if (style.timeSeries !== undefined) camera.buildTimeCache(style.timeSeries);
-//     // ship to Tile Workers
-//     this.#sendStyleDataToWorkers(style);
-//     // update the projector with our style
-//     projector.setStyleParameters(style, ignorePosition);
-//     // return we can start rendering
-//     return true;
-//   }
+    /// Build the style, preparing it for rendering and tile/source processing
+    ///
+    /// ## Parameters
+    /// - `style`: style definition
+    /// - `ignore_position`: if true, we want to leave the position of the camera unchanged.
+    ///
+    /// ## Returns
+    /// True if we can start rendering
+    pub async fn build_style(
+        &mut self,
+        style: MapStyleInput,
+        ignore_position: Option<bool>,
+    ) -> bool {
+        let ignore_position = ignore_position.unwrap_or(false);
+        match style {
+            MapStyleInput::Href(style) => {
+                self._request_style(style).await;
+                false
+            }
+            MapStyleInput::Style(style) => {
+                self.dirty = true;
+                // build workflows that don't exist yet (depends on projection)
+                self._build_workflows(style.clone()).await;
+                // build layer definitions
+                self._build_layers(style.layers.clone());
+                // prep the camera
+                let camera = &mut self.camera.borrow_mut();
+                // inform the projection
+                camera
+                    .painter
+                    .context
+                    .borrow_mut()
+                    .set_projection(style.projection.unwrap_or(Projection::S2));
+                // set the clear color if present
+                if let Some(clear_color) = style.clear_color {
+                    camera.painter.context.borrow_mut().set_clear_color(clear_color);
+                }
+                // built layers let us know if we have an interactive layer or not (depends on layers)
+                camera.painter.context.borrow_mut().set_interactive(self.interactive);
+                // build time series if exists
+                if let Some(time_series) = style.time_series {
+                    camera.build_time_cache(time_series);
+                }
+                // update the projector with our style
+                camera.projector.set_style_parameters(&style, ignore_position);
+                // ship to Tile Workers
+                self._send_style_data_to_workers(style).await;
+                // return we can start rendering
+                true
+            }
+        }
+    }
 
-//   /**
-//    * Inject mask layers
-//    * @param tile - tile to inject the mask layers for
-//    */
-//   injectMaskLayers(tile: Tile): void {
-//     const { maskLayers, camera } = this;
-//     for (const maskLayer of maskLayers) {
-//       const workflow = camera.painter.workflows[maskLayer.type];
-//       workflow?.buildMaskFeature(maskLayer as never, tile);
-//     }
-//   }
+    /// Inject mask layers
+    ///
+    /// ## Parameters
+    /// - `tile`: tile to inject the mask layers for
+    pub fn inject_mask_layers(&self, tile: Rc<RefCell<Tile>>) {
+        let camera = &self.camera.borrow();
+        for mask_layer in &self.mask_layers {
+            if let Some(workflow) = camera.painter.workflows.get_from_mask(mask_layer) {
+                workflow.build_mask_feature(mask_layer, tile.clone());
+            }
+        }
+    }
 
-//   /**
-//    * Request the style if the input style was an href pointing to the style object
-//    * @param style - style href
-//    */
-//   #requestStyle(style: string): void {
-//     const { api_key, url_map, camera } = this;
-//     const { id, webworker } = camera;
-//     const analytics = this.#buildAnalytics();
+    /// Request the style if the input style was an href pointing to the style object
+    ///
+    /// ## Parameters
+    /// - `style`: style href
+    async fn _request_style(&self, style: String) {
+        let api_key = self.api_key.clone();
+        let url_map = self.url_map.clone();
+        let Camera { id, worker, .. } = &*self.camera.borrow();
+        let analytics = self._build_analytics();
 
-//     if (webworker) {
-//       const message: RequestStyleMessage = {
-//         mapID: id,
-//         analytics,
-//         type: 'requestStyle',
-//         style,
-//         api_key,
-//         url_map,
-//       };
-//       postMessage(message);
-//     } else {
-//       window.S2WorkerPool.requestStyle(id, style, analytics, api_key, url_map);
-//     }
-//   }
+        if let Some(worker) = worker {
+            worker
+                .send(MapGLToSourceMessages {
+                    map_id: *id,
+                    message: MapGLToSourceMessage::RequestStyle(RequestStyleMessage {
+                        style,
+                        analytics,
+                        api_key,
+                        url_map: Some(url_map),
+                    }),
+                })
+                .await;
+        } else {
+            let worker_pool = WorkerPool::get();
+            worker_pool.request_style(*id, style, analytics, api_key, Some(url_map));
+        }
+    }
 
-//   /**
-//    * Build workflows
-//    * @param style - input style object
-//    */
-//   async #buildWorkflows(style: StyleDefinition): Promise<void> {
-//     const { camera, url_map } = this;
-//     const { painter } = camera;
-//     const { skybox, wallpaper, layers } = style;
-//     const workflows = new Set<GLWorkflowType | GPUWorkflowType>(['fill']);
-//     // setup appropriate background if it exists
-//     if (skybox !== undefined) workflows.add('skybox');
-//     if (wallpaper !== undefined) workflows.add('wallpaper');
-//     // iterate layers and add workflows
-//     if (Array.isArray(layers)) {
-//       for (const layer of layers) {
-//         if (layer.type !== undefined) workflows.add(layer.type);
-//       }
-//     }
-//     // build workflows
-//     await painter.buildWorkflows(workflows);
-//     // inject styles into workflows
-//     for (const [name, workflow] of Object.entries(painter.workflows)) {
-//       if (name === 'background') continue;
-//       if ('updateStyle' in workflow) workflow.updateStyle(style, camera, url_map);
-//     }
-//   }
+    /// Build workflows
+    ///
+    /// ## Parameters
+    /// - `style`: input style object
+    async fn _build_workflows(&mut self, style: StyleDefinition) {
+        let mut workflows: BTreeSet<WorkflowType> = BTreeSet::from([WorkflowType::Fill]);
+        // setup appropriate background if it exists
+        if style.skybox.is_some() {
+            workflows.insert(WorkflowType::Skybox);
+        }
+        if style.wallpaper.is_some() {
+            workflows.insert(WorkflowType::Wallpaper);
+        }
+        // iterate layers and add workflows
+        if let Some(layers) = &style.layers {
+            for layer in layers {
+                workflows.insert(layer.into());
+            }
+        }
+        // build workflows
+        self.camera.borrow_mut().painter.build_workflows(workflows);
+        // inject styles into workflows
+        if let Some(Workflow::Skybox(skybox)) =
+            self.camera.borrow_mut().painter.workflows.get_from_type_mut(WorkflowType::Skybox)
+        {
+            skybox.update_style(&style, self.camera.clone(), &mut self.url_map).await;
+        }
+        if let Some(Workflow::Wallpaper(wallpaper)) =
+            self.camera.borrow_mut().painter.workflows.get_from_type_mut(WorkflowType::Wallpaper)
+        {
+            wallpaper.update_style(&style);
+        }
+    }
 
-//   /**
-//    * Build layer definitions
-//    * - 1) ensure "bad" layers are removed (missing important keys or subkeys)
-//    * - 2) ensure the order is correct for when WebGL eventually parses the encodings
-//    * @param layers - layers to build
-//    */
-//   #buildLayers(layers: LayerStyle[] = []): void {
-//     const layerDefinitions: LayerDefinition[] = [];
-//     let layerIndex = 0;
-//     for (const layerStyle of layers) {
-//       const layerDefinition = this.#buildLayer(layerStyle, layerIndex);
-//       if (layerDefinition !== undefined) {
-//         if (
-//           layerDefinition.source === 'mask' &&
-//           (layerDefinition.type === 'fill' || layerDefinition.type === 'shade')
-//         )
-//           this.maskLayers.push(layerDefinition);
-//         layerDefinitions.push(layerDefinition);
-//         if (layerDefinition.interactive === true) this.interactive = true;
-//         layerIndex++;
-//       }
-//     }
-//     this.layers = layerDefinitions;
-//   }
+    /// Build layer definitions
+    /// - 1) ensure "bad" layers are removed (missing important keys or subkeys)
+    /// - 2) ensure the order is correct for when WebGL eventually parses the encodings
+    ///
+    /// ## Parameters
+    /// - `layers`: layers to build
+    fn _build_layers(&mut self, layers: Option<Vec<LayerStyle>>) {
+        let layers = layers.unwrap_or(vec![]);
+        let mut layer_definitions: Vec<LayerDefinition> = vec![];
+        let mut layer_index = 0;
+        for layer_style in layers {
+            if let Some(layer_definition) = self._build_layer(layer_style, layer_index) {
+                if layer_definition.base().interactive.unwrap_or(false) {
+                    self.interactive = true;
+                }
+                if layer_definition.source() == "mask" {
+                    match &layer_definition {
+                        LayerDefinition::Fill(f) => {
+                            self.mask_layers.push(StyleMaskLayer::Fill(f.clone()))
+                        }
+                        LayerDefinition::Shade(f) => {
+                            self.mask_layers.push(StyleMaskLayer::Shade(f.clone()))
+                        }
+                        _ => (),
+                    }
+                }
+                layer_definitions.push(layer_definition);
+                layer_index += 1;
+            }
+        }
+        self.layers = layer_definitions;
+    }
 
-//   /**
-//    * Build layer definition
-//    * @param layerStyle - layer style to build
-//    * @param layerIndex - position of the layer in the style layers array
-//    * @returns a layer definition if successful
-//    */
-//   #buildLayer(layerStyle: LayerStyle, layerIndex: number): undefined | LayerDefinition {
-//     const { workflows } = this.camera.painter;
-//     // grab variables
-//     const { type, name, source, layer, minzoom, maxzoom, filter, lch, visible } = layerStyle;
-//     if (type === undefined || name === undefined || source === undefined) {
-//       console.warn(
-//         'Skipping layer: "',
-//         layerStyle,
-//         '" because it is missing "type", "name" and/or "source"',
-//       );
-//       return;
-//     }
-//     // prepare layer base
-//     const base: LayerDefinitionBase = {
-//       type,
-//       name,
-//       source,
-//       layerIndex,
-//       layer: layer ?? 'default',
-//       minzoom: minzoom ?? 0,
-//       maxzoom: maxzoom ?? 20,
-//       filter,
-//       lch: lch ?? false,
-//       visible: visible ?? true,
-//     };
-//     // store the layer definition
-//     const layerDefinition = workflows[type]?.buildLayerDefinition?.(base, layerStyle as never);
-//     if (layerDefinition !== undefined) return layerDefinition;
-//   }
+    /// Build layer definition
+    ///
+    /// ## Parameters
+    /// - `layer_style`: layer style to build
+    /// - `layer_index`: position of the layer in the style layers array
+    ///
+    /// ## Returns
+    /// A layer definition if successful
+    fn _build_layer(&self, layer_style: LayerStyle, layer_index: u32) -> Option<LayerDefinition> {
+        // setup definition
+        let r#type = layer_style.base().r#type.unwrap_or_default();
+        let base = LayerDefinitionBase::from_layer(layer_style.base(), layer_index);
+        // store the layer definition
+        if let Some(workflow) =
+            self.camera.borrow_mut().painter.workflows.get_from_type_mut(r#type.into())
+        {
+            return Some(workflow.build_layer_definition(base, &layer_style));
+        }
+        None
+    }
 
-//   /**
-//    * Request tiles. The projector will forward requests throug this class so it can build the
-//    * tile requests with style specific data before forwarding it to the worker pool
-//    * @param tiles - tiles to request data for
-//    */
-//   requestTiles(tiles: Tile[]): void {
-//     if (tiles.length === 0) return;
-//     const { id, webworker } = this.camera;
-//     const tileRequests: TileRequest[] = [];
-//     tiles.forEach((tile) => {
-//       // grab request values
-//       const { id, face, i, j, zoom, type, bbox, division } = tile;
-//       // build tileRequests
-//       tileRequests.push({ id, face, i, j, zoom, type, bbox, division });
-//     });
-//     // send the tiles over to the worker pool manager to split the workload
-//     if (webworker) {
-//       postMessage({ mapID: id, type: 'tilerequest', tiles: tileRequests });
-//     } else {
-//       window.S2WorkerPool.tileRequest(id, tileRequests);
-//     }
-//   }
+    /// Request tiles. The projector will forward requests throug this class so it can build the
+    /// tile requests with style specific data before forwarding it to the worker pool
+    ///
+    /// ## Parameters
+    /// - `tiles`: tiles to request data for
+    pub async fn request_tiles(&self, tiles: &[Rc<RefCell<Tile>>]) {
+        if tiles.is_empty() {
+            return;
+        }
+        let Camera { id, worker, .. } = &*self.camera.borrow();
+        let mut tile_requests: Vec<TileRequest> = vec![];
+        for tile in tiles {
+            tile_requests.push((&*tile.borrow()).into());
+        }
+        // send the tiles over to the worker pool manager to split the workload
+        if let Some(worker) = worker {
+            worker
+                .send(MapGLToSourceMessages {
+                    map_id: *id,
+                    message: MapGLToSourceMessage::TileRequest(TileRequestMessage {
+                        tiles: tile_requests,
+                        sources: vec![],
+                    }),
+                })
+                .await;
+        } else {
+            let worker_pool = WorkerPool::get();
+            worker_pool.tile_request(*id, tile_requests, None);
+        }
+    }
 
-//   /**
-//    * Send style data to workers
-//    * @param style - style definition to forward
-//    */
-//   #sendStyleDataToWorkers(style: StyleDefinition): void {
-//     const { api_key, url_map, layers } = this;
-//     const { id, webworker, painter, projector } = this.camera;
-//     const { type } = painter.context;
-//     const { tileSize } = projector;
-//     const {
-//       projection,
-//       sources,
-//       glyphs,
-//       fonts,
-//       icons,
-//       sprites,
-//       images,
-//       minzoom,
-//       maxzoom,
-//       experimental,
-//     } = style;
-//     const analytics = this.#buildAnalytics();
-//     // now that we have various source data, package up the style objects we need and send it off:
-//     const stylePackage: StylePackage = {
-//       projection: projection ?? 'S2',
-//       gpuType: type,
-//       sources: sources ?? {},
-//       glyphs: glyphs ?? {},
-//       fonts: fonts ?? {},
-//       icons: icons ?? {},
-//       sprites: sprites ?? {},
-//       images: images ?? {},
-//       layers: layers.filter((l) => l.source !== 'mask'),
-//       minzoom: minzoom ?? 0,
-//       maxzoom: maxzoom ?? 20,
-//       tileSize,
-//       analytics,
-//       api_key,
-//       url_map,
-//       experimental: experimental ?? false,
-//     };
-//     // If the map engine is running on the main thread, directly send the stylePackage to the worker pool.
-//     // Otherwise perhaps this map instance is a web worker and has a global instance of postMessage
-//     if (webworker) {
-//       postMessage({ mapID: id, type: 'style', style: stylePackage });
-//     } else {
-//       window.S2WorkerPool.injectStyle(id, stylePackage);
-//     }
-//   }
+    /// Send style data to workers
+    ///
+    /// ## Parameters
+    /// - `style`: style definition to forward
+    async fn _send_style_data_to_workers(&self, style: StyleDefinition) {
+        let analytics = self._build_analytics();
+        let Self { api_key, url_map, layers, .. } = self;
+        let Camera { id, worker, painter, projector, .. } = &*self.camera.borrow();
+        let context = &painter.context.borrow();
+        let r#type = context.r#type;
+        let tile_size = projector.tile_size;
+        let StyleDefinition {
+            projection,
+            sources,
+            glyphs,
+            fonts,
+            icons,
+            sprites,
+            images,
+            minzoom,
+            maxzoom,
+            experimental,
+            ..
+        } = &style;
+        // now that we have various source data, package up the style objects we need and send it off:
+        let style_package = StylePackage {
+            projection: projection.unwrap_or(Projection::S2),
+            gpu_type: r#type,
+            sources: sources.clone().unwrap_or_default(),
+            glyphs: glyphs.clone().unwrap_or_default(),
+            fonts: fonts.clone().unwrap_or_default(),
+            icons: icons.clone().unwrap_or_default(),
+            sprites: sprites.clone().unwrap_or_default(),
+            images: images.clone().unwrap_or_default(),
+            layers: layers.iter().filter(|l| l.source() != "mask").map(|l| l.clone()).collect(),
+            minzoom: minzoom.unwrap_or(0.),
+            maxzoom: maxzoom.unwrap_or(20.),
+            tile_size,
+            analytics,
+            api_key: api_key.clone(),
+            url_map: Some(url_map.clone()),
+            experimental: experimental.unwrap_or(false),
+        };
+        // If the map engine is running on the main thread, directly send the style_package to the worker pool.
+        // Otherwise perhaps this map instance is a web worker and has a global instance of postMessage
+        if let Some(worker) = worker {
+            worker
+                .send(MapGLToSourceMessages {
+                    map_id: *id,
+                    message: MapGLToSourceMessage::Style(StyleMessage { style: style_package }),
+                })
+                .await;
+        } else {
+            let worker_pool = WorkerPool::get();
+            worker_pool.inject_style(*id, style_package);
+        }
+    }
 
-//   /**
-//    * This is a helper function to build the analytics object. Useful for servers to know what kind
-//    * of GPU or limitations this browser has
-//    * @returns the analytics object
-//    */
-//   #buildAnalytics(): Analytics {
-//     const { context } = this.camera.painter;
-//     const { renderer, type, presentation } = context;
-//     const { width, height } = presentation;
-//     return {
-//       gpu: renderer,
-//       context: type,
-//       language: navigator.language.split('-')[0] ?? 'en',
-//       width,
-//       height,
-//     };
-//   }
-// }
-
-// // addLayer (layer: Layer, nameIndex?: number | string, tileRequests: Array<TileRequest>) {
-// //   const { painter } = this.map
-// //   const workflows = new Set()
-// //   // prebuild & convert nameIndex to index
-// //   const index = this.#findLayerIndex(nameIndex)
-// //   this._prebuildLayer(layer, index)
-// //   // let the workers know
-// //   if (this.webworker) {
-// //     postMessage({ mapID: this.map.id, type: 'addLayer', layer, index, tileRequests })
-// //   } else {
-// //     window.S2WorkerPool.addLayer(this.map.id, layer, index, tileRequests)
-// //   }
-// //   // insert layer into layers, updating positions of other layers as necessary
-// //   const { layers } = this
-// //   layers.splice(index, 0, layer)
-// //   for (let i = index + 1, ll = layers.length; i < ll; i++) {
-// //     const layer = layers[i]
-// //     layer.layerIndex++
-// //     layer.depthPos++
-// //   }
-// //   // build layer
-// //   this._buildLayer(layer, index + 1, workflows)
-// //   // tell the painter that we might be using a new workflow
-// //   painter.buildWorkflows(workflows)
-// //   // let the renderer know the style is dirty
-// //   this.dirty = true
-// // }
-
-// // deleteLayer (nameIndex?: number | string): number {
-// //   // grab the index
-// //   const index = this.#findLayerIndex(nameIndex)
-// //   // let the workers know
-// //   if (this.webworker) {
-// //     postMessage({ mapID: this.map.id, type: 'deleteLayer', index })
-// //   } else {
-// //     window.S2WorkerPool.deleteLayer(this.map.id, index)
-// //   }
-// //   // remove index from layers and update layerIndex & depthPos
-// //   const { layers } = this
-// //   layers.splice(index, 1)
-// //   for (let i = index, ll = layers.length; i < ll; i++) {
-// //     const layer = layers[i]
-// //     layer.layerIndex--
-// //     layer.depthPos--
-// //   }
-// //   // let the renderer know the style is dirty
-// //   this.dirty = true
-
-// //   return index
-// // }
-
-// // reorderLayers (layerChanges: { [string | number]: number }) {
-// //   const { layers } = this
-// //   const newLayers = []
-// //   // move the layer to its new position
-// //   for (const [from, to] of Object.entries(layerChanges)) {
-// //     const layer = layers[+from]
-// //     layer.layerIndex = to
-// //     layer.depthPos = to + 1
-// //     newLayers[to] = layer
-// //   }
-// //   // store the new layers
-// //   this.layers = newLayers
-// //   // let the webworkers know about the reorder
-// //   if (this.webworker) {
-// //     postMessage({ mapID: this.map.id, type: 'reorderLayers', layerChanges })
-// //   } else {
-// //     window.S2WorkerPool.reorderLayers(this.map.id, layerChanges)
-// //   }
-// //   // let the renderer know the style is dirty
-// //   this.dirty = true
-// // }
-
-// // export function findLayerIndex (layers: LayerDefinition[], nameIndex: number | string): number {
-// //   const length = layers.length
-// //   if (typeof nameIndex === 'number') {
-// //     return nameIndex
-// //   } else if (typeof nameIndex === 'string') {
-// //     for (let i = 0; i < length; i++) {
-// //       const layer = layers[i]
-// //       if (layer.name === nameIndex) {
-// //         return i
-// //       }
-// //     }
-// //   }
-
-// //   return length
-// // }
+    /// This is a helper function to build the analytics object. Useful for servers to know what kind
+    /// of GPU or limitations this browser has
+    ///
+    /// ## Returns
+    /// The analytics object
+    fn _build_analytics(&self) -> S2MapsAnalytics {
+        let camera = &self.camera.borrow();
+        let context = &camera.painter.context.borrow();
+        let Presentation { width, height, .. } = context.presentation;
+        S2MapsAnalytics {
+            gpu: context.renderer.clone(),
+            context: context.r#type,
+            language: language(),
+            width,
+            height,
+        }
+    }
+}

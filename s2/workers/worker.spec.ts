@@ -73,7 +73,7 @@ export interface InteractiveObject extends Properties {
 export interface CanvasMessage {
   type: 'canvas';
   options: MapOptions;
-  canvas: HTMLCanvasElement;
+  canvas: OffscreenCanvas;
   id: string;
 }
 

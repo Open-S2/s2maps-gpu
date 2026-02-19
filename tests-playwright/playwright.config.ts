@@ -71,8 +71,8 @@ export default defineConfig({
         alias: {
           s2: fileURLToPath(new URL('../s2', import.meta.url)),
           'gis-tools': fileURLToPath(new URL('../s2/gis-tools', import.meta.url)),
-          gl: fileURLToPath(new URL('../s2/gl', import.meta.url)),
-          gpu: fileURLToPath(new URL('../s2/gpu', import.meta.url)),
+          gl: fileURLToPath(new URL('../s2/render/gl', import.meta.url)),
+          gpu: fileURLToPath(new URL('../s2/render/gpu', import.meta.url)),
           plugins: fileURLToPath(new URL('../s2/plugins', import.meta.url)),
           source: fileURLToPath(new URL('../s2/source', import.meta.url)),
           style: fileURLToPath(new URL('../s2/style', import.meta.url)),

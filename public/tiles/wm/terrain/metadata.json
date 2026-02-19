@@ -1,20 +1,15 @@
 {
-    "format": "webp",
-    "name": "Terrain-DEM",
-    "description": "height = -10000 + ((R * 256 * 256 + G * 256 + B) * 0.1)",
-    "minzoom": 0,
-    "maxzoom": 5,
-    "scheme": "xyz",
-    "type": "raster",
-    "extension": "webp",
-    "encoding": "none",
-    "attributions": {
-        "© Mapbox": "https://www.mapbox.com/about/maps/"
-    },
-    "bounds": [
-        -180,
-        -85,
-        180,
-        85
-    ]
+  "format": "webp",
+  "name": "Terrain-DEM",
+  "description": "height = -10000 + ((R * 256 * 256 + G * 256 + B) * 0.1)",
+  "minzoom": 0,
+  "maxzoom": 5,
+  "scheme": "xyz",
+  "type": "raster",
+  "extension": "webp",
+  "encoding": "none",
+  "attributions": {
+    "© Mapbox": "https://www.mapbox.com/about/maps/"
+  },
+  "bounds": [-180, -85, 180, 85]
 }

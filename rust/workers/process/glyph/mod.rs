@@ -249,7 +249,7 @@ pub use glyph_spec::*;
 //       // if icon, convert field to list of codes, otherwise create a unicode array
 //       let missing = false;
 //       if (type === 'text') {
-//         field = decodeHtmlEntities(field);
+//         field = decode_html_entities(field);
 //         try {
 //           field = shapeString(field, noShaping ? DEFAULT_OPTIONS_WITHOUT_BIDI_SHAPING : undefined);
 //         } catch (err) {
@@ -690,8 +690,8 @@ pub use glyph_spec::*;
 //       if (glyphType === 'point') {
 //         glyphFilterData.push(
 //           ...feature.filter,
-//           storeAsFloat32(resultMap),
-//           storeAsFloat32(id),
+//           store_as_float32(resultMap),
+//           store_as_float32(id),
 //           -1,
 //           -1,
 //           -1,
@@ -704,8 +704,8 @@ pub use glyph_spec::*;
 //         for (const filter of feature.filters) {
 //           glyphFilterData.push(
 //             ...filter,
-//             storeAsFloat32(resultMap),
-//             storeAsFloat32(id),
+//             store_as_float32(resultMap),
+//             store_as_float32(id),
 //             -1, // padding
 //           );
 //           filterCount++;
@@ -776,7 +776,7 @@ pub use glyph_spec::*;
 //  * @param u32value - a 32 bit unsigned integer
 //  * @returns a 32 bit float
 //  */
-// function storeAsFloat32(u32value: number): number {
+// function store_as_float32(u32value: number): number {
 //   const buffer = new ArrayBuffer(4);
 //   const u32View = new Uint32Array(buffer);
 //   const f32View = new Float32Array(buffer);
@@ -790,8 +790,27 @@ pub use glyph_spec::*;
 //  * @param input - the string to decode
 //  * @returns the decoded string
 //  */
-// function decodeHtmlEntities(input: string): string {
+// function decode_html_entities(input: string): string {
 //   return input.replace(/&#x([0-9A-Fa-f]+);/g, function (_, hex: string) {
 //     return String.fromCharCode(parseInt(hex, 16));
 //   });
 // }
+/// Decode HTML entities (hex-based)
+fn decode_html_entities(input: &str) -> String {
+    // We use a lazy_static or Regex::new.
+    // For simplicity here, we'll create it inline.
+    let re = regex::Regex::new(r"&#x([0-9A-Fa-f]+);").unwrap();
+
+    // replace_all allows us to use a closure to process captures
+    re.replace_all(input, |caps: &regex::Captures| {
+        let hex_val = &caps[1];
+
+        // Convert hex string to u32, then to a char
+        u32::from_str_radix(hex_val, 16)
+            .ok()
+            .and_then(std::char::from_u32)
+            .map(|c| c.to_string())
+            .unwrap_or_else(|| caps[0].into()) // Fallback to original match if invalid
+    })
+    .into_owned()
+}

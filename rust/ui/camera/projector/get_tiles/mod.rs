@@ -4,22 +4,51 @@ pub mod s2;
 pub mod wm;
 
 use crate::ui::Vec4;
-use gistools::geometry::CellId;
+use gistools::geometry::{CellId, S2CellId};
 pub use s2::*;
 use s2json::Face;
 pub use wm::*;
+
+/// Tile ID. It handles a single quadtree supporting id's that fall outside the range of the tree
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[allow(missing_docs)]
+pub struct TileID {
+    pub id: S2CellId,
+    pub remainder: u64,
+}
+impl ToString for TileID {
+    fn to_string(&self) -> String {
+        self.id.to_string()
+    }
+}
+impl TileID {
+    /// Create a new TileID
+    pub fn new(id: S2CellId, remainder: u64) -> Self {
+        Self { id, remainder }
+    }
+}
+impl From<S2CellId> for TileID {
+    fn from(id: S2CellId) -> Self {
+        TileID { id, remainder: 0 }
+    }
+}
+impl From<FaceZXY> for TileID {
+    fn from(fzxy: FaceZXY) -> Self {
+        TileID { id: fzxy.into(), remainder: 0 }
+    }
+}
 
 /// Track the face-zoom-i-j positions
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FaceZXY {
     /// The face
-    pub face: Face,
+    pub face: u8,
     /// The zoom level
     pub zoom: u8,
     /// The i component
-    pub x: u32,
+    pub x: i64,
     /// The j component
-    pub y: u32,
+    pub y: i64,
 }
 impl From<Face> for FaceZXY {
     fn from(face: Face) -> Self {
@@ -30,12 +59,12 @@ impl From<Face> for FaceZXY {
 impl From<CellId> for FaceZXY {
     fn from(cell_id: CellId) -> Self {
         let (face, zoom, x, y) = cell_id.to_face_ij();
-        Self { face: face.into(), zoom, x, y }
+        Self { face, zoom, x: x as i64, y: y as i64 }
     }
 }
 impl From<FaceZXY> for CellId {
     fn from(fzij: FaceZXY) -> Self {
-        CellId::from_face_ij(fzij.face.into(), fzij.x, fzij.y, Some(fzij.zoom))
+        CellId::from_face_ij(fzij.face.into(), fzij.x as u32, fzij.y as u32, Some(fzij.zoom))
     }
 }
 
@@ -43,17 +72,17 @@ impl From<FaceZXY> for CellId {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TileInView {
     /// The Cell ID of the Tile
-    pub id: CellId,
+    pub id: TileID,
     /// The face of the tile
-    pub face: Face,
+    pub face: u8,
     /// The zoom level
     pub zoom: u8,
     /// The x coordinates of the tile
-    pub x: u32,
+    pub x: i64,
     /// The y coordinates of the tile
-    pub y: u32,
+    pub y: i64,
     /// If the tile is out of bounds, this will point to the "wrapped"/legal ID
-    pub wrapped_id: Option<CellId>,
+    pub wrapped_id: Option<S2CellId>,
 }
 impl From<&Face> for TileInView {
     fn from(face: &Face) -> Self {
@@ -71,6 +100,14 @@ impl TileInView {
         let id = fzxy.into();
         let FaceZXY { face, zoom, x, y } = fzxy;
         Self { id, face, zoom, x, y, wrapped_id: None }
+    }
+    /// Check if the tile is out of bounds
+    pub fn is_out_of_bounds(&self) -> bool {
+        self.wrapped_id.is_some()
+    }
+    /// Get the cell id. Default to wrapped first if it exists
+    pub fn id(&self) -> S2CellId {
+        self.wrapped_id.unwrap_or(self.id.id)
     }
 }
 

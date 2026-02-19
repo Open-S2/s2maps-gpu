@@ -78,11 +78,15 @@ interface Map {
  * each glyph requested.
  *
  * SOURCE TYPES
- * S2Tile - a compact s2tiles file where we request tiles of many file types and compression types
- * GeoJSON - a json file containing geo-spatial data
- * S2JSON - a json file modeled much like geojson
- * Glyph - either a font or icon file stored in a pbf structure
- * LocalSource -> local build tile information
+ * S2Tile -> a compact s2tiles file where we request tiles of many file types and compression types
+ * (S2)PMTile -> a compact file where we request tiles of many file types and compression types
+ * GeoJSON -> a json file containing geo-spatial data
+ * S2JSON -> a json file modeled much like geojson
+ * Marker -> a json file containing point data or user defined markers
+ * Glyph -> either a font or icon file stored in a pbf structure
+ * Local -> local build tile information
+ * Image -> a collection of images
+ * Sprite -> a sprite sheet with json guide of how to use it
  * default -> assumed the location has a metadata. json at root with a "s2cellid.ext" file structure
  *
  * SESSION TOKEN

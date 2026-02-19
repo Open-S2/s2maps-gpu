@@ -1,101 +1,108 @@
-// import { idParent, idToIJ } from 'gis-tools/index.js';
-// import type { Session } from './index.js';
-// import type {
-//   Attributions,
-//   Encoding,
-//   LayerDefinition,
-//   LayersMetaData,
-//   Projection,
-//   Scheme,
-//   SourceMetadata,
-//   SourceType,
-//   VectorLayer,
-// } from 'style/style.spec.js';
-// import type { ParentLayers, SourceFlush_message, TileRequest } from '../worker.spec.js';
 use crate::{
     style::{LayerDefinition, Projection, SourceMetadata},
-    workers::{MapID, Session, SourceFlushMessage, TileRequest},
+    util::Promise,
+    workers::{
+        AttributionsMessage, JSONDataMessage, MapID, RasterMessage, Session, SourceFlushMessage,
+        SourceWorkerMessage, SourceWorkerMessageOutput, TileLayer, TileRequest, TileWorkerMessage,
+        TileWorkerMessages, TimeSourceMessage, VectorMessage,
+    },
 };
-use alloc::{collections::BTreeSet, string::String, vec::Vec};
-use s2_tilejson::{Attributions, Encoding, LayersMetaData, Scheme, SourceType};
-use s2json::Face;
+use alloc::{collections::BTreeSet, rc::Rc, string::String, vec::Vec};
+use core::cell::RefCell;
+use gistools::{data_structures::Tile, util::fetch_url};
+use s2_tilejson::{Encoding, LayersMetaData, Scheme, SourceType, VectorLayer};
+use s2json::{Attributions, Face};
 use serde::de::DeserializeOwned;
+use std::collections::BTreeMap;
 
 /// # Generic Data Source Methods
-pub trait Source {
+pub trait SourceSpec<M: Clone + Default + DeserializeOwned = ()> {
     /// Grab the Base Source for fundamental attributes used by all sources
     fn base(&mut self) -> &mut BaseSource;
 
-    // if this function runs, we assume default tile source
-    /**
-     * If this function runs, we assume a default quad-tree tile source
-     * @param map_id - the id of the map that is requesting data
-     * @param metadata - the metadata for the source
-     */
-    async fn build(&mut self, map_id: MapID, metadata: Option<SourceMetadata>) {
-        // if (metadata === undefined)
-        //   metadata = await this._fetch<SourceMetadata>(`${this.path}/metadata.json`, map_id, true);
-        // if (metadata === undefined) {
-        //   this.active = false;
-        //   console.error(`FAILED TO extrapolate ${this.path} metadata`);
-        // } else {
-        //   this._build_metadata(metadata, map_id);
-        // }
+    /// If this function runs, we assume a default quad-tree tile source
+    ///
+    /// ## Parameters
+    /// - `map_id`: the id of the map that is requesting data
+    /// - `metadata`: the metadata for the source
+    #[allow(async_fn_in_trait)]
+    async fn build(&mut self, map_id: MapID, mut metadata: Option<SourceMetadata<M>>) {
+        let path = format!("{:?}/metadata.json", self.base().path);
+        if metadata.is_none() {
+            metadata = self._fetch::<SourceMetadata<M>>(path, map_id).await;
+        }
+        if metadata.is_none() {
+            self.base().active = false;
+            // panic!("FAILED TO extrapolate {path} metadata");
+            return;
+        } else {
+            self._build_metadata(metadata.unwrap(), map_id).await;
+        }
     }
 
-    /**
-     * If no data, we still have to let the tile worker know so it can prepare a proper flush
-     * as well as manage cases like "invert" type data.
-     * @param map_id - the id of the map
-     * @param tile - the tile request
-     * @param source_name - the source name the data to belongs to
-     */
-    fn flush(&mut self, map_id: MapID, tile: TileRequest, source_name: String) {
-        // // compress
-        // const data = textEncoder.encode('{"layers":{}}').buffer;
-        // // send off
-        // const worker = session.requestWorker();
-        // worker.postMessage({ map_id, type: 'jsondata', tile, source_name, data }, [data]);
-        todo!()
+    /// If no data, we still have to let the tile worker know so it can prepare a proper flush
+    /// as well as manage cases like "invert" type data.
+    ///
+    /// ## Parameters
+    /// - `map_id`: the id of the map
+    /// - `tile`: the tile request
+    /// - `source_name`: the source name the data to belongs to
+    #[allow(async_fn_in_trait)]
+    async fn flush(&mut self, map_id: MapID, tile: TileRequest, source_name: String) {
+        // send off
+        let session = &mut self.base().session.borrow_mut();
+        let worker = session.request_worker();
+        worker
+            .send(TileWorkerMessage {
+                map_id,
+                message: TileWorkerMessages::JSONData(Box::new(JSONDataMessage {
+                    tile: tile.clone(),
+                    source_name,
+                    vector_tile: Tile::new(tile.layer.id),
+                })),
+            })
+            .await;
     }
 
     /// All tile requests undergo a basic check on whether that data exists
-    /// within the metadata boundaries. layerIndexes exists to set a boundary
+    /// within the metadata boundaries. layer_indexes exists to set a boundary
     /// of what layers the map is interested in (caused by style change add/edit layer)
     ///
     /// ## Parameters
     /// - `map_id`: the id of the map
     /// - `tile`: the tile request
     /// - `source_name`: the name of the source
+    #[allow(async_fn_in_trait)]
     async fn tile_request(
         &mut self,
         map_id: MapID,
-        tile: TileRequest,
-        flush_message: SourceFlushMessage,
+        tile: &mut TileRequest,
+        flush_message: &mut SourceFlushMessage,
     ) {
-        //     const { layersToBeLoaded } = flush_message;
-        //     // if the source isn't ready yet, we wait for the metadata to be built
-        //     await this.ready;
-        //     // inject layerIndexes
-        //     this.#getLayerIndexes(tile, layersToBeLoaded);
-        //     // now make requests for parent data as necessary
-        //     this.#getParentData(map_id, tile, layersToBeLoaded);
-        //     // pull out data, check if data exists in bounds, then request
-        //     const { active, minzoom, maxzoom, faces, name } = this;
-        //     const { face, zoom } = tile;
-        //     if (
-        //       // massive quality check to not over burden servers / lambdas with duds
-        //       active && // we have the correct properties to make proper requests
-        //       minzoom <= zoom &&
-        //       maxzoom >= zoom && // check zoom bounds
-        //       faces.has(face) // check the face exists
-        //     ) {
-        //       // request
-        //       void this._tileRequest(map_id, tile, name);
-        //     } else {
-        //       // flush to let tile know what layers should be cleaned
-        //       this._flush(map_id, tile, name);
-        //     }
+        // if the source isn't ready yet, we wait for the metadata to be built
+        self.base().ready.wait().await;
+        // inject layer_indexes
+        self._get_layer_indexes(tile, &mut flush_message.layers_to_be_loaded);
+        // now make requests for parent data as necessary
+        self._get_parent_data(map_id, tile, &mut flush_message.layers_to_be_loaded);
+        // pull out data, check if data exists in bounds, then request
+        let BaseSource { active, minzoom, maxzoom, .. } = *self.base();
+        let name = self.base().name.clone();
+        let TileLayer { face, zoom, .. } = tile.layer;
+        if
+        // massive quality check to not over burden servers / lambdas with duds
+        active && // we have the correct properties to make proper requests
+              minzoom <= zoom &&
+              maxzoom >= zoom && // check zoom bounds
+              self.base().faces.contains(&face)
+        // check the face exists
+        {
+            // request
+            self._tile_request(map_id, tile.clone(), name).await;
+        } else {
+            // flush to let tile know what layers should be cleaned
+            self.flush(map_id, tile.clone(), name).await;
+        }
     }
 
     /// If this function runs, we assume default quad-tree tile source.
@@ -105,293 +112,330 @@ pub trait Source {
     /// - `map_id`: the id of the map
     /// - `tile`: the tile request
     /// - `source_name`: the name of the source
+    #[allow(async_fn_in_trait)]
     async fn _tile_request(&mut self, map_id: MapID, tile: TileRequest, source_name: String) {
-        let BaseSource { path, session, r#type, extension, size, .. } = self.base();
-        // const { parent } = tile;
-        // const { time, face, zoom, i, j } = parent ?? tile;
-        // const location =
-        //   `${time !== undefined ? String(time) + '/' : ''}` +
-        //   (this.scheme === 'xyz'
-        //     ? `${zoom}/${i}/${j}.${extension}`
-        //     : `${face}/${zoom}/${i}/${j}.${extension}`);
+        let TileLayer { time, face, zoom, i, j, .. } = tile.parent.as_ref().unwrap_or(&tile.layer);
+        let face: u8 = (*face).into();
+        let path = self.base().path.clone();
+        let extension = self.base().extension.clone();
+        let mut location = format!("{face}/{zoom}/{i}/{j}.{extension}");
+        if let Some(time) = time {
+            location = format!("{time}/{location}");
+        }
 
-        // const data = await this._fetch<ArrayBuffer>(`${path}/${location}`, map_id);
-        // if (data !== undefined) {
-        //   const worker = session.requestWorker();
-        //   worker.postMessage({ map_id, type, tile, source_name, data, size }, [data]);
-        // } else {
-        //   this._flush(map_id, tile, source_name);
-        // }
+        let data: Option<Vec<u8>> = self._fetch(format!("{path}/{location}"), map_id).await;
+        if let Some(data) = data {
+            let r#type = self.base().r#type.clone();
+            let size = self.base().size;
+            let session = &mut self.base().session.borrow_mut();
+            let worker = session.request_worker();
+            let message: TileWorkerMessages = if r#type == SourceType::Vector {
+                TileWorkerMessages::Vector(Box::new(VectorMessage { tile, source_name, data }))
+            } else {
+                TileWorkerMessages::Raster(Box::new(RasterMessage {
+                    tile,
+                    source_name,
+                    data,
+                    size,
+                }))
+            };
+            worker.send(TileWorkerMessage { map_id, message }).await;
+        } else {
+            self.flush(map_id, tile.clone(), source_name).await;
+        }
     }
 
-    /**
-     * Internal tool to builds the metadata for the source
-     * @param metadata - the source metadata
-     * @param map_id - the id of the map that we will be shipping the render data to
-     */
-    fn _build_metadata(&mut self, metadata: SourceMetadata, map_id: MapID) {
-        self.base().active = true; // incase we use a "broken" aproach for metadata and insert later
-        // let minzoom = metadata.minzoom();
-        // let maxzoom = metadata.maxzoom();
-        //     this.minzoom = !isNaN(minzoom) ? minzoom : 0;
-        //     this.maxzoom = Math.min(!isNaN(maxzoom) ? maxzoom : 20, this.maxzoom);
-        //     if (Array.isArray(metadata.faces)) this.faces = new Set(metadata.faces ?? [0, 1, 2, 3, 4, 5]);
-        //     if (typeof metadata.extension === 'string') this.extension = metadata.extension;
-        //     this.attributions = metadata.attributions ?? {};
-        //     this.type = parse_meta_type(metadata.type);
-        //     if (typeof metadata.size === 'number') this.size = metadata.size;
-        //     this.encoding = metadata.encoding ?? 'none';
-        //     if (typeof metadata.layers === 'object') {
-        //       // cleanup the fields property
-        //       this.layers = metadata.layers;
-        //     }
-        //     // other engines that have built data store layer data differently  :
-        //     const vectorLayers = Array.isArray(metadata.vector_layers)
-        //       ? metadata.vector_layers
-        //       : typeof metadata.json === 'string'
-        //         ? (JSON.parse(metadata.json).vector_layers as VectorLayer[])
-        //         : undefined;
-        //     if (vectorLayers !== undefined) {
-        //       this.layers = {};
-        //       for (const layer of vectorLayers) {
-        //         if (layer.id === undefined) continue;
-        //         const { minzoom, maxzoom } = layer;
-        //         this.layers[layer.id] = {
-        //           minzoom: minzoom ?? 0,
-        //           maxzoom: maxzoom ?? this.maxzoom,
-        //           drawTypes: [],
-        //           shape: {},
-        //         };
+    /// Internal tool to builds the metadata for the source
+    ///
+    /// ## Parameters
+    /// - `metadata`: the source metadata
+    /// - `map_id`: the id of the map that we will be shipping the render data to
+    #[allow(async_fn_in_trait)]
+    async fn _build_metadata(&mut self, metadata: SourceMetadata<M>, map_id: MapID) {
+        let metadata = metadata.meta();
+        if metadata.is_none() {
+            self.base().active = false;
+            return;
+        }
+        let metadata = metadata.unwrap();
+        let base = &mut self.base();
+        base.active = true;
+        // incase we use a "broken" aproach for metadata and insert later
+        let minzoom = metadata.minzoom;
+        let maxzoom = metadata.maxzoom;
+        base.minzoom = minzoom;
+        base.maxzoom = u8::min(u8::min(maxzoom, 20), base.maxzoom);
+        if !metadata.faces.is_empty() {
+            base.faces = metadata.faces.clone().into_iter().collect();
+        }
+        base.extension = metadata.extension.clone();
+        base.attributions = metadata.attributions.clone();
+        base.r#type = metadata.r#type.clone();
+        base.encoding = metadata.encoding.clone();
+        base.layers = metadata.layers.clone();
+        // other engines that have built data store layer data differently
+        base.vector_layers = metadata.vector_layers.clone();
+        // time series data check
+        base.scheme = metadata.scheme.clone();
+        base.is_time_format = base.scheme == Scheme::Tfzxy || base.scheme == Scheme::Txyz;
+        if base.is_time_format {
+            let session = &mut base.session.borrow_mut();
+            session
+                .worker_pool
+                .send(SourceWorkerMessageOutput {
+                    map_id,
+                    message: SourceWorkerMessage::TimeSource(TimeSourceMessage {
+                        source_name: base.name.clone(),
+                        interval: metadata.interval.unwrap_or_default(),
+                    }),
+                })
+                .await;
+        }
+        // once the metadata is complete, we should check if any tiles were queued
+        base.ready.resolve();
+        // if attributions, we send them off
+        if !base.attributions.is_empty() {
+            let session = &mut base.session.borrow_mut();
+            session
+                .worker_pool
+                .send(SourceWorkerMessageOutput {
+                    map_id,
+                    message: SourceWorkerMessage::Attributions(AttributionsMessage {
+                        attributions: base.attributions.clone(),
+                    }),
+                })
+                .await;
+        }
+    }
+
+    /// Fetch a tile
+    ///
+    /// ## Parameters
+    /// - `path`: the base path to the tile data
+    /// - `map_id`: the id of the map
+    /// - `json`: flag indicating if the data is json
+    ///
+    /// ## Returns
+    /// The raw data or JSON metadata if found
+    #[allow(async_fn_in_trait)]
+    async fn _fetch<T: DeserializeOwned>(&mut self, path: String, map_id: MapID) -> Option<T> {
+        let mut headers: Vec<(&str, &str)> = vec![];
+        let authorization: Option<String>;
+        let session = &mut self.base().session.borrow_mut();
+        if session.has_api_key(&map_id) {
+            authorization = session.request_session_token(map_id).await;
+            if authorization.is_none() || authorization == Some("failed".into()) {
+                return None;
+            }
+            headers.push(("Authorization", authorization.as_ref().unwrap().as_str()));
+        }
+
+        let res = fetch_url::<()>(&path, &headers, None, None).await;
+        if res.is_err() {
+            return None;
+        }
+
+        let data = res.unwrap();
+        let json = serde_json::from_slice(&data).unwrap();
+        Some(json)
+    }
+
+    /// Get the parent data that this tile is interested in
+    ///
+    /// ## Parameters
+    /// - `map_id`: the id of the map that is requesting
+    /// - `tile`: the tile request
+    /// - `layers_to_load`: the set of layers to load
+    fn _get_parent_data(
+        &mut self,
+        map_id: MapID,
+        tile: &TileRequest,
+        layers_to_load: &mut BTreeSet<u32>,
+    ) {
+        //     const { layers, style_layers, name } = this;
+        //     if (layers === undefined) return;
+        //     // pull out data
+        //     const { time, face, zoom, id } = tile;
+        //     // setup parentLayers
+        //     const parentLayers: ParentLayers = {};
+        //     // iterate over layers and found any data doesn't exist at current zoom but the style asks for
+        //     for (const { layer, layerIndex, maxzoom } of style_layers) {
+        //       const source_layer = layers[layer];
+        //       const source_layer_max_zoom = source_layer?.maxzoom;
+        //       if (maxzoom > zoom && source_layer !== undefined && source_layer_max_zoom < zoom) {
+        //         // we have passed the limit at which this data is stored. Rather than
+        //         // processing the data more than once, we reference where to look for the layer
+        //         let p_zoom = zoom;
+        //         let newID = id;
+        //         while (p_zoom > source_layer_max_zoom) {
+        //           p_zoom--;
+        //           newID = idParent(newID);
+        //         }
+        //         const new_id_string = newID.toString();
+        //         // pull out i & j
+        //         const [, i, j] = idToIJ(newID, p_zoom);
+        //         // store parent reference
+        //         if (parentLayers[new_id_string] === undefined) {
+        //           parentLayers[new_id_string] = {
+        //             time,
+        //             face,
+        //             id: newID,
+        //             zoom: p_zoom,
+        //             i,
+        //             j,
+        //             layer_indexes: [],
+        //           };
+        //         }
+        //         parentLayers[new_id_string].layer_indexes.push(layerIndex);
+        //         // filter out the index from the tile
+        //         tile.layer_indexes?.filter((index) => index !== layerIndex);
         //       }
         //     }
-        //     // time series data check
-        //     if (metadata.scheme !== undefined) this.scheme = metadata.scheme;
-        //     else if (metadata.format !== undefined && metadata.format !== 'pbf') {
-        //       this.scheme = metadata.format as Scheme;
-        //       this.is_time_format = metadata.format === 'tfzxy';
+        //     // if we stored any parent layers, make the necessary requests
+        //     for (const parent of Object.values(parentLayers)) {
+        //       for (const index of parent.layer_indexes) layers_to_load.add(index);
+        //       void this._tile_request(map_id, { ...tile, parent }, name);
         //     }
-        //     if (this.scheme === 'xyz') this.faces.add(0);
-        //     if (this.is_time_format) {
-        //       postMessage({
-        //         map_id,
-        //         type: 'timesource',
-        //         source_name: this.name,
-        //         interval: metadata.interval,
-        //       });
-        //     }
-        //     // once the metadata is complete, we should check if any tiles were queued
-        //     this.resolve();
-        //     // if attributions, we send them off
-        //     const attributions = { ...this.attributions };
-        //     if (Object.keys(attributions).length > 0)
-        //       postMessage({ map_id, type: 'attributions', attributions });
+        todo!()
     }
 
-    /**
-     * Fetch a tile
-     * @param path - the base path to the tile data
-     * @param map_id - the id of the map
-     * @param json - flag indicating if the data is json
-     * @returns the raw data or JSON metadata if found
-     */
-    async fn _fetch<T: DeserializeOwned>(path: String, map_id: MapID) -> T {
-        //     const headers: { Authorization?: string } = {};
-        //     if (this.needs_token) {
-        //       const Authorization = await this.session.requestSessionToken(map_id);
-        //       if (Authorization === 'failed') return;
-        //       if (Authorization !== undefined) headers.Authorization = Authorization;
-        //     }
-        //     const res = await fetch(path, { headers });
-        //     if (res.status !== 200 && res.status !== 206) return;
-        //     if (json || (res.headers.get('content-type') ?? '').includes('application/json'))
-        //       return await res.json();
-        //     return (await res.arrayBuffer()) as unknown as Promise<T>;
-        todo!()
+    /// Get the layer indexes that this tile is interested in
+    ///
+    /// ## Parameters
+    /// - `tile`: the tile request
+    /// - `layers_to_load`: the set of layers to load we are going to modify
+    fn _get_layer_indexes(&mut self, tile: &mut TileRequest, layers_to_load: &mut BTreeSet<u32>) {
+        let BaseSource { layers, style_layers, .. } = self.base();
+        if layers.is_empty() {
+            return;
+        }
+        let zoom = tile.layer.zoom;
+        let mut layer_indexes: Vec<u32> = vec![];
+
+        for l in 0..style_layers.len() {
+            let layer = &style_layers[l];
+            if let Some(layer_meta) = layers.get_mut(&layer.layer()) {
+                if layer_meta.minzoom <= zoom && layer_meta.maxzoom >= zoom {
+                    layer_indexes.push(layer.layer_index());
+                }
+            }
+        }
+
+        for index in &layer_indexes {
+            layers_to_load.insert(*index);
+        }
+        tile.layer.layer_indexes = layer_indexes;
     }
 }
 
-/**
- * # Generic Data Source Container
- *
- * This class is wrapped by many other source types. It serves to handle all the generic cases
- * of data sources like fetching metadata, handling flushes, and so on.
- */
+/// # Generic Data Source Container
+///
+/// This class is wrapped by many other source types. It serves to handle all the generic cases
+/// of data sources like fetching metadata, handling flushes, and so on.
+
 #[derive(Debug)]
 pub struct BaseSource {
     /// Flag indicating if the source is active/working
-    pub active: bool, // = true;
-    // /// Resolver letting us know when the source is built
-    //   resolve: (value: void | PromiseLike<void>) => void = () => {};
-    //   ready = new Promise<void>((resolve) => {
-    //     this.resolve = resolve;
-    //   });
+    pub active: bool,
+    /// Promise letting us know when the source is built
+    pub ready: Promise,
     /// Name of the source
     pub name: String,
     /// URL Path to the source
     pub path: String,
     /// Type of the source
-    pub r#type: SourceType, // = 'vector'; // how to process the result
+    pub r#type: SourceType, // how to process the result
     /// Extension of the source
-    pub extension: String, // = 'pbf';
+    pub extension: String,
     /// Encoding of the source
-    pub encoding: Encoding, // = 'none';
+    pub encoding: Encoding,
     /// Scheme of the source
-    pub scheme: Scheme, // = 'xyz';
+    pub scheme: Scheme,
     /// Either WM or S2
     pub projection: Projection,
     /// Flag indicating if the source is a time series
-    pub is_time_format: bool, // = false;
+    pub is_time_format: bool,
     /// Attributions
-    pub attributions: Attributions, // = {};
+    pub attributions: Attributions,
     /// Style layers
     pub style_layers: Vec<LayerDefinition>,
     /// Layer metadata if available
-    pub layers: Option<LayersMetaData>,
+    pub layers: LayersMetaData,
+    /// Vector Layer metadata if available
+    pub vector_layers: Vec<VectorLayer>,
     /// Minimum zoom level
-    pub minzoom: u8, // = 0;
+    pub minzoom: u8,
     /// Maximum zoom level
-    pub maxzoom: u8, // = 20;
+    pub maxzoom: u8,
     /// Size - used for raster type sources
-    pub size: u32, // = 512,
+    pub size: u32,
     /// Faces - used as filter for S2 sources
-    pub faces: BTreeSet<Face>, // = new Set<number>();
+    pub faces: BTreeSet<Face>,
     /// Flag indicating if the source needs a token
     pub needs_token: bool,
     /// Time
     pub time: Option<f64>,
     /// The session should it be neeeded
-    pub session: Session,
-}
-impl Default for BaseSource {
-    fn default() -> Self {
-        Self {
-            active: false,
-            name: "".into(),
-            path: "".into(),
-            r#type: SourceType::Vector,
-            extension: String::from("pbf"),
-            encoding: Encoding::None,
-            scheme: Scheme::Xyz,
-            projection: Projection::S2,
-            is_time_format: false,
-            attributions: Attributions::new(),
-            layers: None,
-            minzoom: 0,
-            maxzoom: 20,
-            size: 512,
-            faces: BTreeSet::new(),
-            style_layers: Vec::new(),
-            needs_token: false,
-            time: None,
-            session: Session::default(),
-        }
-    }
+    pub session: Rc<RefCell<Session>>,
 }
 impl BaseSource {
-    /**
-     * @param name - name of the source
-     * @param projection - the projection used
-     * @param layers - the style layers that are associated with this source
-     * @param path - the path to the source to fetch data
-     * @param needs_token - flag indicating if the source requires a token in the fetch
-     * @param session - the session that works with the token to make valid fetch requests on source data behind an API
-     */
+    /// Create a new source
+    ///
+    /// ## Parameters
+    /// - `name`: name of the source
+    /// - `projection`: the projection used
+    /// - `layers`: the style layers that are associated with this source
+    /// - `path`: the path to the source to fetch data
+    /// - `needs_token`: flag indicating if the source requires a token in the fetch
+    /// - `session`: the session that works with the token to make valid fetch requests on source data behind an API
     pub fn new(
         name: String,
         projection: Projection,
         style_layers: Vec<LayerDefinition>,
         path: String,
-        needs_token: Option<bool>, // = false,
-        session: Session,
+        needs_token: Option<bool>,
+        session: Rc<RefCell<Session>>,
     ) -> Self {
         let needs_token = needs_token.unwrap_or(false);
-        Self { name, path, projection, style_layers, session, needs_token, ..Default::default() }
+        Self {
+            name,
+            path,
+            projection,
+            style_layers,
+            session,
+            needs_token,
+            active: true,
+            ready: Promise::new(),
+            r#type: SourceType::Vector,
+            extension: String::from("pbf"),
+            encoding: Encoding::None,
+            scheme: Scheme::Xyz,
+            is_time_format: false,
+            attributions: Attributions::new(),
+            layers: BTreeMap::new(),
+            vector_layers: vec![],
+            minzoom: 0,
+            maxzoom: 20,
+            size: 512,
+            faces: BTreeSet::from([0.into(), 1.into(), 2.into(), 3.into(), 4.into(), 5.into()]),
+            time: None,
+        }
     }
 }
 
-//   /**
-//    * Get the layer indexes that this tile is interested in
-//    * @param tile - the tile request
-//    * @param layersToLoad - the set of layers to load we are going to modify
-//    */
-//   #getLayerIndexes(tile: TileRequest, layersToLoad: Set<number>): void {
-//     const { layers, style_layers } = this;
-//     const { zoom } = tile;
-//     const layerIndexes: number[] = [];
-//     if (layers === undefined) return;
-
-//     for (let l = 0, ll = style_layers.length; l < ll; l++) {
-//       const layer = style_layers[l];
-//       if (layer === undefined || layers[layer.layer] === undefined) continue;
-//       const { minzoom, maxzoom } = layers[layer.layer];
-//       if (minzoom <= zoom && maxzoom >= zoom) layerIndexes.push(layer.layerIndex);
-//     }
-
-//     tile.layerIndexes = layerIndexes;
-//     for (const index of layerIndexes) layersToLoad.add(index);
-//   }
-
-//   /**
-//    * Get the parent data that this tile is interested in
-//    * @param map_id - the id of the map that is requesting
-//    * @param tile - the tile request
-//    * @param layersToLoad - the set of layers to load
-//    */
-//   #getParentData(map_id: MapID, tile: TileRequest, layersToLoad: Set<number>): void {
-//     const { layers, style_layers, name } = this;
-//     if (layers === undefined) return;
-//     // pull out data
-//     const { time, face, zoom, id } = tile;
-//     // setup parentLayers
-//     const parentLayers: ParentLayers = {};
-//     // iterate over layers and found any data doesn't exist at current zoom but the style asks for
-//     for (const { layer, layerIndex, maxzoom } of style_layers) {
-//       const sourceLayer = layers[layer];
-//       const sourceLayerMaxZoom = sourceLayer?.maxzoom;
-//       if (maxzoom > zoom && sourceLayer !== undefined && sourceLayerMaxZoom < zoom) {
-//         // we have passed the limit at which this data is stored. Rather than
-//         // processing the data more than once, we reference where to look for the layer
-//         let pZoom = zoom;
-//         let newID = id;
-//         while (pZoom > sourceLayerMaxZoom) {
-//           pZoom--;
-//           newID = idParent(newID);
+// /// Basic parsing tool to ensure the source type is valid
+// ///
+// /// ## Parameters
+// /// - `type`: the source type
+// ///
+// /// ## Returns
+// /// The parsed source type
+// fn parse_meta_type(r#type: Option<String>) -> SourceType {
+//     let r#type = r#type.unwrap_or("".into());
+//     match r#type.as_str() {
+//         "vector" | "json" | "raster" | "raster-dem" | "sensor" | "overlay" => {
+//             r#type.as_str().into()
 //         }
-//         const newIDString = newID.toString();
-//         // pull out i & j
-//         const [, i, j] = idToIJ(newID, pZoom);
-//         // store parent reference
-//         if (parentLayers[newIDString] === undefined) {
-//           parentLayers[newIDString] = {
-//             time,
-//             face,
-//             id: newID,
-//             zoom: pZoom,
-//             i,
-//             j,
-//             layerIndexes: [],
-//           };
-//         }
-//         parentLayers[newIDString].layerIndexes.push(layerIndex);
-//         // filter out the index from the tile
-//         tile.layerIndexes?.filter((index) => index !== layerIndex);
-//       }
+//         _ => SourceType::Vector,
 //     }
-//     // if we stored any parent layers, make the necessary requests
-//     for (const parent of Object.values(parentLayers)) {
-//       for (const index of parent.layerIndexes) layersToLoad.add(index);
-//       void this._tileRequest(map_id, { ...tile, parent }, name);
-//     }
-//   }
-// }
-
-// /**
-//  * Basic parsing tool to ensure the source type is valid
-//  * @param type - the source type
-//  * @returns the parsed source type
-//  */
-// fn parse_meta_type(type: string = '') -> SourceType {
-//   if (['vector', 'json', 'raster', 'raster-dem', 'sensor', 'overlay'].includes(type))
-//     return type as SourceType;
-//   return 'vector';
 // }

@@ -1,4 +1,4 @@
-import { findCenterPoints, findSpacedPoints, pointAngle } from './pointTools.js';
+import { findCenterPoints, findSpacedPoints } from './pointTools.js';
 
 import type { Cap } from 'style/style.spec.js';
 import type {
@@ -136,6 +136,7 @@ export function getPathPos(
   // note: st is 0->1 ratio relative to tile size
   // note: offset is in pixels
   // note: xPos and yPos are 0->1 ratio relative to glyph size
+  // oxlint-disable-next-line prefer-const
   let [s, t, offsetX, offsetY, xPos, yPos] = quadPos;
   yPos *= size;
   offsetY += yPos;
@@ -150,11 +151,11 @@ export function getPathPos(
   // now setup an x-y and travel xPos distance along the path
   let dist = 0;
   let pathIndex = 0;
-  let currAngle = 0;
+  // let currAngle = 0;
   // using the current s-t as the starting point and the distance function
   // travel xPos distance along the path
   while (dist < xPos && pathIndex < path.length - 1) {
-    currAngle = pointAngle(path[pathIndex], path[pathIndex + 1]) ?? currAngle;
+    // currAngle = pointAngle(path[pathIndex], path[pathIndex + 1]) ?? currAngle;
     const next = path[pathIndex];
     const d = distance({ x: s, y: t }, next);
     if (dist + d < xPos) {

@@ -4,8 +4,8 @@ import ProcessManager from './process/index.js';
 import { VectorTile } from 'open-vector-tile';
 import { rebuildVectorTile } from './process/util/rebuildVectorTile.js';
 
+import type { LayerDefinition } from 'style/style.spec.js';
 import type { VTTile } from './process/process.spec.js';
-import type { LayerDefinition, StylePackage } from 'style/style.spec.js';
 import type { TileRequest, TileWorkerMessages } from './worker.spec.js';
 
 /**
@@ -28,7 +28,7 @@ export default class TileWorker extends ProcessManager {
     if (type === 'port') this.#loadWorkerPort(ports[0], ports[1], data.id, data.totalWorkers);
     else {
       const { mapID } = data;
-      if (type === 'style') this.#loadStyle(mapID, data.style);
+      if (type === 'style') this.setupStyle(mapID, data.style);
       else if (type === 'vector')
         void this.processVector(
           mapID,
@@ -69,15 +69,6 @@ export default class TileWorker extends ProcessManager {
     this.messagePort = messagePort; // WorkerPool
     this.id = id;
     this._buildIDGen(totalWorkers);
-  }
-
-  /**
-   * pull in the layers and preprocess them
-   * @param mapID - the map id to build data for
-   * @param style - the style package associated with the map
-   */
-  #loadStyle(mapID: string, style: StylePackage): void {
-    this.setupStyle(mapID, style);
   }
 
   /**

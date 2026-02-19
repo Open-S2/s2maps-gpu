@@ -79,6 +79,7 @@ import type {
 export interface MapOptions {
   /**
    * Forces the use of specific GPU Context:
+   * - `0`: DOM
    * - `1`: WebGL
    * - `2`: WebGL2
    * - `3`: WebGPU
@@ -227,6 +228,7 @@ export default class S2MapUI extends Camera {
    * 4) if a layer "source", "layer", or "filter" change it will be in "webworkers". Tell webworkers to rebuild
    * @param _style - Style to update to
    */
+  // oxlint-disable-next-line jsdoc/require-param
   updateStyle(_style: StyleDefinition): void {
     // // build style for the map, painter, and webworkers
     // Style.updateStyle(style)
@@ -316,7 +318,7 @@ export default class S2MapUI extends Camera {
 
   /**
    * Reorder style layers on the map
-   * @param _layerChanges - the layer changes to make, their starting and end positions { [start]: end }
+   * @param _layerChanges - the layer changes to make, their starting and end positions `<start, end>`
    */
   reorderLayers(_layerChanges: Record<number, number>): void {
     // TODO

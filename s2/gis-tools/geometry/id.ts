@@ -141,6 +141,7 @@ function initLookupCell(
  * @param face - the face
  * @returns the S2CellID
  */
+// oxlint-disable-next-line jsdoc/require-returns jsdoc/require-param - false positive
 export function idFromFace(face: Face): S2CellId {
   return (BigInt(face) << POS_BITS) + (1n << 60n);
 }
@@ -412,6 +413,7 @@ export function idIsFace(id: S2CellId): boolean {
  * @param id - the S2CellID
  * @returns quad tree position
  */
+// oxlint-disable-next-line jsdoc/require-returns jsdoc/require-param - false positive
 export function idPos(id: S2CellId): S2CellId {
   return id & 2305843009213693951n;
 }
@@ -450,6 +452,7 @@ export function idDistance(id: S2CellId, lev?: number): bigint {
  * @param pos - quad position 0, 1, 2, or 3
  * @returns the child tile at that position
  */
+// oxlint-disable-next-line jsdoc/require-returns jsdoc/require-param - false positive
 export function idChild(id: S2CellId, pos: 0n | 1n | 2n | 3n): S2CellId {
   const newLSB = (id & (~id + 1n)) >> 2n;
   return id + (2n * pos - FACE_BITS) * newLSB;

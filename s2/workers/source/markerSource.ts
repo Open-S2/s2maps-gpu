@@ -98,7 +98,8 @@ export default class MarkerSource {
    * @param marker - the marker to add
    */
   addMarker(marker: MarkerDefinition): void {
-    let { point, face, properties, id, metadata } = marker;
+    const { point, face, properties, metadata } = marker;
+    let { id } = marker;
     // if no id, let's create one
     if (id === undefined) {
       id = this.idGen++;
