@@ -18,7 +18,7 @@ import type {
   PointWorkflow as PointWorkflowSpec,
 } from './workflow.spec.js';
 
-const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
+const SHADER_BUFFER_LAYOUT: GPUVertexBufferLayout[] = [
   {
     // pos
     arrayStride: 4 * 2,

@@ -1,5 +1,8 @@
 // import { zagzig } from 'open-vector-tile';
-use crate::workers::{ArrayBuffer, Glyph, MapID, Session, TexturePack};
+use crate::{
+    util::{MsgSender, fetch_url},
+    workers::{Glyph, MapID, Session, TexturePack, TileWorkerMessage},
+};
 use alloc::{
     collections::{BTreeMap, BTreeSet},
     rc::Rc,
@@ -14,14 +17,14 @@ use gistools::parsers::Buffer;
 #[allow(missing_docs)]
 pub struct GlyphMetadataUnparsed {
     pub name: String,
-    pub metadata: Option<ArrayBuffer>,
+    pub metadata: Option<Buffer>,
 }
 /// Actual glyph metadata for the Tile Worker to know how to shape and prepare glyphs for rendering
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub struct GlyphMetadata {
     pub name: String,
-    pub metadata: ArrayBuffer,
+    pub metadata: Buffer,
 }
 
 /// An incoming lost of icon requests. Each string is the name of an icon
@@ -110,17 +113,16 @@ impl GlyphSource {
     ///
     /// ## Returns
     /// The metadata, yet to be parsed
-    pub async fn build(map_id: MapID) -> GlyphMetadataUnparsed {
-        //     const metadata = await this._fetch(`${this.path}?type=metadata`, map_id);
+    pub async fn build(&mut self, map_id: MapID) -> GlyphMetadataUnparsed {
+        let metadata = self._fetch(format!("{:?}?type=metadata", self.path), map_id).await;
 
-        //     if (metadata === undefined) {
-        //       this.active = false;
-        //       console.error(`FAILED TO extrapolate ${this.path} metadata`);
-        //       return { name: this.name, metadata: undefined };
-        //     } else {
-        //       return await this._build_metadata(metadata);
-        //     }
-        todo!()
+        if let Some(metadata) = metadata {
+            self._build_metadata(metadata)
+        } else {
+            self.active = false;
+            // panic!("FAILED TO extrapolate {path} metadata");
+            GlyphMetadataUnparsed { name: self.name.clone(), metadata: None }
+        }
     }
 
     /// Build metadata from a buffer
@@ -130,18 +132,16 @@ impl GlyphSource {
     ///
     /// ## Returns
     /// The metadata
-    fn _build_metadata(metadata: Buffer) -> GlyphMetadataUnparsed {
-        //     const meta = new DataView(metadata);
-        //     // build the metadata
-        //     this.extent = meta.getUint16(0, true);
-        //     this.size = meta.getUint16(2, true);
-        //     this.max_height = meta.getUint16(4, true);
-        //     this.range = meta.getUint16(6, true);
-        //     this.default_advance = meta.getUint16(8, true) / this.extent;
-        //     this.is_icon = meta.getUint32(12, true) > 0;
-        //     // return the metadata so it can be shipped to the worker threads
-        //     return { name: this.name, metadata };
-        todo!()
+    fn _build_metadata(&mut self, mut metadata: Buffer) -> GlyphMetadataUnparsed {
+        // build the metadata
+        self.extent = metadata.get_u16_at(0) as f64;
+        self.size = metadata.get_u16_at(2) as f64;
+        self.max_height = metadata.get_u16_at(4) as f64;
+        self.range = metadata.get_u16_at(6) as f64;
+        self.default_advance = metadata.get_u16_at(8) as f64 / self.extent;
+        self.is_icon = metadata.get_u32_at(12) > 0;
+        // return the metadata so it can be shipped to the worker threads
+        GlyphMetadataUnparsed { name: self.name.clone(), metadata: Some(metadata) }
     }
 
     /// Given a collection of unicodes, request the glyphs from the server
@@ -152,38 +152,38 @@ impl GlyphSource {
     /// - `req_id`: the id of the request
     /// - `worker`: the worker port
     pub async fn glyph_request(
+        &self,
         request: Vec<String>, // array of codes
         map_id: MapID,
         req_id: String,
-        // TODO:
-        // worker: MessageChannel['port2'],
+        worker: MsgSender<TileWorkerMessage>,
     ) {
         //     const { glyph_cache, glyph_waitlist, name } = this;
 
         //     const promiseList: Array<Promise<void>> = [];
-        //     const requestList: string[] = [];
-        //     const waitlistPromiseMap = new Map<string, Promise<void>>();
+        //     const request_list: string[] = [];
+        //     const waitlist_promise_map = new Map<string, Promise<void>>();
         //     for (const code of request) {
         //       // 1) already cached in glyph_cache; do nothing
         //       if (glyph_cache.has(code)) continue;
         //       // 2) already exists in the glyph_waitlist (downloading)
         //       if (glyph_waitlist.has(code)) {
         //         const promise = glyph_waitlist.get(code) as GlyphPromise<void>;
-        //         waitlistPromiseMap.set(promise.id, promise);
+        //         waitlist_promise_map.set(promise.id, promise);
         //       } else {
         //         // 5) no one has it
-        //         requestList.push(code);
+        //         request_list.push(code);
         //       }
         //     }
         //     // create THIS glyphs missing glyphs request
-        //     if (requestList.length > 0) {
-        //       const promise = this._request_glyphs(requestList, map_id) as GlyphPromise<void>;
+        //     if (request_list.length > 0) {
+        //       const promise = this._request_glyphs(request_list, map_id) as GlyphPromise<void>;
         //       promise.id = genID();
         //       promiseList.push(promise);
-        //       for (const unicode of requestList) glyph_waitlist.set(unicode, promise);
+        //       for (const unicode of request_list) glyph_waitlist.set(unicode, promise);
         //     }
         //     // add all waitlist promises
-        //     for (const [, promise] of waitlistPromiseMap) promiseList.push(promise);
+        //     for (const [, promise] of waitlist_promise_map) promiseList.push(promise);
 
         //     await Promise.all(promiseList);
         //     // convert glyphList into a Float32Array of unicode data and ship it out
@@ -208,71 +208,70 @@ impl GlyphSource {
     /// ## Parameters
     /// - `list`: array of unicodes to request their data for
     /// - `map_id`: the id of the map
-    async fn _request_glyphs(list: Vec<String>, map_id: MapID) {
+    async fn _request_glyphs(&self, list: Vec<String>, map_id: MapID) {
         //     const { is_icon, extent, glyph_cache, glyph_waitlist, max_height, texture_pack } = this;
-        //     // 1) build the ranges, max 35 glyphs per request
-        //     const requests = this._build_requests(list);
-        //     // 2) return the request promise, THEN: store the glyphs in cache, build the images, and ship the images to the map_id
-        //     const promises: Array<Promise<void>> = [];
-        //     for (const { request, substitutes } of requests) {
-        //       promises.push(
-        //         this._fetch(request, map_id).then((glyphsBuf) => {
-        //           if (glyphsBuf === undefined) return;
-        //           const images: GlyphImages = [];
-        //           const dv = new DataView(glyphsBuf);
-        //           const size = dv.byteLength - 1;
-        //           let pos = 0;
-        //           while (pos < size) {
-        //             // build glyph metadata
-        //             let code = String(dv.getUint16(pos, true));
-        //             if (!is_icon && code === '0') code = substitutes.shift() ?? '';
-        //             const glyph: Glyph = {
-        //               code,
-        //               width: dv.getUint16(pos + 2, true) / extent,
-        //               height: dv.getUint16(pos + 4, true) / extent,
-        //               texW: dv.getUint8(pos + 6),
-        //               texH: dv.getUint8(pos + 7),
-        //               texX: 0,
-        //               texY: 0,
-        //               xOffset: zagzig(dv.getUint16(pos + 8, true)) / extent,
-        //               yOffset: zagzig(dv.getUint16(pos + 10, true)) / extent,
-        //               advanceWidth: zagzig(dv.getUint16(pos + 12, true)) / extent,
-        //             };
-        //             pos += 14;
-        //             // store in texture_pack
-        //             const [pos_x, pos_y] = texture_pack.addGlyph(glyph.texW, max_height);
-        //             glyph.texX = pos_x;
-        //             glyph.texY = pos_y;
-        //             // store glyph in cache
-        //             glyph_cache.set(code, glyph);
-        //             // remove from waitlist cache
-        //             glyph_waitlist.delete(code);
-        //             // grab the image
-        //             const imageSize = glyph.texW * glyph.texH * 4;
-        //             const data = new Uint8ClampedArray(glyphsBuf.slice(pos, pos + imageSize)).buffer;
-        //             images.push({ pos_x, pos_y, width: glyph.texW, height: glyph.texH, data });
-        //             pos += imageSize;
-        //           }
-        //           // send off the images
-        //           const imagesMaxHeight = images.reduce(
-        //             (acc, cur) => Math.max(acc, cur.pos_y + cur.height),
-        //             0,
-        //           );
-        //           const glyphImageMessage: GlyphImageData = {
-        //             map_id,
-        //             type: 'glyphimages',
-        //             images,
-        //             max_height: imagesMaxHeight,
-        //           };
-        //           postMessage(
-        //             glyphImageMessage,
-        //             images.map((i) => i.data),
-        //           );
-        //         }),
-        //       );
-        //     }
-        //     await Promise.allSettled(promises);
-        todo!()
+        // 1) build the ranges, max 35 glyphs per request
+        let requests = self._build_requests(list);
+        // 2) return the request promise, THEN: store the glyphs in cache, build the images, and ship the images to the map_id
+        let mut promises = vec![];
+        for GlyphRequest { request, substitutes } in requests {
+            promises.push(async move {
+                let Some(dv) = self._fetch(request, map_id).await else { return };
+                let mut images: Vec<GlyphImages> = vec![];
+                //   let dv = glyphs_buf;
+                let size = dv.len() - 1;
+                let mut pos = 0;
+                while pos < size {
+                    //             // build glyph metadata
+                    //             let code = String(dv.getUint16(pos, true));
+                    //             if (!is_icon && code === '0') code = substitutes.shift() ?? '';
+                    //             const glyph: Glyph = {
+                    //               code,
+                    //               width: dv.getUint16(pos + 2, true) / extent,
+                    //               height: dv.getUint16(pos + 4, true) / extent,
+                    //               texW: dv.getUint8(pos + 6),
+                    //               texH: dv.getUint8(pos + 7),
+                    //               texX: 0,
+                    //               texY: 0,
+                    //               xOffset: zagzig(dv.getUint16(pos + 8, true)) / extent,
+                    //               yOffset: zagzig(dv.getUint16(pos + 10, true)) / extent,
+                    //               advanceWidth: zagzig(dv.getUint16(pos + 12, true)) / extent,
+                    //             };
+                    //             pos += 14;
+                    //             // store in texture_pack
+                    //             const [pos_x, pos_y] = texture_pack.addGlyph(glyph.texW, max_height);
+                    //             glyph.texX = pos_x;
+                    //             glyph.texY = pos_y;
+                    //             // store glyph in cache
+                    //             glyph_cache.set(code, glyph);
+                    //             // remove from waitlist cache
+                    //             glyph_waitlist.delete(code);
+                    //             // grab the image
+                    //             const imageSize = glyph.texW * glyph.texH * 4;
+                    //             const data = new Uint8ClampedArray(glyphs_buf.slice(pos, pos + imageSize)).buffer;
+                    //             images.push({ pos_x, pos_y, width: glyph.texW, height: glyph.texH, data });
+                    //             pos += imageSize;
+                }
+                //           // send off the images
+                //           const imagesMaxHeight = images.reduce(
+                //             (acc, cur) => Math.max(acc, cur.pos_y + cur.height),
+                //             0,
+                //           );
+                //           const glyphImageMessage: GlyphImageData = {
+                //             map_id,
+                //             type: 'glyphimages',
+                //             images,
+                //             max_height: imagesMaxHeight,
+                //           };
+                //           postMessage(
+                //             glyphImageMessage,
+                //             images.map((i) => i.data),
+                //           );
+            });
+        }
+        for promise in promises {
+            promise.await;
+        }
     }
 
     /// Build requests from the list of requested glyphs
@@ -282,12 +281,12 @@ impl GlyphSource {
     ///
     /// ## Returns
     /// An array of requests
-    fn _build_requests(list: Vec<String>) -> Vec<GlyphRequest> {
+    fn _build_requests(&self, list: Vec<String>) -> Vec<GlyphRequest> {
         //     const { path } = this;
         //     const requests: Array<{ request: string; substitutes: string[] }> = [];
         //     const chunks: Array<Array<number | string>> = [];
         //     // sort the list by unicode order first substitions second
-        //     const parsedList = list
+        //     const parsed_list = list
         //       .map((code) => {
         //         if (code.includes('.')) return code;
         //         else return Number(code);
@@ -298,20 +297,20 @@ impl GlyphSource {
         //         return a - b;
         //       });
         //     // group into batches of 150
-        //     for (let i = 0; i < parsedList.length; i += 150) chunks.push(parsedList.slice(i, i + 150));
+        //     for (let i = 0; i < parsed_list.length; i += 150) chunks.push(parsed_list.slice(i, i + 150));
         //     // group unicode numbers adjacent into the same range
         //     for (const chunk of chunks) {
         //       // convert chunk to mergedRanges
         //       const merged = merge_ranges(chunk);
         //       // shape the ranges into a base36 string
-        //       const mergedBase36 = merged.map((code) => {
+        //       const merged_base36 = merged.map((code) => {
         //         if (Array.isArray(code)) return `${base36(code[0])}-${base36(code[1])}`;
         //         else if (typeof code === 'number') return `${base36(code)}`;
         //         else return code;
         //       });
         //       // merge the ranges into a single request
-        //       const request = `${path}?type=glyph&codes=${mergedBase36.join(',')}`;
-        //       const substitutes = mergedBase36.filter(
+        //       const request = `${path}?type=glyph&codes=${merged_base36.join(',')}`;
+        //       const substitutes = merged_base36.filter(
         //         (code) => typeof code === 'string' && code.includes('.'),
         //       );
         //       requests.push({ request, substitutes });
@@ -329,17 +328,20 @@ impl GlyphSource {
     ///
     /// ## Returns
     /// The raw data if found
-    async fn _fetch(path: String, map_id: MapID) -> Buffer {
-        //     const headers: { Authorization?: string } = {};
-        //     if (this.session.hasAPIKey(map_id)) {
-        //       const Authorization = await this.session.requestSessionToken(map_id);
-        //       if (Authorization === 'failed') return;
-        //       if (Authorization !== undefined) headers.Authorization = Authorization;
-        //     }
-        //     const res = await fetch(path, { headers });
-        //     if (res.status !== 200 && res.status !== 206) return;
-        //     return await res.arrayBuffer();
-        todo!()
+    async fn _fetch(&self, path: String, map_id: MapID) -> Option<Buffer> {
+        let mut headers: Vec<(&str, &str)> = vec![];
+        let authorization: Option<String>;
+        let session = &mut self.session.borrow_mut();
+        if session.has_api_key(&map_id) {
+            authorization = session.request_session_token(map_id).await;
+            if authorization.is_none() || authorization == Some("failed".into()) {
+                return None;
+            }
+            headers.push(("Authorization", authorization.as_ref().unwrap().as_str()));
+        }
+        let Ok(data) = fetch_url::<Vec<u8>>(&path, &headers, None, None).await else { return None };
+
+        Some(Buffer::from(data))
     }
 }
 

@@ -34,7 +34,7 @@ export default class S2PMTilesSource extends Source {
     const bytes =
       tileType === 'S2'
         ? await this.reader.getTileS2(face, zoom, i, j)
-        : await this.reader.getTile(zoom, i, j);
+        : await this.reader.getTileWM(zoom, i, j);
 
     if (bytes !== undefined) {
       const data = bytes.buffer;

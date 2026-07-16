@@ -18,7 +18,7 @@ import type {
   LineWorkflow as LineWorkflowSpec,
 } from './workflow.spec.js';
 
-const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
+const SHADER_BUFFER_LAYOUT: GPUVertexBufferLayout[] = [
   {
     // prev
     arrayStride: 6 * 4, // 6 elements of 4 bytes

@@ -38,21 +38,22 @@ path = "rust/lib.rs"
 
 [dependencies]
 # Open S2 dependencies
-earclip = "1.8"
-open-vector-tile = "1.11"
+earclip = "1"
+open-vector-tile = "1"
 pbf = "1.22"
 s2json = "1"
 s2-tilejson = "1"
-gis-tools = { version = "1.13", default-features = false, features = ["quadratic"] }
+gis-tools = { version = "1", default-features = false, features = ["quadratic"] }
 # External shared dependencies
 libm = "0.2" # NOTE: Rust Core is working on a replacement for libm
 half = "2.7" # NOTE: Rust Core is working on a replacement for half
 regex = { version = "1", default-features = false } # Managed by the Rust Project
+futures = { version = "0.3", default-features = false } # Managed by the Rust Project
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 # Rendering dependencies
 winit = "0.30"
-wgpu = { version = "28.0", default-features = false, features = [
+wgpu = { version = "30", default-features = false, features = [
   "serde",
   "wgsl",
   "vulkan",
@@ -68,8 +69,8 @@ image = { version = "0.25", optional = true, default-features = false }
 surf = { version = "2", default-features = false }
 # Optional Embassy dependencies
 embassy-time = { version = "0.5", optional = true }
-embassy-net = { version = "0.8", optional = true, default-features = false }
-embassy-sync = { version = "0.7", optional = true }
+embassy-net = { version = "0.9", optional = true, default-features = false }
+embassy-sync = { version = "0.8", optional = true }
 
 [dev-dependencies]
 criterion = { version = "0.8", features = ["html_reports"] }
@@ -93,6 +94,7 @@ std = [
   "gis-tools/std",
   "embassy-sync",
   "embassy-sync/std",
+  "futures/std",
 ]
 # Conditional wasm feature for browser tools like fetching
 wasm = ["surf/wasm-client"]
@@ -115,4 +117,3 @@ miniz_oxide.opt-level = 3
 png.opt-level = 3
 fdeflate.opt-level = 3
 flate2.opt-level = 3
-

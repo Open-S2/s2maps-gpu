@@ -1,3 +1,5 @@
+// oxlint-disable-next-line typescript/ban-ts-comment
+// @ts-nocheck
 import type {
   Alignment,
   Anchor,

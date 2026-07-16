@@ -1429,13 +1429,13 @@ export default class S2Map extends EventTarget {
  * @returns 0 for DOM, 1 for WebGL, 2 for WebGL2, 3 for WebGPU
  */
 function getContext(): GPUType {
-  let tmpContext = document.createElement('canvas').getContext('webgpu');
+  const tmpContext = document.createElement('canvas').getContext('webgpu');
   if (tmpContext !== null) {
     return 3;
   } else {
-    tmpContext = document.createElement('canvas').getContext('webgl2');
-    if (tmpContext !== null) {
-      tmpContext.getExtension('WEBGL_lose_context')?.loseContext();
+    const tmpContext2 = document.createElement('canvas').getContext('webgl2');
+    if (tmpContext2 !== null) {
+      tmpContext2.getExtension('WEBGL_lose_context')?.loseContext();
       return 2;
     } else if (document.createElement('canvas').getContext('webgl') !== null) {
       return 1;

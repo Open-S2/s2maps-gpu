@@ -17,7 +17,7 @@ import type {
   RasterSource,
 } from './workflow.spec.js';
 
-const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
+const SHADER_BUFFER_LAYOUT: GPUVertexBufferLayout[] = [
   {
     // position
     arrayStride: 4 * 2,

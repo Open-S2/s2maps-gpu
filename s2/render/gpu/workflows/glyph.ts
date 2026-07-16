@@ -19,7 +19,7 @@ import type {
 } from './workflow.spec.js';
 
 /** st (0), adjustXY (1), xy (2), wh (3), texXY (4), texWH (5) */
-const SUB_SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [0, 1, 2, 3, 4, 5].map((i) => ({
+const SUB_SHADER_BUFFER_LAYOUT: GPUVertexBufferLayout[] = [0, 1, 2, 3, 4, 5].map((i) => ({
   arrayStride: 6 * 4 * 2, // 6 attributes * 4 bytes * 2 floats
   stepMode: 'instance',
   attributes: [
@@ -28,7 +28,7 @@ const SUB_SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [0, 1, 2, 3, 4
   ],
 }));
 /** st - offsetXY (0), xy - wh (1), texXY - textWH (2), paths12 (3), paths34 (4) */
-const SUB_SHADER_BUFFER_LAYOUT_PATH: Iterable<GPUVertexBufferLayout> = [0, 1, 2, 3, 4].map((i) => ({
+const SUB_SHADER_BUFFER_LAYOUT_PATH: GPUVertexBufferLayout[] = [0, 1, 2, 3, 4].map((i) => ({
   arrayStride: 5 * 4 * 4, // 5 attributes * 4 floats * 4 bytes
   stepMode: 'instance',
   attributes: [
@@ -41,7 +41,7 @@ const SUB_SHADER_BUFFER_LAYOUT_PATH: Iterable<GPUVertexBufferLayout> = [0, 1, 2,
  * @param location - the location of the collision result index (box or path)
  * @returns the layout
  */
-const SHADER_BUFFER_COLLISION_COLOR_LAYOUT: (l: number) => Iterable<GPUVertexBufferLayout> = (
+const SHADER_BUFFER_COLLISION_COLOR_LAYOUT: (l: number) => GPUVertexBufferLayout[] = (
   location: number,
 ) => [
   {
@@ -57,11 +57,11 @@ const SHADER_BUFFER_COLLISION_COLOR_LAYOUT: (l: number) => Iterable<GPUVertexBuf
     attributes: [{ shaderLocation: location + 1, offset: 0, format: 'float32x4' }],
   },
 ];
-const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
+const SHADER_BUFFER_LAYOUT: GPUVertexBufferLayout[] = [
   ...SUB_SHADER_BUFFER_LAYOUT,
   ...SHADER_BUFFER_COLLISION_COLOR_LAYOUT(6),
 ];
-const SHADER_BUFFER_LAYOUT_PATH: Iterable<GPUVertexBufferLayout> = [
+const SHADER_BUFFER_LAYOUT_PATH: GPUVertexBufferLayout[] = [
   ...SUB_SHADER_BUFFER_LAYOUT_PATH,
   ...SHADER_BUFFER_COLLISION_COLOR_LAYOUT(5),
 ];
@@ -72,7 +72,7 @@ const SUB_TEST_SHADER_BUFFER_LAYOUT_ATTR: Iterable<GPUVertexAttribute> = [0, 1, 
     format: 'float32x2',
   }),
 );
-const TEST_SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
+const TEST_SHADER_BUFFER_LAYOUT: GPUVertexBufferLayout[] = [
   {
     // collision result index (without the proper offset)
     arrayStride: 4 * 18, // 4 bytes * 1 uint32 at 18 float intervals
@@ -89,7 +89,7 @@ const TEST_SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
 ];
 // the reason for the stride being 18 not 16 is to allow for the padding of the unused ID
 // which you can see inside the glyph.wgsl struct `GlyphContainerPath`
-const TEST_SHADER_BUFFER_LAYOUT_PATH: Iterable<GPUVertexBufferLayout> = [
+const TEST_SHADER_BUFFER_LAYOUT_PATH: GPUVertexBufferLayout[] = [
   {
     arrayStride: 4 * 18, // 4 bytes per float * 18 floats total
     stepMode: 'instance',

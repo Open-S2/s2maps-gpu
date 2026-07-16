@@ -153,7 +153,7 @@ impl ImageSource {
     ///
     /// ## Returns
     /// The image or metadata
-    async fn _fetch(&mut self, path: String, map_id: MapID) -> Option<Vec<u8>> {
+    pub async fn _fetch(&mut self, path: String, map_id: MapID) -> Option<Vec<u8>> {
         let mut headers: Vec<(&str, &str)> = vec![];
         let authorization: Option<String>;
         let session = &mut self.session.borrow_mut();

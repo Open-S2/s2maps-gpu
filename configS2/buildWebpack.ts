@@ -21,6 +21,8 @@ const VERSION = `v${version}`;
 // CLEAN UP FROM OLD BUILD
 fs.rmSync('./buildS2', { recursive: true, force: true });
 fs.rmSync('./buildS2-local', { recursive: true, force: true });
+fs.mkdirSync('./buildS2');
+fs.mkdirSync('./buildS2-local');
 
 // SETUP COMPILER
 const jsCompiler = webpack(configuration);

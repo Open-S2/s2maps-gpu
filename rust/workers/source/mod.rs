@@ -16,10 +16,10 @@ pub mod s2tiles_source;
 pub mod session;
 /// Base Source Manager
 pub mod source;
+/// Sprite Source
+pub mod sprite_source;
 /// Texture Pack stores fonts and builds out SDF characters onto a texture sheet
 pub mod texture_pack;
-
-// Source | S2PMTilesSource | S2TilesSource | JSONSource | LocalSource | MarkerSource
 
 pub use glyph_source::*;
 pub use image_source::*;
@@ -30,6 +30,7 @@ pub use s2pmtiles_source::*;
 pub use s2tiles_source::*;
 pub use session::*;
 pub use source::*;
+pub use sprite_source::*;
 pub use texture_pack::*;
 
 #[derive(Debug)]
@@ -42,7 +43,18 @@ pub enum Source {
     Marker(MarkerSource),
     S2PMTiles(S2PMTilesSource),
     S2Tiles(S2TilesSource),
+    Sprite(SpriteSource),
 }
+impl Source {
+    /// Get the glyph source if the source is a glyph source
+    pub fn glyph_source(&mut self) -> Option<&mut GlyphSource> {
+        match self {
+            Source::Glyph(glyph_source) => Some(glyph_source),
+            _ => None,
+        }
+    }
+}
+// TODO: impl SourceSpec for Source { ... }
 impl From<GlyphSource> for Source {
     fn from(glyph_source: GlyphSource) -> Self {
         Source::Glyph(glyph_source)
@@ -76,5 +88,10 @@ impl From<S2PMTilesSource> for Source {
 impl From<S2TilesSource> for Source {
     fn from(s2tiles_source: S2TilesSource) -> Self {
         Source::S2Tiles(s2tiles_source)
+    }
+}
+impl From<SpriteSource> for Source {
+    fn from(sprite_source: SpriteSource) -> Self {
+        Source::Sprite(sprite_source)
     }
 }

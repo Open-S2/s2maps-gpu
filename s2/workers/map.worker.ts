@@ -1,4 +1,4 @@
-declare const self: DedicatedWorkerGlobalScope;
+declare const self: DedicatedWorkerGlobalScope & { __coverage__: unknown };
 
 import S2MapUI from 'ui/s2mapUI.js';
 
@@ -15,10 +15,14 @@ export default class MapWorker {
   s2mapUI!: S2MapUI;
   /**
    * Map Worker's input messages to handle
-   * @param message - the message
+   * @param msg - the message
    */
-  onmessage(message: MessageEvent<S2MapMessage>): void {
-    const { data } = message;
+  onmessage(msg: MessageEvent<'__coverage__'> | MessageEvent<S2MapMessage>): void {
+    if (msg.data === '__coverage__') {
+      self.postMessage(self.__coverage__);
+      return;
+    }
+    const { data } = msg;
     const { type } = data;
 
     if (type === 'canvas') this.#prepCanvas(data.options, data.canvas, data.id);

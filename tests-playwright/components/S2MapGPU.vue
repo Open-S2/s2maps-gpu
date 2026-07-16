@@ -1,5 +1,7 @@
 <template>
-  <div id="map" ref="container"><slot /></div>
+  <div id="map" ref="container">
+    <slot />
+  </div>
 </template>
 
 <script lang="ts">
@@ -59,7 +61,6 @@ export default {
 
       /** Used by playwright to ensure the map is ready to render */
       window.testMap = toRaw(map);
-
       mapInstance.value = map;
     });
 
@@ -74,6 +75,7 @@ export default {
 
 <style>
 @import url('../../s2/s2maps.css');
+
 #map {
   position: absolute;
   top: 0;

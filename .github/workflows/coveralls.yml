@@ -27,7 +27,7 @@ jobs:
       # Run all tests (both bun and playwright)
 
       - name: Run all tests and collect coverage
-        run: bun run test:all:vitest
+        run: bun run test:all
         timeout-minutes: 20
 
       # upload to Coveralls

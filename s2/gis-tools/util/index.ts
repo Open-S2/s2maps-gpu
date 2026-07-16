@@ -99,7 +99,7 @@ export function base64ToArrayBuffer(base64: string): ArrayBuffer {
  * @returns - the concatenated Uint8Array
  */
 export async function concatUint8Arrays(uint8arrays: Uint8Array[]): Promise<Uint8Array> {
-  const blob = new Blob(uint8arrays);
+  const blob = new Blob(uint8arrays as BlobPart[]);
   const buffer = await blob.arrayBuffer();
   return new Uint8Array(buffer);
 }

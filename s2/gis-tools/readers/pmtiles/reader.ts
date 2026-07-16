@@ -4,9 +4,9 @@ import { FetchReader, toReader } from '../index.js';
 import { S2_HEADER_SIZE_BYTES, S2_ROOT_SIZE, s2BytesToHeader } from './s2pmtiles.js';
 import { bytesToHeader, deserializeDir, findTile, zxyToTileID } from './pmtiles.js';
 
+import type { Metadata } from 's2-tilejson';
 import type { Entry, Header } from './pmtiles.js';
-import type { Face, Metadata } from 's2-tilejson';
-import type { Reader, ReaderInputs } from '../index.js';
+import type { Face, Reader, ReaderInputs } from '../../index.js';
 import type { S2Entries, S2Header } from './s2pmtiles.js';
 
 /** A description of where a tile can be found in the archive. Both offset and length are in bytes */
@@ -30,8 +30,9 @@ export interface S2PMTilesTileEntry {
  * ```ts
  * import { S2PMTilesReader } from 'gis-tools-ts';
  * import { FileReader } from 'gis-tools-ts/file';
- * // or use the MMapReader if using Bun:
+ * // or use the MMapReader if using Bun / FetchReader for web:
  * // import { MMapReader } from 'gis-tools-ts/mmap';
+ * // import { FetchReader } from 'gis-tools-ts';
  *
  * const reader = new S2PMTilesReader(new FileReader('./data.pmtiles'));
  *
@@ -46,8 +47,8 @@ export interface S2PMTilesTileEntry {
  * const tile = await reader.getTileS2(0, 0, 0, 0);
  *
  * // WM functions
- * const hasTile = await reader.hasTile(0, 0, 0);
- * const tile = await reader.getTile(0, 0, 0);
+ * const hasTile = await reader.hasTileWM(0, 0, 0);
+ * const tile = await reader.getTileWM(0, 0, 0);
  * ```
  *
  * ## Links
@@ -180,7 +181,12 @@ export class S2PMTilesReader {
    * @param y - the y coordinate of the tile
    * @returns - the bytes of the tile at the given (face, zoom, x, y) coordinates, or undefined if the tile does not exist in the archive.
    */
-  async getTileS2(face: Face, zoom: number, x: number, y: number): Promise<Uint8Array | undefined> {
+  async getTileS2(
+    face: number,
+    zoom: number,
+    x: number,
+    y: number,
+  ): Promise<Uint8Array | undefined> {
     return await this.#getTile(face, zoom, x, y);
   }
 
@@ -191,7 +197,7 @@ export class S2PMTilesReader {
    * @param y - the y coordinate of the tile
    * @returns - true if the tile exists in the archive
    */
-  async hasTile(zoom: number, x: number, y: number): Promise<boolean> {
+  async hasTileWM(zoom: number, x: number, y: number): Promise<boolean> {
     return (await this.#getTileEntry(-1, zoom, x, y)) !== undefined;
   }
 
@@ -202,7 +208,7 @@ export class S2PMTilesReader {
    * @param y - the y coordinate of the tile
    * @returns - the bytes of the tile at the given (z, x, y) coordinates, or undefined if the tile does not exist in the archive.
    */
-  async getTile(zoom: number, x: number, y: number): Promise<Uint8Array | undefined> {
+  async getTileWM(zoom: number, x: number, y: number): Promise<Uint8Array | undefined> {
     return await this.#getTile(-1, zoom, x, y);
   }
 
@@ -251,7 +257,7 @@ export class S2PMTilesReader {
     let dL = rootDirectoryLength;
 
     for (let depth = 0; depth <= 3; depth++) {
-      const directory = await this.#getDirectory(dO, dL, face);
+      const directory = await this.#getDirectory(dO, dL, face as Face);
       if (directory === undefined) return undefined;
       const entry = findTile(directory, tileID);
       if (entry !== null) {
@@ -273,7 +279,8 @@ export class S2PMTilesReader {
    * @returns - the entries in the directory if it exists
    */
   async #getDirectory(offset: number, length: number, face: number): Promise<Entry[] | undefined> {
-    const dir = face === -1 ? this.#rootDir : this.#rootDirS2[face as Face];
+    if (face === 6) face = 0; // treat WM face as 0
+    const dir = face === -1 ? this.#rootDir : this.#rootDirS2[face as 0 | 1 | 2 | 3 | 4 | 5];
     const header = await this.#getMetadata();
     const { internalCompression, rootDirectoryOffset } = header;
     // if rootDirectoryOffset, return roon

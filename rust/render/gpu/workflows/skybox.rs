@@ -134,12 +134,13 @@ impl SkyboxWorkflow {
             // request each face and assign to cube map
             for i in 0..6 {
                 // TODO: Actuall run these
-                self._get_image(
-                    i,
-                    format!("{path}/{size}/{i}.{}", skybox.r#type),
-                    &mut camera.borrow_mut(),
-                )
-                .await;
+                let _ = self
+                    ._get_image(
+                        i,
+                        format!("{path}/{size}/{i}.{}", skybox.r#type),
+                        &mut camera.borrow_mut(),
+                    )
+                    .await;
             }
         }
     }
@@ -198,8 +199,8 @@ impl SkyboxWorkflow {
         let layout = context.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Skybox Pipeline Layout"),
             bind_group_layouts: &[
-                context.frame_bind_group_layout.as_ref().unwrap(),
-                &skybox_bind_group_layout,
+                context.frame_bind_group_layout.as_ref(),
+                Some(&skybox_bind_group_layout),
             ],
             immediate_size: 0,
         });
@@ -240,8 +241,8 @@ impl SkyboxWorkflow {
             },
             depth_stencil: Some(wgpu::DepthStencilState {
                 format: wgpu::TextureFormat::Depth24PlusStencil8,
-                depth_write_enabled: false,
-                depth_compare: wgpu::CompareFunction::Always,
+                depth_write_enabled: Some(false),
+                depth_compare: Some(wgpu::CompareFunction::Always),
                 stencil: wgpu::StencilState::default(),
                 bias: wgpu::DepthBiasState::default(),
             }),

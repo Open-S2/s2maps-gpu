@@ -12,7 +12,7 @@
 
 import { createFilter } from '@rollup/pluginutils';
 import parse from './parse';
-import { transformWithEsbuild } from 'vite';
+import { transformWithOxc } from 'vite';
 
 import type { Plugin, ResolvedConfig } from 'vite';
 
@@ -76,8 +76,8 @@ export default function ({
     async transform(source, shader) {
       if (!filter(shader)) return;
 
-      return await transformWithEsbuild(parse(shader, source), shader, {
-        sourcemap: (config.build.sourcemap as boolean) && 'external',
+      return await transformWithOxc(parse(shader, source), shader, {
+        sourcemap: !!config.build.sourcemap,
         loader: 'ts',
         format: 'esm',
         minifyWhitespace: prod,

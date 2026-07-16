@@ -53,10 +53,11 @@ const conifguration: Configuration = {
         test: /\.ts?$/,
         use: [
           {
-            loader: 'ts-loader',
+            loader: 'esbuild-loader',
             options: {
-              transpileOnly: true,
-              configFile: path.join(_dirname, '/../tsconfig.build.json'),
+              loader: 'ts',
+              target: 'ESNext',
+              tsconfig: path.join(_dirname, '/../tsconfig.build.json'),
             },
           },
         ],
@@ -66,15 +67,16 @@ const conifguration: Configuration = {
   },
 
   resolve: {
-    extensions: ['*', '.js', '.ts'],
+    extensions: ['*', '.js', '.ts', '.glsl', '.wgsl'],
     extensionAlias: { '.js': ['.js', '.ts'], '.ts': ['.js', '.ts'] },
     alias: {
       // Map aliases from tsconfig.json to absolute paths
       // Assuming tsconfig.json's baseUrl is the project root ('../' from webpack config dir)
       s2: [path.resolve(projectRoot, 's2'), path.resolve(projectRoot, './')],
       'gis-tools': path.resolve(projectRoot, 'gis-tools'),
-      gl: path.resolve(projectRoot, 'gl'),
-      gpu: path.resolve(projectRoot, 'gpu'),
+      dom: path.resolve(projectRoot, 'render/dom'),
+      gl: path.resolve(projectRoot, 'render/gl'),
+      gpu: path.resolve(projectRoot, 'render/gpu'),
       plugins: path.resolve(projectRoot, 'plugins'),
       source: path.resolve(projectRoot, 'source'),
       style: path.resolve(projectRoot, 'style'), // This is the key one for your error
@@ -128,7 +130,6 @@ const conifguration: Configuration = {
       minRatio: 1,
     }),
     new WebpackStatsViewerPlugin(),
-    // @ts-expect-error - types are wrong.
     new BundleAnalyzerPlugin({
       analyzerMode: 'static',
       generateStatsFile: true,

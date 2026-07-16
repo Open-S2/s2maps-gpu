@@ -49,7 +49,7 @@ pub fn get_tiles_in_view_wm(
     let size = 1 << zoom;
 
     // let's find the current tile and store it
-    let (x, y) = ll_to_tile(&(lon, lat), zoom as f64, Some(tile_size));
+    let (x, y) = ll_to_tile(&(lon, lat), zoom as f64);
     let id = S2CellId::from_face_ij(0, x as u32, y as u32, Some(zoom));
     tiles.insert(id.into(), TileInView { id: id.into(), face: 0, zoom, x, y, wrapped_id: None });
     // add the first set of neighbors

@@ -1,5 +1,6 @@
+import type { Face } from 'gis-tools/index.js';
+import type { LayerDefinition } from 'style/style.spec.js';
 import type Session from './session.js';
-import type { Face, LayerDefinition } from 'style/style.spec.js';
 import type { SourceFlushMessage, TileRequest } from '../worker.spec.js';
 import type { VectorPointGeometry, VectorPolygonGeometry } from 'gis-tools/index.js';
 

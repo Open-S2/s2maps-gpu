@@ -98,9 +98,7 @@ export class Orthodrome {
     return { x: radToDeg(lon), y: radToDeg(lat) };
   }
 
-  /**
-   * @returns the bearing in degrees between the two points
-   */
+  /** @returns the bearing in degrees between the two points */
   bearing(): number {
     const { lon1, lat1, lon2, lat2 } = this;
 

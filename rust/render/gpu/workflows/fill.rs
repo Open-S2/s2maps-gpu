@@ -357,9 +357,9 @@ impl FillWorkflow {
             context.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Fill Pipeline Layout"),
                 bind_group_layouts: &[
-                    context.frame_bind_group_layout.as_ref().unwrap(),
-                    context.feature_bind_group_layout.as_ref().unwrap(),
-                    context.mask_pattern_bind_group_layout.as_ref().unwrap(),
+                    context.frame_bind_group_layout.as_ref(),
+                    context.feature_bind_group_layout.as_ref(),
+                    context.mask_pattern_bind_group_layout.as_ref(),
                 ],
                 immediate_size: 0,
             })
@@ -701,7 +701,7 @@ impl FillWorkflow {
                 entry_point: Some("vMain"),
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
                 buffers: &[
-                    wgpu::VertexBufferLayout {
+                    Some(wgpu::VertexBufferLayout {
                         // position
                         array_stride: 4 * 2,
                         step_mode: wgpu::VertexStepMode::Vertex,
@@ -710,8 +710,8 @@ impl FillWorkflow {
                             offset: 0,
                             format: wgpu::VertexFormat::Float32x2,
                         }],
-                    },
-                    wgpu::VertexBufferLayout {
+                    }),
+                    Some(wgpu::VertexBufferLayout {
                         // code
                         array_stride: 4,
                         step_mode: wgpu::VertexStepMode::Vertex,
@@ -720,7 +720,7 @@ impl FillWorkflow {
                             offset: 0,
                             format: wgpu::VertexFormat::Uint32,
                         }],
-                    },
+                    }),
                 ],
             },
             fragment: Some(wgpu::FragmentState {
@@ -762,11 +762,11 @@ impl FillWorkflow {
             },
             depth_stencil: Some(wgpu::DepthStencilState {
                 format: wgpu::TextureFormat::Depth24PlusStencil8,
-                depth_write_enabled: !mask,
+                depth_write_enabled: Some(!mask),
                 depth_compare: if mask {
-                    wgpu::CompareFunction::Always
+                    Some(wgpu::CompareFunction::Always)
                 } else {
-                    wgpu::CompareFunction::Less
+                    Some(wgpu::CompareFunction::Less)
                 },
                 stencil: wgpu::StencilState {
                     front: stencil_state,
@@ -850,10 +850,10 @@ impl FillWorkflow {
         let layout = context.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Fill Interactive Pipeline Layout"),
             bind_group_layouts: &[
-                context.frame_bind_group_layout.as_ref().unwrap(),
-                context.feature_bind_group_layout.as_ref().unwrap(),
-                &fill_interactive_bind_group_layout,
-                context.interactive_bind_group_layout.as_ref().unwrap(),
+                context.frame_bind_group_layout.as_ref(),
+                context.feature_bind_group_layout.as_ref(),
+                Some(&fill_interactive_bind_group_layout),
+                context.interactive_bind_group_layout.as_ref(),
             ],
             immediate_size: 0,
         });

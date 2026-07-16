@@ -1,4 +1,4 @@
-declare const self: DedicatedWorkerGlobalScope;
+declare const self: DedicatedWorkerGlobalScope & { __coverage__: unknown };
 
 import ProcessManager from './process/index.js';
 import { VectorTile } from 'open-vector-tile';
@@ -20,11 +20,16 @@ import type { TileRequest, TileWorkerMessages } from './worker.spec.js';
 export default class TileWorker extends ProcessManager {
   /**
    * Given a tile message, process it according to its type
-   * @param tileMessage - the tile message
+   * @param msg - the tile message
    */
-  onMessage(tileMessage: MessageEvent<TileWorkerMessages>): void {
-    const { data, ports } = tileMessage;
+  onMessage(msg: MessageEvent<'__coverage__'> | MessageEvent<TileWorkerMessages>): void {
+    if (msg.data === '__coverage__') {
+      self.postMessage(self.__coverage__);
+      return;
+    }
+    const { data, ports } = msg;
     const { type } = data;
+
     if (type === 'port') this.#loadWorkerPort(ports[0], ports[1], data.id, data.totalWorkers);
     else {
       const { mapID } = data;

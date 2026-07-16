@@ -27,7 +27,6 @@ export async function decompressStream(bytes: Uint8Array, format?: Format): Prom
   const decompressedStream = stream.pipeThrough(new DecompressionStream(format as 'gzip'));
   // Read all the bytes from this stream.
   const chunks: Uint8Array[] = [];
-  // @ts-expect-error - this works
   for await (const chunk of decompressedStream) chunks.push(chunk);
 
   return await concatUint8Arrays(chunks);

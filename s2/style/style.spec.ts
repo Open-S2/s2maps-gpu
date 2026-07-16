@@ -6,6 +6,7 @@ import type { View } from 'ui/camera/projector/index.js';
 import type {
   Attributions,
   BBox,
+  Face,
   JSONCollection,
   Point,
   Properties,
@@ -15,7 +16,6 @@ import type {
   Center,
   Encoding,
   Extensions,
-  Face,
   ImageExtensions,
   LayersMetaData,
   S2Bounds,

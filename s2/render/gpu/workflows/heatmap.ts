@@ -19,7 +19,7 @@ import type {
   HeatmapWorkflow as HeatmapWorkflowSpec,
 } from './workflow.spec.js';
 
-const SHADER_BUFFER_LAYOUT: Iterable<GPUVertexBufferLayout> = [
+const SHADER_BUFFER_LAYOUT: GPUVertexBufferLayout[] = [
   {
     // pos
     arrayStride: 4 * 2,

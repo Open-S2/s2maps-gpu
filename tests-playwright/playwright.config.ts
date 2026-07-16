@@ -35,17 +35,23 @@ export default defineConfig({
     baseURL: 'http://localhost:3100',
     ctViteConfig: {
       plugins: [
+        // @ts-expect-error - version controls but its fine
         glsl(),
+        // @ts-expect-error - version controls but its fine
         wgsl(),
+        // @ts-expect-error - version controls but its fine
         vue(),
+        // @ts-expect-error - version controls but its fine
         AutoImport({
           imports: ['vue', 'vue-router', '@vueuse/head'],
           dts: 'src/auto-imports.d.ts',
           // eslintrc: { enabled: true },
         }),
+        // @ts-expect-error - version controls but its fine
         Components({ dirs: ['./components'], extensions: ['vue'] }),
+        // @ts-expect-error - version controls but its fine
         IstanbulPlugin({
-          include: ['s2'],
+          include: ['s2/**/*'],
           extension: ['.js', '.ts', '.vue'],
           nycrcPath: './nyc.config.js',
           requireEnv: false,
@@ -55,11 +61,13 @@ export default defineConfig({
       worker: {
         format: 'es',
         /** @returns the inject plugins */
+        // @ts-expect-error - version controls but its fine
         plugins: () => [
           glsl(),
           wgsl(),
           IstanbulPlugin({
-            include: ['s2'],
+            include: ['s2', 'workers'],
+            exclude: ['**/gis-tools/**'],
             extension: ['.js', '.ts', '.vue'],
             nycrcPath: './nyc.config.js',
             requireEnv: false,
@@ -71,6 +79,7 @@ export default defineConfig({
         alias: {
           s2: fileURLToPath(new URL('../s2', import.meta.url)),
           'gis-tools': fileURLToPath(new URL('../s2/gis-tools', import.meta.url)),
+          dom: fileURLToPath(new URL('../s2/render/dom', import.meta.url)),
           gl: fileURLToPath(new URL('../s2/render/gl', import.meta.url)),
           gpu: fileURLToPath(new URL('../s2/render/gpu', import.meta.url)),
           plugins: fileURLToPath(new URL('../s2/plugins', import.meta.url)),
@@ -88,7 +97,19 @@ export default defineConfig({
   /* Configure projects for major browsers */
   projects: [
     /* Test against desktop browsers */
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        channel: 'chromium',
+        launchOptions: {
+          args: [
+            '--enable-unsafe-webgpu', // Bypasses certain WebGPU limitations
+            '--ignore-gpu-blocklist', // Prevents Chrome from disabling GPU on "unsupported" test environments
+          ],
+        },
+      },
+    },
     // { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
     // { name: 'webkit', use: { ...devices['Desktop Safari'] } },
     /* Test against mobile viewports. */

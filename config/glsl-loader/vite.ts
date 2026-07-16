@@ -9,7 +9,7 @@
 
 import { createFilter } from '@rollup/pluginutils';
 import parse from './parse';
-import { transformWithEsbuild } from 'vite';
+import { transformWithOxc } from 'vite';
 
 import type { Plugin, ResolvedConfig } from 'vite';
 
@@ -56,7 +56,6 @@ export default function ({
 } = {}): Plugin {
   let config: ResolvedConfig;
   const filter = createFilter(include, exclude);
-  const prod = process.env.NODE_ENV === 'production';
 
   return {
     enforce: 'pre',
@@ -79,11 +78,8 @@ export default function ({
     async transform(source: string, shader: string) {
       if (!filter(shader)) return;
 
-      return await transformWithEsbuild(parse(shader, source), shader, {
-        sourcemap: (config.build.sourcemap as boolean) && 'external',
-        loader: 'ts',
-        format: 'esm',
-        minifyWhitespace: prod,
+      return await transformWithOxc(parse(shader, source), shader, {
+        sourcemap: !!config.build.sourcemap,
       });
     },
   };

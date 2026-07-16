@@ -10,19 +10,18 @@ use bytemuck::Pod;
 use core::cell::RefCell;
 use libm::powf;
 use wgpu::{
-    Adapter, AddressMode, Backends, BindGroup, BindGroupDescriptor, BindGroupEntry,
-    BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingResource, BindingType,
-    BlendComponent, BlendFactor, BlendOperation, BlendState, Buffer, BufferBinding,
-    BufferBindingType, BufferDescriptor, BufferUsages, CommandEncoder, CommandEncoderDescriptor,
-    CompositeAlphaMode, ComputePass, ComputePassDescriptor, ComputePipeline, Device,
-    DeviceDescriptor, ExperimentalFeatures, Extent3d, Features, FilterMode, Instance,
-    InstanceDescriptor, Limits, LoadOp, Operations, Origin3d, PowerPreference, Queue, RenderPass,
-    RenderPassColorAttachment, RenderPassDepthStencilAttachment, RenderPassDescriptor,
-    RenderPipeline, RequestAdapterOptions, Sampler, SamplerBindingType, SamplerDescriptor,
-    ShaderStages, StoreOp, Surface, SurfaceConfiguration, TexelCopyBufferInfo,
-    TexelCopyBufferLayout, TexelCopyTextureInfo, Texture, TextureAspect, TextureDescriptor,
-    TextureDimension, TextureFormat, TextureSampleType, TextureUsages, TextureView,
-    TextureViewDescriptor, TextureViewDimension, Trace,
+    Adapter, AddressMode, BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout,
+    BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingResource, BindingType, BlendComponent,
+    BlendFactor, BlendOperation, BlendState, Buffer, BufferBinding, BufferBindingType,
+    BufferDescriptor, BufferUsages, CommandEncoder, CommandEncoderDescriptor, CompositeAlphaMode,
+    ComputePass, ComputePassDescriptor, ComputePipeline, CurrentSurfaceTexture, Device,
+    DeviceDescriptor, ExperimentalFeatures, Extent3d, Features, FilterMode, Limits, LoadOp,
+    Operations, Origin3d, PowerPreference, Queue, RenderPass, RenderPassColorAttachment,
+    RenderPassDepthStencilAttachment, RenderPassDescriptor, RenderPipeline, RequestAdapterOptions,
+    Sampler, SamplerBindingType, SamplerDescriptor, ShaderStages, StoreOp, Surface,
+    SurfaceConfiguration, TexelCopyBufferInfo, TexelCopyBufferLayout, TexelCopyTextureInfo,
+    Texture, TextureAspect, TextureDescriptor, TextureDimension, TextureFormat, TextureSampleType,
+    TextureUsages, TextureView, TextureViewDescriptor, TextureViewDimension, Trace,
 };
 
 /// Get the default blend state for this context
@@ -233,7 +232,11 @@ impl RenderContext {
         }
         // prepare descriptor
         let ColorArray(r, g, b, a) = self.clear_color_rgba;
-        let current_texture = self.surface.get_current_texture().unwrap();
+        let current_texture = match self.surface.get_current_texture() {
+            CurrentSurfaceTexture::Success(surface_texture)
+            | CurrentSurfaceTexture::Suboptimal(surface_texture) => surface_texture,
+            _ => panic!("Unable to get current texture"),
+        };
         self.curr_view = Some(
             (self.render_target.as_ref().unwrap_or(&current_texture.texture))
                 .create_view(&TextureViewDescriptor::default()),
@@ -946,8 +949,13 @@ impl RenderContext {
         let target = match self.render_target.as_ref() {
             Some(t) => t,
             None => {
-                surface_tex = self.surface.get_current_texture().unwrap();
-                &surface_tex.texture
+                surface_tex = self.surface.get_current_texture();
+                match &surface_tex {
+                    CurrentSurfaceTexture::Success(st) | CurrentSurfaceTexture::Suboptimal(st) => {
+                        &st.texture
+                    }
+                    _ => panic!("Unable to get current texture"),
+                }
             }
         };
         self.download_texture_data(target, self.presentation.width, self.presentation.height)
@@ -1191,10 +1199,7 @@ pub type GPUContextContainer = (Adapter, Device, Queue, Surface<'static>);
 /// Setup a GPU context Container
 pub async fn create_gpu_context(window: &winit::window::Window) -> GPUContextContainer {
     // 1. Instance - The entry point for wgpu
-    let instance = Instance::new(&InstanceDescriptor {
-        backends: Backends::all(), // Enables Vulkan, Metal, DX12, and GL
-        ..Default::default()
-    });
+    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle());
     // 2. Surface - The connection to your window
     let surface = unsafe {
         core::mem::transmute::<Surface<'_>, Surface<'static>>(
@@ -1207,6 +1212,7 @@ pub async fn create_gpu_context(window: &winit::window::Window) -> GPUContextCon
             power_preference: PowerPreference::HighPerformance,
             compatible_surface: Some(&surface),
             force_fallback_adapter: false,
+            apply_limit_buckets: false,
         })
         .await
         .expect("Failed to find an appropriate adapter");

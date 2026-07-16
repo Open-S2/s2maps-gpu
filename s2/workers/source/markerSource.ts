@@ -55,6 +55,7 @@ export default class MarkerSource {
   3 = new Map<number, Marker>();
   4 = new Map<number, Marker>();
   5 = new Map<number, Marker>();
+  6 = new Map<number, Marker>();
   session: Session;
   textEncoder: TextEncoder = new TextEncoder();
   /**

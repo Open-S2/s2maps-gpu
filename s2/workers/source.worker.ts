@@ -1,4 +1,4 @@
-declare const self: DedicatedWorkerGlobalScope;
+declare const self: DedicatedWorkerGlobalScope & { __coverage__: unknown };
 
 import { adjustURL } from '../util/index.js';
 import {
@@ -87,7 +87,7 @@ interface Map {
  * Local -> local build tile information
  * Image -> a collection of images
  * Sprite -> a sprite sheet with json guide of how to use it
- * default -> assumed the location has a metadata. json at root with a "s2cellid.ext" file structure
+ * default -> assumed the location has a metadata. json at root with a "[face/]zoom/x/y.ext" file structure
  *
  * SESSION TOKEN
  * This is a pre-approved JWT token for any calls made to api.opens2.com or api.s2maps.io
@@ -105,9 +105,14 @@ export default class SourceWorker {
    * Handle source worker's messages
    * @param msg - incoming message
    */
-  onMessage(msg: MessageEvent<SourceWorkerMessages>): void {
+  onMessage(msg: MessageEvent<'__coverage__'> | MessageEvent<SourceWorkerMessages>): void {
+    if (msg.data === '__coverage__') {
+      self.postMessage(self.__coverage__);
+      return;
+    }
     const { data, ports } = msg;
     const { type } = data;
+
     if (type === 'port') this.#loadWorkerPort(ports[0], ports[1], data.id);
     else {
       const { mapID } = data;
@@ -240,8 +245,7 @@ export default class SourceWorker {
     const { layers } = this.maps[mapID];
     layers.splice(index, 1);
     for (let i = index, ll = layers.length; i < ll; i++) {
-      const layer = layers[i];
-      layer.layerIndex--;
+      layers[i].layerIndex--;
     }
   }
 

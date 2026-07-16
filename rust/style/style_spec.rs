@@ -4687,6 +4687,20 @@ impl LayerDefinition {
             LayerDefinition::Shade(layer) => &layer.base,
         }
     }
+    /// Get the base layer definition mutably
+    pub fn base_mut(&mut self) -> &mut LayerDefinitionBase {
+        match self {
+            LayerDefinition::Fill(layer) => &mut layer.base,
+            LayerDefinition::Glyph(layer) => &mut layer.base,
+            LayerDefinition::Heatmap(layer) => &mut layer.base,
+            LayerDefinition::Hillshade(layer) => &mut layer.base,
+            LayerDefinition::Line(layer) => &mut layer.base,
+            LayerDefinition::Point(layer) => &mut layer.base,
+            LayerDefinition::Raster(layer) => &mut layer.base,
+            LayerDefinition::Sensor(layer) => &mut layer.base,
+            LayerDefinition::Shade(layer) => &mut layer.base,
+        }
+    }
     /// Get the layer name
     pub fn layer(&self) -> String {
         self.base().name.clone()
@@ -4698,6 +4712,10 @@ impl LayerDefinition {
     /// Get the layer index
     pub fn layer_index(&self) -> u32 {
         self.base().layer_index
+    }
+    /// Set the layer index
+    pub fn set_layer_index(&mut self, index: u32) {
+        self.base_mut().layer_index = index;
     }
 }
 impl Default for LayerDefinition {

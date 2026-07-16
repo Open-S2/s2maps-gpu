@@ -69,8 +69,7 @@ function testRender(snapshotName: string, style: StyleDefinition, contextType: G
     const success = await waitMap();
     expect(success).toBe(true);
 
-    const content = await page.screenshot();
-    expect(content).toMatchSnapshot(snapshotName);
+    await expect(page).toMatchScreenshot(snapshotName);
 
     comp.unmount();
   };

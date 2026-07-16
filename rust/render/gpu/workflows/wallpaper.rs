@@ -147,8 +147,8 @@ impl WallpaperWorkflow {
         let layout = context.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Wallpaper Pipeline Layout"),
             bind_group_layouts: &[
-                context.frame_bind_group_layout.as_ref().unwrap(),
-                &wallpaper_bind_group_layout,
+                context.frame_bind_group_layout.as_ref(),
+                Some(&wallpaper_bind_group_layout),
             ],
             immediate_size: 0,
         });
@@ -171,8 +171,8 @@ impl WallpaperWorkflow {
                 },
                 depth_stencil: Some(wgpu::DepthStencilState {
                     format: wgpu::TextureFormat::Depth24PlusStencil8,
-                    depth_write_enabled: false,
-                    depth_compare: wgpu::CompareFunction::Always,
+                    depth_write_enabled: Some(false),
+                    depth_compare: Some(wgpu::CompareFunction::Always),
                     stencil: wgpu::StencilState::default(),
                     bias: wgpu::DepthBiasState::default(),
                 }),

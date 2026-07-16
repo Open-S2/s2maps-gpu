@@ -253,7 +253,8 @@ export default class Source {
         }
         parentLayers[newIDString].layerIndexes.push(layerIndex);
         // filter out the index from the tile
-        tile.layerIndexes?.filter((index) => index !== layerIndex);
+        // TODO: This was updated, but not tested
+        tile.layerIndexes = tile.layerIndexes?.filter((index) => index !== layerIndex);
       }
     }
     // if we stored any parent layers, make the necessary requests

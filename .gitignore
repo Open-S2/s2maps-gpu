@@ -32,6 +32,7 @@ logs
 # testing
 .nyc_output
 /coverage
+.vitest-attachments
 
 # next.js
 /.next/

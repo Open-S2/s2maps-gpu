@@ -9,7 +9,7 @@ use crate::{
 };
 use alloc::{collections::BTreeSet, rc::Rc, string::String, vec::Vec};
 use core::cell::RefCell;
-use gistools::{data_structures::Tile, util::fetch_url};
+use gistools::{data_structures::Tile, geometry::S2CellId, util::fetch_url};
 use s2_tilejson::{Encoding, LayersMetaData, Scheme, SourceType, VectorLayer};
 use s2json::{Attributions, Face};
 use serde::de::DeserializeOwned;
@@ -84,7 +84,7 @@ pub trait SourceSpec<M: Clone + Default + DeserializeOwned = ()> {
         // inject layer_indexes
         self._get_layer_indexes(tile, &mut flush_message.layers_to_be_loaded);
         // now make requests for parent data as necessary
-        self._get_parent_data(map_id, tile, &mut flush_message.layers_to_be_loaded);
+        self._get_parent_data(map_id, tile, &mut flush_message.layers_to_be_loaded).await;
         // pull out data, check if data exists in bounds, then request
         let BaseSource { active, minzoom, maxzoom, .. } = *self.base();
         let name = self.base().name.clone();
@@ -246,57 +246,78 @@ pub trait SourceSpec<M: Clone + Default + DeserializeOwned = ()> {
     /// - `map_id`: the id of the map that is requesting
     /// - `tile`: the tile request
     /// - `layers_to_load`: the set of layers to load
-    fn _get_parent_data(
+    #[allow(async_fn_in_trait)]
+    async fn _get_parent_data(
         &mut self,
         map_id: MapID,
-        tile: &TileRequest,
+        tile: &mut TileRequest,
         layers_to_load: &mut BTreeSet<u32>,
     ) {
-        //     const { layers, style_layers, name } = this;
-        //     if (layers === undefined) return;
-        //     // pull out data
-        //     const { time, face, zoom, id } = tile;
-        //     // setup parentLayers
-        //     const parentLayers: ParentLayers = {};
-        //     // iterate over layers and found any data doesn't exist at current zoom but the style asks for
-        //     for (const { layer, layerIndex, maxzoom } of style_layers) {
-        //       const source_layer = layers[layer];
-        //       const source_layer_max_zoom = source_layer?.maxzoom;
-        //       if (maxzoom > zoom && source_layer !== undefined && source_layer_max_zoom < zoom) {
-        //         // we have passed the limit at which this data is stored. Rather than
-        //         // processing the data more than once, we reference where to look for the layer
-        //         let p_zoom = zoom;
-        //         let newID = id;
-        //         while (p_zoom > source_layer_max_zoom) {
-        //           p_zoom--;
-        //           newID = idParent(newID);
-        //         }
-        //         const new_id_string = newID.toString();
-        //         // pull out i & j
-        //         const [, i, j] = idToIJ(newID, p_zoom);
-        //         // store parent reference
-        //         if (parentLayers[new_id_string] === undefined) {
-        //           parentLayers[new_id_string] = {
-        //             time,
-        //             face,
-        //             id: newID,
-        //             zoom: p_zoom,
-        //             i,
-        //             j,
-        //             layer_indexes: [],
-        //           };
-        //         }
-        //         parentLayers[new_id_string].layer_indexes.push(layerIndex);
-        //         // filter out the index from the tile
-        //         tile.layer_indexes?.filter((index) => index !== layerIndex);
-        //       }
-        //     }
-        //     // if we stored any parent layers, make the necessary requests
-        //     for (const parent of Object.values(parentLayers)) {
-        //       for (const index of parent.layer_indexes) layers_to_load.add(index);
-        //       void this._tile_request(map_id, { ...tile, parent }, name);
-        //     }
-        todo!()
+        let name = self.base().name.clone();
+        // setup parent_layers
+        let mut parent_layers = BTreeMap::<S2CellId, TileLayer>::new();
+        {
+            let BaseSource { layers, style_layers, .. } = self.base();
+            if layers.is_empty() {
+                return;
+            }
+            // pull out data
+            let TileLayer { time, face, zoom, id, .. } = tile.layer;
+            // iterate over layers and found any data doesn't exist at current zoom but the style asks for
+            for style_layer in style_layers {
+                let layer = style_layer.layer();
+                let layer_index = style_layer.layer_index();
+                let maxzoom = style_layer.base().maxzoom;
+                let Some(source_layer) = layers.get(&layer) else { continue };
+                let source_layer_max_zoom = source_layer.maxzoom;
+                if maxzoom > zoom && source_layer_max_zoom < zoom {
+                    // we have passed the limit at which this data is stored. Rather than
+                    // processing the data more than once, we reference where to look for the layer
+                    let mut p_zoom = zoom;
+                    let mut new_id = id;
+                    while p_zoom > source_layer_max_zoom {
+                        p_zoom -= 1;
+                        new_id = new_id.parent(None);
+                    }
+                    // pull out i & j
+                    let (_, i, j, _) = new_id.to_face_ij_orientation(Some(p_zoom));
+                    // store parent reference
+                    if !parent_layers.contains_key(&new_id) {
+                        parent_layers.insert(
+                            new_id,
+                            TileLayer {
+                                time,
+                                face,
+                                id: new_id,
+                                zoom: p_zoom,
+                                i,
+                                j,
+                                layer_indexes: vec![],
+                            },
+                        );
+                    }
+                    parent_layers.get_mut(&new_id).unwrap().layer_indexes.push(layer_index);
+                    // filter out the index from the tile
+                    tile.layer.layer_indexes = tile
+                        .layer
+                        .layer_indexes
+                        .clone()
+                        .into_iter()
+                        .filter(|index| *index != layer_index)
+                        .collect();
+                }
+            }
+        }
+        // if we stored any parent layers, make the necessary requests
+        for parent in parent_layers.values() {
+            for index in &parent.layer_indexes {
+                layers_to_load.insert(*index);
+            }
+            // make the request
+            let mut tile_clone = tile.clone();
+            tile_clone.parent = Some(parent.clone());
+            self._tile_request(map_id, tile_clone, name.clone()).await;
+        }
     }
 
     /// Get the layer indexes that this tile is interested in
@@ -422,20 +443,3 @@ impl BaseSource {
         }
     }
 }
-
-// /// Basic parsing tool to ensure the source type is valid
-// ///
-// /// ## Parameters
-// /// - `type`: the source type
-// ///
-// /// ## Returns
-// /// The parsed source type
-// fn parse_meta_type(r#type: Option<String>) -> SourceType {
-//     let r#type = r#type.unwrap_or("".into());
-//     match r#type.as_str() {
-//         "vector" | "json" | "raster" | "raster-dem" | "sensor" | "overlay" => {
-//             r#type.as_str().into()
-//         }
-//         _ => SourceType::Vector,
-//     }
-// }

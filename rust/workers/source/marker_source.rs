@@ -63,6 +63,7 @@ pub struct MarkerSource {
     pub _3: BTreeMap<u64, Marker>,
     pub _4: BTreeMap<u64, Marker>,
     pub _5: BTreeMap<u64, Marker>,
+    pub wm: BTreeMap<u64, Marker>,
     pub session: Rc<RefCell<Session>>,
 }
 impl MarkerSource {
@@ -93,12 +94,14 @@ impl MarkerSource {
             _3: BTreeMap::new(),
             _4: BTreeMap::new(),
             _5: BTreeMap::new(),
+            wm: BTreeMap::new(),
         }
     }
 
     /// Grab the store give a face
     pub fn get_face(&self, face: Face) -> &BTreeMap<u64, Marker> {
         match face {
+            Face::WM => &self.wm,
             Face::Face0 => &self._0,
             Face::Face1 => &self._1,
             Face::Face2 => &self._2,
@@ -111,6 +114,7 @@ impl MarkerSource {
     /// Grab the store give a face
     pub fn get_face_mut(&mut self, face: Face) -> &mut BTreeMap<u64, Marker> {
         match face {
+            Face::WM => &mut self.wm,
             Face::Face0 => &mut self._0,
             Face::Face1 => &mut self._1,
             Face::Face2 => &mut self._2,

@@ -454,7 +454,7 @@ export default class S2MapUI extends Camera {
     requestAnimationFrame(() => {
       if (this.#fullyRenderedScreen()) {
         // assuming the screen is ready for a screen shot we ask for a draw
-        void painter.getScreen().then((data) => {
+        void painter.getScreen().then((data: Uint8ClampedArray): void => {
           const screen = data.buffer;
           const msg: ScreenshotMessageGL = { mapID, type: 'screenshot', screen };
           if (webworker) postMessage(msg, [screen]);

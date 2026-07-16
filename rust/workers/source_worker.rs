@@ -36,14 +36,13 @@
 
 use crate::{
     style::{
-        GPUType, LayerDefinition, Projection, S2MapsAnalytics, Source as StyleSource, SpriteSource,
-        StylePackage,
+        GPUType, LayerDefinition, Projection, S2MapsAnalytics, Source as StyleSource, StylePackage,
     },
     util::{MsgReceiver, MsgSender, UrlMap},
     workers::{
         GlyphMetadataUnparsed, GlyphSource, ImageSource, ImageSourceMetadata, MapID,
-        MarkerDefinition, MarkerSource, Session, SourceWorkerMessageOutput, SourceWorkerMessages,
-        TexturePack, TileRequest, TileWorkerMessage,
+        MarkerDefinition, MarkerSource, Session, Source, SourceWorkerMessageOutput,
+        SourceWorkerMessages, SpriteSource, TexturePack, TileRequest, TileWorkerMessage,
     },
 };
 use alloc::{collections::BTreeMap, rc::Rc};
@@ -59,13 +58,13 @@ pub struct SessionMap {
     pub maxzoom: u8,
     pub analytics: S2MapsAnalytics,
     pub experimental: bool,
-    pub sources: BTreeMap<String, SourceWorker>,
+    pub sources: BTreeMap<String, Source>,
     pub layers: Vec<LayerDefinition>,
     pub glyphs: BTreeMap<String, GlyphSource>,
     pub sprites: BTreeMap<String, SpriteSource>,
     /// e.g. { apiURL: string, ... }
     pub urls: UrlMap,
-    pub texture_tack: TexturePack,
+    pub texture_pack: Rc<TexturePack>,
     pub images: ImageSource,
 }
 
@@ -95,7 +94,7 @@ pub struct SessionMap {
 /// Local -> local build tile information
 /// Image -> a collection of images
 /// Sprite -> a sprite sheet with json guide of how to use it
-/// default -> assumed the location has a metadata. json at root with a "s2cellid.ext" file structure
+/// default -> assumed the location has a metadata. json at root with a "[face/]zoom/x/y.ext" file structure
 ///
 /// SESSION TOKEN
 /// This is a pre-approved JWT token for any calls made to api.opens2.com or api.s2maps.io
@@ -141,7 +140,7 @@ impl SourceWorker {
         // if (type === 'port') this._load_worker_port(ports[0], ports[1], data.id);
         //     else {
         //       const { map_id } = data;
-        //       if (type === 'requestStyle')
+        //       if (type === 'request_style')
         //         this._request_style(map_id, data.style, data.analytics, data.api_key, data.url_map);
         //       else if (type === 'style') this._load_style(map_id, data.style);
         //       else if (type === 'tilerequest') void this._request_tile(map_id, data.tiles, data.sources);
@@ -181,18 +180,19 @@ impl SourceWorker {
     /// - `analytics`: basic analytics to know what this browser can handle
     /// - `api_key`: the api key
     /// - `url_map`: the url map
-    fn _request_style(
-        map_id: String,
+    async fn _request_style(
+        &mut self,
+        map_id: MapID,
         style: String,
-        analytics: S2MapsAnalytics,
+        analytics: Option<S2MapsAnalytics>,
         api_key: Option<String>,
         url_map: Option<UrlMap>,
     ) {
-        // // build maps session
-        // this.session.loadStyle(map_id, analytics, api_key);
-        // // request style
-        // void this.session.requestStyle(map_id, style, url_map);
-        todo!()
+        let session = &mut self.session.borrow_mut();
+        // build maps session
+        session.load_style(map_id, analytics, api_key);
+        // request style
+        session.request_style(map_id, style, url_map).await;
     }
 
     /// Load a style object for a map
@@ -200,7 +200,7 @@ impl SourceWorker {
     /// ## Parameters
     /// - `map_id`: the id of the map to load the style for
     /// - `style`: the style
-    fn _load_style(map_id: MapID, style: StylePackage) {
+    fn _load_style(&self, map_id: MapID, style: StylePackage) {
         //     // pull style data
         //     const {
         //       projection,
@@ -213,7 +213,7 @@ impl SourceWorker {
         //       api_key,
         //       url_map,
         //     } = style;
-        //     const texturePack = new TexturePack();
+        //     let texture_pack = new TexturePack::new();
         //     this.maps[map_id] = {
         //       projection,
         //       gpuType,
@@ -226,11 +226,11 @@ impl SourceWorker {
         //       glyphs: {},
         //       sprites: {},
         //       urls: url_map ?? {},
-        //       texturePack,
-        //       images: new ImageSource('__images', '', texturePack, this.session),
+        //       texture_pack,
+        //       images: new ImageSource('__images', '', texture_pack, this.session),
         //     };
         //     // create a session with the style
-        //     this.session.loadStyle(map_id, analytics, api_key);
+        //     this.session.load_style(map_id, analytics, api_key);
         //     // now build sources
         //     void this._build_sources(map_id, style);
         todo!()
@@ -242,6 +242,7 @@ impl SourceWorker {
     /// - `index`: the index to add the layer at
     /// - `_tile_request`: the list of tiles of all existing tiles in the map already to adjust
     fn _add_layer(
+        &self,
         map_id: MapID,
         layer: LayerDefinition,
         index: Option<u32>,
@@ -267,14 +268,15 @@ impl SourceWorker {
     /// ## Parameters
     /// - `map_id`: the id of the map to delete the layer from
     /// - `index`: the index to delete the layer from
-    fn _delete_layer(map_id: MapID, index: u32) {
-        //     const { layers } = this.maps[map_id];
-        //     layers.splice(index, 1);
-        //     for (let i = index, ll = layers.length; i < ll; i++) {
-        //       const layer = layers[i];
-        //       layer.layerIndex--;
-        //     }
-        todo!()
+    fn _delete_layer(&mut self, map_id: MapID, index: usize) {
+        if let Some(map) = self.maps.get_mut(&map_id) {
+            let layers = &mut map.layers;
+            layers.remove(index);
+            for i in index..layers.len() {
+                let layer = &mut layers[i];
+                layer.set_layer_index(layer.layer_index() - 1);
+            }
+        }
     }
 
     /// Reorder style layers
@@ -282,18 +284,25 @@ impl SourceWorker {
     /// ## Parameters
     /// - `map_id`: the id of the map to reorder the layers
     /// - `layer_changes`: the layer changes to make
-    fn _reorder_layers(map_id: MapID, layer_changes: BTreeMap<u32, u32>) {
-        //     const { layers } = this.maps[map_id];
-        //     const newLayers: LayerDefinition[] = [];
-        //     // move the layer to its new position
-        //     for (const [from, to] of Object.entries(layer_changes)) {
-        //       const layer = layers[Number(from)];
-        //       layer.layerIndex = to;
-        //       newLayers[to] = layer;
-        //     }
-        //     // because other classes depend upon the current array, we just update array items
-        //     for (let i = 0; i < layers.length; i++) layers[i] = newLayers[i];
-        todo!()
+    fn _reorder_layers(&mut self, map_id: MapID, layer_changes: BTreeMap<u32, u32>) {
+        let mut size = 1;
+        for (from, to) in &layer_changes {
+            size = u32::max(size, u32::max(*from, *to) + 1);
+        }
+        let mut new_layers: Vec<LayerDefinition> = vec![LayerDefinition::default(); size as usize];
+        if let Some(map) = self.maps.get_mut(&map_id) {
+            let layers = &mut map.layers;
+            // move the layer to its new position
+            for (from, to) in layer_changes {
+                let layer = &mut layers[from as usize];
+                layer.set_layer_index(to);
+                new_layers[to as usize] = layer.clone();
+            }
+            // because other classes depend upon the current array, we just update array items
+            for i in 0..layers.len() {
+                layers[i] = core::mem::take(&mut new_layers[i]);
+            }
+        }
     }
 
     /// Build sources for a map given an style object
@@ -301,7 +310,7 @@ impl SourceWorker {
     /// ## Parameters
     /// - `map_id`: the id of the map
     /// - `style`: the style object to pull source from
-    async fn _build_sources(map_id: MapID, style: StylePackage) {
+    async fn _build_sources(&self, map_id: MapID, style: StylePackage) {
         //     const { urls, images: mapImages } = this.maps[map_id];
         //     const { sources, layers, fonts, icons, glyphs, sprites, images } = style;
         //     // sources
@@ -363,6 +372,7 @@ impl SourceWorker {
     /// - `input`: the path to the source
     /// - `layers`: the layers that use this source
     fn _create_source(
+        &self,
         map_id: MapID,
         name: String,
         input: StyleSource,
@@ -410,15 +420,16 @@ impl SourceWorker {
     /// ## Returns
     /// A list of glyph metadata that's yet to be parsed
     async fn _create_glyph_source(
+        &self,
         map_id: MapID,
         name: String,
         input: String,
     ) -> Option<GlyphMetadataUnparsed> {
         //     const { maps, session } = this;
-        //     const { urls, texturePack, glyphs } = maps[map_id];
+        //     const { urls, texture_pack, glyphs } = maps[map_id];
         //     // check if already exists
         //     if (glyphs[name] !== undefined) return;
-        //     const source = new GlyphSource(name, adjustURL(input, urls), texturePack, session);
+        //     const source = new GlyphSource(name, adjustURL(input, urls), texture_pack, session);
         //     glyphs[name] = source;
         //     return await source.build(map_id);
         todo!()
@@ -435,20 +446,34 @@ impl SourceWorker {
     /// ## Returns
     /// The image metadata if successful
     async fn _create_sprite_sheet(
+        &mut self,
         map_id: MapID,
         name: String,
         input: String,
         file_type: Option<String>,
     ) -> Option<ImageSourceMetadata> {
-        //     const { maps, session } = this;
-        //     const { urls, texturePack, sprites } = maps[map_id];
-        //     // check if already exists
-        //     if (sprites[name] !== undefined) return;
-        //     const source = new SpriteSource(name, adjustURL(input, urls), texturePack, session, file_type);
-        //     // store & build
-        //     sprites[name] = source;
-        //     return await source.build(map_id);
-        todo!()
+        if let Some(map) = self.maps.get_mut(&map_id) {
+            // check if already exists
+            if map.sprites.contains_key(&name) {
+                return None;
+            }
+            let path = map.urls.adjust_url(input);
+            let mut source = SpriteSource::new(
+                name.clone(),
+                path,
+                map.texture_pack.clone(),
+                self.session.clone(),
+                file_type,
+                self.worker_pool.clone(),
+            );
+            // store & build
+            let result = source.build(map_id).await;
+            // store for later use
+            map.sprites.insert(name, source);
+
+            return result;
+        }
+        None
     }
 
     /// Given a tile request, ship out requests for data from all sources
@@ -458,6 +483,7 @@ impl SourceWorker {
     /// - `tiles`: the tile requests
     /// - `sources`: the sources to modify if needed.
     async fn _request_tile(
+        &self,
         map_id: MapID,
         tiles: Vec<TileRequest>,
         sources: Option<Vec<(String, Option<String>)>>,
@@ -502,6 +528,7 @@ impl SourceWorker {
     /// - `tiles`: the tile requests with time stamps
     /// - `source_names`: the sources to fetch data for
     async fn _request_time(
+        &self,
         map_id: MapID,
         tiles: Vec<TileRequest>,
         source_names: Option<Vec<String>>,
@@ -534,6 +561,7 @@ impl SourceWorker {
     /// - `req_id`: the request id, an encoded string tracking metadata about the request
     /// - `source_glyphs`: the glyphs to request, their sources, etc.
     fn _glyph_request(
+        &self,
         map_id: MapID,
         worker_id: usize,
         req_id: String,
@@ -555,11 +583,12 @@ impl SourceWorker {
     /// - `map_id`: the id of the map to add marker(s) to
     /// - `markers`: the marker(s) to add
     /// - `source_name`: the name of the source to add the marker(s) to
-    fn _add_markers(map_id: MapID, markers: Vec<MarkerDefinition>, source_name: String) {
-        //     const markerSource = this._get_marker_source(map_id, source_name);
-        //     if (markerSource === undefined) return;
-        //     for (const marker of markers) markerSource.addMarker(marker);
-        todo!()
+    fn _add_markers(&self, map_id: MapID, markers: Vec<MarkerDefinition>, source_name: String) {
+        if let Some(marker_source) = self._get_marker_source(map_id, source_name) {
+            for marker in markers {
+                marker_source.add_marker(marker);
+            }
+        }
     }
 
     /// Delete marker(s) from the map
@@ -568,10 +597,10 @@ impl SourceWorker {
     /// - `map_id`: the id of the map to delete marker(s) from
     /// - `ids`: the id(s) of the marker(s) to delete
     /// - `source_name`: the name of the source to delete the marker(s) from
-    fn _delete_markers(map_id: MapID, ids: Vec<u64>, source_name: String) {
-        //     const markerSource = this._get_marker_source(map_id, source_name);
-        //     markerSource?.deleteMarkers(ids);
-        todo!()
+    fn _delete_markers(&self, map_id: MapID, ids: Vec<u64>, source_name: String) {
+        if let Some(marker_source) = self._get_marker_source(map_id, source_name) {
+            marker_source.delete_markers(&ids);
+        }
     }
 
     /// Get the marker source
@@ -582,11 +611,11 @@ impl SourceWorker {
     ///
     /// ## Returns
     /// The marker source if found
-    fn _get_marker_source(map_id: MapID, source_name: String) -> Option<MarkerSource> {
-        //     const { sources, layers, projection } = this.maps[map_id];
+    fn _get_marker_source(&self, map_id: MapID, source_name: String) -> Option<&mut MarkerSource> {
+        //     const { sources, layers, projection } = self.maps[map_id];
         //     if (sources === undefined) throw new Error(`Map ${map_id} does not exist`);
         //     if (sources[source_name] === undefined)
-        //       sources[source_name] = new MarkerSource(source_name, this.session, projection, layers);
+        //       sources[source_name] = new MarkerSource(source_name, self.session, projection, layers);
         //     return sources[source_name] as MarkerSource | undefined;
         todo!()
     }

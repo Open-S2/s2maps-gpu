@@ -315,5 +315,5 @@ impl TimeCache {
  */
 fn parse_date(d: i64) -> i64 {
     let date = Date::from_time(d);
-    date.get_time() / 1000
+    date.get_time() / 1_000
 }
